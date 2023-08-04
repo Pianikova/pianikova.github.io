@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: %pluginName
+Bundle-Vendor: %providerName
+Bundle-Version: 1.0.0.qualifier
+Bundle-SymbolicName: org.e1c.edt.ai;singleton:=true
+Bundle-ActivationPolicy: lazy
+Bundle-Localization: plugin
+Bundle-RequiredExecutionEnvironment: JavaSE-11
+Automatic-Module-Name: org.e1c.edt.ai
+Export-Package: org.e1c.edt.ai;version="1.0.0"

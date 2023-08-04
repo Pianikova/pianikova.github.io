@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Copyright (c) 2023 1C-Soft LLC.
+ -->
+<feature
+      id="org.e1c.edt.ai.sdk"
+      label="%featureName"
+      version="1.0.0.qualifier"
+      provider-name="%providerName"
+      license-feature-version="2.0.2.qualifier">
+
+   <description>
+      %description
+   </description>
+
+   <copyright>
+      %copyright
+   </copyright>
+
+   <license url="%licenseURL">
+      %license
+   </license>
+
+   <includes
+         id="org.e1c.edt.ai.feature.source"
+         version="1.0.0.qualifier"
+         optional="true"/>
+
+   <includes
+         id="org.e1c.edt.ai.feature"
+         version="1.0.0.qualifier"/>
+
+</feature>
