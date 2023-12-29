@@ -4,8 +4,12 @@
 package org.e1c.edt.ai.ui;
 
 import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Plugin;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.resource.ImageRegistry;
+import org.eclipse.jface.resource.ResourceLocator;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 /**
@@ -16,9 +20,13 @@ import org.osgi.framework.BundleContext;
  * Так же данный класс содержит в себе ряд методов для удобного логирования ошибок
  */
 public class Activator
-    extends Plugin
+    extends AbstractUIPlugin
 {
     public static final String PLUGIN_ID = "org.e1c.edt.ai.ui.plugin.ui"; //$NON-NLS-1$
+    /**
+    * Путь к картинкам плагина
+    */
+    private static final String ICONS_PATH = "icons"; //$NON-NLS-1$
     private static Activator plugin;
 
     private BundleContext bundleContext;
@@ -38,6 +46,48 @@ public class Activator
     {
         return plugin;
     }
+
+    /**
+    * Получение картинки по идентификатору
+    *
+    * @param id символьный идентификатор картинки
+    * @return картинка или <b>null</b>, если для указанного идентификатора картинка
+    * не обнаружена
+    */
+
+    public static Image getImage(String id)
+    {
+        return plugin.getImageRegistry().get(id);
+    }
+
+    /**
+    * Получение дескриптора картинки по идентификатору
+    *
+    * @param id символьный идентификатор картинки
+    * @return дескриптор картинки или <b>null</b>, если для указанного идентификатора картинка
+    * не обнаружена
+    */
+    public static ImageDescriptor getImageDescriptor(String id)
+    {
+        return plugin.getImageRegistry().getDescriptor(id);
+    }
+
+    /**
+    * Создает дескриптор картинки по символическому имени
+    * Используется соглашение по формированию символических имен:
+    * идентификатор плагина + относительный путь к картинке
+    *
+    * @param key символьный идентификатор картинки
+    * @retrun созданный дескриптор картинки
+    */
+    public static ImageDescriptor createImageDescriptorFromKey(String key)
+    {
+        String path = ICONS_PATH + key.substring(PLUGIN_ID.length());
+        ImageDescriptor descriptor = ResourceLocator.imageDescriptorFromBundle("org.e1c.edt.ai.ui", path).get(); //$NON-NLS-1$
+//        return AbstractUIPlugin.imageDescriptorFromPlugin(PLUGIN_ID, path);
+        return descriptor;
+    }
+
 
     /**
      * Запись статуса события в лог журнал плагина.
@@ -136,5 +186,15 @@ public class Activator
     protected BundleContext getContext()
     {
         return bundleContext;
+    }
+
+    /**
+    * Инициализация реестра картинок плагина
+    */
+    @Override
+    protected void initializeImageRegistry(ImageRegistry reg)
+    {
+        reg.put(IModelUIPluginImages.OBJS_AI_ICON,
+            createImageDescriptorFromKey(IModelUIPluginImages.OBJS_AI_ICON));
     }
 }

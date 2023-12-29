@@ -1,4 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin>
+
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            id="org.e1c.edt.ai.ui"
+            name="%category.name"
+            parentCategory="com._1c.g5.v8.dt.ui.v8category">
+      </category>
+      <view
+            category="org.e1c.edt.ai.ui"
+            class="org.e1c.edt.ai.ui.views.ChatView"
+            icon="icons/obj16/ai_icon.png"
+            id="org.e1c.edt.ai.ui.views.ChatView"
+            inject="true"
+            name="%view.name">
+      </view>
+   </extension>
+   
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="*">
+         <view
+               id="org.e1c.edt.ai.ui.views.ChatView"
+               relationship="stack"
+               relative="org.eclipse.ui.views.PropertySheet">
+         </view>
+      </perspectiveExtension>
+   </extension>
+   
+   <extension
+         point="org.eclipse.ui.quickAccess">
+      <computer
+            class="org.e1c.edt.ai.ui.quickaccess.AskAIQuickAccessComputer"
+            name="%computer.name">
+      </computer>
+   </extension>
+   
 </plugin>
