@@ -38,5 +38,79 @@
             name="%computer.name">
       </computer>
    </extension>
+    
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="org.e1c.edt.ai.ui.commands.category.ai"
+            name="%category.name">
+      </category>
+      <command
+            categoryId="org.e1c.edt.ai.ui.commands.category.ai"
+            id="org.e1c.edt.ai.ui.commands.explain.ai"
+            name="%command.name.explain">
+      </command>
+      <command
+            categoryId="org.e1c.edt.ai.ui.commands.category.ai"
+            id="org.e1c.edt.ai.ui.commands.criticise.ai"
+            name="%command.name.critic">
+      </command>
+   </extension>
    
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="org.e1c.edt.ai.ui.handlers.ExplainAIHandler"
+            commandId="org.e1c.edt.ai.ui.commands.explain.ai">
+      </handler>
+      <handler
+            class="org.e1c.edt.ai.ui.handlers.CriticiseAIHandler"
+            commandId="org.e1c.edt.ai.ui.commands.criticise.ai">
+      </handler>
+   </extension>
+   
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:org.e1c.edt.ai.ui.groupMenu?after=additions">
+          <command
+               commandId="org.e1c.edt.ai.ui.commands.explain.ai"
+               icon="icons/obj16/explain_icon.png"
+               id="org.e1c.edt.ai.ui.commands.explain.ai.id"
+               label="%command.label.explain"
+               style="push">
+         </command>
+         <command
+               commandId="org.e1c.edt.ai.ui.commands.criticise.ai"
+               icon="icons/obj16/critic_icon.png"
+               id="org.e1c.edt.ai.ui.commands.criticise.ai.id"
+               label="%command.label.critic"
+               style="push">
+         </command>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:#BslEditorContext?endof=group.open">
+         <menu
+               id="org.e1c.edt.ai.ui.groupMenu"
+               label="%menu.label">
+            <separator
+                  name="groupMenuSeparator">
+            </separator>
+         </menu>
+      </menuContribution>
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:xtext.embedded.editor">
+         <menu
+               id="org.e1c.edt.ai.ui.groupMenu"
+               label="%menu.label">
+            <separator
+                  name="groupMenuSeparator">
+            </separator>
+         </menu>
+      </menuContribution>
+   </extension>
+
 </plugin>
