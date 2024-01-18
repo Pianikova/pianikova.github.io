@@ -112,5 +112,11 @@
          </menu>
       </menuContribution>
    </extension>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="org.e1c.edt.ai.ui.startup.PluginStartup">
+      </startup>
+   </extension>
 
 </plugin>
