@@ -7,7 +7,8 @@
       label="%featureName"
       version="1.0.0.qualifier"
       provider-name="%providerName"
-      license-feature-version="2.0.2.qualifier">
+      license-feature="com._1c.g5.edt.license"
+      license-feature-version="2.0.0.v1">
 
    <description>
       %description
