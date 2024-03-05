@@ -118,5 +118,19 @@
             class="org.e1c.edt.ai.ui.startup.PluginStartup">
       </startup>
    </extension>
+   <extension
+         point="org.eclipse.ui.preferencePages">
+      <page
+            class="org.e1c.edt.ai.ui.preferences.ClientAIPreferencePage"
+            id="org.e1c.edt.ai.ui.clientPrefs"
+            name="%page.name">
+      </page>
+   </extension>
+   <extension
+         point="org.eclipse.core.runtime.preferences">
+      <initializer
+            class="org.e1c.edt.ai.ui.preferences.ClientAIPreferencePageInitializer">
+      </initializer>
+   </extension>
 
 </plugin>

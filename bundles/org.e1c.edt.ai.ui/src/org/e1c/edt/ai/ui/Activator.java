@@ -84,7 +84,6 @@ public class Activator
     {
         String path = ICONS_PATH + key.substring(PLUGIN_ID.length());
         ImageDescriptor descriptor = ResourceLocator.imageDescriptorFromBundle("org.e1c.edt.ai.ui", path).get(); //$NON-NLS-1$
-//        return AbstractUIPlugin.imageDescriptorFromPlugin(PLUGIN_ID, path);
         return descriptor;
     }
 

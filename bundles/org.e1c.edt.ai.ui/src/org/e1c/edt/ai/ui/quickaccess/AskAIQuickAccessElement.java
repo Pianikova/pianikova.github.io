@@ -44,7 +44,6 @@ public class AskAIQuickAccessElement
     @Override
     public void execute()
     {
-
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
         try
         {
