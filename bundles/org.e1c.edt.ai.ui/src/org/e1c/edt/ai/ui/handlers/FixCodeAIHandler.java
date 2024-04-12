@@ -19,11 +19,11 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.xtext.ui.editor.XtextEditor;
 
 /**
- * Class Handler of the Explain the Code command.
+ * Class Handler of the fix the Code command.
  *
- * @author Bogdan Sushkov
+ * @author George Suaridze
  */
-public class ExplainAIHandler
+public class FixCodeAIHandler
     extends AbstractHandler
 {
     @Override
@@ -43,7 +43,7 @@ public class ExplainAIHandler
                 {
                     Display.getDefault().asyncExec(() -> {
                         ChatAPI chatAPI = ChatAPIProvider.getService();
-                        chatAPI.explainCode(textSelection.getText());
+                        chatAPI.fixCode(textSelection.getText());
                     });
                     ChatView view = (ChatView)activePage.showView(ChatView.ID);
                     view.setFocus();

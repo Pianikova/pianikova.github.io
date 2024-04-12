@@ -10,11 +10,12 @@ import java.util.ArrayList;
  * @author Bogdan Sushkov
  *
  */
-public class ChatSettings
+public class AISettings
 {
     private ArrayList<String> accessRoles;
     private ArrayList<String> tags;
-    private String serviceURL;
+    private String apiURL;
+    private String chatURL;
     private String clientToken;
     private String modelName;
     private String dataBaseName;
@@ -24,17 +25,19 @@ public class ChatSettings
      * Constructs ChatStarter object
      * @param accessRoles
      * @param tags
-     * @param serviceURL
+     * @param chatURL
      * @param clientToken
      * @param modelName
      * @param dataBaseName
      */
-    public ChatSettings(ArrayList<String> accessRoles, ArrayList<String> tags, String serviceURL, String clientToken,
+    public AISettings(ArrayList<String> accessRoles, ArrayList<String> tags, String apiURL, String chatURL,
+        String clientToken,
         String modelName, String dataBaseName, String documentPath)
     {
         this.accessRoles = accessRoles;
         this.tags = tags;
-        this.serviceURL = serviceURL;
+        this.apiURL = apiURL;
+        this.chatURL = chatURL;
         this.clientToken = clientToken;
         this.modelName = modelName;
         this.dataBaseName = dataBaseName;
@@ -74,19 +77,19 @@ public class ChatSettings
     }
 
     /**
-     * @return the serviceURL
+     * @return the apiURL
      */
-    public String getServiceURL()
+    public String getApiURL()
     {
-        return serviceURL;
+        return apiURL;
     }
 
     /**
-     * @param serviceURL the serviceURL to set
+     * @return the chatURL
      */
-    public void setServiceURL(String serviceURL)
+    public String getChatURL()
     {
-        this.serviceURL = serviceURL;
+        return chatURL;
     }
 
     /**

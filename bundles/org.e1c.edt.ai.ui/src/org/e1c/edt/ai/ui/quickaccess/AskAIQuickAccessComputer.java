@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.ui.quickaccess;
 
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.ui.quickaccess.IQuickAccessComputer;
 import org.eclipse.ui.quickaccess.IQuickAccessComputerExtension;
 import org.eclipse.ui.quickaccess.QuickAccessElement;
 
@@ -15,38 +16,31 @@ import org.eclipse.ui.quickaccess.QuickAccessElement;
  * @author Bogdan Sushkov
  */
 public class AskAIQuickAccessComputer
-    implements IQuickAccessComputerExtension
+    implements IQuickAccessComputer, IQuickAccessComputerExtension
 {
-    private AskAIQuickAccessElement myElement;
-
-    public AskAIQuickAccessComputer()
-    {
-        myElement = new AskAIQuickAccessElement();
-    }
 
     @Override
     public QuickAccessElement[] computeElements()
     {
-        AskAIQuickAccessElement myElement = new AskAIQuickAccessElement();
-        return new QuickAccessElement[] { myElement };
+        return new QuickAccessElement[0];
     }
 
     @Override
     public void resetState()
     {
-        // Empty method
+        // stateless, nothing to do
     }
 
     @Override
     public boolean needsRefresh()
     {
-        return true;
+        return false;
     }
 
     @Override
     public QuickAccessElement[] computeElements(String query, IProgressMonitor monitor)
     {
-        myElement.setText(query);
+        AskAIQuickAccessElement myElement = new AskAIQuickAccessElement(query);
         return new QuickAccessElement[] { myElement };
     }
 }

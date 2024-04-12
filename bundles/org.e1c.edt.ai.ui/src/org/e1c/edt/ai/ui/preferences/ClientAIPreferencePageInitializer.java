@@ -20,7 +20,8 @@ public class ClientAIPreferencePageInitializer
     public void initializeDefaultPreferences()
     {
         IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-        store.setDefault(ClientAIPreferencePage.SERVICEURL, "http://llm-api2.ailab:8889/api"); //$NON-NLS-1$
+        store.setDefault(ClientAIPreferencePage.APIURL, "http://rnd-tocm3.ailab:8093"); //$NON-NLS-1$
+        store.setDefault(ClientAIPreferencePage.CHATURL, "http://10.70.5.31:4000/"); //$NON-NLS-1$
         store.setDefault(ClientAIPreferencePage.CLIENTTOKEN, "user_test"); //$NON-NLS-1$
         store.setDefault(ClientAIPreferencePage.DATABASENAME, "edt_doc"); //$NON-NLS-1$
         store.setDefault(ClientAIPreferencePage.MODELNAME, "openchat_7b"); //$NON-NLS-1$

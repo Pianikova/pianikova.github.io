@@ -4,9 +4,12 @@
 package org.e1c.edt.ai.ui.quickaccess;
 
 import org.e1c.edt.ai.ui.Activator;
+import org.e1c.edt.ai.ui.ChatAPI;
+import org.e1c.edt.ai.ui.ChatAPIProvider;
 import org.e1c.edt.ai.ui.IModelUIPluginImages;
 import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -47,8 +50,11 @@ public class AskAIQuickAccessElement
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
         try
         {
+            Display.getDefault().asyncExec(() -> {
+                ChatAPI chatAPI = ChatAPIProvider.getService();
+                chatAPI.askQuestion(askText);
+            });
             ChatView view = (ChatView)page.showView(ChatView.ID);
-            view.setMessage(askText);
             view.setFocus();
         }
         catch (PartInitException e)
@@ -60,7 +66,7 @@ public class AskAIQuickAccessElement
     @Override
     public String getId()
     {
-        return ID;
+        return askText;
     }
 
     @Override
@@ -75,14 +81,5 @@ public class AskAIQuickAccessElement
     {
         ImageDescriptor image = Activator.getImageDescriptor(IModelUIPluginImages.OBJS_AI_ICON);
         return image;
-    }
-
-    /**
-     * Transmits the message entered by the user to the QuickAccess item
-     * @param input - input string
-     */
-    public void setText(String input)
-    {
-        askText = input;
     }
 }

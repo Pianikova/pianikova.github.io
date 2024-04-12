@@ -24,7 +24,8 @@ public class ClientAIPreferencePage
     public final static String MODELNAME = "stringPreferenceModelName"; //$NON-NLS-1$
     public final static String CLIENTTOKEN = "stringPreferenceClientID"; //$NON-NLS-1$
     public final static String DATABASENAME = "stringPreferenceDataBaseName"; //$NON-NLS-1$
-    public final static String SERVICEURL = "stringPreferenceServiceURL"; //$NON-NLS-1$
+    public final static String APIURL = "stringPreferenceApiURL"; //$NON-NLS-1$
+    public final static String CHATURL = "stringPreferenceChatURL"; //$NON-NLS-1$
     public final static String TAGS = "stringPreferenceTags"; //$NON-NLS-1$
     public final static String ACCESSROLES = "stringPreferenceAccessRoles"; //$NON-NLS-1$
     public final static String DOCUMENTPATH = "stringPreferenceDocumentPath"; //$NON-NLS-1$
@@ -45,8 +46,9 @@ public class ClientAIPreferencePage
     @Override
     public void createFieldEditors()
     {
-        addField(
-            new StringFieldEditor(SERVICEURL, Messages.ClientAIPreferencePage_Service_URL, getFieldEditorParent()));
+        addField(new StringFieldEditor(APIURL, Messages.ClientAIPreferencePage_Api_URL, getFieldEditorParent()));
+
+        addField(new StringFieldEditor(CHATURL, Messages.ClientAIPreferencePage_Chat_URL, getFieldEditorParent()));
 
         addField(
             new StringFieldEditor(CLIENTTOKEN, Messages.ClientAIPreferencePage_Client_token, getFieldEditorParent()));

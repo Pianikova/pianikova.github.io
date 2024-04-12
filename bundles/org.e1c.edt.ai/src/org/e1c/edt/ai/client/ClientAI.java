@@ -43,7 +43,7 @@ import com.google.gson.JsonParser;
  *      ArrayList&lt;MessageResponse> ans = chat.sendMessage("When will the next salary be?");
  * </pre></blockquote>
  *
- * @see ChatSettings
+ * @see AISettings
  * @see MessageResponse
  * @author Bogdan Sushkov
  */
@@ -51,15 +51,15 @@ public class ClientAI
     implements IClientAI
 {
     private ChatInfo chat;
-    private ChatSettings settings;
+    private AISettings settings;
 
     /**
      * Constructs the object ClientAI via chat preference page.
      * @param settings AI preference page
      */
-    public ClientAI(ChatSettings settings)
+    public ClientAI(AISettings settings)
     {
-        chat = new ChatInfo(settings.getClientToken(), settings.getServiceURL());
+        chat = new ChatInfo(settings.getClientToken(), settings.getChatURL());
         this.setSettings(settings);
     }
 
@@ -189,7 +189,7 @@ public class ClientAI
     /**
      * @return the settings
      */
-    public ChatSettings getSettings()
+    public AISettings getSettings()
     {
         return settings;
     }
@@ -197,7 +197,7 @@ public class ClientAI
     /**
      * @param settings the settings to set
      */
-    public void setSettings(ChatSettings settings)
+    public void setSettings(AISettings settings)
     {
         this.settings = settings;
     }

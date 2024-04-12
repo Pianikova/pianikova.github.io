@@ -6,7 +6,7 @@ package org.e1c.edt.ai.ui.preferences;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.e1c.edt.ai.client.ChatSettings;
+import org.e1c.edt.ai.client.AISettings;
 import org.e1c.edt.ai.ui.Activator;
 import org.eclipse.jface.preference.IPreferenceStore;
 
@@ -27,25 +27,35 @@ public class ClientAIPreferenceService
      *
      * @return ChatStarter object
      */
-    public static ChatSettings getSettings()
+    public static AISettings getSettings()
     {
         ArrayList<String> accessRoles = new ArrayList<>(Arrays.asList(getPreferenceAccessRoles().split(","))); //$NON-NLS-1$
         ArrayList<String> tags = new ArrayList<>(Arrays.asList(getPreferenceTags().split(","))); //$NON-NLS-1$
-        String URL = getPreferenceServiceURL();
+        String apiURL = getPreferenceApiURL();
+        String chatURL = getPreferenceChatURL();
         String token = getPreferenceClientToken();
         String modelName = getPreferenceModelName();
         String databaseName = getPreferenceDatabaseName();
         String docPath = getPreferenceDocumentPath();
-        return new ChatSettings(accessRoles, tags, URL, token, modelName, databaseName, docPath);
+        return new AISettings(accessRoles, tags, apiURL, chatURL, token, modelName, databaseName, docPath);
     }
 
     /*
      * Returns <code>serviceURL</code> parameter.
      * @return serviceURL
      */
-    private static String getPreferenceServiceURL()
+    private static String getPreferenceApiURL()
     {
-        return preferenceStore.getString(ClientAIPreferencePage.SERVICEURL);
+        return preferenceStore.getString(ClientAIPreferencePage.APIURL);
+    }
+
+    /*
+     * Returns <code>serviceURL</code> parameter.
+     * @return serviceURL
+     */
+    private static String getPreferenceChatURL()
+    {
+        return preferenceStore.getString(ClientAIPreferencePage.CHATURL);
     }
 
     /*

@@ -23,6 +23,9 @@ public class Activator
     extends AbstractUIPlugin
 {
     public static final String PLUGIN_ID = "org.e1c.edt.ai.ui.plugin.ui"; //$NON-NLS-1$
+
+    public static final String PREF_CODE_COMPLITION_ENABLED = "org.e1c.edt.ai.ui.codeCompletion"; //$NON-NLS-1$
+
     /**
     * Путь к картинкам плагина
     */
@@ -160,6 +163,7 @@ public class Activator
 
         this.bundleContext = bundleContext;
         plugin = this;
+        getDefault().getPreferenceStore().setValue(Activator.PREF_CODE_COMPLITION_ENABLED, false);
     }
 
     /**
