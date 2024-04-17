@@ -7,18 +7,18 @@ import java.util.Objects;
 
 public class ValidationError
 {
-    private int id;
+    private WellknownError error;
     private String target;
 
-    public ValidationError(int id, String target)
+    public ValidationError(WellknownError error, String target)
     {
-        this.id = id;
+        this.error = error;
         this.target = target;
     }
 
-    public int getId()
+    public WellknownError getError()
     {
-        return id;
+        return error;
     }
 
     public String getTarget()
@@ -29,7 +29,7 @@ public class ValidationError
     @Override
     public int hashCode()
     {
-        return Objects.hash(id, target);
+        return Objects.hash(error, target);
     }
 
     @Override
@@ -42,6 +42,6 @@ public class ValidationError
         if (getClass() != obj.getClass())
             return false;
         ValidationError other = (ValidationError)obj;
-        return id == other.id && Objects.equals(target, other.target);
+        return error == other.error && Objects.equals(target, other.target);
     }
 }

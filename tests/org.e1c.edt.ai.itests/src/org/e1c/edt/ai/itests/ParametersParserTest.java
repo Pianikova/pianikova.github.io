@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 import org.e1c.edt.ai.ParametersParser;
 import org.e1c.edt.ai.ValidationError;
 import org.e1c.edt.ai.ValidationResult;
+import org.e1c.edt.ai.WellknownError;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,8 +39,7 @@ public class ParametersParserTest
         var actualValidationResult = new ValidationResult();
 
         // When
-        org.e1c.edt.ai.assistent.model.Parameters actualParameters =
-            parser.tryParse(parametersText, actualValidationResult);
+        var actualParameters = parser.tryParse(parametersText, actualValidationResult);
 
         // Then
         Assert.assertEquals(expectedValidationResult, actualValidationResult);
@@ -95,11 +95,11 @@ public class ParametersParserTest
 
     private static ValidationError UnableToParse(String name)
     {
-        return new ValidationError(ParametersParser.UnableToParseErrorId, name);
+        return new ValidationError(WellknownError.UnableToParse, name);
     }
 
     private static ValidationError Unknown(String name)
     {
-        return new ValidationError(ParametersParser.UnknownParameterErrorId, name);
+        return new ValidationError(WellknownError.Unknown, name);
     }
 }

@@ -3,16 +3,19 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
 public class CodeAssistentText implements ICodeAssistentText
 {
+    private ILog log;
     private ISettingsProvider settingsProvider;
 
-    public CodeAssistentText(ISettingsProvider settingsProvider)
+    public CodeAssistentText(ILog log, ISettingsProvider settingsProvider)
     {
+        this.log = log;
         this.settingsProvider = settingsProvider;
     }
 
@@ -46,7 +49,7 @@ public class CodeAssistentText implements ICodeAssistentText
         }
         catch (BadLocationException e)
         {
-            Activator.logError(e);
+            log.logError(e);
         }
 
         return ""; //$NON-NLS-1$
@@ -63,7 +66,7 @@ public class CodeAssistentText implements ICodeAssistentText
         }
         catch (BadLocationException e)
         {
-            Activator.logError(e);
+            log.logError(e);
         }
     }
 

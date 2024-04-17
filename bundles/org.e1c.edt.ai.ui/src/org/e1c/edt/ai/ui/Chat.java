@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import java.util.function.Consumer;
 
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -36,13 +37,14 @@ public class Chat implements IChat, IChatDialog
     private static final String WELCOME_PAGE_TITLE = "Welcome page"; //$NON-NLS-1$
     private static final String CHAT_PAGE_TITLE = "Chat page"; //$NON-NLS-1$
 
-    private IdeApiHandler handler = new IdeApiHandler();
+    private final ISettingsProvider settingsProvider;
+    private final IdeApiHandler handler;
     private WebView webView;
-    private ISettingsProvider settingsProvider;
 
-    public Chat(ISettingsProvider settingsProvider)
+    public Chat(ILog log, ISettingsProvider settingsProvider)
     {
         this.settingsProvider = settingsProvider;
+        handler = new IdeApiHandler(log);
     }
 
     @Override
@@ -151,7 +153,7 @@ public class Chat implements IChat, IChatDialog
 
             });
 
-            webEngine.load(settingsProvider.getSettings().getChatURL());
+            webEngine.load(settingsProvider.getSettings().getChatURL().toString());
         });
 
         return webView;
@@ -195,7 +197,6 @@ public class Chat implements IChat, IChatDialog
                     {
                         // reschedule
                         new SendMessageJob(webEngine, message, action).schedule(50);
-
                     }
                 }
             });
@@ -205,6 +206,13 @@ public class Chat implements IChat, IChatDialog
 
     public static class IdeApiHandler
     {
+        private ILog log;
+
+        public IdeApiHandler(ILog log)
+        {
+            this.log = log;
+        }
+
         public void wink(String parameter)
         {
             System.out.println("Winked: " + parameter); //$NON-NLS-1$
@@ -233,7 +241,7 @@ public class Chat implements IChat, IChatDialog
                         }
                         catch (BadLocationException e)
                         {
-                            Activator.logError(e);
+                            log.logError(e);
                         }
                     }
                 }
@@ -244,5 +252,4 @@ public class Chat implements IChat, IChatDialog
             }
         }
     }
-
 }

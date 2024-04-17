@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui.preferences;
 
+import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.ui.Activator;
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -20,13 +21,13 @@ public class ClientAIPreferencePageInitializer
     public void initializeDefaultPreferences()
     {
         IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-        store.setDefault(ClientAIPreferencePage.APIURL, "http://rnd-tocm3.ailab:8093"); //$NON-NLS-1$
-        store.setDefault(ClientAIPreferencePage.CHATURL, "http://10.70.5.31:4000/"); //$NON-NLS-1$
-        store.setDefault(ClientAIPreferencePage.CLIENTTOKEN, "user_test"); //$NON-NLS-1$
-        store.setDefault(ClientAIPreferencePage.DATABASENAME, "edt_doc"); //$NON-NLS-1$
-        store.setDefault(ClientAIPreferencePage.MODELNAME, "openchat_7b"); //$NON-NLS-1$
-        store.setDefault(ClientAIPreferencePage.LLMPARAMETERS,
+        store.setDefault(ISettingsStore.APIURL, "http://rnd-tocm3.ailab:8093"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.CHATURL, "http://10.70.5.31:4000/"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.CLIENTTOKEN, "user_test"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.DATABASENAME, "edt_doc"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.MODELNAME, "openchat_7b"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.LLMPARAMETERS,
             "max_new_tokens=120; temperature=0.2; top_p=0.95; top_k=10"); //$NON-NLS-1$
-        store.setDefault(ClientAIPreferencePage.MAXASSISTANTTEXTSIZE, SettingsProvider.DefaultMaxAssistantTextSize);
+        store.setDefault(ISettingsStore.MAXASSISTANTTEXTSIZE, ISettingsStore.DefaultMaxAssistantTextSize);
     }
 }

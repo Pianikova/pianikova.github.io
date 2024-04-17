@@ -5,7 +5,9 @@ package org.e1c.edt.ai.ui.handlers;
 
 import java.util.function.Consumer;
 
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ui.Activator;
+import org.e1c.edt.ai.ui.Composition;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.TextSelection;
@@ -25,10 +27,10 @@ import org.eclipse.xtext.ui.editor.XtextEditor;
 public class AIAnnotation
     extends LineContentAnnotation
 {
-
     private String text;
     private Position position;
     private ISourceViewer viewer;
+    private ILog log;
     /**
      * @param position
      * @param viewer
@@ -38,6 +40,7 @@ public class AIAnnotation
         super(position, viewer);
         this.position = position;
         this.viewer = viewer;
+        log = Composition.getLog();
     }
 
     @Override
@@ -91,7 +94,7 @@ public class AIAnnotation
         }
         catch (Exception e)
         {
-            Activator.logError(e);
+            log.logError(e);
         }
     }
 }

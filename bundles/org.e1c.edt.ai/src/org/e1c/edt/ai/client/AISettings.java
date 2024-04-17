@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.client;
 
+import java.net.URL;
 import java.util.ArrayList;
 
 import org.e1c.edt.ai.assistent.model.Parameters;
@@ -16,8 +17,8 @@ public class AISettings
 {
     private ArrayList<String> accessRoles;
     private ArrayList<String> tags;
-    private String apiURL;
-    private String chatURL;
+    private URL apiURL;
+    private URL chatURL;
     private String clientToken;
     private String modelName;
     private String dataBaseName;
@@ -25,7 +26,7 @@ public class AISettings
     private Parameters llmParameters;
     private int maxAssistantTextSize;
 
-    public AISettings(ArrayList<String> accessRoles, ArrayList<String> tags, String apiURL, String chatURL,
+    public AISettings(ArrayList<String> accessRoles, ArrayList<String> tags, URL apiURL, URL chatURL,
         String clientToken,
         String modelName, String dataBaseName, String documentPath, Parameters llmParameters, int maxAssistantTextSize)
     {
@@ -61,12 +62,12 @@ public class AISettings
         this.tags = tags;
     }
 
-    public String getApiURL()
+    public URL getApiURL()
     {
         return apiURL;
     }
 
-    public String getChatURL()
+    public URL getChatURL()
     {
         return chatURL;
     }

@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.client.model;
 
+import java.net.URL;
+
 /**
  * This class contains information of created chat.
  * It uses to provide connection with active chat.
@@ -15,17 +17,17 @@ public class ChatInfo
     private String conversationUUID = null;
     private String parentUUID = null;
     private String clientToken = null;
-    private final String URL;
+    private final URL url;
 
     /**
      * Constructs object ChatInfo
      * @param token
      * @param URL
      */
-    public ChatInfo(String token, String URL)
+    public ChatInfo(String token, URL url)
     {
         clientToken = token;
-        this.URL = URL;
+        this.url = url;
     }
 
     /**
@@ -86,8 +88,8 @@ public class ChatInfo
     /**
      * @return the uRL
      */
-    public String getURL()
+    public URL getURL()
     {
-        return URL;
+        return url;
     }
 }

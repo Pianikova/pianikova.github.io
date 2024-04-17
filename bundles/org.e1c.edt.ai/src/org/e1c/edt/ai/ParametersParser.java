@@ -15,8 +15,6 @@ import org.e1c.edt.ai.assistent.model.Parameters;
 public class ParametersParser
     implements IValidator<String>, IParser<String, Parameters>
 {
-    public final static int UnableToParseErrorId = 1;
-    public final static int UnknownParameterErrorId = 2;
     private final static String keyValueSeparator = ";"; //$NON-NLS-1$
 
     @Override
@@ -45,7 +43,7 @@ public class ParametersParser
         }
         catch (IOException e)
         {
-            validationResult.addError(new ValidationError(UnableToParseErrorId, parametersText));
+            validationResult.addError(new ValidationError(WellknownError.UnableToParse, parametersText));
             return parameters;
         }
 
@@ -97,7 +95,7 @@ public class ParametersParser
         unknowNames.sort(null);
         for (var unknowName : unknowNames)
         {
-            validationResult.addError(new ValidationError(UnknownParameterErrorId, unknowName));
+            validationResult.addError(new ValidationError(WellknownError.Unknown, unknowName));
         }
 
         return parameters;
@@ -123,7 +121,7 @@ public class ParametersParser
             // ignored
         }
 
-        validationResult.addError(new ValidationError(UnableToParseErrorId, name));
+        validationResult.addError(new ValidationError(WellknownError.UnableToParse, name));
         return name;
     }
 

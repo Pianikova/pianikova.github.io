@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 
@@ -39,17 +38,8 @@ public class AICodeAssistant
     public AITextResponse generateText(String text, CancellationToken cancellationToken)
     {
         var settings = settingsProvider.getSettings();
-        URL url = null;
-        try
-        {
-            url = new URL(settings.getApiURL() + "/generate"); //$NON-NLS-1$
-        }
-        catch (MalformedURLException e)
-        {
-            throw new AIClientException(Messages.ClientAI_Cannot_connect, e);
-        }
-
-        HttpURLConnection connection = makePOST(url);
+        URL url = settings.getApiURL();
+        HttpURLConnection connection = createPostConnection(url);
         AITextRequest request = new AITextRequest();
         request.setInputs(text);
         request.setParameters(settings.getLlmParameters());
@@ -80,11 +70,6 @@ public class AICodeAssistant
     }
 
 
-    /*
-     * Get response
-     * @param connection
-     * @return response
-     */
     private StringBuilder getResponse(HttpURLConnection connection, CancellationToken cancellationToken)
     {
         StringBuilder response = null;
@@ -128,13 +113,7 @@ public class AICodeAssistant
         return response;
     }
 
-
-    /*
-     * Make GET request for given URL
-     * @param url
-     * @return connection
-     */
-    private HttpURLConnection makeGET(URL url)
+    private HttpURLConnection createConnection(URL url, String requestMethod)
     {
         HttpURLConnection connection = null;
         try
@@ -145,47 +124,27 @@ public class AICodeAssistant
         {
             throw new AIClientException(Messages.ClientAI_Cannot_connect, e);
         }
+
         try
         {
-            connection.setRequestMethod("GET"); //$NON-NLS-1$
+            connection.setRequestMethod(requestMethod);
+
         }
         catch (ProtocolException e)
         {
             throw new AIClientException(e.getMessage(), e);
         }
-        connection.setRequestProperty("Accept", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
+
+        connection.addRequestProperty("client_id", settingsProvider.getSettings().getClientToken()); //$NON-NLS-1$
         connection.setDoOutput(true);
         return connection;
     }
 
-    /*
-     * Make POST request for given URL
-     * @param url
-     * @return connection
-     */
-    private HttpURLConnection makePOST(URL url)
+    private HttpURLConnection createPostConnection(URL url)
     {
-        HttpURLConnection connection = null;
-        try
-        {
-            connection = (HttpURLConnection)url.openConnection();
-        }
-        catch (IOException e)
-        {
-            throw new AIClientException(Messages.ClientAI_Cannot_connect, e);
-        }
-        try
-        {
-            connection.setRequestMethod("POST"); //$NON-NLS-1$
-        }
-        catch (ProtocolException e)
-        {
-            throw new AIClientException(e.getMessage(), e);
-        }
+        HttpURLConnection connection = createConnection(url, "POST"); //$NON-NLS-1$
+        connection.setRequestProperty("Accept", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
         connection.setRequestProperty("Content-Type", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
-        connection.setRequestProperty("Accept", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
-        connection.setDoOutput(true);
         return connection;
     }
-
 }

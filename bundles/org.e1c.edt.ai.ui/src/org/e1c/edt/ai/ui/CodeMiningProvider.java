@@ -36,10 +36,14 @@ public class CodeMiningProvider
     private final ExecutorService threadPool = Executors.newSingleThreadExecutor();
     private final CodeMiningReconciler reconciler = new CodeMiningReconciler();
     private AiCodeCompletion completion;
+    private IAICodeAssistant codeAssistant;
+    private ICodeAssistentText codeAssistentText;
 
     public CodeMiningProvider()
     {
         reconciler.setDelay(500);
+        codeAssistant = Composition.getCodeAssistant();
+        codeAssistentText = Composition.getCodeAssistentText();
     }
 
     @Override
@@ -60,8 +64,8 @@ public class CodeMiningProvider
                     completion.dispose();
                 }
 
-                completion = new AiCodeCompletion(Composition.getCodeAssistentText(),
-                    Composition.getCodeAssistant(),
+                completion = new AiCodeCompletion(codeAssistentText,
+                    codeAssistant,
                     threadPool, this, viewer,
                     getAiCodeCompletionInfo(viewer));
                 minings.add(completion);
