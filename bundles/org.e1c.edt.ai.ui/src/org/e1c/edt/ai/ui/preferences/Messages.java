@@ -24,6 +24,7 @@ public class Messages
     public static String ClientAIPreferencePage_Access_roles;
     public static String ClientAIPreferencePage_Document_path;
     public static String ClientAIPreferencePage_LLL_parameters;
+    public static String ClientAIPreferencePage_MaxAssistantTextSize;
     static
     {
         // initialize resource bundle

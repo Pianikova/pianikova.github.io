@@ -23,19 +23,11 @@ public class AISettings
     private String dataBaseName;
     private String documentPath;
     private Parameters llmParameters;
+    private int maxAssistantTextSize;
 
-    /**
-     * Constructs ChatStarter object
-     * @param accessRoles
-     * @param tags
-     * @param chatURL
-     * @param clientToken
-     * @param modelName
-     * @param dataBaseName
-     */
     public AISettings(ArrayList<String> accessRoles, ArrayList<String> tags, String apiURL, String chatURL,
         String clientToken,
-        String modelName, String dataBaseName, String documentPath, Parameters llmParameters)
+        String modelName, String dataBaseName, String documentPath, Parameters llmParameters, int maxAssistantTextSize)
     {
         this.accessRoles = accessRoles;
         this.tags = tags;
@@ -46,115 +38,74 @@ public class AISettings
         this.dataBaseName = dataBaseName;
         this.documentPath = documentPath;
         this.llmParameters = llmParameters;
+        this.maxAssistantTextSize = maxAssistantTextSize;
     }
 
-    /**
-     * @return the accessRoles
-     */
     public ArrayList<String> getAccessRoles()
     {
         return accessRoles;
     }
 
-    /**
-     * @param accessRoles the accessRoles to set
-     */
     public void setAccessRoles(ArrayList<String> accessRoles)
     {
         this.accessRoles = accessRoles;
     }
 
-    /**
-     * @return the tags
-     */
     public ArrayList<String> getTags()
     {
         return tags;
     }
 
-    /**
-     * @param tags the tags to set
-     */
     public void setTags(ArrayList<String> tags)
     {
         this.tags = tags;
     }
 
-    /**
-     * @return the apiURL
-     */
     public String getApiURL()
     {
         return apiURL;
     }
 
-    /**
-     * @return the chatURL
-     */
     public String getChatURL()
     {
         return chatURL;
     }
 
-    /**
-     * @return the clientToken
-     */
     public String getClientToken()
     {
         return clientToken;
     }
 
-    /**
-     * @param clientToken the clientToken to set
-     */
     public void setClientToken(String clientToken)
     {
         this.clientToken = clientToken;
     }
 
-    /**
-     * @return the modelName
-     */
     public String getModelName()
     {
         return modelName;
     }
 
-    /**
-     * @param modelName the modelName to set
-     */
     public void setModelName(String modelName)
     {
         this.modelName = modelName;
     }
 
-    /**
-     * @return the dataBaseName
-     */
     public String getDataBaseName()
     {
         return dataBaseName;
     }
 
-    /**
-     * @param dataBaseName the dataBaseName to set
-     */
     public void setDataBaseName(String dataBaseName)
     {
         this.dataBaseName = dataBaseName;
     }
 
-    /**
-     * @return the documentPath
-     */
     public String getDocumentPath()
     {
         return documentPath;
     }
 
-    /**
-     * @param documentPath the documentPath to set
-     */
     public void setDocumentPath(String documentPath)
     {
         this.documentPath = documentPath;
@@ -163,5 +114,10 @@ public class AISettings
     public Parameters getLlmParameters()
     {
         return llmParameters;
+    }
+
+    public int getMaxAssistantTextSize()
+    {
+        return maxAssistantTextSize;
     }
 }

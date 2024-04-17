@@ -9,14 +9,16 @@ import org.e1c.edt.ai.ParametersParser;
 import org.e1c.edt.ai.assistent.AICodeAssistant;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
 import org.e1c.edt.ai.ui.preferences.SettingsProvider;
+import org.eclipse.swt.widgets.Display;
 
 public class Composition
 {
     private static final ParametersParser ParametersParser = new ParametersParser();
     private static final SettingsProvider SettingsProvider =
         new SettingsProvider(Activator.getDefault().getPreferenceStore(), ParametersParser);
-
     private static final AICodeAssistant CodeAssistant = new AICodeAssistant(SettingsProvider);
+    private static final CodeAssistentText CodeAssistentText =
+        new CodeAssistentText(SettingsProvider);
     private static final Chat Chat = new Chat(SettingsProvider);
 
     public static ISettingsProvider getSettingsProvider()
@@ -42,5 +44,10 @@ public class Composition
     public static IChatDialog getChatDialog()
     {
         return Chat;
+    }
+
+    public static ICodeAssistentText getCodeAssistentText()
+    {
+        return CodeAssistentText;
     }
 }

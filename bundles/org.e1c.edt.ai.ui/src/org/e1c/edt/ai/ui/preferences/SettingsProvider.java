@@ -15,6 +15,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 public class SettingsProvider
     implements ISettingsProvider
 {
+    public static final int DefaultMaxAssistantTextSize = 1500;
     private IPreferenceStore preferenceStore;
     private IParser<String, Parameters> parametersParser;
 
@@ -27,18 +28,19 @@ public class SettingsProvider
     @Override
     public AISettings getSettings()
     {
-        ArrayList<String> accessRoles =
+        var accessRoles =
             new ArrayList<>(Arrays.asList(preferenceStore.getString(ClientAIPreferencePage.ACCESSROLES).split(","))); //$NON-NLS-1$
-        ArrayList<String> tags =
+        var tags =
             new ArrayList<>(Arrays.asList(preferenceStore.getString(ClientAIPreferencePage.TAGS).split(","))); //$NON-NLS-1$
-        String apiURL = preferenceStore.getString(ClientAIPreferencePage.APIURL);
-        String chatURL = preferenceStore.getString(ClientAIPreferencePage.CHATURL);
-        String token = preferenceStore.getString(ClientAIPreferencePage.CLIENTTOKEN);
-        String modelName = preferenceStore.getString(ClientAIPreferencePage.MODELNAME);
-        String databaseName = preferenceStore.getString(ClientAIPreferencePage.DATABASENAME);
-        String docPath = preferenceStore.getString(ClientAIPreferencePage.DOCUMENTPATH);
-        String llmParameters = preferenceStore.getString(ClientAIPreferencePage.LLMPARAMETERS);
+        var apiURL = preferenceStore.getString(ClientAIPreferencePage.APIURL);
+        var chatURL = preferenceStore.getString(ClientAIPreferencePage.CHATURL);
+        var token = preferenceStore.getString(ClientAIPreferencePage.CLIENTTOKEN);
+        var modelName = preferenceStore.getString(ClientAIPreferencePage.MODELNAME);
+        var databaseName = preferenceStore.getString(ClientAIPreferencePage.DATABASENAME);
+        var docPath = preferenceStore.getString(ClientAIPreferencePage.DOCUMENTPATH);
+        var llmParameters = preferenceStore.getString(ClientAIPreferencePage.LLMPARAMETERS);
+        var maxAssistantTextSize = preferenceStore.getInt(ClientAIPreferencePage.MAXASSISTANTTEXTSIZE);
         return new AISettings(accessRoles, tags, apiURL, chatURL, token, modelName, databaseName, docPath,
-            parametersParser.parse(llmParameters));
+            parametersParser.parse(llmParameters), maxAssistantTextSize);
     }
 }

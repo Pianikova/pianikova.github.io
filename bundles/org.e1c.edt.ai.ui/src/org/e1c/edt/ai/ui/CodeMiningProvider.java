@@ -60,7 +60,9 @@ public class CodeMiningProvider
                     completion.dispose();
                 }
 
-                completion = new AiCodeCompletion(Composition.getCodeAssistant(), threadPool, this, viewer,
+                completion = new AiCodeCompletion(Composition.getCodeAssistentText(),
+                    Composition.getCodeAssistant(),
+                    threadPool, this, viewer,
                     getAiCodeCompletionInfo(viewer));
                 minings.add(completion);
             }
@@ -159,13 +161,16 @@ public class CodeMiningProvider
         private final int offset;
         private CancellationToken askCancellationToken = new CancellationToken();
         private ExecutorService threadPool;
+        private ICodeAssistentText codeAssistentText;
 
-        protected AiCodeCompletion(IAICodeAssistant codeAssistant, ExecutorService threadPool,
+        protected AiCodeCompletion(ICodeAssistentText codeAssistentText, IAICodeAssistant codeAssistant,
+            ExecutorService threadPool,
             ICodeMiningProvider provider,
             ITextViewer viewer,
             AiCodeCompletionInfo info)
         {
             super(info.getPosition(), provider);
+            this.codeAssistentText = codeAssistentText;
             this.codeAssistant = codeAssistant;
             this.threadPool = threadPool;
             this.viewer = viewer;
@@ -208,8 +213,7 @@ public class CodeMiningProvider
 
                 setLabel(AI_THINKING);
 
-                IDocument document = viewer.getDocument();
-                String text = document.get(0, offset);
+                var text = codeAssistentText.get(viewer.getDocument(), offset);
                 AITextResponse responce = codeAssistant.generateText(text, cancellationToken);
                 text = responce.getGeneratedText();
 
@@ -233,24 +237,16 @@ public class CodeMiningProvider
 
         private void apply()
         {
-            try
+            String code = super.getLabel();
+            if (code.startsWith(AI_PREFIX))
             {
-                String code = super.getLabel();
-                if (code.startsWith(AI_PREFIX))
-                {
-                    return;
-                }
-
-                setLabel(AI_SUGGESTIONS);
-
-                IDocument document = viewer.getDocument();
-                document.replace(offset, 0, code + System.lineSeparator());
-                viewer.getSelectionProvider().setSelection(new TextSelection(offset + code.length(), 0));
+                return;
             }
-            catch (BadLocationException e)
-            {
-                Activator.logError(e);
-            }
+
+            setLabel(AI_SUGGESTIONS);
+
+            codeAssistentText.set(viewer.getDocument(), offset, code);
+            viewer.getSelectionProvider().setSelection(new TextSelection(offset + code.length(), 0));
         }
 
         private void redraw()
