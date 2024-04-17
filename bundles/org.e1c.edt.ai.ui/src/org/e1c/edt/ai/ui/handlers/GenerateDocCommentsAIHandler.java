@@ -4,14 +4,13 @@
 package org.e1c.edt.ai.ui.handlers;
 
 import org.e1c.edt.ai.ui.Activator;
-import org.e1c.edt.ai.ui.ChatAPI;
-import org.e1c.edt.ai.ui.ChatAPIProvider;
+import org.e1c.edt.ai.ui.Composition;
+import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -26,6 +25,13 @@ import org.eclipse.xtext.ui.editor.XtextEditor;
 public class GenerateDocCommentsAIHandler
     extends AbstractHandler
 {
+    private final IChat chat;
+
+    public GenerateDocCommentsAIHandler()
+    {
+        chat = Composition.getChat();
+    }
+
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
@@ -41,11 +47,8 @@ public class GenerateDocCommentsAIHandler
                 ITextSelection textSelection = (ITextSelection)xtextEditor.getSelectionProvider().getSelection();
                 try
                 {
-                    Display.getDefault().asyncExec(() -> {
-                        ChatAPI chatAPI = ChatAPIProvider.getService();
-                        chatAPI.generateDocComments(textSelection.getText());
-                    });
                     ChatView view = (ChatView)activePage.showView(ChatView.ID);
+                    chat.generateDocComments(textSelection.getText());
                     view.setFocus();
                 }
                 catch (PartInitException e)

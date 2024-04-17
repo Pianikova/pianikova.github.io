@@ -3,8 +3,8 @@
  */
 package org.e1c.edt.ai.ui.views;
 
-import org.e1c.edt.ai.ui.ChatAPI;
-import org.e1c.edt.ai.ui.ChatAPIProvider;
+import org.e1c.edt.ai.ui.Composition;
+import org.e1c.edt.ai.ui.IChatDialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.swt.SWT;
@@ -33,10 +33,13 @@ public class ChatView
      * The ID of the view as specified by the extension.
      */
     public static final String ID = "org.e1c.edt.ai.ui.views.ChatView"; //$NON-NLS-1$
-
-    private ChatAPI chatAPI;
-
     private FXCanvas canvas;
+    private final IChatDialog chatDialog;
+
+    public ChatView()
+    {
+        chatDialog = Composition.getChatDialog();
+    }
 
     @Override
     public void createPartControl(Composite parent)
@@ -77,8 +80,7 @@ public class ChatView
         Scene scene = new Scene(pane);
         canvas.setScene(scene);
 
-        chatAPI = ChatAPIProvider.getService();
-        chatAPI.showDialog(sp);
+        chatDialog.show(sp);
     }
 
     @Override

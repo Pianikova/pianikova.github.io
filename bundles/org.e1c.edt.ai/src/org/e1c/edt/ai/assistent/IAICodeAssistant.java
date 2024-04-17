@@ -12,12 +12,5 @@ import org.e1c.edt.ai.assistent.model.AITextResponse;
 public interface IAICodeAssistant
 {
 
-    /**
-     *
-     * TODO JavaDoc
-     *
-     * @param text
-     * @return
-     */
     public AITextResponse generateText(String text, CancellationToken cancellationToken);
 }

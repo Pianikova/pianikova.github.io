@@ -11,10 +11,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-import org.e1c.edt.ai.assistent.AICodeAssistant;
 import org.e1c.edt.ai.assistent.CancellationToken;
+import org.e1c.edt.ai.assistent.IAICodeAssistant;
 import org.e1c.edt.ai.assistent.model.AITextResponse;
-import org.e1c.edt.ai.ui.preferences.ClientAIPreferenceService;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -61,7 +60,8 @@ public class CodeMiningProvider
                     completion.dispose();
                 }
 
-                completion = new AiCodeCompletion(threadPool, this, viewer, getAiCodeCompletionInfo(viewer));
+                completion = new AiCodeCompletion(Composition.getCodeAssistant(), threadPool, this, viewer,
+                    getAiCodeCompletionInfo(viewer));
                 minings.add(completion);
             }
 
@@ -155,18 +155,20 @@ public class CodeMiningProvider
 
         private final Object lockObject = new Object();
         private final ITextViewer viewer;
-        private final AICodeAssistant assistant;
+        private final IAICodeAssistant codeAssistant;
         private final int offset;
         private CancellationToken askCancellationToken = new CancellationToken();
         private ExecutorService threadPool;
 
-        protected AiCodeCompletion(ExecutorService threadPool, ICodeMiningProvider provider, ITextViewer viewer,
+        protected AiCodeCompletion(IAICodeAssistant codeAssistant, ExecutorService threadPool,
+            ICodeMiningProvider provider,
+            ITextViewer viewer,
             AiCodeCompletionInfo info)
         {
             super(info.getPosition(), provider);
+            this.codeAssistant = codeAssistant;
             this.threadPool = threadPool;
             this.viewer = viewer;
-            this.assistant = new AICodeAssistant(ClientAIPreferenceService.getSettings().getApiURL(), 120);
             offset = info.getOffset();
             askAsync();
         }
@@ -208,7 +210,7 @@ public class CodeMiningProvider
 
                 IDocument document = viewer.getDocument();
                 String text = document.get(0, offset);
-                AITextResponse responce = assistant.generateText(text, cancellationToken);
+                AITextResponse responce = codeAssistant.generateText(text, cancellationToken);
                 text = responce.getGeneratedText();
 
                 if (cancellationToken.isCanceled())

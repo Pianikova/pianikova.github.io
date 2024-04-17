@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui.preferences;
 
 import org.e1c.edt.ai.client.ClientAI;
 import org.e1c.edt.ai.ui.Activator;
+import org.e1c.edt.ai.ui.Composition;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.ui.IWorkbench;
@@ -29,6 +30,7 @@ public class ClientAIPreferencePage
     public final static String TAGS = "stringPreferenceTags"; //$NON-NLS-1$
     public final static String ACCESSROLES = "stringPreferenceAccessRoles"; //$NON-NLS-1$
     public final static String DOCUMENTPATH = "stringPreferenceDocumentPath"; //$NON-NLS-1$
+    public final static String LLMPARAMETERS = "stringPreferenceLLMParameters"; //$NON-NLS-1$
 
     public ClientAIPreferencePage()
     {
@@ -65,6 +67,9 @@ public class ClientAIPreferencePage
 
         addField(
             new StringFieldEditor(DOCUMENTPATH, Messages.ClientAIPreferencePage_Document_path, getFieldEditorParent()));
+
+        addField(new LLMParametersStringFieldEditor(LLMPARAMETERS, Messages.ClientAIPreferencePage_LLL_parameters,
+            getFieldEditorParent(), Composition.getParametersValidator()));
     }
 
     @Override

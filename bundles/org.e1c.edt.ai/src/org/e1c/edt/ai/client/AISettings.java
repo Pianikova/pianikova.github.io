@@ -5,6 +5,8 @@ package org.e1c.edt.ai.client;
 
 import java.util.ArrayList;
 
+import org.e1c.edt.ai.assistent.model.Parameters;
+
 /**
  * This class holds fields with parameters from AI preference page.
  * @author Bogdan Sushkov
@@ -20,6 +22,7 @@ public class AISettings
     private String modelName;
     private String dataBaseName;
     private String documentPath;
+    private Parameters llmParameters;
 
     /**
      * Constructs ChatStarter object
@@ -32,7 +35,7 @@ public class AISettings
      */
     public AISettings(ArrayList<String> accessRoles, ArrayList<String> tags, String apiURL, String chatURL,
         String clientToken,
-        String modelName, String dataBaseName, String documentPath)
+        String modelName, String dataBaseName, String documentPath, Parameters llmParameters)
     {
         this.accessRoles = accessRoles;
         this.tags = tags;
@@ -42,6 +45,7 @@ public class AISettings
         this.modelName = modelName;
         this.dataBaseName = dataBaseName;
         this.documentPath = documentPath;
+        this.llmParameters = llmParameters;
     }
 
     /**
@@ -154,5 +158,10 @@ public class AISettings
     public void setDocumentPath(String documentPath)
     {
         this.documentPath = documentPath;
+    }
+
+    public Parameters getLlmParameters()
+    {
+        return llmParameters;
     }
 }

@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import java.util.function.Consumer;
 
+import org.e1c.edt.ai.ISettingsProvider;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -28,7 +29,7 @@ import netscape.javascript.JSObject;
  * @author George Suaridze
  *
  */
-public class ChatAPI
+public class Chat implements IChat, IChatDialog
 {
     private static final String CHAT_API_WINK = "window.chatApi.wink()"; //$NON-NLS-1$
     private static final String IDE_API = "ideApi"; //$NON-NLS-1$
@@ -37,77 +38,62 @@ public class ChatAPI
 
     private IdeApiHandler handler = new IdeApiHandler();
     private WebView webView;
+    private ISettingsProvider settingsProvider;
 
-    public ChatAPI(String server)
+    public Chat(ISettingsProvider settingsProvider)
     {
-        webView = new WebView();
-        webView.setLayoutX(-1);
-        webView.setLayoutY(-1);
-
-        WebEngine webEngine = webView.getEngine();
-        webEngine.titleProperty().addListener(new ChangeListener<String>()
-        {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue)
-            {
-                if (newValue.contains(WELCOME_PAGE_TITLE))
-                {
-                    // initialize only once, no need this listener anymore
-                    webEngine.titleProperty().removeListener(this);
-
-                    JSObject window = (JSObject)webView.getEngine().executeScript("window"); //$NON-NLS-1$
-                    window.setMember(IDE_API, handler);
-                    webEngine.executeScript(CHAT_API_WINK);
-                }
-            }
-
-        });
-        webEngine.load(server);
+        this.settingsProvider = settingsProvider;
     }
 
+    @Override
     public void reviewCode(String codeSnippet)
     {
-        WebEngine webEngine = webView.getEngine();
+        WebEngine webEngine = getEngine();
         new SendMessageJob(webEngine, codeSnippet, (String code) -> {
             webEngine.executeScript("window.chatApi.review_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
         }).schedule(50);
     }
 
+    @Override
     public void explainCode(String codeSnippet)
     {
-        WebEngine webEngine = webView.getEngine();
+        WebEngine webEngine = getEngine();
         new SendMessageJob(webEngine, codeSnippet, (String code) -> {
             webEngine.executeScript("window.chatApi.comment_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
         }).schedule(50);
     }
 
+    @Override
     public void fixCode(String codeSnippet)
     {
-        WebEngine webEngine = webView.getEngine();
+        WebEngine webEngine = getEngine();
         new SendMessageJob(webEngine, codeSnippet, (String code) -> {
             webEngine.executeScript("window.chatApi.fix_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
         }).schedule(50);
     }
 
+    @Override
     public void generateDocComments(String method)
     {
-        WebEngine webEngine = webView.getEngine();
+        WebEngine webEngine = getEngine();
         new SendMessageJob(webEngine, method, (String code) -> {
             webEngine.executeScript("window.chatApi.document_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
         }).schedule(50);
     }
 
+    @Override
     public void askQuestion(String userQuestion)
     {
-        WebEngine webEngine = webView.getEngine();
+        WebEngine webEngine = getEngine();
         new SendMessageJob(webEngine, userQuestion, (String q) -> {
             webEngine.executeScript("window.chatApi.plain_message(`" + esqapeString(q) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
         }).schedule(50);
     }
 
-    public void showDialog(ScrollPane pane)
+    @Override
+    public void show(ScrollPane pane)
     {
-        pane.setContent(webView);
+        pane.setContent(getWebView());
         webView.setFocusTraversable(true);
 
         pane.widthProperty().addListener(new ChangeListener<Object>()
@@ -116,7 +102,7 @@ public class ChatAPI
             public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
             {
                 Double width = (Double)newValue;
-                webView.setPrefWidth(width);
+                getWebView().setPrefWidth(width);
             }
         });
         pane.heightProperty().addListener(new ChangeListener<Object>()
@@ -125,9 +111,50 @@ public class ChatAPI
             public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
             {
                 Double height = (Double)newValue;
-                webView.setPrefHeight(height);
+                getWebView().setPrefHeight(height);
             }
         });
+    }
+
+    private WebEngine getEngine()
+    {
+        return getWebView().getEngine();
+    }
+
+    private WebView getWebView()
+    {
+        if (webView != null)
+        {
+            return webView;
+        }
+
+        Display.getDefault().syncExec(() -> {
+            webView = new WebView();
+            webView.setLayoutX(-1);
+            webView.setLayoutY(-1);
+            WebEngine webEngine = webView.getEngine();
+            webEngine.titleProperty().addListener(new ChangeListener<String>()
+            {
+                @Override
+                public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue)
+                {
+                    if (newValue.contains(WELCOME_PAGE_TITLE))
+                    {
+                        // initialize only once, no need this listener anymore
+                        webEngine.titleProperty().removeListener(this);
+
+                        JSObject window = (JSObject)getEngine().executeScript("window"); //$NON-NLS-1$
+                        window.setMember(IDE_API, handler);
+                        webEngine.executeScript(CHAT_API_WINK);
+                    }
+                }
+
+            });
+
+            webEngine.load(settingsProvider.getSettings().getChatURL());
+        });
+
+        return webView;
     }
 
     private String esqapeString(String text)

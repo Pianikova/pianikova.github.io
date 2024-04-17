@@ -4,12 +4,11 @@
 package org.e1c.edt.ai.ui.quickaccess;
 
 import org.e1c.edt.ai.ui.Activator;
-import org.e1c.edt.ai.ui.ChatAPI;
-import org.e1c.edt.ai.ui.ChatAPIProvider;
+import org.e1c.edt.ai.ui.Composition;
+import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IModelUIPluginImages;
 import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -31,16 +30,17 @@ public class AskAIQuickAccessElement
 {
     public static final String ID = Activator.PLUGIN_ID + ".MyQuickAccessElement"; //$NON-NLS-1$
 
-    private final String defaultInput = Messages.QuickAccessElementAskAI_0;
+    private final IChat chat;
     private String askText;
 
     public AskAIQuickAccessElement()
     {
-        askText = defaultInput;
+        this(Messages.QuickAccessElementAskAI_0);
     }
 
     public AskAIQuickAccessElement(String input)
     {
+        chat = Composition.getChat();
         askText = input;
     }
 
@@ -50,11 +50,8 @@ public class AskAIQuickAccessElement
         IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
         try
         {
-            Display.getDefault().asyncExec(() -> {
-                ChatAPI chatAPI = ChatAPIProvider.getService();
-                chatAPI.askQuestion(askText);
-            });
             ChatView view = (ChatView)page.showView(ChatView.ID);
+            chat.askQuestion(askText);
             view.setFocus();
         }
         catch (PartInitException e)

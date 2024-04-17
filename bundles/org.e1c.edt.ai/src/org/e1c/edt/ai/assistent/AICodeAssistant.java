@@ -12,8 +12,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
-import java.util.List;
 
+import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.assistent.model.AITextRequest;
 import org.e1c.edt.ai.assistent.model.AITextResponse;
 import org.e1c.edt.ai.client.AIClientException;
@@ -28,27 +28,21 @@ import com.google.gson.Gson;
 public class AICodeAssistant
     implements IAICodeAssistant
 {
-    private String URL;
-    private int maxTokens;
+    private ISettingsProvider settingsProvider;
 
-    /**
-     * Constructor of assistant
-     * @param URL service URL
-     * @param maxTokens max characters in response, <b>20</b> is default value
-     */
-    public AICodeAssistant(String URL, int maxTokens)
+    public AICodeAssistant(ISettingsProvider settingsProvider)
     {
-        this.URL = URL;
-        this.maxTokens = maxTokens;
+        this.settingsProvider = settingsProvider;
     }
 
     @Override
     public AITextResponse generateText(String text, CancellationToken cancellationToken)
     {
+        var settings = settingsProvider.getSettings();
         URL url = null;
         try
         {
-            url = new URL(URL + "/generate"); //$NON-NLS-1$
+            url = new URL(settings.getApiURL() + "/generate"); //$NON-NLS-1$
         }
         catch (MalformedURLException e)
         {
@@ -58,10 +52,7 @@ public class AICodeAssistant
         HttpURLConnection connection = makePOST(url);
         AITextRequest request = new AITextRequest();
         request.setInputs(text);
-        AITextRequest.Parameters params = request.new Parameters();
-        params.setMaxNewTokens(this.maxTokens);
-        params.setStop(List.of("\n"));
-        request.setParameters(params);
+        request.setParameters(settings.getLlmParameters());
         Gson gson = new Gson();
         String requestBody = gson.toJson(request);
 
