@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Consumer;
 
@@ -21,18 +22,18 @@ public class ParametersParser
     public ValidationResult validate(String target)
     {
         var validationResult = new ValidationResult();
-        tryParse(target, validationResult);
+        parse(target, validationResult);
         return validationResult;
     }
 
     @Override
-    public Parameters parse(String target)
+    public Optional<Parameters> parse(String target)
     {
-        return tryParse(target, new ValidationResult());
+        return parse(target, new ValidationResult());
     }
 
     @SuppressWarnings("nls")
-    public Parameters tryParse(String parametersText, ValidationResult validationResult)
+    public Optional<Parameters> parse(String parametersText, ValidationResult validationResult)
     {
         var parameters = new Parameters();
         var reader = new StringReader(parametersText.replace(keyValueSeparator, System.lineSeparator()));
@@ -44,52 +45,52 @@ public class ParametersParser
         catch (IOException e)
         {
             validationResult.addError(new ValidationError(WellknownError.UnableToParse, parametersText));
-            return parameters;
+            return Optional.empty();
         }
 
         var names = new HashSet<>(properties.stringPropertyNames());
 
         names.remove(
-            tryParse(properties, "best_of", validationResult, val -> parameters.bestOf = Integer.parseInt(val)));
+            parse(properties, "best_of", validationResult, val -> parameters.bestOf = Integer.parseInt(val)));
 
-        names.remove(tryParse(properties, "decoder_input_details", validationResult,
+        names.remove(parse(properties, "decoder_input_details", validationResult,
             val -> parameters.decoderInputDetails = parseBoolean(val)));
 
         names.remove(
-            tryParse(properties, "do_sample", validationResult, val -> parameters.doSample = parseBoolean(val)));
+            parse(properties, "do_sample", validationResult, val -> parameters.doSample = parseBoolean(val)));
 
-        names.remove(tryParse(properties, "max_new_tokens", validationResult,
+        names.remove(parse(properties, "max_new_tokens", validationResult,
             val -> parameters.maxNewTokens = Integer.parseInt(val)));
 
-        names.remove(tryParse(properties, "repetition_penalty", validationResult,
+        names.remove(parse(properties, "repetition_penalty", validationResult,
             val -> parameters.repetitionPenalty = Double.parseDouble(val)));
 
-        names.remove(tryParse(properties, "frequency_penalty", validationResult,
+        names.remove(parse(properties, "frequency_penalty", validationResult,
             val -> parameters.frequencyPenalty = Double.parseDouble(val)));
 
-        names.remove(tryParse(properties, "return_full_text", validationResult,
+        names.remove(parse(properties, "return_full_text", validationResult,
             val -> parameters.returnFullText = parseBoolean(val)));
 
-        names.remove(tryParse(properties, "seed", validationResult, val -> parameters.seed = parseBoolean(val)));
+        names.remove(parse(properties, "seed", validationResult, val -> parameters.seed = parseBoolean(val)));
 
-        names.remove(tryParse(properties, "temperature", validationResult,
+        names.remove(parse(properties, "temperature", validationResult,
             val -> parameters.temperature = Double.parseDouble(val)));
 
-        names.remove(tryParse(properties, "top_k", validationResult, val -> parameters.topK = Integer.parseInt(val)));
+        names.remove(parse(properties, "top_k", validationResult, val -> parameters.topK = Integer.parseInt(val)));
 
-        names.remove(tryParse(properties, "top_n_tokens", validationResult,
+        names.remove(parse(properties, "top_n_tokens", validationResult,
             val -> parameters.topNTokens = Integer.parseInt(val)));
 
-        names.remove(tryParse(properties, "top_p", validationResult, val -> parameters.topP = Double.parseDouble(val)));
+        names.remove(parse(properties, "top_p", validationResult, val -> parameters.topP = Double.parseDouble(val)));
 
         names
-            .remove(tryParse(properties, "truncate", validationResult, val -> parameters.truncate = parseBoolean(val)));
+            .remove(parse(properties, "truncate", validationResult, val -> parameters.truncate = parseBoolean(val)));
 
         names.remove(
-            tryParse(properties, "typical_p", validationResult, val -> parameters.typicalP = Double.parseDouble(val)));
+            parse(properties, "typical_p", validationResult, val -> parameters.typicalP = Double.parseDouble(val)));
 
         names.remove(
-            tryParse(properties, "watermark", validationResult, val -> parameters.watermark = parseBoolean(val)));
+            parse(properties, "watermark", validationResult, val -> parameters.watermark = parseBoolean(val)));
 
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
@@ -98,10 +99,10 @@ public class ParametersParser
             validationResult.addError(new ValidationError(WellknownError.Unknown, unknowName));
         }
 
-        return parameters;
+        return Optional.of(parameters);
     }
 
-    private String tryParse(Properties properties, String name, ValidationResult validationResult,
+    private String parse(Properties properties, String name, ValidationResult validationResult,
         Consumer<String> valueConsumer)
     {
         var val = properties.getProperty(name);

@@ -47,7 +47,7 @@ public class URLValidatorTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                {"http://abc.com", ValidationResult.Success },
+                {"http://abc.com", ValidationResult.SUCCESS },
                 {"", new ValidationResult(UnableToParse("")) },
                 {"Xyz", new ValidationResult(UnableToParse("Xyz")) },
             });

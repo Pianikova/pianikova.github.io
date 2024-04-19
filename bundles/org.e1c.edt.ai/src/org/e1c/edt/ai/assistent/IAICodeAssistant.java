@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.assistent;
 
+import java.util.Optional;
+
 import org.e1c.edt.ai.assistent.model.AITextResponse;
 
 /**
@@ -11,6 +13,5 @@ import org.e1c.edt.ai.assistent.model.AITextResponse;
  */
 public interface IAICodeAssistant
 {
-
-    public AITextResponse generateText(String text, CancellationToken cancellationToken);
+    public Optional<AITextResponse> generateText(String text, CancellationToken cancellationToken);
 }

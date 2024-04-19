@@ -14,51 +14,62 @@ import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 
 public class Composition
 {
-    private static final Log Log = new Log();
-    private static final PreferenceStoreToSettingsStoreAdapter PreferenceStoreToSettingsStoreAdapter =
+    private static final Log LOG = new Log();
+    private static final Dispatcher DISPATCHER = new Dispatcher(LOG);
+    private static final PreferenceStoreToSettingsStoreAdapter PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER =
         new PreferenceStoreToSettingsStoreAdapter(Activator.getDefault().getPreferenceStore());
-    private static final ParametersParser ParametersParser = new ParametersParser();
-    private static final SettingsProvider SettingsProvider =
-        new SettingsProvider(Log, PreferenceStoreToSettingsStoreAdapter, ParametersParser);
-    private static final AICodeAssistant CodeAssistant = new AICodeAssistant(SettingsProvider);
-    private static final CodeAssistentText CodeAssistentText =
-        new CodeAssistentText(Log, SettingsProvider);
-    private static final Chat Chat = new Chat(Log, SettingsProvider);
-    private static final URLValidator URLValidator = new URLValidator();
+    private static final ParametersParser PARAMETERS_PARSER = new ParametersParser();
+    private static final SettingsProvider SETTINGS_PROVIDER =
+        new SettingsProvider(LOG, PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER, PARAMETERS_PARSER);
+    private static final AICodeAssistant CODE_ASSISTANT = new AICodeAssistant(SETTINGS_PROVIDER);
+    private static final UI UI = new UI(LOG);
+    private static final Chat CHAT = new Chat(LOG, SETTINGS_PROVIDER, UI, DISPATCHER);
+    private static final URLValidator URL_VALIDATOR = new URLValidator();
+    private static final AIContextImpl AI_CONTEXT_IMPL = new AIContextImpl(LOG, UI, SETTINGS_PROVIDER);
 
 
     public static ILog getLog()
     {
-        return Log;
+        return LOG;
+    }
+
+    public static IDispatcher getDispatcher()
+    {
+        return DISPATCHER;
     }
 
     public static IAICodeAssistant getCodeAssistant()
     {
-        return CodeAssistant;
+        return CODE_ASSISTANT;
     }
 
     public static IValidator<String> getParametersValidator()
     {
-        return ParametersParser;
+        return PARAMETERS_PARSER;
     }
 
     public static IValidator<String> getURLValidator()
     {
-        return URLValidator;
+        return URL_VALIDATOR;
     }
 
     public static IChat getChat()
     {
-        return Chat;
+        return CHAT;
     }
 
     public static IChatDialog getChatDialog()
     {
-        return Chat;
+        return CHAT;
     }
 
-    public static ICodeAssistentText getCodeAssistentText()
+    public static IAIContext getAIContext()
     {
-        return CodeAssistentText;
+        return AI_CONTEXT_IMPL;
+    }
+
+    public static IUI getUI()
+    {
+        return UI;
     }
 }

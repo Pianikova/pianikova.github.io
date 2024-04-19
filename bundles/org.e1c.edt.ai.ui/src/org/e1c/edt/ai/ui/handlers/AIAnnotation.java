@@ -6,20 +6,15 @@ package org.e1c.edt.ai.ui.handlers;
 import java.util.function.Consumer;
 
 import org.e1c.edt.ai.ILog;
-import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.Composition;
+import org.e1c.edt.ai.ui.IDispatcher;
+import org.e1c.edt.ai.ui.IUI;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Position;
 import org.eclipse.jface.text.TextSelection;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.inlined.LineContentAnnotation;
-import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.xtext.ui.editor.XtextEditor;
 /**
  * @author Bogdan Sushkov
  *
@@ -30,7 +25,10 @@ public class AIAnnotation
     private String text;
     private Position position;
     private ISourceViewer viewer;
-    private ILog log;
+    private final ILog log;
+    private final IUI ui;
+    private final IDispatcher dispatcher;
+
     /**
      * @param position
      * @param viewer
@@ -41,6 +39,8 @@ public class AIAnnotation
         this.position = position;
         this.viewer = viewer;
         log = Composition.getLog();
+        ui = Composition.getUI();
+        dispatcher = Composition.getDispatcher();
     }
 
     @Override
@@ -54,20 +54,15 @@ public class AIAnnotation
     public Consumer<MouseEvent> getAction(MouseEvent e)
     {
         return (Consumer<MouseEvent>)action -> {
-            Display.getDefault().asyncExec(new Runnable()
-            {
-                @Override
-                public void run()
+            dispatcher.dispatch(() -> {
+                try
                 {
-                    try
-                    {
-                        viewer.getDocument().replace(position.getOffset(), 0, text);
-                        setCursorOffset(position.getOffset());
-                    }
-                    catch (BadLocationException e)
-                    {
-                        Activator.logError(e);
-                    }
+                    viewer.getDocument().replace(position.getOffset(), 0, text);
+                    setCursorOffset(position.getOffset());
+                }
+                catch (BadLocationException ex)
+                {
+                    log.logError(ex);
                 }
             });
         };
@@ -75,26 +70,6 @@ public class AIAnnotation
 
     private void setCursorOffset(int offset)
     {
-        try
-        {
-            IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-            if (activePage != null)
-            {
-                IEditorPart editor = activePage.getActiveEditor();
-
-                if (editor != null)
-                {
-                    XtextEditor xtextEditor = editor.getAdapter(XtextEditor.class);
-                    ISelectionProvider selectionProvider = xtextEditor.getSelectionProvider();
-                    if (selectionProvider != null) {
-                        selectionProvider.setSelection(new TextSelection(offset, 0));
-                    }
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            log.logError(e);
-        }
+        ui.select(new TextSelection(offset, 0));
     }
 }

@@ -5,10 +5,6 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.ILog;
 
-/**
- * @author Nikolay Pyanikov
- *
- */
 public class Log
     implements ILog
 {
@@ -17,6 +13,5 @@ public class Log
     public void logError(Exception exception)
     {
         Activator.logError(exception);
-
     }
 }

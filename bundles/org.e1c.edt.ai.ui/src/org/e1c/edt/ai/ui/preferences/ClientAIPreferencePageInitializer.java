@@ -28,6 +28,6 @@ public class ClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.MODELNAME, "openchat_7b"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.LLMPARAMETERS,
             "max_new_tokens=120; temperature=0.2; top_p=0.95; top_k=10"); //$NON-NLS-1$
-        store.setDefault(ISettingsStore.MAXASSISTANTTEXTSIZE, ISettingsStore.DefaultMaxAssistantTextSize);
+        store.setDefault(ISettingsStore.MAXASSISTANTTEXTSIZE, ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE);
     }
 }

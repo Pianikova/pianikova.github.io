@@ -13,7 +13,7 @@ public class ValidationResult
 {
     private ArrayList<ValidationError> errors;
 
-    public static final ValidationResult Success = new ValidationResult();
+    public static final ValidationResult SUCCESS = new ValidationResult();
 
     public ValidationResult(ValidationError... errors)
     {

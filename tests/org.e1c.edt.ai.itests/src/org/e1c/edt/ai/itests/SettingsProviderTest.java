@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Optional;
 
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IParser;
@@ -37,7 +38,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals("Abc", settings.getModelName());
+        Assert.assertEquals("Abc", settings.get().getModelName());
     }
 
     @Test
@@ -51,7 +52,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals("Abc", settings.getClientToken());
+        Assert.assertEquals("Abc", settings.get().getClientToken());
     }
 
     @Test
@@ -65,7 +66,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals("Abc", settings.getDataBaseName());
+        Assert.assertEquals("Abc", settings.get().getDataBaseName());
     }
 
     @Test
@@ -82,7 +83,8 @@ public class SettingsProviderTest
         // Then
         try
         {
-            Assert.assertEquals(new URL(new URL("http://api.com"), "generate?client_id=Abc"), settings.getApiURL());
+            Assert.assertEquals(new URL(new URL("http://api.com"), "generate?client_id=Abc"),
+                settings.get().getApiURL());
         }
         catch (MalformedURLException e)
         {
@@ -103,7 +105,7 @@ public class SettingsProviderTest
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://chat.com"), settings.getChatURL());
+            Assert.assertEquals(new URL("http://chat.com"), settings.get().getChatURL());
         }
         catch (MalformedURLException e)
         {
@@ -122,7 +124,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals(Arrays.asList("Tag1", "Tag2"), settings.getTags());
+        Assert.assertEquals(Arrays.asList("Tag1", "Tag2"), settings.get().getTags());
     }
 
     @Test
@@ -136,7 +138,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals(Arrays.asList("Role1", "Role2"), settings.getAccessRoles());
+        Assert.assertEquals(Arrays.asList("Role1", "Role2"), settings.get().getAccessRoles());
     }
 
     @Test
@@ -150,7 +152,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals("Abc", settings.getDocumentPath());
+        Assert.assertEquals("Abc", settings.get().getDocumentPath());
     }
 
     @Test
@@ -162,11 +164,26 @@ public class SettingsProviderTest
 
         // When
         when(settingsStore.getString(ISettingsStore.LLMPARAMETERS)).thenReturn("LLM params");
-        when(parametersParser.parse("LLM params")).thenReturn(parameters);
+        when(parametersParser.parse("LLM params")).thenReturn(Optional.of(parameters));
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals(parameters, settings.getLlmParameters());
+        Assert.assertEquals(parameters, settings.get().getLlmParameters());
+    }
+
+    @Test
+    public void shouldProvideLlmParametersWhenEppty()
+    {
+        // Given
+        var provider = createInstance();
+
+        // When
+        when(settingsStore.getString(ISettingsStore.LLMPARAMETERS)).thenReturn("LLM params");
+        when(parametersParser.parse("LLM params")).thenReturn(Optional.empty());
+        var settings = provider.getSettings();
+
+        // Then
+        Assert.assertEquals(true, settings.isEmpty());
     }
 
     @Test
@@ -180,7 +197,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals(123, settings.getMaxAssistantTextSize());
+        Assert.assertEquals(123, settings.get().getMaxAssistantTextSize());
     }
 
     @Test
@@ -194,7 +211,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals(ISettingsStore.DefaultMaxAssistantTextSize, settings.getMaxAssistantTextSize());
+        Assert.assertEquals(ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE, settings.get().getMaxAssistantTextSize());
     }
 
     private SettingsProvider createInstance()
@@ -203,6 +220,7 @@ public class SettingsProviderTest
         when(settingsStore.getInt(Mockito.anyString())).thenReturn(0);
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com");
         when(settingsStore.getString(ISettingsStore.CHATURL)).thenReturn("http://chat.com");
+        when(parametersParser.parse(Mockito.anyString())).thenReturn(Optional.of(new Parameters()));
         return new SettingsProvider(log, settingsStore, parametersParser);
     }
 }

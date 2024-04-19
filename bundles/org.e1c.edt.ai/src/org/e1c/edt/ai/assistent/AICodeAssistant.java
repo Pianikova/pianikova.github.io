@@ -10,12 +10,13 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
-import java.net.URL;
+import java.util.Optional;
 
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.assistent.model.AITextRequest;
 import org.e1c.edt.ai.assistent.model.AITextResponse;
 import org.e1c.edt.ai.client.AIClientException;
+import org.e1c.edt.ai.client.AISettings;
 import org.e1c.edt.ai.client.Messages;
 
 import com.google.gson.Gson;
@@ -35,11 +36,16 @@ public class AICodeAssistant
     }
 
     @Override
-    public AITextResponse generateText(String text, CancellationToken cancellationToken)
+    public Optional<AITextResponse> generateText(String text, CancellationToken cancellationToken)
     {
-        var settings = settingsProvider.getSettings();
-        URL url = settings.getApiURL();
-        HttpURLConnection connection = createPostConnection(url);
+        var optionalSettings = settingsProvider.getSettings();
+        if (optionalSettings.isEmpty())
+        {
+            return Optional.empty();
+        }
+
+        var settings = optionalSettings.get();
+        HttpURLConnection connection = createPostConnection(settings);
         AITextRequest request = new AITextRequest();
         request.setInputs(text);
         request.setParameters(settings.getLlmParameters());
@@ -66,7 +72,7 @@ public class AICodeAssistant
         cancellationToken.throwIfCanceled();
 
         AITextResponse textResponse = gson.fromJson(response.toString(), AITextResponse.class);
-        return textResponse;
+        return Optional.of(textResponse);
     }
 
 
@@ -113,12 +119,12 @@ public class AICodeAssistant
         return response;
     }
 
-    private HttpURLConnection createConnection(URL url, String requestMethod)
+    private HttpURLConnection createConnection(AISettings settings, String requestMethod)
     {
         HttpURLConnection connection = null;
         try
         {
-            connection = (HttpURLConnection)url.openConnection();
+            connection = (HttpURLConnection)settings.getApiURL().openConnection();
         }
         catch (IOException e)
         {
@@ -135,14 +141,14 @@ public class AICodeAssistant
             throw new AIClientException(e.getMessage(), e);
         }
 
-        connection.addRequestProperty("client_id", settingsProvider.getSettings().getClientToken()); //$NON-NLS-1$
+        connection.addRequestProperty("client_id", settings.getClientToken()); //$NON-NLS-1$
         connection.setDoOutput(true);
         return connection;
     }
 
-    private HttpURLConnection createPostConnection(URL url)
+    private HttpURLConnection createPostConnection(AISettings settings)
     {
-        HttpURLConnection connection = createConnection(url, "POST"); //$NON-NLS-1$
+        HttpURLConnection connection = createConnection(settings, "POST"); //$NON-NLS-1$
         connection.setRequestProperty("Accept", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
         connection.setRequestProperty("Content-Type", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
         return connection;

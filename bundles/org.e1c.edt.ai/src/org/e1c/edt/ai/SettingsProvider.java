@@ -9,6 +9,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Optional;
 
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.client.AISettings;
@@ -28,7 +29,7 @@ public class SettingsProvider
     }
 
     @Override
-    public AISettings getSettings()
+    public Optional<AISettings> getSettings()
     {
         var clientToken = settingsStore.getString(ISettingsStore.CLIENTTOKEN);
         var accessRoles =
@@ -55,10 +56,14 @@ public class SettingsProvider
         var maxAssistantTextSize = settingsStore.getInt(ISettingsStore.MAXASSISTANTTEXTSIZE);
         if (maxAssistantTextSize <= 0)
         {
-            maxAssistantTextSize = ISettingsStore.DefaultMaxAssistantTextSize;
+            maxAssistantTextSize = ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE;
         }
 
-        return new AISettings(accessRoles, tags, apiURL, chatURL, clientToken, modelName, databaseName, docPath,
-            parametersParser.parse(llmParameters), maxAssistantTextSize);
+        var _apiURL = apiURL;
+        var _chatURL = chatURL;
+        var _maxAssistantTextSize = maxAssistantTextSize;
+        return parametersParser.parse(llmParameters)
+            .map(params -> new AISettings(accessRoles, tags, _apiURL, _chatURL, clientToken, modelName, databaseName,
+                docPath, params, _maxAssistantTextSize));
     }
 }

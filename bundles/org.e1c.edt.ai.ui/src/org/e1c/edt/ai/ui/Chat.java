@@ -3,21 +3,18 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.xtext.ui.editor.XtextEditor;
+import org.eclipse.ui.IViewPart;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -38,65 +35,65 @@ public class Chat implements IChat, IChatDialog
     private static final String CHAT_PAGE_TITLE = "Chat page"; //$NON-NLS-1$
 
     private final ISettingsProvider settingsProvider;
+    private final IUI ui;
+    private final IDispatcher dispatcher;
     private final IdeApiHandler handler;
-    private WebView webView;
+    private Optional<WebView> webView = Optional.empty();
 
-    public Chat(ILog log, ISettingsProvider settingsProvider)
+    public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher)
     {
         this.settingsProvider = settingsProvider;
-        handler = new IdeApiHandler(log);
+        this.ui = ui;
+        this.dispatcher = dispatcher;
+        handler = new IdeApiHandler(log, ui);
     }
 
     @Override
     public void reviewCode(String codeSnippet)
     {
-        WebEngine webEngine = getEngine();
-        new SendMessageJob(webEngine, codeSnippet, (String code) -> {
+        getEngine().ifPresent(webEngine -> new SendMessageJob(dispatcher, webEngine, codeSnippet, (String code) -> {
             webEngine.executeScript("window.chatApi.review_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
-        }).schedule(50);
+        }).schedule(50));
     }
 
     @Override
     public void explainCode(String codeSnippet)
     {
-        WebEngine webEngine = getEngine();
-        new SendMessageJob(webEngine, codeSnippet, (String code) -> {
+        getEngine().ifPresent(webEngine -> new SendMessageJob(dispatcher, webEngine, codeSnippet, (String code) -> {
             webEngine.executeScript("window.chatApi.comment_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
-        }).schedule(50);
+        }).schedule(50));
     }
 
     @Override
     public void fixCode(String codeSnippet)
     {
-        WebEngine webEngine = getEngine();
-        new SendMessageJob(webEngine, codeSnippet, (String code) -> {
+        getEngine().ifPresent(webEngine -> new SendMessageJob(dispatcher, webEngine, codeSnippet, (String code) -> {
             webEngine.executeScript("window.chatApi.fix_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
-        }).schedule(50);
+        }).schedule(50));
     }
 
     @Override
     public void generateDocComments(String method)
     {
-        WebEngine webEngine = getEngine();
-        new SendMessageJob(webEngine, method, (String code) -> {
+        getEngine().ifPresent(webEngine -> new SendMessageJob(dispatcher, webEngine, method, (String code) -> {
             webEngine.executeScript("window.chatApi.document_code(`" + esqapeString(code) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
-        }).schedule(50);
+        }).schedule(50));
     }
 
     @Override
     public void askQuestion(String userQuestion)
     {
-        WebEngine webEngine = getEngine();
-        new SendMessageJob(webEngine, userQuestion, (String q) -> {
+        getEngine().ifPresent(webEngine -> new SendMessageJob(dispatcher, webEngine, userQuestion, (String q) -> {
             webEngine.executeScript("window.chatApi.plain_message(`" + esqapeString(q) + "`)"); //$NON-NLS-1$ //$NON-NLS-2$
-        }).schedule(50);
+        }).schedule(50));
     }
 
     @Override
     public void show(ScrollPane pane)
     {
-        pane.setContent(getWebView());
-        webView.setFocusTraversable(true);
+        getWebView().ifPresent(view -> {
+            pane.setContent(view);
+            view.setFocusTraversable(true);
 
         pane.widthProperty().addListener(new ChangeListener<Object>()
         {
@@ -104,37 +101,43 @@ public class Chat implements IChat, IChatDialog
             public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
             {
                 Double width = (Double)newValue;
-                getWebView().setPrefWidth(width);
+                    view.setPrefWidth(width);
             }
         });
+
         pane.heightProperty().addListener(new ChangeListener<Object>()
         {
             @Override
             public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
             {
                 Double height = (Double)newValue;
-                getWebView().setPrefHeight(height);
+                    view.setPrefHeight(height);
             }
+        });
+
         });
     }
 
-    private WebEngine getEngine()
+    private Optional<WebEngine> getEngine()
     {
-        return getWebView().getEngine();
+        return dispatcher.dispatch(() -> {
+            ensureWebViewCreated();
+            return getWebView().map(view -> view.getEngine());
+        }).orElse(Optional.empty());
     }
 
-    private WebView getWebView()
+    private Optional<WebView> getWebView()
     {
-        if (webView != null)
+        if (this.webView.isPresent())
         {
-            return webView;
+            return this.webView;
         }
 
-        Display.getDefault().syncExec(() -> {
-            webView = new WebView();
-            webView.setLayoutX(-1);
-            webView.setLayoutY(-1);
-            WebEngine webEngine = webView.getEngine();
+        this.webView = dispatcher.dispatch(() -> {
+            var view = new WebView();
+            view.setLayoutX(-1);
+            view.setLayoutY(-1);
+            WebEngine webEngine = view.getEngine();
             webEngine.titleProperty().addListener(new ChangeListener<String>()
             {
                 @Override
@@ -145,7 +148,7 @@ public class Chat implements IChat, IChatDialog
                         // initialize only once, no need this listener anymore
                         webEngine.titleProperty().removeListener(this);
 
-                        JSObject window = (JSObject)getEngine().executeScript("window"); //$NON-NLS-1$
+                        JSObject window = (JSObject)webEngine.executeScript("window"); //$NON-NLS-1$
                         window.setMember(IDE_API, handler);
                         webEngine.executeScript(CHAT_API_WINK);
                     }
@@ -153,10 +156,19 @@ public class Chat implements IChat, IChatDialog
 
             });
 
-            webEngine.load(settingsProvider.getSettings().getChatURL().toString());
+            settingsProvider.getSettings().ifPresent(settings -> webEngine.load(settings.getChatURL().toString()));
+            return view;
         });
 
-        return webView;
+        return this.webView;
+    }
+
+    private Optional<IViewPart> ensureWebViewCreated()
+    {
+        return ui.showView(ChatView.ID).map(view -> {
+            view.setFocus();
+            return view;
+        });
     }
 
     private String esqapeString(String text)
@@ -167,13 +179,15 @@ public class Chat implements IChat, IChatDialog
     public static class SendMessageJob
         extends Job
     {
-        private WebEngine webEngine;
-        private String message;
-        private Consumer<String> action;
+        private final IDispatcher dispatcher;
+        private final WebEngine webEngine;
+        private final String message;
+        private final Consumer<String> action;
 
-        public SendMessageJob(WebEngine webEngine, String message, Consumer<String> action)
+        public SendMessageJob(IDispatcher dispatcher, WebEngine webEngine, String message, Consumer<String> action)
         {
             super("Send message"); //$NON-NLS-1$
+            this.dispatcher = dispatcher;
             this.webEngine = webEngine;
             this.message = message;
             this.action = action;
@@ -182,24 +196,18 @@ public class Chat implements IChat, IChatDialog
         @Override
         protected IStatus run(IProgressMonitor monitor)
         {
-            Display.getDefault().asyncExec(new Runnable()
-            {
-                @Override
-                public void run()
+            dispatcher.dispatch(() -> {
+                if (webEngine.getTitle().contains(CHAT_PAGE_TITLE) || webEngine.getTitle().contains(WELCOME_PAGE_TITLE))
                 {
-                    if (webEngine.getTitle().contains(CHAT_PAGE_TITLE)
-                        || webEngine.getTitle().contains(WELCOME_PAGE_TITLE))
-                    {
-                        action.accept(message);
-
-                    }
-                    else
-                    {
-                        // reschedule
-                        new SendMessageJob(webEngine, message, action).schedule(50);
-                    }
+                    action.accept(message);
+                }
+                else
+                {
+                    // reschedule
+                    new SendMessageJob(dispatcher, webEngine, message, action).schedule(50);
                 }
             });
+
             return Status.OK_STATUS;
         }
     }
@@ -207,10 +215,12 @@ public class Chat implements IChat, IChatDialog
     public static class IdeApiHandler
     {
         private ILog log;
+        private IUI ui;
 
-        public IdeApiHandler(ILog log)
+        public IdeApiHandler(ILog log, IUI ui)
         {
             this.log = log;
+            this.ui = ui;
         }
 
         public void wink(String parameter)
@@ -220,36 +230,16 @@ public class Chat implements IChat, IChatDialog
 
         public void paste_code(String code)
         {
-            try
-            {
-                IWorkbenchPage activePage = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-
-                if (activePage != null)
+            ui.getEditor().ifPresent(editor -> ui.getSelection().ifPresent(selection -> {
+                try
                 {
-                    IEditorPart editor = activePage.getActiveEditor();
-
-                    if (editor != null)
-                    {
-                        XtextEditor xtextEditor = editor.getAdapter(XtextEditor.class);
-
-                        try
-                        {
-                            ITextSelection textSelection =
-                                (ITextSelection)xtextEditor.getSelectionProvider().getSelection();
-                            xtextEditor.getDocument()
-                                .replace(textSelection.getOffset(), textSelection.getLength(), code);
-                        }
-                        catch (BadLocationException e)
-                        {
-                            log.logError(e);
-                        }
-                    }
+                    editor.getDocument().replace(selection.getOffset(), selection.getLength(), code);
                 }
-            }
-            catch (Exception e)
-            {
-                Activator.logError(e);
-            }
+                catch (BadLocationException e)
+                {
+                    log.logError(e);
+                }
+            }));
         }
     }
 }

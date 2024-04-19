@@ -26,5 +26,4 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     {
         return preferenceStore.getInt(key);
     }
-
 }

@@ -3,7 +3,11 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.Optional;
+
+import org.e1c.edt.ai.assistent.model.Parameters;
+
 public interface IParser<TTarget, TResult>
 {
-    TResult parse(TTarget target);
+    Optional<Parameters> parse(TTarget target);
 }

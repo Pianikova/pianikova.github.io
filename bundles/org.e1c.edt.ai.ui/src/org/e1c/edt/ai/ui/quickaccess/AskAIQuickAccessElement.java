@@ -7,11 +7,9 @@ import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.Composition;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IModelUIPluginImages;
+import org.e1c.edt.ai.ui.IUI;
 import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.ui.IWorkbenchPage;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.quickaccess.QuickAccessElement;
 
 
@@ -31,7 +29,9 @@ public class AskAIQuickAccessElement
     public static final String ID = Activator.PLUGIN_ID + ".MyQuickAccessElement"; //$NON-NLS-1$
 
     private final IChat chat;
+    private final IUI ui;
     private String askText;
+
 
     public AskAIQuickAccessElement()
     {
@@ -41,23 +41,17 @@ public class AskAIQuickAccessElement
     public AskAIQuickAccessElement(String input)
     {
         chat = Composition.getChat();
+        ui = Composition.getUI();
         askText = input;
     }
 
     @Override
     public void execute()
     {
-        IWorkbenchPage page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-        try
-        {
-            ChatView view = (ChatView)page.showView(ChatView.ID);
+        ui.showView(ChatView.ID).ifPresent(view -> {
             chat.askQuestion(askText);
             view.setFocus();
-        }
-        catch (PartInitException e)
-        {
-            Activator.createErrorStatus(e.getMessage(), e);
-        }
+        });
     }
 
     @Override

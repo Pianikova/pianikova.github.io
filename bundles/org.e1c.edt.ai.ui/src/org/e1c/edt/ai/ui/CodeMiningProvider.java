@@ -13,7 +13,6 @@ import java.util.function.Consumer;
 
 import org.e1c.edt.ai.assistent.CancellationToken;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
-import org.e1c.edt.ai.assistent.model.AITextResponse;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
@@ -28,7 +27,6 @@ import org.eclipse.jface.text.codemining.ICodeMining;
 import org.eclipse.jface.text.codemining.ICodeMiningProvider;
 import org.eclipse.jface.text.codemining.LineContentCodeMining;
 import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.widgets.Display;
 
 public class CodeMiningProvider
     extends AbstractCodeMiningProvider
@@ -36,14 +34,16 @@ public class CodeMiningProvider
     private final ExecutorService threadPool = Executors.newSingleThreadExecutor();
     private final CodeMiningReconciler reconciler = new CodeMiningReconciler();
     private AiCodeCompletion completion;
-    private IAICodeAssistant codeAssistant;
-    private ICodeAssistentText codeAssistentText;
+    private final IDispatcher dispatcher;
+    private final IAICodeAssistant codeAssistant;
+    private final IAIContext aiContext;
 
     public CodeMiningProvider()
     {
         reconciler.setDelay(500);
+        dispatcher = Composition.getDispatcher();
         codeAssistant = Composition.getCodeAssistant();
-        codeAssistentText = Composition.getCodeAssistentText();
+        aiContext = Composition.getAIContext();
     }
 
     @Override
@@ -52,7 +52,7 @@ public class CodeMiningProvider
     {
         if (completion == null)
         {
-            Display.getDefault().syncExec(() -> reconciler.install(viewer));
+            dispatcher.dispatch(() -> reconciler.install(viewer));
         }
 
         return CompletableFuture.supplyAsync(() -> {
@@ -64,7 +64,7 @@ public class CodeMiningProvider
                     completion.dispose();
                 }
 
-                completion = new AiCodeCompletion(codeAssistentText,
+                completion = new AiCodeCompletion(dispatcher, aiContext,
                     codeAssistant,
                     threadPool, this, viewer,
                     getAiCodeCompletionInfo(viewer));
@@ -88,18 +88,16 @@ public class CodeMiningProvider
         super.dispose();
     }
 
-    private static AiCodeCompletionInfo getAiCodeCompletionInfo(ITextViewer viewer)
+    private AiCodeCompletionInfo getAiCodeCompletionInfo(ITextViewer viewer)
     {
         IDocument document = viewer.getDocument();
         int linesCount = document.getNumberOfLines();
 
-        final ArrayList<Integer> lines = new ArrayList<>();
-        Display.getDefault().syncExec(() -> {
+        int curLine = dispatcher.dispatch(() -> {
             ITextSelection selection = (ITextSelection)viewer.getSelectionProvider().getSelection();
-            lines.add(selection.getEndLine());
-        });
+            return selection.getEndLine();
+        }).orElse(0);
 
-        int curLine = lines.get(0);
         if (curLine < linesCount)
         {
             try
@@ -161,20 +159,23 @@ public class CodeMiningProvider
 
         private final Object lockObject = new Object();
         private final ITextViewer viewer;
+        private final IDispatcher dispatcher;
         private final IAICodeAssistant codeAssistant;
         private final int offset;
+        private final ExecutorService threadPool;
+        private final IAIContext aiContext;
         private CancellationToken askCancellationToken = new CancellationToken();
-        private ExecutorService threadPool;
-        private ICodeAssistentText codeAssistentText;
 
-        protected AiCodeCompletion(ICodeAssistentText codeAssistentText, IAICodeAssistant codeAssistant,
+        protected AiCodeCompletion(IDispatcher dispatcher, IAIContext aiContext,
+            IAICodeAssistant codeAssistant,
             ExecutorService threadPool,
             ICodeMiningProvider provider,
             ITextViewer viewer,
             AiCodeCompletionInfo info)
         {
             super(info.getPosition(), provider);
-            this.codeAssistentText = codeAssistentText;
+            this.dispatcher = dispatcher;
+            this.aiContext = aiContext;
             this.codeAssistant = codeAssistant;
             this.threadPool = threadPool;
             this.viewer = viewer;
@@ -217,16 +218,11 @@ public class CodeMiningProvider
 
                 setLabel(AI_THINKING);
 
-                var text = codeAssistentText.get(viewer.getDocument(), offset);
-                AITextResponse responce = codeAssistant.generateText(text, cancellationToken);
-                text = responce.getGeneratedText();
+                var responseText = aiContext.create(viewer.getDocument(), offset)
+                    .map(ctx -> codeAssistant.generateText(ctx.getInput(), cancellationToken).map(response -> response.getGeneratedText()).orElse(null))
+                    .orElse(null);
 
-                if (cancellationToken.isCanceled())
-                {
-                    return;
-                }
-
-                setLabel(text.isBlank() ? AI_SUGGESTIONS : text);
+                setLabel(responseText.isBlank() ? AI_SUGGESTIONS : responseText);
                 redraw();
             }
             catch (CancellationException e)
@@ -249,13 +245,13 @@ public class CodeMiningProvider
 
             setLabel(AI_SUGGESTIONS);
 
-            codeAssistentText.set(viewer.getDocument(), offset, code);
+            aiContext.apply(viewer.getDocument(), new AIContext(code, offset));
             viewer.getSelectionProvider().setSelection(new TextSelection(offset + code.length(), 0));
         }
 
         private void redraw()
         {
-            Display.getDefault().syncExec(() -> viewer.getTextWidget().redraw());
+            dispatcher.dispatch(() -> viewer.getTextWidget().redraw());
         }
 
         @Override

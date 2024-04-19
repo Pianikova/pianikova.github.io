@@ -3,9 +3,11 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.Optional;
+
 import org.e1c.edt.ai.client.AISettings;
 
 public interface ISettingsProvider
 {
-    AISettings getSettings();
+    Optional<AISettings> getSettings();
 }

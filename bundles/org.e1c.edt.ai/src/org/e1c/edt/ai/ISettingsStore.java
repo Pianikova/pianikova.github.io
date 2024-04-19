@@ -20,7 +20,7 @@ public interface ISettingsStore
     public final static String LLMPARAMETERS = "stringPreferenceLLMParameters"; //$NON-NLS-1$
     public final static String MAXASSISTANTTEXTSIZE = "stringPreferenceMaxAssistantTextSize"; //$NON-NLS-1$
 
-    public static final int DefaultMaxAssistantTextSize = 1500;
+    public final static int DEFAULTMAXASSISTANTTEXTSIZE = 1500;
 
     String getString(String key);
 
