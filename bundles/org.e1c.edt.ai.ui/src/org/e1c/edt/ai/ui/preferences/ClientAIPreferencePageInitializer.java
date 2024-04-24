@@ -21,7 +21,7 @@ public class ClientAIPreferencePageInitializer
     public void initializeDefaultPreferences()
     {
         IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-        store.setDefault(ISettingsStore.APIURL, "http://rnd-tocm3.ailab:8093"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.APIURL, "https://coder.1c.ai/api/v1/generate"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CHATURL, "http://10.70.5.31:4000/"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CLIENTTOKEN, "user_test"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.DATABASENAME, "edt_doc"); //$NON-NLS-1$

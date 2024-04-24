@@ -141,6 +141,7 @@ public class CodeCompletionViewModel
         catch (Exception e)
         {
             Activator.logError(e);
+            deactivate();
         }
     }
 

@@ -72,7 +72,7 @@ public class AICodeAssistant
         cancellationToken.throwIfCanceled();
 
         AITextResponse textResponse = gson.fromJson(response.toString(), AITextResponse.class);
-        return Optional.of(textResponse);
+        return Optional.ofNullable(textResponse);
     }
 
 

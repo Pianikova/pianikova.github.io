@@ -40,7 +40,7 @@ public class Dispatcher implements IDispatcher
             Optional.empty();
         }
 
-        return Optional.of(vals.get(0));
+        return Optional.ofNullable(vals.get(0));
     }
 
     @Override

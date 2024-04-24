@@ -77,14 +77,80 @@ public class SettingsProviderTest
 
         // When
         when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/");
+        var settings = provider.getSettings();
+
+        // Then
+        try
+        {
+            Assert.assertEquals(new URL("http://api.com/?client_id=Abc"),
+                settings.get().getApiURL());
+        }
+        catch (MalformedURLException e)
+        {
+            Assert.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void shouldProvideApiURLWhenHasNoFinishingSlash()
+    {
+        // Given
+        var provider = createInstance();
+
+        // When
+        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com");
         var settings = provider.getSettings();
 
         // Then
         try
         {
-            Assert.assertEquals(new URL(new URL("http://api.com"), "generate?client_id=Abc"),
-                settings.get().getApiURL());
+            Assert.assertEquals(new URL("http://api.com/?client_id=Abc"), settings.get().getApiURL());
+        }
+        catch (MalformedURLException e)
+        {
+            Assert.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void shouldProvideApiURLWhenHasRelativePath()
+    {
+        // Given
+        var provider = createInstance();
+
+        // When
+        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/generate/");
+        var settings = provider.getSettings();
+
+        // Then
+        try
+        {
+            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc"), settings.get().getApiURL());
+        }
+        catch (MalformedURLException e)
+        {
+            Assert.fail(e.getMessage());
+        }
+    }
+
+    @Test
+    public void shouldProvideApiURLWhenHasRelativePathHasNoFinishingSlash()
+    {
+        // Given
+        var provider = createInstance();
+
+        // When
+        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/generate");
+        var settings = provider.getSettings();
+
+        // Then
+        try
+        {
+            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc"), settings.get().getApiURL());
         }
         catch (MalformedURLException e)
         {

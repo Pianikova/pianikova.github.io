@@ -40,9 +40,10 @@ public class SettingsProvider
         URL chatURL = null;
         try
         {
-            var rootURL = new URL(settingsStore.getString(ISettingsStore.APIURL));
-            apiURL = new URL(rootURL, "/generate?client_id=" + URLEncoder.encode(clientToken, StandardCharsets.UTF_8)); //$NON-NLS-1$
-            chatURL = new URL(settingsStore.getString(ISettingsStore.CHATURL));
+            var rootURL = new URL(normalize(settingsStore.getString(ISettingsStore.APIURL)));
+            apiURL = new URL(rootURL,
+                normalize(rootURL.getFile()) + "?client_id=" + URLEncoder.encode(clientToken, StandardCharsets.UTF_8)); //$NON-NLS-1$
+            chatURL = new URL(normalize(settingsStore.getString(ISettingsStore.CHATURL)));
         }
         catch (MalformedURLException e)
         {
@@ -65,5 +66,23 @@ public class SettingsProvider
         return parametersParser.parse(llmParameters)
             .map(params -> new AISettings(accessRoles, tags, _apiURL, _chatURL, clientToken, modelName, databaseName,
                 docPath, params, _maxAssistantTextSize));
+    }
+
+    @SuppressWarnings("nls")
+    private String normalize(String text)
+    {
+        if (text.isEmpty())
+        {
+            return text;
+        }
+
+        text = text.trim();
+
+        if (text.endsWith("/"))
+        {
+            text = text.substring(0, text.length() - 1);
+        }
+
+        return text;
     }
 }

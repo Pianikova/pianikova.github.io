@@ -61,7 +61,7 @@ public class AITextResponse
         @SerializedName("generated_tokens")
         private int generatedTokens;
         private ArrayList<PrefillToken> prefill;
-        private int seed;
+        private double seed;
         private ArrayList<Token> tokens;
         @SerializedName("top_tokens")
         private ArrayList<ArrayList<Token>> topTokens;
@@ -117,7 +117,7 @@ public class AITextResponse
         /**
          * @return the seed
          */
-        public int getSeed()
+        public double getSeed()
         {
             return seed;
         }
@@ -125,7 +125,7 @@ public class AITextResponse
         /**
          * @param seed the seed to set
          */
-        public void setSeed(int seed)
+        public void setSeed(double seed)
         {
             this.seed = seed;
         }
