@@ -6,6 +6,8 @@ package org.e1c.edt.ai.ui.handlers;
 import org.e1c.edt.ai.ui.Composition;
 import org.e1c.edt.ai.ui.IAIContext;
 import org.e1c.edt.ai.ui.IChat;
+import org.e1c.edt.ai.ui.IUI;
+import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
@@ -18,19 +20,22 @@ import org.eclipse.core.commands.ExecutionException;
 public class ExplainAIHandler
     extends AbstractHandler
 {
-    private IAIContext aiContext;
+    private final IAIContext aiContext;
     private final IChat chat;
+    private final IUI ui;
 
     public ExplainAIHandler()
     {
         aiContext = Composition.getAIContext();
         chat = Composition.getChat();
+        ui = Composition.getUI();
     }
 
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         aiContext.create().ifPresent(ctx -> chat.explainCode(ctx.getInput()));
+        ui.showView(ChatView.ID);
         return null;
     }
 }

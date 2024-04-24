@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.CodeCompletionTokenizer;
+import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IValidator;
 import org.e1c.edt.ai.ParametersParser;
@@ -26,7 +28,7 @@ public class Composition
     private static final Chat CHAT = new Chat(LOG, SETTINGS_PROVIDER, UI, DISPATCHER);
     private static final URLValidator URL_VALIDATOR = new URLValidator();
     private static final AIContextImpl AI_CONTEXT_IMPL = new AIContextImpl(LOG, UI, SETTINGS_PROVIDER);
-
+    private static final CodeCompletionTokenizer CODECOMPLETION_TOKENIZER = new CodeCompletionTokenizer();
 
     public static ILog getLog()
     {
@@ -71,5 +73,10 @@ public class Composition
     public static IUI getUI()
     {
         return UI;
+    }
+
+    public static ICodeCompletionTokenizer getCodeCompletionTokenizer()
+    {
+        return CODECOMPLETION_TOKENIZER;
     }
 }

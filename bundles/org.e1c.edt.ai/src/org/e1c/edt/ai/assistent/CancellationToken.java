@@ -6,10 +6,6 @@ package org.e1c.edt.ai.assistent;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * @author Nikolay Pyanikov
- *
- */
 public class CancellationToken
 {
     private final AtomicBoolean cancelled = new AtomicBoolean();

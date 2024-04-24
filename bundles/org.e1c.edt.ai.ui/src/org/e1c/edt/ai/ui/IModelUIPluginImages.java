@@ -10,6 +10,10 @@ package org.e1c.edt.ai.ui;
 public interface IModelUIPluginImages
 {
     public static final String T_OBJ16 = "/obj16/"; //$NON-NLS-1$
-    public static final String NAME_ICON_AI = "ai_icon.png"; //$NON-NLS-1$
+
+    public static final String NAME_ICON_AI = "ai.png"; //$NON-NLS-1$
     public static final String OBJS_AI_ICON = Activator.PLUGIN_ID + T_OBJ16 + NAME_ICON_AI;
+
+    public static final String NAME_ICON_THINKING = "thinking.png"; //$NON-NLS-1$
+    public static final String OBJS_THINKING_ICON = Activator.PLUGIN_ID + T_OBJ16 + NAME_ICON_THINKING;
 }

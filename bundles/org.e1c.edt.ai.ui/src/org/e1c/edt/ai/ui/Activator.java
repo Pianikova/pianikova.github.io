@@ -24,8 +24,6 @@ public class Activator
 {
     public static final String PLUGIN_ID = "org.e1c.edt.ai.ui.plugin.ui"; //$NON-NLS-1$
 
-    public static final String PREF_CODE_COMPLITION_ENABLED = "org.e1c.edt.ai.ui.codeCompletion"; //$NON-NLS-1$
-
     /**
     * Путь к картинкам плагина
     */
@@ -163,7 +161,6 @@ public class Activator
 
         this.bundleContext = bundleContext;
         plugin = this;
-        getDefault().getPreferenceStore().setValue(Activator.PREF_CODE_COMPLITION_ENABLED, false);
     }
 
     /**
@@ -199,5 +196,8 @@ public class Activator
     {
         reg.put(IModelUIPluginImages.OBJS_AI_ICON,
             createImageDescriptorFromKey(IModelUIPluginImages.OBJS_AI_ICON));
+
+        reg.put(IModelUIPluginImages.NAME_ICON_THINKING,
+            createImageDescriptorFromKey(IModelUIPluginImages.OBJS_THINKING_ICON));
     }
 }

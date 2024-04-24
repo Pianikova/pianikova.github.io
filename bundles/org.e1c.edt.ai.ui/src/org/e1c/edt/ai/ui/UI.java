@@ -6,8 +6,12 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ILog;
+import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.ITextSelection;
+import org.eclipse.jface.text.ITextViewer;
+import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.viewers.ISelectionProvider;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -44,8 +48,29 @@ public class UI
     @Override
     public Optional<XtextEditor> getEditor()
     {
-        return getActivePage().map(activePage -> activePage.getActiveEditor())
-            .map(editor -> editor.getAdapter(XtextEditor.class));
+        return getEditorPart().map(editor -> editor.getAdapter(XtextEditor.class));
+    }
+
+    @Override
+    public Optional<ITextViewer> getTextViewer()
+    {
+        return getTextOperationTarget().map(target -> {
+            return (target instanceof ITextViewer) ? (ITextViewer)target : null;
+        });
+    }
+
+    @Override
+    public Optional<ITextViewerExtension2> getTextViewerExtension2()
+    {
+        return getTextOperationTarget().map(target -> {
+            return (target instanceof ITextViewerExtension2) ? (ITextViewerExtension2)target : null;
+        });
+    }
+
+    @Override
+    public Optional<ISelectionProvider> getSelectionProvider()
+    {
+        return getEditor().map(editor -> editor.getSelectionProvider());
     }
 
     @Override
@@ -68,8 +93,13 @@ public class UI
         return Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage());
     }
 
-    public Optional<ISelectionProvider> getSelectionProvider()
+    private Optional<IEditorPart> getEditorPart()
     {
-        return getEditor().map(editor -> editor.getSelectionProvider());
+        return getActivePage().map(activePage -> activePage.getActiveEditor());
+    }
+
+    private Optional<ITextOperationTarget> getTextOperationTarget()
+    {
+        return getEditorPart().map(editor -> editor.getAdapter(ITextOperationTarget.class));
     }
 }
