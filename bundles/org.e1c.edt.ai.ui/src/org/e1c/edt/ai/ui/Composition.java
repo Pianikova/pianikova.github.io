@@ -27,7 +27,7 @@ public class Composition
     private static final UI UI = new UI(LOG);
     private static final Chat CHAT = new Chat(LOG, SETTINGS_PROVIDER, UI, DISPATCHER);
     private static final URLValidator URL_VALIDATOR = new URLValidator();
-    private static final AIContextImpl AI_CONTEXT_IMPL = new AIContextImpl(LOG, UI, SETTINGS_PROVIDER);
+    private static final AIContextImpl AI_CONTEXT_IMPL = new AIContextImpl(UI, SETTINGS_PROVIDER);
     private static final CodeCompletionTokenizer CODECOMPLETION_TOKENIZER = new CodeCompletionTokenizer();
 
     public static ILog getLog()

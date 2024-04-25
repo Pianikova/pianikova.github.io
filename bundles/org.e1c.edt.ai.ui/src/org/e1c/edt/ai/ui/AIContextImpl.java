@@ -5,36 +5,56 @@ package org.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
-import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.ISettingsStore;
-import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.ITextSelection;
 
 public class AIContextImpl
     implements IAIContext
 {
-    private final ILog log;
-    private final IUI ui;
     private final ISettingsProvider settingsProvider;
+    private IUI ui;
 
-    public AIContextImpl(ILog log, IUI ui, ISettingsProvider settingsProvider)
+    public AIContextImpl(IUI ui, ISettingsProvider settingsProvider)
     {
-        this.log = log;
         this.ui = ui;
         this.settingsProvider = settingsProvider;
     }
 
+    @SuppressWarnings("nls")
     @Override
     public Optional<AIContext> create()
     {
-        return ui.getSelection().map(selection -> new AIContext(selection.getText(), selection.getOffset()));
-    }
+        var viewer = ui.getTextViewer();
+        if (viewer.isEmpty())
+        {
+            return Optional.empty();
+        }
 
-    @Override
-    public Optional<AIContext> create(IDocument document, int cursorOffset)
-    {
-        var start = cursorOffset - settingsProvider.getSettings()
+        var selectionProvider = viewer.get().getSelectionProvider();
+        var selection = selectionProvider.getSelection();
+        if (!(selection instanceof ITextSelection))
+        {
+            return Optional.empty();
+        }
+
+        var textSelection = (ITextSelection)selection;
+        int cursorOffset = textSelection.getOffset();
+        int offset;
+        String text;
+        if (textSelection.getLength() > 0)
+        {
+            offset = textSelection.getLength();
+            text = textSelection.getText();
+            cursorOffset += textSelection.getLength();
+        }
+        else
+        {
+            offset = cursorOffset;
+            text = viewer.get().getDocument().get();
+        }
+
+        var start = offset - settingsProvider.getSettings()
             .map(settings -> settings.getMaxAssistantTextSize())
             .orElse(ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE);
 
@@ -43,42 +63,26 @@ public class AIContextImpl
             start = 0;
         }
 
-        try
+        if (start > 0)
         {
-            var text = document.get(start, cursorOffset - start);
-            if (start > 0)
+            var linePosition = text.indexOf(System.lineSeparator(), start);
+            if (linePosition >= 0)
             {
-                var linePosition = text.indexOf(System.lineSeparator());
-                if (linePosition >= 0 && linePosition < text.length() - 1)
-                {
-                    var textPart = text.substring(linePosition);
-                    if (!textPart.isBlank())
-                    {
-                        text = textPart;
-                    }
-                }
+                start = linePosition;
             }
-
-            return Optional.of(new AIContext(text, cursorOffset));
-        }
-        catch (BadLocationException e)
-        {
-            log.logError(e);
         }
 
-        return Optional.empty();
-    }
+        var prefix = text.substring(start, offset);
+        String postfix;
+        if (offset < text.length() - 1)
+        {
+            postfix = text.substring(offset, text.length() - 1);
+        }
+        else
+        {
+            postfix = "";
+        }
 
-    @Override
-    public void apply(IDocument document, AIContext aiContext)
-    {
-        try
-        {
-            document.replace(aiContext.getCursorOffset(), 0, aiContext.getInput());
-        }
-        catch (BadLocationException e)
-        {
-            log.logError(e);
-        }
+        return Optional.of(new AIContext(cursorOffset, text, prefix, postfix));
     }
 }

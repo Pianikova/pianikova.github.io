@@ -34,7 +34,7 @@ public class CriticiseAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        aiContext.create().ifPresent(ctx -> chat.reviewCode(ctx.getInput()));
+        aiContext.create().ifPresent(ctx -> chat.reviewCode(ctx.getText()));
         ui.showView(ChatView.ID);
         return null;
     }

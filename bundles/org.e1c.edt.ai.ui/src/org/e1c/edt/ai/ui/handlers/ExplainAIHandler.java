@@ -34,7 +34,7 @@ public class ExplainAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        aiContext.create().ifPresent(ctx -> chat.explainCode(ctx.getInput()));
+        aiContext.create().ifPresent(ctx -> chat.explainCode(ctx.getText()));
         ui.showView(ChatView.ID);
         return null;
     }

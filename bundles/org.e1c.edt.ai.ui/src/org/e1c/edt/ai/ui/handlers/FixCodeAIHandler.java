@@ -34,7 +34,7 @@ public class FixCodeAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        aiContext.create().ifPresent(ctx -> chat.fixCode(ctx.getInput()));
+        aiContext.create().ifPresent(ctx -> chat.fixCode(ctx.getText()));
         ui.showView(ChatView.ID);
         return null;
     }

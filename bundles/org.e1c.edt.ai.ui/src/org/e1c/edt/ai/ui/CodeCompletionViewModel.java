@@ -3,7 +3,6 @@
  */
 package org.e1c.edt.ai.ui;
 
-import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -81,29 +80,6 @@ public class CodeCompletionViewModel
         });
     }
 
-    private Optional<AIContext> createContext()
-    {
-        var document = ui.getTextViewer().map(viewer -> viewer.getDocument());
-        if (document.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        var selection = ui.getSelection();
-        if (selection.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        Optional<AIContext> ctx = aiContext.create(document.get(), selection.get().getOffset());
-        if (ctx.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        return ctx;
-    }
-
     private void ask(CancellationToken cancellationToken)
     {
         try
@@ -113,26 +89,32 @@ public class CodeCompletionViewModel
                 return;
             }
 
-            var ctx = dispatcher.dispatch(() -> {
-                hintPainter.pinOffset();
-                return createContext().orElse(null);
-            });
-
+            var ctx = dispatcher.dispatch(() -> aiContext.create().orElse(null));
             if (cancellationToken.isCanceled() || ctx.isEmpty())
             {
-                dispatcher.dispatch(() -> hintPainter.setHintText("")); //$NON-NLS-1$
+                dispatcher.dispatch(() -> hintPainter.reset());
                 return;
             }
 
-            var response = codeAssistant.generateText(ctx.get().getInput(), cancellationToken);
+            var aiContext = ctx.get();
+            var prefix = aiContext.getPrefix();
+            if (prefix.isBlank())
+            {
+                return;
+            }
+
+            var cursorOffset = aiContext.getCursorOffset();
+            dispatcher.dispatch(() -> hintPainter.pinOffset(cursorOffset));
+
+            var response = codeAssistant.generateText(prefix, cancellationToken);
             if (cancellationToken.isCanceled() || response.isEmpty())
             {
-                dispatcher.dispatch(() -> hintPainter.setHintText("")); //$NON-NLS-1$
+                dispatcher.dispatch(() -> hintPainter.reset());
                 return;
             }
 
             var hintText = response.get().getGeneratedText().trim();
-            dispatcher.dispatch(() -> hintPainter.setHintText(hintText));
+            dispatcher.dispatch(() -> hintPainter.setHintAt(cursorOffset, hintText));
         }
         catch (CancellationException e)
         {
@@ -172,8 +154,11 @@ public class CodeCompletionViewModel
             {
                 dispatcher.dispatch(() -> {
                     apply(viewer.get(), tokenValue, offset);
-                    hintPainter.pinOffset();
-                    hintPainter.setHintText(token.getText());
+                    aiContext.create().ifPresent(ctx -> {
+                        var cursorOffset = ctx.getCursorOffset();
+                        hintPainter.pinOffset(cursorOffset);
+                        hintPainter.setHintAt(cursorOffset, token.getText());
+                    });
                 });
 
                 return;

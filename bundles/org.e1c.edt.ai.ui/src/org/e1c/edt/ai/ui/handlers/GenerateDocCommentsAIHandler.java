@@ -34,7 +34,7 @@ public class GenerateDocCommentsAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        aiContext.create().ifPresent(ctx -> chat.generateDocComments(ctx.getInput()));
+        aiContext.create().ifPresent(ctx -> chat.generateDocComments(ctx.getText()));
         ui.showView(ChatView.ID);
         return null;
     }

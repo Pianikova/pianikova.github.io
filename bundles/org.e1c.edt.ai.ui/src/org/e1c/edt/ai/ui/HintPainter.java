@@ -5,7 +5,6 @@ package org.e1c.edt.ai.ui;
 
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IPaintPositionManager;
-import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
 import org.eclipse.swt.custom.StyledText;
@@ -22,7 +21,8 @@ public class HintPainter
     private ITextViewer viewer;
     private StyledText textWidget;
     private String hintText = DEFAULT_HINT_TEXT;
-    private int hintOffset = -1;
+    private int pinnedOffset = -1;
+    private int offset = -1;
     private Image pinImage;
 
     public HintPainter(ITextViewer textViewer)
@@ -33,16 +33,10 @@ public class HintPainter
     }
 
     @Override
-    public void pinOffset()
+    public void pinOffset(int offset)
     {
-        hintOffset = getCurrentOffset();
+        pinnedOffset = offset;
         textWidget.redraw();
-    }
-
-    @Override
-    public int getOffset()
-    {
-        return hintOffset;
     }
 
     @Override
@@ -52,12 +46,26 @@ public class HintPainter
     }
 
     @Override
-    public void setHintText(String hintText)
+    public int getOffset()
     {
+        return pinnedOffset;
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public void reset()
+    {
+        setHintAt(-1, "");
+    }
+
+    @Override
+    public void setHintAt(int offset, String hintText)
+    {
+        this.offset = offset;
         if (hintText.isEmpty())
         {
             hintText = DEFAULT_HINT_TEXT;
-            hintOffset = -1;
+            pinnedOffset = -1;
             textWidget.redraw();
         }
         else
@@ -142,32 +150,38 @@ public class HintPainter
             return;
         }
 
-        if (hintOffset == -1)
+        if (pinnedOffset == -1)
         {
             return;
         }
 
-        var widgetOffset = getCurrentOffset();
-        if (hintOffset != widgetOffset)
+        if (pinnedOffset != offset && offset != -1)
         {
-            hintOffset = -1;
+            pinnedOffset = -1;
             return;
+        }
+
+        var curOffset = pinnedOffset;
+        if (viewer instanceof ITextViewerExtension5)
+        {
+            // adjust offset according folded content
+            curOffset = ((ITextViewerExtension5)viewer).modelOffset2WidgetOffset(curOffset);
         }
 
         var gc = event.gc;
         var text = getHintText();
         var textSize = gc.stringExtent(text);
         var isLastChar = false;
-        if (widgetOffset >= textWidget.getCharCount())
+        if (curOffset >= textWidget.getCharCount())
         {
-            widgetOffset = textWidget.getCharCount() - 1;
+            curOffset = textWidget.getCharCount() - 1;
             isLastChar = true;
         }
 
-        var bounds = textWidget.getTextBounds(widgetOffset, widgetOffset);
+        var bounds = textWidget.getTextBounds(curOffset, curOffset);
         var x = bounds.x;
         var y = bounds.y;
-        var currentChar = textWidget.getContent().getTextRange(widgetOffset, 1);
+        var currentChar = textWidget.getContent().getTextRange(curOffset, 1);
         if (System.lineSeparator().endsWith(currentChar))
         {
             x = 0;
@@ -177,6 +191,16 @@ public class HintPainter
         if (isLastChar || System.lineSeparator().startsWith(currentChar))
         {
             x += bounds.width;
+        }
+
+        if (x < 0)
+        {
+            x = 0;
+        }
+
+        if (y < 0)
+        {
+            y = 0;
         }
 
         if (textSize.x <= 0 || textSize.y <= 0)
@@ -200,35 +224,5 @@ public class HintPainter
         gc.drawRectangle(x, y, width, height);
         gc.setAlpha(160);
         gc.drawString(text, x + BORDER, y, true);
-    }
-
-    private int getCurrentOffset()
-    {
-        var selectionProvider = viewer.getSelectionProvider();
-        var selection = selectionProvider.getSelection();
-        var widgetOffset = -1;
-        if (selection instanceof ITextSelection)
-        {
-            widgetOffset = ((ITextSelection)selection).getOffset();
-        }
-
-        if (viewer instanceof ITextViewerExtension5)
-        {
-            // adjust offset according folded content
-            widgetOffset = ((ITextViewerExtension5)viewer).modelOffset2WidgetOffset(widgetOffset);
-        }
-
-        if (widgetOffset < 0)
-        {
-            widgetOffset = 0;
-        }
-
-        var charCount = textWidget.getCharCount();
-        if (widgetOffset > charCount)
-        {
-            widgetOffset = charCount - 1;
-        }
-
-        return widgetOffset;
     }
 }

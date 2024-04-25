@@ -8,11 +8,13 @@ import org.eclipse.jface.text.IPainter;
 public interface IHintPainter
     extends IPainter
 {
-    void pinOffset();
+    void pinOffset(int offset);
 
     int getOffset();
 
     String getHintText();
 
-    void setHintText(String hintText);
+    void reset();
+
+    void setHintAt(int offset, String hintText);
 }
