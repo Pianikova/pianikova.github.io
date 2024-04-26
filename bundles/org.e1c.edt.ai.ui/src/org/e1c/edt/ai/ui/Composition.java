@@ -3,7 +3,9 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.AIContextSplitter;
 import org.e1c.edt.ai.CodeCompletionTokenizer;
+import org.e1c.edt.ai.IAIContextSplitter;
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IValidator;
@@ -27,7 +29,9 @@ public class Composition
     private static final UI UI = new UI(LOG);
     private static final Chat CHAT = new Chat(LOG, SETTINGS_PROVIDER, UI, DISPATCHER);
     private static final URLValidator URL_VALIDATOR = new URLValidator();
-    private static final AIContextImpl AI_CONTEXT_IMPL = new AIContextImpl(UI, SETTINGS_PROVIDER);
+    private static final IAIContextSplitter AI_CONTEXT_SPLITTER = new AIContextSplitter();
+    private static final AIContextProvider AI_CONTEXT_PROVIDER =
+        new AIContextProvider(UI, SETTINGS_PROVIDER, AI_CONTEXT_SPLITTER);
     private static final CodeCompletionTokenizer CODECOMPLETION_TOKENIZER = new CodeCompletionTokenizer();
 
     public static ILog getLog()
@@ -65,9 +69,9 @@ public class Composition
         return CHAT;
     }
 
-    public static IAIContext getAIContext()
+    public static IAIContextProvider getAIContextProvider()
     {
-        return AI_CONTEXT_IMPL;
+        return AI_CONTEXT_PROVIDER;
     }
 
     public static IUI getUI()

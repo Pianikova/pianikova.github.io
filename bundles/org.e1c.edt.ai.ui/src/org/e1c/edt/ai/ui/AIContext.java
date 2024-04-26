@@ -7,15 +7,13 @@ public class AIContext
 {
     private int cursorOffset;
     private String text;
-    private String prefix;
-    private String postfix;
+    private String context;
 
-    public AIContext(int cursorOffset, String text, String prefix, String postfix)
+    public AIContext(int cursorOffset, String text, String context)
     {
         this.cursorOffset = cursorOffset;
         this.text = text;
-        this.prefix = prefix;
-        this.postfix = postfix;
+        this.context = context;
     }
 
     public int getCursorOffset()
@@ -28,13 +26,8 @@ public class AIContext
         return text;
     }
 
-    public String getPrefix()
+    public String getContext()
     {
-        return prefix;
-    }
-
-    public String getPostfix()
-    {
-        return postfix;
+        return context;
     }
 }

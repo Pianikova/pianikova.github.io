@@ -15,31 +15,33 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.TextSelection;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CaretEvent;
+import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
 
 public class CodeCompletionViewModel
-    implements ICodeCompletionViewModel, VerifyKeyListener
+    implements ICodeCompletionViewModel, VerifyKeyListener, CaretListener
 {
     private final Object lockObject = new Object();
     private final ExecutorService threadPool = Executors.newSingleThreadExecutor();
     private final ILog log;
     private final IAICodeAssistant codeAssistant;
-    private final IAIContext aiContext;
+    private final IAIContextProvider aiContextProvider;
     private final IDispatcher dispatcher;
     private final IUI ui;
     private final ICodeCompletionTokenizer tokenizer;
     private final IHintPainter hintPainter;
     private CancellationToken askCancellationToken = new CancellationToken();
 
-    public CodeCompletionViewModel(ILog log, IAICodeAssistant codeAssistant, IAIContext aiContext,
+    public CodeCompletionViewModel(ILog log, IAICodeAssistant codeAssistant, IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, IUI ui,
         ICodeCompletionTokenizer tokenizer,
         IHintPainter hintPainter)
     {
         this.log = log;
         this.codeAssistant = codeAssistant;
-        this.aiContext = aiContext;
+        this.aiContextProvider = aiContextProvider;
         this.dispatcher = dispatcher;
         this.ui = ui;
         this.tokenizer = tokenizer;
@@ -58,7 +60,11 @@ public class CodeCompletionViewModel
 
         dispatcher.dispatch(() -> {
             ui.getTextViewerExtension2().ifPresent(viewer -> viewer.addPainter(hintPainter));
-            ui.getTextViewer().ifPresent(viewer -> viewer.getTextWidget().addVerifyKeyListener(this));
+            ui.getTextViewer().ifPresent(viewer -> {
+                var textWidget = viewer.getTextWidget();
+                textWidget.addCaretListener(this);
+                textWidget.addVerifyKeyListener(this);
+            });
         });
 
         threadPool.execute(() -> ask(cancellationToken));
@@ -76,7 +82,11 @@ public class CodeCompletionViewModel
 
         dispatcher.dispatch(() -> {
             ui.getTextViewerExtension2().ifPresent(viewer -> viewer.removePainter(hintPainter));
-            ui.getTextViewer().ifPresent(viewer -> viewer.getTextWidget().removeVerifyKeyListener(this));
+            ui.getTextViewer().ifPresent(viewer -> {
+                var textWidget = viewer.getTextWidget();
+                textWidget.removeCaretListener(this);
+                textWidget.removeVerifyKeyListener(this);
+            });
         });
     }
 
@@ -89,7 +99,7 @@ public class CodeCompletionViewModel
                 return;
             }
 
-            var ctx = dispatcher.dispatch(() -> aiContext.create().orElse(null));
+            var ctx = dispatcher.dispatch(() -> aiContextProvider.create().orElse(null));
             if (cancellationToken.isCanceled() || ctx.isEmpty())
             {
                 dispatcher.dispatch(() -> hintPainter.reset());
@@ -97,8 +107,8 @@ public class CodeCompletionViewModel
             }
 
             var aiContext = ctx.get();
-            var prefix = aiContext.getPrefix();
-            if (prefix.isBlank())
+            var context = aiContext.getContext();
+            if (context.isBlank())
             {
                 return;
             }
@@ -106,14 +116,14 @@ public class CodeCompletionViewModel
             var cursorOffset = aiContext.getCursorOffset();
             dispatcher.dispatch(() -> hintPainter.pinOffset(cursorOffset));
 
-            var response = codeAssistant.generateText(prefix, cancellationToken);
+            var response = codeAssistant.generateText(context, cancellationToken);
             if (cancellationToken.isCanceled() || response.isEmpty())
             {
                 dispatcher.dispatch(() -> hintPainter.reset());
                 return;
             }
 
-            var hintText = response.get().getGeneratedText().trim();
+            var hintText = response.get().getGeneratedText();
             dispatcher.dispatch(() -> hintPainter.setHintAt(cursorOffset, hintText));
         }
         catch (CancellationException e)
@@ -154,13 +164,14 @@ public class CodeCompletionViewModel
             {
                 dispatcher.dispatch(() -> {
                     apply(viewer.get(), tokenValue, offset);
-                    aiContext.create().ifPresent(ctx -> {
+                    aiContextProvider.create().ifPresent(ctx -> {
                         var cursorOffset = ctx.getCursorOffset();
                         hintPainter.pinOffset(cursorOffset);
                         hintPainter.setHintAt(cursorOffset, token.getText());
                     });
                 });
 
+                activate();
                 return;
             }
         }
@@ -170,8 +181,6 @@ public class CodeCompletionViewModel
             e.doit = false;
             dispatcher.dispatch(() -> apply(viewer.get(), hintPainter.getHintText(), offset));
         }
-
-        deactivate();
     }
 
     private void apply(ITextViewer viewer, String hintText, int offset)
@@ -190,5 +199,11 @@ public class CodeCompletionViewModel
         {
             log.logError(e);
         }
+    }
+
+    @Override
+    public void caretMoved(CaretEvent event)
+    {
+        deactivate();
     }
 }

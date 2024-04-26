@@ -5,7 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
-public interface IAIContext
+public interface IAIContextProvider
 {
     Optional<AIContext> create();
 }

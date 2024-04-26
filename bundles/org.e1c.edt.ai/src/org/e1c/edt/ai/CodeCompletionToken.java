@@ -5,6 +5,8 @@ package org.e1c.edt.ai;
 
 import java.util.Objects;
 
+import com.google.common.base.Preconditions;
+
 public class CodeCompletionToken
 {
     private String value;
@@ -12,6 +14,8 @@ public class CodeCompletionToken
 
     public CodeCompletionToken(String value, String text)
     {
+        Preconditions.checkNotNull(value);
+        Preconditions.checkNotNull(text);
         this.value = value;
         this.text = text;
     }

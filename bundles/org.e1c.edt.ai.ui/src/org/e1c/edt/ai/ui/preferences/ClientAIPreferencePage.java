@@ -78,9 +78,12 @@ public class ClientAIPreferencePage
             Messages.ClientAIPreferencePage_LLL_parameters,
             getFieldEditorParent(), parametersValidator));
 
-        addField(new IntegerFieldEditor(ISettingsStore.MAXASSISTANTTEXTSIZE,
+        var maxAssistTextSize = new IntegerFieldEditor(ISettingsStore.MAXASSISTANTTEXTSIZE,
             Messages.ClientAIPreferencePage_MaxAssistantTextSize,
-            getFieldEditorParent()));
+            getFieldEditorParent());
+        maxAssistTextSize.setValidRange(ISettingsStore.MINASSISTANTTEXTSIZE,
+            ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE);
+        addField(maxAssistTextSize);
     }
 
     @Override

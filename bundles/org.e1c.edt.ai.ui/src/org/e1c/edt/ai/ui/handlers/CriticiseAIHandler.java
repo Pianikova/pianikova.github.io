@@ -4,7 +4,7 @@
 package org.e1c.edt.ai.ui.handlers;
 
 import org.e1c.edt.ai.ui.Composition;
-import org.e1c.edt.ai.ui.IAIContext;
+import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IUI;
 import org.e1c.edt.ai.ui.views.ChatView;
@@ -20,13 +20,13 @@ import org.eclipse.core.commands.ExecutionException;
 public class CriticiseAIHandler
     extends AbstractHandler
 {
-    private final IAIContext aiContext;
+    private final IAIContextProvider aiContextProvider;
     private final IChat chat;
     private final IUI ui;
 
     public CriticiseAIHandler()
     {
-        aiContext = Composition.getAIContext();
+        aiContextProvider = Composition.getAIContextProvider();
         chat = Composition.getChat();
         ui = Composition.getUI();
     }
@@ -34,7 +34,7 @@ public class CriticiseAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        aiContext.create().ifPresent(ctx -> chat.reviewCode(ctx.getText()));
+        aiContextProvider.create().ifPresent(ctx -> chat.reviewCode(ctx.getText()));
         ui.showView(ChatView.ID);
         return null;
     }

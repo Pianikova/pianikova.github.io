@@ -3,10 +3,6 @@
  */
 package org.e1c.edt.ai;
 
-/**
- * @author Nikolay Pyanikov
- *
- */
 public interface ISettingsStore
 {
     public final static String MODELNAME = "stringPreferenceModelName"; //$NON-NLS-1$
@@ -21,6 +17,7 @@ public interface ISettingsStore
     public final static String MAXASSISTANTTEXTSIZE = "stringPreferenceMaxAssistantTextSize"; //$NON-NLS-1$
 
     public final static int DEFAULTMAXASSISTANTTEXTSIZE = 1500;
+    public final static int MINASSISTANTTEXTSIZE = 16;
 
     String getString(String key);
 

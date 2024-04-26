@@ -5,6 +5,8 @@ package org.e1c.edt.ai;
 
 import java.util.Objects;
 
+import com.google.common.base.Preconditions;
+
 public class ValidationError
 {
     private WellknownError error;
@@ -12,6 +14,7 @@ public class ValidationError
 
     public ValidationError(WellknownError error, String target)
     {
+        Preconditions.checkNotNull(target);
         this.error = error;
         this.target = target;
     }

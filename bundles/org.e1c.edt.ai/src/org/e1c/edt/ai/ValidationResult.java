@@ -9,6 +9,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.common.base.Preconditions;
+
 public class ValidationResult
 {
     private ArrayList<ValidationError> errors;
@@ -17,11 +19,13 @@ public class ValidationResult
 
     public ValidationResult(ValidationError... errors)
     {
+        Preconditions.checkNotNull(errors);
         this.errors = new ArrayList<>(Arrays.asList(errors));
     }
 
     public ValidationResult addError(ValidationError error)
     {
+        Preconditions.checkNotNull(error);
         errors.add(error);
         return this;
     }

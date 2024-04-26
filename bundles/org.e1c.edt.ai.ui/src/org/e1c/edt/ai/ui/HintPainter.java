@@ -51,11 +51,10 @@ public class HintPainter
         return pinnedOffset;
     }
 
-    @SuppressWarnings("nls")
     @Override
     public void reset()
     {
-        setHintAt(-1, "");
+        setHintAt(-1, ""); //$NON-NLS-1$
     }
 
     @Override
@@ -169,7 +168,7 @@ public class HintPainter
         }
 
         var gc = event.gc;
-        var text = getHintText();
+        var text = VisibleTextBuilder.build(getHintText());
         var textSize = gc.stringExtent(text);
         var isLastChar = false;
         if (curOffset >= textWidget.getCharCount())
@@ -181,14 +180,17 @@ public class HintPainter
         var bounds = textWidget.getTextBounds(curOffset, curOffset);
         var x = bounds.x;
         var y = bounds.y;
-        var currentChar = textWidget.getContent().getTextRange(curOffset, 1);
-        if (System.lineSeparator().endsWith(currentChar))
+        var content = textWidget.getContent();
+        var currentChar = content.getTextRange(curOffset, 1);
+        var isLineSeparator =
+            System.lineSeparator().endsWith(currentChar) || System.lineSeparator().startsWith(currentChar);
+        if (isLastChar && isLineSeparator)
         {
             x = 0;
             y += bounds.height;
         }
 
-        if (isLastChar || System.lineSeparator().startsWith(currentChar))
+        if (isLineSeparator)
         {
             x += bounds.width;
         }

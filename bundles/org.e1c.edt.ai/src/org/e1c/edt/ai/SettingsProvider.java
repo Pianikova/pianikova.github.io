@@ -68,7 +68,6 @@ public class SettingsProvider
                 docPath, params, _maxAssistantTextSize));
     }
 
-    @SuppressWarnings("nls")
     private String normalize(String text)
     {
         if (text.isEmpty())
@@ -78,7 +77,7 @@ public class SettingsProvider
 
         text = text.trim();
 
-        if (text.endsWith("/"))
+        if (text.endsWith("/")) //$NON-NLS-1$
         {
             text = text.substring(0, text.length() - 1);
         }

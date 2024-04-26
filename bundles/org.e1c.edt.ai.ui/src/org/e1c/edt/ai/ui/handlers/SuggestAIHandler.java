@@ -10,7 +10,7 @@ import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.CodeCompletionViewModel;
 import org.e1c.edt.ai.ui.Composition;
 import org.e1c.edt.ai.ui.HintPainter;
-import org.e1c.edt.ai.ui.IAIContext;
+import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IDispatcher;
 import org.e1c.edt.ai.ui.IModelUIPluginImages;
 import org.e1c.edt.ai.ui.IUI;
@@ -25,7 +25,7 @@ public class SuggestAIHandler
     private final ILog log;
     private final IUI ui;
     private final IAICodeAssistant codeAssistant;
-    private final IAIContext aiContext;
+    private final IAIContextProvider aiContextProvider;
     private final IDispatcher dispatcher;
     private final ICodeCompletionTokenizer tokenizer;
     private CodeCompletionViewModel codeCompletion;
@@ -36,7 +36,7 @@ public class SuggestAIHandler
         log = Composition.getLog();
         ui = Composition.getUI();
         codeAssistant = Composition.getCodeAssistant();
-        aiContext = Composition.getAIContext();
+        aiContextProvider = Composition.getAIContextProvider();
         dispatcher = Composition.getDispatcher();
         tokenizer = Composition.getCodeCompletionTokenizer();
         pinImage = Activator.getImage(IModelUIPluginImages.NAME_ICON_THINKING);
@@ -54,7 +54,7 @@ public class SuggestAIHandler
             var painter = new HintPainter(textViewer);
             painter.setPinImage(pinImage);
             codeCompletion =
-                new CodeCompletionViewModel(log, codeAssistant, aiContext, dispatcher, ui, tokenizer, painter);
+                new CodeCompletionViewModel(log, codeAssistant, aiContextProvider, dispatcher, ui, tokenizer, painter);
             codeCompletion.activate();
         });
 

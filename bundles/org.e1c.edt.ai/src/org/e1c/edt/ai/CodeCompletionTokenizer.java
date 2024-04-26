@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai;
 
+import com.google.common.base.Preconditions;
+
 public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
 {
     private int minLength;
@@ -14,15 +16,10 @@ public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
 
     public CodeCompletionTokenizer(int minLength)
     {
-        if (minLength < 1)
-        {
-            minLength = 1;
-        }
-
+        Preconditions.checkArgument(minLength > 0);
         this.minLength = minLength;
     }
 
-    @SuppressWarnings("nls")
     @Override
     public CodeCompletionToken getNext(String text)
     {
@@ -36,10 +33,9 @@ public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
             }
         }
 
-        return new CodeCompletionToken("", text);
+        return new CodeCompletionToken("", text); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String getNextToken(String text)
     {
         var chars = text.toCharArray();
@@ -63,7 +59,7 @@ public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
             return text.substring(0, cursor - 1);
         }
 
-        return "";
+        return ""; //$NON-NLS-1$
     }
 
     private Boolean isWhiteSpace(char ch)

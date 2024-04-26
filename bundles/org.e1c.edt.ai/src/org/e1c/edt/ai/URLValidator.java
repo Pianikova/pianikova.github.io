@@ -6,13 +6,15 @@ package org.e1c.edt.ai;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import com.google.common.base.Preconditions;
+
 public class URLValidator
     implements IValidator<String>
 {
-
     @Override
     public ValidationResult validate(String target)
     {
+        Preconditions.checkNotNull(target);
         var validationResult = new ValidationResult();
         try
         {
@@ -25,5 +27,4 @@ public class URLValidator
 
         return validationResult;
     }
-
 }

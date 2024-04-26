@@ -36,6 +36,11 @@ public class ParametersParser
     public Optional<Parameters> parse(String parametersText, ValidationResult validationResult)
     {
         var parameters = new Parameters();
+        if (parametersText.isBlank())
+        {
+            return Optional.of(parameters);
+        }
+
         var reader = new StringReader(parametersText.replace(keyValueSeparator, System.lineSeparator()));
         var properties = new Properties();
         try
