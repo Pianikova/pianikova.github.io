@@ -4,13 +4,15 @@
 package org.e1c.edt.ai.ui;
 
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.assistent.CancellationToken;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.TextSelection;
@@ -24,7 +26,6 @@ public class CodeCompletionViewModel
     implements ICodeCompletionViewModel, VerifyKeyListener, CaretListener
 {
     private final Object lockObject = new Object();
-    private final ExecutorService threadPool = Executors.newSingleThreadExecutor();
     private final ILog log;
     private final IAICodeAssistant codeAssistant;
     private final IAIContextProvider aiContextProvider;
@@ -67,7 +68,18 @@ public class CodeCompletionViewModel
             });
         });
 
-        threadPool.execute(() -> ask(cancellationToken));
+        new Job(Messages.CodeCompletionJobName)
+        {
+            @Override
+            protected IStatus run(IProgressMonitor monitor)
+            {
+                var cancellationToken = new JobCancellationToken(monitor);
+                askCancellationToken.cancel();
+                askCancellationToken = cancellationToken;
+                ask(cancellationToken);
+                return cancellationToken.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
+            }
+        }.schedule();
     }
 
     @Override

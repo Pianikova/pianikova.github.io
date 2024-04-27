@@ -27,7 +27,8 @@ public class Composition
         new SettingsProvider(LOG, PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER, PARAMETERS_PARSER);
     private static final AICodeAssistant CODE_ASSISTANT = new AICodeAssistant(SETTINGS_PROVIDER);
     private static final UI UI = new UI(LOG);
-    private static final Chat CHAT = new Chat(LOG, SETTINGS_PROVIDER, UI, DISPATCHER);
+    private static final IdeApiHandler IDE_API_HANDLER = new IdeApiHandler(LOG, UI);
+    private static final Chat CHAT = new Chat(LOG, SETTINGS_PROVIDER, UI, DISPATCHER, IDE_API_HANDLER);
     private static final URLValidator URL_VALIDATOR = new URLValidator();
     private static final IAIContextSplitter AI_CONTEXT_SPLITTER = new AIContextSplitter();
     private static final AIContextProvider AI_CONTEXT_PROVIDER =
