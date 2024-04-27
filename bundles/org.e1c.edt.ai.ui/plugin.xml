@@ -80,6 +80,18 @@
         <key sequence="Shift+Space"
              commandId="org.e1c.edt.ai.ui.commands.suggest.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I E"
+             commandId="org.e1c.edt.ai.ui.commands.explain.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I R"
+             commandId="org.e1c.edt.ai.ui.commands.criticise.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I F"
+             commandId="org.e1c.edt.ai.ui.commands.fixcode.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I G"
+             commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
     </extension>
 
     <extension
