@@ -27,7 +27,7 @@ import netscape.javascript.JSObject;
  */
 public class Chat implements IChat, IChatDialog
 {
-    private static final String CHAT_API_WINK = "window.chatApi.wink()"; //$NON-NLS-1$
+    private static final String CHAT_API_WINK_TEMPLATE = "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"})"; //$NON-NLS-1$
     private static final String IDE_API = "ideApi"; //$NON-NLS-1$
     private static final String WELCOME_PAGE_TITLE = "Welcome page"; //$NON-NLS-1$
 
@@ -147,7 +147,9 @@ public class Chat implements IChat, IChatDialog
 
                     JSObject window = (JSObject)webEngine.executeScript("window"); //$NON-NLS-1$
                     window.setMember(IDE_API, handler);
-                    webEngine.executeScript(CHAT_API_WINK);
+                    settingsProvider.getSettings()
+                        .ifPresent(settings -> webEngine.executeScript(String.format(CHAT_API_WINK_TEMPLATE,
+                            settings.getClientToken(), settings.getClientUniqueId())));
                 }
             }
         });

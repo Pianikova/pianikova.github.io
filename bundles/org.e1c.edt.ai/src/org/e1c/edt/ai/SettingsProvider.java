@@ -17,9 +17,10 @@ import org.e1c.edt.ai.client.AISettings;
 public class SettingsProvider
     implements ISettingsProvider
 {
-    private ILog log;
-    private ISettingsStore settingsStore;
-    private IParser<String, Parameters> parametersParser;
+    private final static String QUERY_TEMPLATE = "?client_id=%s&client_uid=%s"; //$NON-NLS-1$
+    private final ILog log;
+    private final ISettingsStore settingsStore;
+    private final IParser<String, Parameters> parametersParser;
 
     public SettingsProvider(ILog log, ISettingsStore settingsStore, IParser<String, Parameters> parametersParser)
     {
@@ -31,9 +32,10 @@ public class SettingsProvider
     @Override
     public Optional<AISettings> getSettings()
     {
-        var clientToken = settingsStore.getString(ISettingsStore.CLIENTTOKEN);
+        var clientToken = settingsStore.getString(ISettingsStore.CLIENT_TOKEN);
+        var clientUID = settingsStore.getString(ISettingsStore.CLIENT_UID);
         var accessRoles =
-            new ArrayList<>(Arrays.asList(settingsStore.getString(ISettingsStore.ACCESSROLES).split(","))); //$NON-NLS-1$
+            new ArrayList<>(Arrays.asList(settingsStore.getString(ISettingsStore.ACCESS_ROLES).split(","))); //$NON-NLS-1$
         var tags =
             new ArrayList<>(Arrays.asList(settingsStore.getString(ISettingsStore.TAGS).split(","))); //$NON-NLS-1$
         URL apiURL = null;
@@ -42,7 +44,9 @@ public class SettingsProvider
         {
             var rootURL = new URL(normalize(settingsStore.getString(ISettingsStore.APIURL)));
             apiURL = new URL(rootURL,
-                normalize(rootURL.getFile()) + "?client_id=" + URLEncoder.encode(clientToken, StandardCharsets.UTF_8)); //$NON-NLS-1$
+                normalize(rootURL.getFile())
+                    + String.format(QUERY_TEMPLATE, URLEncoder.encode(clientToken, StandardCharsets.UTF_8),
+                        URLEncoder.encode(clientUID, StandardCharsets.UTF_8)));
             chatURL = new URL(normalize(settingsStore.getString(ISettingsStore.CHATURL)));
         }
         catch (MalformedURLException e)
@@ -50,21 +54,22 @@ public class SettingsProvider
             log.logError(e);
         }
 
-        var modelName = settingsStore.getString(ISettingsStore.MODELNAME);
-        var databaseName = settingsStore.getString(ISettingsStore.DATABASENAME);
-        var docPath = settingsStore.getString(ISettingsStore.DOCUMENTPATH);
-        var llmParameters = settingsStore.getString(ISettingsStore.LLMPARAMETERS);
-        var maxAssistantTextSize = settingsStore.getInt(ISettingsStore.MAXASSISTANTTEXTSIZE);
+        var modelName = settingsStore.getString(ISettingsStore.MODEL_NAME);
+        var databaseName = settingsStore.getString(ISettingsStore.DATABASE_NAME);
+        var docPath = settingsStore.getString(ISettingsStore.DOCUMENT_PATH);
+        var llmParameters = settingsStore.getString(ISettingsStore.LLM_PARAMETERS);
+        var maxAssistantTextSize = settingsStore.getInt(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE);
         if (maxAssistantTextSize <= 0)
         {
-            maxAssistantTextSize = ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE;
+            maxAssistantTextSize = ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE;
         }
 
         var _apiURL = apiURL;
         var _chatURL = chatURL;
         var _maxAssistantTextSize = maxAssistantTextSize;
         return parametersParser.parse(llmParameters)
-            .map(params -> new AISettings(accessRoles, tags, _apiURL, _chatURL, clientToken, modelName, databaseName,
+            .map(params -> new AISettings(accessRoles, tags, _apiURL, _chatURL, clientToken, clientUID, modelName,
+                databaseName,
                 docPath, params, _maxAssistantTextSize));
     }
 

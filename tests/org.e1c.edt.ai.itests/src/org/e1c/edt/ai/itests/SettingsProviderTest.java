@@ -34,7 +34,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.MODELNAME)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.MODEL_NAME)).thenReturn("Abc");
         var settings = provider.getSettings();
 
         // Then
@@ -48,7 +48,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
         var settings = provider.getSettings();
 
         // Then
@@ -62,7 +62,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.DATABASENAME)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.DATABASE_NAME)).thenReturn("Abc");
         var settings = provider.getSettings();
 
         // Then
@@ -76,14 +76,15 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/");
         var settings = provider.getSettings();
 
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/?client_id=Abc"),
+            Assert.assertEquals(new URL("http://api.com/?client_id=Abc&client_uid=345"),
                 settings.get().getApiURL());
         }
         catch (MalformedURLException e)
@@ -99,14 +100,15 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com");
         var settings = provider.getSettings();
 
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/?client_id=Abc"), settings.get().getApiURL());
+            Assert.assertEquals(new URL("http://api.com/?client_id=Abc&client_uid=345"), settings.get().getApiURL());
         }
         catch (MalformedURLException e)
         {
@@ -121,14 +123,16 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/generate/");
         var settings = provider.getSettings();
 
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc"), settings.get().getApiURL());
+            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc&client_uid=345"),
+                settings.get().getApiURL());
         }
         catch (MalformedURLException e)
         {
@@ -143,14 +147,16 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.CLIENTTOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/generate");
         var settings = provider.getSettings();
 
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc"), settings.get().getApiURL());
+            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc&client_uid=345"),
+                settings.get().getApiURL());
         }
         catch (MalformedURLException e)
         {
@@ -200,7 +206,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.ACCESSROLES)).thenReturn("Role1,Role2");
+        when(settingsStore.getString(ISettingsStore.ACCESS_ROLES)).thenReturn("Role1,Role2");
         var settings = provider.getSettings();
 
         // Then
@@ -214,7 +220,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.DOCUMENTPATH)).thenReturn("Abc");
+        when(settingsStore.getString(ISettingsStore.DOCUMENT_PATH)).thenReturn("Abc");
         var settings = provider.getSettings();
 
         // Then
@@ -229,7 +235,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.LLMPARAMETERS)).thenReturn("LLM params");
+        when(settingsStore.getString(ISettingsStore.LLM_PARAMETERS)).thenReturn("LLM params");
         when(parametersParser.parse("LLM params")).thenReturn(Optional.of(parameters));
         var settings = provider.getSettings();
 
@@ -244,7 +250,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getString(ISettingsStore.LLMPARAMETERS)).thenReturn("LLM params");
+        when(settingsStore.getString(ISettingsStore.LLM_PARAMETERS)).thenReturn("LLM params");
         when(parametersParser.parse("LLM params")).thenReturn(Optional.empty());
         var settings = provider.getSettings();
 
@@ -259,7 +265,7 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getInt(ISettingsStore.MAXASSISTANTTEXTSIZE)).thenReturn(123);
+        when(settingsStore.getInt(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE)).thenReturn(123);
         var settings = provider.getSettings();
 
         // Then
@@ -273,16 +279,17 @@ public class SettingsProviderTest
         var provider = createInstance();
 
         // When
-        when(settingsStore.getInt(ISettingsStore.MAXASSISTANTTEXTSIZE)).thenReturn(0);
+        when(settingsStore.getInt(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE)).thenReturn(0);
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals(ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE, settings.get().getMaxAssistantTextSize());
+        Assert.assertEquals(ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE, settings.get().getMaxAssistantTextSize());
     }
 
     private SettingsProvider createInstance()
     {
         when(settingsStore.getString(Mockito.anyString())).thenReturn("");
+        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("");
         when(settingsStore.getInt(Mockito.anyString())).thenReturn(0);
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com");
         when(settingsStore.getString(ISettingsStore.CHATURL)).thenReturn("http://chat.com");

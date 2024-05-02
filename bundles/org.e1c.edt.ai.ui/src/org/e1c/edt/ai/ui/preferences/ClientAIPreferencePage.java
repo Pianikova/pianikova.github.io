@@ -53,36 +53,36 @@ public class ClientAIPreferencePage
             getFieldEditorParent(), urlValidator));
 
         addField(
-            new StringFieldEditor(ISettingsStore.CLIENTTOKEN, Messages.ClientAIPreferencePage_Client_token,
+            new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_token,
                 getFieldEditorParent()));
 
         addField(
-            new StringFieldEditor(ISettingsStore.DATABASENAME, Messages.ClientAIPreferencePage_Database_name,
+            new StringFieldEditor(ISettingsStore.DATABASE_NAME, Messages.ClientAIPreferencePage_Database_name,
                 getFieldEditorParent()));
 
-        addField(new StringFieldEditor(ISettingsStore.MODELNAME, Messages.ClientAIPreferencePage_AI_model,
+        addField(new StringFieldEditor(ISettingsStore.MODEL_NAME, Messages.ClientAIPreferencePage_AI_model,
             getFieldEditorParent()));
 
         addField(
             new StringFieldEditor(ISettingsStore.TAGS, Messages.ClientAIPreferencePage_Tags, getFieldEditorParent()));
 
         addField(
-            new StringFieldEditor(ISettingsStore.ACCESSROLES, Messages.ClientAIPreferencePage_Access_roles,
+            new StringFieldEditor(ISettingsStore.ACCESS_ROLES, Messages.ClientAIPreferencePage_Access_roles,
                 getFieldEditorParent()));
 
         addField(
-            new StringFieldEditor(ISettingsStore.DOCUMENTPATH, Messages.ClientAIPreferencePage_Document_path,
+            new StringFieldEditor(ISettingsStore.DOCUMENT_PATH, Messages.ClientAIPreferencePage_Document_path,
                 getFieldEditorParent()));
 
-        addField(new ValidatingStringFieldEditor(ISettingsStore.LLMPARAMETERS,
+        addField(new ValidatingStringFieldEditor(ISettingsStore.LLM_PARAMETERS,
             Messages.ClientAIPreferencePage_LLL_parameters,
             getFieldEditorParent(), parametersValidator));
 
-        var maxAssistTextSize = new IntegerFieldEditor(ISettingsStore.MAXASSISTANTTEXTSIZE,
+        var maxAssistTextSize = new IntegerFieldEditor(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE,
             Messages.ClientAIPreferencePage_MaxAssistantTextSize,
             getFieldEditorParent());
-        maxAssistTextSize.setValidRange(ISettingsStore.MINASSISTANTTEXTSIZE,
-            ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE);
+        maxAssistTextSize.setValidRange(ISettingsStore.MIN_ASSISTANT_TEXT_SIZE,
+            ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE);
         addField(maxAssistTextSize);
     }
 
