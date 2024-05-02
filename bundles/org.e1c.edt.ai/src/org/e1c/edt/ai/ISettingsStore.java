@@ -16,9 +16,12 @@ public interface ISettingsStore
     public final static String DOCUMENT_PATH = "stringPreferenceDocumentPath"; //$NON-NLS-1$
     public final static String LLM_PARAMETERS = "stringPreferenceLLMParameters"; //$NON-NLS-1$
     public final static String MAX_ASSISTANT_TEXT_SIZE = "stringPreferenceMaxAssistantTextSize"; //$NON-NLS-1$
+    public final static String CODE_COMPLETION_LINES_COUNT = "stringPreferenceCodeCompletionLinesCount"; //$NON-NLS-1$
 
     public final static int DEFAULT_MAX_ASSISTANT_TEXT_SIZE = 1500;
     public final static int MIN_ASSISTANT_TEXT_SIZE = 16;
+    public final static int DEFAULT_CODE_COMPLETION_LINES_COUNT = 1;
+    public final static int MAX_CODE_COMPLETION_LINES_COUNT = 64;
 
     String getString(String key);
 

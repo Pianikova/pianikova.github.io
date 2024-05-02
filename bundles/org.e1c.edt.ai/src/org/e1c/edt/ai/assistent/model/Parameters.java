@@ -35,7 +35,7 @@ public class Parameters
 
     public Boolean seed;
 
-    public List<String> stop = List.of("\n"); //$NON-NLS-1$
+    public List<String> stop = List.of();
 
     public Double temperature;
 

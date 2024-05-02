@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.client.model;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -27,8 +28,7 @@ public class ChatCreateRequest
      * @param tags may be <code>null</code>
      * @param documentPath may be <code>null</code>
      */
-    public ChatCreateRequest(String dataBaseName, String modelName, ArrayList<String> accessRoles,
-        ArrayList<String> tags,
+    public ChatCreateRequest(String dataBaseName, String modelName, List<String> accessRoles, List<String> tags,
         String documentPath) {
         this.databases = new ArrayList<>();
         databases.add(new Database(dataBaseName, accessRoles, tags, documentPath));
@@ -38,7 +38,7 @@ public class ChatCreateRequest
     /**
      * @return the databases
      */
-    public ArrayList<Database> getDatabases()
+    public List<Database> getDatabases()
     {
         return databases;
     }

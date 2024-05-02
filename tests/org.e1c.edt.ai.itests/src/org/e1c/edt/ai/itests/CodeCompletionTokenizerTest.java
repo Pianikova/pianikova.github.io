@@ -35,7 +35,7 @@ public class CodeCompletionTokenizerTest
         var tokenizer = new CodeCompletionTokenizer(minSize);
 
         // When
-        var actualToken = tokenizer.getNext(text);
+        var actualToken = tokenizer.getNext(text, this::isDelimiter);
 
         // Then
         Assert.assertEquals(expectedToken, actualToken);
@@ -51,19 +51,25 @@ public class CodeCompletionTokenizerTest
                 { "//Наименование = Наименование + \"!\" + \"?\";", 2, new CodeCompletionToken("//Наименование", " = Наименование + \"!\" + \"?\";") },
                 { " = Наименование + \"!\" + \"?\";", 2, new CodeCompletionToken(" = Наименование", " + \"!\" + \"?\";") },
                 { " + \"!\" + \"?\";", 2, new CodeCompletionToken(" + \"!\"", " + \"?\";") },
-                { " + \"?\";", 2, new CodeCompletionToken("", " + \"?\";") },
-                { "Hello", 2, new CodeCompletionToken("", "Hello") },
+                { " + \"?\";", 2, new CodeCompletionToken(" + \"?\";", "") },
+                { "Hello", 2, new CodeCompletionToken("Hello", "") },
                 { "Hello Abc", 2, new CodeCompletionToken("Hello", " Abc") },
                 { "Hello\tAbc", 2, new CodeCompletionToken("Hello", "\tAbc") },
                 { "Hello  \t\rAbc", 2, new CodeCompletionToken("Hello", "  \t\rAbc") },
                 { "Hello\r\nAbc", 2, new CodeCompletionToken("Hello", "\r\nAbc") },
                 { "  Hello  Abc", 2, new CodeCompletionToken("  Hello", "  Abc") },
-                { "  Hello  A", 2, new CodeCompletionToken("", "  Hello  A") },
-                { "  A  Hello", 2, new CodeCompletionToken("", "  A  Hello") },
+                { "  Hello  A", 2, new CodeCompletionToken("  Hello  A", "") },
+                { "  A  Hello", 2, new CodeCompletionToken("  A  Hello", "") },
                 { "", 2, new CodeCompletionToken("", "") },
-                { " ", 2, new CodeCompletionToken("", " ") },
-                { "  ", 2, new CodeCompletionToken("", "  ") },
+                { " ", 2, new CodeCompletionToken(" ", "") },
+                { "  ", 2, new CodeCompletionToken("  ", "") },
+                { "\r\n    КонецЕсли;\r\n", 2, new CodeCompletionToken("\r\n    КонецЕсли;\r\n", "") },
             });
         // @formatter:on
+    }
+
+    private Boolean isDelimiter(char ch)
+    {
+        return (ch == ' ') || (ch == '\t') || (ch == '\n') || (ch == '\r');
     }
 }

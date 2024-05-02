@@ -7,6 +7,7 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
@@ -15,6 +16,7 @@ import org.eclipse.swt.graphics.Image;
 public class HintPainter
     implements PaintListener, IHintPainter
 {
+    private static final int DRAW_FLAGS = SWT.DRAW_DELIMITER + SWT.DRAW_TAB + SWT.DRAW_MNEMONIC;
     private static final int BORDER = 2;
     private static final String DEFAULT_HINT_TEXT = ""; //$NON-NLS-1$
     private boolean isActive = false;
@@ -61,7 +63,7 @@ public class HintPainter
     public void setHintAt(int offset, String hintText)
     {
         this.offset = offset;
-        if (hintText.isEmpty())
+        if (hintText == null || offset == -1)
         {
             hintText = DEFAULT_HINT_TEXT;
             pinnedOffset = -1;
@@ -154,12 +156,6 @@ public class HintPainter
             return;
         }
 
-        if (pinnedOffset != offset && offset != -1)
-        {
-            pinnedOffset = -1;
-            return;
-        }
-
         var curOffset = pinnedOffset;
         if (viewer instanceof ITextViewerExtension5)
         {
@@ -168,8 +164,13 @@ public class HintPainter
         }
 
         var gc = event.gc;
+        gc.setBackground(textWidget.getBackground());
+        gc.setForeground(textWidget.getForeground());
+        gc.setFont(textWidget.getFont());
+
         var text = VisibleTextBuilder.build(getHintText());
-        var textSize = gc.stringExtent(text);
+        var textSize =
+            gc.textExtent(text, DRAW_FLAGS);
         var isLastChar = false;
         if (curOffset >= textWidget.getCharCount())
         {
@@ -217,14 +218,7 @@ public class HintPainter
             return;
         }
 
-        gc.setBackground(textWidget.getBackground());
-        gc.setForeground(textWidget.getForeground());
-        gc.setFont(textWidget.getFont());
-        var width = textSize.x + BORDER * 2;
-        var height = textSize.y + 1;
-        gc.fillRectangle(x, y, width, height);
-        gc.drawRectangle(x, y, width, height);
         gc.setAlpha(160);
-        gc.drawString(text, x + BORDER, y, true);
+        gc.drawText(text, x + BORDER, y + 1, DRAW_FLAGS);
     }
 }

@@ -21,7 +21,7 @@ public class ClientAIPreferencePageInitializer
     public void initializeDefaultPreferences()
     {
         IPreferenceStore store = Activator.getDefault().getPreferenceStore();
-        store.setDefault(ISettingsStore.APIURL, "https://coder.1c.ai/api/v1/generate"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.APIURL, "https://llms.1c.ai/codegen/generate_stream"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CHATURL, "http://10.70.2.171:4000/"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CLIENT_TOKEN, "user_test"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.DATABASE_NAME, "edt_doc"); //$NON-NLS-1$
@@ -29,5 +29,6 @@ public class ClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.LLM_PARAMETERS,
             "max_new_tokens=120; temperature=0.2; top_p=0.95; top_k=10"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE, ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE);
+        store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
     }
 }

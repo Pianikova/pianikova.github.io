@@ -10,8 +10,8 @@ public class Log
 {
 
     @Override
-    public void logError(Exception exception)
+    public void logError(Throwable error)
     {
-        Activator.logError(exception);
+        Activator.logError(error);
     }
 }

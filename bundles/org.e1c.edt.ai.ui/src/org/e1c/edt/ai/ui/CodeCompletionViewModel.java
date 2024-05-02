@@ -7,6 +7,7 @@ import java.util.concurrent.CancellationException;
 
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.assistent.CancellationToken;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -34,6 +35,8 @@ public class CodeCompletionViewModel
     private final ICodeCompletionTokenizer tokenizer;
     private final IHintPainter hintPainter;
     private CancellationToken askCancellationToken = new CancellationToken();
+    private boolean isCompleted = true;
+    private boolean inProgress = false;
 
     public CodeCompletionViewModel(ILog log, IAICodeAssistant codeAssistant, IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, IUI ui,
@@ -100,6 +103,8 @@ public class CodeCompletionViewModel
                 textWidget.removeVerifyKeyListener(this);
             });
         });
+
+        isCompleted = true;
     }
 
     private void ask(CancellationToken cancellationToken)
@@ -120,23 +125,57 @@ public class CodeCompletionViewModel
 
             var aiContext = ctx.get();
             var context = aiContext.getContext();
-            if (context.isBlank())
+            if (context == null || context.isBlank())
             {
                 return;
             }
 
-            var cursorOffset = aiContext.getCursorOffset();
-            dispatcher.dispatch(() -> hintPainter.pinOffset(cursorOffset));
+            inProgress = true;
+            dispatcher.dispatch(() -> hintPainter.pinOffset(aiContext.getCursorOffset()));
+            var observer = new IObserver<String>()
+            {
+                @Override
+                public boolean onNext(String value)
+                {
+                    dispatcher.dispatch(() -> {
+                        if (!value.isEmpty())
+                        {
+                            var updatedHint = hintPainter.getHintText() + value;
+                            hintPainter.setHintAt(aiContext.getCursorOffset(), updatedHint);
+                        }
+                    });
 
-            var response = codeAssistant.generateText(context, cancellationToken);
+                    return true;
+                }
+
+                @Override
+                public void onError(Throwable error)
+                {
+                    log.logError(error);
+                    inProgress = false;
+                    deactivate();
+                }
+
+                @Override
+                public void onCompleted()
+                {
+                    dispatcher.dispatch(() -> {
+                        var hint = hintPainter.getHintText();
+                        if (hint.isEmpty())
+                        {
+                            hintPainter.setHintAt(aiContext.getCursorOffset(), System.lineSeparator());
+                            inProgress = false;
+                        }
+                    });
+                }
+            };
+
+            var response = codeAssistant.generateText(context, observer, cancellationToken);
             if (cancellationToken.isCanceled() || response.isEmpty())
             {
                 dispatcher.dispatch(() -> hintPainter.reset());
                 return;
             }
-
-            var hintText = response.get().getGeneratedText();
-            dispatcher.dispatch(() -> hintPainter.setHintAt(cursorOffset, hintText));
         }
         catch (CancellationException e)
         {
@@ -164,58 +203,63 @@ public class CodeCompletionViewModel
             return;
         }
 
-        var hintText = hintPainter.getHintText();
-        var applyHint = false;
         if (e.keyCode == SWT.ARROW_RIGHT)
         {
             e.doit = false;
-            applyHint = true;
-            var token = tokenizer.getNext(hintText);
-            var tokenValue = token.getValue();
-            if (!tokenValue.isEmpty())
-            {
-                dispatcher.dispatch(() -> {
-                    apply(viewer.get(), tokenValue, offset);
-                    aiContextProvider.create().ifPresent(ctx -> {
-                        var cursorOffset = ctx.getCursorOffset();
-                        hintPainter.pinOffset(cursorOffset);
-                        hintPainter.setHintAt(cursorOffset, token.getText());
-                    });
+            dispatcher.dispatch(() -> {
+                var hintText = hintPainter.getHintText();
+                var token = tokenizer.getNext(hintText, this::isDelimiter);
+                var tokenValue = token.getValue();
+                var text = token.getText();
+                apply(viewer.get(), tokenValue, offset, !(inProgress || text == null || !text.isEmpty()));
+                aiContextProvider.create().ifPresent(ctx -> {
+                    hintPainter.pinOffset(ctx.getCursorOffset());
+                    hintPainter.setHintAt(ctx.getCursorOffset(), text);
                 });
-
-                activate();
-                return;
-            }
+            });
         }
 
-        if (applyHint || e.character == '\t')
+        if (e.character == '\t')
         {
             e.doit = false;
-            dispatcher.dispatch(() -> apply(viewer.get(), hintPainter.getHintText(), offset));
+            dispatcher.dispatch(() -> apply(viewer.get(), hintPainter.getHintText(), offset, true));
         }
     }
 
-    private void apply(ITextViewer viewer, String hintText, int offset)
+    private void apply(ITextViewer viewer, String hintText, int offset, boolean isCompleted)
     {
-        if (hintText.isEmpty())
-        {
-            return;
-        }
-
+        this.isCompleted = isCompleted;
         try
         {
-            viewer.getDocument().replace(offset, 0, hintText);
-            viewer.getSelectionProvider().setSelection(new TextSelection(offset + hintText.length(), 0));
+            if (!hintText.isEmpty())
+            {
+                viewer.getDocument().replace(offset, 0, hintText);
+                viewer.getSelectionProvider().setSelection(new TextSelection(offset + hintText.length(), 0));
+            }
         }
         catch (BadLocationException e)
         {
             log.logError(e);
+        }
+        finally
+        {
+            this.isCompleted = true;
         }
     }
 
     @Override
     public void caretMoved(CaretEvent event)
     {
+        if (!isCompleted)
+        {
+            return;
+        }
+
         deactivate();
+    }
+
+    private Boolean isDelimiter(char ch)
+    {
+        return (ch == ' ') || (ch == '\t') || (ch == '\n') || (ch == '\r');
     }
 }

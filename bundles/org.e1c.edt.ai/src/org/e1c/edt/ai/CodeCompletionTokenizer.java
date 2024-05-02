@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.function.Predicate;
+
 import com.google.common.base.Preconditions;
 
 public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
@@ -21,34 +23,34 @@ public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
     }
 
     @Override
-    public CodeCompletionToken getNext(String text)
+    public CodeCompletionToken getNext(String text, Predicate<Character> isDelimiter)
     {
-        var nextToken = getNextToken(text);
+        var nextToken = getNextToken(text, isDelimiter);
         if (!nextToken.isEmpty())
         {
             var nextText = text.substring(nextToken.length());
-            if (!getNextToken(nextText).isEmpty())
+            if (!getNextToken(nextText, isDelimiter).isEmpty())
             {
                 return new CodeCompletionToken(nextToken, nextText);
             }
         }
 
-        return new CodeCompletionToken("", text); //$NON-NLS-1$
+        return new CodeCompletionToken(text, ""); //$NON-NLS-1$
     }
 
-    private String getNextToken(String text)
+    private String getNextToken(String text, Predicate<Character> isDelimiter)
     {
         var chars = text.toCharArray();
         var length = chars.length;
         var cursor = 0;
 
-        while (cursor < length && isWhiteSpace(chars[cursor++]))
+        while (cursor < length && isDelimiter.test(chars[cursor++]))
             ;
 
         var size = 0;
         while (size < minLength && cursor < length)
         {
-            while (cursor < length && !isWhiteSpace(chars[cursor++]))
+            while (cursor < length && !isDelimiter.test(chars[cursor++]))
             {
                 size++;
             }
@@ -60,10 +62,5 @@ public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
         }
 
         return ""; //$NON-NLS-1$
-    }
-
-    private Boolean isWhiteSpace(char ch)
-    {
-        return (ch == ' ') || (ch == '\t') || (ch == '\n') || (ch == '\r');
     }
 }

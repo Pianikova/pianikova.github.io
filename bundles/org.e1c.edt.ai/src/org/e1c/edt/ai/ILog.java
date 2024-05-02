@@ -5,5 +5,5 @@ package org.e1c.edt.ai;
 
 public interface ILog
 {
-    void logError(Exception exception);
+    void logError(Throwable error);
 }
