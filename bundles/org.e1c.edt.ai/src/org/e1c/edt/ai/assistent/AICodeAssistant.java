@@ -28,7 +28,7 @@ import com.google.gson.Gson;
 public class AICodeAssistant
     implements IAICodeAssistant
 {
-    private ISettingsProvider settingsProvider;
+    private final ISettingsProvider settingsProvider;
 
     public AICodeAssistant(ISettingsProvider settingsProvider)
     {
@@ -142,6 +142,7 @@ public class AICodeAssistant
         }
 
         connection.addRequestProperty("client_id", settings.getClientToken()); //$NON-NLS-1$
+        connection.addRequestProperty("client_uid", settings.getClientUniqueId()); //$NON-NLS-1$
         connection.setDoOutput(true);
         return connection;
     }

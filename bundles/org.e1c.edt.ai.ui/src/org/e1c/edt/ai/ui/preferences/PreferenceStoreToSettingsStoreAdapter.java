@@ -3,27 +3,115 @@
  */
 package org.e1c.edt.ai.ui.preferences;
 
+import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Properties;
+
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
+import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
 {
-    private IPreferenceStore preferenceStore;
+    private static final String AI_PROPS_FILE_NAME = "ai.props"; //$NON-NLS-1$
+    private static final int AI_UID_SIZE = 8;
+    private final Object lock = new Object();
+    private final ILog log;
+    private final IPreferenceStore preferenceStore;
+    private Properties props;
 
-    public PreferenceStoreToSettingsStoreAdapter(IPreferenceStore preferenceStore)
+    public PreferenceStoreToSettingsStoreAdapter(ILog log, IPreferenceStore preferenceStore)
     {
+        this.log = log;
         this.preferenceStore = preferenceStore;
     }
 
     @Override
     public String getString(String key)
     {
-        return preferenceStore.getString(key);
+        switch(key)
+        {
+            case ISettingsStore.CLIENT_UID:
+                var curProps = getProps();
+                var val = curProps.getProperty(key, "").trim(); //$NON-NLS-1$
+                if (val.length() != AI_UID_SIZE)
+                {
+                    val = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, AI_UID_SIZE); //$NON-NLS-1$ //$NON-NLS-2$
+                    curProps.setProperty(key, val);
+                    saveProps();
+                }
+
+                return val;
+
+            default:
+                return preferenceStore.getString(key);
+        }
     }
 
     @Override
     public int getInt(String key)
     {
         return preferenceStore.getInt(key);
+    }
+
+    private Properties getProps()
+    {
+        synchronized (lock)
+        {
+            if (props != null)
+            {
+                return props;
+            }
+
+            props = new Properties();
+            try
+            {
+                var propsFilePath = getPropsFilePath();
+                if (Files.exists(propsFilePath) && Files.isRegularFile(propsFilePath))
+                {
+                    var propsStr = Files.readString(propsFilePath);
+                    var reader = new StringReader(propsStr);
+                    props.load(reader);
+                }
+            }
+            catch (IOException e)
+            {
+                log.logError(e);
+            }
+
+            return props;
+        }
+    }
+
+    private void saveProps()
+    {
+        synchronized (lock)
+        {
+            var curProps = getProps();
+            var writer = new StringWriter();
+            try
+            {
+                curProps.store(writer, "AI properties"); //$NON-NLS-1$
+                var propsFilePath = getPropsFilePath();
+                Files.writeString(propsFilePath, writer.toString());
+            }
+            catch (IOException e)
+            {
+                log.logError(e);
+            }
+        }
+    }
+
+    private Path getPropsFilePath()
+    {
+        return Path.of(ConfigurationScope.INSTANCE.getLocation()
+            .addTrailingSeparator()
+            .append(AI_PROPS_FILE_NAME)
+            .toFile()
+            .getAbsolutePath());
     }
 }

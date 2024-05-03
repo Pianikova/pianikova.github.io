@@ -15,19 +15,20 @@ import org.e1c.edt.ai.assistent.model.Parameters;
  */
 public class AISettings
 {
-    private ArrayList<String> accessRoles;
-    private ArrayList<String> tags;
-    private URL apiURL;
-    private URL chatURL;
-    private String clientToken;
-    private String modelName;
-    private String dataBaseName;
-    private String documentPath;
-    private Parameters llmParameters;
-    private int maxAssistantTextSize;
+    private final ArrayList<String> accessRoles;
+    private final ArrayList<String> tags;
+    private final URL apiURL;
+    private final URL chatURL;
+    private final String clientToken;
+    private final String clientUniqueId;
+    private final String modelName;
+    private final String dataBaseName;
+    private final String documentPath;
+    private final Parameters llmParameters;
+    private final int maxAssistantTextSize;
 
     public AISettings(ArrayList<String> accessRoles, ArrayList<String> tags, URL apiURL, URL chatURL,
-        String clientToken,
+        String clientToken, String clientUniqueId,
         String modelName, String dataBaseName, String documentPath, Parameters llmParameters, int maxAssistantTextSize)
     {
         this.accessRoles = accessRoles;
@@ -35,6 +36,7 @@ public class AISettings
         this.apiURL = apiURL;
         this.chatURL = chatURL;
         this.clientToken = clientToken;
+        this.clientUniqueId = clientUniqueId;
         this.modelName = modelName;
         this.dataBaseName = dataBaseName;
         this.documentPath = documentPath;
@@ -47,19 +49,9 @@ public class AISettings
         return accessRoles;
     }
 
-    public void setAccessRoles(ArrayList<String> accessRoles)
-    {
-        this.accessRoles = accessRoles;
-    }
-
     public ArrayList<String> getTags()
     {
         return tags;
-    }
-
-    public void setTags(ArrayList<String> tags)
-    {
-        this.tags = tags;
     }
 
     public URL getApiURL()
@@ -77,9 +69,9 @@ public class AISettings
         return clientToken;
     }
 
-    public void setClientToken(String clientToken)
+    public String getClientUniqueId()
     {
-        this.clientToken = clientToken;
+        return clientUniqueId;
     }
 
     public String getModelName()
@@ -87,29 +79,14 @@ public class AISettings
         return modelName;
     }
 
-    public void setModelName(String modelName)
-    {
-        this.modelName = modelName;
-    }
-
     public String getDataBaseName()
     {
         return dataBaseName;
     }
 
-    public void setDataBaseName(String dataBaseName)
-    {
-        this.dataBaseName = dataBaseName;
-    }
-
     public String getDocumentPath()
     {
         return documentPath;
-    }
-
-    public void setDocumentPath(String documentPath)
-    {
-        this.documentPath = documentPath;
     }
 
     public Parameters getLlmParameters()

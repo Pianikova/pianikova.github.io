@@ -89,9 +89,9 @@ public class AIContextProvider
     {
         var length = settingsProvider.getSettings()
             .map(settings -> settings.getMaxAssistantTextSize())
-            .orElse(ISettingsStore.DEFAULTMAXASSISTANTTEXTSIZE) - TEMPLATE_LENGTH;
+            .orElse(ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE) - TEMPLATE_LENGTH;
 
-        if (length < ISettingsStore.MINASSISTANTTEXTSIZE)
+        if (length < ISettingsStore.MIN_ASSISTANT_TEXT_SIZE)
         {
             return length;
         }

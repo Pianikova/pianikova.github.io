@@ -21,11 +21,12 @@ public class Composition
     private static final Log LOG = new Log();
     private static final Dispatcher DISPATCHER = new Dispatcher(LOG);
     private static final PreferenceStoreToSettingsStoreAdapter PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER =
-        new PreferenceStoreToSettingsStoreAdapter(Activator.getDefault().getPreferenceStore());
+        new PreferenceStoreToSettingsStoreAdapter(LOG, Activator.getDefault().getPreferenceStore());
     private static final ParametersParser PARAMETERS_PARSER = new ParametersParser();
     private static final SettingsProvider SETTINGS_PROVIDER =
         new SettingsProvider(LOG, PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER, PARAMETERS_PARSER);
-    private static final AICodeAssistant CODE_ASSISTANT = new AICodeAssistant(SETTINGS_PROVIDER);
+    private static final AICodeAssistant CODE_ASSISTANT =
+        new AICodeAssistant(SETTINGS_PROVIDER);
     private static final UI UI = new UI(LOG);
     private static final IdeApiHandler IDE_API_HANDLER = new IdeApiHandler(LOG, UI);
     private static final Chat CHAT = new Chat(LOG, SETTINGS_PROVIDER, UI, DISPATCHER, IDE_API_HANDLER);
