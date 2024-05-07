@@ -3,9 +3,11 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.Optional;
+
 public interface IJson
 {
     String serialize(Object src);
 
-    <T> T deserialize(String json, Class<T> classOfT);
+    <T> Optional<T> deserialize(String json, Class<T> classOfT);
 }

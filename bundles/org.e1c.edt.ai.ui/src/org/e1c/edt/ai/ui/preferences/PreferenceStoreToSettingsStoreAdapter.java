@@ -58,6 +58,12 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
         return preferenceStore.getInt(key);
     }
 
+    @Override
+    public boolean getBoolean(String key)
+    {
+        return preferenceStore.getBoolean(key);
+    }
+
     private Properties getProps()
     {
         synchronized (lock)

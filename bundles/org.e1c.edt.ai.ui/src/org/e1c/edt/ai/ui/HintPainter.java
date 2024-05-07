@@ -3,29 +3,22 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
-import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.GC;
 
 public class HintPainter
     implements PaintListener, IHintPainter
 {
-    private static final int DRAW_FLAGS = SWT.DRAW_DELIMITER + SWT.DRAW_TAB + SWT.DRAW_MNEMONIC;
-    private static final int BORDER = 2;
-    private static final String DEFAULT_HINT_TEXT = ""; //$NON-NLS-1$
     private boolean isActive = false;
     private ITextViewer viewer;
     private StyledText textWidget;
-    private String hintText = DEFAULT_HINT_TEXT;
+    private String hintText = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
-    private int offset = -1;
-    private Image pinImage;
 
     public HintPainter(ITextViewer textViewer)
     {
@@ -38,6 +31,11 @@ public class HintPainter
     public void pinOffset(int offset)
     {
         pinnedOffset = offset;
+        if (textWidget == null)
+        {
+            return;
+        }
+
         textWidget.redraw();
     }
 
@@ -62,30 +60,27 @@ public class HintPainter
     @Override
     public void setHintAt(int offset, String hintText)
     {
-        this.offset = offset;
+        var changed = false;
         if (hintText == null || offset == -1)
         {
-            hintText = DEFAULT_HINT_TEXT;
             pinnedOffset = -1;
-            textWidget.redraw();
+            changed = true;
         }
         else
         {
-            this.hintText = hintText;
+            changed = !hintText.equals(this.hintText);
         }
 
-        textWidget.redraw();
-    }
+        if (textWidget == null)
+        {
+            return;
+        }
 
-    public Image getPinImage()
-    {
-        return pinImage;
-    }
-
-    public void setPinImage(Image pinImage)
-    {
-        this.pinImage = pinImage;
-        textWidget.redraw();
+        if (changed)
+        {
+            this.hintText = hintText;
+            textWidget.redraw();
+        }
     }
 
     @Override
@@ -98,7 +93,12 @@ public class HintPainter
     @Override
     public void paint(int reason)
     {
-        IDocument document = viewer.getDocument();
+        if (textWidget == null)
+        {
+            return;
+        }
+
+        var document = viewer.getDocument();
         if (document == null)
         {
             deactivate(false);
@@ -122,6 +122,11 @@ public class HintPainter
     @Override
     public void deactivate(boolean redraw)
     {
+        if (textWidget == null)
+        {
+            return;
+        }
+
         if (!isActive)
         {
             return;
@@ -146,16 +151,16 @@ public class HintPainter
     @Override
     public void paintControl(PaintEvent event)
     {
-        if (textWidget == null)
+        if (textWidget == null || pinnedOffset == -1)
         {
             return;
         }
 
-        if (pinnedOffset == -1)
-        {
-            return;
-        }
+        drawHint(event.gc, getHint());
+    }
 
+    private String getHint()
+    {
         var curOffset = pinnedOffset;
         if (viewer instanceof ITextViewerExtension5)
         {
@@ -163,62 +168,32 @@ public class HintPainter
             curOffset = ((ITextViewerExtension5)viewer).modelOffset2WidgetOffset(curOffset);
         }
 
-        var gc = event.gc;
+        var content = textWidget.getContent();
+        var line = content.getLineAtOffset(curOffset);
+        var lineStartOffset = content.getOffsetAtLine(line);
+        var lineContent = content.getTextRange(lineStartOffset, curOffset - lineStartOffset);
+        var trimmedPrefix = lineContent.stripLeading();
+        var prefix = ""; //$NON-NLS-1$
+        if (trimmedPrefix.length() < lineContent.length())
+        {
+            prefix = lineContent.substring(0, lineContent.length() - trimmedPrefix.length());
+        }
+
+        return VisibleTextBuilder.build(getHintText(), prefix);
+    }
+
+    private void drawHint(GC gc, String hint)
+    {
+        var caretLocation = textWidget.getCaret().getLocation();
+        var x = caretLocation.x;
+        var y = caretLocation.y;
         gc.setBackground(textWidget.getBackground());
         gc.setForeground(textWidget.getForeground());
         gc.setFont(textWidget.getFont());
-
-        var text = VisibleTextBuilder.build(getHintText());
-        var textSize =
-            gc.textExtent(text, DRAW_FLAGS);
-        var isLastChar = false;
-        if (curOffset >= textWidget.getCharCount())
-        {
-            curOffset = textWidget.getCharCount() - 1;
-            isLastChar = true;
-        }
-
-        var bounds = textWidget.getTextBounds(curOffset, curOffset);
-        var x = bounds.x;
-        var y = bounds.y;
-        var content = textWidget.getContent();
-        var currentChar = content.getTextRange(curOffset, 1);
-        var isLineSeparator =
-            System.lineSeparator().endsWith(currentChar) || System.lineSeparator().startsWith(currentChar);
-        if (isLastChar && isLineSeparator)
-        {
-            x = 0;
-            y += bounds.height;
-        }
-
-        if (isLineSeparator)
-        {
-            x += bounds.width;
-        }
-
-        if (x < 0)
-        {
-            x = 0;
-        }
-
-        if (y < 0)
-        {
-            y = 0;
-        }
-
-        if (textSize.x <= 0 || textSize.y <= 0)
-        {
-            if (pinImage != null)
-            {
-                var imageBounds = pinImage.getBounds();
-                gc.drawImage(pinImage, 0, 0, imageBounds.width, imageBounds.height, x + BORDER, y + BORDER,
-                    bounds.height - BORDER * 2, bounds.height - BORDER * 2);
-            }
-
-            return;
-        }
-
+        var textSize = gc.textExtent(hint);
+        gc.fillRectangle(x, y, textSize.x + 2, textSize.y);
+        gc.drawRectangle(x, y, textSize.x + 2, textSize.y);
         gc.setAlpha(160);
-        gc.drawText(text, x + BORDER, y + 1, DRAW_FLAGS);
+        gc.drawText(hint, x + 2, y);
     }
 }

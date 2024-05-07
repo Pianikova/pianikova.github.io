@@ -7,5 +7,5 @@ import org.e1c.edt.ai.IObserver;
 
 public interface IResponseLineProcessor
 {
-    boolean process(IResponseStreamContext context, IObserver<String> observer, String line);
+    boolean process(IObserver<String> observer, String line);
 }

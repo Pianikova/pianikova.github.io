@@ -8,6 +8,7 @@ import org.e1c.edt.ai.IValidator;
 import org.e1c.edt.ai.client.ClientAI;
 import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.Composition;
+import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.StringFieldEditor;
@@ -46,49 +47,53 @@ public class ClientAIPreferencePage
     @Override
     public void createFieldEditors()
     {
+        var parent = getFieldEditorParent();
         addField(new ValidatingStringFieldEditor(ISettingsStore.APIURL, Messages.ClientAIPreferencePage_Api_URL,
-            getFieldEditorParent(), urlValidator));
+            parent, urlValidator));
 
         addField(new ValidatingStringFieldEditor(ISettingsStore.CHATURL, Messages.ClientAIPreferencePage_Chat_URL,
-            getFieldEditorParent(), urlValidator));
+            parent, urlValidator));
 
         addField(
             new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_token,
-                getFieldEditorParent()));
+                parent));
 
         addField(
             new StringFieldEditor(ISettingsStore.DATABASE_NAME, Messages.ClientAIPreferencePage_Database_name,
-                getFieldEditorParent()));
+                parent));
 
         addField(new StringFieldEditor(ISettingsStore.MODEL_NAME, Messages.ClientAIPreferencePage_AI_model,
-            getFieldEditorParent()));
+            parent));
 
         addField(
-            new StringFieldEditor(ISettingsStore.TAGS, Messages.ClientAIPreferencePage_Tags, getFieldEditorParent()));
+            new StringFieldEditor(ISettingsStore.TAGS, Messages.ClientAIPreferencePage_Tags, parent));
 
         addField(
             new StringFieldEditor(ISettingsStore.ACCESS_ROLES, Messages.ClientAIPreferencePage_Access_roles,
-                getFieldEditorParent()));
+                parent));
 
         addField(
             new StringFieldEditor(ISettingsStore.DOCUMENT_PATH, Messages.ClientAIPreferencePage_Document_path,
-                getFieldEditorParent()));
+                parent));
 
         addField(new ValidatingStringFieldEditor(ISettingsStore.LLM_PARAMETERS,
             Messages.ClientAIPreferencePage_LLL_parameters,
-            getFieldEditorParent(), parametersValidator));
+            parent, parametersValidator));
 
         var maxAssistTextSize = new IntegerFieldEditor(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE,
             Messages.ClientAIPreferencePage_MaxAssistantTextSize,
-            getFieldEditorParent());
+            parent);
         maxAssistTextSize.setValidRange(ISettingsStore.MIN_ASSISTANT_TEXT_SIZE,
             ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE);
         addField(maxAssistTextSize);
 
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
-            Messages.ClientAIPreferencePage_CodeCompletionLinesCount, getFieldEditorParent());
+            Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
         codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
         addField(codeCompletionLinesCount);
+
+        addField(new BooleanFieldEditor(ISettingsStore.CONTINUOUS_CODE_COMPLETION,
+            Messages.ClientAIPreferencePage_ContinuousCodeCompletition, parent));
     }
 
     @Override

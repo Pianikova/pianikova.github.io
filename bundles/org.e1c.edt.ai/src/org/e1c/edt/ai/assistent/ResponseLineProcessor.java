@@ -18,7 +18,7 @@ public class ResponseLineProcessor implements IResponseLineProcessor
     }
 
     @Override
-    public boolean process(IResponseStreamContext context, IObserver<String> observer, String line)
+    public boolean process(IObserver<String> observer, String line)
     {
         if (line == null || line.length() < DATA_LINE_PREFIX.length() + 1 || !line.startsWith(DATA_LINE_PREFIX))
         {
@@ -28,27 +28,9 @@ public class ResponseLineProcessor implements IResponseLineProcessor
         line = line.substring(DATA_LINE_PREFIX.length());
         try
         {
-            var aiResponse = json.deserialize(line, AIResponse.class);
-            var generatedText = aiResponse.getGeneratedText();
-            if (generatedText != null)
-            {
-                var update = createUpdate(context, generatedText);
-                observer.onNext(update);
-                return false;
-            }
-
-            var token = aiResponse.getToken();
-            if (token != null)
-            {
-                var text = token.getText();
-                if (text != null && !text.isEmpty())
-                {
-                    var update = createUpdate(context, text);
-                    return observer.onNext(update.toString()) && !isPartialUpdate(text, update);
-                }
-            }
-
-            return true;
+            return json.deserialize(line, AIResponse.class)
+                .map(aiResponse -> process(observer, aiResponse))
+                .orElse(true);
         }
         catch (Exception e)
         {
@@ -58,18 +40,31 @@ public class ResponseLineProcessor implements IResponseLineProcessor
         return false;
     }
 
-    private boolean isPartialUpdate(String text, String update)
+    private Boolean process(IObserver<String> observer, AIResponse aiResponse)
     {
-        return update.length() < text.length();
-    }
-
-    private String createUpdate(IResponseStreamContext context, String text)
-    {
-        if (text.isEmpty())
+        var token = aiResponse.getToken();
+        if (token == null)
         {
-            return text;
+            return true;
         }
 
-        return text.substring(0, context.acceptAndGetLength(text));
+        var text = token.getText();
+        if (text == null || text.isEmpty())
+        {
+            return true;
+        }
+
+        if (aiResponse.getGeneratedText() != null)
+        {
+            if (text.endsWith("</s>")) //$NON-NLS-1$
+            {
+                return false;
+            }
+
+            observer.onNext(text);
+            return false;
+        }
+
+        return observer.onNext(text);
     }
 }

@@ -3,7 +3,6 @@
  */
 package org.e1c.edt.ai.assistent;
 
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -11,13 +10,11 @@ import org.e1c.edt.ai.IObserver;
 
 public class ResponseStreamProcessor implements IResponseStreamProcessor
 {
-    private final Supplier<IResponseStreamContext> contextFactory;
     private final IResponseLineProcessor lineProcessor;
 
-    public ResponseStreamProcessor(Supplier<IResponseStreamContext> contextFactory,
+    public ResponseStreamProcessor(
         IResponseLineProcessor lineProcessor)
     {
-        this.contextFactory = contextFactory;
         this.lineProcessor = lineProcessor;
     }
 
@@ -26,8 +23,7 @@ public class ResponseStreamProcessor implements IResponseStreamProcessor
     {
         try (stream)
         {
-            var context = contextFactory.get();
-            stream.takeWhile(line -> !cancellationToken.isCanceled() && lineProcessor.process(context, observer, line))
+            stream.takeWhile(line -> !cancellationToken.isCanceled() && lineProcessor.process(observer, line))
                 .collect(Collectors.toList());
 
             observer.onCompleted();

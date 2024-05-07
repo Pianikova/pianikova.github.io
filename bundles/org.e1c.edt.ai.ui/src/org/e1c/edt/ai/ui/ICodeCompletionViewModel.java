@@ -3,9 +3,11 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.assistent.CancellationToken;
+
 public interface ICodeCompletionViewModel
 {
-    void activate();
+    CancellationToken activate(boolean ask);
 
     void deactivate();
 }

@@ -9,23 +9,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.function.Supplier;
 
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.assistent.CancellationToken;
 import org.e1c.edt.ai.assistent.IResponseLineProcessor;
-import org.e1c.edt.ai.assistent.IResponseStreamContext;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
 import org.junit.Test;
 
 public class ResponseStreamProcessorTest
 {
-    @SuppressWarnings("unchecked")
-    private final Supplier<IResponseStreamContext> contextFactory = mock(Supplier.class);
     private final IResponseLineProcessor lineProcessor = mock(IResponseLineProcessor.class);
     @SuppressWarnings("unchecked")
     private final IObserver<String> observer = mock(IObserver.class);
-    private final IResponseStreamContext context = mock(IResponseStreamContext.class);
 
     @SuppressWarnings("nls")
     @Test
@@ -36,16 +31,16 @@ public class ResponseStreamProcessorTest
         var data = List.of("Abc", "Xy", "Asd", "Rty");
 
         // When
-        when(lineProcessor.process(context, observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Xy")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Asd")).thenReturn(false);
+        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy")).thenReturn(true);
+        when(lineProcessor.process(observer, "Asd")).thenReturn(false);
         provcessor.process(data.stream(), observer, new CancellationToken());
 
         // Then
-        verify(lineProcessor).process(context, observer, "Abc");
-        verify(lineProcessor).process(context, observer, "Xy");
-        verify(lineProcessor).process(context, observer, "Asd");
-        verify(lineProcessor, times(0)).process(context, observer, "Rty");
+        verify(lineProcessor).process(observer, "Abc");
+        verify(lineProcessor).process(observer, "Xy");
+        verify(lineProcessor).process(observer, "Asd");
+        verify(lineProcessor, times(0)).process(observer, "Rty");
         verify(observer).onCompleted();
     }
 
@@ -58,17 +53,17 @@ public class ResponseStreamProcessorTest
         var data = List.of("Abc", "Xy", "Asd", "Rty");
 
         // When
-        when(lineProcessor.process(context, observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Xy")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Asd")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Rty")).thenReturn(true);
+        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy")).thenReturn(true);
+        when(lineProcessor.process(observer, "Asd")).thenReturn(true);
+        when(lineProcessor.process(observer, "Rty")).thenReturn(true);
         provcessor.process(data.stream(), observer, new CancellationToken());
 
         // Then
-        verify(lineProcessor).process(context, observer, "Abc");
-        verify(lineProcessor).process(context, observer, "Xy");
-        verify(lineProcessor).process(context, observer, "Asd");
-        verify(lineProcessor).process(context, observer, "Rty");
+        verify(lineProcessor).process(observer, "Abc");
+        verify(lineProcessor).process(observer, "Xy");
+        verify(lineProcessor).process(observer, "Asd");
+        verify(lineProcessor).process(observer, "Rty");
         verify(observer).onCompleted();
     }
 
@@ -83,16 +78,16 @@ public class ResponseStreamProcessorTest
         // When
         var cancellationToken = new CancellationToken();
         cancellationToken.cancel();
-        when(lineProcessor.process(context, observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Xy")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Asd")).thenReturn(false);
+        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy")).thenReturn(true);
+        when(lineProcessor.process(observer, "Asd")).thenReturn(false);
         provcessor.process(data.stream(), observer, cancellationToken);
 
         // Then
-        verify(lineProcessor, times(0)).process(context, observer, "Abc");
-        verify(lineProcessor, times(0)).process(context, observer, "Xy");
-        verify(lineProcessor, times(0)).process(context, observer, "Asd");
-        verify(lineProcessor, times(0)).process(context, observer, "Rty");
+        verify(lineProcessor, times(0)).process(observer, "Abc");
+        verify(lineProcessor, times(0)).process(observer, "Xy");
+        verify(lineProcessor, times(0)).process(observer, "Asd");
+        verify(lineProcessor, times(0)).process(observer, "Rty");
         verify(observer).onCompleted();
     }
 
@@ -106,23 +101,22 @@ public class ResponseStreamProcessorTest
         var error = new Throwable();
 
         // When
-        when(lineProcessor.process(context, observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(context, observer, "Xy")).thenAnswer(i -> {
+        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy")).thenAnswer(i -> {
             throw error;
         });
         provcessor.process(data.stream(), observer, new CancellationToken());
 
         // Then
-        verify(lineProcessor).process(context, observer, "Abc");
-        verify(lineProcessor).process(context, observer, "Xy");
-        verify(lineProcessor, times(0)).process(context, observer, "Asd");
+        verify(lineProcessor).process(observer, "Abc");
+        verify(lineProcessor).process(observer, "Xy");
+        verify(lineProcessor, times(0)).process(observer, "Asd");
         verify(observer).onError(error);
         verify(observer, times(0)).onCompleted();
     }
 
     private ResponseStreamProcessor createInstance(int codeCompletionLinesCount)
     {
-        when(contextFactory.get()).thenReturn(context);
-        return new ResponseStreamProcessor(contextFactory, lineProcessor);
+        return new ResponseStreamProcessor(lineProcessor);
     }
 }

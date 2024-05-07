@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.Optional;
+
 import com.google.gson.Gson;
 
 public class Json implements IJson
@@ -21,8 +23,8 @@ public class Json implements IJson
     }
 
     @Override
-    public <T> T deserialize(String json, Class<T> classOfT)
+    public <T> Optional<T> deserialize(String json, Class<T> classOfT)
     {
-        return gson.fromJson(json, classOfT);
+        return Optional.ofNullable(gson.fromJson(json, classOfT));
     }
 }

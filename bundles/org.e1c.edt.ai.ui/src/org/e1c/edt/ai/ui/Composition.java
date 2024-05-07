@@ -3,12 +3,9 @@
  */
 package org.e1c.edt.ai.ui;
 
-import java.util.function.Supplier;
-
 import org.e1c.edt.ai.AIContextSplitter;
 import org.e1c.edt.ai.CodeCompletionTokenizer;
 import org.e1c.edt.ai.IAIContextSplitter;
-import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IValidator;
 import org.e1c.edt.ai.Json;
@@ -16,11 +13,7 @@ import org.e1c.edt.ai.ParametersParser;
 import org.e1c.edt.ai.SettingsProvider;
 import org.e1c.edt.ai.URLValidator;
 import org.e1c.edt.ai.assistent.AICodeAssistant;
-import org.e1c.edt.ai.assistent.IAICodeAssistant;
-import org.e1c.edt.ai.assistent.IResponseStreamContext;
-import org.e1c.edt.ai.assistent.LinesCounter;
 import org.e1c.edt.ai.assistent.ResponseLineProcessor;
-import org.e1c.edt.ai.assistent.ResponseStreamContext;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 
@@ -34,20 +27,10 @@ public class Composition
     private static final SettingsProvider SETTINGS_PROVIDER =
         new SettingsProvider(LOG, PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER, PARAMETERS_PARSER);
     private static final CodeCompletionTokenizer CODECOMPLETION_TOKENIZER = new CodeCompletionTokenizer();
-    private static final Supplier<IResponseStreamContext> RESPONSE_STREAM_CONTEXT_FACTORY = new Supplier<>()
-    {
-
-        @Override
-        public IResponseStreamContext get()
-        {
-            return new ResponseStreamContext(SETTINGS_PROVIDER, new LinesCounter());
-        }
-    };
-
     private static final Json JSON = new Json();
     private static final ResponseLineProcessor RESPONSE_LINE_PROCESSOR = new ResponseLineProcessor(JSON);
     private static final ResponseStreamProcessor RESPONSE_STREAM_PROCESSOR =
-        new ResponseStreamProcessor(RESPONSE_STREAM_CONTEXT_FACTORY, RESPONSE_LINE_PROCESSOR);
+        new ResponseStreamProcessor(RESPONSE_LINE_PROCESSOR);
     private static final AICodeAssistant CODE_ASSISTANT =
         new AICodeAssistant(SETTINGS_PROVIDER, JSON, RESPONSE_STREAM_PROCESSOR);
     private static final UI UI = new UI(LOG);
@@ -57,6 +40,9 @@ public class Composition
     private static final IAIContextSplitter AI_CONTEXT_SPLITTER = new AIContextSplitter();
     private static final AIContextProvider AI_CONTEXT_PROVIDER =
         new AIContextProvider(UI, SETTINGS_PROVIDER, AI_CONTEXT_SPLITTER);
+    private static final CodeCompletion CODE_COMPLETION =
+        new CodeCompletion(LOG, PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER, UI, CODE_ASSISTANT, AI_CONTEXT_PROVIDER,
+            DISPATCHER, CODECOMPLETION_TOKENIZER);
 
     public static ILog getLog()
     {
@@ -66,11 +52,6 @@ public class Composition
     public static IDispatcher getDispatcher()
     {
         return DISPATCHER;
-    }
-
-    public static IAICodeAssistant getCodeAssistant()
-    {
-        return CODE_ASSISTANT;
     }
 
     public static IValidator<String> getParametersValidator()
@@ -103,8 +84,8 @@ public class Composition
         return UI;
     }
 
-    public static ICodeCompletionTokenizer getCodeCompletionTokenizer()
+    public static ICodeCompletion getCodeCompletion()
     {
-        return CODECOMPLETION_TOKENIZER;
+        return CODE_COMPLETION;
     }
 }

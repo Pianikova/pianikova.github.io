@@ -9,23 +9,37 @@ import org.eclipse.core.runtime.IProgressMonitor;
 public class JobCancellationToken
     extends CancellationToken
 {
+    private final Object lock = new Object();
     private IProgressMonitor monitor;
 
-    public JobCancellationToken(IProgressMonitor monitor)
+    public void attachMonitor(IProgressMonitor monitor)
     {
-        this.monitor = monitor;
+        synchronized (lock)
+        {
+            this.monitor = monitor;
+        }
     }
 
     @Override
     public Boolean isCanceled()
     {
-        return monitor.isCanceled() || super.isCanceled();
+        synchronized (lock)
+        {
+            return (monitor != null && monitor.isCanceled()) || super.isCanceled();
+        }
     }
 
     @Override
     public void cancel()
     {
-        monitor.setCanceled(true);
+        synchronized (lock)
+        {
+            if (monitor != null)
+            {
+                monitor.setCanceled(true);
+            }
+        }
+
         super.cancel();
     }
 }

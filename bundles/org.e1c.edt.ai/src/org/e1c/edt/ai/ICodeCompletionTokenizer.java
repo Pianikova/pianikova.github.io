@@ -7,5 +7,5 @@ import java.util.function.Predicate;
 
 public interface ICodeCompletionTokenizer
 {
-    CodeCompletionToken getNext(String text, Predicate<Character> isDelimiter);
+    CodeCompletionToken getNext(int minLength, String text, Predicate<Character> isDelimiter);
 }
