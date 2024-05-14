@@ -49,10 +49,9 @@ public class AIContextParts
         return Objects.equals(prefix, other.prefix) && Objects.equals(sufix, other.sufix);
     }
 
-    @SuppressWarnings("nls")
     @Override
     public String toString()
     {
-        return "AIContextParts [prefix=" + prefix + ", sufix=" + sufix + "]";
+        return "AIContextParts [prefix=" + prefix + ", sufix=" + sufix + "]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 }

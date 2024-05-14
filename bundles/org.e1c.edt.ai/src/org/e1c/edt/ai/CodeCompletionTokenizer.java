@@ -34,6 +34,11 @@ public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
             while (index < text.length());
         }
 
+        if (text == null)
+        {
+            text = ""; //$NON-NLS-1$
+        }
+
         return new CodeCompletionToken(text, ""); //$NON-NLS-1$
     }
 }

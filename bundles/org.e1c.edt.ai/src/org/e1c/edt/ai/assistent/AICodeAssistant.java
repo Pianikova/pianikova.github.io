@@ -50,7 +50,6 @@ public class AICodeAssistant
             .flatMap(settings -> generateText(settings, text, observer, cancellationToken));
     }
 
-    @SuppressWarnings("nls")
     private Optional<CompletableFuture<Void>> generateText(AISettings settings, String text,
         IObserver<String> observer,
         CancellationToken cancellationToken)
@@ -74,10 +73,10 @@ public class AICodeAssistant
         var request = HttpRequest.newBuilder()
             .uri(uri)
             .timeout(Duration.ofMinutes(1))
-            .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .header("client_id", settings.getClientToken())
-            .header("client_uid", settings.getClientUniqueId())
+            .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+            .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+            .header("client_id", settings.getClientToken()) //$NON-NLS-1$
+            .header("client_uid", settings.getClientUniqueId()) //$NON-NLS-1$
             .POST(BodyPublishers.ofString(requestBody))
             .build();
 

@@ -11,11 +11,8 @@ package org.e1c.edt.ai.client;
 public class AIClientException
     extends RuntimeException
 {
-    /**
-     * Exception constructor
-     * @param message
-     * @param exception
-     */
+    private static final long serialVersionUID = 8033741557264378457L;
+
     public AIClientException(String message, Throwable exception)
     {
         super(message, exception);

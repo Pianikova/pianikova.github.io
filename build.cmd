@@ -1,0 +1,1 @@
+mvn --batch-mode -P g5-v8-dt -P find-bugs,SDK -DbuildNumberPath=/var/lib/nfs-cistore/build/buildNumbers clean verify -Dtycho.localArtifacts=ignore -Dbaseline.skip
