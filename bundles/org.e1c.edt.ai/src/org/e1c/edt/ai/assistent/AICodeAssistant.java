@@ -88,11 +88,25 @@ public class AICodeAssistant
             .proxy(ProxySelector.getDefault())
             .build();
 
-         var feature = client
-            .sendAsync(request, BodyHandlers.ofLines())
+        var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
+        var feature = asyncRequest
             .thenApplyAsync(rsp -> checkResponse(rsp, observer))
             .thenApplyAsync(HttpResponse::body)
-            .thenAcceptAsync(stream -> responseStreamProcessor.process(stream, observer, cancellationToken));
+            .thenAcceptAsync(stream -> {
+                var attachToken = cancellationToken.attach(() -> asyncRequest.cancel(true));
+                try (attachToken)
+                {
+                    responseStreamProcessor.process(stream, observer, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    observer.onError(e);
+                }
+            })
+             .exceptionally(e -> {
+                 observer.onError(e);
+                 return null;
+             });
 
         return Optional.of(feature);
     }

@@ -39,7 +39,7 @@ public class CodeCompletionViewModel
     private final ICodeCompletionTokenizer tokenizer;
     private final IHintPainter hintPainter;
     private final Stack<String> tokens = new Stack<>();
-    private CancellationToken askCancellationToken = new CancellationToken();
+    private CancellationToken askCancellationToken = CancellationToken.NONE;
     private StringBuilder hint = new StringBuilder();
     private boolean inProgress;
 
@@ -89,11 +89,10 @@ public class CodeCompletionViewModel
 
     private void deactivate()
     {
-        CancellationToken cancellationToken = new CancellationToken();
         synchronized (lockObject)
         {
             askCancellationToken.cancel();
-            askCancellationToken = cancellationToken;
+            askCancellationToken = CancellationToken.NONE;
         }
 
         dispatcher.dispatch(() -> {
@@ -110,6 +109,17 @@ public class CodeCompletionViewModel
 
     private void reset()
     {
+        synchronized (lockObject)
+        {
+            if (askCancellationToken == CancellationToken.NONE)
+            {
+                return;
+            }
+
+            askCancellationToken.cancel();
+            askCancellationToken = CancellationToken.NONE;
+        }
+
         dispatcher.dispatch(() -> {
             hint = new StringBuilder();
             tokens.clear();
@@ -294,7 +304,7 @@ public class CodeCompletionViewModel
             return;
         }
 
-        if (!isContinuousCodeCompletion())
+        if (offset >= 0 && !isContinuousCodeCompletion())
         {
             reset();
             return;
