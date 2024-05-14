@@ -6,9 +6,11 @@ package org.e1c.edt.ai.ui;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 
 public class HintPainter
@@ -190,11 +192,24 @@ public class HintPainter
         gc.setAdvanced(true);
         gc.setBackground(textWidget.getBackground());
         gc.setForeground(textWidget.getForeground());
-        gc.setFont(textWidget.getFont());
-        var textSize = gc.textExtent(hint);
-        gc.fillRectangle(x - 1, y, textSize.x + 1, textSize.y);
-        gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
-        gc.setAlpha(160);
-        gc.drawText(hint, x, y);
+        var font = textWidget.getFont();
+        var fontData = font.getFontData()[0];
+        fontData.setStyle(SWT.ITALIC);
+        var italicFont = new Font(font.getDevice(), fontData);
+        try
+        {
+            gc.setFont(italicFont);
+            var textSize = gc.textExtent(hint);
+            gc.fillRectangle(x - 1, y, textSize.x + 1, textSize.y);
+            gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
+            gc.setAlpha(160);
+            gc.drawText(hint, x, y);
+        }
+        finally
+        {
+            italicFont.dispose();
+        }
+
+
     }
 }
