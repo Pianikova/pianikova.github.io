@@ -26,12 +26,6 @@ public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
                 while (index < text.length() && isDelimiterToken == isDelimiter.test(text.charAt(index)))
                     index++;
 
-                if (!isDelimiterToken)
-                {
-                    while (index < text.length() && isDelimiter.test(text.charAt(index)))
-                        index++;
-                }
-
                 if (index >= minLength)
                 {
                     return new CodeCompletionToken(text.substring(0, index), text.substring(index));

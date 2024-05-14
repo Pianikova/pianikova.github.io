@@ -187,13 +187,14 @@ public class HintPainter
         var caretLocation = textWidget.getCaret().getLocation();
         var x = caretLocation.x;
         var y = caretLocation.y;
+        gc.setAdvanced(true);
         gc.setBackground(textWidget.getBackground());
         gc.setForeground(textWidget.getForeground());
         gc.setFont(textWidget.getFont());
         var textSize = gc.textExtent(hint);
-        gc.fillRectangle(x, y, textSize.x + 2, textSize.y);
-        gc.drawRectangle(x, y, textSize.x + 2, textSize.y);
+        gc.fillRectangle(x - 1, y, textSize.x + 1, textSize.y);
+        gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
         gc.setAlpha(160);
-        gc.drawText(hint, x + 2, y);
+        gc.drawText(hint, x, y);
     }
 }

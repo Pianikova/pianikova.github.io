@@ -6,6 +6,7 @@ package org.e1c.edt.ai.assistent;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.IObserver;
 
 /**

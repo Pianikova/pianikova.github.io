@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.e1c.edt.ai.assistent.CancellationToken;
+import org.e1c.edt.ai.CancellationToken;
 import org.eclipse.core.runtime.IProgressMonitor;
 
 public class JobCancellationToken

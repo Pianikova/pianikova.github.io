@@ -10,8 +10,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
+import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.IObserver;
-import org.e1c.edt.ai.assistent.CancellationToken;
 import org.e1c.edt.ai.assistent.IResponseLineProcessor;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
 import org.junit.Test;

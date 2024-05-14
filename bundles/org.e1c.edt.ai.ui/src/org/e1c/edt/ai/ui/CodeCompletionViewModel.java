@@ -5,11 +5,12 @@ package org.e1c.edt.ai.ui;
 
 import java.util.concurrent.CancellationException;
 
+import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.ISettingsStore;
-import org.e1c.edt.ai.assistent.CancellationToken;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -57,7 +58,7 @@ public class CodeCompletionViewModel
     }
 
     @Override
-    public CancellationToken activate(boolean ask)
+    public AutoCloseable activate(boolean ask)
     {
         CancellationToken cancellationToken = new CancellationToken();
         synchronized (lockObject)
@@ -81,11 +82,10 @@ public class CodeCompletionViewModel
             askByJob(0);
         }
 
-        return cancellationToken;
+        return Closeables.create(() -> deactivate());
     }
 
-    @Override
-    public void deactivate()
+    private void deactivate()
     {
         CancellationToken cancellationToken = new CancellationToken();
         synchronized (lockObject)

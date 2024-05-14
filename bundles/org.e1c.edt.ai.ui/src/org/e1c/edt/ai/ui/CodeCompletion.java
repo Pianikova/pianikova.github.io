@@ -3,10 +3,10 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
-import org.e1c.edt.ai.assistent.CancellationToken;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
 
 public class CodeCompletion implements ICodeCompletion
@@ -19,7 +19,7 @@ public class CodeCompletion implements ICodeCompletion
     private final IDispatcher dispatcher;
     private final ICodeCompletionTokenizer tokenizer;
     private ICodeCompletionViewModel codeCompletion;
-    private CancellationToken cancellationToken;
+    private AutoCloseable query = Closeables.Empty;
 
     public CodeCompletion(ILog log, ISettingsStore settingsStore, IUI ui, IAICodeAssistant codeAssistant,
         IAIContextProvider aiContextProvider,
@@ -37,14 +37,13 @@ public class CodeCompletion implements ICodeCompletion
     @Override
     public void show(boolean ask)
     {
-        if (cancellationToken != null)
+        try
         {
-            cancellationToken.cancel();
+            query.close();
         }
-
-        if (codeCompletion != null)
+        catch (Exception e)
         {
-            codeCompletion.deactivate();
+            // ignored
         }
 
         ui.getTextViewer().ifPresent(textViewer -> {
@@ -52,7 +51,7 @@ public class CodeCompletion implements ICodeCompletion
                 new CodeCompletionViewModel(log, settingsStore, codeAssistant, aiContextProvider, dispatcher, ui,
                     tokenizer, new HintPainter(textViewer));
 
-            cancellationToken = codeCompletion.activate(ask);
+            query = codeCompletion.activate(ask);
         });
     }
 }

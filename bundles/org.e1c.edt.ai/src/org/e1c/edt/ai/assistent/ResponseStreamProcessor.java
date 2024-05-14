@@ -6,6 +6,7 @@ package org.e1c.edt.ai.assistent;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.IObserver;
 
 public class ResponseStreamProcessor implements IResponseStreamProcessor
