@@ -47,9 +47,11 @@ public class CodeCompletion implements ICodeCompletion
         }
 
         ui.getTextViewer().ifPresent(textViewer -> {
+            var hintPainter = new HintPainter(textViewer);
+            hintPainter.setLabel("Tab → ← Esc"); //$NON-NLS-1$
             codeCompletion =
                 new CodeCompletionViewModel(log, settingsStore, codeAssistant, aiContextProvider, dispatcher, ui,
-                    tokenizer, new HintPainter(textViewer));
+                    tokenizer, hintPainter);
 
             query = codeCompletion.activate(ask);
         });

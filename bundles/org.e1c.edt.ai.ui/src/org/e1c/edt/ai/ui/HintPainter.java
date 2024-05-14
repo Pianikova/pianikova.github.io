@@ -13,14 +13,18 @@ import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 
+import com.google.common.base.Preconditions;
+
 public class HintPainter
     implements PaintListener, IHintPainter
 {
+    private static final int BORDER = 1;
     private boolean isActive = false;
     private ITextViewer viewer;
     private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
+    private String labelText = ""; //$NON-NLS-1$
 
     public HintPainter(ITextViewer textViewer)
     {
@@ -83,6 +87,13 @@ public class HintPainter
             this.hintText = hintText;
             textWidget.redraw();
         }
+    }
+
+    @Override
+    public void setLabel(String labelText)
+    {
+        Preconditions.checkNotNull(labelText);
+        this.labelText = labelText;
     }
 
     @Override
@@ -201,9 +212,38 @@ public class HintPainter
             gc.setFont(italicFont);
             var textSize = gc.textExtent(hint);
             gc.fillRectangle(x - 1, y, textSize.x + 1, textSize.y);
+            gc.setAlpha(80);
             gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
             gc.setAlpha(160);
             gc.drawText(hint, x, y);
+
+            if (!labelText.isBlank())
+            {
+                fontData.setHeight((int)(fontData.getHeight() * .75));
+                var smalFont = new Font(font.getDevice(), fontData);
+                try
+                {
+                    gc.setFont(smalFont);
+                    var labelTextSize = gc.textExtent(labelText);
+                    var hintX = x;
+                    x = x + textSize.x - labelTextSize.x;
+                    if (x < hintX)
+                    {
+                        x = hintX;
+                    }
+
+                    y = y + textSize.y;
+                    gc.setAlpha(255);
+                    gc.fillRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
+                    gc.setAlpha(80);
+                    gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
+                    gc.drawText(labelText, x + BORDER, y);
+                }
+                finally
+                {
+                    smalFont.dispose();
+                }
+            }
         }
         finally
         {

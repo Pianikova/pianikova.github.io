@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.assistent;
 
 import java.net.Authenticator;
+import java.net.ProxySelector;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -80,11 +81,14 @@ public class AICodeAssistant
             .POST(BodyPublishers.ofString(requestBody))
             .build();
 
-        var feature = HttpClient.newBuilder()
+        var client = HttpClient.newBuilder()
             .version(Version.HTTP_2)
             .followRedirects(Redirect.NORMAL)
             .authenticator(Authenticator.getDefault())
-            .build()
+            .proxy(ProxySelector.getDefault())
+            .build();
+
+         var feature = client
             .sendAsync(request, BodyHandlers.ofLines())
             .thenApplyAsync(rsp -> checkResponse(rsp, observer))
             .thenApplyAsync(HttpResponse::body)
