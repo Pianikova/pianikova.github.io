@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.util.Stack;
 import java.util.concurrent.CancellationException;
 
 import org.e1c.edt.ai.CancellationToken;
@@ -37,6 +38,7 @@ public class CodeCompletionViewModel
     private final IUI ui;
     private final ICodeCompletionTokenizer tokenizer;
     private final IHintPainter hintPainter;
+    private final Stack<String> tokens = new Stack<>();
     private CancellationToken askCancellationToken = new CancellationToken();
     private StringBuilder hint = new StringBuilder();
     private boolean inProgress;
@@ -110,6 +112,7 @@ public class CodeCompletionViewModel
     {
         dispatcher.dispatch(() -> {
             hint = new StringBuilder();
+            tokens.clear();
             inProgress = false;
             hintPainter.reset();
         });
@@ -243,13 +246,30 @@ public class CodeCompletionViewModel
                 var token = tokenizer.getNext(1, hintText, this::isTextDelimiter);
                 var text = token.getValue();
                 apply(viewer.get(), text, offset);
-
                 hint.delete(0, text.length());
+                tokens.push(text);
                 var hintLines = getHintLines();
                 continueAsk(hintLines);
                 if (hint.length() == 0)
                 {
                     askByJob(0);
+                }
+            });
+
+            return;
+        }
+
+        if (e.keyCode == SWT.ARROW_LEFT && offset >= 0)
+        {
+            e.doit = false;
+            dispatcher.dispatch(() -> {
+                if (tokens.size() > 0)
+                {
+                    var text = tokens.pop();
+                    rollback(viewer.get(), text, offset);
+                    hint.insert(0, text);
+                    var hintLines = getHintLines();
+                    continueAsk(hintLines);
                 }
             });
 
@@ -298,6 +318,31 @@ public class CodeCompletionViewModel
                     inProgress = true;
                     viewer.getDocument().replace(offset, 0, hintText);
                     viewer.getSelectionProvider().setSelection(new TextSelection(offset + hintText.length(), 0));
+                }
+                finally
+                {
+                    inProgress = false;
+                }
+            }
+        }
+        catch (BadLocationException e)
+        {
+            log.logError(e);
+        }
+    }
+
+    private void rollback(ITextViewer viewer, String hintText, int offset)
+    {
+        try
+        {
+            if (!hintText.isEmpty())
+            {
+                try
+                {
+                    inProgress = true;
+                    var start = offset - hintText.length();
+                    viewer.getDocument().replace(start, hintText.length(), ""); //$NON-NLS-1$
+                    viewer.getSelectionProvider().setSelection(new TextSelection(start, 0));
                 }
                 finally
                 {
