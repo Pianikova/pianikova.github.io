@@ -3,11 +3,9 @@
  */
 package org.e1c.edt.ai;
 
-/**
- * @author Nikolay Pyanikov
- *
- */
+import java.util.function.Predicate;
+
 public interface ICodeCompletionTokenizer
 {
-    CodeCompletionToken getNext(String text);
+    CodeCompletionToken getNext(int minLength, String text, Predicate<Character> isDelimiter);
 }

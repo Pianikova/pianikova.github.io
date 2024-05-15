@@ -3,67 +3,42 @@
  */
 package org.e1c.edt.ai;
 
-import com.google.common.base.Preconditions;
+import java.util.function.Predicate;
 
 public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
 {
-    private int minLength;
-
-    public CodeCompletionTokenizer()
-    {
-        this(2);
-    }
-
-    public CodeCompletionTokenizer(int minLength)
-    {
-        Preconditions.checkArgument(minLength > 0);
-        this.minLength = minLength;
-    }
-
     @Override
-    public CodeCompletionToken getNext(String text)
+    public CodeCompletionToken getNext(int minLength, String text, Predicate<Character> isDelimiter)
     {
-        var nextToken = getNextToken(text);
-        if (!nextToken.isEmpty())
+        if (minLength < 1)
         {
-            var nextText = text.substring(nextToken.length());
-            if (!getNextToken(nextText).isEmpty())
+            minLength = 1;
+        }
+
+        if (text != null && !text.isBlank())
+        {
+            var index = 0;
+            do
             {
-                return new CodeCompletionToken(nextToken, nextText);
+                var isDelimiterToken = isDelimiter.test(text.charAt(index));
+                index++;
+
+                while (index < text.length() && isDelimiterToken == isDelimiter.test(text.charAt(index)))
+                    index++;
+
+                if (index >= minLength)
+                {
+                    return new CodeCompletionToken(text.substring(0, index), text.substring(index));
+                }
             }
+            while (index < text.length());
         }
 
-        return new CodeCompletionToken("", text); //$NON-NLS-1$
-    }
-
-    private String getNextToken(String text)
-    {
-        var chars = text.toCharArray();
-        var length = chars.length;
-        var cursor = 0;
-
-        while (cursor < length && isWhiteSpace(chars[cursor++]))
-            ;
-
-        var size = 0;
-        while (size < minLength && cursor < length)
+        if (text == null)
         {
-            while (cursor < length && !isWhiteSpace(chars[cursor++]))
-            {
-                size++;
-            }
+            text = ""; //$NON-NLS-1$
         }
 
-        if (size >= minLength)
-        {
-            return text.substring(0, cursor - 1);
-        }
-
-        return ""; //$NON-NLS-1$
-    }
-
-    private Boolean isWhiteSpace(char ch)
-    {
-        return (ch == ' ') || (ch == '\t') || (ch == '\n') || (ch == '\r');
+        return new CodeCompletionToken(text, ""); //$NON-NLS-1$
     }
 }

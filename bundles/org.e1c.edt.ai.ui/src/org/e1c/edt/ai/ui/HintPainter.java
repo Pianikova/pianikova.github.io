@@ -3,27 +3,28 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
-import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.GC;
+
+import com.google.common.base.Preconditions;
 
 public class HintPainter
     implements PaintListener, IHintPainter
 {
-    private static final int BORDER = 2;
-    private static final String DEFAULT_HINT_TEXT = ""; //$NON-NLS-1$
+    private static final int BORDER = 1;
     private boolean isActive = false;
     private ITextViewer viewer;
     private StyledText textWidget;
-    private String hintText = DEFAULT_HINT_TEXT;
+    private String hintText = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
-    private int offset = -1;
-    private Image pinImage;
+    private String labelText = ""; //$NON-NLS-1$
 
     public HintPainter(ITextViewer textViewer)
     {
@@ -36,6 +37,11 @@ public class HintPainter
     public void pinOffset(int offset)
     {
         pinnedOffset = offset;
+        if (textWidget == null)
+        {
+            return;
+        }
+
         textWidget.redraw();
     }
 
@@ -60,30 +66,34 @@ public class HintPainter
     @Override
     public void setHintAt(int offset, String hintText)
     {
-        this.offset = offset;
-        if (hintText.isEmpty())
+        var changed = false;
+        if (hintText == null || offset == -1)
         {
-            hintText = DEFAULT_HINT_TEXT;
             pinnedOffset = -1;
-            textWidget.redraw();
+            changed = true;
         }
         else
         {
-            this.hintText = hintText;
+            changed = !hintText.equals(this.hintText);
         }
 
-        textWidget.redraw();
+        if (textWidget == null)
+        {
+            return;
+        }
+
+        if (changed)
+        {
+            this.hintText = hintText;
+            textWidget.redraw();
+        }
     }
 
-    public Image getPinImage()
+    @Override
+    public void setLabel(String labelText)
     {
-        return pinImage;
-    }
-
-    public void setPinImage(Image pinImage)
-    {
-        this.pinImage = pinImage;
-        textWidget.redraw();
+        Preconditions.checkNotNull(labelText);
+        this.labelText = labelText;
     }
 
     @Override
@@ -96,7 +106,12 @@ public class HintPainter
     @Override
     public void paint(int reason)
     {
-        IDocument document = viewer.getDocument();
+        if (textWidget == null)
+        {
+            return;
+        }
+
+        var document = viewer.getDocument();
         if (document == null)
         {
             deactivate(false);
@@ -120,6 +135,11 @@ public class HintPainter
     @Override
     public void deactivate(boolean redraw)
     {
+        if (textWidget == null)
+        {
+            return;
+        }
+
         if (!isActive)
         {
             return;
@@ -144,22 +164,16 @@ public class HintPainter
     @Override
     public void paintControl(PaintEvent event)
     {
-        if (textWidget == null)
+        if (textWidget == null || pinnedOffset == -1)
         {
             return;
         }
 
-        if (pinnedOffset == -1)
-        {
-            return;
-        }
+        drawHint(event.gc, getHint());
+    }
 
-        if (pinnedOffset != offset && offset != -1)
-        {
-            pinnedOffset = -1;
-            return;
-        }
-
+    private String getHint()
+    {
         var curOffset = pinnedOffset;
         if (viewer instanceof ITextViewerExtension5)
         {
@@ -167,64 +181,75 @@ public class HintPainter
             curOffset = ((ITextViewerExtension5)viewer).modelOffset2WidgetOffset(curOffset);
         }
 
-        var gc = event.gc;
-        var text = VisibleTextBuilder.build(getHintText());
-        var textSize = gc.stringExtent(text);
-        var isLastChar = false;
-        if (curOffset >= textWidget.getCharCount())
-        {
-            curOffset = textWidget.getCharCount() - 1;
-            isLastChar = true;
-        }
-
-        var bounds = textWidget.getTextBounds(curOffset, curOffset);
-        var x = bounds.x;
-        var y = bounds.y;
         var content = textWidget.getContent();
-        var currentChar = content.getTextRange(curOffset, 1);
-        var isLineSeparator =
-            System.lineSeparator().endsWith(currentChar) || System.lineSeparator().startsWith(currentChar);
-        if (isLastChar && isLineSeparator)
+        var line = content.getLineAtOffset(curOffset);
+        var lineStartOffset = content.getOffsetAtLine(line);
+        var lineContent = content.getTextRange(lineStartOffset, curOffset - lineStartOffset);
+        var trimmedPrefix = lineContent.stripLeading();
+        var prefix = ""; //$NON-NLS-1$
+        if (trimmedPrefix.length() < lineContent.length())
         {
-            x = 0;
-            y += bounds.height;
+            prefix = lineContent.substring(0, lineContent.length() - trimmedPrefix.length());
         }
 
-        if (isLineSeparator)
-        {
-            x += bounds.width;
-        }
+        return VisibleTextBuilder.build(getHintText(), prefix);
+    }
 
-        if (x < 0)
-        {
-            x = 0;
-        }
-
-        if (y < 0)
-        {
-            y = 0;
-        }
-
-        if (textSize.x <= 0 || textSize.y <= 0)
-        {
-            if (pinImage != null)
-            {
-                var imageBounds = pinImage.getBounds();
-                gc.drawImage(pinImage, 0, 0, imageBounds.width, imageBounds.height, x + BORDER, y + BORDER,
-                    bounds.height - BORDER * 2, bounds.height - BORDER * 2);
-            }
-
-            return;
-        }
-
+    private void drawHint(GC gc, String hint)
+    {
+        var caretLocation = textWidget.getCaret().getLocation();
+        var x = caretLocation.x;
+        var y = caretLocation.y;
+        gc.setAdvanced(true);
         gc.setBackground(textWidget.getBackground());
         gc.setForeground(textWidget.getForeground());
-        gc.setFont(textWidget.getFont());
-        var width = textSize.x + BORDER * 2;
-        var height = textSize.y + 1;
-        gc.fillRectangle(x, y, width, height);
-        gc.drawRectangle(x, y, width, height);
-        gc.setAlpha(160);
-        gc.drawString(text, x + BORDER, y, true);
+        var font = textWidget.getFont();
+        var fontData = font.getFontData()[0];
+        fontData.setStyle(SWT.ITALIC);
+        var italicFont = new Font(font.getDevice(), fontData);
+        try
+        {
+            gc.setFont(italicFont);
+            var textSize = gc.textExtent(hint);
+            gc.fillRectangle(x - 1, y, textSize.x + 1, textSize.y);
+            gc.setAlpha(80);
+            gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
+            gc.setAlpha(160);
+            gc.drawText(hint, x, y);
+
+            if (!labelText.isBlank())
+            {
+                fontData.setHeight((int)(fontData.getHeight() * .75));
+                var smalFont = new Font(font.getDevice(), fontData);
+                try
+                {
+                    gc.setFont(smalFont);
+                    var labelTextSize = gc.textExtent(labelText);
+                    var hintX = x;
+                    x = x + textSize.x - labelTextSize.x;
+                    if (x < hintX)
+                    {
+                        x = hintX;
+                    }
+
+                    y = y + textSize.y;
+                    gc.setAlpha(255);
+                    gc.fillRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
+                    gc.setAlpha(80);
+                    gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
+                    gc.drawText(labelText, x + BORDER, y);
+                }
+                finally
+                {
+                    smalFont.dispose();
+                }
+            }
+        }
+        finally
+        {
+            italicFont.dispose();
+        }
+
+
     }
 }

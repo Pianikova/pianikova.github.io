@@ -1,157 +1,125 @@
-/*
+/**
  * Copyright (C) 2024, 1C
  */
 package org.e1c.edt.ai.assistent;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.ProtocolException;
+import java.net.Authenticator;
+import java.net.ProxySelector;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Redirect;
+import java.net.http.HttpClient.Version;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
+import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.IJson;
+import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.assistent.model.AITextRequest;
-import org.e1c.edt.ai.assistent.model.AITextResponse;
 import org.e1c.edt.ai.client.AIClientException;
 import org.e1c.edt.ai.client.AISettings;
-import org.e1c.edt.ai.client.Messages;
 
-import com.google.gson.Gson;
-
-/**
- * @author Bogdan Sushkov
- *
- */
 public class AICodeAssistant
     implements IAICodeAssistant
 {
     private final ISettingsProvider settingsProvider;
+    private final IJson json;
+    private final IResponseStreamProcessor responseStreamProcessor;
 
-    public AICodeAssistant(ISettingsProvider settingsProvider)
+    public AICodeAssistant(ISettingsProvider settingsProvider,
+        IJson json,
+        IResponseStreamProcessor responseStreamProcessor)
     {
         this.settingsProvider = settingsProvider;
+        this.json = json;
+        this.responseStreamProcessor = responseStreamProcessor;
     }
 
     @Override
-    public Optional<AITextResponse> generateText(String text, CancellationToken cancellationToken)
+    public Optional<CompletableFuture<Void>> generateText(String text, IObserver<String> observer,
+        CancellationToken cancellationToken)
     {
-        var optionalSettings = settingsProvider.getSettings();
-        if (optionalSettings.isEmpty())
+        return settingsProvider.getSettings()
+            .flatMap(settings -> generateText(settings, text, observer, cancellationToken));
+    }
+
+    private Optional<CompletableFuture<Void>> generateText(AISettings settings, String text,
+        IObserver<String> observer,
+        CancellationToken cancellationToken)
+    {
+        var aiRequest = new AITextRequest();
+        aiRequest.setInputs(text);
+        aiRequest.setParameters(settings.getLlmParameters());
+        var requestBody = json.serialize(aiRequest);
+
+        URI uri;
+        try
         {
+            uri = settings.getApiURL().toURI();
+        }
+        catch (URISyntaxException e)
+        {
+            observer.onError(e);
             return Optional.empty();
         }
 
-        var settings = optionalSettings.get();
-        HttpURLConnection connection = createPostConnection(settings);
-        AITextRequest request = new AITextRequest();
-        request.setInputs(text);
-        request.setParameters(settings.getLlmParameters());
-        Gson gson = new Gson();
-        String requestBody = gson.toJson(request);
+        var request = HttpRequest.newBuilder()
+            .uri(uri)
+            .timeout(Duration.ofMinutes(1))
+            .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+            .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+            .header("client_id", settings.getClientToken()) //$NON-NLS-1$
+            .header("client_uid", settings.getClientUniqueId()) //$NON-NLS-1$
+            .POST(BodyPublishers.ofString(requestBody))
+            .build();
 
-        cancellationToken.throwIfCanceled();
+        var client = HttpClient.newBuilder()
+            .version(Version.HTTP_2)
+            .followRedirects(Redirect.NORMAL)
+            .authenticator(Authenticator.getDefault())
+            .proxy(ProxySelector.getDefault())
+            .build();
 
-        try (OutputStream os = connection.getOutputStream())
-        {
-            byte[] input = requestBody.getBytes("utf-8"); //$NON-NLS-1$
+        var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
+        var feature = asyncRequest
+            .thenApplyAsync(rsp -> checkResponse(rsp, observer))
+            .thenApplyAsync(HttpResponse::body)
+            .thenAcceptAsync(stream -> {
+                var attachToken = cancellationToken.attach(() -> asyncRequest.cancel(true));
+                try (attachToken)
+                {
+                    responseStreamProcessor.process(stream, observer, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    observer.onError(e);
+                }
+            })
+             .exceptionally(e -> {
+                 observer.onError(e);
+                 return null;
+             });
 
-            cancellationToken.throwIfCanceled();
-
-            os.write(input, 0, input.length);
-        }
-        catch (IOException e)
-        {
-            throw new AIClientException(Messages.ClientAI_Response_error, e);
-        }
-
-        StringBuilder response = getResponse(connection, cancellationToken);
-
-        cancellationToken.throwIfCanceled();
-
-        AITextResponse textResponse = gson.fromJson(response.toString(), AITextResponse.class);
-        return Optional.ofNullable(textResponse);
+        return Optional.of(feature);
     }
 
-
-    private StringBuilder getResponse(HttpURLConnection connection, CancellationToken cancellationToken)
+    private HttpResponse<Stream<String>> checkResponse(HttpResponse<Stream<String>> response,
+        IObserver<String> observer)
     {
-        StringBuilder response = null;
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) //$NON-NLS-1$
+        var statusCode = response.statusCode();
+        if (statusCode >= 300)
         {
-            response = new StringBuilder();
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null)
-            {
-                cancellationToken.throwIfCanceled();
-                response.append(responseLine.trim());
-            }
-        }
-        catch (UnsupportedEncodingException e)
-        {
-            throw new AIClientException(e.getMessage(), e);
-        }
-        catch (IOException e)
-        {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getErrorStream(), "utf-8"))) //$NON-NLS-1$
-            {
-                response = new StringBuilder();
-                String responseLine = null;
-                while ((responseLine = br.readLine()) != null)
-                {
-                    response.append(responseLine.trim());
-                }
-
-                throw new AIClientException(Messages.ClientAI_Server_status_500, e);
-            }
-            catch (UnsupportedEncodingException e1)
-            {
-                throw new AIClientException(e1.getMessage(), e1);
-            }
-            catch (IOException e2)
-            {
-                throw new AIClientException(Messages.ClientAI_Response_error, e);
-            }
+            observer.onError(new AIClientException("AI HTTP response status code is " + statusCode, null)); //$NON-NLS-1$
         }
 
         return response;
-    }
-
-    private HttpURLConnection createConnection(AISettings settings, String requestMethod)
-    {
-        HttpURLConnection connection = null;
-        try
-        {
-            connection = (HttpURLConnection)settings.getApiURL().openConnection();
-        }
-        catch (IOException e)
-        {
-            throw new AIClientException(Messages.ClientAI_Cannot_connect, e);
-        }
-
-        try
-        {
-            connection.setRequestMethod(requestMethod);
-
-        }
-        catch (ProtocolException e)
-        {
-            throw new AIClientException(e.getMessage(), e);
-        }
-
-        connection.addRequestProperty("client_id", settings.getClientToken()); //$NON-NLS-1$
-        connection.addRequestProperty("client_uid", settings.getClientUniqueId()); //$NON-NLS-1$
-        connection.setDoOutput(true);
-        return connection;
-    }
-
-    private HttpURLConnection createPostConnection(AISettings settings)
-    {
-        HttpURLConnection connection = createConnection(settings, "POST"); //$NON-NLS-1$
-        connection.setRequestProperty("Accept", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
-        connection.setRequestProperty("Content-Type", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
-        return connection;
     }
 }

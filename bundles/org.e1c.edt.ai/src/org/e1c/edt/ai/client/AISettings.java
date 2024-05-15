@@ -4,7 +4,7 @@
 package org.e1c.edt.ai.client;
 
 import java.net.URL;
-import java.util.ArrayList;
+import java.util.List;
 
 import org.e1c.edt.ai.assistent.model.Parameters;
 
@@ -15,8 +15,8 @@ import org.e1c.edt.ai.assistent.model.Parameters;
  */
 public class AISettings
 {
-    private final ArrayList<String> accessRoles;
-    private final ArrayList<String> tags;
+    private final List<String> accessRoles;
+    private final List<String> tags;
     private final URL apiURL;
     private final URL chatURL;
     private final String clientToken;
@@ -26,10 +26,12 @@ public class AISettings
     private final String documentPath;
     private final Parameters llmParameters;
     private final int maxAssistantTextSize;
+    private final int codeCompletionLinesCount;
 
-    public AISettings(ArrayList<String> accessRoles, ArrayList<String> tags, URL apiURL, URL chatURL,
+    public AISettings(List<String> accessRoles, List<String> tags, URL apiURL, URL chatURL,
         String clientToken, String clientUniqueId,
-        String modelName, String dataBaseName, String documentPath, Parameters llmParameters, int maxAssistantTextSize)
+        String modelName, String dataBaseName, String documentPath, Parameters llmParameters, int maxAssistantTextSize,
+        int codeCompletionLinesCount)
     {
         this.accessRoles = accessRoles;
         this.tags = tags;
@@ -42,14 +44,15 @@ public class AISettings
         this.documentPath = documentPath;
         this.llmParameters = llmParameters;
         this.maxAssistantTextSize = maxAssistantTextSize;
+        this.codeCompletionLinesCount = codeCompletionLinesCount;
     }
 
-    public ArrayList<String> getAccessRoles()
+    public List<String> getAccessRoles()
     {
         return accessRoles;
     }
 
-    public ArrayList<String> getTags()
+    public List<String> getTags()
     {
         return tags;
     }
@@ -97,5 +100,10 @@ public class AISettings
     public int getMaxAssistantTextSize()
     {
         return maxAssistantTextSize;
+    }
+
+    public int getCodeCompletionLinesCount()
+    {
+        return codeCompletionLinesCount;
     }
 }

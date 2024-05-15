@@ -3,7 +3,10 @@
  */
 package org.e1c.edt.ai.ui.startup;
 
+import org.e1c.edt.ai.ui.AIPartListener;
 import org.eclipse.ui.IStartup;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.internal.Workbench;
 
 /**
  * This class serves as an activation point for plugins
@@ -17,11 +20,20 @@ import org.eclipse.ui.IStartup;
 public class PluginStartup
     implements IStartup
 {
-
     @Override
     public void earlyStartup()
     {
-        // Empty method
+        PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable()
+        {
+            @SuppressWarnings("restriction")
+            @Override
+            public void run()
+            {
+                Workbench.getInstance()
+                    .getActiveWorkbenchWindow()
+                    .getPartService()
+                    .addPartListener(new AIPartListener());
+            }
+        });
     }
-
 }

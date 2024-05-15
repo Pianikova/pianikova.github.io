@@ -8,53 +8,57 @@ import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
 public class VisibleTextBuilder
 {
-    private static final char SPACE_SIGN = ' ';
-    private static final char TAB_SIGN = '\u00bb';
-    private static final char LINE_FEED_SIGN = '\u21B5';
+    private static final char LINE_FEED_SIGN = '\u00b6';
 
-    public static String build(String text)
+    public static String build(String text, String prefix)
     {
-        var tabWidth =
-            EditorsUI.getPreferenceStore().getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);
+        var lines = text.split("\n"); //$NON-NLS-1$
         StringBuilder visibleChar = new StringBuilder(text.length());
-        for (var i = 0; i < text.length(); i++)
+        for (var lineIndex = 0; lineIndex < lines.length; lineIndex++)
         {
-            var ch = text.charAt(i);
-            switch (ch)
+            var line = lines[lineIndex];
+            if (lineIndex > 0 && !prefix.isEmpty() && line.startsWith(prefix))
             {
-            case ' ':
-            case '\u3000': // ideographic whitespace
-                visibleChar.append(SPACE_SIGN);
-                break;
+                line = line.substring(prefix.length());
+            }
 
-            case '\t':
-                for (int tab = 0; tab < tabWidth; tab++)
+            for (var i = 0; i < line.length(); i++)
+            {
+                var ch = line.charAt(i);
+                switch (ch)
                 {
-                    char tabChar;
-                    if (tab == 0 || tab == tabWidth - 1)
+                case ' ':
+                case '\u3000': // ideographic whitespace
+                    visibleChar.append(' ');
+                    break;
+
+                case '\t':
+                    var tabWidth = EditorsUI.getPreferenceStore()
+                        .getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);
+                    for (int tab = 0; tab < tabWidth; tab++)
                     {
-                        tabChar = TAB_SIGN;
-                    }
-                    else
-                    {
-                        tabChar = SPACE_SIGN;
+                        visibleChar.append(' ');
                     }
 
-                    visibleChar.append(tabChar);
+                    break;
+
+                case '\r':
+                case '\n':
+                    break;
+
+                default:
+                    visibleChar.append(ch);
+                    break;
                 }
+            }
 
-                break;
-
-            case '\r':
-                break;
-
-            case '\n':
+            if (lineIndex == lines.length - 1)
+            {
                 visibleChar.append(LINE_FEED_SIGN);
-                break;
-
-            default:
-                visibleChar.append(ch);
-                break;
+            }
+            else
+            {
+                visibleChar.append('\n');
             }
         }
 

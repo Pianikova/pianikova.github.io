@@ -321,33 +321,4 @@ public class ClientAI
         connection.setDoOutput(true);
         return connection;
     }
-
-    /*
-     * Make PUT request for given URL
-     * @param url
-     * @return connection
-     */
-    private HttpURLConnection makePUT(URL url)
-    {
-        HttpURLConnection connection = null;
-        try
-        {
-            connection = (HttpURLConnection)url.openConnection();
-        }
-        catch (IOException e)
-        {
-            throw new AIClientException(Messages.ClientAI_Cannot_connect, e);
-        }
-        try
-        {
-            connection.setRequestMethod("PUT"); //$NON-NLS-1$
-        }
-        catch (ProtocolException e)
-        {
-            throw new AIClientException(e.getMessage(), e);
-        }
-        connection.setRequestProperty("Content-Type", "application/json"); //$NON-NLS-1$ //$NON-NLS-2$
-        connection.setDoOutput(true);
-        return connection;
-    }
 }

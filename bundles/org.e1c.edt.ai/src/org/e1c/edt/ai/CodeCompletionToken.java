@@ -48,4 +48,11 @@ public class CodeCompletionToken
         CodeCompletionToken other = (CodeCompletionToken)obj;
         return Objects.equals(text, other.text) && Objects.equals(value, other.value);
     }
+
+    @SuppressWarnings("nls")
+    @Override
+    public String toString()
+    {
+        return "CodeCompletionToken [value=" + value + ", text=" + text + "]";
+    }
 }

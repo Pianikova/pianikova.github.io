@@ -25,6 +25,8 @@ public class Messages
     public static String ClientAIPreferencePage_Document_path;
     public static String ClientAIPreferencePage_LLL_parameters;
     public static String ClientAIPreferencePage_MaxAssistantTextSize;
+    public static String ClientAIPreferencePage_CodeCompletionLinesCount;
+    public static String ClientAIPreferencePage_ContinuousCodeCompletition;
 
     public static String Error_UnableToParse;
     public static String Error_Unknown;

@@ -196,8 +196,5 @@ public class Activator
     {
         reg.put(IModelUIPluginImages.OBJS_AI_ICON,
             createImageDescriptorFromKey(IModelUIPluginImages.OBJS_AI_ICON));
-
-        reg.put(IModelUIPluginImages.NAME_ICON_THINKING,
-            createImageDescriptorFromKey(IModelUIPluginImages.OBJS_THINKING_ICON));
     }
 }

@@ -286,6 +286,35 @@ public class SettingsProviderTest
         Assert.assertEquals(ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE, settings.get().getMaxAssistantTextSize());
     }
 
+    @Test
+    public void shouldProvideCodeCompletionLinesCount()
+    {
+        // Given
+        var provider = createInstance();
+
+        // When
+        when(settingsStore.getInt(ISettingsStore.CODE_COMPLETION_LINES_COUNT)).thenReturn(5);
+        var settings = provider.getSettings();
+
+        // Then
+        Assert.assertEquals(5, settings.get().getCodeCompletionLinesCount());
+    }
+
+    @Test
+    public void shouldProvideDefaultCodeCompletionLinesCount()
+    {
+        // Given
+        var provider = createInstance();
+
+        // When
+        when(settingsStore.getInt(ISettingsStore.CODE_COMPLETION_LINES_COUNT)).thenReturn(0);
+        var settings = provider.getSettings();
+
+        // Then
+        Assert.assertEquals(ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT,
+            settings.get().getCodeCompletionLinesCount());
+    }
+
     private SettingsProvider createInstance()
     {
         when(settingsStore.getString(Mockito.anyString())).thenReturn("");

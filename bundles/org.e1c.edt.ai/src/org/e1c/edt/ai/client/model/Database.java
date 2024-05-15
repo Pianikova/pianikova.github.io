@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai.client.model;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -18,8 +18,8 @@ public class Database
     @SerializedName("database_name")
     private String dataBaseName;
     @SerializedName("access_roles")
-    private ArrayList<String> accessRoles;
-    private ArrayList<String> tags;
+    private List<String> accessRoles;
+    private List<String> tags;
     @SerializedName("document_path")
     private String documentPath;
 
@@ -30,7 +30,7 @@ public class Database
      * @param tags
      * @param documentPath
      */
-    public Database(String dataBaseName, ArrayList<String> accessRoles, ArrayList<String> tags, String documentPath)
+    public Database(String dataBaseName, List<String> accessRoles, List<String> tags, String documentPath)
     {
         this.dataBaseName = dataBaseName;
         this.accessRoles = accessRoles;
@@ -57,7 +57,7 @@ public class Database
     /**
      * @return the accessRoles
      */
-    public ArrayList<String> getAccessRoles()
+    public List<String> getAccessRoles()
     {
         return accessRoles;
     }
@@ -65,7 +65,7 @@ public class Database
     /**
      * @param accessRoles the accessRoles to set
      */
-    public void setAccessRoles(ArrayList<String> accessRoles)
+    public void setAccessRoles(List<String> accessRoles)
     {
         this.accessRoles = accessRoles;
     }
@@ -73,7 +73,7 @@ public class Database
     /**
      * @return the tags
      */
-    public ArrayList<String> getTags()
+    public List<String> getTags()
     {
         return tags;
     }
@@ -81,7 +81,7 @@ public class Database
     /**
      * @param tags the tags to set
      */
-    public void setTags(ArrayList<String> tags)
+    public void setTags(List<String> tags)
     {
         this.tags = tags;
     }

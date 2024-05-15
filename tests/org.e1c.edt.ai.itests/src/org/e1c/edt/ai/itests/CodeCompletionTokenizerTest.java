@@ -32,10 +32,10 @@ public class CodeCompletionTokenizerTest
     public void shouldTokenize()
     {
         // Given
-        var tokenizer = new CodeCompletionTokenizer(minSize);
+        var tokenizer = new CodeCompletionTokenizer();
 
         // When
-        var actualToken = tokenizer.getNext(text);
+        var actualToken = tokenizer.getNext(minSize, text, this::isDelimiter);
 
         // Then
         Assert.assertEquals(expectedToken, actualToken);
@@ -48,22 +48,25 @@ public class CodeCompletionTokenizerTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "//Наименование = Наименование + \"!\" + \"?\";", 2, new CodeCompletionToken("//Наименование", " = Наименование + \"!\" + \"?\";") },
-                { " = Наименование + \"!\" + \"?\";", 2, new CodeCompletionToken(" = Наименование", " + \"!\" + \"?\";") },
-                { " + \"!\" + \"?\";", 2, new CodeCompletionToken(" + \"!\"", " + \"?\";") },
-                { " + \"?\";", 2, new CodeCompletionToken("", " + \"?\";") },
-                { "Hello", 2, new CodeCompletionToken("", "Hello") },
-                { "Hello Abc", 2, new CodeCompletionToken("Hello", " Abc") },
-                { "Hello\tAbc", 2, new CodeCompletionToken("Hello", "\tAbc") },
-                { "Hello  \t\rAbc", 2, new CodeCompletionToken("Hello", "  \t\rAbc") },
-                { "Hello\r\nAbc", 2, new CodeCompletionToken("Hello", "\r\nAbc") },
-                { "  Hello  Abc", 2, new CodeCompletionToken("  Hello", "  Abc") },
-                { "  Hello  A", 2, new CodeCompletionToken("", "  Hello  A") },
-                { "  A  Hello", 2, new CodeCompletionToken("", "  A  Hello") },
-                { "", 2, new CodeCompletionToken("", "") },
-                { " ", 2, new CodeCompletionToken("", " ") },
-                { "  ", 2, new CodeCompletionToken("", "  ") },
+                { "1; A", 2, new CodeCompletionToken("1;", " A") },
+                { "  Hello  Abc", 2, new CodeCompletionToken("  ", "Hello  Abc") },
+                { "Hello  Abc", 2, new CodeCompletionToken("Hello", "  Abc") },
+                { "  Abc", 2, new CodeCompletionToken("  ", "Abc") },
+                { "Abc", 2, new CodeCompletionToken("Abc", "") },
+                { "  Hello  Abc", 3, new CodeCompletionToken("  Hello", "  Abc") },
+                { "Hello  Abc ", 3, new CodeCompletionToken("Hello", "  Abc ") },
+                { "Abc ", 3, new CodeCompletionToken("Abc", " ") },
+                { "Abc", 2, new CodeCompletionToken("Abc", "") },
+                { "Abc", 5, new CodeCompletionToken("Abc", "") },
+                { "   ", 2, new CodeCompletionToken("   ", "") },
+                { "   ", 5, new CodeCompletionToken("   ", "") },
+                { "", 5, new CodeCompletionToken("", "") },
             });
         // @formatter:on
+    }
+
+    private Boolean isDelimiter(char ch)
+    {
+        return ch == ' ';
     }
 }
