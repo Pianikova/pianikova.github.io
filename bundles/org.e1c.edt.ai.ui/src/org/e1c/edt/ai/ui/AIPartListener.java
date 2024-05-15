@@ -17,10 +17,10 @@ public class AIPartListener
     private final ICodeCompletion codeCompletion;
     private ITextViewer lastTextViewer;
 
-    public AIPartListener()
+    public AIPartListener(IUI ui, ICodeCompletion codeCompletion)
     {
-        ui = Composition.getUI();
-        codeCompletion = Composition.getCodeCompletion();
+        this.ui = ui;
+        this.codeCompletion = codeCompletion;
     }
 
     @Override

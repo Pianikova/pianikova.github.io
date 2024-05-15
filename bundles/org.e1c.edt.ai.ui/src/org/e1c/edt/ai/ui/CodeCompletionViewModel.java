@@ -62,13 +62,7 @@ public class CodeCompletionViewModel
     @Override
     public AutoCloseable activate(boolean ask)
     {
-        CancellationToken cancellationToken = new CancellationToken();
-        synchronized (lockObject)
-        {
-            askCancellationToken.cancel();
-            askCancellationToken = cancellationToken;
-        }
-
+        cancel();
         dispatcher.dispatch(() -> {
             hintPainter.reset();
             ui.getTextViewerExtension2().ifPresent(viewer -> viewer.addPainter(hintPainter));
@@ -89,12 +83,7 @@ public class CodeCompletionViewModel
 
     private void deactivate()
     {
-        synchronized (lockObject)
-        {
-            askCancellationToken.cancel();
-            askCancellationToken = CancellationToken.NONE;
-        }
-
+        cancel();
         dispatcher.dispatch(() -> {
             ui.getTextViewerExtension2().ifPresent(viewer -> viewer.removePainter(hintPainter));
             ui.getTextViewer().ifPresent(viewer -> {
@@ -111,13 +100,10 @@ public class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            if (askCancellationToken == CancellationToken.NONE)
+            if (!cancel())
             {
                 return;
             }
-
-            askCancellationToken.cancel();
-            askCancellationToken = CancellationToken.NONE;
         }
 
         dispatcher.dispatch(() -> {
@@ -128,16 +114,34 @@ public class CodeCompletionViewModel
         });
     }
 
+    private boolean cancel()
+    {
+        synchronized (lockObject)
+        {
+            if (askCancellationToken.isCanceled())
+            {
+                return false;
+            }
+
+            askCancellationToken.cancel();
+            return true;
+        }
+    }
+
     private void askByJob(long delay)
     {
-        askCancellationToken.cancel();
-        var cancellationToken = new JobCancellationToken();
-        askCancellationToken = cancellationToken;
+        cancel();
         new Job(Messages.CodeCompletionJobName)
         {
             @Override
             protected IStatus run(IProgressMonitor monitor)
             {
+                var cancellationToken = new JobCancellationToken();
+                synchronized (lockObject)
+                {
+                    askCancellationToken = cancellationToken;
+                }
+
                 cancellationToken.attachMonitor(monitor);
                 ask(cancellationToken);
                 return cancellationToken.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
@@ -293,6 +297,7 @@ public class CodeCompletionViewModel
             dispatcher.dispatch(() -> {
                 apply(viewer.get(), text, offset);
                 hint.delete(0, text.length());
+                tokens.push(text);
                 var hintLines = getHintLines();
                 continueAsk(hintLines);
                 if (hint.length() == 0)
@@ -304,7 +309,7 @@ public class CodeCompletionViewModel
             return;
         }
 
-        if (offset >= 0 && !isContinuousCodeCompletion())
+        if (!isContinuousCodeCompletion())
         {
             reset();
             return;

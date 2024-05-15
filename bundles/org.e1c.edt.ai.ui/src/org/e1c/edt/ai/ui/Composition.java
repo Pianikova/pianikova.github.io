@@ -16,6 +16,8 @@ import org.e1c.edt.ai.assistent.AICodeAssistant;
 import org.e1c.edt.ai.assistent.ResponseLineProcessor;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
+import org.eclipse.ui.IPartListener2;
+import org.eclipse.ui.ISelectionListener;
 
 public class Composition
 {
@@ -43,6 +45,7 @@ public class Composition
     private static final CodeCompletion CODE_COMPLETION =
         new CodeCompletion(LOG, PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER, UI, CODE_ASSISTANT, AI_CONTEXT_PROVIDER,
             DISPATCHER, CODECOMPLETION_TOKENIZER);
+    private static final AIPartListener PART_LISTENER = new AIPartListener(UI, CODE_COMPLETION);
 
     public static ILog getLog()
     {
@@ -87,5 +90,15 @@ public class Composition
     public static ICodeCompletion getCodeCompletion()
     {
         return CODE_COMPLETION;
+    }
+
+    public static IPartListener2 getPartListener()
+    {
+        return PART_LISTENER;
+    }
+
+    public static ISelectionListener getSelectionListener()
+    {
+        return PART_LISTENER;
     }
 }
