@@ -3,7 +3,9 @@
  */
 package org.e1c.edt.ai.ui.startup;
 
-import org.e1c.edt.ai.ui.AIPartListener;
+import org.e1c.edt.ai.ui.Composition;
+import org.eclipse.ui.IPartListener2;
+import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IStartup;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.Workbench;
@@ -20,6 +22,15 @@ import org.eclipse.ui.internal.Workbench;
 public class PluginStartup
     implements IStartup
 {
+    private final IPartListener2 partListener;
+    private final ISelectionListener selectionListener;
+
+    public PluginStartup()
+    {
+        partListener = Composition.getPartListener();
+        selectionListener = Composition.getSelectionListener();
+    }
+
     @Override
     public void earlyStartup()
     {
@@ -29,10 +40,12 @@ public class PluginStartup
             @Override
             public void run()
             {
-                Workbench.getInstance()
+                var partService = Workbench.getInstance()
                     .getActiveWorkbenchWindow()
-                    .getPartService()
-                    .addPartListener(new AIPartListener());
+                    .getPartService();
+
+                partService.getActivePartReference().getPage().addPostSelectionListener(selectionListener);
+                partService.addPartListener(partListener);
             }
         });
     }

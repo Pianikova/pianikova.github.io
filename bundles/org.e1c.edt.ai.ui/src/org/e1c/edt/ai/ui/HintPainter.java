@@ -212,10 +212,10 @@ public class HintPainter
             gc.setFont(italicFont);
             var textSize = gc.textExtent(hint);
             gc.fillRectangle(x - 1, y, textSize.x + 1, textSize.y);
-            gc.setAlpha(80);
-            gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
             gc.setAlpha(160);
             gc.drawText(hint, x, y);
+            gc.setAlpha(80);
+            gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
 
             if (!labelText.isBlank())
             {
@@ -236,8 +236,8 @@ public class HintPainter
                     gc.setAlpha(255);
                     gc.fillRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
                     gc.setAlpha(80);
-                    gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
                     gc.drawText(labelText, x + BORDER, y);
+                    gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
                 }
                 finally
                 {
