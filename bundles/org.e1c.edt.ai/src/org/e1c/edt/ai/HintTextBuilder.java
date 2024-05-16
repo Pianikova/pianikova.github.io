@@ -1,22 +1,24 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.ui;
+package org.e1c.edt.ai;
 
-import org.eclipse.ui.editors.text.EditorsUI;
-import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class VisibleTextBuilder
+public class HintTextBuilder implements IHintTextBuilder
 {
-    private static final char LINE_FEED_SIGN = '\u00b6';
+    private final ConcurrentHashMap<Integer, String> tabs = new ConcurrentHashMap<>();
 
-    public static String build(String text, String prefix)
+    @Override
+    public String build(String text, String prefix, int tabWidth, char lineFeedSing)
     {
+        var tab = tabs.computeIfAbsent(tabWidth, this::createTab);
+        prefix = prefix.replace("\t", tab); //$NON-NLS-1$
         var lines = text.split("\n"); //$NON-NLS-1$
         StringBuilder visibleChar = new StringBuilder(text.length());
         for (var lineIndex = 0; lineIndex < lines.length; lineIndex++)
         {
-            var line = lines[lineIndex];
+            var line = lines[lineIndex].replace("\t", tab); //$NON-NLS-1$
             if (lineIndex > 0 && !prefix.isEmpty() && line.startsWith(prefix))
             {
                 line = line.substring(prefix.length());
@@ -33,13 +35,7 @@ public class VisibleTextBuilder
                     break;
 
                 case '\t':
-                    var tabWidth = EditorsUI.getPreferenceStore()
-                        .getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);
-                    for (int tab = 0; tab < tabWidth; tab++)
-                    {
-                        visibleChar.append(' ');
-                    }
-
+                    visibleChar.append(tab);
                     break;
 
                 case '\r':
@@ -54,7 +50,7 @@ public class VisibleTextBuilder
 
             if (lineIndex == lines.length - 1)
             {
-                visibleChar.append(LINE_FEED_SIGN);
+                visibleChar.append(lineFeedSing);
             }
             else
             {
@@ -63,5 +59,16 @@ public class VisibleTextBuilder
         }
 
         return visibleChar.toString();
+    }
+
+    private String createTab(int tabWith)
+    {
+        var tabBuilder = new StringBuilder(tabWith);
+        for(var i = 0; i < tabWith; i++)
+        {
+            tabBuilder.append(' ');
+        }
+
+        return tabBuilder.toString();
     }
 }

@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.IHintTextBuilder;
 import org.eclipse.jface.text.IPaintPositionManager;
 import org.eclipse.jface.text.ITextViewer;
 import org.eclipse.jface.text.ITextViewerExtension5;
@@ -12,25 +13,33 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
+import org.eclipse.ui.editors.text.EditorsUI;
+import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
 import com.google.common.base.Preconditions;
 
 public class HintPainter
     implements PaintListener, IHintPainter
 {
-    private static final int BORDER = 1;
+    private static final char LINE_FEED_SIGN = '\u00b6';
+    private static final int BORDER = 2;
     private boolean isActive = false;
     private ITextViewer viewer;
+    private final IHintTextBuilder hintTextBuilder;
     private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
     private String labelText = ""; //$NON-NLS-1$
+    private final int tabWidth;
 
-    public HintPainter(ITextViewer textViewer)
+    public HintPainter(ITextViewer viewer, IHintTextBuilder hintTextBuilder)
     {
         super();
-        viewer = textViewer;
-        textWidget = textViewer.getTextWidget();
+        this.viewer = viewer;
+        this.hintTextBuilder = hintTextBuilder;
+        textWidget = viewer.getTextWidget();
+        tabWidth =
+            EditorsUI.getPreferenceStore().getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);
     }
 
     @Override
@@ -192,7 +201,7 @@ public class HintPainter
             prefix = lineContent.substring(0, lineContent.length() - trimmedPrefix.length());
         }
 
-        return VisibleTextBuilder.build(getHintText(), prefix);
+        return hintTextBuilder.build(getHintText(), prefix, tabWidth, LINE_FEED_SIGN);
     }
 
     private void drawHint(GC gc, String hint)
@@ -211,11 +220,11 @@ public class HintPainter
         {
             gc.setFont(italicFont);
             var textSize = gc.textExtent(hint);
-            gc.fillRectangle(x - 1, y, textSize.x + 1, textSize.y);
+            gc.fillRectangle(x - BORDER, y, textSize.x + BORDER * 4, textSize.y);
             gc.setAlpha(160);
-            gc.drawText(hint, x, y);
+            gc.drawText(hint, x + BORDER * 2, y);
             gc.setAlpha(80);
-            gc.drawRectangle(x - 1, y, textSize.x + 1, textSize.y);
+            gc.drawRectangle(x - BORDER, y, textSize.x + BORDER * 4, textSize.y);
 
             if (!labelText.isBlank())
             {
@@ -234,10 +243,10 @@ public class HintPainter
 
                     y = y + textSize.y;
                     gc.setAlpha(255);
-                    gc.fillRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
+                    gc.fillRectangle(x - BORDER, y, labelTextSize.x + BORDER * 4, labelTextSize.y);
                     gc.setAlpha(80);
-                    gc.drawText(labelText, x + BORDER, y);
-                    gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER, labelTextSize.y);
+                    gc.drawText(labelText, x + BORDER * 2, y);
+                    gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER * 4, labelTextSize.y);
                 }
                 finally
                 {

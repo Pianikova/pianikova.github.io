@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.AIContextSplitter;
 import org.e1c.edt.ai.CodeCompletionTokenizer;
+import org.e1c.edt.ai.HintTextBuilder;
 import org.e1c.edt.ai.IAIContextSplitter;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IValidator;
@@ -42,9 +43,11 @@ public class Composition
     private static final IAIContextSplitter AI_CONTEXT_SPLITTER = new AIContextSplitter();
     private static final AIContextProvider AI_CONTEXT_PROVIDER =
         new AIContextProvider(UI, SETTINGS_PROVIDER, AI_CONTEXT_SPLITTER);
+
+    private static final HintTextBuilder HINT_TEXT_BUILDER = new HintTextBuilder();
     private static final CodeCompletion CODE_COMPLETION =
         new CodeCompletion(LOG, PREFERENCE_STORE_TO_SETTINGS_STORE_ADAPTER, UI, CODE_ASSISTANT, AI_CONTEXT_PROVIDER,
-            DISPATCHER, CODECOMPLETION_TOKENIZER);
+            DISPATCHER, CODECOMPLETION_TOKENIZER, HINT_TEXT_BUILDER);
     private static final AIPartListener PART_LISTENER = new AIPartListener(UI, CODE_COMPLETION);
 
     public static ILog getLog()

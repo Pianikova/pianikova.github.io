@@ -56,14 +56,8 @@ pipeline {
     stage("Publish") {
       when { expression { isDevelopOrReleaseBranch() }}
       steps {
-        parallel "Publish Repository": {
-          publishP2Repository(name: 'CodeAI', source: 'repositories/org.e1c.edt.ai.repository/target/repository', 
-                                target: "${env.CODEAI_P2_PATH}", qualifier: "${env.CODEAI_QUALIFIER}")
-        },
-        "Publish SDK Repository": {
-          publishP2Repository(name: 'CodeAISDK', source: 'repositories/org.e1c.edt.ai.repository.sdk/target/repository', 
-                                target: "${env.CODEAI_P2_SDK_PATH}", qualifier: "${env.CODEAI_QUALIFIER}")
-        }
+        publishP2Repository(name: 'CodeAI', source: 'repositories/org.e1c.edt.ai.repository/target/repository', target: "${env.CODEAI_P2_PATH}", qualifier: "${env.CODEAI_QUALIFIER}")
+        publishP2Repository(name: 'CodeAISDK', source: 'repositories/org.e1c.edt.ai.repository.sdk/target/repository', target: "${env.CODEAI_P2_SDK_PATH}", qualifier: "${env.CODEAI_QUALIFIER}")        
       }
     }
   }

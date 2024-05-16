@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
+import org.e1c.edt.ai.IHintTextBuilder;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
@@ -20,10 +21,11 @@ public class CodeCompletion implements ICodeCompletion
     private final ICodeCompletionTokenizer tokenizer;
     private ICodeCompletionViewModel codeCompletion;
     private AutoCloseable query = Closeables.Empty;
+    private IHintTextBuilder hintTextBuilder;
 
     public CodeCompletion(ILog log, ISettingsStore settingsStore, IUI ui, IAICodeAssistant codeAssistant,
         IAIContextProvider aiContextProvider,
-        IDispatcher dispatcher, ICodeCompletionTokenizer tokenizer)
+        IDispatcher dispatcher, ICodeCompletionTokenizer tokenizer, IHintTextBuilder hintTextBuilder)
     {
         this.log = log;
         this.settingsStore = settingsStore;
@@ -32,6 +34,7 @@ public class CodeCompletion implements ICodeCompletion
         this.aiContextProvider = aiContextProvider;
         this.dispatcher = dispatcher;
         this.tokenizer = tokenizer;
+        this.hintTextBuilder = hintTextBuilder;
     }
 
     @Override
@@ -47,7 +50,7 @@ public class CodeCompletion implements ICodeCompletion
         }
 
         ui.getTextViewer().ifPresent(textViewer -> {
-            var hintPainter = new HintPainter(textViewer);
+            var hintPainter = new HintPainter(textViewer, hintTextBuilder);
             hintPainter.setLabel("Tab → ← Esc"); //$NON-NLS-1$
             codeCompletion =
                 new CodeCompletionViewModel(log, settingsStore, codeAssistant, aiContextProvider, dispatcher, ui,
