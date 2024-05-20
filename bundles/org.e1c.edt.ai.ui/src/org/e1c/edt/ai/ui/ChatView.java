@@ -1,16 +1,16 @@
 /*
  * Copyright (C) 2023, 1C
  */
-package org.e1c.edt.ai.ui.views;
+package org.e1c.edt.ai.ui;
 
-import org.e1c.edt.ai.ui.Composition;
-import org.e1c.edt.ai.ui.IChatDialog;
 import org.eclipse.jface.layout.GridDataFactory;
 import org.eclipse.jface.layout.GridLayoutFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
+
+import com.google.inject.Inject;
 
 import javafx.embed.swt.FXCanvas;
 import javafx.geometry.Insets;
@@ -34,11 +34,12 @@ public class ChatView
      */
     public static final String ID = "org.e1c.edt.ai.ui.views.ChatView"; //$NON-NLS-1$
     private FXCanvas canvas;
-    private final IChatDialog chatDialog;
+    @Inject
+    IChatDialog chatDialog;
 
     public ChatView()
     {
-        chatDialog = Composition.getChatDialog();
+        Activator.injectMembers(this);
     }
 
     @Override

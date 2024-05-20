@@ -18,11 +18,14 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.xtext.ui.editor.XtextEditor;
 
+import com.google.inject.Inject;
+
 public class UI
     implements IUI
 {
     private ILog log;
 
+    @Inject
     public UI(ILog log)
     {
         this.log = log;

@@ -10,6 +10,8 @@ import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.IWorkbenchPartReference;
 
+import com.google.inject.Inject;
+
 public class AIPartListener
     implements IPartListener2, ISelectionListener
 {
@@ -17,6 +19,7 @@ public class AIPartListener
     private final ICodeCompletion codeCompletion;
     private ITextViewer lastTextViewer;
 
+    @Inject
     public AIPartListener(IUI ui, ICodeCompletion codeCompletion)
     {
         this.ui = ui;

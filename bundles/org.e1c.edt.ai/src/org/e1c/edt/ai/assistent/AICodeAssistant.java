@@ -27,6 +27,8 @@ import org.e1c.edt.ai.assistent.model.AITextRequest;
 import org.e1c.edt.ai.client.AIClientException;
 import org.e1c.edt.ai.client.AISettings;
 
+import com.google.inject.Inject;
+
 public class AICodeAssistant
     implements IAICodeAssistant
 {
@@ -34,6 +36,7 @@ public class AICodeAssistant
     private final IJson json;
     private final IResponseStreamProcessor responseStreamProcessor;
 
+    @Inject
     public AICodeAssistant(ISettingsProvider settingsProvider,
         IJson json,
         IResponseStreamProcessor responseStreamProcessor)

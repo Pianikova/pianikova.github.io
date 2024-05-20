@@ -8,11 +8,12 @@ import java.util.Optional;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
-import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
+
+import com.google.inject.Inject;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -37,6 +38,7 @@ public class Chat implements IChat, IChatDialog
     private final IdeApiHandler handler;
     private Optional<WebView> webView = Optional.empty();
 
+    @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler)
     {

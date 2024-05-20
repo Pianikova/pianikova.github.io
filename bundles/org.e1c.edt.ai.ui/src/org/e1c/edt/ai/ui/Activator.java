@@ -12,6 +12,9 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+
 /**
  * Данный класс представляет собой начальную точку в работе плагина.
  * В нем следует реализовывать логику создания плагина,
@@ -29,8 +32,8 @@ public class Activator
     */
     private static final String ICONS_PATH = "icons"; //$NON-NLS-1$
     private static Activator plugin;
-
     private BundleContext bundleContext;
+    private Injector injector;
 
     /**
      * Получить экземпляр плагина. Через экземпляр плагина можно получать доступ к разнообразным механизмам Eclipse,
@@ -46,6 +49,11 @@ public class Activator
     public static Activator getDefault()
     {
         return plugin;
+    }
+
+    public static void injectMembers(Object instance)
+    {
+        getDefault().getInjector().injectMembers(instance);
     }
 
     /**
@@ -196,5 +204,25 @@ public class Activator
     {
         reg.put(IModelUIPluginImages.OBJS_AI_ICON,
             createImageDescriptorFromKey(IModelUIPluginImages.OBJS_AI_ICON));
+    }
+
+    private synchronized Injector getInjector()
+    {
+        if (injector == null)
+        {
+            try
+            {
+                injector = Guice.createInjector(new AIUIModule(this));
+            }
+            catch (Exception e)
+            {
+                log(createErrorStatus("Failed to create injector for " //$NON-NLS-1$
+                    + getBundle().getSymbolicName(), e));
+                throw new RuntimeException("Failed to create injector for " //$NON-NLS-1$
+                    + getBundle().getSymbolicName(), e);
+            }
+        }
+
+        return injector;
     }
 }

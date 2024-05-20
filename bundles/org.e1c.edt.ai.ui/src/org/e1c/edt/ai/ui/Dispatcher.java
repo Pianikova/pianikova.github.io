@@ -10,11 +10,13 @@ import org.e1c.edt.ai.ILog;
 import org.eclipse.swt.widgets.Display;
 
 import com.google.common.base.Supplier;
+import com.google.inject.Inject;
 
 public class Dispatcher implements IDispatcher
 {
     private ILog log;
 
+    @Inject
     public Dispatcher(ILog log)
     {
         this.log = log;

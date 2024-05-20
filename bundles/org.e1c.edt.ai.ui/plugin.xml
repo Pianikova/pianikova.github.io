@@ -11,7 +11,7 @@
         </category>
         <view
                 category="org.e1c.edt.ai.ui"
-                class="org.e1c.edt.ai.ui.views.ChatView"
+                class="org.e1c.edt.ai.ui.ChatView"
                 icon="icons/obj16/chatbot.png"
                 id="org.e1c.edt.ai.ui.views.ChatView"
                 inject="true"
@@ -188,7 +188,7 @@
     <extension
             point="org.eclipse.ui.startup">
         <startup
-                class="org.e1c.edt.ai.ui.startup.PluginStartup">
+                class="org.e1c.edt.ai.ui.PluginStartup">
         </startup>
     </extension>
     

@@ -9,10 +9,13 @@ import java.util.stream.Stream;
 import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.IObserver;
 
+import com.google.inject.Inject;
+
 public class ResponseStreamProcessor implements IResponseStreamProcessor
 {
     private final IResponseLineProcessor lineProcessor;
 
+    @Inject
     public ResponseStreamProcessor(
         IResponseLineProcessor lineProcessor)
     {

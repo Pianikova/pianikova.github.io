@@ -3,20 +3,23 @@
  */
 package org.e1c.edt.ai.ui.handlers;
 
-import org.e1c.edt.ai.ui.Composition;
+import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.ICodeCompletion;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
+import com.google.inject.Inject;
+
 public class SuggestAIHandler
     extends AbstractHandler
 {
-    private final ICodeCompletion codeCompletion;
+    @Inject
+    ICodeCompletion codeCompletion;
 
     public SuggestAIHandler()
     {
-        this.codeCompletion = Composition.getCodeCompletion();
+        Activator.injectMembers(this);
     }
 
     @Override

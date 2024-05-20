@@ -11,6 +11,8 @@ import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.ISettingsStore;
 import org.eclipse.jface.text.ITextSelection;
 
+import com.google.inject.Inject;
+
 public class AIContextProvider
     implements IAIContextProvider
 {
@@ -22,6 +24,7 @@ public class AIContextProvider
     private IUI ui;
     private IAIContextSplitter contextSplitter;
 
+    @Inject
     public AIContextProvider(IUI ui, ISettingsProvider settingsProvider, IAIContextSplitter contextSplitter)
     {
         this.ui = ui;

@@ -6,11 +6,14 @@ package org.e1c.edt.ai.ui;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.jface.text.BadLocationException;
 
+import com.google.inject.Inject;
+
 public class IdeApiHandler
 {
     private ILog log;
     private IUI ui;
 
+    @Inject
     public IdeApiHandler(ILog log, IUI ui)
     {
         this.log = log;

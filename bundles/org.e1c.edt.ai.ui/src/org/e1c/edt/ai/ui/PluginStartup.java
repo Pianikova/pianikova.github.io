@@ -1,14 +1,15 @@
 /*
  * Copyright (C) 2023, 1C
  */
-package org.e1c.edt.ai.ui.startup;
+package org.e1c.edt.ai.ui;
 
-import org.e1c.edt.ai.ui.Composition;
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IStartup;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.internal.Workbench;
+
+import com.google.inject.Inject;
 
 /**
  * This class serves as an activation point for plugins
@@ -22,13 +23,14 @@ import org.eclipse.ui.internal.Workbench;
 public class PluginStartup
     implements IStartup
 {
-    private final IPartListener2 partListener;
-    private final ISelectionListener selectionListener;
+    @Inject
+    IPartListener2 partListener;
+    @Inject
+    ISelectionListener selectionListener;
 
     public PluginStartup()
     {
-        partListener = Composition.getPartListener();
-        selectionListener = Composition.getSelectionListener();
+        Activator.injectMembers(this);
     }
 
     @Override

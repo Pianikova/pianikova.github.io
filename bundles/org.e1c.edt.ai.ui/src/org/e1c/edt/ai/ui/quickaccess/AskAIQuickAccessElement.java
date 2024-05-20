@@ -4,13 +4,14 @@
 package org.e1c.edt.ai.ui.quickaccess;
 
 import org.e1c.edt.ai.ui.Activator;
-import org.e1c.edt.ai.ui.Composition;
+import org.e1c.edt.ai.ui.ChatView;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IModelUIPluginImages;
 import org.e1c.edt.ai.ui.IUI;
-import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.quickaccess.QuickAccessElement;
+
+import com.google.inject.Inject;
 
 
 /**
@@ -28,8 +29,10 @@ public class AskAIQuickAccessElement
 {
     public static final String ID = Activator.PLUGIN_ID + ".MyQuickAccessElement"; //$NON-NLS-1$
 
-    private final IChat chat;
-    private final IUI ui;
+    @Inject
+    IChat chat;
+    @Inject
+    IUI ui;
     private String askText;
 
 
@@ -40,8 +43,7 @@ public class AskAIQuickAccessElement
 
     public AskAIQuickAccessElement(String input)
     {
-        chat = Composition.getChat();
-        ui = Composition.getUI();
+        Activator.injectMembers(this);
         askText = input;
     }
 

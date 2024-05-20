@@ -14,6 +14,8 @@ import java.util.Optional;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.client.AISettings;
 
+import com.google.inject.Inject;
+
 public class SettingsProvider
     implements ISettingsProvider
 {
@@ -22,6 +24,7 @@ public class SettingsProvider
     private final ISettingsStore settingsStore;
     private final IParser<String, Parameters> parametersParser;
 
+    @Inject
     public SettingsProvider(ILog log, ISettingsStore settingsStore, IParser<String, Parameters> parametersParser)
     {
         this.log = log;

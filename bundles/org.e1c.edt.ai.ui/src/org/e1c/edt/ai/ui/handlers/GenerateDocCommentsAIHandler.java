@@ -3,14 +3,16 @@
  */
 package org.e1c.edt.ai.ui.handlers;
 
-import org.e1c.edt.ai.ui.Composition;
+import org.e1c.edt.ai.ui.Activator;
+import org.e1c.edt.ai.ui.ChatView;
 import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IUI;
-import org.e1c.edt.ai.ui.views.ChatView;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+
+import com.google.inject.Inject;
 
 /**
  * Class Handler of the fix the Code command.
@@ -20,15 +22,16 @@ import org.eclipse.core.commands.ExecutionException;
 public class GenerateDocCommentsAIHandler
     extends AbstractHandler
 {
-    private final IAIContextProvider aiContextProvider;
-    private final IChat chat;
-    private final IUI ui;
+    @Inject
+    IAIContextProvider aiContextProvider;
+    @Inject
+    IChat chat;
+    @Inject
+    IUI ui;
 
     public GenerateDocCommentsAIHandler()
     {
-        aiContextProvider = Composition.getAIContextProvider();
-        chat = Composition.getChat();
-        ui = Composition.getUI();
+        Activator.injectMembers(this);
     }
 
     @Override

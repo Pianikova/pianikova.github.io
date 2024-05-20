@@ -6,14 +6,18 @@ package org.e1c.edt.ai.ui.preferences;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IValidator;
 import org.e1c.edt.ai.client.ClientAI;
+import org.e1c.edt.ai.ui.AIUIModule;
 import org.e1c.edt.ai.ui.Activator;
-import org.e1c.edt.ai.ui.Composition;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
+
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 /**
  * This class contains fields on the preferences page with AI chat settings.
@@ -26,15 +30,20 @@ public class ClientAIPreferencePage
     extends FieldEditorPreferencePage
     implements IWorkbenchPreferencePage
 {
-    private IValidator<String> urlValidator;
-    private IValidator<String> parametersValidator;
+    @Inject
+    @Named(AIUIModule.URL)
+    IValidator<String> urlValidator;
+    @Inject
+    @Named(AIUIModule.PARAMETERS)
+    IValidator<String> parametersValidator;
+    @Inject
+    IPreferenceStore preferenceStore;
 
     public ClientAIPreferencePage()
     {
         super(GRID);
-        urlValidator = Composition.getURLValidator();
-        parametersValidator = Composition.getParametersValidator();
-        setPreferenceStore(Activator.getDefault().getPreferenceStore());
+        Activator.injectMembers(this);
+        setPreferenceStore(preferenceStore);
         setDescription(Messages.ClientAIPreferencePage_Service_parameters);
     }
 

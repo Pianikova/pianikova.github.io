@@ -10,6 +10,8 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
 
+import com.google.inject.Inject;
+
 public class CodeCompletion implements ICodeCompletion
 {
     private final ILog log;
@@ -23,6 +25,7 @@ public class CodeCompletion implements ICodeCompletion
     private AutoCloseable query = Closeables.Empty;
     private IHintTextBuilder hintTextBuilder;
 
+    @Inject
     public CodeCompletion(ILog log, ISettingsStore settingsStore, IUI ui, IAICodeAssistant codeAssistant,
         IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, ICodeCompletionTokenizer tokenizer, IHintTextBuilder hintTextBuilder)

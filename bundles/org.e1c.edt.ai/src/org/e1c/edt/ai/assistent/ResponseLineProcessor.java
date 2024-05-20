@@ -7,11 +7,14 @@ import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.assistent.model.AIResponse;
 
+import com.google.inject.Inject;
+
 public class ResponseLineProcessor implements IResponseLineProcessor
 {
     public static final String DATA_LINE_PREFIX = "data:"; //$NON-NLS-1$
     private final IJson json;
 
+    @Inject
     public ResponseLineProcessor(IJson json)
     {
         this.json = json;

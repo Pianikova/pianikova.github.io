@@ -15,6 +15,8 @@ import org.e1c.edt.ai.ISettingsStore;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 
+import com.google.inject.Inject;
+
 public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
 {
     private static final String AI_PROPS_FILE_NAME = "ai.props"; //$NON-NLS-1$
@@ -24,6 +26,7 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     private final IPreferenceStore preferenceStore;
     private Properties props;
 
+    @Inject
     public PreferenceStoreToSettingsStoreAdapter(ILog log, IPreferenceStore preferenceStore)
     {
         this.log = log;
