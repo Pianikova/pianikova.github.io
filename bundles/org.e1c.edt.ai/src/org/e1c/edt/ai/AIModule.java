@@ -38,6 +38,7 @@ public class AIModule
         bind(new TypeLiteral<IValidator<String>>() {}).annotatedWith(Names.named(URL)).to(URLValidator.class).in(Singleton.class);
         bind(IAIContextSplitter.class).to(AIContextSplitter.class).in(Singleton.class);
         bind(IHintTextBuilder.class).to(HintTextBuilder.class).in(Singleton.class);
+        bind(ILinePrefixMatcher.class).to(LinePrefixMatcher.class).in(Singleton.class);
         // @formatter:on
     }
 }

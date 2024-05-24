@@ -21,14 +21,16 @@ public class CodeCompletion implements ICodeCompletion
     private final IAIContextProvider aiContextProvider;
     private final IDispatcher dispatcher;
     private final ICodeCompletionTokenizer tokenizer;
+    private final IHintTextBuilder hintTextBuilder;
+    private final IUISettings uiSettings;
     private ICodeCompletionViewModel codeCompletion;
     private AutoCloseable query = Closeables.Empty;
-    private IHintTextBuilder hintTextBuilder;
 
     @Inject
     public CodeCompletion(ILog log, ISettingsStore settingsStore, IUI ui, IAICodeAssistant codeAssistant,
         IAIContextProvider aiContextProvider,
-        IDispatcher dispatcher, ICodeCompletionTokenizer tokenizer, IHintTextBuilder hintTextBuilder)
+        IDispatcher dispatcher, ICodeCompletionTokenizer tokenizer, IHintTextBuilder hintTextBuilder,
+        IUISettings uiSettings)
     {
         this.log = log;
         this.settingsStore = settingsStore;
@@ -38,6 +40,7 @@ public class CodeCompletion implements ICodeCompletion
         this.dispatcher = dispatcher;
         this.tokenizer = tokenizer;
         this.hintTextBuilder = hintTextBuilder;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -53,11 +56,11 @@ public class CodeCompletion implements ICodeCompletion
         }
 
         ui.getTextViewer().ifPresent(textViewer -> {
-            var hintPainter = new HintPainter(textViewer, hintTextBuilder);
+            var hintPainter = new HintPainter(textViewer, hintTextBuilder, uiSettings);
             hintPainter.setLabel("Tab → ← Esc"); //$NON-NLS-1$
             codeCompletion =
                 new CodeCompletionViewModel(log, settingsStore, codeAssistant, aiContextProvider, dispatcher, ui,
-                    tokenizer, hintPainter);
+                    tokenizer, hintPainter, uiSettings);
 
             query = codeCompletion.activate(ask);
         });

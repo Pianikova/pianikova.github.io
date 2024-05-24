@@ -13,8 +13,6 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
-import org.eclipse.ui.editors.text.EditorsUI;
-import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
 import com.google.common.base.Preconditions;
 
@@ -26,20 +24,19 @@ public class HintPainter
     private boolean isActive = false;
     private ITextViewer viewer;
     private final IHintTextBuilder hintTextBuilder;
+    private final IUISettings uiSettings;
     private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
     private String labelText = ""; //$NON-NLS-1$
-    private final int tabWidth;
 
-    public HintPainter(ITextViewer viewer, IHintTextBuilder hintTextBuilder)
+    public HintPainter(ITextViewer viewer, IHintTextBuilder hintTextBuilder, IUISettings uiSettings)
     {
         super();
         this.viewer = viewer;
         this.hintTextBuilder = hintTextBuilder;
+        this.uiSettings = uiSettings;
         textWidget = viewer.getTextWidget();
-        tabWidth =
-            EditorsUI.getPreferenceStore().getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);
     }
 
     @Override
@@ -201,7 +198,7 @@ public class HintPainter
             prefix = lineContent.substring(0, lineContent.length() - trimmedPrefix.length());
         }
 
-        return hintTextBuilder.build(getHintText(), prefix, tabWidth, LINE_FEED_SIGN);
+        return hintTextBuilder.build(getHintText(), prefix, uiSettings.getTabWidth(), LINE_FEED_SIGN);
     }
 
     private void drawHint(GC gc, String hint)

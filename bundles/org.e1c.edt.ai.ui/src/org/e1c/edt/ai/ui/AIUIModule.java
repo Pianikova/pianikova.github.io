@@ -32,7 +32,7 @@ public class AIUIModule
     {
         // @formatter:off
         install(new AIModule());
-        bind(ILog.class).to(Log.class).in(Singleton.class);
+        bind(ILog.class).toInstance(activator);
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);
@@ -46,6 +46,7 @@ public class AIUIModule
         bind(AIPartListener.class).in(Singleton.class);
         bind(IPartListener2.class).to(AIPartListener.class);
         bind(ISelectionListener.class).to(AIPartListener.class);
+        bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -25,13 +25,10 @@ public class AISettings
     private final String dataBaseName;
     private final String documentPath;
     private final Parameters llmParameters;
-    private final int maxAssistantTextSize;
-    private final int codeCompletionLinesCount;
 
     public AISettings(List<String> accessRoles, List<String> tags, URL apiURL, URL chatURL,
         String clientToken, String clientUniqueId,
-        String modelName, String dataBaseName, String documentPath, Parameters llmParameters, int maxAssistantTextSize,
-        int codeCompletionLinesCount)
+        String modelName, String dataBaseName, String documentPath, Parameters llmParameters)
     {
         this.accessRoles = accessRoles;
         this.tags = tags;
@@ -43,8 +40,6 @@ public class AISettings
         this.dataBaseName = dataBaseName;
         this.documentPath = documentPath;
         this.llmParameters = llmParameters;
-        this.maxAssistantTextSize = maxAssistantTextSize;
-        this.codeCompletionLinesCount = codeCompletionLinesCount;
     }
 
     public List<String> getAccessRoles()
@@ -95,15 +90,5 @@ public class AISettings
     public Parameters getLlmParameters()
     {
         return llmParameters;
-    }
-
-    public int getMaxAssistantTextSize()
-    {
-        return maxAssistantTextSize;
-    }
-
-    public int getCodeCompletionLinesCount()
-    {
-        return codeCompletionLinesCount;
     }
 }

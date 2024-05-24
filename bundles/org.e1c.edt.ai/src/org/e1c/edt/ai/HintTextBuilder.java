@@ -3,25 +3,30 @@
  */
 package org.e1c.edt.ai;
 
-import java.util.concurrent.ConcurrentHashMap;
+import com.google.inject.Inject;
 
 public class HintTextBuilder implements IHintTextBuilder
 {
-    private final ConcurrentHashMap<Integer, String> tabs = new ConcurrentHashMap<>();
+    private final ILinePrefixMatcher linePrefixMatcher;
+
+    @Inject
+    public HintTextBuilder(ILinePrefixMatcher linePrefixMatcher)
+    {
+        this.linePrefixMatcher = linePrefixMatcher;
+    }
 
     @Override
     public String build(String text, String prefix, int tabWidth, char lineFeedSing)
     {
-        var tab = tabs.computeIfAbsent(tabWidth, this::createTab);
-        prefix = prefix.replace("\t", tab); //$NON-NLS-1$
-        var lines = text.split("\n"); //$NON-NLS-1$
+        var lines = text.split("\n", -1); //$NON-NLS-1$
         StringBuilder visibleChar = new StringBuilder(text.length());
         for (var lineIndex = 0; lineIndex < lines.length; lineIndex++)
         {
-            var line = lines[lineIndex].replace("\t", tab); //$NON-NLS-1$
-            if (lineIndex > 0 && !prefix.isEmpty() && line.startsWith(prefix))
+            var line = lines[lineIndex];
+            var prefixLength = linePrefixMatcher.getPrefixLength(line, prefix, tabWidth);
+            if (lineIndex > 0 && prefixLength > 0)
             {
-                line = line.substring(prefix.length());
+                line = line.substring(prefixLength);
             }
 
             for (var i = 0; i < line.length(); i++)
@@ -35,7 +40,11 @@ public class HintTextBuilder implements IHintTextBuilder
                     break;
 
                 case '\t':
-                    visibleChar.append(tab);
+                    for (int tab = 0; tab < tabWidth; tab++)
+                    {
+                        visibleChar.append(' ');
+                    }
+
                     break;
 
                 case '\r':
@@ -59,16 +68,5 @@ public class HintTextBuilder implements IHintTextBuilder
         }
 
         return visibleChar.toString();
-    }
-
-    private String createTab(int tabWith)
-    {
-        var tabBuilder = new StringBuilder(tabWith);
-        for(var i = 0; i < tabWith; i++)
-        {
-            tabBuilder.append(' ');
-        }
-
-        return tabBuilder.toString();
     }
 }

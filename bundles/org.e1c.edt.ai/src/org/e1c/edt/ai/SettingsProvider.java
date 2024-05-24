@@ -62,25 +62,12 @@ public class SettingsProvider
         var databaseName = settingsStore.getString(ISettingsStore.DATABASE_NAME);
         var docPath = settingsStore.getString(ISettingsStore.DOCUMENT_PATH);
         var llmParameters = settingsStore.getString(ISettingsStore.LLM_PARAMETERS);
-        var maxAssistantTextSize = settingsStore.getInt(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE);
-        if (maxAssistantTextSize <= 0)
-        {
-            maxAssistantTextSize = ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE;
-        }
-        var codeCompletionLinesCount = settingsStore.getInt(ISettingsStore.CODE_COMPLETION_LINES_COUNT);
-        if (codeCompletionLinesCount <= 0)
-        {
-            codeCompletionLinesCount = ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT;
-        }
-
         var _apiURL = apiURL;
         var _chatURL = chatURL;
-        var _maxAssistantTextSize = maxAssistantTextSize;
-        var _codeCompletionLinesCount = codeCompletionLinesCount;
         return parametersParser.parse(llmParameters)
             .map(params -> new AISettings(accessRoles, tags, _apiURL, _chatURL, clientToken, clientUID, modelName,
                 databaseName,
-                docPath, params, _maxAssistantTextSize, _codeCompletionLinesCount));
+                docPath, params));
     }
 
     private String normalize(String text)

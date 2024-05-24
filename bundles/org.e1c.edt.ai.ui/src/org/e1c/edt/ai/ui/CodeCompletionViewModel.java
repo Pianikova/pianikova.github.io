@@ -31,13 +31,13 @@ public class CodeCompletionViewModel
 {
     private final Object lockObject = new Object();
     private final ILog log;
-    private final ISettingsStore settingsStore;
     private final IAICodeAssistant codeAssistant;
     private final IAIContextProvider aiContextProvider;
     private final IDispatcher dispatcher;
     private final IUI ui;
     private final ICodeCompletionTokenizer tokenizer;
     private final IHintPainter hintPainter;
+    private final IUISettings uiSettings;
     private final Stack<String> tokens = new Stack<>();
     private CancellationToken askCancellationToken = CancellationToken.NONE;
     private StringBuilder hint = new StringBuilder();
@@ -47,16 +47,16 @@ public class CodeCompletionViewModel
         IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, IUI ui,
         ICodeCompletionTokenizer tokenizer,
-        IHintPainter hintPainter)
+        IHintPainter hintPainter, IUISettings uiSettings)
     {
         this.log = log;
-        this.settingsStore = settingsStore;
         this.codeAssistant = codeAssistant;
         this.aiContextProvider = aiContextProvider;
         this.dispatcher = dispatcher;
         this.ui = ui;
         this.tokenizer = tokenizer;
         this.hintPainter = hintPainter;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -166,6 +166,7 @@ public class CodeCompletionViewModel
                 return;
             }
 
+            log.trace("AI context " + cancellationToken.hashCode(), aiContext.toString()); //$NON-NLS-1$
             var observer = new IObserver<String>()
             {
                 @Override
@@ -177,7 +178,11 @@ public class CodeCompletionViewModel
                             return;
                         }
 
-                        hint.append(value);
+                        if (!(aiContext.isTrimmedContext() && hint.length() == 0 && value.isBlank()))
+                        {
+                            hint.append(value);
+                        }
+
                         hintPainter.setHintAt(aiContext.getCursorOffset(), getHintLines());
                     });
 
@@ -205,6 +210,7 @@ public class CodeCompletionViewModel
                             return;
                         }
 
+                        log.trace("AI generated text " + cancellationToken.hashCode(), hint.toString()); //$NON-NLS-1$
                         hintPainter.setHintAt(aiContext.getCursorOffset(), getHintLines());
                     });
                 }
@@ -232,7 +238,7 @@ public class CodeCompletionViewModel
         }
         catch (Exception e)
         {
-            Activator.logError(e);
+            log.logError(e);
             deactivate();
         }
     }
@@ -260,8 +266,8 @@ public class CodeCompletionViewModel
                 var token = tokenizer.getNext(1, hintText, this::isTextDelimiter);
                 var text = token.getValue();
                 apply(viewer.get(), text, offset);
-                hint.delete(0, text.length());
                 tokens.push(text);
+                hint.delete(0, text.length());
                 var hintLines = getHintLines();
                 continueAsk(hintLines);
                 if (hint.length() == 0)
@@ -293,11 +299,11 @@ public class CodeCompletionViewModel
         if (e.character == '\t' && offset >= 0)
         {
             e.doit = false;
-            var text = hintPainter.getHintText();
             dispatcher.dispatch(() -> {
-                apply(viewer.get(), text, offset);
-                hint.delete(0, text.length());
-                tokens.push(text);
+                var hintText = hintPainter.getHintText();
+                apply(viewer.get(), hintText, offset);
+                tokens.push(hintText);
+                hint.delete(0, hintText.length());
                 var hintLines = getHintLines();
                 continueAsk(hintLines);
                 if (hint.length() == 0)
@@ -309,15 +315,31 @@ public class CodeCompletionViewModel
             return;
         }
 
-        if (!isContinuousCodeCompletion())
+        if (!uiSettings.isContinuousCodeCompletion())
         {
             reset();
             return;
         }
 
-        var charType = Character.getType(e.character);
-        if (charType != Character.SPACE_SEPARATOR && charType != Character.CONTROL)
+        if (hint.length() > 0 && hint.charAt(0) == e.character)
         {
+            e.doit = false;
+            var chars = new char[1];
+            chars[0] = e.character;
+            var text = new String(chars);
+            apply(viewer.get(), text, offset);
+            tokens.push(text);
+            hint.delete(0, 1);
+            var hintLines = getHintLines();
+            continueAsk(hintLines);
+            return;
+        }
+
+        var charType = Character.getType(e.character);
+        if (e.character == '\r' || e.character == '\n'
+            || charType != Character.SPACE_SEPARATOR && charType != Character.CONTROL)
+        {
+
             askByJob(500);
         }
     }
@@ -331,8 +353,11 @@ public class CodeCompletionViewModel
                 try
                 {
                     inProgress = true;
-                    viewer.getDocument().replace(offset, 0, hintText);
-                    viewer.getSelectionProvider().setSelection(new TextSelection(offset + hintText.length(), 0));
+                    if (hintText.length() > 0)
+                    {
+                        viewer.getDocument().replace(offset, 0, hintText);
+                        viewer.getSelectionProvider().setSelection(new TextSelection(offset + hintText.length(), 0));
+                    }
                 }
                 finally
                 {
@@ -394,13 +419,14 @@ public class CodeCompletionViewModel
 
     private String getHintLines()
     {
-        var maxLines = getMaxLines();
+        var maxLines = uiSettings.getCodeCompletionLinesCount();
         var lines = new StringBuilder();
         var text = hint.toString();
         while (maxLines-- > 0 && !text.isEmpty())
         {
             var token = tokenizer.getNext(2, text, this::isLineDelimiter);
-            lines.append(token.getValue());
+            var value = token.getValue();
+            lines.append(value);
             text = token.getText();
         }
 
@@ -410,16 +436,6 @@ public class CodeCompletionViewModel
         }
 
         return lines.toString();
-    }
-
-    private int getMaxLines()
-    {
-        return settingsStore.getInt(ISettingsStore.CODE_COMPLETION_LINES_COUNT);
-    }
-
-    private boolean isContinuousCodeCompletion()
-    {
-        return settingsStore.getBoolean(ISettingsStore.CONTINUOUS_CODE_COMPLETION);
     }
 
     private Boolean isTextDelimiter(char ch)

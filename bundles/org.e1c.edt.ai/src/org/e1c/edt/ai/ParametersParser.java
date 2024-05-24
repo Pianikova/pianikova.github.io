@@ -6,12 +6,14 @@ package org.e1c.edt.ai;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Consumer;
 
 import org.e1c.edt.ai.assistent.model.Parameters;
+import org.e1c.edt.ai.assistent.model.TokenHealing;
 
 public class ParametersParser
     implements IValidator<String>, IParser<String, Parameters>
@@ -97,6 +99,15 @@ public class ParametersParser
         names.remove(
             parse(properties, "watermark", validationResult, val -> parameters.watermark = parseBoolean(val)));
 
+        names.remove(
+            parse(properties, "token_healing", validationResult,
+                val -> parameters.tokenHealing = parseEnum(val, TokenHealing.class)));
+
+        names.remove(
+            parse(properties, "return_line", validationResult, val -> parameters.returnLine = parseBoolean(val)));
+
+        names.remove(parse(properties, "trim_stop", validationResult, val -> parameters.trimStop = parseBoolean(val)));
+
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
         for (var unknowName : unknowNames)
@@ -147,6 +158,24 @@ public class ParametersParser
         if ("false".equalsIgnoreCase(text)) //$NON-NLS-1$
         {
             return false;
+        }
+
+        throw new IllegalArgumentException(text);
+    }
+
+    private <TEnum extends Enum<TEnum>> TEnum parseEnum(String text, Class<TEnum> clazz)
+    {
+        if (text == null)
+        {
+            throw new IllegalArgumentException(text);
+        }
+
+        for (TEnum value : EnumSet.allOf(clazz))
+        {
+            if (value.name().equalsIgnoreCase(text))
+            {
+                return value;
+            }
         }
 
         throw new IllegalArgumentException(text);

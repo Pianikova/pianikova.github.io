@@ -6,9 +6,7 @@ package org.e1c.edt.ai.itests;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.e1c.edt.ai.AIContextParts;
 import org.e1c.edt.ai.AIContextSplitter;
-import org.e1c.edt.ai.Range;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,7 +30,16 @@ public class AIContextSplitterTests
     public int maxLength;
 
     @Parameter(4)
-    public AIContextParts expectedParts;
+    public String prefix;
+
+    @Parameter(5)
+    public String middle;
+
+    @Parameter(6)
+    public String sufix;
+
+    @Parameter(7)
+    public Boolean isTrimmedMiddle;
 
     @Test
     @Parameters()
@@ -43,10 +50,17 @@ public class AIContextSplitterTests
         var splitter = new AIContextSplitter("|", midpointFactor);
 
         // When
-        var actualParts = splitter.split(text, offset, maxLength);
+        var parts = splitter.split(text.replace('-', '\t'), offset, maxLength);
+        var actualPrefix = parts.getPrefix().apply(text);
+        var actualSufix = parts.getSufix().apply(text);
+        var actualMiddle = parts.getMiddle().apply(text);
+        var actualIsTrimmedMiddle = parts.isTrimmedMiddle();
 
         // Then
-        Assert.assertEquals(expectedParts, actualParts);
+        Assert.assertEquals(prefix, actualPrefix);
+        Assert.assertEquals(sufix, actualSufix);
+        Assert.assertEquals(middle, actualMiddle);
+        Assert.assertEquals(isTrimmedMiddle, actualIsTrimmedMiddle);
     }
 
     @SuppressWarnings("nls")
@@ -56,23 +70,31 @@ public class AIContextSplitterTests
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "", .5, 0, 10, new AIContextParts(Range.EMPTY, Range.EMPTY) },
-                { "H", .5, 1, 10, new AIContextParts(new Range(0, 1), new Range(1, 0)) },
-                { "H", .5, 0, 10, new AIContextParts(new Range(0, 0), new Range(0, 1)) },
-                { "HelloWorld", .5, 5, 10, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "Hell|World", .5, 5, 10, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "Helld|orld", .5, 5, 10, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "HelloWorld", .5, 5, 20, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "HelloWorld", .5, 5, 2, new AIContextParts(new Range(4, 1), new Range(5, 1)) },
-                { "HelloWorld", .5, 5, 3, new AIContextParts(new Range(3, 2), new Range(5, 1)) },
-                { "H|lloWor|d", .5, 5, 10, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "H|lloWor|d", .5, 5, 9, new AIContextParts(new Range(2, 3), new Range(5, 3)) },
-                { "H|lloWor|d", .75, 5, 10, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "H|lloWor|d", .75, 5, 9, new AIContextParts(new Range(2, 3), new Range(5, 2)) },
-                { "H|lloWorld", .5, 5, 10, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "H|lloWorld", .5, 5, 9, new AIContextParts(new Range(2, 3), new Range(5, 4)) },
-                { "|elloWorl|", .5, 5, 10, new AIContextParts(new Range(0, 5), new Range(5, 5)) },
-                { "|elloWorl|", .5, 5, 9, new AIContextParts(new Range(1, 4), new Range(5, 4)) },
+                // | is line separator
+                // - is tab
+                // _ is cursor
+
+                { " ", .6666, 0, 1500, "", " ", "", false },
+
+                // обесп|// 123|Начало|-Наимен = Коп|-|Конец|
+                //   _
+                { "// обесп|// 123|Начало|-Наимен = Коп|-|Конец|", .6666, 5, 1500, "", "// об", "есп|// 123|Начало|-Наимен = Коп|-|Конец|", false },
+
+                // обесп|// 123|Начало|-Наимен = Коп|-|Конец|
+                //           _
+                { "// обесп|// 123|Начало|-Наимен = Коп|-|Конец|", .6666, 13, 1500, "// обесп|", "// 1", "23|Начало|-Наимен = Коп|-|Конец|", false },
+
+                // Removes all empty characters the middle part if current line is an empty string
+                // обесп|// 123|Начало|-Наимен = Коп|-|Конец|
+                //                                    _
+                { "// обесп|// 123|Начало|-Наимен = Коп|-|Конец|", .6666, 38, 1500, "// обесп|// 123|Начало|-Наимен = Коп|", "", "|Конец|", true },
+                // обесп|// 123|Начало|-Наимен = Коп|--|Конец|
+                //                                    _
+                { "// обесп|// 123|Начало|-Наимен = Коп|--|Конец|", .6666, 38, 1500, "// обесп|// 123|Начало|-Наимен = Коп|", "", "|Конец|", true },
+
+                // обесп|// 123|Начало|-Наимен = Коп|-|Конец|
+                //             _
+                { "// обесп|// 123|Начало|-Наимен = Коп|-|Конец|", .6666, 15, 1500, "// обесп|", "// 123", "|Начало|-Наимен = Коп|-|Конец|", false },
             });
         // @formatter:on
     }

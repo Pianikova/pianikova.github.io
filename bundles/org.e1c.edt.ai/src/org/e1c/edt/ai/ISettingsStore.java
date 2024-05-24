@@ -18,6 +18,7 @@ public interface ISettingsStore
     public final static String MAX_ASSISTANT_TEXT_SIZE = "stringPreferenceMaxAssistantTextSize"; //$NON-NLS-1$
     public final static String CODE_COMPLETION_LINES_COUNT = "stringPreferenceCodeCompletionLinesCount"; //$NON-NLS-1$
     public final static String CONTINUOUS_CODE_COMPLETION = "stringPreferenceContinuousCodeCompletion"; //$NON-NLS-1$
+    public final static String CONTINUOUS_TEMPLATED_CONTEXT = "stringPreferenceTemplatedContext"; //$NON-NLS-1$
 
     public final static int DEFAULT_MAX_ASSISTANT_TEXT_SIZE = 1500;
     public final static int MIN_ASSISTANT_TEXT_SIZE = 16;

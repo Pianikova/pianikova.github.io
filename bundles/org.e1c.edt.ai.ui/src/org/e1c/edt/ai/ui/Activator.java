@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.ILog;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -24,6 +25,7 @@ import com.google.inject.Injector;
  */
 public class Activator
     extends AbstractUIPlugin
+    implements ILog
 {
     public static final String PLUGIN_ID = "org.e1c.edt.ai.ui.plugin.ui"; //$NON-NLS-1$
 
@@ -96,7 +98,6 @@ public class Activator
         return descriptor;
     }
 
-
     /**
      * Запись статуса события в лог журнал плагина.
      *
@@ -104,7 +105,7 @@ public class Activator
      * Данный статус содержит в себе информацию о произошедшем событии (ошибка выполнения,
      * разнообразные предупреждения), которые были зафиксированы в логике работы плагина.
      */
-    public static void log(IStatus status)
+    private static void log(IStatus status)
     {
         plugin.getLog().log(status);
     }
@@ -114,9 +115,26 @@ public class Activator
      *
      * @param throwable выкинутое исключение, не может быть <code>null</code>
      */
-    public static void logError(Throwable throwable)
+    @Override
+    public void logError(Throwable throwable)
     {
         log(createErrorStatus(throwable.getMessage(), throwable));
+    }
+
+    /**
+     * Запись сообщения трасировки в лог журнал плагина
+     *
+     * @param topic тема трасировки
+     * @param traceMessage детали
+     */
+    @Override
+    public void trace(String topic, String details)
+    {
+        var sb = new StringBuilder();
+        sb.append(topic);
+        sb.append(System.lineSeparator());
+        sb.append(details);
+        log(Status.info(sb.toString()));
     }
 
     /**
@@ -126,7 +144,7 @@ public class Activator
      * @param throwable выкинутое исключение, может быть <code>null</code>
      * @return созданное статус событие, не может быть <code>null</code>
      */
-    public static IStatus createErrorStatus(String message, Throwable throwable)
+    private static IStatus createErrorStatus(String message, Throwable throwable)
     {
         return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, throwable);
     }
@@ -137,7 +155,7 @@ public class Activator
      * @param message описание предупреждения, не может быть <code>null</code>
      * @return созданное статус событие, не может быть <code>null</code>
      */
-    public static IStatus createWarningStatus(String message)
+    private static IStatus createWarningStatus(String message)
     {
         return new Status(IStatus.WARNING, PLUGIN_ID, 0, message, null);
     }
@@ -150,7 +168,7 @@ public class Activator
      * @param throwable выкинутое исключение, может быть <code>null</code>
      * @return созданное статус событие, не может быть <code>null</code>
      */
-    public static IStatus createWarningStatus(final String message,
+    private static IStatus createWarningStatus(final String message,
         Exception throwable)
     {
         return new Status(IStatus.WARNING, PLUGIN_ID, 0, message, throwable);

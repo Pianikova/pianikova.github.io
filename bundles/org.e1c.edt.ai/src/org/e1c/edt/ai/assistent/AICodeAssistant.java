@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 
 import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.IJson;
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.assistent.model.AITextRequest;
@@ -32,15 +33,17 @@ import com.google.inject.Inject;
 public class AICodeAssistant
     implements IAICodeAssistant
 {
+    private final ILog log;
     private final ISettingsProvider settingsProvider;
     private final IJson json;
     private final IResponseStreamProcessor responseStreamProcessor;
 
     @Inject
-    public AICodeAssistant(ISettingsProvider settingsProvider,
+    public AICodeAssistant(ILog log, ISettingsProvider settingsProvider,
         IJson json,
         IResponseStreamProcessor responseStreamProcessor)
     {
+        this.log = log;
         this.settingsProvider = settingsProvider;
         this.json = json;
         this.responseStreamProcessor = responseStreamProcessor;
@@ -84,6 +87,9 @@ public class AICodeAssistant
             .POST(BodyPublishers.ofString(requestBody))
             .build();
 
+        log.trace("AI request " + cancellationToken.hashCode(), //$NON-NLS-1$
+            request.toString() + System.lineSeparator() + requestBody);
+
         var client = HttpClient.newBuilder()
             .version(Version.HTTP_2)
             .followRedirects(Redirect.NORMAL)
@@ -93,7 +99,7 @@ public class AICodeAssistant
 
         var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
         var feature = asyncRequest
-            .thenApplyAsync(rsp -> checkResponse(rsp, observer))
+            .thenApplyAsync(rsp -> checkResponse(rsp, observer, cancellationToken))
             .thenApplyAsync(HttpResponse::body)
             .thenAcceptAsync(stream -> {
                 var attachToken = cancellationToken.attach(() -> asyncRequest.cancel(true));
@@ -115,7 +121,7 @@ public class AICodeAssistant
     }
 
     private HttpResponse<Stream<String>> checkResponse(HttpResponse<Stream<String>> response,
-        IObserver<String> observer)
+        IObserver<String> observer, CancellationToken cancellationToken)
     {
         var statusCode = response.statusCode();
         if (statusCode >= 300)
@@ -123,6 +129,7 @@ public class AICodeAssistant
             observer.onError(new AIClientException("AI HTTP response status code is " + statusCode, null)); //$NON-NLS-1$
         }
 
+        log.trace("AI response " + cancellationToken.hashCode(), response.toString()); //$NON-NLS-1$
         return response;
     }
 }

@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.e1c.edt.ai.HintTextBuilder;
+import org.e1c.edt.ai.ILinePrefixMatcher;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +35,7 @@ public class HintTextBuilderTest
     public void shouldBuild()
     {
         // Given
-        var builder = new HintTextBuilder();
+        var builder = new HintTextBuilder(new LinePrefixMatcherStub());
 
         // When
         var actualHint = builder.build(text, prefix, tabWidth, '!');
@@ -58,12 +59,25 @@ public class HintTextBuilderTest
                 { "Abc\nPrefixXyz", "Prefix", 2, "Abc\nXyz!" },
                 { "PrefixAbc\nPrefixXyz\nPrefix Asd", "Prefix", 2, "PrefixAbc\nXyz\n Asd!" },
                 { "PrefixAbc\n\t\tXyz", "\t\t", 2, "PrefixAbc\nXyz!" },
-                { "PrefixAbc\n\t  Xyz", "\t\t", 2, "PrefixAbc\nXyz!" },
-                { "PrefixAbc\n    Xyz", "\t\t", 2, "PrefixAbc\nXyz!" },
-                { "PrefixAbc\n\t  Xyz", "  \t", 2, "PrefixAbc\nXyz!" },
                 { "PrefixAbc\n\t  Xyz", "\t  ", 2, "PrefixAbc\nXyz!" },
                 { "PrefixAbc\n\t   Xyz", "\t  ", 2, "PrefixAbc\n Xyz!" },
             });
         // @formatter:on
+    }
+
+    private static class LinePrefixMatcherStub
+        implements ILinePrefixMatcher
+    {
+
+        @Override
+        public int getPrefixLength(String line, String prefix, int tabWidth)
+        {
+            if (line.startsWith(prefix))
+            {
+                return prefix.length();
+            }
+
+            return 0;
+        }
     }
 }

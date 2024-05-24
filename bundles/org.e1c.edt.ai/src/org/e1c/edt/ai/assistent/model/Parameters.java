@@ -55,12 +55,21 @@ public class Parameters
 
     public Boolean watermark;
 
+    @SerializedName("token_healing")
+    public TokenHealing tokenHealing;
+
+    @SerializedName("return_line")
+    public Boolean returnLine;
+
+    @SerializedName("trim_stop")
+    public Boolean trimStop;
+
     @Override
     public int hashCode()
     {
         return Objects.hash(bestOf, decoderInputDetails, details, doSample, frequencyPenalty, maxNewTokens,
             repetitionPenalty, returnFullText, seed, stop, temperature, topK, topNTokens, topP, truncate, typicalP,
-            watermark);
+            watermark, tokenHealing, returnLine, trimStop);
     }
 
     @Override
@@ -82,6 +91,7 @@ public class Parameters
             && Objects.equals(temperature, other.temperature) && Objects.equals(topK, other.topK)
             && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
             && Objects.equals(truncate, other.truncate) && Objects.equals(typicalP, other.typicalP)
-            && Objects.equals(watermark, other.watermark);
+            && Objects.equals(watermark, other.watermark) && Objects.equals(tokenHealing, other.tokenHealing)
+            && Objects.equals(returnLine, other.returnLine) && Objects.equals(trimStop, other.trimStop);
     }
 }

@@ -12,6 +12,7 @@ import org.e1c.edt.ai.ParametersParser;
 import org.e1c.edt.ai.ValidationError;
 import org.e1c.edt.ai.ValidationResult;
 import org.e1c.edt.ai.WellknownError;
+import org.e1c.edt.ai.assistent.model.TokenHealing;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -82,6 +83,11 @@ public class ParametersParserTest
                 { "truncate=true", ValidationResult.SUCCESS, createParams(p -> { p.truncate = true; } ) },
                 { "typical_p=34.5", ValidationResult.SUCCESS, createParams(p -> { p.typicalP = 34.5; } ) },
                 { "watermark=true", ValidationResult.SUCCESS, createParams(p -> { p.watermark = true; } ) },
+                { "token_healing=guidance", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.GUIDANCE; } ) },
+                { "token_healing=streaming", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.STREAMING; } ) },
+                { "token_healing=None", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.NONE; } ) },
+                { "return_line=true", ValidationResult.SUCCESS, createParams(p -> { p.returnLine = true; } ) },
+                { "trim_stop=true", ValidationResult.SUCCESS, createParams(p -> { p.trimStop = true; } ) },
             });
         // @formatter:on
     }

@@ -3,14 +3,20 @@
  */
 package org.e1c.edt.ai.ui;
 
+import com.google.common.base.Preconditions;
+
 public class AIContext
 {
-    private int cursorOffset;
-    private String text;
-    private String context;
+    private final int cursorOffset;
+    private final String text;
+    private final String context;
+    private final boolean isTrimmedContext;
 
-    public AIContext(int cursorOffset, String text, String context)
+    public AIContext(int cursorOffset, String text, String context, boolean isTrimmedContext)
     {
+        this.isTrimmedContext = isTrimmedContext;
+        Preconditions.checkNotNull(text);
+        Preconditions.checkArgument(cursorOffset >= 0 && cursorOffset < text.length());
         this.cursorOffset = cursorOffset;
         this.text = text;
         this.context = context;
@@ -29,5 +35,39 @@ public class AIContext
     public String getContext()
     {
         return context;
+    }
+
+    public boolean isTrimmedContext()
+    {
+        return isTrimmedContext;
+    }
+
+    @Override
+    public String toString()
+    {
+        var str = new StringBuilder();
+
+        str.append("cursorOffset:"); //$NON-NLS-1$
+        str.append(cursorOffset);
+        str.append(System.lineSeparator());
+
+        var textWithCursor = text.substring(0, cursorOffset) + "█" + text.substring(cursorOffset); //$NON-NLS-1$
+
+        str.append("text:"); //$NON-NLS-1$
+        str.append(format(textWithCursor));
+        str.append(System.lineSeparator());
+
+        str.append("context:"); //$NON-NLS-1$
+        str.append(format(context));
+        str.append(System.lineSeparator());
+
+        str.append("isTrimmedContext: " + isTrimmedContext); //$NON-NLS-1$
+        return str.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private static String format(String text)
+    {
+        return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
     }
 }
