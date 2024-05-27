@@ -47,6 +47,8 @@ public class AIUIModule
         bind(IPartListener2.class).to(AIPartListener.class);
         bind(ISelectionListener.class).to(AIPartListener.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
+        bind(IHintPainter.class).toProvider(HintPainterProvider.class);
+        bind(ICodeCompletionViewModel.class).to(CodeCompletionViewModel.class);
         // @formatter:on
     }
 }

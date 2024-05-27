@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import java.util.Stack;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.Closeables;
@@ -26,6 +27,8 @@ import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
 
+import com.google.inject.Inject;
+
 public class CodeCompletionViewModel
     implements ICodeCompletionViewModel, VerifyKeyListener, CaretListener
 {
@@ -42,7 +45,9 @@ public class CodeCompletionViewModel
     private CancellationToken askCancellationToken = CancellationToken.NONE;
     private StringBuilder hint = new StringBuilder();
     private boolean inProgress;
+    private CompletableFuture<Void> currentResponse = CompletableFuture.completedFuture(null);
 
+    @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IAICodeAssistant codeAssistant,
         IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, IUI ui,
@@ -60,7 +65,7 @@ public class CodeCompletionViewModel
     }
 
     @Override
-    public AutoCloseable activate(boolean ask)
+    public AutoCloseable activate(boolean askImmediately)
     {
         cancel();
         dispatcher.dispatch(() -> {
@@ -73,7 +78,7 @@ public class CodeCompletionViewModel
             });
         });
 
-        if (ask)
+        if (askImmediately)
         {
             askByJob(0);
         }
@@ -231,6 +236,11 @@ public class CodeCompletionViewModel
             {
                 return;
             }
+
+            synchronized (lockObject)
+            {
+                currentResponse = response.get();
+            }
         }
         catch (CancellationException e)
         {
@@ -270,7 +280,7 @@ public class CodeCompletionViewModel
                 hint.delete(0, text.length());
                 var hintLines = getHintLines();
                 continueAsk(hintLines);
-                if (hint.length() == 0)
+                if (hint.length() == 0 && currentResponse.isDone())
                 {
                     askByJob(0);
                 }
@@ -306,7 +316,7 @@ public class CodeCompletionViewModel
                 hint.delete(0, hintText.length());
                 var hintLines = getHintLines();
                 continueAsk(hintLines);
-                if (hint.length() == 0)
+                if (hint.length() == 0 && currentResponse.isDone())
                 {
                     askByJob(0);
                 }
@@ -332,6 +342,11 @@ public class CodeCompletionViewModel
             hint.delete(0, 1);
             var hintLines = getHintLines();
             continueAsk(hintLines);
+            if (hint.length() == 0 && currentResponse.isDone())
+            {
+                askByJob(0);
+            }
+
             return;
         }
 
@@ -339,7 +354,6 @@ public class CodeCompletionViewModel
         if (e.character == '\r' || e.character == '\n'
             || charType != Character.SPACE_SEPARATOR && charType != Character.CONTROL)
         {
-
             askByJob(500);
         }
     }

@@ -5,5 +5,5 @@ package org.e1c.edt.ai.ui;
 
 public interface ICodeCompletion
 {
-    void show(boolean ask);
+    void show(boolean askImmediately);
 }

@@ -5,5 +5,5 @@ package org.e1c.edt.ai.ui;
 
 public interface ICodeCompletionViewModel
 {
-    AutoCloseable activate(boolean ask);
+    AutoCloseable activate(boolean askImmediately);
 }
