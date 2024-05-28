@@ -83,7 +83,7 @@ public class AIContextProvider
             context = ctreateSimpleContext(text, parts);
         }
 
-        return Optional.of(new AIContext(offset, text, context, parts.isTrimmedMiddle()));
+        return Optional.of(new AIContext(offset, text, context));
     }
 
     private String ctreateTemplatedContext(String text, AIContextParts parts)

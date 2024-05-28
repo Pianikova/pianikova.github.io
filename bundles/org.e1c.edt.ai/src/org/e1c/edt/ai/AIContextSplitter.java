@@ -29,34 +29,7 @@ public class AIContextSplitter implements IAIContextSplitter
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0 && offset < text.length());
-        var parts = splitOnPrefixAndSufixAndMiddle(text, offset, maxLength);
-
-        var prefix = parts.getPrefix();
-        if (!prefix.isEmpty())
-        {
-            var middle = parts.getMiddle();
-            var cursor = middle.getStart();
-            var startOfLine = text.substring(0, cursor).lastIndexOf(separator);
-            if (startOfLine >= parts.getPrefix().getStart())
-            {
-                startOfLine += separator.length();
-                var endOfLine = text.indexOf(separator, cursor);
-                if (endOfLine - startOfLine > 0 && text.substring(startOfLine, endOfLine).isBlank())
-                {
-                    var sufix = parts.getSufix();
-                    var dif = endOfLine - sufix.getStart();
-                    var sufixLength = sufix.getLength() - dif;
-                    if (sufixLength > 0)
-                    {
-                        sufix = new Range(endOfLine, sufixLength);
-                    }
-
-                    return new AIContextParts(prefix, sufix, Range.EMPTY, true);
-                }
-            }
-        }
-
-        return parts;
+        return splitOnPrefixAndSufixAndMiddle(text, offset, maxLength);
     }
 
     private AIContextParts splitOnPrefixAndSufixAndMiddle(String text, int offset, int maxLength)
@@ -83,11 +56,11 @@ public class AIContextSplitter implements IAIContextSplitter
                     prefix = Range.EMPTY;
                 }
 
-                return new AIContextParts(prefix, parts.getSufix(), middle, false);
+                return new AIContextParts(prefix, parts.getSufix(), middle);
             }
             else
             {
-                return new AIContextParts(Range.EMPTY, parts.getSufix(), prefix, false);
+                return new AIContextParts(Range.EMPTY, parts.getSufix(), prefix);
             }
         }
 
@@ -98,18 +71,18 @@ public class AIContextSplitter implements IAIContextSplitter
     {
         if (text.isEmpty())
         {
-            return new AIContextParts(Range.EMPTY, Range.EMPTY, Range.EMPTY, false);
+            return new AIContextParts(Range.EMPTY, Range.EMPTY, Range.EMPTY);
         }
 
         var length = text.length();
         if (text.isBlank())
         {
-            return new AIContextParts(new Range(0, length), Range.EMPTY, Range.EMPTY, false);
+            return new AIContextParts(new Range(0, length), Range.EMPTY, Range.EMPTY);
         }
 
         if (length <= maxLength)
         {
-            return new AIContextParts(new Range(0, offset), new Range(offset, length - offset), Range.EMPTY, false);
+            return new AIContextParts(new Range(0, offset), new Range(offset, length - offset), Range.EMPTY);
         }
 
         var maxPrefixLength = (int)(maxLength * midpointFactor + .5555);
@@ -157,6 +130,6 @@ public class AIContextSplitter implements IAIContextSplitter
         }
 
         var sufix = new Range(offset, sufixLength);
-        return new AIContextParts(prefix, sufix, Range.EMPTY, false);
+        return new AIContextParts(prefix, sufix, Range.EMPTY);
     }
 }

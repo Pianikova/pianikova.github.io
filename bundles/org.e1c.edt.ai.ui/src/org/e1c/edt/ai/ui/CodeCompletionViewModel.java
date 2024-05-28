@@ -183,11 +183,7 @@ public class CodeCompletionViewModel
                             return;
                         }
 
-                        if (!(aiContext.isTrimmedContext() && hint.length() == 0 && value.isBlank()))
-                        {
-                            hint.append(value);
-                        }
-
+                        hint.append(value);
                         hintPainter.setHintAt(aiContext.getCursorOffset(), getHintLines());
                     });
 

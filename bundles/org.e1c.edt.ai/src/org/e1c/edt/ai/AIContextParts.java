@@ -12,11 +12,9 @@ public class AIContextParts
     private final Range prefix;
     private final Range sufix;
     private final Range middle;
-    private final boolean isTrimmedMiddle;
 
-    public AIContextParts(Range prefix, Range sufix, Range middle, boolean isTrimmedMiddle)
+    public AIContextParts(Range prefix, Range sufix, Range middle)
     {
-        this.isTrimmedMiddle = isTrimmedMiddle;
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
         Preconditions.checkNotNull(middle);
@@ -40,11 +38,6 @@ public class AIContextParts
         return middle;
     }
 
-    public boolean isTrimmedMiddle()
-    {
-        return isTrimmedMiddle;
-    }
-
     @Override
     public int hashCode()
     {
@@ -62,13 +55,12 @@ public class AIContextParts
             return false;
         AIContextParts other = (AIContextParts)obj;
         return Objects.equals(prefix, other.prefix) && Objects.equals(sufix, other.sufix)
-            && Objects.equals(middle, other.middle) && isTrimmedMiddle == other.isTrimmedMiddle;
+            && Objects.equals(middle, other.middle);
     }
 
     @Override
     public String toString()
     {
-        return "AIContextParts [prefix=" + prefix + ", sufix=" + sufix + ", middle=" + middle + ", isTrimmedMiddle=" //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$//$NON-NLS-4$
-            + isTrimmedMiddle + "]"; //$NON-NLS-1$
+        return "AIContextParts [prefix=" + prefix + ", sufix=" + sufix + ", middle=" + middle + "]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     }
 }

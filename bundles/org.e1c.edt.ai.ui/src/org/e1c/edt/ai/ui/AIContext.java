@@ -10,11 +10,9 @@ public class AIContext
     private final int cursorOffset;
     private final String text;
     private final String context;
-    private final boolean isTrimmedContext;
 
-    public AIContext(int cursorOffset, String text, String context, boolean isTrimmedContext)
+    public AIContext(int cursorOffset, String text, String context)
     {
-        this.isTrimmedContext = isTrimmedContext;
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(cursorOffset >= 0 && cursorOffset < text.length());
         this.cursorOffset = cursorOffset;
@@ -37,11 +35,6 @@ public class AIContext
         return context;
     }
 
-    public boolean isTrimmedContext()
-    {
-        return isTrimmedContext;
-    }
-
     @Override
     public String toString()
     {
@@ -59,9 +52,7 @@ public class AIContext
 
         str.append("context:"); //$NON-NLS-1$
         str.append(format(context));
-        str.append(System.lineSeparator());
 
-        str.append("isTrimmedContext: " + isTrimmedContext); //$NON-NLS-1$
         return str.toString();
     }
 
