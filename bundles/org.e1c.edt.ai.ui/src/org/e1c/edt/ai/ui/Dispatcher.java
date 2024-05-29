@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.swt.widgets.Display;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 
@@ -19,12 +20,14 @@ public class Dispatcher implements IDispatcher
     @Inject
     public Dispatcher(ILog log)
     {
+        Preconditions.checkNotNull(log);
         this.log = log;
     }
 
     @Override
     public <T> Optional<T> dispatch(Supplier<T> supplier)
     {
+        Preconditions.checkNotNull(supplier);
         var vals = new ArrayList<T>();
         Display.getDefault().syncExec(() -> {
             try
@@ -39,17 +42,18 @@ public class Dispatcher implements IDispatcher
 
         if (vals.isEmpty())
         {
-            Optional.empty();
+            return Optional.empty();
         }
 
         return Optional.ofNullable(vals.get(0));
     }
 
     @Override
-    public Boolean dispatch(Runnable supplier)
+    public Boolean dispatch(Runnable runnable)
     {
+        Preconditions.checkNotNull(runnable);
         return dispatch(() -> {
-            supplier.run();
+            runnable.run();
             return 0;
         }).isPresent();
     }

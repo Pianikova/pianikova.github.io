@@ -6,6 +6,8 @@ package org.e1c.edt.ai;
 import java.util.ArrayList;
 import java.util.concurrent.CancellationException;
 
+import com.google.common.base.Preconditions;
+
 public class CancellationToken
 {
     public final static CancellationToken NONE = new CancellationToken()
@@ -63,6 +65,7 @@ public class CancellationToken
 
     public AutoCloseable attach(Runnable runnable)
     {
+        Preconditions.checkNotNull(runnable);
         synchronized (lock)
         {
             attached.add(runnable);
@@ -74,5 +77,18 @@ public class CancellationToken
                 attached.remove(runnable);
             }
         });
+    }
+
+    @Override
+    public String toString()
+    {
+        var sb = new StringBuilder();
+        sb.append(hashCode());
+        if (isCanceled())
+        {
+            sb.append(" (cancelled)"); //$NON-NLS-1$
+        }
+
+        return sb.toString();
     }
 }

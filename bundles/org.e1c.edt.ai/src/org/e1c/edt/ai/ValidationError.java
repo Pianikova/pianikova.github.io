@@ -15,6 +15,7 @@ public class ValidationError
     public ValidationError(WellknownError error, String target)
     {
         Preconditions.checkNotNull(target);
+        Preconditions.checkNotNull(target);
         this.error = error;
         this.target = target;
     }

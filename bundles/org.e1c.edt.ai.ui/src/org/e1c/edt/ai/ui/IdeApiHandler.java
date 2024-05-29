@@ -3,39 +3,31 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.e1c.edt.ai.ILog;
-import org.eclipse.jface.text.BadLocationException;
-
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class IdeApiHandler
 {
-    private ILog log;
     private IUI ui;
 
     @Inject
-    public IdeApiHandler(ILog log, IUI ui)
+    public IdeApiHandler(IUI ui)
     {
-        this.log = log;
+        Preconditions.checkNotNull(ui);
         this.ui = ui;
     }
 
     public void wink(String parameter)
     {
+        Preconditions.checkNotNull(parameter);
         System.out.println("Winked: " + parameter); //$NON-NLS-1$
     }
 
     public void paste_code(String code)
     {
-        ui.getEditor().ifPresent(editor -> ui.getSelection().ifPresent(selection -> {
-            try
-            {
-                editor.getDocument().replace(selection.getOffset(), selection.getLength(), code);
-            }
-            catch (BadLocationException e)
-            {
-                log.logError(e);
-            }
-        }));
+        Preconditions.checkNotNull(code);
+        ui.getTextWidget().ifPresent(textWidget -> {
+            textWidget.replaceTextRange(textWidget.getCaretOffset(), 0, code);
+        });
     }
 }

@@ -6,6 +6,8 @@ package org.e1c.edt.ai.ui;
 import org.e1c.edt.ai.CancellationToken;
 import org.eclipse.core.runtime.IProgressMonitor;
 
+import com.google.common.base.Preconditions;
+
 public class JobCancellationToken
     extends CancellationToken
 {
@@ -14,6 +16,7 @@ public class JobCancellationToken
 
     public void attachMonitor(IProgressMonitor monitor)
     {
+        Preconditions.checkNotNull(monitor);
         synchronized (lock)
         {
             this.monitor = monitor;

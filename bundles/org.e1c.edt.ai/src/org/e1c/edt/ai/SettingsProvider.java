@@ -14,6 +14,7 @@ import java.util.Optional;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.client.AISettings;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class SettingsProvider
@@ -27,6 +28,9 @@ public class SettingsProvider
     @Inject
     public SettingsProvider(ILog log, ISettingsStore settingsStore, IParser<String, Parameters> parametersParser)
     {
+        Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settingsStore);
+        Preconditions.checkNotNull(parametersParser);
         this.log = log;
         this.settingsStore = settingsStore;
         this.parametersParser = parametersParser;

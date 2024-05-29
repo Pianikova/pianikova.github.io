@@ -7,8 +7,8 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.AIContextParts;
 import org.e1c.edt.ai.IAIContextSplitter;
-import org.eclipse.jface.text.ITextSelection;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class AIContextProvider
@@ -25,6 +25,9 @@ public class AIContextProvider
     @Inject
     public AIContextProvider(IUI ui, IUISettings uiSettings, IAIContextSplitter contextSplitter)
     {
+        Preconditions.checkNotNull(ui);
+        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(contextSplitter);
         this.ui = ui;
         this.uiSettings = uiSettings;
         this.contextSplitter = contextSplitter;
@@ -33,41 +36,26 @@ public class AIContextProvider
     @Override
     public Optional<AIContext> create()
     {
-        var viewer = ui.getTextViewer();
-        if (viewer.isEmpty())
+        var opptionalTextWidget = ui.getTextWidget();
+        if (opptionalTextWidget.isEmpty())
         {
             return Optional.empty();
         }
 
-        var selectionProvider = viewer.get().getSelectionProvider();
-        var selection = selectionProvider.getSelection();
-        if (!(selection instanceof ITextSelection))
+        var textWidget = opptionalTextWidget.get();
+        var text = textWidget.getText();
+        if (text == null || text.isEmpty())
         {
-            return Optional.empty();
+            return Optional.of(new AIContext(0, "", "")); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
-        var textSelection = (ITextSelection)selection;
-        int cursorOffset = textSelection.getOffset();
-        int offset;
-        String text;
-        if (textSelection.getLength() > 0)
+        int offset = textWidget.getCaretOffset();
+        if (offset > text.length())
         {
-            offset = textSelection.getLength();
-            text = textSelection.getText();
-            cursorOffset += textSelection.getLength();
-        }
-        else
-        {
-            offset = cursorOffset;
-            text = viewer.get().getDocument().get();
+            offset = text.length();
         }
 
-        if (offset >= text.length())
-        {
-            offset = text.length() - 1;
-        }
-
-        if (text == null || text.isEmpty() || offset < 0)
+        if (offset < 0)
         {
             return Optional.empty();
         }

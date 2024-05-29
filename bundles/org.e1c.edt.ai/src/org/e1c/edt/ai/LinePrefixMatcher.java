@@ -3,12 +3,17 @@
  */
 package org.e1c.edt.ai;
 
+import com.google.common.base.Preconditions;
+
 public class LinePrefixMatcher
     implements ILinePrefixMatcher
 {
     @Override
     public int getPrefixLength(String line, String prefix, int tabWidth)
     {
+        Preconditions.checkNotNull(line);
+        Preconditions.checkNotNull(prefix);
+        Preconditions.checkArgument(tabWidth > 0);
         var prefixSize = 0;
         var pos = 0;
         while (pos < prefix.length())

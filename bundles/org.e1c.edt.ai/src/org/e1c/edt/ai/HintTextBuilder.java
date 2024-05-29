@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class HintTextBuilder implements IHintTextBuilder
@@ -12,12 +13,15 @@ public class HintTextBuilder implements IHintTextBuilder
     @Inject
     public HintTextBuilder(ILinePrefixMatcher linePrefixMatcher)
     {
+        Preconditions.checkNotNull(linePrefixMatcher);
         this.linePrefixMatcher = linePrefixMatcher;
     }
 
     @Override
     public String build(String text, String prefix, int tabWidth, char lineFeedSing)
     {
+        Preconditions.checkNotNull(text);
+        Preconditions.checkNotNull(prefix);
         var lines = text.split("\n", -1); //$NON-NLS-1$
         StringBuilder visibleChar = new StringBuilder(text.length());
         for (var lineIndex = 0; lineIndex < lines.length; lineIndex++)

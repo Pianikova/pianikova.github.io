@@ -8,8 +8,6 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import org.eclipse.jface.preference.IPreferenceStore;
-import org.eclipse.ui.IPartListener2;
-import org.eclipse.ui.ISelectionListener;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -36,19 +34,17 @@ public class AIUIModule
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);
-        bind(IUI.class).to(UI.class).in(Singleton.class);
+        bind(UI.class).in(Singleton.class);
+        bind(IUI.class).to(UI.class);
         bind(IdeApiHandler.class).in(Singleton.class);
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
         bind(IAIContextProvider.class).to(AIContextProvider.class).in(Singleton.class);
-        bind(ICodeCompletion.class).to(CodeCompletion.class).in(Singleton.class);
-        bind(AIPartListener.class).in(Singleton.class);
-        bind(IPartListener2.class).to(AIPartListener.class);
-        bind(ISelectionListener.class).to(AIPartListener.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
-        bind(IHintPainter.class).toProvider(HintPainterProvider.class);
-        bind(ICodeCompletionViewModel.class).to(CodeCompletionViewModel.class);
+        bind(ICodeCompletionViewModel.class).to(CodeCompletionViewModel.class).in(Singleton.class);
+        bind(IHintPainter.class).to(HintPainter.class);
+        bind(IHotKeys.class).to(HotKeys.class).in(Singleton.class);
         // @formatter:on
     }
 }

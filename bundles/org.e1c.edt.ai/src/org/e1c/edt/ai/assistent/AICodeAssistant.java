@@ -87,7 +87,7 @@ public class AICodeAssistant
             .POST(BodyPublishers.ofString(requestBody))
             .build();
 
-        log.trace("AI request " + cancellationToken.hashCode(), //$NON-NLS-1$
+        log.trace("AI request " + cancellationToken, //$NON-NLS-1$
             request.toString() + System.lineSeparator() + requestBody);
 
         var client = HttpClient.newBuilder()
@@ -129,7 +129,7 @@ public class AICodeAssistant
             observer.onError(new AIClientException("AI HTTP response status code is " + statusCode, null)); //$NON-NLS-1$
         }
 
-        log.trace("AI response " + cancellationToken.hashCode(), response.toString()); //$NON-NLS-1$
+        log.trace("AI response " + cancellationToken, response.toString()); //$NON-NLS-1$
         return response;
     }
 }

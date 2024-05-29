@@ -3,12 +3,13 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.eclipse.jface.text.IPainter;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.events.PaintListener;
 
 public interface IHintPainter
-    extends IPainter
+    extends PaintListener
 {
-    void pinOffset(int offset);
+    void pinOffset(StyledText textWidget, int offset);
 
     int getOffset();
 
@@ -17,6 +18,4 @@ public interface IHintPainter
     void reset();
 
     void setHintAt(int offset, String hintText);
-
-    void setLabel(String label);
 }

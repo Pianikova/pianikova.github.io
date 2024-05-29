@@ -28,7 +28,7 @@ public class AIContextSplitter implements IAIContextSplitter
     public AIContextParts split(String text, int offset, int maxLength)
     {
         Preconditions.checkNotNull(text);
-        Preconditions.checkArgument(offset >= 0 && offset < text.length());
+        Preconditions.checkArgument(offset >= 0 && offset <= text.length());
         return splitOnPrefixAndSufixAndMiddle(text, offset, maxLength);
     }
 

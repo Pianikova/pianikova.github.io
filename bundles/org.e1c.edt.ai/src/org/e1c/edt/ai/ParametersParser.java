@@ -15,6 +15,8 @@ import java.util.function.Consumer;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.TokenHealing;
 
+import com.google.common.base.Preconditions;
+
 public class ParametersParser
     implements IValidator<String>, IParser<String, Parameters>
 {
@@ -23,6 +25,7 @@ public class ParametersParser
     @Override
     public ValidationResult validate(String target)
     {
+        Preconditions.checkNotNull(target);
         var validationResult = new ValidationResult();
         parse(target, validationResult);
         return validationResult;
@@ -31,12 +34,15 @@ public class ParametersParser
     @Override
     public Optional<Parameters> parse(String target)
     {
+        Preconditions.checkNotNull(target);
         return parse(target, new ValidationResult());
     }
 
     @SuppressWarnings("nls")
     public Optional<Parameters> parse(String parametersText, ValidationResult validationResult)
     {
+        Preconditions.checkNotNull(parametersText);
+        Preconditions.checkNotNull(validationResult);
         var parameters = new Parameters();
         if (parametersText.isBlank())
         {

@@ -3,11 +3,10 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.eclipse.ui.IPartListener2;
-import org.eclipse.ui.ISelectionListener;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IStartup;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.internal.Workbench;
 
 import com.google.inject.Inject;
 
@@ -24,9 +23,7 @@ public class PluginStartup
     implements IStartup
 {
     @Inject
-    IPartListener2 partListener;
-    @Inject
-    ISelectionListener selectionListener;
+    UI ui;
 
     public PluginStartup()
     {
@@ -38,16 +35,12 @@ public class PluginStartup
     {
         PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable()
         {
-            @SuppressWarnings("restriction")
             @Override
             public void run()
             {
-                var partService = Workbench.getInstance()
-                    .getActiveWorkbenchWindow()
-                    .getPartService();
-
-                partService.getActivePartReference().getPage().addPostSelectionListener(selectionListener);
-                partService.addPartListener(partListener);
+                var display = Display.getCurrent();
+                display.addFilter(SWT.FocusIn, ui);
+                display.addFilter(SWT.FocusOut, ui);
             }
         });
     }

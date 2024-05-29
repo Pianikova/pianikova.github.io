@@ -14,7 +14,8 @@ public class AIContext
     public AIContext(int cursorOffset, String text, String context)
     {
         Preconditions.checkNotNull(text);
-        Preconditions.checkArgument(cursorOffset >= 0 && cursorOffset < text.length());
+        Preconditions.checkNotNull(context);
+        Preconditions.checkArgument(cursorOffset >= 0 && (text.isEmpty() || cursorOffset <= text.length()));
         this.cursorOffset = cursorOffset;
         this.text = text;
         this.context = context;

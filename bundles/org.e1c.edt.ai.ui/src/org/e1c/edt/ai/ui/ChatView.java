@@ -10,6 +10,7 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.part.ViewPart;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 import javafx.embed.swt.FXCanvas;
@@ -45,6 +46,8 @@ public class ChatView
     @Override
     public void createPartControl(Composite parent)
     {
+        Preconditions.checkNotNull(parent);
+
         parent.setLayout(new GridLayout());
         GridLayoutFactory.fillDefaults().spacing(0, 0).applyTo(parent);
         GridDataFactory.fillDefaults().grab(true, true).applyTo(parent);

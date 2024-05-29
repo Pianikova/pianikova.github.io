@@ -13,6 +13,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 import javafx.beans.value.ChangeListener;
@@ -42,6 +43,10 @@ public class Chat implements IChat, IChatDialog
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler)
     {
+        Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settingsProvider);
+        Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(handler);
         this.settingsProvider = settingsProvider;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -51,30 +56,35 @@ public class Chat implements IChat, IChatDialog
     @Override
     public void reviewCode(String codeSnippet)
     {
+        Preconditions.checkNotNull(codeSnippet);
         chat("review_code", codeSnippet); //$NON-NLS-1$
     }
 
     @Override
     public void explainCode(String codeSnippet)
     {
+        Preconditions.checkNotNull(codeSnippet);
         chat("comment_code", codeSnippet); //$NON-NLS-1$
     }
 
     @Override
     public void fixCode(String codeSnippet)
     {
+        Preconditions.checkNotNull(codeSnippet);
         chat("fix_code", codeSnippet); //$NON-NLS-1$
     }
 
     @Override
     public void generateDocComments(String method)
     {
+        Preconditions.checkNotNull(method);
         chat("document_code", method); //$NON-NLS-1$
     }
 
     @Override
     public void askQuestion(String userQuestion)
     {
+        Preconditions.checkNotNull(userQuestion);
         chat("document_code", userQuestion); //$NON-NLS-1$
     }
 

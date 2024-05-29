@@ -52,6 +52,26 @@
         </command>
         <command
                 categoryId="org.e1c.edt.ai.ui.commands.category.ai"
+                id="org.e1c.edt.ai.ui.commands.accept.ai"
+                name="%command.name.accept">
+        </command>
+        <command
+                categoryId="org.e1c.edt.ai.ui.commands.category.ai"
+                id="org.e1c.edt.ai.ui.commands.acceptpart.ai"
+                name="%command.name.acceptpart">
+        </command>
+        <command
+                categoryId="org.e1c.edt.ai.ui.commands.category.ai"
+                id="org.e1c.edt.ai.ui.commands.rollbackpart.ai"
+                name="%command.name.rollbackpart">
+        </command>
+        <command
+                categoryId="org.e1c.edt.ai.ui.commands.category.ai"
+                id="org.e1c.edt.ai.ui.commands.stop.ai"
+                name="%command.name.stop">
+        </command>
+        <command
+                categoryId="org.e1c.edt.ai.ui.commands.category.ai"
                 id="org.e1c.edt.ai.ui.commands.explain.ai"
                 name="%command.name.explain">
         </command>
@@ -92,14 +112,22 @@
         <key sequence="Alt+I G"
              commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Tab"
+             commandId="org.e1c.edt.ai.ui.commands.accept.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="ARROW_RIGHT"
+             commandId="org.e1c.edt.ai.ui.commands.acceptpart.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="ARROW_LEFT"
+             commandId="org.e1c.edt.ai.ui.commands.rollbackpart.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="ESC"
+             commandId="org.e1c.edt.ai.ui.commands.stop.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
     </extension>
 
     <extension
             point="org.eclipse.ui.handlers">
-        <handler
-                class="org.e1c.edt.ai.ui.handlers.SuggestAIHandler"
-                commandId="org.e1c.edt.ai.ui.commands.suggest.ai">
-        </handler>
         <handler
                 class="org.e1c.edt.ai.ui.handlers.ExplainAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.explain.ai">
@@ -123,13 +151,6 @@
         <menuContribution
                 allPopups="false"
                 locationURI="popup:org.e1c.edt.ai.ui.groupMenu?after=additions">
-            <command
-                    commandId="org.e1c.edt.ai.ui.commands.suggest.ai"
-                    icon="icons/obj16/suggest.png"
-                    id="org.e1c.edt.ai.ui.commands.suggest.ai.id"
-                    label="%command.label.suggest"
-                    style="push">
-            </command>
             <command
                     commandId="org.e1c.edt.ai.ui.commands.explain.ai"
                     icon="icons/obj16/teach.png"

@@ -11,5 +11,5 @@ public interface IDispatcher
 {
     <T> Optional<T> dispatch(Supplier<T> supplier);
 
-    Boolean dispatch(Runnable supplier);
+    Boolean dispatch(Runnable runnable);
 }

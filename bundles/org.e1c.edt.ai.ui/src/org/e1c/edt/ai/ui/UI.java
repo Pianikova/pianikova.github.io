@@ -3,37 +3,96 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.util.Iterator;
 import java.util.Optional;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
+import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ILog;
-import org.eclipse.jface.text.ITextOperationTarget;
-import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.jface.text.ITextViewer;
-import org.eclipse.jface.text.ITextViewerExtension2;
-import org.eclipse.jface.viewers.ISelectionProvider;
-import org.eclipse.ui.IEditorPart;
+import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Layout;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.xtext.ui.editor.XtextEditor;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class UI
-    implements IUI
+    implements IUI, Listener
 {
-    private ILog log;
+    private Object lock = new Object();
+    private final ILog log;
+    private final Provider<ICodeCompletionViewModel> codeCompletionViewModelProvider;
+    private StyledText textWidget;
+    private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
-    public UI(ILog log)
+    public UI(ILog log, Provider<ICodeCompletionViewModel> codeCompletionViewModelProvider)
     {
+        Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(codeCompletionViewModelProvider);
         this.log = log;
+        this.codeCompletionViewModelProvider = codeCompletionViewModelProvider;
+    }
+
+    @Override
+    public void handleEvent(Event event)
+    {
+        Preconditions.checkNotNull(event);
+        if (event.type == SWT.FocusIn && event.widget instanceof StyledText)
+        {
+            synchronized (lock)
+            {
+                try
+                {
+                    queryToken.close();
+                }
+                catch (Exception e)
+                {
+                    // ignored
+                }
+
+                var newTextWidget = (StyledText)event.widget;
+                if (isValidWidget(newTextWidget))
+                {
+                    textWidget = newTextWidget;
+                    queryToken = codeCompletionViewModelProvider.get().activate(false);
+                }
+            }
+        }
+    }
+
+    @Override
+    public Optional<StyledText> getTextWidget()
+    {
+        synchronized (lock)
+        {
+            var widget = textWidget;
+            if (!isValidWidget(widget))
+            {
+                return Optional.empty();
+            }
+
+            return Optional.of(widget);
+        }
     }
 
     @Override
     public Optional<IViewPart> showView(String viewId)
     {
+        Preconditions.checkNotNull(viewId);
         return getActivePage().map(activePage -> {
             try
             {
@@ -48,47 +107,54 @@ public class UI
         });
     }
 
-    @Override
-    public Optional<XtextEditor> getEditor()
+    private boolean isValidWidget(StyledText widget)
     {
-        return getEditorPart().map(editor -> editor.getAdapter(XtextEditor.class));
+        Preconditions.checkNotNull(widget);
+        return widget != null && !widget.isDisposed() && widget.getEditable() && widget.isEnabled()
+            && widget.getVisible() && getSourceViewer(widget).isPresent();
     }
 
-    @Override
-    public Optional<ITextViewer> getTextViewer()
+    private Optional<SourceViewer> getSourceViewer(StyledText widget)
     {
-        return getTextOperationTarget().map(target -> {
-            return (target instanceof ITextViewer) ? (ITextViewer)target : null;
-        });
+        Preconditions.checkNotNull(widget);
+        return getAncestors(widget).filter(i -> i instanceof Canvas)
+            .map(i -> getSourceViewer(((Canvas)i).getLayout()))
+            .filter(i -> i != null)
+            .findFirst();
     }
 
-    @Override
-    public Optional<ITextViewerExtension2> getTextViewerExtension2()
+    private SourceViewer getSourceViewer(Layout layout)
     {
-        return getTextOperationTarget().map(target -> {
-            return (target instanceof ITextViewerExtension2) ? (ITextViewerExtension2)target : null;
-        });
+        Preconditions.checkNotNull(layout);
+        var fields = layout.getClass().getDeclaredFields();
+        for (var field : fields)
+        {
+            if ("this$0".equals(field.getName())) //$NON-NLS-1$
+            {
+                field.setAccessible(true);
+                try
+                {
+                    var outer = field.get(layout);
+                    if (outer != null && outer instanceof SourceViewer)
+                    {
+                        return (SourceViewer)outer;
+                    }
+                }
+                catch (Exception e)
+                {
+                    //
+                }
+            }
+        }
+
+        return null;
     }
 
-    @Override
-    public Optional<ISelectionProvider> getSelectionProvider()
+    private Stream<Composite> getAncestors(Composite current)
     {
-        return getEditor().map(editor -> editor.getSelectionProvider());
-    }
-
-    @Override
-    public Optional<ITextSelection> getSelection()
-    {
-        return getSelectionProvider().map(selectionProvider -> {
-            var selection = selectionProvider.getSelection();
-            return selection instanceof ITextSelection ? (ITextSelection)selection : null;
-        });
-    }
-
-    @Override
-    public void select(ITextSelection selection)
-    {
-        getSelectionProvider().ifPresent(selectionProvider -> selectionProvider.setSelection(selection));
+        Preconditions.checkNotNull(current);
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(new AncestorsIterator(current),
+            Spliterator.IMMUTABLE & Spliterator.DISTINCT & Spliterator.NONNULL), false);
     }
 
     private Optional<IWorkbenchPage> getActivePage()
@@ -96,13 +162,28 @@ public class UI
         return Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage());
     }
 
-    private Optional<IEditorPart> getEditorPart()
+    private class AncestorsIterator
+        implements Iterator<Composite>
     {
-        return getActivePage().map(activePage -> activePage.getActiveEditor());
-    }
+        private Composite current;
 
-    private Optional<ITextOperationTarget> getTextOperationTarget()
-    {
-        return getEditorPart().map(editor -> editor.getAdapter(ITextOperationTarget.class));
+        public AncestorsIterator(Composite current)
+        {
+            Preconditions.checkNotNull(current);
+            this.current = current;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return current.getParent() != null;
+        }
+
+        @Override
+        public Composite next()
+        {
+            current = current.getParent();
+            return current;
+        }
     }
 }
