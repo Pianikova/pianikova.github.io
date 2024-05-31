@@ -17,14 +17,16 @@ import com.google.inject.Inject;
 public class HintPainter
     implements PaintListener, IHintPainter
 {
-    private static final String labelText = "Tab → ← Esc"; //$NON-NLS-1$
-    private static final char LINE_FEED_SIGN = '\u00b6';
+    private static final String LABEL_TEXT = "Tab → ← Esc"; //$NON-NLS-1$
+    private static final char CONTINUATION_SIGN = '…';
     private static final int BORDER = 2;
+
     private final IHintTextBuilder hintTextBuilder;
     private final IUISettings uiSettings;
     private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
+    private boolean showEmpty;
 
     @Inject
     public HintPainter(IHintTextBuilder hintTextBuilder, IUISettings uiSettings)
@@ -36,8 +38,9 @@ public class HintPainter
     }
 
     @Override
-    public void pinOffset(StyledText textWidget, int offset)
+    public void pinOffset(StyledText textWidget, int offset, boolean showEmpty)
     {
+        this.showEmpty = showEmpty;
         Preconditions.checkNotNull(textWidget);
         this.textWidget = textWidget;
         pinnedOffset = offset;
@@ -105,6 +108,11 @@ public class HintPainter
             return;
         }
 
+        if (!showEmpty && getHintText().isEmpty())
+        {
+            return;
+        }
+
         drawHint(event.gc, getHint());
     }
 
@@ -122,7 +130,7 @@ public class HintPainter
             prefix = lineContent.substring(0, lineContent.length() - trimmedPrefix.length());
         }
 
-        return hintTextBuilder.build(getHintText(), prefix, uiSettings.getTabWidth(), LINE_FEED_SIGN);
+        return hintTextBuilder.build(getHintText(), prefix, uiSettings.getTabWidth(), CONTINUATION_SIGN);
     }
 
     private void drawHint(GC gc, String hint)
@@ -147,14 +155,14 @@ public class HintPainter
             gc.setAlpha(80);
             gc.drawRectangle(x - BORDER, y, textSize.x + BORDER * 4, textSize.y);
 
-            if (!labelText.isBlank())
+            if (!LABEL_TEXT.isBlank())
             {
                 fontData.setHeight((int)(fontData.getHeight() * .75));
                 var smalFont = new Font(font.getDevice(), fontData);
                 try
                 {
                     gc.setFont(smalFont);
-                    var labelTextSize = gc.textExtent(labelText);
+                    var labelTextSize = gc.textExtent(LABEL_TEXT);
                     var hintX = x;
                     x = x + textSize.x - labelTextSize.x;
                     if (x < hintX)
@@ -166,7 +174,7 @@ public class HintPainter
                     gc.setAlpha(255);
                     gc.fillRectangle(x - BORDER, y, labelTextSize.x + BORDER * 4, labelTextSize.y);
                     gc.setAlpha(80);
-                    gc.drawText(labelText, x + BORDER * 2, y);
+                    gc.drawText(LABEL_TEXT, x + BORDER * 2, y);
                     gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER * 4, labelTextSize.y);
                 }
                 finally

@@ -39,6 +39,9 @@ public class AIModule
         bind(IAIContextSplitter.class).to(AIContextSplitter.class).in(Singleton.class);
         bind(IHintTextBuilder.class).to(HintTextBuilder.class).in(Singleton.class);
         bind(ILinePrefixMatcher.class).to(LinePrefixMatcher.class).in(Singleton.class);
+        bind(IClock.class).to(Clock.class).in(Singleton.class);
+        bind(IMath.class).to(Math.class).in(Singleton.class);
+        bind(IInputDelayStatistics.class).to(InputDelayStatistics.class).in(Singleton.class);
         // @formatter:on
     }
 }

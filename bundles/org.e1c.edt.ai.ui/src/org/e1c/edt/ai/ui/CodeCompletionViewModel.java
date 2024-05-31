@@ -3,13 +3,17 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.time.Duration;
 import java.util.Stack;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
+import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.ISettingsStore;
@@ -39,7 +43,9 @@ public class CodeCompletionViewModel
     private final ICodeCompletionTokenizer tokenizer;
     private final IHintPainter hintPainter;
     private final IUISettings uiSettings;
+    private final IInputDelayStatistics inputRateStatistics;
     private final Stack<String> tokens = new Stack<>();
+    private final Timer showTimer = new Timer(true);
     private CancellationToken askCancellationToken = CancellationToken.NONE;
     private StringBuilder hint = new StringBuilder();
     private boolean inProgress;
@@ -50,7 +56,7 @@ public class CodeCompletionViewModel
         IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, IUI ui, IHotKeys hotKeys,
         ICodeCompletionTokenizer tokenizer,
-        IHintPainter hintPainter, IUISettings uiSettings)
+        IHintPainter hintPainter, IUISettings uiSettings, IInputDelayStatistics inputRateStatistics)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -62,6 +68,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(tokenizer);
         Preconditions.checkNotNull(tokenizer);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(inputRateStatistics);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.aiContextProvider = aiContextProvider;
@@ -71,6 +78,7 @@ public class CodeCompletionViewModel
         this.tokenizer = tokenizer;
         this.hintPainter = hintPainter;
         this.uiSettings = uiSettings;
+        this.inputRateStatistics = inputRateStatistics;
     }
 
     @Override
@@ -88,7 +96,7 @@ public class CodeCompletionViewModel
 
         if (askImmediately)
         {
-            askByJob(0);
+            askByJob(Duration.ZERO);
         }
 
         return Closeables.create(() -> deactivate());
@@ -126,6 +134,7 @@ public class CodeCompletionViewModel
 
     private boolean cancel()
     {
+        showTimer.purge();
         synchronized (lockObject)
         {
             if (askCancellationToken.isCanceled())
@@ -138,7 +147,7 @@ public class CodeCompletionViewModel
         }
     }
 
-    private void askByJob(long delay)
+    private void askByJob(Duration delayBeforeShow)
     {
         cancel();
         var model = this;
@@ -158,13 +167,46 @@ public class CodeCompletionViewModel
                 }
 
                 cancellationToken.attachMonitor(monitor);
-                ask(curHint, cancellationToken);
+                ask(curHint, delayBeforeShow, cancellationToken);
                 return cancellationToken.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
             }
-        }.schedule(delay);
+        }.schedule();
     }
 
-    private void ask(StringBuilder curHint, CancellationToken cancellationToken)
+    private void show(AIContext aiContext, StringBuilder curHint, Duration delayBeforeShow,
+        CancellationToken cancellationToken)
+    {
+        showTimer.purge();
+        if (delayBeforeShow == Duration.ZERO)
+        {
+            show(aiContext, curHint, cancellationToken);
+            return;
+        }
+
+        showTimer.schedule(new TimerTask()
+            {
+            @Override
+            public void run()
+                {
+                show(aiContext, curHint, cancellationToken);
+                }
+        }, delayBeforeShow.toMillis());
+    }
+
+    private void show(AIContext aiContext, StringBuilder curHint, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.isCanceled())
+        {
+            return;
+        }
+
+        dispatcher.dispatch(() -> {
+            hintPainter.setHintAt(aiContext.getCursorOffset(), getHintLines(curHint));
+            ui.getTextWidget().ifPresent(textWidget -> textWidget.redraw());
+        });
+    }
+
+    private void ask(StringBuilder curHint, Duration delayBeforeShow, CancellationToken cancellationToken)
     {
         try
         {
@@ -192,8 +234,7 @@ public class CodeCompletionViewModel
                         }
 
                         curHint.append(value);
-                        hintPainter.setHintAt(aiContext.getCursorOffset(), getHintLines(curHint));
-                        ui.getTextWidget().ifPresent(textWidget -> textWidget.redraw());
+                        show(aiContext, curHint, delayBeforeShow, cancellationToken);
                     });
 
                     return true;
@@ -221,8 +262,7 @@ public class CodeCompletionViewModel
                         }
 
                         log.trace("AI generated text " + cancellationToken, curHint.toString()); //$NON-NLS-1$
-                        hintPainter.setHintAt(aiContext.getCursorOffset(), getHintLines(curHint));
-                        ui.getTextWidget().ifPresent(textWidget -> textWidget.redraw());
+                        show(aiContext, curHint, delayBeforeShow, cancellationToken);
                     });
                 }
             };
@@ -235,7 +275,8 @@ public class CodeCompletionViewModel
 
                 hintPainter.reset();
                 ui.getTextWidget()
-                    .ifPresent(textWidget -> hintPainter.pinOffset(textWidget, aiContext.getCursorOffset()));
+                    .ifPresent(textWidget -> hintPainter.pinOffset(textWidget, aiContext.getCursorOffset(),
+                        delayBeforeShow == Duration.ZERO));
             });
 
             var response = codeAssistant.generateText(context, observer, cancellationToken);
@@ -273,7 +314,7 @@ public class CodeCompletionViewModel
         {
             e.doit = false;
             reset();
-            askByJob(0);
+            askByJob(Duration.ZERO);
             return;
         }
 
@@ -301,7 +342,7 @@ public class CodeCompletionViewModel
                     continueAsk(hintLines);
                     if (curHint.length() == 0 && currentResponse.isDone())
                     {
-                        askByJob(0);
+                        askByJob(Duration.ZERO);
                     }
                 });
 
@@ -337,7 +378,7 @@ public class CodeCompletionViewModel
                     continueAsk(hintLines);
                     if (curHint.length() == 0 && currentResponse.isDone())
                     {
-                        askByJob(0);
+                        askByJob(Duration.ZERO);
                     }
                 });
 
@@ -347,6 +388,7 @@ public class CodeCompletionViewModel
 
         if (curHint.length() > 0 && curHint.charAt(0) == e.character)
         {
+            inputRateStatistics.registerAndPredictDelay();
             e.doit = false;
             var chars = new char[1];
             chars[0] = e.character;
@@ -358,25 +400,31 @@ public class CodeCompletionViewModel
             continueAsk(hintLines);
             if (curHint.length() == 0 && currentResponse.isDone())
             {
-                askByJob(0);
+                askByJob(Duration.ZERO);
             }
 
             return;
         }
 
-        if (!uiSettings.isContinuousCodeCompletion())
+        var charType = Character.getType(e.character);
+        if (charType != Character.CONTROL && !uiSettings.isContinuousCodeCompletion())
         {
             reset();
             return;
         }
 
-        var charType = Character.getType(e.character);
         if (e.character == '\r' || e.character == '\n'
             || charType != Character.SPACE_SEPARATOR && charType != Character.CONTROL)
         {
+            var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
+            log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
             reset();
-            askByJob(500);
+            inProgress = true;
+            askByJob(delayBeforeShow);
+            return;
         }
+
+        inProgress = false;
     }
 
     private void apply(String hintText, int offset)
@@ -389,8 +437,20 @@ public class CodeCompletionViewModel
                 if (hintText.length() > 0)
                 {
                     ui.getTextWidget().ifPresent(textWidget -> {
-                        textWidget.replaceTextRange(offset, 0, hintText);
-                        textWidget.setCaretOffset(offset + hintText.length());
+                        var start = offset;
+                        if (offset < 0)
+                        {
+                            start = 0;
+                        }
+
+                        var contentLength = textWidget.getCharCount();
+                        if (start > contentLength)
+                        {
+                            start = contentLength;
+                        }
+
+                        textWidget.replaceTextRange(start, 0, hintText);
+                        textWidget.setCaretOffset(start + hintText.length());
                     });
                 }
             }
@@ -408,8 +468,19 @@ public class CodeCompletionViewModel
             try
             {
                 inProgress = true;
-                var start = offset - hintText.length();
                 ui.getTextWidget().ifPresent(textWidget -> {
+                    var start = offset - hintText.length();
+                    if (offset < 0)
+                    {
+                        start = 0;
+                    }
+
+                    var contentLength = textWidget.getCharCount();
+                    if (start > contentLength)
+                    {
+                        start = contentLength;
+                    }
+
                     textWidget.replaceTextRange(start, hintText.length(), ""); //$NON-NLS-1$
                     textWidget.setCaretOffset(start);
                 });
@@ -424,11 +495,11 @@ public class CodeCompletionViewModel
     private void continueAsk(String hint)
     {
         aiContextProvider.create().ifPresent(ctx -> {
-            ui.getTextWidget().ifPresent(textWidget -> hintPainter.pinOffset(textWidget, ctx.getCursorOffset()));
+            ui.getTextWidget().ifPresent(textWidget -> hintPainter.pinOffset(textWidget, ctx.getCursorOffset(), true));
             hintPainter.setHintAt(ctx.getCursorOffset(), hint);
             if (hint.isEmpty())
             {
-                askByJob(0);
+                askByJob(Duration.ZERO);
             }
         });
     }
