@@ -3,14 +3,18 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.AIContextSettings;
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.jface.text.source.SourceViewer;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 
 public class AIUIModule
     extends AbstractModule
@@ -22,6 +26,7 @@ public class AIUIModule
 
     public AIUIModule(Activator activator)
     {
+        Preconditions.checkNotNull(activator);
         this.activator = activator;
     }
 
@@ -40,7 +45,12 @@ public class AIUIModule
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
-        bind(IAIContextProvider.class).to(AIContextProvider.class).in(Singleton.class);
+        bind(AIContextSettings.class).toProvider(AIContextSettingsProvider.class);
+        bind(new TypeLiteral<IAIContextProvider<Void>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<SourceViewer>>() { /**/ }).to(AISourceViewerContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).to(AISourceContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<ISyntaxWalker<StringSerializerContext>>() { /**/ }).to(new TypeLiteral<BasicPathSyntaxWalker<StringSerializerContext>>() { /**/ }).in(Singleton.class);
+        bind(new TypeLiteral<ISyntaxVisitor<StringSerializerContext>>() { /**/ }).to(StringSerializerVisitor.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(ICodeCompletionViewModel.class).to(CodeCompletionViewModel.class).in(Singleton.class);
         bind(IHintPainter.class).to(HintPainter.class);

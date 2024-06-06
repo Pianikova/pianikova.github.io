@@ -5,7 +5,10 @@ package org.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
-public interface IAIContextProvider
+import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.CancellationToken;
+
+public interface IAIContextProvider<T>
 {
-    Optional<AIContext> create();
+    Optional<AIContext> create(T state, CancellationToken cancellationToken);
 }

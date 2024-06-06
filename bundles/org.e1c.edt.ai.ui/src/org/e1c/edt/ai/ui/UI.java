@@ -90,6 +90,16 @@ public class UI
     }
 
     @Override
+    public Optional<SourceViewer> getSourceViewer(StyledText textWidget)
+    {
+        Preconditions.checkNotNull(textWidget);
+        return getAncestors(textWidget).filter(i -> i instanceof Canvas)
+            .map(i -> getSourceViewer(((Canvas)i).getLayout()))
+            .filter(i -> i != null)
+            .findFirst();
+    }
+
+    @Override
     public Optional<IViewPart> showView(String viewId)
     {
         Preconditions.checkNotNull(viewId);
@@ -112,15 +122,6 @@ public class UI
         Preconditions.checkNotNull(widget);
         return widget != null && !widget.isDisposed() && widget.getEditable() && widget.isEnabled()
             && widget.getVisible() && getSourceViewer(widget).isPresent();
-    }
-
-    private Optional<SourceViewer> getSourceViewer(StyledText widget)
-    {
-        Preconditions.checkNotNull(widget);
-        return getAncestors(widget).filter(i -> i instanceof Canvas)
-            .map(i -> getSourceViewer(((Canvas)i).getLayout()))
-            .filter(i -> i != null)
-            .findFirst();
     }
 
     private SourceViewer getSourceViewer(Layout layout)

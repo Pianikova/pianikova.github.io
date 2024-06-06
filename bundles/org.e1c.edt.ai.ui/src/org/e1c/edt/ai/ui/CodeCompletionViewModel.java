@@ -10,8 +10,10 @@ import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
+import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.Closeables;
+import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILog;
@@ -36,7 +38,7 @@ public class CodeCompletionViewModel
     private final Object lockObject = new Object();
     private final ILog log;
     private final IAICodeAssistant codeAssistant;
-    private final IAIContextProvider aiContextProvider;
+    private final IAIContextProvider<Void> aiContextProvider;
     private final IDispatcher dispatcher;
     private final IUI ui;
     private final IHotKeys hotKeys;
@@ -44,6 +46,7 @@ public class CodeCompletionViewModel
     private final IHintPainter hintPainter;
     private final IUISettings uiSettings;
     private final IInputDelayStatistics inputRateStatistics;
+    private final IClock clock;
     private final Stack<String> tokens = new Stack<>();
     private final Timer showTimer = new Timer(true);
     private CancellationToken askCancellationToken = CancellationToken.NONE;
@@ -53,10 +56,10 @@ public class CodeCompletionViewModel
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IAICodeAssistant codeAssistant,
-        IAIContextProvider aiContextProvider,
+        IAIContextProvider<Void> aiContextProvider,
         IDispatcher dispatcher, IUI ui, IHotKeys hotKeys,
         ICodeCompletionTokenizer tokenizer,
-        IHintPainter hintPainter, IUISettings uiSettings, IInputDelayStatistics inputRateStatistics)
+        IHintPainter hintPainter, IUISettings uiSettings, IInputDelayStatistics inputRateStatistics, IClock clock)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -69,6 +72,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(tokenizer);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(inputRateStatistics);
+        Preconditions.checkNotNull(clock);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.aiContextProvider = aiContextProvider;
@@ -79,6 +83,7 @@ public class CodeCompletionViewModel
         this.hintPainter = hintPainter;
         this.uiSettings = uiSettings;
         this.inputRateStatistics = inputRateStatistics;
+        this.clock = clock;
     }
 
     @Override
@@ -177,7 +182,7 @@ public class CodeCompletionViewModel
         CancellationToken cancellationToken)
     {
         showTimer.purge();
-        if (delayBeforeShow == Duration.ZERO)
+        if (delayBeforeShow.isNegative() || delayBeforeShow == Duration.ZERO)
         {
             show(aiContext, curHint, cancellationToken);
             return;
@@ -201,8 +206,10 @@ public class CodeCompletionViewModel
         }
 
         dispatcher.dispatch(() -> {
-            hintPainter.setHintAt(aiContext.getCursorOffset(), getHintLines(curHint));
-            ui.getTextWidget().ifPresent(textWidget -> textWidget.redraw());
+            ui.getTextWidget().ifPresent(textWidget -> {
+                hintPainter.setHintAt(textWidget.getCaretOffset(), getHintLines(curHint));
+                textWidget.redraw();
+            });
         });
     }
 
@@ -210,8 +217,9 @@ public class CodeCompletionViewModel
     {
         try
         {
+            var startTime = clock.now();
             var ctx = dispatcher.dispatch(() -> {
-                return aiContextProvider.create().orElse(null);
+                return aiContextProvider.create(null, cancellationToken).orElse(null);
             });
 
             if (cancellationToken.isCanceled() || ctx.isEmpty())
@@ -234,7 +242,8 @@ public class CodeCompletionViewModel
                         }
 
                         curHint.append(value);
-                        show(aiContext, curHint, delayBeforeShow, cancellationToken);
+                        show(aiContext, curHint, delayBeforeShow.minus(Duration.between(startTime, clock.now())),
+                            cancellationToken);
                     });
 
                     return true;
@@ -262,7 +271,7 @@ public class CodeCompletionViewModel
                         }
 
                         log.trace("AI generated text " + cancellationToken, curHint.toString()); //$NON-NLS-1$
-                        show(aiContext, curHint, delayBeforeShow, cancellationToken);
+                        show(aiContext, curHint, delayBeforeShow.minus(Duration.between(startTime, clock.now())), cancellationToken);
                     });
                 }
             };
@@ -274,9 +283,10 @@ public class CodeCompletionViewModel
                 }
 
                 hintPainter.reset();
+                var delay = delayBeforeShow.minus(Duration.between(startTime, clock.now()));
                 ui.getTextWidget()
-                    .ifPresent(textWidget -> hintPainter.pinOffset(textWidget, aiContext.getCursorOffset(),
-                        delayBeforeShow == Duration.ZERO));
+                    .ifPresent(textWidget -> hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
+                        delay.isNegative() || delay == Duration.ZERO));
             });
 
             var response = codeAssistant.generateText(context, observer, cancellationToken);
@@ -413,7 +423,7 @@ public class CodeCompletionViewModel
             return;
         }
 
-        if (e.character == '\r' || e.character == '\n'
+        if (uiSettings.isContinuousCodeCompletion() && e.character == '\r' || e.character == '\n'
             || charType != Character.SPACE_SEPARATOR && charType != Character.CONTROL)
         {
             var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
@@ -494,9 +504,20 @@ public class CodeCompletionViewModel
 
     private void continueAsk(String hint)
     {
-        aiContextProvider.create().ifPresent(ctx -> {
-            ui.getTextWidget().ifPresent(textWidget -> hintPainter.pinOffset(textWidget, ctx.getCursorOffset(), true));
-            hintPainter.setHintAt(ctx.getCursorOffset(), hint);
+        CancellationToken cancellationToken;
+        synchronized (lockObject)
+        {
+            cancellationToken = askCancellationToken;
+        }
+
+        aiContextProvider.create(null, cancellationToken).ifPresent(ctx -> {
+            ui.getTextWidget()
+                .ifPresent(textWidget -> {
+                    var offset = textWidget.getCaretOffset();
+                    hintPainter.pinOffset(textWidget, offset, true);
+                    hintPainter.setHintAt(offset, hint);
+                });
+
             if (hint.isEmpty())
             {
                 askByJob(Duration.ZERO);

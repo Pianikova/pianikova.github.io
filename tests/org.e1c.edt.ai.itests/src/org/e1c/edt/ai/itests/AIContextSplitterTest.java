@@ -15,7 +15,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public class AIContextSplitterTests
+public class AIContextSplitterTest
 {
     @Parameter(0)
     public String text;

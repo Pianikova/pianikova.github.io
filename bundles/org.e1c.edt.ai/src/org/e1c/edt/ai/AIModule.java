@@ -42,6 +42,7 @@ public class AIModule
         bind(IClock.class).to(Clock.class).in(Singleton.class);
         bind(IMath.class).to(Math.class).in(Singleton.class);
         bind(IInputDelayStatistics.class).to(InputDelayStatistics.class).in(Singleton.class);
+        bind(IAIContextFactory.class).to(AIContextFactory.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.ui;
+package org.e1c.edt.ai;
 
 import com.google.common.base.Preconditions;
 
@@ -53,6 +53,11 @@ public class AIContext
 
         str.append("context:"); //$NON-NLS-1$
         str.append(format(context));
+        str.append(System.lineSeparator());
+
+        str.append("raw text:"); //$NON-NLS-1$
+        str.append(System.lineSeparator());
+        str.append(textWithCursor);
 
         return str.toString();
     }

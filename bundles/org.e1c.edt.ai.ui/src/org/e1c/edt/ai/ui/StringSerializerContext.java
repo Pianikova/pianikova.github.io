@@ -1,0 +1,46 @@
+/**
+ * Copyright (C) 2024, 1C
+ */
+package org.e1c.edt.ai.ui;
+
+import org.eclipse.xtext.nodemodel.ILeafNode;
+
+import com.google.common.base.Preconditions;
+
+public class StringSerializerContext
+{
+    private final StringBuilder text = new StringBuilder();
+    private final ILeafNode cursorNode;
+    private int offset;
+    private final int maxLength;
+
+    public StringSerializerContext(ILeafNode cursorNode, int offset, int maxLength)
+    {
+        Preconditions.checkArgument(offset >= 0);
+        Preconditions.checkArgument(maxLength > 0);
+        this.cursorNode = cursorNode;
+        this.maxLength = maxLength;
+        this.offset = offset - (cursorNode != null ? cursorNode.getOffset() : 0);
+    }
+
+    public boolean serialize(ILeafNode node)
+    {
+        if (node == cursorNode)
+        {
+            offset += text.length();
+        }
+
+        text.append(node.getText());
+        return text.length() < maxLength;
+    }
+
+    public String getText()
+    {
+        return text.toString();
+    }
+
+    public int getOffset()
+    {
+        return offset;
+    }
+}
