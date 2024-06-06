@@ -19,7 +19,7 @@ public class HintPainter
 {
     private static final String LABEL_TEXT = "Tab → ← Esc"; //$NON-NLS-1$
     private static final char CONTINUATION_SIGN = '…';
-    private static final int BORDER = 2;
+    private static final int BORDER = 1;
 
     private final IHintTextBuilder hintTextBuilder;
     private final IUISettings uiSettings;
@@ -113,27 +113,29 @@ public class HintPainter
             return;
         }
 
-        drawHint(event.gc, getHint());
-    }
-
-    private String getHint()
-    {
-        var curOffset = pinnedOffset;
-        var content = textWidget.getContent();
-        var line = content.getLineAtOffset(curOffset);
-        var lineStartOffset = content.getOffsetAtLine(line);
-        var lineContent = content.getTextRange(lineStartOffset, curOffset - lineStartOffset);
-        var trimmedPrefix = lineContent.stripLeading();
-        var prefix = ""; //$NON-NLS-1$
-        if (trimmedPrefix.length() < lineContent.length())
+        var text = hintTextBuilder.build(getHintText(), uiSettings.getTabWidth(), CONTINUATION_SIGN);
+        if (text.length() == 0)
         {
-            prefix = lineContent.substring(0, lineContent.length() - trimmedPrefix.length());
+            return;
         }
 
-        return hintTextBuilder.build(getHintText(), prefix, uiSettings.getTabWidth(), CONTINUATION_SIGN);
+        var firstLineFinish = text.indexOf('\n');
+        String firstLine = ""; //$NON-NLS-1$
+        String otherLines = ""; //$NON-NLS-1$
+        if (firstLineFinish >= 0)
+        {
+            firstLine = text.substring(0, firstLineFinish);
+            otherLines = text.substring(firstLineFinish + 1);
+        }
+        else
+        {
+            firstLine = text;
+        }
+
+        drawHint(event.gc, firstLine, otherLines);
     }
 
-    private void drawHint(GC gc, String hint)
+    private void drawHint(GC gc, String firstLine, String otherLines)
     {
         var caretLocation = textWidget.getCaret().getLocation();
         var x = caretLocation.x;
@@ -141,51 +143,80 @@ public class HintPainter
         gc.setAdvanced(true);
         gc.setBackground(textWidget.getBackground());
         gc.setForeground(textWidget.getForeground());
+
         var font = textWidget.getFont();
         var fontData = font.getFontData()[0];
         fontData.setStyle(SWT.ITALIC);
         var italicFont = new Font(font.getDevice(), fontData);
+        fontData.setHeight((int)(fontData.getHeight() * .75));
+        var smalFont = new Font(font.getDevice(), fontData);
+
         try
         {
             gc.setFont(italicFont);
-            var textSize = gc.textExtent(hint);
-            gc.fillRectangle(x - BORDER, y, textSize.x + BORDER * 4, textSize.y);
-            gc.setAlpha(160);
-            gc.drawText(hint, x + BORDER * 2, y);
-            gc.setAlpha(80);
-            gc.drawRectangle(x - BORDER, y, textSize.x + BORDER * 4, textSize.y);
 
-            if (!LABEL_TEXT.isBlank())
+            var firstLineSize = gc.textExtent(firstLine);
+            var firstLineX = x - BORDER;
+            var firstLineY = y;
+            var firstLineW = firstLineSize.x + BORDER * 4;
+            var firstLineH = firstLineSize.y;
+
+            var otherLinesSize = gc.textExtent(otherLines);
+            var otherLinesX = BORDER;
+            var otherLinesY = firstLineY + firstLineH;
+            var otherLinesW = otherLinesSize.x + BORDER * 4;
+            var otherLinesH = otherLinesSize.y;
+            if (otherLines.isEmpty())
             {
-                fontData.setHeight((int)(fontData.getHeight() * .75));
-                var smalFont = new Font(font.getDevice(), fontData);
-                try
-                {
-                    gc.setFont(smalFont);
-                    var labelTextSize = gc.textExtent(LABEL_TEXT);
-                    var hintX = x;
-                    x = x + textSize.x - labelTextSize.x;
-                    if (x < hintX)
-                    {
-                        x = hintX;
-                    }
-
-                    y = y + textSize.y;
-                    gc.setAlpha(255);
-                    gc.fillRectangle(x - BORDER, y, labelTextSize.x + BORDER * 4, labelTextSize.y);
-                    gc.setAlpha(80);
-                    gc.drawText(LABEL_TEXT, x + BORDER * 2, y);
-                    gc.drawRectangle(x - BORDER, y, labelTextSize.x + BORDER * 4, labelTextSize.y);
-                }
-                finally
-                {
-                    smalFont.dispose();
-                }
+                otherLinesX = firstLineX;
+                otherLinesY = firstLineY;
+                otherLinesW = 0;
+                otherLinesH = 0;
             }
+
+            gc.setFont(smalFont);
+
+            var labelSize = gc.textExtent(LABEL_TEXT);
+            var labelX = BORDER;
+            var labelY = firstLineY + firstLineH + otherLinesH;
+            var labelW = labelSize.x + BORDER * 4;
+            var labelH = labelSize.y;
+
+            var l = Integer.max(Integer.max(firstLineX + firstLineW, otherLinesX + otherLinesW), labelX + labelW);
+            firstLineW = l - firstLineX;
+            otherLinesW = l - otherLinesX;
+            labelW = l - labelX;
+            labelX = labelW - labelSize.x - BORDER;
+
+            gc.fillRectangle(firstLineX, firstLineY, firstLineW, firstLineH);
+            gc.fillRectangle(otherLinesX, otherLinesY, otherLinesW, otherLinesH);
+            gc.fillRectangle(labelX, labelY, labelW, labelH);
+
+            gc.setAlpha(160);
+            gc.setFont(italicFont);
+            gc.drawText(firstLine, firstLineX + BORDER * 2, firstLineY);
+            gc.drawText(otherLines, otherLinesX + BORDER * 2, otherLinesY);
+            gc.setFont(smalFont);
+            gc.drawText(LABEL_TEXT, labelX + BORDER * 2, labelY);
+
+            gc.setAlpha(80);
+            gc.drawLine(firstLineX, firstLineY, firstLineX + firstLineW, firstLineY);
+            gc.drawLine(firstLineX + firstLineW, firstLineY, firstLineX + firstLineW,
+                firstLineY + firstLineH + otherLinesH + labelH);
+            gc.drawLine(firstLineX + firstLineW, firstLineY + firstLineH + otherLinesH + labelH, labelX,
+                firstLineY + firstLineH + otherLinesH + labelH);
+            gc.drawLine(labelX, firstLineY + firstLineH + otherLinesH + labelH, labelX,
+                firstLineY + firstLineH + otherLinesH);
+            gc.drawLine(labelX, firstLineY + firstLineH + otherLinesH, otherLinesX,
+                firstLineY + firstLineH + otherLinesH);
+            gc.drawLine(otherLinesX, firstLineY + firstLineH + otherLinesH, otherLinesX, firstLineY + firstLineH);
+            gc.drawLine(otherLinesX, firstLineY + firstLineH, firstLineX, firstLineY + firstLineH);
+            gc.drawLine(firstLineX, firstLineY + firstLineH, firstLineX, firstLineY);
         }
         finally
         {
             italicFont.dispose();
+            smalFont.dispose();
         }
     }
 }

@@ -122,14 +122,7 @@ public class CodeCompletionViewModel
 
     private void reset()
     {
-        synchronized (lockObject)
-        {
-            if (!cancel())
-            {
-                return;
-            }
-        }
-
+        cancel();
         dispatcher.dispatch(() -> {
             tokens.clear();
             inProgress = false;
@@ -137,18 +130,17 @@ public class CodeCompletionViewModel
         });
     }
 
-    private boolean cancel()
+    private void cancel()
     {
         showTimer.purge();
         synchronized (lockObject)
         {
             if (askCancellationToken.isCanceled())
             {
-                return false;
+                return;
             }
 
             askCancellationToken.cancel();
-            return true;
         }
     }
 
@@ -218,10 +210,7 @@ public class CodeCompletionViewModel
         try
         {
             var startTime = clock.now();
-            var ctx = dispatcher.dispatch(() -> {
-                return aiContextProvider.create(null, cancellationToken).orElse(null);
-            });
-
+            var ctx = dispatcher.dispatch(() -> aiContextProvider.create(null, cancellationToken).orElse(null));
             if (cancellationToken.isCanceled() || ctx.isEmpty())
             {
                 return;
@@ -510,19 +499,16 @@ public class CodeCompletionViewModel
             cancellationToken = askCancellationToken;
         }
 
-        aiContextProvider.create(null, cancellationToken).ifPresent(ctx -> {
-            ui.getTextWidget()
-                .ifPresent(textWidget -> {
-                    var offset = textWidget.getCaretOffset();
-                    hintPainter.pinOffset(textWidget, offset, true);
-                    hintPainter.setHintAt(offset, hint);
-                });
-
-            if (hint.isEmpty())
-            {
-                askByJob(Duration.ZERO);
-            }
+        ui.getTextWidget().ifPresent(textWidget -> {
+            var offset = textWidget.getCaretOffset();
+            hintPainter.pinOffset(textWidget, offset, true);
+            hintPainter.setHintAt(offset, hint);
         });
+
+        if (hint.isEmpty())
+        {
+            askByJob(Duration.ZERO);
+        }
     }
 
     @Override

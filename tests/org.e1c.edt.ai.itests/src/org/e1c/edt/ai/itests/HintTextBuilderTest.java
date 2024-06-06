@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.e1c.edt.ai.HintTextBuilder;
-import org.e1c.edt.ai.ILinePrefixMatcher;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,12 +21,9 @@ public class HintTextBuilderTest
     public String text;
 
     @Parameter(1)
-    public String prefix;
-
-    @Parameter(2)
     public int tabWidth;
 
-    @Parameter(3)
+    @Parameter(2)
     public String expectedHint;
 
     @Test
@@ -35,10 +31,10 @@ public class HintTextBuilderTest
     public void shouldBuild()
     {
         // Given
-        var builder = new HintTextBuilder(new LinePrefixMatcherStub());
+        var builder = new HintTextBuilder();
 
         // When
-        var actualHint = builder.build(text, prefix, tabWidth, '!');
+        var actualHint = builder.build(text, tabWidth, '!');
 
         // Then
         Assert.assertEquals(expectedHint, actualHint);
@@ -51,33 +47,13 @@ public class HintTextBuilderTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "", "", 2, "!" },
-                { "Abc", "", 2, "Abc!" },
-                { "Abc\nXyz", "", 2, "Abc\nXyz!" },
-                { "PrefixAbc", "Prefix", 2, "PrefixAbc!" },
-                { "PrefixAbc\nPrefixXyz", "Prefix", 2, "PrefixAbc\nXyz!" },
-                { "Abc\nPrefixXyz", "Prefix", 2, "Abc\nXyz!" },
-                { "PrefixAbc\nPrefixXyz\nPrefix Asd", "Prefix", 2, "PrefixAbc\nXyz\n Asd!" },
-                { "PrefixAbc\n\t\tXyz", "\t\t", 2, "PrefixAbc\nXyz!" },
-                { "PrefixAbc\n\t  Xyz", "\t  ", 2, "PrefixAbc\nXyz!" },
-                { "PrefixAbc\n\t   Xyz", "\t  ", 2, "PrefixAbc\n Xyz!" },
+                { "", 2, "!" },
+                { "Abc", 2, "Abc" },
+                { "Abc\nXyz", 2, "Abc\nXyz!" },
+                { "\tAbc", 2, "  Abc" },
+                { "\t Abc\n\tXyz", 2, "   Abc\n  Xyz!" },
+                { "A\t\tbc", 2, "A    bc" },
             });
         // @formatter:on
-    }
-
-    private static class LinePrefixMatcherStub
-        implements ILinePrefixMatcher
-    {
-
-        @Override
-        public int getPrefixLength(String line, String prefix, int tabWidth)
-        {
-            if (line.startsWith(prefix))
-            {
-                return prefix.length();
-            }
-
-            return 0;
-        }
     }
 }

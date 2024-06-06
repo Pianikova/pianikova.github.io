@@ -4,71 +4,50 @@
 package org.e1c.edt.ai;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
 
 public class HintTextBuilder implements IHintTextBuilder
 {
-    private final ILinePrefixMatcher linePrefixMatcher;
-
-    @Inject
-    public HintTextBuilder(ILinePrefixMatcher linePrefixMatcher)
-    {
-        Preconditions.checkNotNull(linePrefixMatcher);
-        this.linePrefixMatcher = linePrefixMatcher;
-    }
-
     @Override
-    public String build(String text, String prefix, int tabWidth, char lineFeedSing)
+    public String build(String text, int tabWidth, char lineFeedSing)
     {
         Preconditions.checkNotNull(text);
-        Preconditions.checkNotNull(prefix);
-        var lines = text.split("\n", -1); //$NON-NLS-1$
+        Preconditions.checkArgument(tabWidth > 0);
         StringBuilder visibleChar = new StringBuilder(text.length());
-        for (var lineIndex = 0; lineIndex < lines.length; lineIndex++)
+        var hasLine = false;
+        for (var ch : text.toCharArray())
         {
-            var line = lines[lineIndex];
-            var prefixLength = linePrefixMatcher.getPrefixLength(line, prefix, tabWidth);
-            if (lineIndex > 0 && prefixLength > 0)
+            switch (ch)
             {
-                line = line.substring(prefixLength);
-            }
+            case ' ':
+            case '\u3000': // ideographic whitespace
+                visibleChar.append(' ');
+                break;
 
-            for (var i = 0; i < line.length(); i++)
-            {
-                var ch = line.charAt(i);
-                switch (ch)
+            case '\t':
+                for (int tab = 0; tab < tabWidth; tab++)
                 {
-                case ' ':
-                case '\u3000': // ideographic whitespace
                     visibleChar.append(' ');
-                    break;
-
-                case '\t':
-                    for (int tab = 0; tab < tabWidth; tab++)
-                    {
-                        visibleChar.append(' ');
-                    }
-
-                    break;
-
-                case '\r':
-                case '\n':
-                    break;
-
-                default:
-                    visibleChar.append(ch);
-                    break;
                 }
-            }
 
-            if (lineIndex == lines.length - 1)
-            {
-                visibleChar.append(lineFeedSing);
+                break;
+
+            case '\r':
+                break;
+
+            case '\n':
+                hasLine = true;
+                visibleChar.append(ch);
+                break;
+
+            default:
+                visibleChar.append(ch);
+                break;
             }
-            else
-            {
-                visibleChar.append('\n');
-            }
+        }
+
+        if (text.isEmpty() || hasLine)
+        {
+            visibleChar.append(lineFeedSing);
         }
 
         return visibleChar.toString();
