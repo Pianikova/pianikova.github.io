@@ -38,7 +38,7 @@ public class CodeCompletionViewModel
     private final Object lockObject = new Object();
     private final ILog log;
     private final IAICodeAssistant codeAssistant;
-    private final IAIContextProvider<Void> aiContextProvider;
+    private final IAIContextProvider<Integer> aiContextProvider;
     private final IDispatcher dispatcher;
     private final IUI ui;
     private final IHotKeys hotKeys;
@@ -56,7 +56,7 @@ public class CodeCompletionViewModel
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IAICodeAssistant codeAssistant,
-        IAIContextProvider<Void> aiContextProvider,
+        IAIContextProvider<Integer> aiContextProvider,
         IDispatcher dispatcher, IUI ui, IHotKeys hotKeys,
         ICodeCompletionTokenizer tokenizer,
         IHintPainter hintPainter, IUISettings uiSettings, IInputDelayStatistics inputRateStatistics, IClock clock)
@@ -210,7 +210,7 @@ public class CodeCompletionViewModel
         try
         {
             var startTime = clock.now();
-            var ctx = dispatcher.dispatch(() -> aiContextProvider.create(null, cancellationToken).orElse(null));
+            var ctx = dispatcher.dispatch(() -> aiContextProvider.create(0, cancellationToken).orElse(null));
             if (cancellationToken.isCanceled() || ctx.isEmpty())
             {
                 return;
@@ -428,66 +428,71 @@ public class CodeCompletionViewModel
 
     private void apply(String hintText, int offset)
     {
-        if (!hintText.isEmpty())
+        var len = hintText.length();
+        if (len == 0)
         {
-            try
-            {
-                inProgress = true;
-                if (hintText.length() > 0)
+            return;
+        }
+
+        try
+        {
+            inProgress = true;
+            ui.getTextWidget().ifPresent(textWidget -> {
+                var start = offset;
+                if (offset < 0)
                 {
-                    ui.getTextWidget().ifPresent(textWidget -> {
-                        var start = offset;
-                        if (offset < 0)
-                        {
-                            start = 0;
-                        }
-
-                        var contentLength = textWidget.getCharCount();
-                        if (start > contentLength)
-                        {
-                            start = contentLength;
-                        }
-
-                        textWidget.replaceTextRange(start, 0, hintText);
-                        textWidget.setCaretOffset(start + hintText.length());
-                    });
+                    start = 0;
                 }
-            }
-            finally
-            {
-                inProgress = false;
-            }
+
+                var contet = textWidget.getContent();
+                var contentLength = contet.getCharCount();
+                if (start > contentLength)
+                {
+                    start = contentLength;
+                }
+
+                contet.replaceTextRange(start, 0, hintText);
+                textWidget.setCaretOffset(start + len);
+            });
+        }
+        finally
+        {
+            inProgress = false;
         }
     }
 
     private void rollback(String hintText, int offset)
     {
-        if (!hintText.isEmpty())
+        var len = hintText.length();
+        if (len == 0)
         {
-            try
-            {
-                inProgress = true;
-                ui.getTextWidget().ifPresent(textWidget -> {
-                    var start = offset - hintText.length();
-                    if (offset < 0)
-                    {
-                        start = 0;
-                    }
+            return;
+        }
 
-                    var contentLength = textWidget.getCharCount();
-                    if (start > contentLength)
-                    {
-                        start = contentLength;
-                    }
+        try
+        {
+            inProgress = true;
+            ui.getTextWidget().ifPresent(textWidget -> {
+                var start = offset - len;
+                if (offset < 0)
+                {
+                    start = 0;
+                }
 
-                    textWidget.replaceTextRange(start, hintText.length(), ""); //$NON-NLS-1$
-                    textWidget.setCaretOffset(start);
-                });
-            }
-            finally
-            {
-                inProgress = false;
-            }
+                var contet = textWidget.getContent();
+                var contentLength = contet.getCharCount();
+                if (start > contentLength)
+                {
+                    start = contentLength;
+                }
+
+                contet.replaceTextRange(start, len, ""); //$NON-NLS-1$
+                textWidget.setCaretOffset(start);
+            });
+        }
+        finally
+        {
+            inProgress = false;
         }
     }
 

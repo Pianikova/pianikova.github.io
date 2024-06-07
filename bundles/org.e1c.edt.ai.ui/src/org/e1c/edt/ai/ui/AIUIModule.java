@@ -46,7 +46,7 @@ public class AIUIModule
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
         bind(AIContextSettings.class).toProvider(AIContextSettingsProvider.class);
-        bind(new TypeLiteral<IAIContextProvider<Void>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<Integer>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<SourceViewer>>() { /**/ }).to(AISourceViewerContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).to(AISourceContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<ISyntaxWalker<StringSerializerContext>>() { /**/ }).to(new TypeLiteral<BasicPathSyntaxWalker<StringSerializerContext>>() { /**/ }).in(Singleton.class);

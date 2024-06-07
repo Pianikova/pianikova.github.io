@@ -24,7 +24,7 @@ public class ExplainAIHandler
     extends AbstractHandler
 {
     @Inject
-    IAIContextProvider<Void> aiContextProvider;
+    IAIContextProvider<Integer> aiContextProvider;
     @Inject
     IChat chat;
     @Inject
@@ -38,7 +38,8 @@ public class ExplainAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        aiContextProvider.create(null, CancellationToken.NONE).ifPresent(ctx -> chat.explainCode(ctx.getText()));
+        aiContextProvider.create(Integer.MAX_VALUE, CancellationToken.NONE)
+            .ifPresent(ctx -> chat.explainCode(ctx.getText()));
         ui.showView(ChatView.ID);
         return null;
     }

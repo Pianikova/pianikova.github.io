@@ -27,7 +27,8 @@ public class IdeApiHandler
     {
         Preconditions.checkNotNull(code);
         ui.getTextWidget().ifPresent(textWidget -> {
-            textWidget.replaceTextRange(textWidget.getCaretOffset(), 0, code);
+            var contet = textWidget.getContent();
+            contet.replaceTextRange(textWidget.getCaretOffset(), 0, code);
         });
     }
 }

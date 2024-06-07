@@ -14,7 +14,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class AIContextProvider
-    implements IAIContextProvider<Void>
+    implements IAIContextProvider<Integer>
 {
     private final IUI ui;
     private final IUISettings uiSettings;
@@ -38,21 +38,38 @@ public class AIContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(Void state, CancellationToken cancellationToken)
+    public Optional<AIContext> create(Integer maxLength, CancellationToken cancellationToken)
     {
         return ui.getTextWidget()
             .flatMap(textWidget -> ui.getSourceViewer(textWidget))
             .flatMap(sourceViewer -> {
                 var textWidget = sourceViewer.getTextWidget();
                 var text = textWidget.getText();
-                var offsset = textWidget.getCaretOffset();
-                if (text.length() <= uiSettings.getMaxAssistantTextSize())
+                var offset = textWidget.getCaretOffset();
+                var max = maxLength;
+                if (max <= 0)
                 {
-                    return contextFactory.create(text, offsset);
+                    max = uiSettings.getMaxAssistantTextSize();
                 }
 
+                if (max == Integer.MAX_VALUE)
+                {
+                    if (textWidget.isTextSelected())
+                    {
+                        text = textWidget.getSelectionText();
+                        offset = 0;
+                    }
+                }
+
+                if (text.length() <= max)
+                {
+                    return contextFactory.create(text, offset);
+                }
+
+                var curText = text;
+                var curOffset = offset;
                 return sourceBasedContextProvider.create(sourceViewer, cancellationToken)
-                    .or(() -> contextFactory.create(text, offsset));
+                    .or(() -> contextFactory.create(curText, curOffset));
             });
     }
 }
