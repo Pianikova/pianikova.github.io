@@ -19,12 +19,14 @@ public class HintPainter
 {
     private static final String LABEL_TEXT = "Tab → ← Esc"; //$NON-NLS-1$
     private static final char CONTINUATION_SIGN = '…';
+    private static final char RETURN_SIGN = '↵';
     private static final int BORDER = 1;
 
     private final IHintTextBuilder hintTextBuilder;
     private final IUISettings uiSettings;
     private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
+    private String nextToken = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
     private boolean showEmpty;
 
@@ -67,11 +69,11 @@ public class HintPainter
     @Override
     public void reset()
     {
-        setHintAt(-1, ""); //$NON-NLS-1$
+        setHintAt(-1, "", ""); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Override
-    public void setHintAt(int offset, String hintText)
+    public void setHintAt(int offset, String hintText, String nextToken)
     {
         var changed = false;
         if (hintText == null || offset == -1)
@@ -81,7 +83,7 @@ public class HintPainter
         }
         else
         {
-            changed = !hintText.equals(this.hintText);
+            changed = !hintText.equals(this.hintText) || !nextToken.equals(this.nextToken);
         }
 
         if (textWidget == null)
@@ -92,6 +94,7 @@ public class HintPainter
         if (changed)
         {
             this.hintText = hintText;
+            this.nextToken = nextToken;
             if (!textWidget.isDisposed())
             {
                 textWidget.redraw();
@@ -132,10 +135,11 @@ public class HintPainter
             firstLine = text;
         }
 
-        drawHint(event.gc, firstLine, otherLines);
+        drawHint(event.gc, firstLine.startsWith(this.nextToken) ? this.nextToken : "", //$NON-NLS-1$
+            firstLine + RETURN_SIGN, otherLines);
     }
 
-    private void drawHint(GC gc, String firstLine, String otherLines)
+    private void drawHint(GC gc, String nextToken, String firstLine, String otherLines)
     {
         var caretLocation = textWidget.getCaret().getLocation();
         var x = caretLocation.x;
@@ -150,21 +154,22 @@ public class HintPainter
         var italicFont = new Font(font.getDevice(), fontData);
         fontData.setHeight((int)(fontData.getHeight() * .75));
         var smalFont = new Font(font.getDevice(), fontData);
-
         try
         {
+            var bounds = gc.getClipping();
+            var boundsWidth = bounds.width - BORDER * 2 - 1;
             gc.setFont(italicFont);
 
             var firstLineSize = gc.textExtent(firstLine);
-            var firstLineX = x - BORDER;
+            var firstLineX = x - BORDER + 1;
             var firstLineY = y;
             var firstLineW = firstLineSize.x + BORDER * 4;
             var firstLineH = firstLineSize.y;
 
             var otherLinesSize = gc.textExtent(otherLines);
-            var otherLinesX = BORDER;
+            var otherLinesX = BORDER + 1;
             var otherLinesY = firstLineY + firstLineH;
-            var otherLinesW = otherLinesSize.x + BORDER * 4;
+            var otherLinesW = boundsWidth;
             var otherLinesH = otherLinesSize.y;
             if (otherLines.isEmpty())
             {
@@ -177,16 +182,19 @@ public class HintPainter
             gc.setFont(smalFont);
 
             var labelSize = gc.textExtent(LABEL_TEXT);
-            var labelX = BORDER;
+            var labelX = BORDER + 1;
             var labelY = firstLineY + firstLineH + otherLinesH;
             var labelW = labelSize.x + BORDER * 4;
             var labelH = labelSize.y;
 
-            var l = Integer.max(Integer.max(firstLineX + firstLineW, otherLinesX + otherLinesW), labelX + labelW);
-            firstLineW = l - firstLineX;
+            var l = Integer.max(Integer.max(otherLinesX + otherLinesW, labelX + labelW), boundsWidth);
             otherLinesW = l - otherLinesX;
             labelW = l - labelX;
             labelX = labelW - labelSize.x - BORDER;
+
+            gc.copyArea(firstLineX, firstLineY, firstLineX + firstLineW, firstLineH, firstLineX + firstLineW,
+                firstLineY, true);
+            gc.copyArea(bounds.x, otherLinesY, bounds.width, bounds.height, bounds.x, otherLinesY + otherLinesH, true);
 
             gc.fillRectangle(firstLineX, firstLineY, firstLineW, firstLineH);
             gc.fillRectangle(otherLinesX, otherLinesY, otherLinesW, otherLinesH);
@@ -194,24 +202,65 @@ public class HintPainter
 
             gc.setAlpha(160);
             gc.setFont(italicFont);
-            gc.drawText(firstLine, firstLineX + BORDER * 2, firstLineY);
-            gc.drawText(otherLines, otherLinesX + BORDER * 2, otherLinesY);
-            gc.setFont(smalFont);
-            gc.drawText(LABEL_TEXT, labelX + BORDER * 2, labelY);
+            gc.drawText(firstLine, firstLineX + BORDER * 2, firstLineY, true);
+            if (!nextToken.isEmpty())
+            {
+                var nextTokenLineSize = gc.textExtent(nextToken);
+                gc.setLineStyle(SWT.LINE_SOLID);
+                gc.drawLine(firstLineX + BORDER * 2, firstLineY + firstLineH, firstLineX + nextTokenLineSize.x,
+                    firstLineY + firstLineH);
+            }
 
-            gc.setAlpha(80);
-            gc.drawLine(firstLineX, firstLineY, firstLineX + firstLineW, firstLineY);
-            gc.drawLine(firstLineX + firstLineW, firstLineY, firstLineX + firstLineW,
-                firstLineY + firstLineH + otherLinesH + labelH);
-            gc.drawLine(firstLineX + firstLineW, firstLineY + firstLineH + otherLinesH + labelH, labelX,
-                firstLineY + firstLineH + otherLinesH + labelH);
-            gc.drawLine(labelX, firstLineY + firstLineH + otherLinesH + labelH, labelX,
-                firstLineY + firstLineH + otherLinesH);
-            gc.drawLine(labelX, firstLineY + firstLineH + otherLinesH, otherLinesX,
-                firstLineY + firstLineH + otherLinesH);
-            gc.drawLine(otherLinesX, firstLineY + firstLineH + otherLinesH, otherLinesX, firstLineY + firstLineH);
-            gc.drawLine(otherLinesX, firstLineY + firstLineH, firstLineX, firstLineY + firstLineH);
-            gc.drawLine(firstLineX, firstLineY + firstLineH, firstLineX, firstLineY);
+            gc.setAlpha(120);
+            gc.drawText(otherLines, otherLinesX + BORDER * 2, otherLinesY, true);
+
+            gc.setLineStyle(SWT.LINE_DOT);
+
+            // @formatter:off
+            if (otherLines.isEmpty())
+            {
+                gc.drawPolyline(new int[] {
+                    firstLineX, firstLineY,
+
+                    firstLineX + firstLineW, firstLineY,
+
+                    firstLineX + firstLineW, firstLineY + firstLineH,
+
+                    firstLineX, firstLineY + firstLineH,
+
+                    firstLineX, firstLineY
+                });
+            }
+            else
+            {
+                gc.setFont(smalFont);
+                gc.drawText(LABEL_TEXT, labelX + BORDER * 2, labelY, true);
+
+                gc.drawPolyline(new int[] {
+                    firstLineX, firstLineY,
+
+                    firstLineX + firstLineW, firstLineY,
+
+                    firstLineX + firstLineW, otherLinesY,
+
+                    otherLinesX + otherLinesW, otherLinesY,
+
+                    otherLinesX + otherLinesW, otherLinesY + otherLinesH + labelH,
+
+                    labelX, otherLinesY + otherLinesH + labelH,
+
+                    labelX, labelY,
+
+                    otherLinesX, labelY,
+
+                    otherLinesX, otherLinesY,
+
+                    firstLineX, otherLinesY,
+
+                    firstLineX, firstLineY
+                });
+            }
+            // @formatter:on
         }
         finally
         {

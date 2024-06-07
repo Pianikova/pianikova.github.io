@@ -52,7 +52,7 @@ public class CodeCompletionViewModel
     private final Stack<String> tokens = new Stack<>();
     private final Timer showTimer = new Timer(true);
     private CancellationToken askCancellationToken = CancellationToken.NONE;
-    private StringBuilder hint = new StringBuilder();
+    private StringBuilder curHint = new StringBuilder();
     private boolean inProgress;
     private CompletableFuture<Void> currentResponse = CompletableFuture.completedFuture(null);
 
@@ -182,29 +182,29 @@ public class CodeCompletionViewModel
             protected IStatus run(IProgressMonitor monitor)
             {
                 var cancellationToken = new JobCancellationToken();
-                StringBuilder curHint;
+                StringBuilder hint;
                 synchronized (lockObject)
                 {
                     model.cancel();
                     askCancellationToken = cancellationToken;
-                    hint = new StringBuilder();
-                    curHint = hint;
+                    curHint = new StringBuilder();
+                    hint = curHint;
                 }
 
                 cancellationToken.attachMonitor(monitor);
-                ask(curHint, delayBeforeShow, cancellationToken);
+                ask(hint, delayBeforeShow, cancellationToken);
                 return cancellationToken.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
             }
         }.schedule();
     }
 
-    private void show(AIContext aiContext, StringBuilder curHint, Duration delayBeforeShow,
+    private void show(AIContext aiContext, StringBuilder hint, Duration delayBeforeShow,
         CancellationToken cancellationToken)
     {
         showTimer.purge();
         if (delayBeforeShow.isNegative() || delayBeforeShow == Duration.ZERO)
         {
-            show(aiContext, curHint, cancellationToken);
+            show(aiContext, hint, cancellationToken);
             return;
         }
 
@@ -213,12 +213,12 @@ public class CodeCompletionViewModel
             @Override
             public void run()
                 {
-                show(aiContext, curHint, cancellationToken);
+                show(aiContext, hint, cancellationToken);
                 }
         }, delayBeforeShow.toMillis());
     }
 
-    private void show(AIContext aiContext, StringBuilder curHint, CancellationToken cancellationToken)
+    private void show(AIContext aiContext, StringBuilder hint, CancellationToken cancellationToken)
     {
         if (cancellationToken.isCanceled())
         {
@@ -227,13 +227,15 @@ public class CodeCompletionViewModel
 
         dispatcher.dispatch(() -> {
             ui.getTextWidget().ifPresent(textWidget -> {
-                hintPainter.setHintAt(textWidget.getCaretOffset(), getHintLines(curHint));
+                var text = getHintLines(hint);
+                var token = tokenizer.getNext(1, text, this::isTextDelimiter);
+                hintPainter.setHintAt(textWidget.getCaretOffset(), text, token.getValue());
                 textWidget.redraw();
             });
         });
     }
 
-    private void ask(StringBuilder curHint, Duration delayBeforeShow, CancellationToken cancellationToken)
+    private void ask(StringBuilder hint, Duration delayBeforeShow, CancellationToken cancellationToken)
     {
         try
         {
@@ -258,8 +260,8 @@ public class CodeCompletionViewModel
                             return;
                         }
 
-                        curHint.append(value);
-                        show(aiContext, curHint, delayBeforeShow.minus(Duration.between(startTime, clock.now())),
+                        hint.append(value);
+                        show(aiContext, hint, delayBeforeShow.minus(Duration.between(startTime, clock.now())),
                             cancellationToken);
                     });
 
@@ -287,8 +289,13 @@ public class CodeCompletionViewModel
                             return;
                         }
 
-                        log.trace("AI generated text " + cancellationToken, format(curHint.toString())); //$NON-NLS-1$
-                        show(aiContext, curHint, delayBeforeShow.minus(Duration.between(startTime, clock.now())), cancellationToken);
+                        log.trace("AI generated text " + cancellationToken, format(hint.toString())); //$NON-NLS-1$
+                        if (hint.length() == 0)
+                        {
+                            hint.append('\n');
+                        }
+
+                        show(aiContext, hint, delayBeforeShow.minus(Duration.between(startTime, clock.now())), cancellationToken);
                     });
                 }
             };
@@ -331,10 +338,10 @@ public class CodeCompletionViewModel
     @Override
     public void verifyKey(VerifyEvent e)
     {
-        StringBuilder curHint;
+        StringBuilder hint;
         synchronized (lockObject)
         {
-            curHint = hint;
+            hint = curHint;
         }
 
         if (hotKeys.isTriggered(IHotKeys.SUGGEST, e))
@@ -355,27 +362,6 @@ public class CodeCompletionViewModel
                 return;
             }
 
-            if (hotKeys.isTriggered(IHotKeys.ACCEPT_PART, e))
-            {
-                e.doit = false;
-                dispatcher.dispatch(() -> {
-                    var hintText = hintPainter.getHintText();
-                    var token = tokenizer.getNext(1, hintText, this::isTextDelimiter);
-                    var text = token.getValue();
-                    apply(text, offset);
-                    tokens.push(text);
-                    curHint.delete(0, text.length());
-                    var hintLines = getHintLines(curHint);
-                    continueAsk(hintLines);
-                    if (curHint.length() == 0 && currentResponse.isDone())
-                    {
-                        askByJob(Duration.ZERO);
-                    }
-                });
-
-                return;
-            }
-
             if (hotKeys.isTriggered(IHotKeys.ROLLBACK_PART, e))
             {
                 e.doit = false;
@@ -384,9 +370,36 @@ public class CodeCompletionViewModel
                     {
                         var text = tokens.pop();
                         rollback(text, offset);
-                        curHint.insert(0, text);
-                        var hintLines = getHintLines(curHint);
+                        hint.insert(0, text);
+                        var hintLines = getHintLines(hint);
                         continueAsk(hintLines);
+                    }
+                });
+
+                return;
+            }
+
+            if (hotKeys.isTriggered(IHotKeys.ACCEPT_PART, e))
+            {
+                e.doit = false;
+                dispatcher.dispatch(() -> {
+                    var hintText = hintPainter.getHintText();
+                    if (hintText.isEmpty())
+                    {
+                        e.doit = tokens.size() == 0;
+                        return;
+                    }
+
+                    var token = tokenizer.getNext(1, hintText, this::isTextDelimiter);
+                    var text = token.getValue();
+                    apply(text, offset);
+                    tokens.push(text);
+                    hint.delete(0, text.length());
+                    var hintLines = getHintLines(hint);
+                    continueAsk(hintLines);
+                    if (hint.length() == 0 && currentResponse.isDone())
+                    {
+                        askByJob(Duration.ZERO);
                     }
                 });
 
@@ -398,12 +411,18 @@ public class CodeCompletionViewModel
                 e.doit = false;
                 dispatcher.dispatch(() -> {
                     var hintText = hintPainter.getHintText();
+                    if (hintText.isEmpty())
+                    {
+                        e.doit = tokens.size() == 0;
+                        return;
+                    }
+
                     apply(hintText, offset);
                     tokens.push(hintText);
-                    curHint.delete(0, hintText.length());
-                    var hintLines = getHintLines(curHint);
+                    hint.delete(0, hintText.length());
+                    var hintLines = getHintLines(hint);
                     continueAsk(hintLines);
-                    if (curHint.length() == 0 && currentResponse.isDone())
+                    if (hint.length() == 0 && currentResponse.isDone())
                     {
                         askByJob(Duration.ZERO);
                     }
@@ -413,7 +432,7 @@ public class CodeCompletionViewModel
             }
         }
 
-        if (curHint.length() > 0 && curHint.charAt(0) == e.character)
+        if (hint.length() > 0 && hint.charAt(0) == e.character)
         {
             inputRateStatistics.registerAndPredictDelay();
             e.doit = false;
@@ -422,10 +441,10 @@ public class CodeCompletionViewModel
             var text = new String(chars);
             apply(text, offset);
             tokens.push(text);
-            curHint.delete(0, 1);
-            var hintLines = getHintLines(curHint);
+            hint.delete(0, 1);
+            var hintLines = getHintLines(hint);
             continueAsk(hintLines);
-            if (curHint.length() == 0 && currentResponse.isDone())
+            if (hint.length() == 0 && currentResponse.isDone())
             {
                 askByJob(Duration.ZERO);
             }
@@ -441,7 +460,7 @@ public class CodeCompletionViewModel
         }
 
         if (uiSettings.isContinuousCodeCompletion() && e.character == '\r' || e.character == '\n'
-            || charType != Character.SPACE_SEPARATOR && charType != Character.CONTROL)
+            || charType != Character.CONTROL)
         {
             var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
             log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
@@ -535,7 +554,8 @@ public class CodeCompletionViewModel
         ui.getTextWidget().ifPresent(textWidget -> {
             var offset = textWidget.getCaretOffset();
             hintPainter.pinOffset(textWidget, offset, true);
-            hintPainter.setHintAt(offset, hint);
+            var token = tokenizer.getNext(1, hint, this::isTextDelimiter);
+            hintPainter.setHintAt(offset, hint, token.getValue());
         });
 
         if (hint.isEmpty())
@@ -564,11 +584,6 @@ public class CodeCompletionViewModel
             var value = token.getValue();
             lines.append(value);
             text = token.getText();
-        }
-
-        if (lines.length() == 0 || lines.charAt(lines.length() - 1) == '\n')
-        {
-            lines.append(System.lineSeparator());
         }
 
         return lines.toString();

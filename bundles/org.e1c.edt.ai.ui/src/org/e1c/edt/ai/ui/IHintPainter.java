@@ -17,5 +17,5 @@ public interface IHintPainter
 
     void reset();
 
-    void setHintAt(int offset, String hintText);
+    void setHintAt(int offset, String hintText, String nextToken);
 }

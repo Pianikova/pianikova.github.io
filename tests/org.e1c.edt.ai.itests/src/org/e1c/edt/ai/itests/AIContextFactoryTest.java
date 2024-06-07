@@ -102,5 +102,6 @@ public class AIContextFactoryTest
                 { "Abc", "Xyz", "Qwe", 1, 1, true, true, "<PRE> Abc <SUF>Xyz <MID>Qwe" },
                 { "Abc" + System.lineSeparator(), System.lineSeparator() + "Xyz", "Qwe" + System.lineSeparator(), 1, 1, true, true, "<PRE> Abc\n <SUF>\nXyz <MID>Qwe\n" },
             });
+     // @formatter:on
     }
 }
