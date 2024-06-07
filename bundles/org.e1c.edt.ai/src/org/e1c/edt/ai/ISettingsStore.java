@@ -20,6 +20,7 @@ public interface ISettingsStore
     public final static String CONTINUOUS_CODE_COMPLETION = "stringPreferenceContinuousCodeCompletion"; //$NON-NLS-1$
     public final static String CONTINUOUS_TEMPLATED_CONTEXT = "stringPreferenceTemplatedContext"; //$NON-NLS-1$
 
+    public final static int MAX_MAX_ASSISTANT_TEXT_SIZE = 4000;
     public final static int DEFAULT_MAX_ASSISTANT_TEXT_SIZE = 1500;
     public final static int MIN_ASSISTANT_TEXT_SIZE = 16;
     public final static int DEFAULT_CODE_COMPLETION_LINES_COUNT = 5;

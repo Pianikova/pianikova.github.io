@@ -259,7 +259,7 @@ public class CodeCompletionViewModel
                             return;
                         }
 
-                        log.trace("AI generated text " + cancellationToken, curHint.toString()); //$NON-NLS-1$
+                        log.trace("AI generated text " + cancellationToken, format(curHint.toString())); //$NON-NLS-1$
                         show(aiContext, curHint, delayBeforeShow.minus(Duration.between(startTime, clock.now())), cancellationToken);
                     });
                 }
@@ -554,5 +554,11 @@ public class CodeCompletionViewModel
     private Boolean isLineDelimiter(char ch)
     {
         return (ch == '\n') || (ch == '\r');
+    }
+
+    @SuppressWarnings("nls")
+    private static String format(String text)
+    {
+        return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
     }
 }

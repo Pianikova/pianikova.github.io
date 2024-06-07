@@ -93,7 +93,7 @@ public class ClientAIPreferencePage
             Messages.ClientAIPreferencePage_MaxAssistantTextSize,
             parent);
         maxAssistTextSize.setValidRange(ISettingsStore.MIN_ASSISTANT_TEXT_SIZE,
-            ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE);
+            ISettingsStore.MAX_MAX_ASSISTANT_TEXT_SIZE);
         addField(maxAssistTextSize);
 
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
