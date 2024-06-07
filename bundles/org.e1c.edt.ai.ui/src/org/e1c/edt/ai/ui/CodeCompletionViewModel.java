@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -35,6 +36,7 @@ import com.google.inject.Inject;
 public class CodeCompletionViewModel
     implements ICodeCompletionViewModel, VerifyKeyListener, CaretListener
 {
+    private static final HashSet<Character> TextDelimiters;
     private final Object lockObject = new Object();
     private final ILog log;
     private final IAICodeAssistant codeAssistant;
@@ -53,6 +55,32 @@ public class CodeCompletionViewModel
     private StringBuilder hint = new StringBuilder();
     private boolean inProgress;
     private CompletableFuture<Void> currentResponse = CompletableFuture.completedFuture(null);
+
+    static
+    {
+        TextDelimiters = new HashSet<>();
+        TextDelimiters.add(' ');
+        TextDelimiters.add('\t');
+        TextDelimiters.add('|');
+        TextDelimiters.add('~');
+        TextDelimiters.add(':');
+        TextDelimiters.add(';');
+        TextDelimiters.add('(');
+        TextDelimiters.add(')');
+        TextDelimiters.add('[');
+        TextDelimiters.add(']');
+        TextDelimiters.add(',');
+        TextDelimiters.add('"');
+        TextDelimiters.add('\'');
+        TextDelimiters.add('.');
+        TextDelimiters.add('+');
+        TextDelimiters.add('-');
+        TextDelimiters.add('*');
+        TextDelimiters.add('/');
+        TextDelimiters.add('>');
+        TextDelimiters.add('<');
+        TextDelimiters.add('=');
+    }
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IAICodeAssistant codeAssistant,
@@ -548,7 +576,7 @@ public class CodeCompletionViewModel
 
     private Boolean isTextDelimiter(char ch)
     {
-        return (ch == ' ') || (ch == '\t') || isLineDelimiter(ch);
+        return isLineDelimiter(ch) || TextDelimiters.contains(ch);
     }
 
     private Boolean isLineDelimiter(char ch)
