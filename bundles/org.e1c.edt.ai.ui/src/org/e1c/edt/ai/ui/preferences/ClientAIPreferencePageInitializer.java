@@ -30,6 +30,7 @@ public class ClientAIPreferencePageInitializer
             "max_new_tokens=120; temperature=0.2; top_p=0.95; top_k=10; token_healing=guidance; return_line=true"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE, ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE);
         store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
+        store.setDefault(ISettingsStore.CONTINUOUS_CODE_COMPLETION, true);
         store.setDefault(ISettingsStore.CONTINUOUS_TEMPLATED_CONTEXT, true);
     }
 }

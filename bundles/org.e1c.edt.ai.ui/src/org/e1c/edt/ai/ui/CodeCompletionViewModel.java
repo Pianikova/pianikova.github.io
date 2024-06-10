@@ -55,6 +55,7 @@ public class CodeCompletionViewModel
     private StringBuilder curHint = new StringBuilder();
     private boolean inProgress;
     private CompletableFuture<Void> currentResponse = CompletableFuture.completedFuture(null);
+    private boolean isSingleWordMode;
 
     static
     {
@@ -247,6 +248,7 @@ public class CodeCompletionViewModel
             }
 
             var aiContext = ctx.get();
+            isSingleWordMode = aiContext.isSingleWord();
             var context = aiContext.getContext();
             log.trace("AI context " + cancellationToken, aiContext.toString()); //$NON-NLS-1$
             var observer = new IObserver<String>()
@@ -290,7 +292,7 @@ public class CodeCompletionViewModel
                         }
 
                         log.trace("AI generated text " + cancellationToken, format(hint.toString())); //$NON-NLS-1$
-                        if (hint.length() == 0)
+                        if (!aiContext.isSingleWord() && hint.length() == 0)
                         {
                             hint.append('\n');
                         }
@@ -310,7 +312,7 @@ public class CodeCompletionViewModel
                 var delay = delayBeforeShow.minus(Duration.between(startTime, clock.now()));
                 ui.getTextWidget()
                     .ifPresent(textWidget -> hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
-                        delay.isNegative() || delay == Duration.ZERO));
+                        delay.isNegative() || delay == Duration.ZERO, isSingleWordMode));
             });
 
             var response = codeAssistant.generateText(context, observer, cancellationToken);
@@ -364,91 +366,26 @@ public class CodeCompletionViewModel
 
             if (hotKeys.isTriggered(IHotKeys.ROLLBACK_PART, e))
             {
-                e.doit = false;
-                dispatcher.dispatch(() -> {
-                    if (tokens.size() > 0)
-                    {
-                        var text = tokens.pop();
-                        rollback(text, offset);
-                        hint.insert(0, text);
-                        var hintLines = getHintLines(hint);
-                        continueAsk(hintLines);
-                    }
-                });
-
+                rollback(e, hint, offset);
                 return;
             }
 
             if (hotKeys.isTriggered(IHotKeys.ACCEPT_PART, e))
             {
-                e.doit = false;
-                dispatcher.dispatch(() -> {
-                    var hintText = hintPainter.getHintText();
-                    if (hintText.isEmpty())
-                    {
-                        e.doit = tokens.size() == 0;
-                        return;
-                    }
-
-                    var token = tokenizer.getNext(1, hintText, this::isTextDelimiter);
-                    var text = token.getValue();
-                    apply(text, offset);
-                    tokens.push(text);
-                    hint.delete(0, text.length());
-                    var hintLines = getHintLines(hint);
-                    continueAsk(hintLines);
-                    if (hint.length() == 0 && currentResponse.isDone())
-                    {
-                        askByJob(Duration.ZERO);
-                    }
-                });
-
+                acceptPart(e, hint, offset);
                 return;
             }
 
             if (hotKeys.isTriggered(IHotKeys.ACCEPT, e))
             {
-                e.doit = false;
-                dispatcher.dispatch(() -> {
-                    var hintText = hintPainter.getHintText();
-                    if (hintText.isEmpty())
-                    {
-                        e.doit = tokens.size() == 0;
-                        return;
-                    }
-
-                    apply(hintText, offset);
-                    tokens.push(hintText);
-                    hint.delete(0, hintText.length());
-                    var hintLines = getHintLines(hint);
-                    continueAsk(hintLines);
-                    if (hint.length() == 0 && currentResponse.isDone())
-                    {
-                        askByJob(Duration.ZERO);
-                    }
-                });
-
+                accept(e, hint, offset);
                 return;
             }
         }
 
         if (hint.length() > 0 && hint.charAt(0) == e.character)
         {
-            inputRateStatistics.registerAndPredictDelay();
-            e.doit = false;
-            var chars = new char[1];
-            chars[0] = e.character;
-            var text = new String(chars);
-            apply(text, offset);
-            tokens.push(text);
-            hint.delete(0, 1);
-            var hintLines = getHintLines(hint);
-            continueAsk(hintLines);
-            if (hint.length() == 0 && currentResponse.isDone())
-            {
-                askByJob(Duration.ZERO);
-            }
-
+            acceptChar(e, hint, offset);
             return;
         }
 
@@ -459,18 +396,117 @@ public class CodeCompletionViewModel
             return;
         }
 
-        if (uiSettings.isContinuousCodeCompletion() && e.character == '\r' || e.character == '\n'
-            || charType != Character.CONTROL)
+        if (uiSettings.isContinuousCodeCompletion() && e.character != '.'
+            && (e.character == '\r' || e.character == '\n' || charType != Character.CONTROL))
         {
-            var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
-            log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
-            reset();
-            inProgress = true;
-            askByJob(delayBeforeShow);
+            continuousCodeCompletion();
             return;
         }
 
         inProgress = false;
+    }
+
+    private void continuousCodeCompletion()
+    {
+        var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
+        log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
+        reset();
+        inProgress = true;
+        askByJob(delayBeforeShow);
+    }
+
+    private void acceptChar(VerifyEvent e, StringBuilder hint, int offset)
+    {
+        inputRateStatistics.registerAndPredictDelay();
+        e.doit = false;
+        var chars = new char[1];
+        chars[0] = e.character;
+        var text = new String(chars);
+        apply(text, offset);
+        tokens.push(text);
+        hint.delete(0, 1);
+        var hintLines = getHintLines(hint);
+        continueAsk(hintLines);
+        if (hint.length() == 0 && currentResponse.isDone())
+        {
+            askByJob(Duration.ZERO);
+        }
+    }
+
+    private void rollback(VerifyEvent e, StringBuilder hint, int offset)
+    {
+        e.doit = false;
+        dispatcher.dispatch(() -> {
+            if (tokens.size() > 0)
+            {
+                var text = tokens.pop();
+                rollback(text, offset);
+                hint.insert(0, text);
+                var hintLines = getHintLines(hint);
+                continueAsk(hintLines);
+            }
+        });
+    }
+
+    private void accept(VerifyEvent e, StringBuilder hint, int offset)
+    {
+        e.doit = false;
+        dispatcher.dispatch(() -> {
+            var hintText = hintPainter.getHintText();
+            if (hintText.isEmpty())
+            {
+                e.doit = tokens.size() == 0;
+                return;
+            }
+
+            apply(hintText, offset);
+            if (isSingleWordMode)
+            {
+                reset();
+                return;
+            }
+
+            tokens.push(hintText);
+            hint.delete(0, hintText.length());
+            var hintLines = getHintLines(hint);
+            continueAsk(hintLines);
+            if (hint.length() == 0 && currentResponse.isDone())
+            {
+                askByJob(Duration.ZERO);
+            }
+        });
+    }
+
+    private void acceptPart(VerifyEvent e, StringBuilder hint, int offset)
+    {
+        e.doit = false;
+        dispatcher.dispatch(() -> {
+            var hintText = hintPainter.getHintText();
+            if (hintText.isEmpty())
+            {
+                e.doit = tokens.size() == 0;
+                return;
+            }
+
+            var token = tokenizer.getNext(1, hintText, this::isTextDelimiter);
+            var text = token.getValue();
+            apply(text, offset);
+            hint.delete(0, text.length());
+            var hintLines = getHintLines(hint);
+            if (isSingleWordMode && (hintLines.isBlank() || hintLines.startsWith("\n"))) //$NON-NLS-1$
+            {
+                reset();
+                askByJob(Duration.ZERO);
+                return;
+            }
+
+            tokens.push(text);
+            continueAsk(hintLines);
+            if (hint.length() == 0 && currentResponse.isDone())
+            {
+                askByJob(Duration.ZERO);
+            }
+        });
     }
 
     private void apply(String hintText, int offset)
@@ -545,15 +581,9 @@ public class CodeCompletionViewModel
 
     private void continueAsk(String hint)
     {
-        CancellationToken cancellationToken;
-        synchronized (lockObject)
-        {
-            cancellationToken = askCancellationToken;
-        }
-
         ui.getTextWidget().ifPresent(textWidget -> {
             var offset = textWidget.getCaretOffset();
-            hintPainter.pinOffset(textWidget, offset, true);
+            hintPainter.pinOffset(textWidget, offset, true, isSingleWordMode);
             var token = tokenizer.getNext(1, hint, this::isTextDelimiter);
             hintPainter.setHintAt(offset, hint, token.getValue());
         });
@@ -575,12 +605,17 @@ public class CodeCompletionViewModel
 
     private String getHintLines(StringBuilder hint)
     {
-        var maxLines = uiSettings.getCodeCompletionLinesCount();
+        return isSingleWordMode ? getHintLines(hint, 1)
+            : getHintLines(hint, uiSettings.getCodeCompletionLinesCount());
+    }
+
+    private String getHintLines(StringBuilder hint, int maxTokens)
+    {
         var lines = new StringBuilder();
         var text = hint.toString();
-        while (maxLines-- > 0 && !text.isEmpty())
+        while (maxTokens-- > 0 && !text.isEmpty())
         {
-            var token = tokenizer.getNext(2, text, this::isLineDelimiter);
+            var token = tokenizer.getNext(1, text, this::isLineDelimiter);
             var value = token.getValue();
             lines.append(value);
             text = token.getText();

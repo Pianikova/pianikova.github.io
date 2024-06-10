@@ -80,7 +80,7 @@ public class AISourceContextProvider
         var textLength = text.length();
         var duration = Duration.between(startTime, clock.now());
         log.trace("AI context optimizer " + cancellationToken, //$NON-NLS-1$
-            "length: " + textLength + ", duration: " + duration.toMillis() + " ms, " + ctx); //$NON-NLS-1$ //$NON-NLS-2$
+            "length: " + textLength + ", duration: " + duration.toMillis() + " ms, " + ctx); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         if (!ctx.Forcable && textLength > maxLength)
         {
             return Optional.empty();

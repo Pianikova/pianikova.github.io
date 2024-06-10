@@ -13,6 +13,7 @@ public class StringSerializerContext
     private final ILeafNode cursorNode;
     private int offset;
     private final int maxLength;
+    private boolean achiveCursor;
 
     public StringSerializerContext(ILeafNode cursorNode, int offset, int maxLength)
     {
@@ -28,10 +29,11 @@ public class StringSerializerContext
         if (node == cursorNode)
         {
             offset += text.length();
+            achiveCursor = true;
         }
 
         text.append(node.getText());
-        return text.length() < maxLength;
+        return text.length() <= maxLength;
     }
 
     public String getText()
@@ -41,6 +43,6 @@ public class StringSerializerContext
 
     public int getOffset()
     {
-        return offset;
+        return achiveCursor ? offset : text.length();
     }
 }

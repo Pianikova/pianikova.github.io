@@ -35,7 +35,7 @@ public class AIContextFactory
         Preconditions.checkArgument(offset >= 0);
         if (text.isEmpty())
         {
-            return Optional.of(new AIContext(0, "", "")); //$NON-NLS-1$ //$NON-NLS-2$
+            return Optional.of(new AIContext(0, "", "", true)); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         if (offset > text.length())
@@ -45,20 +45,15 @@ public class AIContextFactory
 
         var settings = contextSettingsProvider.get();
         var parts = contextSplitter.split(text, offset, settings.getMaxLength());
-        String context;
         if (settings.isTempleted())
         {
-            context = ctreateTemplatedContext(text, parts);
-        }
-        else
-        {
-            context = ctreateSimpleContext(text, parts);
+            return Optional.of(ctreateTemplatedContext(offset, text, parts));
         }
 
-        return Optional.of(new AIContext(offset, text, context));
+        return Optional.of(ctreateSimpleContext(offset, text, parts));
     }
 
-    private String ctreateTemplatedContext(String text, AIContextParts parts)
+    private AIContext ctreateTemplatedContext(int offset, String text, AIContextParts parts)
     {
         var prefix = normalize(parts.getPrefix().apply(text));
         var sufix = normalize(parts.getSufix().apply(text));
@@ -70,17 +65,29 @@ public class AIContextFactory
         sb.append(sufix);
         sb.append(MID_KEYWORD);
         sb.append(middle);
-        return sb.toString();
+        return new AIContext(offset, text, sb.toString(), isSingleWord(sufix));
     }
 
-    private String ctreateSimpleContext(String text, AIContextParts parts)
+    private AIContext ctreateSimpleContext(int offset, String text, AIContextParts parts)
     {
         var prefix = normalize(parts.getPrefix().apply(text));
+        var sufix = normalize(parts.getSufix().apply(text));
         var middle = normalize(parts.getMiddle().apply(text));
         var sb = new StringBuffer(prefix.length() + middle.length());
         sb.append(prefix);
         sb.append(middle);
-        return sb.toString();
+        return new AIContext(offset, text, sb.toString(), isSingleWord(sufix));
+    }
+
+    private boolean isSingleWord(String sufix)
+    {
+        var lineFinish = sufix.indexOf('\n');
+        if (lineFinish > 0)
+        {
+            return !sufix.substring(0, lineFinish).isBlank();
+        }
+
+        return false;
     }
 
     private String normalize(String text)

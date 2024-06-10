@@ -29,6 +29,7 @@ public class HintPainter
     private String nextToken = ""; //$NON-NLS-1$
     private int pinnedOffset = -1;
     private boolean showEmpty;
+    private boolean isSingleWordMode;
 
     @Inject
     public HintPainter(IHintTextBuilder hintTextBuilder, IUISettings uiSettings)
@@ -40,12 +41,13 @@ public class HintPainter
     }
 
     @Override
-    public void pinOffset(StyledText textWidget, int offset, boolean showEmpty)
+    public void pinOffset(StyledText textWidget, int offset, boolean showEmpty, boolean isSingleWordMode)
     {
-        this.showEmpty = showEmpty;
         Preconditions.checkNotNull(textWidget);
         this.textWidget = textWidget;
         pinnedOffset = offset;
+        this.showEmpty = showEmpty;
+        this.isSingleWordMode = isSingleWordMode;
         if (textWidget == null || textWidget.isDisposed())
         {
             return;
@@ -116,10 +118,15 @@ public class HintPainter
             return;
         }
 
-        var text = hintTextBuilder.build(getHintText(), uiSettings.getTabWidth(), CONTINUATION_SIGN);
+        var text = getHintText();
         if (text.length() == 0)
         {
             return;
+        }
+
+        if (!isSingleWordMode)
+        {
+            text = hintTextBuilder.build(text, uiSettings.getTabWidth(), CONTINUATION_SIGN);
         }
 
         var firstLineFinish = text.indexOf('\n');
@@ -136,11 +143,16 @@ public class HintPainter
         }
 
         drawHint(event.gc, firstLine.startsWith(this.nextToken) ? this.nextToken : "", //$NON-NLS-1$
-            firstLine + RETURN_SIGN, otherLines);
+            firstLine, otherLines);
     }
 
     private void drawHint(GC gc, String nextToken, String firstLine, String otherLines)
     {
+        if (!isSingleWordMode)
+        {
+            firstLine = firstLine + RETURN_SIGN;
+        }
+
         var caretLocation = textWidget.getCaret().getLocation();
         var x = caretLocation.x;
         var y = caretLocation.y;
@@ -152,6 +164,9 @@ public class HintPainter
         var fontData = font.getFontData()[0];
         fontData.setStyle(SWT.ITALIC);
         var italicFont = new Font(font.getDevice(), fontData);
+        fontData.setStyle(SWT.ITALIC | SWT.BOLD);
+        var boldFont = new Font(font.getDevice(), fontData);
+        fontData.setStyle(SWT.NORMAL);
         fontData.setHeight((int)(fontData.getHeight() * .75));
         var smalFont = new Font(font.getDevice(), fontData);
         try
@@ -200,18 +215,28 @@ public class HintPainter
             gc.fillRectangle(otherLinesX, otherLinesY, otherLinesW, otherLinesH);
             gc.fillRectangle(labelX, labelY, labelW, labelH);
 
-            gc.setAlpha(160);
-            gc.setFont(italicFont);
-            gc.drawText(firstLine, firstLineX + BORDER * 2, firstLineY, true);
             if (!nextToken.isEmpty())
             {
-                var nextTokenLineSize = gc.textExtent(nextToken);
-                gc.setLineStyle(SWT.LINE_SOLID);
-                gc.drawLine(firstLineX + BORDER * 2, firstLineY + firstLineH, firstLineX + nextTokenLineSize.x,
-                    firstLineY + firstLineH);
+                gc.setAlpha(180);
+                fontData.setStyle(SWT.BOLD);
+                gc.setFont(boldFont);
+                gc.drawText(nextToken, firstLineX + BORDER * 2, firstLineY, true);
+
+                gc.setFont(italicFont);
+                gc.setAlpha(160);
+                var nextTokenSize = gc.stringExtent(nextToken);
+                gc.drawText(firstLine.substring(nextToken.length()), firstLineX + BORDER * 2 + nextTokenSize.x,
+                    firstLineY, true);
+            }
+            else
+            {
+                gc.setAlpha(160);
+                gc.setFont(italicFont);
+                gc.drawText(firstLine, firstLineX + BORDER * 2, firstLineY, true);
             }
 
             gc.setAlpha(120);
+            gc.setFont(italicFont);
             gc.drawText(otherLines, otherLinesX + BORDER * 2, otherLinesY, true);
 
             gc.setLineStyle(SWT.LINE_DOT);
@@ -265,6 +290,7 @@ public class HintPainter
         finally
         {
             italicFont.dispose();
+            boldFont.dispose();
             smalFont.dispose();
         }
     }
