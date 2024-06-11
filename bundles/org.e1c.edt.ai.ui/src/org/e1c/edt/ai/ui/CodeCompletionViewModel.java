@@ -249,7 +249,6 @@ public class CodeCompletionViewModel
 
             var aiContext = ctx.get();
             isSingleWordMode = aiContext.isSingleWord();
-            var context = aiContext.getContext();
             log.trace("AI context " + cancellationToken, aiContext.toString()); //$NON-NLS-1$
             var observer = new IObserver<String>()
             {
@@ -315,7 +314,7 @@ public class CodeCompletionViewModel
                         delay.isNegative() || delay == Duration.ZERO, isSingleWordMode));
             });
 
-            var response = codeAssistant.generateText(context, observer, cancellationToken);
+            var response = codeAssistant.generate(aiContext, observer, cancellationToken);
             if (cancellationToken.isCanceled() || response.isEmpty())
             {
                 return;

@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
+import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
@@ -50,19 +51,19 @@ public class AICodeAssistant
     }
 
     @Override
-    public Optional<CompletableFuture<Void>> generateText(String text, IObserver<String> observer,
+    public Optional<CompletableFuture<Void>> generate(AIContext aiContext, IObserver<String> observer,
         CancellationToken cancellationToken)
     {
         return settingsProvider.getSettings()
-            .flatMap(settings -> generateText(settings, text, observer, cancellationToken));
+            .flatMap(settings -> generateText(settings, aiContext, observer, cancellationToken));
     }
 
-    private Optional<CompletableFuture<Void>> generateText(AISettings settings, String text,
+    private Optional<CompletableFuture<Void>> generateText(AISettings settings, AIContext aiContext,
         IObserver<String> observer,
         CancellationToken cancellationToken)
     {
         var aiRequest = new AITextRequest();
-        aiRequest.setInputs(text);
+        aiRequest.setInputs(aiContext.getContext());
         aiRequest.setParameters(settings.getLlmParameters());
         var requestBody = json.serialize(aiRequest);
 
