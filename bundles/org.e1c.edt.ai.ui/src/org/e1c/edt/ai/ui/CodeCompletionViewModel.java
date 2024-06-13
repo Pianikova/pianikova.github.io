@@ -291,6 +291,11 @@ public class CodeCompletionViewModel
                         }
 
                         log.trace("AI generated text " + cancellationToken, format(hint.toString())); //$NON-NLS-1$
+                        if (hint.toString().isBlank())
+                        {
+                            hint.setLength(0);
+                        }
+
                         if (!aiContext.isSingleWord() && hint.length() == 0)
                         {
                             hint.append('\n');
@@ -380,12 +385,12 @@ public class CodeCompletionViewModel
                 accept(e, hint, offset);
                 return;
             }
-        }
 
-        if (hint.length() > 0 && hint.charAt(0) == e.character)
-        {
-            acceptChar(e, hint, offset);
-            return;
+            if (hint.length() > 0 && hint.charAt(0) == e.character)
+            {
+                acceptChar(e, hint, offset);
+                return;
+            }
         }
 
         var charType = Character.getType(e.character);

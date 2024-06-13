@@ -18,14 +18,18 @@ public class AIContextFactory
     private static final int TEMPLATE_LENGTH = PRE_KEYWORD.length() + SUF_KEYWORD.length() + MID_KEYWORD.length();
     private final IAIContextSplitter contextSplitter;
     private final Provider<AIContextSettings> contextSettingsProvider;
+    private final IStringNormalizer stringNormalizer;
 
     @Inject
-    public AIContextFactory(IAIContextSplitter contextSplitter, Provider<AIContextSettings> contextSettingsProvider)
+    public AIContextFactory(IAIContextSplitter contextSplitter, Provider<AIContextSettings> contextSettingsProvider,
+        IStringNormalizer stringNormalizer)
     {
         Preconditions.checkNotNull(contextSplitter);
         Preconditions.checkNotNull(contextSettingsProvider);
+        Preconditions.checkNotNull(stringNormalizer);
         this.contextSplitter = contextSplitter;
         this.contextSettingsProvider = contextSettingsProvider;
+        this.stringNormalizer = stringNormalizer;
     }
 
     @Override
@@ -55,9 +59,9 @@ public class AIContextFactory
 
     private AIContext ctreateTemplatedContext(int offset, String text, AIContextParts parts)
     {
-        var prefix = normalize(parts.getPrefix().apply(text));
-        var sufix = normalize(parts.getSufix().apply(text));
-        var middle = normalize(parts.getMiddle().apply(text));
+        var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
+        var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
+        var middle = stringNormalizer.normalize(parts.getMiddle().apply(text), false);
         var sb = new StringBuffer(prefix.length() + sufix.length() + middle.length() + TEMPLATE_LENGTH);
         sb.append(PRE_KEYWORD);
         sb.append(prefix);
@@ -70,9 +74,9 @@ public class AIContextFactory
 
     private AIContext ctreateSimpleContext(int offset, String text, AIContextParts parts)
     {
-        var prefix = normalize(parts.getPrefix().apply(text));
-        var sufix = normalize(parts.getSufix().apply(text));
-        var middle = normalize(parts.getMiddle().apply(text));
+        var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
+        var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
+        var middle = stringNormalizer.normalize(parts.getMiddle().apply(text), false);
         var sb = new StringBuffer(prefix.length() + middle.length());
         sb.append(prefix);
         sb.append(middle);
@@ -88,10 +92,5 @@ public class AIContextFactory
         }
 
         return false;
-    }
-
-    private String normalize(String text)
-    {
-        return text.replace(System.lineSeparator(), "\n"); //$NON-NLS-1$
     }
 }

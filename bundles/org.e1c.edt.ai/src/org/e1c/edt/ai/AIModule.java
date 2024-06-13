@@ -42,6 +42,7 @@ public class AIModule
         bind(IMath.class).to(Math.class).in(Singleton.class);
         bind(IInputDelayStatistics.class).to(InputDelayStatistics.class).in(Singleton.class);
         bind(IAIContextFactory.class).to(AIContextFactory.class).in(Singleton.class);
+        bind(IStringNormalizer.class).to(StringNormalizer.class).in(Singleton.class);
         // @formatter:on
     }
 }

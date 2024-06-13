@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.itests;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -13,6 +14,7 @@ import org.e1c.edt.ai.AIContextFactory;
 import org.e1c.edt.ai.AIContextParts;
 import org.e1c.edt.ai.AIContextSettings;
 import org.e1c.edt.ai.IAIContextSplitter;
+import org.e1c.edt.ai.IStringNormalizer;
 import org.e1c.edt.ai.Range;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,6 +31,7 @@ public class AIContextFactoryTest
     private final IAIContextSplitter splitter = mock(IAIContextSplitter.class);
     @SuppressWarnings("unchecked")
     private final Provider<AIContextSettings> contextSettingsProvider = mock(Provider.class);
+    private final IStringNormalizer stringNormalizer = mock(IStringNormalizer.class);
 
     @Parameter(0)
     public String prefix;
@@ -59,6 +62,11 @@ public class AIContextFactoryTest
     public void shouldCreateContext()
     {
         // Given
+        when(stringNormalizer.normalize(any(String.class), any(Boolean.class))).thenAnswer(state -> {
+            var text = (String)state.getArguments()[0];
+            return text.replace(System.lineSeparator(), "\n"); //$NON-NLS-1$
+        });
+
         when(contextSettingsProvider.get()).thenReturn(new AIContextSettings(99, templeted));
         var text = prefix + middle + sufix;
         var parts = new AIContextParts(new Range(0, prefix.length()),
@@ -83,7 +91,7 @@ public class AIContextFactoryTest
 
     private AIContextFactory createInstance()
     {
-        return new AIContextFactory(splitter, contextSettingsProvider);
+        return new AIContextFactory(splitter, contextSettingsProvider, stringNormalizer);
     }
 
     @SuppressWarnings("nls")
