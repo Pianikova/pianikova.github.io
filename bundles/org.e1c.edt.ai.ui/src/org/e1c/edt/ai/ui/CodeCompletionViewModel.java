@@ -439,15 +439,19 @@ public class CodeCompletionViewModel
 
     private void rollback(VerifyEvent e, StringBuilder hint, int offset)
     {
-        e.doit = false;
         dispatcher.dispatch(() -> {
             if (tokens.size() > 0)
             {
+                e.doit = false;
                 var text = tokens.pop();
                 rollback(text, offset);
                 hint.insert(0, text);
                 var hintLines = getHintLines(hint);
                 continueAsk(hintLines);
+            }
+            else
+            {
+                reset();
             }
         });
     }
