@@ -85,7 +85,7 @@ public class Chat implements IChat, IChatDialog
     public void askQuestion(String userQuestion)
     {
         Preconditions.checkNotNull(userQuestion);
-        chat("document_code", userQuestion); //$NON-NLS-1$
+        chat("plain_message", userQuestion); //$NON-NLS-1$
     }
 
     @SuppressWarnings("nls")
