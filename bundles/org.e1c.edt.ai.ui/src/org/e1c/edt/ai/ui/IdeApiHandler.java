@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.eclipse.jface.text.TextSelection;
+
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -28,7 +30,17 @@ public class IdeApiHandler
         Preconditions.checkNotNull(code);
         ui.getTextWidget().ifPresent(textWidget -> {
             var contet = textWidget.getContent();
-            contet.replaceTextRange(textWidget.getCaretOffset(), 0, code);
+            ui.getSourceViewer(textWidget).ifPresent(sourceViewer -> {
+                var selection = sourceViewer.getSelection();
+                if (selection instanceof TextSelection)
+                {
+                    var textSelection = (TextSelection)selection;
+                    contet.replaceTextRange(textSelection.getOffset(), textSelection.getLength(), code);
+                    return;
+                }
+
+                contet.replaceTextRange(textWidget.getCaretOffset(), 0, code);
+            });
         });
     }
 }
