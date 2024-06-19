@@ -6,9 +6,10 @@ package org.e1c.edt.ai.assistent;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IObserver;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class ResponseStreamProcessor implements IResponseStreamProcessor
@@ -19,22 +20,26 @@ public class ResponseStreamProcessor implements IResponseStreamProcessor
     public ResponseStreamProcessor(
         IResponseLineProcessor lineProcessor)
     {
+        Preconditions.checkNotNull(lineProcessor);
         this.lineProcessor = lineProcessor;
     }
 
     @Override
-    public void process(Stream<String> stream, IObserver<String> observer, CancellationToken cancellationToken)
+    public void process(Stream<String> stream, IObserver<String> observer, ICancellationToken cancellationToken)
     {
-        try (stream)
-        {
-            stream.takeWhile(line -> !cancellationToken.isCanceled() && lineProcessor.process(observer, line))
-                .collect(Collectors.toList());
-
-            observer.onCompleted();
-        }
-        catch (Throwable e)
-        {
-            observer.onError(e);
-        }
+        Preconditions.checkNotNull(stream);
+        Preconditions.checkNotNull(observer);
+        Preconditions.checkNotNull(cancellationToken);
+        stream.takeWhile(line -> {
+            try
+            {
+                return !cancellationToken.isCanceled() && lineProcessor.process(observer, line);
+            }
+            catch (Throwable error)
+            {
+                observer.onError(error);
+                return false;
+            }
+        }).collect(Collectors.toList());
     }
 }

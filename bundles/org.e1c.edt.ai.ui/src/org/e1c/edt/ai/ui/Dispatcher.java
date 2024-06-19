@@ -25,7 +25,7 @@ public class Dispatcher implements IDispatcher
     }
 
     @Override
-    public <T> Optional<T> dispatch(Supplier<T> supplier)
+    public <T> Optional<T> dispatch(Supplier<? extends T> supplier)
     {
         Preconditions.checkNotNull(supplier);
         var vals = new ArrayList<T>();

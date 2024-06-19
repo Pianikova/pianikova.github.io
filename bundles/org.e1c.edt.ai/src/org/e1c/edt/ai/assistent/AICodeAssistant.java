@@ -15,20 +15,24 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.CancellationTokenSource;
+import org.e1c.edt.ai.Closeables;
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.assistent.model.AITextRequest;
 import org.e1c.edt.ai.client.AIClientException;
 import org.e1c.edt.ai.client.AISettings;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class AICodeAssistant
@@ -44,6 +48,10 @@ public class AICodeAssistant
         IJson json,
         IResponseStreamProcessor responseStreamProcessor)
     {
+        Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settingsProvider);
+        Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(responseStreamProcessor);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.json = json;
@@ -51,16 +59,27 @@ public class AICodeAssistant
     }
 
     @Override
-    public Optional<CompletableFuture<Void>> generate(AIContext aiContext, IObserver<String> observer,
-        CancellationToken cancellationToken)
+    public IObservable<String> generate(AIContext aiContext,
+        ICancellationToken cancellationToken)
     {
-        return settingsProvider.getSettings()
-            .flatMap(settings -> generateText(settings, aiContext, observer, cancellationToken));
+        Preconditions.checkNotNull(aiContext);
+        Preconditions.checkNotNull(cancellationToken);
+        return Observables.create(observer -> {
+            var settings = settingsProvider.getSettings();
+            if (settings.isEmpty())
+            {
+                observer.onCompleted();
+                return Closeables.Empty;
+            }
+
+            generateText(settings.get(), aiContext, observer, cancellationToken);
+            return Closeables.Empty;
+        });
     }
 
-    private Optional<CompletableFuture<Void>> generateText(AISettings settings, AIContext aiContext,
+    private void generateText(AISettings settings, AIContext aiContext,
         IObserver<String> observer,
-        CancellationToken cancellationToken)
+        ICancellationToken cancellationToken)
     {
         var aiRequest = new AITextRequest();
         aiRequest.setInputs(aiContext.getContext());
@@ -75,7 +94,7 @@ public class AICodeAssistant
         catch (URISyntaxException e)
         {
             observer.onError(e);
-            return Optional.empty();
+            return;
         }
 
         var request = HttpRequest.newBuilder()
@@ -99,38 +118,38 @@ public class AICodeAssistant
             .build();
 
         var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
-        var feature = asyncRequest
-            .thenApplyAsync(rsp -> checkResponse(rsp, observer, cancellationToken))
+        asyncRequest
+            .thenApplyAsync(response -> checkResponse(response, observer, cancellationToken))
             .thenApplyAsync(HttpResponse::body)
-            .thenAcceptAsync(stream -> {
-                var attachToken = cancellationToken.attach(() -> asyncRequest.cancel(true));
-                try (attachToken)
-                {
-                    responseStreamProcessor.process(stream, observer, cancellationToken);
-                }
-                catch (Exception e)
-                {
-                    observer.onError(e);
-                }
-            })
-             .exceptionally(e -> {
-                 observer.onError(e);
-                 return null;
-             });
-
-        return Optional.of(feature);
+            .thenAcceptAsync(stream -> processStream(asyncRequest, stream, observer, cancellationToken))
+            .whenComplete((r, e) -> observer.onCompleted());
     }
 
     private HttpResponse<Stream<String>> checkResponse(HttpResponse<Stream<String>> response,
-        IObserver<String> observer, CancellationToken cancellationToken)
+        IObserver<String> observer, ICancellationToken cancellationToken)
     {
         var statusCode = response.statusCode();
         if (statusCode >= 300)
         {
-            observer.onError(new AIClientException("AI HTTP response status code is " + statusCode, null)); //$NON-NLS-1$
+            observer.onError(
+                new AIClientException("AI HTTP response " + cancellationToken + " status code is " + statusCode, null)); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         log.trace("AI response " + cancellationToken, response.toString()); //$NON-NLS-1$
         return response;
+    }
+
+    private void processStream(CompletableFuture<HttpResponse<Stream<String>>> asyncRequest, Stream<String> stream,
+        IObserver<String> observer, ICancellationToken cancellationToken)
+    {
+        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> asyncRequest.cancel(true));
+        try (attachToken)
+        {
+            responseStreamProcessor.process(stream, observer, cancellationToken);
+        }
+        catch (Exception e)
+        {
+            observer.onError(e);
+        }
     }
 }

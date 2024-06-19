@@ -1,0 +1,401 @@
+/**
+ * Copyright (C) 2024, 1C
+ */
+package org.e1c.edt.ai.tests;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import org.e1c.edt.ai.CodeCompletionAction;
+import org.e1c.edt.ai.CodeCompletionSession;
+import org.e1c.edt.ai.HintPart;
+import org.e1c.edt.ai.ICodeCompletionContext;
+import org.e1c.edt.ai.IHintHistory;
+import org.e1c.edt.ai.IHistoricalHint;
+import org.e1c.edt.ai.IUISettings;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class CodeCompletionSessionTest
+{
+    private final IUISettings uiSettings = mock(IUISettings.class);
+    private final IHistoricalHint hint = mock(IHistoricalHint.class);
+    private final IHintHistory history = mock(IHintHistory.class);
+    private final ICodeCompletionContext context = mock(ICodeCompletionContext.class);
+
+    @Test
+    public void shouldProvideContext()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        var actual = session.getContext();
+
+        // Then
+        Assert.assertEquals(context, actual);
+    }
+
+    @Test
+    public void shouldProvideHint()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        var actual = session.getHint();
+
+        // Then
+        Assert.assertEquals(hint, actual);
+    }
+
+    @Test
+    public void shouldBeDoneWhenCompletedAndEmpty()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        session.complete();
+        when(hint.isEmpty()).thenReturn(true);
+        var actual = session.isDone();
+
+        // Then
+        Assert.assertTrue(actual);
+    }
+
+    @Test
+    public void shouldBeDoneWhenCompletedAndNotEmpty()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        session.complete();
+        when(hint.isEmpty()).thenReturn(false);
+        var actual = session.isDone();
+
+        // Then
+        Assert.assertFalse(actual);
+    }
+
+    @Test
+    public void shouldBeDoneWhenNotCompletedAndEmpty()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        when(hint.isEmpty()).thenReturn(true);
+        var actual = session.isDone();
+
+        // Then
+        Assert.assertFalse(actual);
+    }
+
+    @Test
+    public void shouldReturnResetWhenFinish()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        var actualAction = session.finish();
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldAccept()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+
+        // When
+        var actualAction = session.accept(HintPart.TOKEN, 37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).replace(37, 0, "Abc");
+    }
+
+    @Test
+    public void shouldNotAcceptAndReturnSkipWhenHintIsEmptyAndHistoryIsEmpty()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        when(hint.isEmpty()).thenReturn(true);
+        when(history.isEmpty()).thenReturn(true);
+        var actualAction = session.accept(HintPart.TOKEN, 37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.SKIP, actualAction);
+        verify(context, never()).replace(anyInt(), anyInt(), anyString());
+    }
+
+    @Test
+    public void shouldNotAcceptAndReturnHandleWhenHintIsEmptyAndHistoryIsNotEmpty()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        when(hint.isEmpty()).thenReturn(true);
+        when(history.isEmpty()).thenReturn(false);
+        var actualAction = session.accept(HintPart.TOKEN, 37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.HANDLE, actualAction);
+        verify(context, never()).replace(anyInt(), anyInt(), anyString());
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnResetForAcceptWhenSingleWordModeAndHintIsBlank()
+    {
+        // Given
+        var session = createInstance(true);
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        var actualAction = session.accept(HintPart.TOKEN, 37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context).replace(37, 0, "Abc");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnResetForAcceptWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
+    {
+        // Given
+        var session = createInstance(true);
+        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        when(hint.startsWith('\n')).thenReturn(true);
+        var actualAction = session.accept(HintPart.TOKEN, 37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context).replace(37, 0, "Abc");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnResetForAcceptWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
+    {
+        // Given
+        var session = createInstance(true);
+        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        when(hint.startsWith('\n')).thenReturn(false);
+        var actualAction = session.accept(HintPart.TOKEN, 37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context).replace(37, 0, "Abc");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnUpdateForAcceptWhenNotSingleWordModeHintIsBlankAndHintStartsWithNewLine()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        when(hint.startsWith('\n')).thenReturn(true);
+        var actualAction = session.accept(HintPart.TOKEN, 37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).replace(37, 0, "Abc");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldAcceptChar()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.pullChar('A')).thenReturn("A");
+
+        // When
+        var actualAction = session.acceptChar(37, 'A');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).replace(37, 0, "A");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnSkipWhenAcceptCharAndDoesNotPullChar()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.pullChar('A')).thenReturn("");
+
+        // When
+        var actualAction = session.acceptChar(37, 'A');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.SKIP, actualAction);
+        verify(context, times(0)).replace(37, 0, "A");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnResetForAcceptCharWhenSingleWordModeAndHintIsBlank()
+    {
+        // Given
+        var session = createInstance(true);
+        when(hint.pullChar('A')).thenReturn("A");
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        var actualAction = session.acceptChar(37, 'A');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context).replace(37, 0, "A");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnResetForAcceptCharWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
+    {
+        // Given
+        var session = createInstance(true);
+        when(hint.pullChar('A')).thenReturn("A");
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        when(hint.startsWith('\n')).thenReturn(true);
+        var actualAction = session.acceptChar(37, 'A');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context).replace(37, 0, "A");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnResetForAcceptCharWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
+    {
+        // Given
+        var session = createInstance(true);
+        when(hint.pullChar('A')).thenReturn("A");
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        when(hint.startsWith('\n')).thenReturn(false);
+        var actualAction = session.acceptChar(37, 'A');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context).replace(37, 0, "A");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldReturnUpdateForAcceptCharWhenNotSingleWordModeHintIsBlankAndHintStartsWithNewLine()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.pullChar('A')).thenReturn("A");
+
+        // When
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isBlank()).thenReturn(true);
+        when(hint.startsWith('\n')).thenReturn(true);
+        var actualAction = session.acceptChar(37, 'A');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).replace(37, 0, "A");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldRollback()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.rollback()).thenReturn("Abc");
+
+        // When
+        var actualAction = session.rollback(37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).replace(34, 3, "");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldNotRollbackWhenHintDoesNotRollback()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.rollback()).thenReturn("");
+
+        // When
+        var actualAction = session.rollback(37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context, never()).replace(anyInt(), anyInt(), anyString());
+    }
+
+    @Test
+    public void shouldReset()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.isEmpty()).thenReturn(false);
+        session.complete();
+
+        // When
+        session.reset();
+
+        // Then
+        Assert.assertFalse(session.isDone());
+        verify(hint).clear();
+    }
+
+    private CodeCompletionSession<ICodeCompletionContext> createInstance(boolean isSingleWordMode)
+    {
+        var session = new CodeCompletionSession<>(uiSettings, hint, history);
+        session.initiaize(context, history, isSingleWordMode);
+        return session;
+    }
+}

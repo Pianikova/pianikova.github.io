@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.IHintTextBuilder;
+import org.e1c.edt.ai.IUISettings;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;

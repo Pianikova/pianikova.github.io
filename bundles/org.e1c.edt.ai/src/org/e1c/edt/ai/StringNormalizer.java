@@ -5,6 +5,8 @@ package org.e1c.edt.ai;
 
 import java.util.ArrayList;
 
+import com.google.common.base.Preconditions;
+
 public class StringNormalizer
     implements IStringNormalizer
 {
@@ -12,6 +14,7 @@ public class StringNormalizer
     @Override
     public String normalize(String text, boolean cleanLines)
     {
+        Preconditions.checkNotNull(text);
         text = text.replace("\r", "");
         if (!cleanLines)
         {

@@ -4,22 +4,24 @@
 package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
-import java.util.HashSet;
-import java.util.Stack;
+import java.time.LocalDateTime;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
 
-import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
+import org.e1c.edt.ai.CodeCompletionAction;
+import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.IClock;
-import org.e1c.edt.ai.ICodeCompletionTokenizer;
+import org.e1c.edt.ai.ICodeCompletionActionHandler;
+import org.e1c.edt.ai.ICodeCompletionSession;
+import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILog;
-import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.ISettingsStore;
+import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.Observers;
 import org.e1c.edt.ai.assistent.IAICodeAssistant;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -27,308 +29,225 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class CodeCompletionViewModel
-    implements ICodeCompletionViewModel, VerifyKeyListener, CaretListener
+    implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener
 {
-    private static final HashSet<Character> TextDelimiters;
     private final Object lockObject = new Object();
     private final ILog log;
-    private final IAICodeAssistant codeAssistant;
-    private final IAIContextProvider<Integer> aiContextProvider;
-    private final IDispatcher dispatcher;
-    private final IUI ui;
-    private final IHotKeys hotKeys;
-    private final ICodeCompletionTokenizer tokenizer;
-    private final IHintPainter hintPainter;
     private final IUISettings uiSettings;
+    private final IAICodeAssistant codeAssistant;
+    private final IAIContextProvider<AITarget> aiContextProvider;
+    private final IDispatcher dispatcher;
+    private final IHintPainter hintPainter;
     private final IInputDelayStatistics inputRateStatistics;
     private final IClock clock;
-    private final Stack<String> tokens = new Stack<>();
+    private final Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider;
+    private final ICodeCompletionActionHandler<CodeCompletionContext> handler;
+    private final IHintHistory history;
+    private final IHotKeys hotKeys;
     private final Timer showTimer = new Timer(true);
-    private CancellationToken askCancellationToken = CancellationToken.NONE;
-    private StringBuilder curHint = new StringBuilder();
-    private boolean inProgress;
-    private CompletableFuture<Void> currentResponse = CompletableFuture.completedFuture(null);
-    private boolean isSingleWordMode;
-
-    static
-    {
-        TextDelimiters = new HashSet<>();
-        TextDelimiters.add(' ');
-        TextDelimiters.add('\t');
-        TextDelimiters.add('|');
-        TextDelimiters.add('~');
-        TextDelimiters.add(':');
-        TextDelimiters.add(';');
-        TextDelimiters.add('(');
-        TextDelimiters.add(')');
-        TextDelimiters.add('[');
-        TextDelimiters.add(']');
-        TextDelimiters.add(',');
-        TextDelimiters.add('"');
-        TextDelimiters.add('\'');
-        TextDelimiters.add('.');
-        TextDelimiters.add('+');
-        TextDelimiters.add('-');
-        TextDelimiters.add('*');
-        TextDelimiters.add('/');
-        TextDelimiters.add('>');
-        TextDelimiters.add('<');
-        TextDelimiters.add('=');
-    }
+    private ICodeCompletionSession<CodeCompletionContext> lastSession;
+    private StyledText textWidget;
 
     @Inject
-    public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IAICodeAssistant codeAssistant,
-        IAIContextProvider<Integer> aiContextProvider,
-        IDispatcher dispatcher, IUI ui, IHotKeys hotKeys,
-        ICodeCompletionTokenizer tokenizer,
-        IHintPainter hintPainter, IUISettings uiSettings, IInputDelayStatistics inputRateStatistics, IClock clock)
+    public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
+        IAICodeAssistant codeAssistant,
+        IAIContextProvider<AITarget> aiContextProvider,
+        IDispatcher dispatcher, IHintPainter hintPainter, IInputDelayStatistics inputRateStatistics,
+        IClock clock,
+        Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
+        ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IHotKeys hotKeys)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
+        Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(codeAssistant);
         Preconditions.checkNotNull(aiContextProvider);
         Preconditions.checkNotNull(dispatcher);
-        Preconditions.checkNotNull(ui);
-        Preconditions.checkNotNull(hotKeys);
-        Preconditions.checkNotNull(tokenizer);
-        Preconditions.checkNotNull(tokenizer);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(hintPainter);
         Preconditions.checkNotNull(inputRateStatistics);
         Preconditions.checkNotNull(clock);
+        Preconditions.checkNotNull(sessionProvider);
+        Preconditions.checkNotNull(handler);
+        Preconditions.checkNotNull(history);
+        Preconditions.checkNotNull(hotKeys);
         this.log = log;
         this.codeAssistant = codeAssistant;
+        this.uiSettings = uiSettings;
         this.aiContextProvider = aiContextProvider;
         this.dispatcher = dispatcher;
-        this.ui = ui;
-        this.hotKeys = hotKeys;
-        this.tokenizer = tokenizer;
         this.hintPainter = hintPainter;
-        this.uiSettings = uiSettings;
         this.inputRateStatistics = inputRateStatistics;
         this.clock = clock;
+        this.sessionProvider = sessionProvider;
+        this.handler = handler;
+        this.history = history;
+        this.hotKeys = hotKeys;
     }
 
     @Override
-    public AutoCloseable activate(boolean askImmediately)
+    public AutoCloseable activate(StyledText textWidget)
     {
+        this.textWidget = textWidget;
         reset();
         dispatcher.dispatch(() -> {
-            ui.getTextWidget().ifPresent(textWidget -> {
-                textWidget.addPaintListener(hintPainter);
-                textWidget.addCaretListener(this);
-                textWidget.addVerifyKeyListener(this);
-                textWidget.redraw();
-            });
+            textWidget.addPaintListener(hintPainter);
+            textWidget.addCaretListener(this);
+            textWidget.addVerifyKeyListener(this);
+            textWidget.redraw();
         });
 
-        if (askImmediately)
-        {
-            askByJob(Duration.ZERO);
-        }
-
         return Closeables.create(() -> deactivate());
+    }
+
+    private void reset()
+    {
+        cancel();
+        history.clear();
+        dispatcher.dispatch(() -> {
+            hintPainter.reset();
+        });
+    }
+
+    private void update(ICodeCompletionSession<CodeCompletionContext> session)
+    {
+        var content = session.getContext();
+        var widget = content.getWidget();
+        var hint = session.getHint();
+        var offset = widget.getCaretOffset();
+        dispatcher.dispatch(() -> {
+            hintPainter.pinOffset(widget, offset, true, session.getContext().isSingleWordMode());
+            hintPainter.setHintAt(offset, hint.getText(HintPart.LINES), hint.getText(HintPart.TOKEN));
+        });
+    }
+
+    private void askNew()
+    {
+        var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
+        log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
+        reset();
+        askWithDelay(delayBeforeShow);
+    }
+
+    private void askWithDelay(Duration delayBeforeShow)
+    {
+        cancel();
+        new Job(Messages.CodeCompletionJobName)
+        {
+            @Override
+            protected IStatus run(IProgressMonitor monitor)
+            {
+                var cancellationTokenSource = new JobCancellationTokenSource();
+                cancellationTokenSource.attachMonitor(monitor);
+                ask(delayBeforeShow, cancellationTokenSource);
+                return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
+            }
+        }.schedule();
     }
 
     private void deactivate()
     {
         reset();
         dispatcher.dispatch(() -> {
-            ui.getTextWidget().ifPresent(textWidget -> {
-                textWidget.removePaintListener(hintPainter);
-                textWidget.removeCaretListener(this);
-                textWidget.removeVerifyKeyListener(this);
-                textWidget.redraw();
-            });
+            textWidget.removePaintListener(hintPainter);
+            textWidget.removeCaretListener(this);
+            textWidget.removeVerifyKeyListener(this);
+            textWidget.redraw();
         });
     }
 
-    private void reset()
-    {
-        cancel();
-        dispatcher.dispatch(() -> {
-            tokens.clear();
-            inProgress = false;
-            hintPainter.reset();
-        });
-    }
-
-    private void cancel()
-    {
-        showTimer.purge();
-        synchronized (lockObject)
-        {
-            if (askCancellationToken.isCanceled())
-            {
-                return;
-            }
-
-            askCancellationToken.cancel();
-        }
-    }
-
-    private void askByJob(Duration delayBeforeShow)
-    {
-        cancel();
-        var model = this;
-        new Job(Messages.CodeCompletionJobName)
-        {
-            @Override
-            protected IStatus run(IProgressMonitor monitor)
-            {
-                var cancellationToken = new JobCancellationToken();
-                StringBuilder hint;
-                synchronized (lockObject)
-                {
-                    model.cancel();
-                    askCancellationToken = cancellationToken;
-                    curHint = new StringBuilder();
-                    hint = curHint;
-                }
-
-                cancellationToken.attachMonitor(monitor);
-                ask(hint, delayBeforeShow, cancellationToken);
-                return cancellationToken.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
-            }
-        }.schedule();
-    }
-
-    private void show(AIContext aiContext, StringBuilder hint, Duration delayBeforeShow,
-        CancellationToken cancellationToken)
-    {
-        showTimer.purge();
-        if (delayBeforeShow.isNegative() || delayBeforeShow == Duration.ZERO)
-        {
-            show(aiContext, hint, cancellationToken);
-            return;
-        }
-
-        showTimer.schedule(new TimerTask()
-            {
-            @Override
-            public void run()
-                {
-                show(aiContext, hint, cancellationToken);
-                }
-        }, delayBeforeShow.toMillis());
-    }
-
-    private void show(AIContext aiContext, StringBuilder hint, CancellationToken cancellationToken)
-    {
-        if (cancellationToken.isCanceled())
-        {
-            return;
-        }
-
-        dispatcher.dispatch(() -> {
-            ui.getTextWidget().ifPresent(textWidget -> {
-                var text = getHintLines(hint);
-                var token = tokenizer.getNext(1, text, this::isTextDelimiter);
-                hintPainter.setHintAt(textWidget.getCaretOffset(), text, token.getValue());
-                textWidget.redraw();
-            });
-        });
-    }
-
-    private void ask(StringBuilder hint, Duration delayBeforeShow, CancellationToken cancellationToken)
+    private void ask(Duration delayBeforeShow, CancellationTokenSource cancellationTokenSource)
     {
         try
         {
             var startTime = clock.now();
-            var ctx = dispatcher.dispatch(() -> aiContextProvider.create(0, cancellationToken).orElse(null));
-            if (cancellationToken.isCanceled() || ctx.isEmpty())
+            var aiCtx = dispatcher.dispatch(
+                () -> aiContextProvider.create(new AITarget(textWidget, 0), cancellationTokenSource).orElse(null));
+            if (aiCtx.isEmpty())
             {
                 return;
             }
 
-            var aiContext = ctx.get();
-            isSingleWordMode = aiContext.isSingleWord();
-            log.trace("AI context " + cancellationToken, aiContext.toString()); //$NON-NLS-1$
-            var observer = new IObserver<String>()
+            var aiContext = aiCtx.get();
+            var codeCompletionCtx = new CodeCompletionContext(aiContext, textWidget, cancellationTokenSource);
+            var session = sessionProvider.get().initiaize(codeCompletionCtx, history, aiContext.isSingleWord());
+            synchronized (lockObject)
             {
-                @Override
-                public boolean onNext(String value)
+                if (lastSession != null)
                 {
-                    dispatcher.dispatch(() -> {
-                        if (cancellationToken.isCanceled())
-                        {
-                            return;
-                        }
-
-                        hint.append(value);
-                        show(aiContext, hint, delayBeforeShow.minus(Duration.between(startTime, clock.now())),
-                            cancellationToken);
-                    });
-
-                    return true;
+                    lastSession.getContext().getCancellationTokenSource().cancel();
+                    lastSession.reset();
                 }
 
-                @Override
-                public void onError(Throwable error)
-                {
-                    if (cancellationToken.isCanceled())
+                lastSession = session;
+            }
+
+            log.trace("AI context " + cancellationTokenSource, aiContext.toString()); //$NON-NLS-1$
+            var delay = calculateDelay(startTime, delayBeforeShow);
+            if (cancellationTokenSource.isCanceled())
+            {
+                return;
+            }
+
+            dispatcher.dispatch(() -> {
+                hintPainter.reset();
+                hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
+                    delay.isNegative() || delay == Duration.ZERO, aiContext.isSingleWord());
+            });
+
+            var codeCompletionSource = codeAssistant.generate(aiContext, cancellationTokenSource);
+
+            // @formatter:off
+            codeCompletionSource.subscribe(Observers.create(
+                value -> {
+                    if (cancellationTokenSource.isCanceled())
+                    {
+                        return;
+                    }
+
+                    var hint = session.getHint();
+                    hint.append(value);
+                    showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
+                },
+                error -> {
+                    if (cancellationTokenSource.isCanceled())
                     {
                         return;
                     }
 
                     log.logError(error);
                     reset();
-                }
+                },
+                () -> {
+                    if (cancellationTokenSource.isCanceled())
+                    {
+                        return;
+                    }
 
-                @Override
-                public void onCompleted()
-                {
-                    dispatcher.dispatch(() -> {
-                        if (cancellationToken.isCanceled())
-                        {
-                            return;
-                        }
+                    var hint = session.getHint();
+                    log.trace("AI generated text " + cancellationTokenSource, format(hint.toString())); //$NON-NLS-1$
+                    if (hint.isBlank())
+                    {
+                        hint.clear();
+                    }
 
-                        log.trace("AI generated text " + cancellationToken, format(hint.toString())); //$NON-NLS-1$
-                        if (hint.toString().isBlank())
-                        {
-                            hint.setLength(0);
-                        }
+                    if (!aiContext.isSingleWord() && hint.isEmpty())
+                    {
+                        hint.append("\n"); //$NON-NLS-1$
+                    }
 
-                        if (!aiContext.isSingleWord() && hint.length() == 0)
-                        {
-                            hint.append('\n');
-                        }
-
-                        show(aiContext, hint, delayBeforeShow.minus(Duration.between(startTime, clock.now())), cancellationToken);
-                    });
-                }
-            };
-
-            dispatcher.dispatch(() -> {
-                if (cancellationToken.isCanceled())
-                {
-                    return;
-                }
-
-                hintPainter.reset();
-                var delay = delayBeforeShow.minus(Duration.between(startTime, clock.now()));
-                ui.getTextWidget()
-                    .ifPresent(textWidget -> hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
-                        delay.isNegative() || delay == Duration.ZERO, isSingleWordMode));
-            });
-
-            var response = codeAssistant.generate(aiContext, observer, cancellationToken);
-            if (cancellationToken.isCanceled() || response.isEmpty())
-            {
-                return;
-            }
-
-            synchronized (lockObject)
-            {
-                currentResponse = response.get();
-            }
+                    session.complete();
+                    showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
+                }));
+            // @formatter:on
         }
         catch (CancellationException e)
         {
@@ -341,310 +260,159 @@ public class CodeCompletionViewModel
         }
     }
 
-    @Override
-    public void verifyKey(VerifyEvent e)
+    private void cancel()
     {
-        StringBuilder hint;
+        showTimer.purge();
         synchronized (lockObject)
         {
-            hint = curHint;
-        }
-
-        if (hotKeys.isTriggered(IHotKeys.SUGGEST, e))
-        {
-            e.doit = false;
-            reset();
-            askByJob(Duration.ZERO);
-            return;
-        }
-
-        var offset = hintPainter.getOffset();
-        if (offset >= 0)
-        {
-            if (hotKeys.isTriggered(IHotKeys.STOP, e))
+            if (lastSession != null)
             {
-                e.doit = false;
-                reset();
-                return;
+                lastSession.getContext().getCancellationTokenSource().cancel();
+                lastSession.reset();
             }
-
-            if (hotKeys.isTriggered(IHotKeys.ROLLBACK_PART, e))
-            {
-                rollback(e, hint, offset);
-                return;
-            }
-
-            if (hotKeys.isTriggered(IHotKeys.ACCEPT_PART, e))
-            {
-                acceptPart(e, hint, offset);
-                return;
-            }
-
-            if (hotKeys.isTriggered(IHotKeys.ACCEPT, e))
-            {
-                accept(e, hint, offset);
-                return;
-            }
-
-            if (hint.length() > 0 && hint.charAt(0) == e.character)
-            {
-                acceptChar(e, hint, offset);
-                return;
-            }
-        }
-
-        var charType = Character.getType(e.character);
-        if (charType != Character.CONTROL && !uiSettings.isContinuousCodeCompletion())
-        {
-            reset();
-            return;
-        }
-
-        if (uiSettings.isContinuousCodeCompletion() && e.character != '.'
-            && (e.character == '\r' || e.character == '\n' || charType != Character.CONTROL))
-        {
-            continuousCodeCompletion();
-            return;
-        }
-
-        inProgress = false;
-    }
-
-    private void continuousCodeCompletion()
-    {
-        var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
-        log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
-        reset();
-        inProgress = true;
-        askByJob(delayBeforeShow);
-    }
-
-    private void acceptChar(VerifyEvent e, StringBuilder hint, int offset)
-    {
-        inputRateStatistics.registerAndPredictDelay();
-        e.doit = false;
-        var chars = new char[1];
-        chars[0] = e.character;
-        var text = new String(chars);
-        apply(text, offset);
-        tokens.push(text);
-        hint.delete(0, 1);
-        var hintLines = getHintLines(hint);
-        continueAsk(hintLines);
-        if (hint.length() == 0 && currentResponse.isDone())
-        {
-            askByJob(Duration.ZERO);
         }
     }
 
-    private void rollback(VerifyEvent e, StringBuilder hint, int offset)
+    private void showWithDelay(ICodeCompletionSession<CodeCompletionContext> session, Duration delayBeforeShow)
     {
+        showTimer.purge();
+        if (delayBeforeShow.isNegative() || delayBeforeShow == Duration.ZERO)
+        {
+            show(session);
+            return;
+        }
+
+        // @formatter:off
+        showTimer.schedule(
+            new TimerTask() {
+                @Override
+                public void run()
+                {
+                    show(session);
+                }
+            },
+            delayBeforeShow.toMillis());
+
+        // @formatter:on
+    }
+
+    private void show(ICodeCompletionSession<CodeCompletionContext> session)
+    {
+        if (session.getContext().getCancellationTokenSource().isCanceled())
+        {
+            return;
+        }
+
+        var content = session.getContext();
+        var widget = content.getWidget();
+        var hint = session.getHint();
         dispatcher.dispatch(() -> {
-            if (tokens.size() > 0)
-            {
-                e.doit = false;
-                var text = tokens.pop();
-                rollback(text, offset);
-                hint.insert(0, text);
-                var hintLines = getHintLines(hint);
-                continueAsk(hintLines);
-            }
-            else
-            {
-                reset();
-            }
+            hintPainter.setHintAt(widget.getCaretOffset(), hint.getText(HintPart.LINES), hint.getText(HintPart.TOKEN));
+            widget.redraw();
         });
     }
 
-    private void accept(VerifyEvent e, StringBuilder hint, int offset)
+    private Duration calculateDelay(LocalDateTime startTime, Duration delayBeforeShow)
     {
-        e.doit = false;
-        dispatcher.dispatch(() -> {
-            var hintText = hintPainter.getHintText();
-            if (hintText.isEmpty())
-            {
-                e.doit = tokens.size() == 0;
-                return;
-            }
-
-            apply(hintText, offset);
-            if (isSingleWordMode)
-            {
-                reset();
-                return;
-            }
-
-            tokens.push(hintText);
-            hint.delete(0, hintText.length());
-            var hintLines = getHintLines(hint);
-            continueAsk(hintLines);
-            if (hint.length() == 0 && currentResponse.isDone())
-            {
-                askByJob(Duration.ZERO);
-            }
-        });
-    }
-
-    private void acceptPart(VerifyEvent e, StringBuilder hint, int offset)
-    {
-        e.doit = false;
-        dispatcher.dispatch(() -> {
-            var hintText = hintPainter.getHintText();
-            if (hintText.isEmpty())
-            {
-                e.doit = tokens.size() == 0;
-                return;
-            }
-
-            var token = tokenizer.getNext(1, hintText, this::isTextDelimiter);
-            var text = token.getValue();
-            apply(text, offset);
-            hint.delete(0, text.length());
-            var hintLines = getHintLines(hint);
-            if (isSingleWordMode && (hintLines.isBlank() || hintLines.startsWith("\n"))) //$NON-NLS-1$
-            {
-                reset();
-                askByJob(Duration.ZERO);
-                return;
-            }
-
-            tokens.push(text);
-            continueAsk(hintLines);
-            if (hint.length() == 0 && currentResponse.isDone())
-            {
-                askByJob(Duration.ZERO);
-            }
-        });
-    }
-
-    private void apply(String hintText, int offset)
-    {
-        var len = hintText.length();
-        if (len == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            inProgress = true;
-            ui.getTextWidget().ifPresent(textWidget -> {
-                var start = offset;
-                if (offset < 0)
-                {
-                    start = 0;
-                }
-
-                var contet = textWidget.getContent();
-                var contentLength = contet.getCharCount();
-                if (start > contentLength)
-                {
-                    start = contentLength;
-                }
-
-                contet.replaceTextRange(start, 0, hintText);
-                textWidget.setCaretOffset(start + len);
-            });
-        }
-        finally
-        {
-            inProgress = false;
-        }
-    }
-
-    private void rollback(String hintText, int offset)
-    {
-        var len = hintText.length();
-        if (len == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            inProgress = true;
-            ui.getTextWidget().ifPresent(textWidget -> {
-                var start = offset - len;
-                if (offset < 0)
-                {
-                    start = 0;
-                }
-
-                var contet = textWidget.getContent();
-                var contentLength = contet.getCharCount();
-                if (start > contentLength)
-                {
-                    start = contentLength;
-                }
-
-                contet.replaceTextRange(start, len, ""); //$NON-NLS-1$
-                textWidget.setCaretOffset(start);
-            });
-        }
-        finally
-        {
-            inProgress = false;
-        }
-    }
-
-    private void continueAsk(String hint)
-    {
-        ui.getTextWidget().ifPresent(textWidget -> {
-            var offset = textWidget.getCaretOffset();
-            hintPainter.pinOffset(textWidget, offset, true, isSingleWordMode);
-            var token = tokenizer.getNext(1, hint, this::isTextDelimiter);
-            hintPainter.setHintAt(offset, hint, token.getValue());
-        });
-
-        if (hint.isEmpty())
-        {
-            askByJob(Duration.ZERO);
-        }
-    }
-
-    @Override
-    public void caretMoved(CaretEvent event)
-    {
-        if (!inProgress)
-        {
-            reset();
-        }
-    }
-
-    private String getHintLines(StringBuilder hint)
-    {
-        return isSingleWordMode ? getHintLines(hint, 1)
-            : getHintLines(hint, uiSettings.getCodeCompletionLinesCount());
-    }
-
-    private String getHintLines(StringBuilder hint, int maxTokens)
-    {
-        var lines = new StringBuilder();
-        var text = hint.toString();
-        while (maxTokens-- > 0 && !text.isEmpty())
-        {
-            var token = tokenizer.getNext(1, text, this::isLineDelimiter);
-            var value = token.getValue();
-            lines.append(value);
-            text = token.getText();
-        }
-
-        return lines.toString();
-    }
-
-    private Boolean isTextDelimiter(char ch)
-    {
-        return isLineDelimiter(ch) || TextDelimiters.contains(ch);
-    }
-
-    private Boolean isLineDelimiter(char ch)
-    {
-        return (ch == '\n') || (ch == '\r');
+        return delayBeforeShow.minus(Duration.between(startTime, clock.now()));
     }
 
     @SuppressWarnings("nls")
     private static String format(String text)
     {
         return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
+    }
+
+    @Override
+    public void verifyKey(VerifyEvent event)
+    {
+        ICodeCompletionSession<CodeCompletionContext> session;
+        synchronized (lockObject)
+        {
+            session = lastSession;
+        }
+
+        var action = getUserAction(event);
+        action = handler.handle(session, getUserAction(event), event.character, hintPainter.getOffset(),
+            uiSettings.isContinuousCodeCompletion());
+
+        switch (action)
+        {
+        case SUGGEST:
+            reset();
+            askWithDelay(Duration.ZERO);
+            event.doit = false;
+            break;
+
+        case UPDATE:
+            update(session);
+            if (session.isDone())
+            {
+                askWithDelay(Duration.ZERO);
+            }
+
+            event.doit = false;
+            break;
+
+        case ASK_NEW:
+            askNew();
+            break;
+
+        case RESET:
+            reset();
+            event.doit = false;
+            break;
+
+        case HANDLE:
+            event.doit = false;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    private CodeCompletionAction getUserAction(VerifyEvent event)
+    {
+        if (hotKeys.isTriggered(IHotKeys.SUGGEST, event))
+        {
+            return CodeCompletionAction.SUGGEST;
+        }
+
+        if (hotKeys.isTriggered(IHotKeys.STOP, event))
+        {
+            return CodeCompletionAction.STOP;
+        }
+
+        if (hotKeys.isTriggered(IHotKeys.ROLLBACK_PART, event))
+        {
+            return CodeCompletionAction.ROLLBACK_PART;
+        }
+
+        if (hotKeys.isTriggered(IHotKeys.ACCEPT_PART, event))
+        {
+            return CodeCompletionAction.ACCEPT_PART;
+        }
+
+        if (hotKeys.isTriggered(IHotKeys.ACCEPT, event))
+        {
+            return CodeCompletionAction.ACCEPT;
+        }
+
+        return CodeCompletionAction.CHAR;
+    }
+
+    @Override
+    public void caretMoved(CaretEvent event)
+    {
+        synchronized (lockObject)
+        {
+            if (lastSession == null || lastSession.isAccepting())
+            {
+                return;
+            }
+        }
+
+        reset();
     }
 }

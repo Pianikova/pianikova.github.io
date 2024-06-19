@@ -4,26 +4,28 @@
 package org.e1c.edt.ai;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
-public class AIContextSettings
+public class AIContextSettings implements IAIContextSettings
 {
-    private final int maxLength;
-    private final boolean templeted;
+    private final IUISettings uiSettings;
 
-    public AIContextSettings(int maxLength, boolean templeted)
+    @Inject
+    public AIContextSettings(IUISettings uiSettings)
     {
-        Preconditions.checkArgument(maxLength > 0);
-        this.maxLength = maxLength;
-        this.templeted = templeted;
+        Preconditions.checkNotNull(uiSettings);
+        this.uiSettings = uiSettings;
     }
 
+    @Override
     public int getMaxLength()
     {
-        return maxLength;
+        return uiSettings.getMaxAssistantTextSize();
     }
 
+    @Override
     public boolean isTempleted()
     {
-        return templeted;
+        return uiSettings.isTemplatedContext();
     }
 }

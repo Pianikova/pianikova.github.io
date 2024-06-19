@@ -5,8 +5,14 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.AIContextSettings;
 import org.e1c.edt.ai.AIModule;
+import org.e1c.edt.ai.CodeCompletionActionHandler;
+import org.e1c.edt.ai.CodeCompletionSession;
+import org.e1c.edt.ai.IAIContextSettings;
+import org.e1c.edt.ai.ICodeCompletionActionHandler;
+import org.e1c.edt.ai.ICodeCompletionSession;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.source.SourceViewer;
@@ -45,8 +51,8 @@ public class AIUIModule
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
-        bind(AIContextSettings.class).toProvider(AIContextSettingsProvider.class);
-        bind(new TypeLiteral<IAIContextProvider<Integer>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
+        bind(IAIContextSettings.class).to(AIContextSettings.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<AITarget>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<SourceViewer>>() { /**/ }).to(AISourceViewerContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).to(AISourceContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<ISyntaxWalker<StringSerializerContext>>() { /**/ }).to(new TypeLiteral<BasicPathSyntaxWalker<StringSerializerContext>>() { /**/ }).in(Singleton.class);
@@ -55,6 +61,8 @@ public class AIUIModule
         bind(ICodeCompletionViewModel.class).to(CodeCompletionViewModel.class).in(Singleton.class);
         bind(IHintPainter.class).to(HintPainter.class);
         bind(IHotKeys.class).to(HotKeys.class).in(Singleton.class);
+        bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });
+        bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
         // @formatter:on
     }
 }

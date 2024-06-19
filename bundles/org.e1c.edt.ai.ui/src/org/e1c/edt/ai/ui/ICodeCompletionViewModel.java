@@ -3,7 +3,10 @@
  */
 package org.e1c.edt.ai.ui;
 
-public interface ICodeCompletionViewModel
+import org.e1c.edt.ai.ICodeCompletionContext;
+import org.eclipse.swt.custom.StyledText;
+
+public interface ICodeCompletionViewModel<TContext extends ICodeCompletionContext>
 {
-    AutoCloseable activate(boolean askImmediately);
+    AutoCloseable activate(StyledText textWidget);
 }

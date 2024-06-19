@@ -68,7 +68,7 @@ public class UI
                 if (isValidWidget(newTextWidget))
                 {
                     textWidget = newTextWidget;
-                    queryToken = codeCompletionViewModelProvider.get().activate(false);
+                    queryToken = codeCompletionViewModelProvider.get().activate(newTextWidget);
                 }
             }
         }

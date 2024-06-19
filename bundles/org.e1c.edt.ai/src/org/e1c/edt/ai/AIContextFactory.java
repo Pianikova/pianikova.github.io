@@ -7,7 +7,6 @@ import java.util.Optional;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 
 public class AIContextFactory
     implements IAIContextFactory
@@ -17,18 +16,18 @@ public class AIContextFactory
     private static final String MID_KEYWORD = " <MID>"; //$NON-NLS-1$
     private static final int TEMPLATE_LENGTH = PRE_KEYWORD.length() + SUF_KEYWORD.length() + MID_KEYWORD.length();
     private final IAIContextSplitter contextSplitter;
-    private final Provider<AIContextSettings> contextSettingsProvider;
+    private final IAIContextSettings contextSettings;
     private final IStringNormalizer stringNormalizer;
 
     @Inject
-    public AIContextFactory(IAIContextSplitter contextSplitter, Provider<AIContextSettings> contextSettingsProvider,
+    public AIContextFactory(IAIContextSplitter contextSplitter, IAIContextSettings contextSettings,
         IStringNormalizer stringNormalizer)
     {
         Preconditions.checkNotNull(contextSplitter);
-        Preconditions.checkNotNull(contextSettingsProvider);
+        Preconditions.checkNotNull(contextSettings);
         Preconditions.checkNotNull(stringNormalizer);
         this.contextSplitter = contextSplitter;
-        this.contextSettingsProvider = contextSettingsProvider;
+        this.contextSettings = contextSettings;
         this.stringNormalizer = stringNormalizer;
     }
 
@@ -47,9 +46,8 @@ public class AIContextFactory
             offset = text.length();
         }
 
-        var settings = contextSettingsProvider.get();
-        var parts = contextSplitter.split(text, offset, settings.getMaxLength());
-        if (settings.isTempleted())
+        var parts = contextSplitter.split(text, offset, contextSettings.getMaxLength());
+        if (contextSettings.isTempleted())
         {
             return Optional.of(ctreateTemplatedContext(offset, text, parts));
         }

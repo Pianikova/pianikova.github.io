@@ -9,7 +9,7 @@ import com.google.common.base.Supplier;
 
 public interface IDispatcher
 {
-    <T> Optional<T> dispatch(Supplier<T> supplier);
+    <T> Optional<T> dispatch(Supplier<? extends T> supplier);
 
     Boolean dispatch(Runnable runnable);
 }

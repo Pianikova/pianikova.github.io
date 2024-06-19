@@ -18,7 +18,7 @@
   <name>Tests</name>
 
   <modules>
-    <module>org.e1c.edt.ai.itests</module>
+    <module>org.e1c.edt.ai.tests</module>
   </modules>
 
   <profiles>

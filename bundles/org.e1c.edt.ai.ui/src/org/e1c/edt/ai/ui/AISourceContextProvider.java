@@ -7,8 +7,8 @@ import java.time.Duration;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.CancellationToken;
 import org.e1c.edt.ai.IAIContextFactory;
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
@@ -43,7 +43,7 @@ public class AISourceContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(AISourceContext ctx, CancellationToken cancellationToken)
+    public Optional<AIContext> create(AISourceContext ctx, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(ctx);
         var startTime = clock.now();

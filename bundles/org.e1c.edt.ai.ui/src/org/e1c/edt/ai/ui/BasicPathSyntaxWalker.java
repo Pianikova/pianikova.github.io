@@ -8,7 +8,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
@@ -26,7 +26,7 @@ public class BasicPathSyntaxWalker<TContext>
 {
     @Override
     public void walk(INode targetNode, ISyntaxVisitor<TContext> visitor, SyntaxWalkerContext<TContext> ctx,
-        CancellationToken cancellationToken)
+        ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(targetNode);
         Preconditions.checkNotNull(visitor);

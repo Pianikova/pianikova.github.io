@@ -6,7 +6,8 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IUISettings;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 
@@ -29,7 +30,7 @@ public class AISourceViewerContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(SourceViewer sourceViewer, CancellationToken cancellationToken)
+    public Optional<AIContext> create(SourceViewer sourceViewer, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(sourceViewer);
         var textWidget = sourceViewer.getTextWidget();

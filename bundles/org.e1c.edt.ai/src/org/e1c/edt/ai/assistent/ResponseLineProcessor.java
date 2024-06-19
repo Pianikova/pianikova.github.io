@@ -7,6 +7,7 @@ import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.assistent.model.AIResponse;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class ResponseLineProcessor implements IResponseLineProcessor
@@ -23,6 +24,7 @@ public class ResponseLineProcessor implements IResponseLineProcessor
     @Override
     public boolean process(IObserver<String> observer, String line)
     {
+        Preconditions.checkNotNull(observer);
         if (line == null || line.length() < DATA_LINE_PREFIX.length() + 1 || !line.startsWith(DATA_LINE_PREFIX))
         {
             return true;
@@ -68,6 +70,7 @@ public class ResponseLineProcessor implements IResponseLineProcessor
             return false;
         }
 
-        return observer.onNext(text);
+        observer.onNext(text);
+        return true;
     }
 }

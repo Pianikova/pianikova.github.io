@@ -3,11 +3,11 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.e1c.edt.ai.CancellationToken;
+import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.xtext.nodemodel.INode;
 
 public interface ISyntaxWalker<TContext>
 {
     void walk(INode targetNode, ISyntaxVisitor<TContext> visitor, SyntaxWalkerContext<TContext> ctx,
-        CancellationToken cancellationToken);
+        ICancellationToken cancellationToken);
 }
