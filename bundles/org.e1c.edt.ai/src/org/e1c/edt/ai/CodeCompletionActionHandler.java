@@ -16,7 +16,7 @@ public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext
 
         if (session != null && offset >= 0)
         {
-            if (action == CodeCompletionAction.STOP)
+            if (action == CodeCompletionAction.FINISH)
             {
                 return session.finish();
             }
@@ -36,7 +36,10 @@ public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext
                 return session.accept(HintPart.LINES, offset);
             }
 
-            return session.acceptChar(offset, character);
+            if (action == CodeCompletionAction.ACCEPT_CHAR)
+            {
+                return session.acceptChar(offset, character);
+            }
         }
 
         var charType = Character.getType(character);
@@ -46,7 +49,7 @@ public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext
         }
 
         if (isContinuousCodeCompletion && character != '.'
-            && (character == '\r' || character == '\n' || charType != Character.CONTROL))
+            && (charType != Character.CONTROL || character == '\r' || character == '\n'))
         {
             return CodeCompletionAction.ASK_NEW;
         }

@@ -11,9 +11,10 @@ public enum CodeCompletionAction
     RESET,
     ASK_NEW,
     SUGGEST,
-    STOP,
+    FINISH,
     ROLLBACK_PART,
-    ACCEPT_PART,
     ACCEPT,
-    CHAR
+    ACCEPT_PART,
+    ACCEPT_CHAR,
+    TEST
 }

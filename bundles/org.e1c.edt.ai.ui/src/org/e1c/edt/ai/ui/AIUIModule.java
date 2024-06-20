@@ -61,6 +61,7 @@ public class AIUIModule
         bind(ICodeCompletionViewModel.class).to(CodeCompletionViewModel.class).in(Singleton.class);
         bind(IHintPainter.class).to(HintPainter.class);
         bind(IHotKeys.class).to(HotKeys.class).in(Singleton.class);
+        bind(IUserActions.class).to(UserActions.class).in(Singleton.class);
         bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });
         bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
         // @formatter:on

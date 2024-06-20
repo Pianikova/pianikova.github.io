@@ -5,6 +5,7 @@ package org.e1c.edt.ai.tests;
 
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -99,7 +100,7 @@ public class CodeCompletionSessionTest
     }
 
     @Test
-    public void shouldReturnResetWhenFinish()
+    public void shouldReturnRESETWhenFinish()
     {
         // Given
         var session = createInstance(false);
@@ -128,8 +129,27 @@ public class CodeCompletionSessionTest
         verify(context).replace(37, 0, "Abc");
     }
 
+    @SuppressWarnings("nls")
     @Test
-    public void shouldNotAcceptAndReturnSkipWhenHintIsEmptyAndHistoryIsEmpty()
+    public void shouldSetIsAcceptingDuringAccept()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        doAnswer(i -> {
+            Assert.assertTrue(session.isAccepting());
+            return null;
+        }).when(context).replace(37, 0, "Abc");
+
+        // When
+        session.accept(HintPart.TOKEN, 37);
+
+        // Then
+    }
+
+    @Test
+    public void shouldNotAcceptAndReturnSKIPWhenHintIsEmptyAndHistoryIsEmpty()
     {
         // Given
         var session = createInstance(false);
@@ -145,7 +165,7 @@ public class CodeCompletionSessionTest
     }
 
     @Test
-    public void shouldNotAcceptAndReturnHandleWhenHintIsEmptyAndHistoryIsNotEmpty()
+    public void shouldNotAcceptAndReturnHANDLEWhenHintIsEmptyAndHistoryIsNotEmpty()
     {
         // Given
         var session = createInstance(false);
@@ -162,7 +182,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnResetForAcceptWhenSingleWordModeAndHintIsBlank()
+    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsBlank()
     {
         // Given
         var session = createInstance(true);
@@ -180,7 +200,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnResetForAcceptWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
@@ -199,7 +219,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnResetForAcceptWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
@@ -218,7 +238,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnUpdateForAcceptWhenNotSingleWordModeHintIsBlankAndHintStartsWithNewLine()
+    public void shouldReturnUPDATEForAcceptWhenNotSingleWordModeHintIsBlankAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(false);
@@ -254,7 +274,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnSkipWhenAcceptCharAndDoesNotPullChar()
+    public void shouldReturnASK_NEWWhenAcceptCharAndDoesNotPullChar()
     {
         // Given
         var session = createInstance(false);
@@ -265,13 +285,13 @@ public class CodeCompletionSessionTest
         var actualAction = session.acceptChar(37, 'A');
 
         // Then
-        Assert.assertEquals(CodeCompletionAction.SKIP, actualAction);
+        Assert.assertEquals(CodeCompletionAction.ASK_NEW, actualAction);
         verify(context, times(0)).replace(37, 0, "A");
     }
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnResetForAcceptCharWhenSingleWordModeAndHintIsBlank()
+    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsBlank()
     {
         // Given
         var session = createInstance(true);
@@ -289,7 +309,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnResetForAcceptCharWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
@@ -308,7 +328,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnResetForAcceptCharWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
@@ -327,7 +347,7 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnUpdateForAcceptCharWhenNotSingleWordModeHintIsBlankAndHintStartsWithNewLine()
+    public void shouldReturnUPDATEForAcceptCharWhenNotSingleWordModeHintIsBlankAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(false);
@@ -358,6 +378,24 @@ public class CodeCompletionSessionTest
         // Then
         Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
         verify(context).replace(34, 3, "");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldSetIsAcceptingDuringRollback()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.rollback()).thenReturn("Abc");
+        doAnswer(i -> {
+            Assert.assertTrue(session.isAccepting());
+            return null;
+        }).when(context).replace(34, 3, "");
+
+        // When
+        session.rollback(37);
+
+        // Then
     }
 
     @SuppressWarnings("nls")

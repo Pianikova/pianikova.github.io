@@ -105,7 +105,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
         var charText = hint.pullChar(ch);
         if (charText.isEmpty())
         {
-            return CodeCompletionAction.SKIP;
+            return CodeCompletionAction.ASK_NEW;
         }
 
         apply(charText, offset);

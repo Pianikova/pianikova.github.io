@@ -11,7 +11,6 @@ import java.util.concurrent.CancellationException;
 
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
-import org.e1c.edt.ai.CodeCompletionAction;
 import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
@@ -52,10 +51,10 @@ public class CodeCompletionViewModel
     private final Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider;
     private final ICodeCompletionActionHandler<CodeCompletionContext> handler;
     private final IHintHistory history;
-    private final IHotKeys hotKeys;
     private final Timer showTimer = new Timer(true);
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
+    private IUserActions userActions;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -64,7 +63,7 @@ public class CodeCompletionViewModel
         IDispatcher dispatcher, IHintPainter hintPainter, IInputDelayStatistics inputRateStatistics,
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
-        ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IHotKeys hotKeys)
+        ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -78,7 +77,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(sessionProvider);
         Preconditions.checkNotNull(handler);
         Preconditions.checkNotNull(history);
-        Preconditions.checkNotNull(hotKeys);
+        Preconditions.checkNotNull(userActions);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -90,7 +89,7 @@ public class CodeCompletionViewModel
         this.sessionProvider = sessionProvider;
         this.handler = handler;
         this.history = history;
-        this.hotKeys = hotKeys;
+        this.userActions = userActions;
     }
 
     @Override
@@ -332,10 +331,9 @@ public class CodeCompletionViewModel
             session = lastSession;
         }
 
-        var action = getUserAction(event);
-        action = handler.handle(session, getUserAction(event), event.character, hintPainter.getOffset(),
-            uiSettings.isContinuousCodeCompletion());
-
+        var action = userActions.getAction(event);
+        var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
+        action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
         switch (action)
         {
         case SUGGEST:
@@ -370,36 +368,6 @@ public class CodeCompletionViewModel
         default:
             break;
         }
-    }
-
-    private CodeCompletionAction getUserAction(VerifyEvent event)
-    {
-        if (hotKeys.isTriggered(IHotKeys.SUGGEST, event))
-        {
-            return CodeCompletionAction.SUGGEST;
-        }
-
-        if (hotKeys.isTriggered(IHotKeys.STOP, event))
-        {
-            return CodeCompletionAction.STOP;
-        }
-
-        if (hotKeys.isTriggered(IHotKeys.ROLLBACK_PART, event))
-        {
-            return CodeCompletionAction.ROLLBACK_PART;
-        }
-
-        if (hotKeys.isTriggered(IHotKeys.ACCEPT_PART, event))
-        {
-            return CodeCompletionAction.ACCEPT_PART;
-        }
-
-        if (hotKeys.isTriggered(IHotKeys.ACCEPT, event))
-        {
-            return CodeCompletionAction.ACCEPT;
-        }
-
-        return CodeCompletionAction.CHAR;
     }
 
     @Override
