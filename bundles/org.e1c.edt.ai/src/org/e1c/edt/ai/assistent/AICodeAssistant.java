@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
+import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
@@ -89,7 +90,10 @@ public class AICodeAssistant
         URI uri;
         try
         {
-            uri = settings.getApiURL().toURI();
+            uri = aiContext.getComplitionType() == CodeCompletionType.Comments
+                ? new URI(String.format("http://gpu22.egom.ailab:8094/generate_stream?client_id=%s&client_uid=%s", //$NON-NLS-1$
+                    settings.getClientUniqueId(), settings.getClientToken()))
+                : settings.getApiURL().toURI();
         }
         catch (URISyntaxException e)
         {
@@ -97,25 +101,47 @@ public class AICodeAssistant
             return;
         }
 
-        var request = HttpRequest.newBuilder()
-            .uri(uri)
-            .timeout(Duration.ofMinutes(1))
-            .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
-            .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
-            .header("client_id", settings.getClientToken()) //$NON-NLS-1$
-            .header("client_uid", settings.getClientUniqueId()) //$NON-NLS-1$
-            .POST(BodyPublishers.ofString(requestBody))
-            .build();
+        HttpRequest request;
+        HttpClient client;
 
-        log.trace("AI request " + cancellationToken, //$NON-NLS-1$
-            request.toString() + System.lineSeparator() + requestBody);
+        if (aiContext.getComplitionType() == CodeCompletionType.Comments)
+        {
+            request = HttpRequest.newBuilder()
+                .uri(uri)
+                .timeout(Duration.ofMinutes(1))
+                .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+                .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+                .POST(BodyPublishers.ofString(requestBody))
+                .build();
 
-        var client = HttpClient.newBuilder()
-            .version(Version.HTTP_2)
-            .followRedirects(Redirect.NORMAL)
-            .authenticator(Authenticator.getDefault())
-            .proxy(ProxySelector.getDefault())
-            .build();
+            log.trace("AI request " + cancellationToken, //$NON-NLS-1$
+                request.toString() + System.lineSeparator() + requestBody);
+
+            client = HttpClient.newBuilder().version(Version.HTTP_2).authenticator(Authenticator.getDefault()).build();
+
+        }
+        else
+        {
+            request = HttpRequest.newBuilder()
+                .uri(uri)
+                .timeout(Duration.ofMinutes(1))
+                .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+                .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
+                .header("client_id", settings.getClientToken()) //$NON-NLS-1$
+                .header("client_uid", settings.getClientUniqueId()) //$NON-NLS-1$
+                .POST(BodyPublishers.ofString(requestBody))
+                .build();
+
+            log.trace("AI request " + cancellationToken, //$NON-NLS-1$
+                request.toString() + System.lineSeparator() + requestBody);
+
+            client = HttpClient.newBuilder()
+                .version(Version.HTTP_2)
+                .followRedirects(Redirect.NORMAL)
+                .authenticator(Authenticator.getDefault())
+                .proxy(ProxySelector.getDefault())
+                .build();
+        }
 
         var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
         asyncRequest

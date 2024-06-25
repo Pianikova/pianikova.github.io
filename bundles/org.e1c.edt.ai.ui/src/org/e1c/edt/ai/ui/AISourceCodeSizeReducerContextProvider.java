@@ -17,7 +17,7 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class AISourceContextProvider
+public class AISourceCodeSizeReducerContextProvider
     implements IAIContextProvider<AISourceContext>
 {
     private final ILog log;
@@ -27,7 +27,7 @@ public class AISourceContextProvider
     private IClock clock;
 
     @Inject
-    public AISourceContextProvider(ILog log, IAIContextFactory contextFactory,
+    public AISourceCodeSizeReducerContextProvider(ILog log, IAIContextFactory contextFactory,
         ISyntaxWalker<StringSerializerContext> basicPathSyntaxWalker,
         ISyntaxVisitor<StringSerializerContext> serializerVisitor, IClock clock)
     {

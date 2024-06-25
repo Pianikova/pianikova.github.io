@@ -12,6 +12,7 @@ import java.util.Collection;
 
 import org.e1c.edt.ai.AIContextFactory;
 import org.e1c.edt.ai.AIContextParts;
+import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.IAIContextSettings;
 import org.e1c.edt.ai.IAIContextSplitter;
 import org.e1c.edt.ai.IStringNormalizer;
@@ -43,15 +44,18 @@ public class AIContextFactoryTest
     public int offset;
 
     @Parameter(4)
-    public int expectedOffset;
+    public CodeCompletionType type;
 
     @Parameter(5)
-    public boolean templeted;
+    public int expectedOffset;
 
     @Parameter(6)
-    public boolean success;
+    public boolean templeted;
 
     @Parameter(7)
+    public boolean success;
+
+    @Parameter(8)
     public String expectedContext;
 
     @Test
@@ -73,7 +77,7 @@ public class AIContextFactoryTest
         var factory = createInstance();
 
         // When
-        var actualContext = factory.create(text, offset);
+        var actualContext = factory.create(text, offset, type);
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());
@@ -98,14 +102,14 @@ public class AIContextFactoryTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "", "", "", 0, 0, false, true, "" },
-                { "Abc", "Xyz", "Qwe", 33, 9, false, true, "AbcQwe" },
+                { "", "", "", 0, CodeCompletionType.Lines, 0, false, true, "" },
+                { "Abc", "Xyz", "Qwe", 33, CodeCompletionType.Lines, 9, false, true, "AbcQwe" },
 
-                { "Abc", "Xyz", "Qwe", 1, 1, false, true, "AbcQwe" },
-                { "Ab" + System.lineSeparator() + "c", "Xyz", "Qwe" + System.lineSeparator(), 1, 1, false, true, "Ab\ncQwe\n" },
+                { "Abc", "Xyz", "Qwe", 1, CodeCompletionType.Lines, 1, false, true, "AbcQwe" },
+                { "Ab" + System.lineSeparator() + "c", "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.Lines, 1, false, true, "Ab\ncQwe\n" },
 
-                { "Abc", "Xyz", "Qwe", 1, 1, true, true, "<PRE> Abc <SUF>Xyz <MID>Qwe" },
-                { "Abc" + System.lineSeparator(), System.lineSeparator() + "Xyz", "Qwe" + System.lineSeparator(), 1, 1, true, true, "<PRE> Abc\n <SUF>\nXyz <MID>Qwe\n" },
+                { "Abc", "Xyz", "Qwe", 1, CodeCompletionType.Lines, 1, true, true, "<PRE> Abc <SUF>Xyz <MID>Qwe" },
+                { "Abc" + System.lineSeparator(), System.lineSeparator() + "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.Lines, 1, true, true, "<PRE> Abc\n <SUF>\nXyz <MID>Qwe\n" },
             });
      // @formatter:on
     }

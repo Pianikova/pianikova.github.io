@@ -10,9 +10,9 @@ public class AIContext
     private final int cursorOffset;
     private final String text;
     private final String context;
-    private final boolean isSingleWord;
+    private final CodeCompletionType complitionType;
 
-    public AIContext(int cursorOffset, String text, String context, boolean isSingleWord)
+    public AIContext(int cursorOffset, String text, String context, CodeCompletionType complitionType)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkNotNull(context);
@@ -20,7 +20,8 @@ public class AIContext
         this.cursorOffset = cursorOffset;
         this.text = text;
         this.context = context;
-        this.isSingleWord = isSingleWord;
+        this.complitionType = complitionType;
+
     }
 
     public int getCursorOffset()
@@ -48,7 +49,7 @@ public class AIContext
         str.append(System.lineSeparator());
 
         str.append("isSingleWord:"); //$NON-NLS-1$
-        str.append(isSingleWord);
+        str.append(complitionType == CodeCompletionType.SingleWord);
         str.append(System.lineSeparator());
 
         var textWithCursor = text.substring(0, cursorOffset) + "█" + text.substring(cursorOffset); //$NON-NLS-1$
@@ -74,8 +75,8 @@ public class AIContext
         return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
     }
 
-    public boolean isSingleWord()
+    public CodeCompletionType getComplitionType()
     {
-        return isSingleWord;
+        return complitionType;
     }
 }

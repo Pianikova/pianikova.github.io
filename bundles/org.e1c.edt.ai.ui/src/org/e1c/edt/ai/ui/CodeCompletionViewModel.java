@@ -11,6 +11,7 @@ import java.util.concurrent.CancellationException;
 
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
+import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
@@ -177,7 +178,8 @@ public class CodeCompletionViewModel
 
             var aiContext = aiCtx.get();
             var codeCompletionCtx = new CodeCompletionContext(aiContext, textWidget, cancellationTokenSource);
-            var session = sessionProvider.get().initiaize(codeCompletionCtx, history, aiContext.isSingleWord());
+            var session = sessionProvider.get()
+                .initiaize(codeCompletionCtx, history, aiContext.getComplitionType() == CodeCompletionType.SingleWord);
             synchronized (lockObject)
             {
                 if (lastSession != null)
@@ -199,7 +201,8 @@ public class CodeCompletionViewModel
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
                 hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
-                    delay.isNegative() || delay == Duration.ZERO, aiContext.isSingleWord());
+                    delay.isNegative() || delay == Duration.ZERO,
+                    aiContext.getComplitionType() == CodeCompletionType.SingleWord);
             });
 
             var codeCompletionSource = codeAssistant.generate(aiContext, cancellationTokenSource);
@@ -238,7 +241,7 @@ public class CodeCompletionViewModel
                         hint.clear();
                     }
 
-                    if (!aiContext.isSingleWord() && hint.isEmpty())
+                    if (aiContext.getComplitionType() != CodeCompletionType.SingleWord && hint.isEmpty())
                     {
                         hint.append("\n"); //$NON-NLS-1$
                     }

@@ -3,6 +3,16 @@
  */
 package org.e1c.edt.ai.ui;
 
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import javax.inject.Qualifier;
+
 import org.e1c.edt.ai.AIContextSettings;
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.CodeCompletionActionHandler;
@@ -15,7 +25,6 @@ import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import org.eclipse.jface.preference.IPreferenceStore;
-import org.eclipse.jface.text.source.SourceViewer;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
@@ -53,8 +62,9 @@ public class AIUIModule
         bind(IChatDialog.class).to(Chat.class);
         bind(IAIContextSettings.class).to(AIContextSettings.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<AITarget>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
-        bind(new TypeLiteral<IAIContextProvider<SourceViewer>>() { /**/ }).to(AISourceViewerContextProvider.class).in(Singleton.class);
-        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).to(AISourceContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).to(AISourceViewerContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceMethodComments.class).to(AISourceMethodCommentsContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceCodeSizeReducer.class).to(AISourceCodeSizeReducerContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<ISyntaxWalker<StringSerializerContext>>() { /**/ }).to(new TypeLiteral<BasicPathSyntaxWalker<StringSerializerContext>>() { /**/ }).in(Singleton.class);
         bind(new TypeLiteral<ISyntaxVisitor<StringSerializerContext>>() { /**/ }).to(StringSerializerVisitor.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
@@ -65,5 +75,21 @@ public class AIUIModule
         bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });
         bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
         // @formatter:on
+    }
+
+    @Qualifier
+    @Target({ FIELD, PARAMETER, METHOD })
+    @Retention(RUNTIME)
+    public @interface SourceCodeSizeReducer
+    {
+        //
+    }
+
+    @Qualifier
+    @Target({ FIELD, PARAMETER, METHOD })
+    @Retention(RUNTIME)
+    public @interface SourceMethodComments
+    {
+        //
     }
 }

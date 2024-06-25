@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
+import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.ICodeCompletionContext;
 import org.eclipse.swt.custom.StyledText;
 
@@ -54,6 +55,6 @@ public class CodeCompletionContext
 
     public boolean isSingleWordMode()
     {
-        return aiContext.isSingleWord();
+        return aiContext.getComplitionType() == CodeCompletionType.SingleWord;
     }
 }

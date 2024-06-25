@@ -17,4 +17,4 @@ Require-Bundle: org.e1c.edt.ai;bundle-version="[1.0.0,2.0.0)",
  org.objenesis;bundle-version="2.6.0",
  net.bytebuddy.byte-buddy;bundle-version="1.9.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
-Automatic-Module-Name: org.e1c.edt.ai.itests
+Automatic-Module-Name: org.e1c.edt.ai.tests

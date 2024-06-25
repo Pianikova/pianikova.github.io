@@ -12,3 +12,6 @@ target/
 #Mac-specific directory that no other operating system needs.
 .DS_Store
 .idea
+#Misc
+bundles/org.e1c.edt.ai.ui/.settings
+bundles/org.e1c.edt.ai/.settings

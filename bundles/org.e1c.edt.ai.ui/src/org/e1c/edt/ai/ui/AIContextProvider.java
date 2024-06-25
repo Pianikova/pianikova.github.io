@@ -6,10 +6,11 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.IAIContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IUISettings;
-import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -20,22 +21,22 @@ public class AIContextProvider
     private final IUI ui;
     private final IUISettings uiSettings;
     private final IAIContextFactory contextFactory;
-    private final IAIContextProvider<SourceViewer> sourceBasedContextProvider;
+    private final IAIContextProvider<AISourceContext> sourceContextProvider;
 
     @Inject
     public AIContextProvider(IUI ui,
         IUISettings uiSettings,
         IAIContextFactory contextFactory,
-        IAIContextProvider<SourceViewer> sourceBasedContextProvider)
+        IAIContextProvider<AISourceContext> sourceContextProvider)
     {
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(contextFactory);
-        Preconditions.checkNotNull(sourceBasedContextProvider);
+        Preconditions.checkNotNull(sourceContextProvider);
         this.ui = ui;
         this.uiSettings = uiSettings;
         this.contextFactory = contextFactory;
-        this.sourceBasedContextProvider = sourceBasedContextProvider;
+        this.sourceContextProvider = sourceContextProvider;
     }
 
     @Override
@@ -61,15 +62,24 @@ public class AIContextProvider
                     }
                 }
 
-                if (text.length() <= max)
+                if (sourceViewer instanceof XtextSourceViewer)
                 {
-                    return contextFactory.create(text, offset);
+                    var xtextSourceViewer = (XtextSourceViewer)sourceViewer;
+                    var parseResult = xtextSourceViewer.getXtextDocument().readOnly(state -> state.getParseResult());
+                    if (parseResult != null)
+                    {
+                        var sourceCtx = new AISourceContext(xtextSourceViewer, parseResult, offset,
+                            uiSettings.getMaxAssistantTextSize());
+
+                        var curText = text;
+                        var curOffset = offset;
+
+                        return sourceContextProvider.create(sourceCtx, cancellationToken)
+                            .or(() -> contextFactory.create(curText, curOffset, CodeCompletionType.Lines));
+                    }
                 }
 
-                var curText = text;
-                var curOffset = offset;
-                return sourceBasedContextProvider.create(sourceViewer, cancellationToken)
-                    .or(() -> contextFactory.create(curText, curOffset));
+                return contextFactory.create(text, offset, CodeCompletionType.Lines);
             });
     }
 }
