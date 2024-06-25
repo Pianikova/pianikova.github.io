@@ -274,6 +274,21 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
+    public void shouldReturnRESETWhenAcceptCharAndDoesNotPullChar()
+    {
+        // Given
+        var session = createInstance(false);
+
+        // When
+        var actualAction = session.acceptChar(37, '\b');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
+        verify(context, times(0)).replace(37, 0, "\b");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
     public void shouldReturnASK_NEWWhenAcceptCharAndDoesNotPullChar()
     {
         // Given

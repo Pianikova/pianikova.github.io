@@ -100,10 +100,6 @@ public class CodeCompletionActionHandlerTest
                 { "ACCEPT_PART", DefaultSesssion, CodeCompletionAction.ACCEPT_PART, ' ', DEFAULT_OFFSET, false, CodeCompletionAction.TEST, verifyActions(() -> { verify(DefaultSesssion).accept(HintPart.TOKEN, DEFAULT_OFFSET); })},
                 { "ACCEPT_CHAR", DefaultSesssion, CodeCompletionAction.ACCEPT_CHAR, 'a', DEFAULT_OFFSET, false, CodeCompletionAction.TEST, verifyActions(() -> { verify(DefaultSesssion).acceptChar(DEFAULT_OFFSET, 'a'); })},
 
-                { "RESET when session is null", null, CodeCompletionAction.ACCEPT, 'a', DEFAULT_OFFSET, false, CodeCompletionAction.RESET, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
-                { "RESET when ofsett is less then -1", DefaultSesssion, CodeCompletionAction.ACCEPT, 'a', -1, false, CodeCompletionAction.RESET, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
-                { "RESET when session is null and not continuous and some non CONTROL char", null, CodeCompletionAction.ACCEPT, 'a', DEFAULT_OFFSET, false, CodeCompletionAction.RESET, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
-
                 { "ASK_NEW when session is null and continuous and some non CONTROL char", null, CodeCompletionAction.ACCEPT, 'a', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
                 { "ASK_NEW when session is null and continuous and \n", null, CodeCompletionAction.ACCEPT, '\n', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
                 { "ASK_NEW when session is null and continuous and \r", null, CodeCompletionAction.ACCEPT, '\r', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},

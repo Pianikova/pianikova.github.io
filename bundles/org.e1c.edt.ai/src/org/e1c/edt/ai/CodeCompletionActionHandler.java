@@ -39,17 +39,11 @@ public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext
             if (action == CodeCompletionAction.ACCEPT_CHAR)
             {
                 return session.acceptChar(offset, character);
-            }
-        }
-
-        var charType = Character.getType(character);
-        if (charType != Character.CONTROL && !isContinuousCodeCompletion)
-        {
-            return CodeCompletionAction.RESET;
+            }            
         }
 
         if (isContinuousCodeCompletion && character != '.'
-            && (charType != Character.CONTROL || character == '\r' || character == '\n'))
+            && (Character.getType(character) != Character.CONTROL || character == '\r' || character == '\n'))
         {
             return CodeCompletionAction.ASK_NEW;
         }

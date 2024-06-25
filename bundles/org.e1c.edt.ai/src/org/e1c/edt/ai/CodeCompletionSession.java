@@ -102,6 +102,16 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
     @Override
     public synchronized CodeCompletionAction acceptChar(int offset, char ch)
     {
+        if (ch == 0)
+        {
+            return CodeCompletionAction.SKIP;
+        }
+
+        if (ch == '\b')
+        {
+            return CodeCompletionAction.RESET;
+        }
+
         var charText = hint.pullChar(ch);
         if (charText.isEmpty())
         {
