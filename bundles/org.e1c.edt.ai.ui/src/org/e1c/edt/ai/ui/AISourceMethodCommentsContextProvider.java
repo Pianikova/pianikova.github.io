@@ -40,7 +40,15 @@ public class AISourceMethodCommentsContextProvider
         var offset = ctx.getOffset();
         var rootNoode = parseResult.getRootNode();
         var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNoode, offset);
+        if (cursorNode == null)
+        {
+            return Optional.empty();
+        }
         var sibling = cursorNode.getNextSibling();
+        if (sibling == null)
+        {
+            return Optional.empty();
+        }
         var siblingSemantic = NodeModelUtils.findActualSemanticObjectFor(sibling);
         if (!(siblingSemantic instanceof Method))
         {
