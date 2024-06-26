@@ -11,6 +11,7 @@ public interface IHotKeys
     public static String SUGGEST = PREFIX + "suggest.ai"; //$NON-NLS-1$
     public static String ACCEPT = PREFIX + "accept.ai"; //$NON-NLS-1$
     public static String ACCEPT_PART = PREFIX + "acceptpart.ai"; //$NON-NLS-1$
+    public static String ACCEPT_LINE = PREFIX + "acceptline.ai"; //$NON-NLS-1$
     public static String ROLLBACK_PART = PREFIX + "rollbackpart.ai"; //$NON-NLS-1$
     public static String FINISH = PREFIX + "stop.ai"; //$NON-NLS-1$
 

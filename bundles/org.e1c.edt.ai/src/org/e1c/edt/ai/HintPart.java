@@ -7,5 +7,6 @@ public enum HintPart
 {
     TEXT,
     LINES,
+    LINE,
     TOKEN
 }

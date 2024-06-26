@@ -214,6 +214,53 @@ public class HintTest
 
     @SuppressWarnings("nls")
     @Test
+    public void shouldGetLine()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append("Abc");
+        when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
+
+        // When
+        var actualText = hint.getText(HintPart.LINE);
+
+        // Then
+        Assert.assertEquals("Ab", actualText);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldGetLineWhenEmpty()
+    {
+        // Given
+        var hint = createInstance();
+
+        // When
+        var actualText = hint.getText(HintPart.LINE);
+
+        // Then
+        Assert.assertEquals("", actualText);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldPullLine()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append("Abc");
+        when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
+
+        // When
+        var actualText = hint.pull(HintPart.LINE);
+
+        // Then
+        Assert.assertEquals("Ab", actualText);
+        verify(history).push("Ab");
+    }
+
+    @SuppressWarnings("nls")
+    @Test
     public void shouldGetToken()
     {
         // Given

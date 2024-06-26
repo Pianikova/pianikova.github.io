@@ -15,6 +15,7 @@ public enum CodeCompletionAction
     ROLLBACK_PART,
     ACCEPT,
     ACCEPT_PART,
+    ACCEPT_LINE,
     ACCEPT_CHAR,
     TEST
 }

@@ -66,6 +66,7 @@ public class CodeCompletionActionHandlerTest
         when(DefaultSesssion.finish()).thenReturn(CodeCompletionAction.TEST);
         when(DefaultSesssion.rollback(DEFAULT_OFFSET)).thenReturn(CodeCompletionAction.TEST);
         when(DefaultSesssion.accept(HintPart.TOKEN, DEFAULT_OFFSET)).thenReturn(CodeCompletionAction.TEST);
+        when(DefaultSesssion.accept(HintPart.LINE, DEFAULT_OFFSET)).thenReturn(CodeCompletionAction.TEST);
         when(DefaultSesssion.accept(HintPart.LINES, DEFAULT_OFFSET)).thenReturn(CodeCompletionAction.TEST);
         when(DefaultSesssion.acceptChar(DEFAULT_OFFSET, 'a')).thenReturn(CodeCompletionAction.TEST);
         var<ICodeCompletionContext> handler = createInstance();
@@ -98,6 +99,7 @@ public class CodeCompletionActionHandlerTest
                 { "ROLLBACK_PART", DefaultSesssion, CodeCompletionAction.ROLLBACK_PART, ' ', DEFAULT_OFFSET, false, CodeCompletionAction.TEST, verifyActions(() -> { verify(DefaultSesssion).rollback(DEFAULT_OFFSET); })},
                 { "ACCEPT", DefaultSesssion, CodeCompletionAction.ACCEPT, ' ', DEFAULT_OFFSET, false, CodeCompletionAction.TEST, verifyActions(() -> { verify(DefaultSesssion).accept(HintPart.LINES, DEFAULT_OFFSET); })},
                 { "ACCEPT_PART", DefaultSesssion, CodeCompletionAction.ACCEPT_PART, ' ', DEFAULT_OFFSET, false, CodeCompletionAction.TEST, verifyActions(() -> { verify(DefaultSesssion).accept(HintPart.TOKEN, DEFAULT_OFFSET); })},
+                { "ACCEPT_LINE", DefaultSesssion, CodeCompletionAction.ACCEPT_LINE, ' ', DEFAULT_OFFSET, false, CodeCompletionAction.TEST, verifyActions(() -> { verify(DefaultSesssion).accept(HintPart.LINE, DEFAULT_OFFSET); })},
                 { "ACCEPT_CHAR", DefaultSesssion, CodeCompletionAction.ACCEPT_CHAR, 'a', DEFAULT_OFFSET, false, CodeCompletionAction.TEST, verifyActions(() -> { verify(DefaultSesssion).acceptChar(DEFAULT_OFFSET, 'a'); })},
 
                 { "ASK_NEW when session is null and continuous and some non CONTROL char", null, CodeCompletionAction.ACCEPT, 'a', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},

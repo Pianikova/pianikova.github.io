@@ -80,16 +80,20 @@ public class Hint
             var token = tokenizer.getNext(1, getText(HintPart.TEXT), TOKEN_DELIMITER);
             return token.getValue();
 
+        case LINE:
+            var line = tokenizer.getNext(2, getText(HintPart.TEXT), LINE_DELIMITER);
+            return line.getValue();
+
         case LINES:
             var lines = new StringBuilder();
             var str = getText(HintPart.TEXT);
             var count = maxLines;
             while (count-- > 0 && !str.isEmpty())
             {
-                var line = tokenizer.getNext(1, str, LINE_DELIMITER);
-                var value = line.getValue();
+                var nextLine = tokenizer.getNext(1, str, LINE_DELIMITER);
+                var value = nextLine.getValue();
                 lines.append(value);
-                str = line.getText();
+                str = nextLine.getText();
             }
 
             return lines.toString();

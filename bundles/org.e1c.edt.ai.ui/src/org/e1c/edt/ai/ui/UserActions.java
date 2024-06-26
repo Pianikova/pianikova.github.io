@@ -18,6 +18,7 @@ public class UserActions implements IUserActions
         IHotKeys.SUGGEST, CodeCompletionAction.SUGGEST,
         IHotKeys.FINISH, CodeCompletionAction.FINISH,
         IHotKeys.ROLLBACK_PART, CodeCompletionAction.ROLLBACK_PART,
+        IHotKeys.ACCEPT_LINE, CodeCompletionAction.ACCEPT_LINE,
         IHotKeys.ACCEPT_PART, CodeCompletionAction.ACCEPT_PART,
         IHotKeys.ACCEPT, CodeCompletionAction.ACCEPT);
  // @formatter:on

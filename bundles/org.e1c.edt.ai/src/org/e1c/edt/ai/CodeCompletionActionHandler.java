@@ -31,6 +31,11 @@ public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext
                 return session.accept(HintPart.TOKEN, offset);
             }
 
+            if (action == CodeCompletionAction.ACCEPT_LINE)
+            {
+                return session.accept(HintPart.LINE, offset);
+            }
+
             if (action == CodeCompletionAction.ACCEPT)
             {
                 return session.accept(HintPart.LINES, offset);
@@ -39,7 +44,7 @@ public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext
             if (action == CodeCompletionAction.ACCEPT_CHAR)
             {
                 return session.acceptChar(offset, character);
-            }            
+            }
         }
 
         if (isContinuousCodeCompletion && character != '.'
