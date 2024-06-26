@@ -60,6 +60,8 @@ public class AIContextProvider
                         text = textWidget.getSelectionText();
                         offset = 0;
                     }
+
+                    return contextFactory.create(text, offset, CodeCompletionType.Lines);
                 }
 
                 if (sourceViewer instanceof XtextSourceViewer)
