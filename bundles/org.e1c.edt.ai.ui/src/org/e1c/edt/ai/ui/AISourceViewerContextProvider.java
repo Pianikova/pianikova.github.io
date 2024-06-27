@@ -41,9 +41,6 @@ public class AISourceViewerContextProvider
         Preconditions.checkNotNull(ctx);
         Preconditions.checkNotNull(cancellationToken);
         return commentsContextProvider.create(ctx, cancellationToken).or(() -> {
-            ctx.SkipMinorMethodStatements = true;
-            return sourceContextProvider.create(ctx, cancellationToken);
-        }).or(() -> {
             var text = ctx.getViewer().getTextWidget().getText();
             if (text.length() <= ctx.getMaxLength())
             {
@@ -51,12 +48,6 @@ public class AISourceViewerContextProvider
             }
 
             return Optional.empty();
-        }).or(() -> {
-            ctx.SkipMethodTail = true;
-            return sourceContextProvider.create(ctx, cancellationToken);
-        }).or(() -> {
-            ctx.SkipOutOfStackStatements = true;
-            return sourceContextProvider.create(ctx, cancellationToken);
         }).or(() -> {
             ctx.SkipMinorMethods = true;
             ctx.Forcable = true;
