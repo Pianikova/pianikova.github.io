@@ -90,7 +90,7 @@ public class AICodeAssistant
         URI uri;
         try
         {
-            uri = aiContext.getComplitionType() == CodeCompletionType.Comments
+            uri = aiContext.getComplitionType() == CodeCompletionType.CodeComments
                 ? new URI(String.format("http://gpu22.egom.ailab:8094/generate_stream?client_id=%s&client_uid=%s", //$NON-NLS-1$
                     settings.getClientUniqueId(), settings.getClientToken()))
                 : settings.getApiURL().toURI();
@@ -104,7 +104,7 @@ public class AICodeAssistant
         HttpRequest request;
         HttpClient client;
 
-        if (aiContext.getComplitionType() == CodeCompletionType.Comments)
+        if (aiContext.getComplitionType() == CodeCompletionType.CodeComments)
         {
             request = HttpRequest.newBuilder()
                 .uri(uri)

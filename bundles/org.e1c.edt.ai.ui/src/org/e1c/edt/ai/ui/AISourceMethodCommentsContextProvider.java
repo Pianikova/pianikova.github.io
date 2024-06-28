@@ -7,7 +7,6 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.IAIContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
@@ -34,7 +33,7 @@ public class AISourceMethodCommentsContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(AISourceContext ctx, ICancellationToken cancellationToken)
+    public Optional<AIContext> create(AITarget target, AISourceContext ctx, ICancellationToken cancellationToken)
     {
         var parseResult = ctx.getParseResult();
         var offset = ctx.getOffset();
@@ -85,6 +84,6 @@ public class AISourceMethodCommentsContextProvider
             }
         }
 
-        return contextFactory.create(method.toString(), offset, CodeCompletionType.Comments);
+        return contextFactory.create(method.toString(), offset, target.getComplitionType());
     }
 }

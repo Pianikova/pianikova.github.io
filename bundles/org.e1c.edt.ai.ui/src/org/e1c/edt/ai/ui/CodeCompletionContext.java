@@ -55,6 +55,6 @@ public class CodeCompletionContext
 
     public boolean isSingleWordMode()
     {
-        return aiContext.getComplitionType() == CodeCompletionType.SingleWord;
+        return aiContext.getComplitionType() == CodeCompletionType.CodeSingleWord;
     }
 }

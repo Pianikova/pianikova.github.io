@@ -44,7 +44,7 @@ public class CodeCompletionViewModel
     private final ILog log;
     private final IUISettings uiSettings;
     private final IAICodeAssistant codeAssistant;
-    private final IAIContextProvider<AITarget> aiContextProvider;
+    private final IAIContextProvider<Void> aiContextProvider;
     private final IDispatcher dispatcher;
     private final IHintPainter hintPainter;
     private final IInputDelayStatistics inputRateStatistics;
@@ -60,7 +60,7 @@ public class CodeCompletionViewModel
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
         IAICodeAssistant codeAssistant,
-        IAIContextProvider<AITarget> aiContextProvider,
+        IAIContextProvider<Void> aiContextProvider,
         IDispatcher dispatcher, IHintPainter hintPainter, IInputDelayStatistics inputRateStatistics,
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
@@ -170,7 +170,9 @@ public class CodeCompletionViewModel
         {
             var startTime = clock.now();
             var aiCtx = dispatcher.dispatch(
-                () -> aiContextProvider.create(new AITarget(textWidget, 0), cancellationTokenSource).orElse(null));
+                () -> aiContextProvider
+                    .create(new AITarget(textWidget, 0, CodeCompletionType.CodeLines), null, cancellationTokenSource)
+                    .orElse(null));
             if (aiCtx.isEmpty())
             {
                 return;
@@ -179,7 +181,7 @@ public class CodeCompletionViewModel
             var aiContext = aiCtx.get();
             var codeCompletionCtx = new CodeCompletionContext(aiContext, textWidget, cancellationTokenSource);
             var session = sessionProvider.get()
-                .initiaize(codeCompletionCtx, history, aiContext.getComplitionType() == CodeCompletionType.SingleWord);
+                .initiaize(codeCompletionCtx, history, aiContext.getComplitionType() == CodeCompletionType.CodeSingleWord);
             synchronized (lockObject)
             {
                 if (lastSession != null)
@@ -202,7 +204,7 @@ public class CodeCompletionViewModel
                 hintPainter.reset();
                 hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
                     delay.isNegative() || delay == Duration.ZERO,
-                    aiContext.getComplitionType() == CodeCompletionType.SingleWord);
+                    aiContext.getComplitionType() == CodeCompletionType.CodeSingleWord);
             });
 
             var codeCompletionSource = codeAssistant.generate(aiContext, cancellationTokenSource);
@@ -241,7 +243,7 @@ public class CodeCompletionViewModel
                         hint.clear();
                     }
 
-                    if (aiContext.getComplitionType() != CodeCompletionType.SingleWord && hint.isEmpty())
+                    if (aiContext.getComplitionType() != CodeCompletionType.CodeSingleWord && hint.isEmpty())
                     {
                         hint.append("\n"); //$NON-NLS-1$
                     }

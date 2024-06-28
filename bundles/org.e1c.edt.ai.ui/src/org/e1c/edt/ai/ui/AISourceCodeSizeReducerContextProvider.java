@@ -44,7 +44,7 @@ public class AISourceCodeSizeReducerContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(AISourceContext ctx, ICancellationToken cancellationToken)
+    public Optional<AIContext> create(AITarget target, AISourceContext ctx, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(ctx);
         var startTime = clock.now();
@@ -87,6 +87,6 @@ public class AISourceCodeSizeReducerContextProvider
             return Optional.empty();
         }
 
-        return contextFactory.create(text, serializerContext.getOffset(), CodeCompletionType.Lines);
+        return contextFactory.create(text, serializerContext.getOffset(), CodeCompletionType.CodeLines);
     }
 }

@@ -102,14 +102,14 @@ public class AIContextFactoryTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "", "", "", 0, CodeCompletionType.Lines, 0, false, true, "" },
-                { "Abc", "Xyz", "Qwe", 33, CodeCompletionType.Lines, 9, false, true, "AbcQwe" },
+                { "", "", "", 0, CodeCompletionType.CodeLines, 0, false, true, "" },
+                { "Abc", "Xyz", "Qwe", 33, CodeCompletionType.CodeLines, 9, false, true, "AbcQwe" },
 
-                { "Abc", "Xyz", "Qwe", 1, CodeCompletionType.Lines, 1, false, true, "AbcQwe" },
-                { "Ab" + System.lineSeparator() + "c", "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.Lines, 1, false, true, "Ab\ncQwe\n" },
+                { "Abc", "Xyz", "Qwe", 1, CodeCompletionType.CodeLines, 1, false, true, "AbcQwe" },
+                { "Ab" + System.lineSeparator() + "c", "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.CodeLines, 1, false, true, "Ab\ncQwe\n" },
 
-                { "Abc", "Xyz", "Qwe", 1, CodeCompletionType.Lines, 1, true, true, "<PRE> Abc <SUF>Xyz <MID>Qwe" },
-                { "Abc" + System.lineSeparator(), System.lineSeparator() + "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.Lines, 1, true, true, "<PRE> Abc\n <SUF>\nXyz <MID>Qwe\n" },
+                { "Abc", "Xyz", "Qwe", 1, CodeCompletionType.CodeLines, 1, true, true, "<PRE> Abc <SUF>Xyz <MID>Qwe" },
+                { "Abc" + System.lineSeparator(), System.lineSeparator() + "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.CodeLines, 1, true, true, "<PRE> Abc\n <SUF>\nXyz <MID>Qwe\n" },
             });
      // @formatter:on
     }

@@ -9,7 +9,11 @@ package org.e1c.edt.ai;
  */
 public enum CodeCompletionType
 {
-    Lines,
-    Comments,
-    SingleWord
+    CodeLines,
+    CodeComments,
+    CodeSingleWord,
+    ChatReview,
+    ChatExplain,
+    ChatFix,
+    ChatComments
 }

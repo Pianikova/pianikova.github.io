@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.ui.handlers;
 
 import org.e1c.edt.ai.CancellationTokens;
+import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.ui.AITarget;
 import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.ChatView;
@@ -25,7 +26,7 @@ public class ExplainAIHandler
     extends AbstractHandler
 {
     @Inject
-    IAIContextProvider<AITarget> aiContextProvider;
+    IAIContextProvider<Void> aiContextProvider;
     @Inject
     IChat chat;
     @Inject
@@ -40,7 +41,8 @@ public class ExplainAIHandler
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         ui.getTextWidget()
-            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE),
+            .flatMap(textWidget -> aiContextProvider.create(
+                new AITarget(textWidget, Integer.MAX_VALUE, CodeCompletionType.ChatExplain), null,
                 CancellationTokens.NONE))
             .ifPresent(ctx -> chat.explainCode(ctx.getText()));
         ui.showView(ChatView.ID);

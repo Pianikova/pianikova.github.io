@@ -10,5 +10,5 @@ import org.e1c.edt.ai.ICancellationToken;
 
 public interface IAIContextProvider<T>
 {
-    Optional<AIContext> create(T state, ICancellationToken cancellationToken);
+    Optional<AIContext> create(AITarget target, T state, ICancellationToken cancellationToken);
 }

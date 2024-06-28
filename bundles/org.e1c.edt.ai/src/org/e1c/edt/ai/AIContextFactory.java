@@ -52,7 +52,7 @@ public class AIContextFactory
             offset = text.length();
         }
 
-        if (codeCompletionType == CodeCompletionType.Comments)
+        if (codeCompletionType == CodeCompletionType.CodeComments)
         {
             return Optional.of(createDocContext(offset, text));
         }
@@ -80,7 +80,7 @@ public class AIContextFactory
         sb.append(query);
         sb.append(method);
         sb.append(INST_CLOSED_KEYWORD);
-        return new AIContext(offset, text, sb.toString(), CodeCompletionType.Comments);
+        return new AIContext(offset, text, sb.toString(), CodeCompletionType.CodeComments);
     }
 
     private AIContext createTemplatedContext(int offset, String text, AIContextParts parts)
@@ -114,9 +114,9 @@ public class AIContextFactory
         var lineFinish = sufix.indexOf('\n');
         if (lineFinish > 0 && !sufix.substring(0, lineFinish).isBlank())
         {
-            return CodeCompletionType.SingleWord;
+            return CodeCompletionType.CodeSingleWord;
         }
 
-        return CodeCompletionType.Lines;
+        return CodeCompletionType.CodeLines;
     }
 }

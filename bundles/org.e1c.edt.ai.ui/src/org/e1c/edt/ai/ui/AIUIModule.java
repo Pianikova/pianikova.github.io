@@ -61,8 +61,7 @@ public class AIUIModule
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
         bind(IAIContextSettings.class).to(AIContextSettings.class).in(Singleton.class);
-        bind(new TypeLiteral<IAIContextProvider<AITarget>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
-        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).to(AISourceViewerContextProvider.class).in(Singleton.class);
+        bind(new TypeLiteral<IAIContextProvider<Void>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceMethodComments.class).to(AISourceMethodCommentsContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceCodeSizeReducer.class).to(AISourceCodeSizeReducerContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<ISyntaxWalker<StringSerializerContext>>() { /**/ }).to(new TypeLiteral<BasicPathSyntaxWalker<StringSerializerContext>>() { /**/ }).in(Singleton.class);
@@ -74,6 +73,7 @@ public class AIUIModule
         bind(IUserActions.class).to(UserActions.class).in(Singleton.class);
         bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });
         bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
+        bind(ICodeCompletionTypeProvider.class).to(CodeCompletionTypeProvider.class).in(Singleton.class);
         // @formatter:on
     }
 
