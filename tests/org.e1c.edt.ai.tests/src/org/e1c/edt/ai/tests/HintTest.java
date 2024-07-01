@@ -41,15 +41,38 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
+        hint.initiaize(history, 5, false);
 
         // When
         hint.append("Abc");
+        hint.append("Xyz\n");
+        hint.append("Asd");
         var actualText = hint.getText(HintPart.TEXT);
 
         // Then
         Assert.assertFalse(hint.isEmpty());
         Assert.assertFalse(hint.isBlank());
-        Assert.assertEquals("Abc", actualText);
+        Assert.assertEquals("AbcXyz\nAsd", actualText);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldAppendSingleLineWhenSingleWordMode()
+    {
+        // Given
+        var hint = createInstance();
+        hint.initiaize(history, 5, true);
+
+        // When
+        hint.append("Abc");
+        hint.append("Xyz\n");
+        hint.append("Asd");
+        var actualText = hint.getText(HintPart.TEXT);
+
+        // Then
+        Assert.assertFalse(hint.isEmpty());
+        Assert.assertFalse(hint.isBlank());
+        Assert.assertEquals("AbcXyz", actualText);
     }
 
     @SuppressWarnings("nls")
@@ -312,7 +335,7 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.setMaxLines(5);
+        hint.initiaize(history, 5, false);
         hint.append("Abc|Xyz|Asd");
         when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
             .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
@@ -332,7 +355,7 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.setMaxLines(5);
+        hint.initiaize(history, 5, false);
 
         // When
         var actualText = hint.getText(HintPart.LINES);
@@ -347,7 +370,7 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.setMaxLines(5);
+        hint.initiaize(history, 5, false);
         hint.append("Abc|Xyz|Asd");
         when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
             .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
@@ -368,7 +391,7 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.setMaxLines(2);
+        hint.initiaize(history, 2, false);
         hint.append("Abc|Xyz|Asd");
         when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
             .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));

@@ -117,27 +117,28 @@ public class CodeCompletionViewModel
         });
     }
 
-    private void update(ICodeCompletionSession<CodeCompletionContext> session)
+    private void update(CodeCompletionType codeCompletionType, ICodeCompletionSession<CodeCompletionContext> session)
     {
         var content = session.getContext();
         var widget = content.getWidget();
         var hint = session.getHint();
         var offset = widget.getCaretOffset();
         dispatcher.dispatch(() -> {
-            hintPainter.pinOffset(widget, offset, true, session.getContext().isSingleWordMode());
+            hintPainter.pinOffset(widget, offset, true,
+                codeCompletionType == CodeCompletionType.CodeSingleWord);
             hintPainter.setHintAt(offset, hint.getText(HintPart.LINES), hint.getText(HintPart.TOKEN));
         });
     }
 
-    private void askNew()
+    private void askNew(CodeCompletionType codeCompletionType)
     {
         var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
         log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
         reset();
-        askWithDelay(delayBeforeShow);
+        askWithDelay(codeCompletionType, delayBeforeShow);
     }
 
-    private void askWithDelay(Duration delayBeforeShow)
+    private void askWithDelay(CodeCompletionType codeCompletionType, Duration delayBeforeShow)
     {
         cancel();
         new Job(Messages.CodeCompletionJobName)
@@ -147,7 +148,7 @@ public class CodeCompletionViewModel
             {
                 var cancellationTokenSource = new JobCancellationTokenSource();
                 cancellationTokenSource.attachMonitor(monitor);
-                ask(delayBeforeShow, cancellationTokenSource);
+                ask(codeCompletionType, delayBeforeShow, cancellationTokenSource);
                 return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
             }
         }.schedule();
@@ -164,14 +165,15 @@ public class CodeCompletionViewModel
         });
     }
 
-    private void ask(Duration delayBeforeShow, CancellationTokenSource cancellationTokenSource)
+    private void ask(CodeCompletionType codeCompletionType, Duration delayBeforeShow,
+        CancellationTokenSource cancellationTokenSource)
     {
         try
         {
             var startTime = clock.now();
             var aiCtx = dispatcher.dispatch(
                 () -> aiContextProvider
-                    .create(new AITarget(textWidget, 0, CodeCompletionType.CodeLines), null, cancellationTokenSource)
+                    .create(new AITarget(textWidget, 0, codeCompletionType), null, cancellationTokenSource)
                     .orElse(null));
             if (aiCtx.isEmpty())
             {
@@ -179,9 +181,10 @@ public class CodeCompletionViewModel
             }
 
             var aiContext = aiCtx.get();
+            var complitionType = aiContext.getComplitionType();
             var codeCompletionCtx = new CodeCompletionContext(aiContext, textWidget, cancellationTokenSource);
             var session = sessionProvider.get()
-                .initiaize(codeCompletionCtx, history, aiContext.getComplitionType() == CodeCompletionType.CodeSingleWord);
+                .initiaize(codeCompletionCtx, history, complitionType == CodeCompletionType.CodeSingleWord);
             synchronized (lockObject)
             {
                 if (lastSession != null)
@@ -204,7 +207,7 @@ public class CodeCompletionViewModel
                 hintPainter.reset();
                 hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
                     delay.isNegative() || delay == Duration.ZERO,
-                    aiContext.getComplitionType() == CodeCompletionType.CodeSingleWord);
+                    complitionType == CodeCompletionType.CodeSingleWord);
             });
 
             var codeCompletionSource = codeAssistant.generate(aiContext, cancellationTokenSource);
@@ -218,6 +221,13 @@ public class CodeCompletionViewModel
                     }
 
                     var hint = session.getHint();
+
+                    // temporarily for comments
+                    if (complitionType == CodeCompletionType.CodeComments)
+                    {
+                        value = value.replace("`", ""); //$NON-NLS-1$ //$NON-NLS-2$
+                    }
+
                     hint.append(value);
                     showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
                 },
@@ -243,7 +253,7 @@ public class CodeCompletionViewModel
                         hint.clear();
                     }
 
-                    if (aiContext.getComplitionType() != CodeCompletionType.CodeSingleWord && hint.isEmpty())
+                    if (complitionType != CodeCompletionType.CodeSingleWord && hint.isEmpty())
                     {
                         hint.append("\n"); //$NON-NLS-1$
                     }
@@ -343,22 +353,23 @@ public class CodeCompletionViewModel
         {
         case SUGGEST:
             reset();
-            askWithDelay(Duration.ZERO);
+            askWithDelay(CodeCompletionType.CodeLines, Duration.ZERO);
             event.doit = false;
             break;
 
         case UPDATE:
-            update(session);
-            if (session.isDone())
+            var complitionType = session.getContext().getAiContext().getComplitionType();
+            update(complitionType, session);
+            if (session.isDone() && complitionType == CodeCompletionType.CodeLines)
             {
-                askWithDelay(Duration.ZERO);
+                askWithDelay(complitionType, Duration.ZERO);
             }
 
             event.doit = false;
             break;
 
         case ASK_NEW:
-            askNew();
+            askNew(CodeCompletionType.CodeLines);
             break;
 
         case RESET:

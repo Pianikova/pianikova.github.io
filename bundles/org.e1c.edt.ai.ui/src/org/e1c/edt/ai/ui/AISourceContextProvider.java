@@ -87,6 +87,6 @@ public class AISourceContextProvider
             return Optional.empty();
         }
 
-        return contextFactory.create(text, serializerContext.getOffset(), CodeCompletionType.CodeLines);
+        return contextFactory.create(text, text, serializerContext.getOffset(), CodeCompletionType.CodeLines);
     }
 }

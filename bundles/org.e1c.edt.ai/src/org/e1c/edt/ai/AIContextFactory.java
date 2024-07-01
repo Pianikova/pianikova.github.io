@@ -15,9 +15,8 @@ public class AIContextFactory
     private static final String SUF_KEYWORD = " <SUF>"; //$NON-NLS-1$
     private static final String MID_KEYWORD = " <MID>"; //$NON-NLS-1$
 
-    private static final String SYS_OPEN_KEYWORD = "<<SYS>>"; //$NON-NLS-1$
-    private static final String SYS_CLOSED_KEYWORD = "<</SYS>>"; //$NON-NLS-1$
-    private static final String INST_OPEN_KEYWORD = "[INST]"; //$NON-NLS-1$
+    private static final String SYS_OPEN_PREFIX =
+        "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\n"; //$NON-NLS-1$
     private static final String INST_CLOSED_KEYWORD = "[/INST]"; //$NON-NLS-1$
 
     private static final int TEMPLATE_LENGTH = PRE_KEYWORD.length() + SUF_KEYWORD.length() + MID_KEYWORD.length();
@@ -38,7 +37,7 @@ public class AIContextFactory
     }
 
     @Override
-    public Optional<AIContext> create(String text, int offset, CodeCompletionType codeCompletionType)
+    public Optional<AIContext> create(String source, String text, int offset, CodeCompletionType codeCompletionType)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0);
@@ -52,9 +51,10 @@ public class AIContextFactory
             offset = text.length();
         }
 
-        if (codeCompletionType == CodeCompletionType.CodeComments)
+        if (codeCompletionType == CodeCompletionType.CodeComments
+            || codeCompletionType == CodeCompletionType.CodeCommentsContinue)
         {
-            return Optional.of(createDocContext(offset, text));
+            return Optional.of(createDocContext(source, offset, text, codeCompletionType));
         }
 
         var parts = contextSplitter.split(text, offset, contextSettings.getMaxLength());
@@ -66,21 +66,46 @@ public class AIContextFactory
         return Optional.of(createSimpleContext(offset, text, parts));
     }
 
-    private AIContext createDocContext(int offset, String text)
+    @SuppressWarnings("nls")
+    private AIContext createDocContext(String source, int offset, String text, CodeCompletionType codeCompletionType)
     {
-        var prompt =
-            "Ты русскоязычный ассистент разработчика в среде 1C Enterprise,помогаешь вести разработку на языке bsl."; //$NON-NLS-1$
-        var query = "Напиши комментарий к методу:\n"; //$NON-NLS-1$
         var method = stringNormalizer.normalize(text, true);
         var sb = new StringBuilder();
-        sb.append(INST_OPEN_KEYWORD);
-        sb.append(SYS_OPEN_KEYWORD);
-        sb.append(prompt);
-        sb.append(SYS_CLOSED_KEYWORD);
-        sb.append(query);
-        sb.append(method);
+        sb.append(SYS_OPEN_PREFIX);
+        if (codeCompletionType == CodeCompletionType.CodeCommentsContinue)
+        {
+            sb.append("Продолжай писать комментария к методу");
+        }
+        else
+        {
+            sb.append("Напиши комментарий к методу");
+        }
+
+        sb.append(" ```");
+        sb.append(method.stripLeading());
+        sb.append("``` ");
         sb.append(INST_CLOSED_KEYWORD);
-        return new AIContext(offset, text, sb.toString(), CodeCompletionType.CodeComments);
+
+        if (codeCompletionType == CodeCompletionType.CodeCommentsContinue)
+        {
+            var pos = offset - 1;
+            while (pos >= 0 && source.charAt(pos) != '\n')
+            {
+                pos--;
+            }
+
+            if (pos + 1 < offset)
+            {
+                var comment = source.substring(pos + 1, offset);
+                sb.append(comment);
+            }
+        }
+        else
+        {
+            sb.append("`");
+        }
+
+        return new AIContext(offset, text, sb.toString(), codeCompletionType);
     }
 
     private AIContext createTemplatedContext(int offset, String text, AIContextParts parts)

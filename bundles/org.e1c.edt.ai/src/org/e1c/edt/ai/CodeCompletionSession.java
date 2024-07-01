@@ -35,8 +35,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
         this.context = context;
         this.history = history;
         this.isSingleWordMode = isSingleWordMode;
-        hint.setMaxLines(isSingleWordMode ? 1 : uiSettings.getCodeCompletionLinesCount());
-        hint.attachHistory(history);
+        hint.initiaize(history, isSingleWordMode ? 1 : uiSettings.getCodeCompletionLinesCount(), isSingleWordMode);
         return this;
     }
 
@@ -200,6 +199,12 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
 
     private boolean isFinishingChar()
     {
-        return isSingleWordMode && (getHint().isBlank() || getHint().startsWith('\n'));
+        if (!isSingleWordMode)
+        {
+            return false;
+        }
+
+        var hint = getHint();
+        return hint.isBlank();
     }
 }

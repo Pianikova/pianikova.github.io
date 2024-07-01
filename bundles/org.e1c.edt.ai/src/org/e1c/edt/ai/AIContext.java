@@ -48,8 +48,8 @@ public class AIContext
         str.append(cursorOffset);
         str.append(System.lineSeparator());
 
-        str.append("isSingleWord:"); //$NON-NLS-1$
-        str.append(complitionType == CodeCompletionType.CodeSingleWord);
+        str.append("complitionType:"); //$NON-NLS-1$
+        str.append(complitionType);
         str.append(System.lineSeparator());
 
         var textWithCursor = text.substring(0, cursorOffset) + "█" + text.substring(cursorOffset); //$NON-NLS-1$

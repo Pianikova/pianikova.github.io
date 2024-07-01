@@ -23,7 +23,7 @@ public class AIContextProvider
     private final IUI ui;
     private final IUISettings uiSettings;
     private final IAIContextFactory contextFactory;
-    private final ICodeCompletionTypeProvider codeCompletionTypeProvider;
+    private final ICodePartsProvider codePartsProvider;
     private final IAIContextProvider<AISourceContext> commentsContextProvider;
     private final IAIContextProvider<AISourceContext> codeSizeReducerContextProvider;
 
@@ -31,20 +31,20 @@ public class AIContextProvider
     public AIContextProvider(IUI ui,
         IUISettings uiSettings,
         IAIContextFactory contextFactory,
-        ICodeCompletionTypeProvider codeCompletionTypeProvider,
+        ICodePartsProvider codePartsProvider,
         @SourceMethodComments IAIContextProvider<AISourceContext> commentsContextProvider,
         @SourceCodeSizeReducer IAIContextProvider<AISourceContext> codeSizeReducerContextProvider)
     {
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(contextFactory);
-        Preconditions.checkNotNull(codeCompletionTypeProvider);
+        Preconditions.checkNotNull(codePartsProvider);
         Preconditions.checkNotNull(commentsContextProvider);
         Preconditions.checkNotNull(codeSizeReducerContextProvider);
         this.ui = ui;
         this.uiSettings = uiSettings;
         this.contextFactory = contextFactory;
-        this.codeCompletionTypeProvider = codeCompletionTypeProvider;
+        this.codePartsProvider = codePartsProvider;
         this.commentsContextProvider = commentsContextProvider;
         this.codeSizeReducerContextProvider = codeSizeReducerContextProvider;
     }
@@ -75,40 +75,63 @@ public class AIContextProvider
                         offset = 0;
                     }
 
-                    return contextFactory.create(text, offset, CodeCompletionType.CodeLines);
+                    return contextFactory.create(text, text, offset, target.getComplitionType());
 
                 default:
                     break;
                 }
 
-                if (text.length() <= max)
-                {
-                    return contextFactory.create(text, offset, CodeCompletionType.CodeLines);
-                }
-
-                Optional<AIContext> result = null;
                 if (sourceViewer instanceof XtextSourceViewer)
                 {
                     var xtextSourceViewer = (XtextSourceViewer)sourceViewer;
                     var parseResult = xtextSourceViewer.getXtextDocument().readOnly(s -> s.getParseResult());
                     if (parseResult != null)
                     {
+                        var parts = codePartsProvider.getParts(parseResult.getRootNode());
                         var sourceCtx = new AISourceContext(xtextSourceViewer, parseResult, offset,
-                            uiSettings.getMaxAssistantTextSize());
+                            uiSettings.getMaxAssistantTextSize(), parts);
 
-                        var codeCompletionType = codeCompletionTypeProvider.getType(sourceCtx);
-                        switch (codeCompletionType)
+                        AITarget actualTarget = target;
+                        for (var part : parts)
+                        {
+                            if (part.getRange().contains(offset))
+                            {
+                                switch (part.getType())
+                                {
+                                case Comment:
+                                    actualTarget = new AITarget(target.getTextWidget(), target.getMaxLength(),
+                                        CodeCompletionType.CodeCommentsContinue);
+                                    break;
+
+                                case MethodPrefix:
+                                    actualTarget = new AITarget(target.getTextWidget(), target.getMaxLength(),
+                                        CodeCompletionType.CodeComments);
+                                    break;
+
+                                default:
+                                    break;
+                                }
+
+                                break;
+                            }
+                        }
+
+                        switch (actualTarget.getComplitionType())
                         {
                         case CodeComments:
-                            result = commentsContextProvider.create(target, sourceCtx, cancellationToken);
-                            break;
+                        case CodeCommentsContinue:
+                            return commentsContextProvider.create(actualTarget, sourceCtx, cancellationToken);
 
                         case CodeLines:
                         case CodeSingleWord:
+                            if (text.length() <= max)
+                            {
+                                return contextFactory.create(text, text, offset, actualTarget.getComplitionType());
+                            }
+
                             sourceCtx.SkipMinorMethods = true;
                             sourceCtx.Forcable = true;
-                            result = codeSizeReducerContextProvider.create(target, sourceCtx, cancellationToken);
-                            break;
+                            return codeSizeReducerContextProvider.create(actualTarget, sourceCtx, cancellationToken);
 
                         default:
                             break;
@@ -116,12 +139,7 @@ public class AIContextProvider
                     }
                 }
 
-                if (result != null && result.isPresent())
-                {
-                    return result;
-                }
-
-                return contextFactory.create(text, offset, CodeCompletionType.CodeLines);
+                return contextFactory.create(text, text, offset, target.getComplitionType());
             });
     }
 }

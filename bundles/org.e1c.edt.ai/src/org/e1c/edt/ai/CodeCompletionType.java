@@ -11,6 +11,7 @@ public enum CodeCompletionType
 {
     CodeLines,
     CodeComments,
+    CodeCommentsContinue,
     CodeSingleWord,
     ChatReview,
     ChatExplain,

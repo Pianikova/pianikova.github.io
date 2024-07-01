@@ -12,7 +12,6 @@ import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
-import com._1c.g5.v8.dt.bsl.model.Method;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -20,7 +19,6 @@ public class AISourceMethodCommentsContextProvider
     implements IAIContextProvider<AISourceContext>
 {
     private final IAIContextFactory contextFactory;
-    private final BslMultiLineCommentDocumentationProvider commentProvider;
 
     @Inject
     public AISourceMethodCommentsContextProvider(IAIContextFactory contextFactory,
@@ -29,44 +27,39 @@ public class AISourceMethodCommentsContextProvider
         Preconditions.checkNotNull(contextFactory);
         Preconditions.checkNotNull(commentProvider);
         this.contextFactory = contextFactory;
-        this.commentProvider = commentProvider;
     }
 
     @Override
     public Optional<AIContext> create(AITarget target, AISourceContext ctx, ICancellationToken cancellationToken)
     {
-        var parseResult = ctx.getParseResult();
+        for (var part : ctx.getParts())
+        {
+            if (part.getRange().contains(ctx.getOffset()))
+            {
+                switch (part.getType())
+                {
+                case Comment:
+                case MethodPrefix:
+                    return create(target, ctx, part);
+
+                default:
+                    break;
+                }
+
+                break;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<AIContext> create(AITarget target, AISourceContext ctx, CodePart part)
+    {
+        var rootNode = ctx.getParseResult().getRootNode();
         var offset = ctx.getOffset();
-        var rootNoode = parseResult.getRootNode();
-        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNoode, offset);
-        if (cursorNode == null)
-        {
-            return Optional.empty();
-        }
+        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNode, offset);
         var sibling = cursorNode.getNextSibling();
-        if (sibling == null)
-        {
-            return Optional.empty();
-        }
-        var siblingSemantic = NodeModelUtils.findActualSemanticObjectFor(sibling);
-        if (!(siblingSemantic instanceof Method))
-        {
-            return Optional.empty();
-        }
-
-        var comment = commentProvider.getDocumentation(siblingSemantic);
-        if (!comment.isEmpty() && !comment.trim().endsWith("//")) //$NON-NLS-1$
-        {
-            return Optional.empty();
-        }
-
         var method = new StringBuilder();
-        var text = ctx.getViewer().getTextWidget().getText();
-        if (text.endsWith("//") || text.endsWith("// ")) //$NON-NLS-1$//$NON-NLS-2$
-        {
-            method.append("//\n"); //$NON-NLS-1$
-        }
-
         while (sibling != null)
         {
             method.append(sibling.getText());
@@ -84,6 +77,7 @@ public class AISourceMethodCommentsContextProvider
             }
         }
 
-        return contextFactory.create(method.toString(), offset, target.getComplitionType());
+        return contextFactory.create(target.getTextWidget().getText(), method.toString(), offset,
+            target.getComplitionType());
     }
 }

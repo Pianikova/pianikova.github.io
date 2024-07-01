@@ -90,10 +90,11 @@ public class AICodeAssistant
         URI uri;
         try
         {
-            uri = aiContext.getComplitionType() == CodeCompletionType.CodeComments
-                ? new URI(String.format("http://gpu22.egom.ailab:8094/generate_stream?client_id=%s&client_uid=%s", //$NON-NLS-1$
-                    settings.getClientUniqueId(), settings.getClientToken()))
-                : settings.getApiURL().toURI();
+            uri = (aiContext.getComplitionType() == CodeCompletionType.CodeComments
+                || aiContext.getComplitionType() == CodeCompletionType.CodeCommentsContinue)
+                    ? new URI(String.format("http://gpu22.egom.ailab:8094/generate_stream?client_id=%s&client_uid=%s", //$NON-NLS-1$
+                        settings.getClientUniqueId(), settings.getClientToken()))
+                    : settings.getApiURL().toURI();
         }
         catch (URISyntaxException e)
         {

@@ -14,23 +14,27 @@ public class AISourceContext
     private final IParseResult parseResult;
     private final int offset;
     private final int maxLength;
+    private final Iterable<CodePart> parts;
     public boolean SkipMinorMethodStatements;
     public boolean SkipMethodTail;
     public boolean SkipOutOfStackStatements;
     public boolean SkipMinorMethods;
     public boolean Forcable;
 
-    public AISourceContext(XtextSourceViewer viewer, IParseResult parseResult, int offset, int maxLength)
+    public AISourceContext(XtextSourceViewer viewer, IParseResult parseResult, int offset, int maxLength,
+        Iterable<CodePart> parts)
     {
         Preconditions.checkNotNull(viewer);
         Preconditions.checkNotNull(parseResult);
         Preconditions.checkArgument(offset >= 0);
         Preconditions.checkArgument(maxLength > 0);
         Preconditions.checkNotNull(parseResult);
+        Preconditions.checkNotNull(parts);
         this.viewer = viewer;
         this.parseResult = parseResult;
         this.offset = offset;
         this.maxLength = maxLength;
+        this.parts = parts;
     }
 
     public XtextSourceViewer getViewer()
@@ -51,6 +55,11 @@ public class AISourceContext
     public int getMaxLength()
     {
         return maxLength;
+    }
+
+    public Iterable<CodePart> getParts()
+    {
+        return parts;
     }
 
     @SuppressWarnings("nls")

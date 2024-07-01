@@ -73,7 +73,7 @@ public class AIUIModule
         bind(IUserActions.class).to(UserActions.class).in(Singleton.class);
         bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });
         bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
-        bind(ICodeCompletionTypeProvider.class).to(CodeCompletionTypeProvider.class).in(Singleton.class);
+        bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
         // @formatter:on
     }
 

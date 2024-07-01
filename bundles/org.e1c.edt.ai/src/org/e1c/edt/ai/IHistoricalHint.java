@@ -6,9 +6,7 @@ package org.e1c.edt.ai;
 public interface IHistoricalHint
     extends IHint
 {
-    void setMaxLines(int maxLines);
-
-    void attachHistory(IHintHistory history);
+    void initiaize(IHintHistory history, int maxLines, boolean isSingleWordMode);
 
     String pull(HintPart part);
 

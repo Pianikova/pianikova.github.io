@@ -17,6 +17,7 @@ public class Hint
     private final StringBuilder text = new StringBuilder();
     private IHintHistory history;
     private int maxLines;
+    private boolean isSingleWordMode, hasEdOfLine;
 
     @Inject
     public Hint(ICodeCompletionTokenizer tokenizer, IHintHistory defaultHistory)
@@ -28,23 +29,36 @@ public class Hint
     }
 
     @Override
-    public synchronized void setMaxLines(int maxLines)
-    {
-        Preconditions.checkArgument(maxLines > 0);
-        this.maxLines = maxLines;
-    }
-
-    @Override
-    public synchronized void attachHistory(IHintHistory history)
+    public synchronized void initiaize(IHintHistory history, int maxLines, boolean isSingleWordMode)
     {
         Preconditions.checkNotNull(history);
+        Preconditions.checkArgument(maxLines > 0);
         this.history = history;
+        this.maxLines = maxLines;
+        this.isSingleWordMode = isSingleWordMode;
+        hasEdOfLine = false;
     }
 
     @Override
     public synchronized void append(String text)
     {
         Preconditions.checkNotNull(text);
+        if (hasEdOfLine)
+        {
+            return;
+        }
+
+        if (isSingleWordMode)
+        {
+            var endOfLine = text.indexOf('\n');
+            if (endOfLine >= 0)
+            {
+                this.text.append(text.substring(0, endOfLine));
+                hasEdOfLine = true;
+                return;
+            }
+        }
+
         this.text.append(text);
     }
 

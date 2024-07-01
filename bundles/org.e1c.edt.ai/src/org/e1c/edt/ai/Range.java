@@ -44,6 +44,11 @@ public class Range
         return text.substring(getStart(), endIndex);
     }
 
+    public boolean contains(int position)
+    {
+        return position >= start && position < start + length;
+    }
+
     @Override
     public int hashCode()
     {
