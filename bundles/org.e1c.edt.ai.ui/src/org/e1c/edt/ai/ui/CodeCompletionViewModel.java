@@ -349,7 +349,6 @@ public class CodeCompletionViewModel
         var action = userActions.getAction(event);
         var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
         action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
-        var complitionType = session.getContext().getAiContext().getComplitionType();
         switch (action)
         {
         case SUGGEST:
@@ -359,13 +358,18 @@ public class CodeCompletionViewModel
             break;
 
         case UPDATE:
-            update(complitionType, session);
-            if (session.isDone() && complitionType == CodeCompletionType.CodeLines)
+            if (session != null)
             {
-                askWithDelay(complitionType, Duration.ZERO);
+                var complitionType = session.getContext().getAiContext().getComplitionType();
+                update(complitionType, session);
+                if (session.isDone() && complitionType == CodeCompletionType.CodeLines)
+                {
+                    askWithDelay(complitionType, Duration.ZERO);
+                }
+
+                event.doit = false;
             }
 
-            event.doit = false;
             break;
 
         case ASK_NEW:
@@ -378,7 +382,8 @@ public class CodeCompletionViewModel
             break;
 
         case HANDLE:
-            if (complitionType == CodeCompletionType.CodeLines)
+            if (session != null
+                && session.getContext().getAiContext().getComplitionType() == CodeCompletionType.CodeLines)
             {
                 event.doit = false;
             }
