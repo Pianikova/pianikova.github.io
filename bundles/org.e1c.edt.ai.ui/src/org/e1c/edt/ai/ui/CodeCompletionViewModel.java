@@ -349,6 +349,7 @@ public class CodeCompletionViewModel
         var action = userActions.getAction(event);
         var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
         action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
+        var complitionType = session.getContext().getAiContext().getComplitionType();
         switch (action)
         {
         case SUGGEST:
@@ -358,7 +359,6 @@ public class CodeCompletionViewModel
             break;
 
         case UPDATE:
-            var complitionType = session.getContext().getAiContext().getComplitionType();
             update(complitionType, session);
             if (session.isDone() && complitionType == CodeCompletionType.CodeLines)
             {
@@ -378,7 +378,11 @@ public class CodeCompletionViewModel
             break;
 
         case HANDLE:
-            event.doit = false;
+            if (complitionType == CodeCompletionType.CodeLines)
+            {
+                event.doit = false;
+            }
+
             break;
 
         default:

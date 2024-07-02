@@ -100,10 +100,6 @@ public class AIContextFactory
                 sb.append(comment);
             }
         }
-        else
-        {
-            sb.append("`");
-        }
 
         return new AIContext(offset, text, sb.toString(), codeCompletionType);
     }
