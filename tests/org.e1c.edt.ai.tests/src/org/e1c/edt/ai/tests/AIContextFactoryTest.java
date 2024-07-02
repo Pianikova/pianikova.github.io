@@ -77,7 +77,7 @@ public class AIContextFactoryTest
         var factory = createInstance();
 
         // When
-        var actualContext = factory.create(text, text, offset, type);
+        var actualContext = factory.create(text, offset, text, offset, type);
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());

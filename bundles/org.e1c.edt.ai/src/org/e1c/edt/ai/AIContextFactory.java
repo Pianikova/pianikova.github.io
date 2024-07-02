@@ -37,7 +37,7 @@ public class AIContextFactory
     }
 
     @Override
-    public Optional<AIContext> create(String source, String text, int offset, CodeCompletionType codeCompletionType)
+    public Optional<AIContext> create(String source, int sourceOffset, String text, int offset, CodeCompletionType codeCompletionType)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0);
@@ -54,20 +54,21 @@ public class AIContextFactory
         if (codeCompletionType == CodeCompletionType.CodeComments
             || codeCompletionType == CodeCompletionType.CodeCommentsContinue)
         {
-            return Optional.of(createDocContext(source, offset, text, codeCompletionType));
+            return Optional.of(createDocContext(source, sourceOffset, text, offset, codeCompletionType));
         }
 
         var parts = contextSplitter.split(text, offset, contextSettings.getMaxLength());
         if (contextSettings.isTempleted())
         {
-            return Optional.of(createTemplatedContext(offset, text, parts));
+            return Optional.of(createTemplatedContext(text, offset, parts));
         }
 
-        return Optional.of(createSimpleContext(offset, text, parts));
+        return Optional.of(createSimpleContext(text, offset, parts));
     }
 
     @SuppressWarnings("nls")
-    private AIContext createDocContext(String source, int offset, String text, CodeCompletionType codeCompletionType)
+    private AIContext createDocContext(String source, int sourceOffset, String text, int offset,
+        CodeCompletionType codeCompletionType)
     {
         var method = stringNormalizer.normalize(text, true);
         var sb = new StringBuilder();
@@ -88,15 +89,15 @@ public class AIContextFactory
 
         if (codeCompletionType == CodeCompletionType.CodeCommentsContinue)
         {
-            var pos = offset - 1;
+            var pos = sourceOffset - 1;
             while (pos >= 0 && source.charAt(pos) != '\n')
             {
                 pos--;
             }
 
-            if (pos + 1 < offset)
+            if (pos + 1 < sourceOffset)
             {
-                var comment = source.substring(pos + 1, offset);
+                var comment = source.substring(pos + 1, sourceOffset);
                 sb.append(comment);
             }
         }
@@ -104,7 +105,7 @@ public class AIContextFactory
         return new AIContext(offset, text, sb.toString(), codeCompletionType);
     }
 
-    private AIContext createTemplatedContext(int offset, String text, AIContextParts parts)
+    private AIContext createTemplatedContext(String text, int offset, AIContextParts parts)
     {
         var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
         var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
@@ -119,7 +120,7 @@ public class AIContextFactory
         return new AIContext(offset, text, sb.toString(), getComplitionType(sufix));
     }
 
-    private AIContext createSimpleContext(int offset, String text, AIContextParts parts)
+    private AIContext createSimpleContext(String text, int offset, AIContextParts parts)
     {
         var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
         var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);

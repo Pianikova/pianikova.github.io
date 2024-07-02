@@ -75,7 +75,7 @@ public class AIContextProvider
                         offset = 0;
                     }
 
-                    return contextFactory.create(text, text, offset, target.getComplitionType());
+                    return contextFactory.create(text, offset, text, offset, target.getComplitionType());
 
                 default:
                     break;
@@ -126,7 +126,8 @@ public class AIContextProvider
                         case CodeSingleWord:
                             if (text.length() <= max)
                             {
-                                return contextFactory.create(text, text, offset, actualTarget.getComplitionType());
+                                return contextFactory.create(text, offset, text, offset,
+                                    actualTarget.getComplitionType());
                             }
 
                             sourceCtx.SkipMinorMethods = true;
@@ -139,7 +140,7 @@ public class AIContextProvider
                     }
                 }
 
-                return contextFactory.create(text, text, offset, target.getComplitionType());
+                return contextFactory.create(text, offset, text, offset, target.getComplitionType());
             });
     }
 }

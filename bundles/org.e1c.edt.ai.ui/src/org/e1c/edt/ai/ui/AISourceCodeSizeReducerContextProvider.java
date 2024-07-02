@@ -87,6 +87,7 @@ public class AISourceCodeSizeReducerContextProvider
             return Optional.empty();
         }
 
-        return contextFactory.create(text, text, serializerContext.getOffset(), CodeCompletionType.CodeLines);
+        return contextFactory.create(target.getTextWidget().getText(), offset, text, serializerContext.getOffset(),
+            CodeCompletionType.CodeLines);
     }
 }

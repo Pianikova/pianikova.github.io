@@ -4,8 +4,12 @@
 package org.e1c.edt.ai.ui;
 
 import java.util.ArrayList;
+import java.util.stream.Stream;
 
 import org.e1c.edt.ai.Range;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.AbstractElement;
+import org.eclipse.xtext.Alternatives;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.Keyword;
 import org.eclipse.xtext.TerminalRule;
@@ -25,12 +29,14 @@ public class CodePartsProvider implements ICodePartsProvider
         var nodes = new ArrayList<ILeafNode>();
         var start = 0;
         CodePartType lastType = CodePartType.Unknown;
-        Method lastMethod = null;
         var methodStarted = false;
+        var argsStarted = false;
+        var hasArgs = false;
         ILeafNode lastLeafNode = null;
         for (var leafNode : rootNode.getLeafNodes())
         {
             lastLeafNode = leafNode;
+            var text = leafNode.getText();
             var type = CodePartType.Unknown;
             var semantic = NodeModelUtils.findActualSemanticObjectFor(leafNode);
             if (semantic != null)
@@ -38,12 +44,6 @@ public class CodePartsProvider implements ICodePartsProvider
                 var method = EcoreUtil2.getContainerOfType(semantic, Method.class);
                 if (method != null)
                 {
-                    if (lastMethod != method)
-                    {
-                        lastMethod = method;
-                        methodStarted = false;
-                    }
-
                     type = methodStarted ? CodePartType.Method : CodePartType.MethodPrefix;
                     var grammar = leafNode.getGrammarElement();
                     if (!methodStarted && grammar instanceof TerminalRule)
@@ -56,10 +56,53 @@ public class CodePartsProvider implements ICodePartsProvider
                         }
                     }
 
-                    if (!methodStarted && grammar instanceof Keyword)
+                    if (grammar instanceof Keyword)
                     {
-                        type = CodePartType.Method;
-                        methodStarted = true;
+                        if (!methodStarted)
+                        {
+                            if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                                .map(i -> (Keyword)i)
+                                .anyMatch(i -> "Процедура".equalsIgnoreCase(i.getValue())))
+                            {
+                                type = CodePartType.Method;
+                                methodStarted = true;
+                                argsStarted = false;
+                                hasArgs = false;
+                                continue;
+                            }
+                        }
+                        else
+                        {
+                            if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                                .map(i -> (Keyword)i)
+                                .anyMatch(i -> "КонецПроцедуры".equalsIgnoreCase(i.getValue())))
+                            {
+                                methodStarted = false;
+                                continue;
+                            }
+
+                            if (!hasArgs)
+                            {
+                                var keyword = (Keyword)grammar;
+                                if (!argsStarted)
+                                {
+                                    if ("(".equals(keyword.getValue()))
+                                    {
+                                        type = CodePartType.MethodArgs;
+                                        argsStarted = true;
+                                    }
+                                }
+                                else
+                                {
+                                    if (")".equals(keyword.getValue()))
+                                    {
+                                        type = CodePartType.Method;
+                                        argsStarted = false;
+                                        hasArgs = true;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -86,5 +129,16 @@ public class CodePartsProvider implements ICodePartsProvider
         }
 
         return result;
+    }
+
+    private Stream<AbstractElement> getAlternatives(EObject obj)
+    {
+        var сontainer = obj.eContainer();
+        if (сontainer instanceof Alternatives)
+        {
+            return ((Alternatives)сontainer).getElements().stream();
+        }
+
+        return Stream.empty();
     }
 }

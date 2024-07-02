@@ -77,7 +77,7 @@ public class AISourceMethodCommentsContextProvider
             }
         }
 
-        return contextFactory.create(target.getTextWidget().getText(), method.toString(), offset,
+        return contextFactory.create(target.getTextWidget().getText(), ctx.getOffset(), method.toString(), offset,
             target.getComplitionType());
     }
 }
