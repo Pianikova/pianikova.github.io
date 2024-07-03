@@ -40,6 +40,7 @@ public class CodeCompletionContext
 
         contet.replaceTextRange(start, replaceLength, text);
         textWidget.setCaretOffset(start + text.length());
+        textWidget.showSelection();
     }
 
     public StyledText getWidget()
