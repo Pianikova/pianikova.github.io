@@ -81,6 +81,7 @@ public class AIContextProvider
                     break;
                 }
 
+                Optional<AIContext> result = Optional.empty();
                 if (sourceViewer instanceof XtextSourceViewer)
                 {
                     var xtextSourceViewer = (XtextSourceViewer)sourceViewer;
@@ -120,7 +121,8 @@ public class AIContextProvider
                         {
                         case CodeComments:
                         case CodeCommentsContinue:
-                            return commentsContextProvider.create(actualTarget, sourceCtx, cancellationToken);
+                            result = commentsContextProvider.create(actualTarget, sourceCtx, cancellationToken);
+                            break;
 
                         case CodeLines:
                         case CodeSingleWord:
@@ -132,12 +134,18 @@ public class AIContextProvider
 
                             sourceCtx.SkipMinorMethods = true;
                             sourceCtx.Forcable = true;
-                            return codeSizeReducerContextProvider.create(actualTarget, sourceCtx, cancellationToken);
+                            result = codeSizeReducerContextProvider.create(actualTarget, sourceCtx, cancellationToken);
+                            break;
 
                         default:
                             break;
                         }
                     }
+                }
+
+                if (result.isPresent())
+                {
+                    return result;
                 }
 
                 return contextFactory.create(text, offset, text, offset, target.getComplitionType());
