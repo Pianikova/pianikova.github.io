@@ -116,6 +116,11 @@ public class AIContextFactoryTest
 
                 { "", 0, "Abc", "Xyz", "Qwe", 1, CodeCompletionType.CodeLines, 1, true, true, "<PRE> Abc <SUF>Xyz <MID>Qwe" },
                 { "", 0, "Abc" + System.lineSeparator(), System.lineSeparator() + "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.CodeLines, 1, true, true, "<PRE> Abc\n <SUF>\nXyz <MID>Qwe\n" },
+
+                { "Abc\nXyzAsd", 7, "Method", " - ", "Body", 1, CodeCompletionType.CodeComments, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nНапиши комментарий к методу ```Method - Body``` [/INST]" },
+                { "Abc\nXyzAsd", 7, "Method", " - ", "Body", 1, CodeCompletionType.CodeCommentsContinue, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nПродолжай писать комментария к методу ```Method - Body``` [/INST]Xyz" },
+                { "Abc\nXyzAsd", 0, "Method", " - ", "Body", 1, CodeCompletionType.CodeCommentsContinue, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nПродолжай писать комментария к методу ```Method - Body``` [/INST]" },
+                { "AbcXyzAsd", 6, "Method", " - ", "Body", 1, CodeCompletionType.CodeCommentsContinue, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nПродолжай писать комментария к методу ```Method - Body``` [/INST]AbcXyz" },
             });
      // @formatter:on
     }

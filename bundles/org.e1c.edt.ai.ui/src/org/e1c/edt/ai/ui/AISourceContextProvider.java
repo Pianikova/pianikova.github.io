@@ -46,7 +46,9 @@ public class AISourceContextProvider
     @Override
     public Optional<AIContext> create(AITarget target, AISourceContext ctx, ICancellationToken cancellationToken)
     {
+        Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(ctx);
+        Preconditions.checkNotNull(cancellationToken);
         var startTime = clock.now();
         var parseResult = ctx.getParseResult();
         /*if (parseResult.hasSyntaxErrors())

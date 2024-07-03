@@ -39,6 +39,7 @@ public class AIContextFactory
     @Override
     public Optional<AIContext> create(String source, int sourceOffset, String text, int offset, CodeCompletionType codeCompletionType)
     {
+        Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0);
         if (text.isEmpty())
@@ -54,7 +55,7 @@ public class AIContextFactory
         if (codeCompletionType == CodeCompletionType.CodeComments
             || codeCompletionType == CodeCompletionType.CodeCommentsContinue)
         {
-            return Optional.of(createDocContext(source, sourceOffset, text, offset, codeCompletionType));
+            return Optional.of(createCommentsContext(source, sourceOffset, text, offset, codeCompletionType));
         }
 
         var parts = contextSplitter.split(text, offset, contextSettings.getMaxLength());
@@ -67,7 +68,7 @@ public class AIContextFactory
     }
 
     @SuppressWarnings("nls")
-    private AIContext createDocContext(String source, int sourceOffset, String text, int offset,
+    private AIContext createCommentsContext(String source, int sourceOffset, String text, int offset,
         CodeCompletionType codeCompletionType)
     {
         var method = stringNormalizer.normalize(text, true);

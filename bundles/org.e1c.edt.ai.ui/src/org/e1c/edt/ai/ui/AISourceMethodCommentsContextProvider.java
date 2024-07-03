@@ -32,6 +32,9 @@ public class AISourceMethodCommentsContextProvider
     @Override
     public Optional<AIContext> create(AITarget target, AISourceContext ctx, ICancellationToken cancellationToken)
     {
+        Preconditions.checkNotNull(target);
+        Preconditions.checkNotNull(ctx);
+        Preconditions.checkNotNull(cancellationToken);
         for (var part : ctx.getParts())
         {
             if (part.getRange().contains(ctx.getOffset()))
