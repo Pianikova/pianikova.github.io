@@ -53,53 +53,52 @@ public class CodePartsProvider implements ICodePartsProvider
                         if ("SL_COMMENT".equals(name))
                         {
                             type = CodePartType.Comment;
+                            continue;
                         }
                     }
 
                     if (grammar instanceof Keyword)
                     {
-                        if (!methodStarted)
+                        if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                            .map(i -> (Keyword)i)
+                            .anyMatch(i -> "Процедура".equalsIgnoreCase(i.getValue())
+                                || "Функция".equalsIgnoreCase(i.getValue())))
                         {
-                            if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
-                                .map(i -> (Keyword)i)
-                                .anyMatch(i -> "Процедура".equalsIgnoreCase(i.getValue())))
-                            {
-                                type = CodePartType.Method;
-                                methodStarted = true;
-                                argsStarted = false;
-                                hasArgs = false;
-                                continue;
-                            }
+                            type = CodePartType.Method;
+                            methodStarted = true;
+                            argsStarted = false;
+                            hasArgs = false;
+                            continue;
                         }
-                        else
-                        {
-                            if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
-                                .map(i -> (Keyword)i)
-                                .anyMatch(i -> "КонецПроцедуры".equalsIgnoreCase(i.getValue())))
-                            {
-                                methodStarted = false;
-                                continue;
-                            }
 
-                            if (!hasArgs)
+                        if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                            .map(i -> (Keyword)i)
+                            .anyMatch(i -> "КонецПроцедуры".equalsIgnoreCase(i.getValue())
+                                || "КонецФункции".equalsIgnoreCase(i.getValue())))
+                        {
+                            methodStarted = false;
+                            type = CodePartType.MethodPrefix;
+                            continue;
+                        }
+
+                        if (!hasArgs)
+                        {
+                            var keyword = (Keyword)grammar;
+                            if (!argsStarted)
                             {
-                                var keyword = (Keyword)grammar;
-                                if (!argsStarted)
+                                if ("(".equals(keyword.getValue()))
                                 {
-                                    if ("(".equals(keyword.getValue()))
-                                    {
-                                        type = CodePartType.MethodArgs;
-                                        argsStarted = true;
-                                    }
+                                    type = CodePartType.MethodArgs;
+                                    argsStarted = true;
                                 }
-                                else
+                            }
+                            else
+                            {
+                                if (")".equals(keyword.getValue()))
                                 {
-                                    if (")".equals(keyword.getValue()))
-                                    {
-                                        type = CodePartType.Method;
-                                        argsStarted = false;
-                                        hasArgs = true;
-                                    }
+                                    type = CodePartType.Method;
+                                    argsStarted = false;
+                                    hasArgs = true;
                                 }
                             }
                         }

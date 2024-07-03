@@ -223,7 +223,8 @@ public class CodeCompletionViewModel
                     var hint = session.getHint();
 
                     // temporarily for comments
-                    if (complitionType == CodeCompletionType.CodeComments)
+                    if (complitionType == CodeCompletionType.CodeComments
+                        || complitionType == CodeCompletionType.CodeCommentsContinue)
                     {
                         value = value.replace("`", ""); //$NON-NLS-1$ //$NON-NLS-2$
                     }
