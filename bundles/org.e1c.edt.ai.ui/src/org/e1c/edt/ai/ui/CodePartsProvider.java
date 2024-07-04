@@ -35,6 +35,7 @@ public class CodePartsProvider implements ICodePartsProvider
         ILeafNode lastLeafNode = null;
         for (var leafNode : rootNode.getLeafNodes())
         {
+            var isProcessed = false;
             lastLeafNode = leafNode;
             var text = leafNode.getText();
             var type = CodePartType.Unknown;
@@ -46,20 +47,20 @@ public class CodePartsProvider implements ICodePartsProvider
                 {
                     type = methodStarted ? CodePartType.Method : CodePartType.MethodPrefix;
                     var grammar = leafNode.getGrammarElement();
-                    if (!methodStarted && grammar instanceof TerminalRule)
+                    if (!isProcessed && !methodStarted && grammar instanceof TerminalRule)
                     {
                         var terminalRule = (TerminalRule)grammar;
                         var name = terminalRule.getName();
                         if ("SL_COMMENT".equals(name))
                         {
                             type = CodePartType.Comment;
-                            continue;
+                            isProcessed = true;
                         }
                     }
 
-                    if (grammar instanceof Keyword)
+                    if (!isProcessed && grammar instanceof Keyword)
                     {
-                        if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                        if (!isProcessed && getAlternatives(grammar).filter(i -> i instanceof Keyword)
                             .map(i -> (Keyword)i)
                             .anyMatch(i -> "Процедура".equalsIgnoreCase(i.getValue())
                                 || "Функция".equalsIgnoreCase(i.getValue())))
@@ -71,7 +72,7 @@ public class CodePartsProvider implements ICodePartsProvider
                             continue;
                         }
 
-                        if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                        if (!isProcessed && getAlternatives(grammar).filter(i -> i instanceof Keyword)
                             .map(i -> (Keyword)i)
                             .anyMatch(i -> "КонецПроцедуры".equalsIgnoreCase(i.getValue())
                                 || "КонецФункции".equalsIgnoreCase(i.getValue())))
@@ -81,7 +82,7 @@ public class CodePartsProvider implements ICodePartsProvider
                             continue;
                         }
 
-                        if (!hasArgs)
+                        if (!isProcessed && !hasArgs)
                         {
                             var keyword = (Keyword)grammar;
                             if (!argsStarted)
