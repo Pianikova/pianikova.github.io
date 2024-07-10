@@ -12,7 +12,8 @@ import org.e1c.edt.ai.IAIContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ILog;
-import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
+import org.eclipse.xtext.nodemodel.ILeafNode;
+import org.eclipse.xtext.nodemodel.INode;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -63,12 +64,13 @@ public class AISourceCodeSizeReducerContextProvider
             return Optional.empty();
         }
 
-        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNoode, offset);
+        var cursorNode = findVisibleLeafNodeAtOffset(rootNoode, offset);
         if (cursorNode == null || cancellationToken.isCanceled())
         {
             return Optional.empty();
         }
 
+        var a = cursorNode.getText();
         var maxLength = ctx.getMaxLength();
         var serializerContext =
             new StringSerializerContext(cursorNode, offset, ctx.Forcable ? Integer.MAX_VALUE : maxLength);
@@ -91,5 +93,30 @@ public class AISourceCodeSizeReducerContextProvider
 
         return contextFactory.create(target.getTextWidget().getText(), offset, text, serializerContext.getOffset(),
             CodeCompletionType.CodeLines);
+    }
+
+    private ILeafNode findVisibleLeafNodeAtOffset(INode rootNode, int leafNodeOffset)
+    {
+        ILeafNode lastVisible = null;
+        for (var leafNode : rootNode.getLeafNodes())
+        {
+            if (!leafNode.isHidden())
+            {
+                lastVisible = leafNode;
+            }
+
+            if (leafNodeOffset >= leafNode.getOffset()
+                && leafNodeOffset < leafNode.getTotalEndOffset())
+            {
+                if (leafNode.isHidden())
+                {
+                    return lastVisible;
+                }
+
+                return leafNode;
+            }
+        }
+
+        return null;
     }
 }

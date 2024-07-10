@@ -26,7 +26,7 @@ public class StringSerializerContext
 
     public boolean serialize(ILeafNode node)
     {
-        if (node == cursorNode)
+        if (cursorNode.equals(node))
         {
             offset += text.length();
             achiveCursor = true;
