@@ -70,7 +70,6 @@ public class AISourceCodeSizeReducerContextProvider
             return Optional.empty();
         }
 
-        var a = cursorNode.getText();
         var maxLength = ctx.getMaxLength();
         var serializerContext =
             new StringSerializerContext(cursorNode, offset, ctx.Forcable ? Integer.MAX_VALUE : maxLength);

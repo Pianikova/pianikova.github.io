@@ -10,7 +10,7 @@ import com.google.common.base.Preconditions;
 public class StringSerializerContext
 {
     private final StringBuilder text = new StringBuilder();
-    private final ILeafNode cursorNode;
+    private final int cursorNodeOffset;
     private int offset;
     private final int maxLength;
     private boolean achiveCursor;
@@ -19,14 +19,22 @@ public class StringSerializerContext
     {
         Preconditions.checkArgument(offset >= 0);
         Preconditions.checkArgument(maxLength > 0);
-        this.cursorNode = cursorNode;
         this.maxLength = maxLength;
-        this.offset = offset - (cursorNode != null ? cursorNode.getOffset() : 0);
+        if (cursorNode != null)
+        {
+            cursorNodeOffset = cursorNode.getTotalOffset();
+            this.offset = offset - cursorNodeOffset;
+        }
+        else
+        {
+            cursorNodeOffset = 0;
+            this.offset = 0;
+        }
     }
 
     public boolean serialize(ILeafNode node)
     {
-        if (cursorNode.equals(node))
+        if (!achiveCursor && cursorNodeOffset == node.getTotalOffset())
         {
             offset += text.length();
             achiveCursor = true;

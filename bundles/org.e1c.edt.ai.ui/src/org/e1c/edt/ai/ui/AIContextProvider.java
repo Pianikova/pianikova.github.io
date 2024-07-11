@@ -10,7 +10,6 @@ import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.IAIContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IUISettings;
-import org.e1c.edt.ai.ui.AIUIModule.SourceCodeSizeReducer;
 import org.e1c.edt.ai.ui.AIUIModule.SourceMethodComments;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.ui.editor.XtextSourceViewer;
@@ -26,28 +25,24 @@ public class AIContextProvider
     private final IAIContextFactory contextFactory;
     private final ICodePartsProvider codePartsProvider;
     private final IAIContextProvider<AISourceContext> commentsContextProvider;
-    private final IAIContextProvider<AISourceContext> codeSizeReducerContextProvider;
 
     @Inject
     public AIContextProvider(IUI ui,
         IUISettings uiSettings,
         IAIContextFactory contextFactory,
         ICodePartsProvider codePartsProvider,
-        @SourceMethodComments IAIContextProvider<AISourceContext> commentsContextProvider,
-        @SourceCodeSizeReducer IAIContextProvider<AISourceContext> codeSizeReducerContextProvider)
+        @SourceMethodComments IAIContextProvider<AISourceContext> commentsContextProvider)
     {
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(contextFactory);
         Preconditions.checkNotNull(codePartsProvider);
         Preconditions.checkNotNull(commentsContextProvider);
-        Preconditions.checkNotNull(codeSizeReducerContextProvider);
         this.ui = ui;
         this.uiSettings = uiSettings;
         this.contextFactory = contextFactory;
         this.codePartsProvider = codePartsProvider;
         this.commentsContextProvider = commentsContextProvider;
-        this.codeSizeReducerContextProvider = codeSizeReducerContextProvider;
     }
 
     @Override
@@ -133,19 +128,6 @@ public class AIContextProvider
                 case CodeComments:
                 case CodeCommentsContinue:
                     result = commentsContextProvider.create(actualTarget, sourceCtx, cancellationToken);
-                    break;
-
-                case CodeLines:
-                case CodeSingleWord:
-                    if (text.length() <= max)
-                    {
-                        return contextFactory.create(text, offset, text, offset,
-                            actualTarget.getComplitionType());
-                    }
-
-                    sourceCtx.SkipMinorMethods = true;
-                    sourceCtx.Forcable = true;
-                    result = codeSizeReducerContextProvider.create(actualTarget, sourceCtx, cancellationToken);
                     break;
 
                 default:
