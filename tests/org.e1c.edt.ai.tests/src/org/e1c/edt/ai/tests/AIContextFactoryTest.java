@@ -12,7 +12,6 @@ import java.util.Collection;
 
 import org.e1c.edt.ai.ContextFactory;
 import org.e1c.edt.ai.ContextParts;
-import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.IContextSettings;
 import org.e1c.edt.ai.IContextSplitter;
 import org.e1c.edt.ai.IStringNormalizer;
@@ -63,7 +62,7 @@ public class AIContextFactoryTest
         var factory = createInstance();
 
         // When
-        var actualContext = factory.create("", 0, text, offset, CodeCompletionType.CodeLines); //$NON-NLS-1$
+        var actualContext = factory.create("", 0, text, offset); //$NON-NLS-1$
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());

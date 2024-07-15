@@ -7,8 +7,8 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.IContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IContextFactory;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
@@ -80,7 +80,6 @@ public class AISourceMethodCommentsContextProvider
             }
         }
 
-        return contextFactory.create(target.getTextWidget().getText(), ctx.getOffset(), method.toString(), offset,
-            target.getComplitionType());
+        return contextFactory.create(target.getTextWidget().getText(), ctx.getOffset(), method.toString(), offset);
     }
 }

@@ -5,7 +5,7 @@ package org.e1c.edt.ai;
 
 public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
 {
-    ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history, boolean isSingleWordMode);
+    ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history, boolean singleWordMode);
 
     TContext getContext();
 

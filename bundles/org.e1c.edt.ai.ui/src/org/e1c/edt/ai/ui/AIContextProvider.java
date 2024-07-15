@@ -6,8 +6,8 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.IContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IContextFactory;
 import org.e1c.edt.ai.IUISettings;
 import org.eclipse.jface.text.source.SourceViewer;
 
@@ -58,6 +58,6 @@ public class AIContextProvider
             max = uiSettings.getMaxAssistantTextSize();
         }
 
-        return contextFactory.create(text, offset, text, offset, target.getComplitionType());
+        return contextFactory.create(text, offset, text, offset);
     }
 }

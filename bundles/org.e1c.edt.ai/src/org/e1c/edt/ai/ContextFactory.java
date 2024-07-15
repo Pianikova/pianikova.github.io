@@ -28,14 +28,14 @@ public class ContextFactory
     }
 
     @Override
-    public Optional<AIContext> create(String source, int sourceOffset, String text, int offset, CodeCompletionType codeCompletionType)
+    public Optional<AIContext> create(String source, int sourceOffset, String text, int offset)
     {
         Preconditions.checkNotNull(source);
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0);
         if (text.isEmpty())
         {
-            return Optional.of(new AIContext(0, "", codeCompletionType, "", "")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            return Optional.of(new AIContext(0, "", "", "")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         }
 
         if (offset > text.length())
@@ -46,6 +46,6 @@ public class ContextFactory
         var parts = contextSplitter.split(text, offset, contextSettings.getMaxLength());
         var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
         var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
-        return Optional.of(new AIContext(offset, text, codeCompletionType, prefix, sufix));
+        return Optional.of(new AIContext(offset, text, prefix, sufix));
     }
 }

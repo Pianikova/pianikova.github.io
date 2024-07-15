@@ -11,7 +11,6 @@ import java.util.concurrent.CancellationException;
 
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
-import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
@@ -117,28 +116,27 @@ public class CodeCompletionViewModel
         });
     }
 
-    private void update(CodeCompletionType codeCompletionType, ICodeCompletionSession<CodeCompletionContext> session)
+    private void update(ICodeCompletionSession<CodeCompletionContext> session)
     {
         var content = session.getContext();
         var widget = content.getWidget();
         var hint = session.getHint();
         var offset = widget.getCaretOffset();
         dispatcher.dispatch(() -> {
-            hintPainter.pinOffset(widget, offset, true,
-                codeCompletionType == CodeCompletionType.CodeSingleWord);
+            hintPainter.pinOffset(widget, offset, true, session.getContext().isSingleWordMode());
             hintPainter.setHintAt(offset, hint.getText(HintPart.LINES), hint.getText(HintPart.TOKEN));
         });
     }
 
-    private void askNew(CodeCompletionType codeCompletionType)
+    private void askNew()
     {
         var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
         log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
         reset();
-        askWithDelay(codeCompletionType, delayBeforeShow);
+        askWithDelay(delayBeforeShow);
     }
 
-    private void askWithDelay(CodeCompletionType codeCompletionType, Duration delayBeforeShow)
+    private void askWithDelay(Duration delayBeforeShow)
     {
         cancel();
         new Job(Messages.CodeCompletionJobName)
@@ -148,7 +146,7 @@ public class CodeCompletionViewModel
             {
                 var cancellationTokenSource = new JobCancellationTokenSource();
                 cancellationTokenSource.attachMonitor(monitor);
-                ask(codeCompletionType, delayBeforeShow, cancellationTokenSource);
+                ask(delayBeforeShow, cancellationTokenSource);
                 return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
             }
         }.schedule();
@@ -165,26 +163,26 @@ public class CodeCompletionViewModel
         });
     }
 
-    private void ask(CodeCompletionType codeCompletionType, Duration delayBeforeShow,
+    private void ask(Duration delayBeforeShow,
         CancellationTokenSource cancellationTokenSource)
     {
         try
         {
             var startTime = clock.now();
-            var aiCtx = dispatcher.dispatch(
+            var optionalAiContext = dispatcher.dispatch(
                 () -> aiContextProvider
-                    .create(new AITarget(textWidget, 0, codeCompletionType), null, cancellationTokenSource)
+                    .create(new AITarget(textWidget, 0), null, cancellationTokenSource)
                     .orElse(null));
-            if (aiCtx.isEmpty())
+
+            if (optionalAiContext.isEmpty())
             {
                 return;
             }
 
-            var aiContext = aiCtx.get();
-            var complitionType = aiContext.getComplitionType();
+            var aiContext = optionalAiContext.get();
             var codeCompletionCtx = new CodeCompletionContext(aiContext, textWidget, cancellationTokenSource);
-            var session = sessionProvider.get()
-                .initiaize(codeCompletionCtx, history, complitionType == CodeCompletionType.CodeSingleWord);
+            var singleWordMode = dispatcher.dispatch(() -> codeCompletionCtx.isSingleWordMode()).orElse(false);
+            var session = sessionProvider.get().initiaize(codeCompletionCtx, history, singleWordMode);
             synchronized (lockObject)
             {
                 if (lastSession != null)
@@ -206,8 +204,7 @@ public class CodeCompletionViewModel
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
                 hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
-                    delay.isNegative() || delay == Duration.ZERO,
-                    complitionType == CodeCompletionType.CodeSingleWord);
+                    delay.isNegative() || delay == Duration.ZERO, singleWordMode);
             });
 
             var codeCompletionSource = codeAssistant.generate(aiContext, cancellationTokenSource);
@@ -244,6 +241,11 @@ public class CodeCompletionViewModel
                     if (hint.isBlank())
                     {
                         hint.clear();
+                    }
+
+                    if (!singleWordMode && hint.isEmpty())
+                    {
+                        hint.append("\n"); //$NON-NLS-1$
                     }
 
                     session.complete();
@@ -341,18 +343,17 @@ public class CodeCompletionViewModel
         {
         case SUGGEST:
             reset();
-            askWithDelay(CodeCompletionType.CodeLines, Duration.ZERO);
+            askWithDelay(Duration.ZERO);
             event.doit = false;
             break;
 
         case UPDATE:
             if (session != null)
             {
-                var complitionType = session.getContext().getAiContext().getComplitionType();
-                update(complitionType, session);
-                if (session.isDone() && complitionType == CodeCompletionType.CodeLines)
+                update(session);
+                if (session.isDone() && !session.getContext().isSingleWordMode())
                 {
-                    askWithDelay(complitionType, Duration.ZERO);
+                    askWithDelay(Duration.ZERO);
                 }
 
                 event.doit = false;
@@ -361,7 +362,7 @@ public class CodeCompletionViewModel
             break;
 
         case ASK_NEW:
-            askNew(CodeCompletionType.CodeLines);
+            askNew();
             break;
 
         case RESET:
@@ -370,12 +371,7 @@ public class CodeCompletionViewModel
             break;
 
         case HANDLE:
-            if (session != null
-                && session.getContext().getAiContext().getComplitionType() == CodeCompletionType.CodeLines)
-            {
-                event.doit = false;
-            }
-
+            event.doit = false;
             break;
 
         default:

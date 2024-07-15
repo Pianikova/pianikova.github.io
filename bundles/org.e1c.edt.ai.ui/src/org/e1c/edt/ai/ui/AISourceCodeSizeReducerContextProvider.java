@@ -7,10 +7,9 @@ import java.time.Duration;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.CodeCompletionType;
-import org.e1c.edt.ai.IContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
+import org.e1c.edt.ai.IContextFactory;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.xtext.nodemodel.ILeafNode;
 import org.eclipse.xtext.nodemodel.INode;
@@ -90,8 +89,7 @@ public class AISourceCodeSizeReducerContextProvider
             return Optional.empty();
         }
 
-        return contextFactory.create(target.getTextWidget().getText(), offset, text, serializerContext.getOffset(),
-            CodeCompletionType.CodeLines);
+        return contextFactory.create(target.getTextWidget().getText(), offset, text, serializerContext.getOffset());
     }
 
     private ILeafNode findVisibleLeafNodeAtOffset(INode rootNode, int leafNodeOffset)

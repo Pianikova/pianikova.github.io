@@ -9,12 +9,10 @@ public class AIContext
 {
     private final int cursorOffset;
     private final String text;
-    private final CodeCompletionType complitionType;
     private final String prefix;
     private final String sufix;
 
-    public AIContext(int cursorOffset, String text, CodeCompletionType complitionType, String prefix,
-        String sufix)
+    public AIContext(int cursorOffset, String text, String prefix, String sufix)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(cursorOffset >= 0 && (text.isEmpty() || cursorOffset <= text.length()));
@@ -22,7 +20,6 @@ public class AIContext
         Preconditions.checkNotNull(sufix);
         this.cursorOffset = cursorOffset;
         this.text = text;
-        this.complitionType = complitionType;
         this.prefix = prefix;
         this.sufix = sufix;
     }
@@ -44,10 +41,6 @@ public class AIContext
 
         str.append("cursorOffset:"); //$NON-NLS-1$
         str.append(cursorOffset);
-        str.append(System.lineSeparator());
-
-        str.append("complitionType:"); //$NON-NLS-1$
-        str.append(complitionType);
         str.append(System.lineSeparator());
 
         var textWithCursor = text.substring(0, cursorOffset) + "█" + text.substring(cursorOffset); //$NON-NLS-1$
@@ -75,11 +68,6 @@ public class AIContext
     private static String format(String text)
     {
         return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
-    }
-
-    public CodeCompletionType getComplitionType()
-    {
-        return complitionType;
     }
 
     public String getPrefix()

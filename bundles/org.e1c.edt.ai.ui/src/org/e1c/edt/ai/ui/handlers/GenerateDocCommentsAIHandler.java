@@ -4,7 +4,6 @@
 package org.e1c.edt.ai.ui.handlers;
 
 import org.e1c.edt.ai.CancellationTokens;
-import org.e1c.edt.ai.CodeCompletionType;
 import org.e1c.edt.ai.ui.AITarget;
 import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.ChatView;
@@ -42,7 +41,7 @@ public class GenerateDocCommentsAIHandler
     {
         ui.getTextWidget()
             .flatMap(textWidget -> aiContextProvider.create(
-                new AITarget(textWidget, Integer.MAX_VALUE, CodeCompletionType.ChatComments), null,
+                new AITarget(textWidget, Integer.MAX_VALUE), null,
                 CancellationTokens.NONE))
             .ifPresent(ctx -> chat.generateDocComments(ctx.getText()));
         ui.showView(ChatView.ID);

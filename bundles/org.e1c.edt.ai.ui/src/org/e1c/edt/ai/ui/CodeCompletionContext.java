@@ -29,6 +29,33 @@ public class CodeCompletionContext
     }
 
     @Override
+    public boolean isSingleWordMode()
+    {
+        var offset = textWidget.getCaretOffset();
+        var contet = textWidget.getContent();
+        var contentLength = contet.getCharCount();
+        var prefix = contet.getTextRange(offset, contentLength - offset);
+        var pos = 0;
+        while (pos < prefix.length())
+        {
+            var ch = prefix.charAt(pos);
+            if (!Character.isWhitespace(ch))
+            {
+                return true;
+            }
+
+            if (ch == '\n')
+            {
+                return false;
+            }
+
+            pos++;
+        }
+
+        return false;
+    }
+
+    @Override
     public void replace(int start, int replaceLength, String text)
     {
         var contet = textWidget.getContent();

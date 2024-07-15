@@ -7,6 +7,5 @@ import java.util.Optional;
 
 public interface IContextFactory
 {
-    Optional<AIContext> create(String source, int sourceOffset, String text, int offset,
-        CodeCompletionType codeCompletionType);
+    Optional<AIContext> create(String source, int sourceOffset, String text, int offset);
 }

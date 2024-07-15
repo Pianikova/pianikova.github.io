@@ -12,7 +12,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
     private final IHistoricalHint hint;
     private TContext context;
     private IHintHistory history;
-    private boolean isSingleWordMode;
+    private boolean singleWordMode;
     private boolean isAccepting, inDone;
 
     @Inject
@@ -27,15 +27,15 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
     }
 
     @Override
-    public ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history, boolean isSingleWordMode)
+    public ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history, boolean singleWordMode)
     {
         Preconditions.checkNotNull(context);
         Preconditions.checkNotNull(hint);
         Preconditions.checkNotNull(hint);
         this.context = context;
         this.history = history;
-        this.isSingleWordMode = isSingleWordMode;
-        hint.initiaize(history, isSingleWordMode ? 1 : uiSettings.getCodeCompletionLinesCount(), isSingleWordMode);
+        this.singleWordMode = singleWordMode;
+        hint.initiaize(history, singleWordMode ? 1 : uiSettings.getCodeCompletionLinesCount(), singleWordMode);
         return this;
     }
 
@@ -199,7 +199,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
 
     private boolean isFinishingChar()
     {
-        if (!isSingleWordMode)
+        if (!singleWordMode)
         {
             return false;
         }
