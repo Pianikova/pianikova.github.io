@@ -6,12 +6,13 @@ package org.e1c.edt.ai.assistent;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IObservable;
+import org.e1c.edt.ai.assistent.model.Completion;
 
 /**
  * @author Bogdan Sushkov
  *
  */
-public interface IAICodeAssistant
+public interface ICodeAssistant
 {
-    public IObservable<String> generate(AIContext aiContext, ICancellationToken cancellationToken);
+    public IObservable<Completion> generate(AIContext aiContext, ICancellationToken cancellationToken);
 }

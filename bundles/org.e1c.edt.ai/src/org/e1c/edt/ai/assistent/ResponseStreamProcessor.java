@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IObserver;
+import org.e1c.edt.ai.assistent.model.Completion;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -25,7 +26,7 @@ public class ResponseStreamProcessor implements IResponseStreamProcessor
     }
 
     @Override
-    public void process(Stream<String> stream, IObserver<String> observer, ICancellationToken cancellationToken)
+    public void process(Stream<String> stream, IObserver<Completion> observer, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(stream);
         Preconditions.checkNotNull(observer);

@@ -8,7 +8,7 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CodeCompletionType;
-import org.e1c.edt.ai.IAIContextFactory;
+import org.e1c.edt.ai.IContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ILog;
@@ -22,13 +22,13 @@ public class AISourceCodeSizeReducerContextProvider
     implements IAIContextProvider<AISourceContext>
 {
     private final ILog log;
-    private final IAIContextFactory contextFactory;
+    private final IContextFactory contextFactory;
     private final ISyntaxWalker<StringSerializerContext> basicPathSyntaxWalker;
     private final ISyntaxVisitor<StringSerializerContext> serializerVisitor;
     private IClock clock;
 
     @Inject
-    public AISourceCodeSizeReducerContextProvider(ILog log, IAIContextFactory contextFactory,
+    public AISourceCodeSizeReducerContextProvider(ILog log, IContextFactory contextFactory,
         ISyntaxWalker<StringSerializerContext> basicPathSyntaxWalker,
         ISyntaxVisitor<StringSerializerContext> serializerVisitor, IClock clock)
     {

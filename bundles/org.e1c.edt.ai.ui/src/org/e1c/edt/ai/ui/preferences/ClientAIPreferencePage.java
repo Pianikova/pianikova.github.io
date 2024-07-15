@@ -103,9 +103,6 @@ public class ClientAIPreferencePage
 
         addField(new BooleanFieldEditor(ISettingsStore.CONTINUOUS_CODE_COMPLETION,
             Messages.ClientAIPreferencePage_ContinuousCodeCompletition, parent));
-
-        addField(new BooleanFieldEditor(ISettingsStore.CONTINUOUS_TEMPLATED_CONTEXT,
-            Messages.ClientAIPreferencePage_TemplatedContext, parent));
     }
 
     @Override

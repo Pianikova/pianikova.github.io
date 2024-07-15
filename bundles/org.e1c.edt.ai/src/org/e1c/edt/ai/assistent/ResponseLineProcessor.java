@@ -5,14 +5,14 @@ package org.e1c.edt.ai.assistent;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObserver;
-import org.e1c.edt.ai.assistent.model.AIResponse;
+import org.e1c.edt.ai.assistent.model.CompletionResponse;
+import org.e1c.edt.ai.assistent.model.Completion;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class ResponseLineProcessor implements IResponseLineProcessor
 {
-    public static final String DATA_LINE_PREFIX = "data:"; //$NON-NLS-1$
     private final IJson json;
 
     @Inject
@@ -22,19 +22,22 @@ public class ResponseLineProcessor implements IResponseLineProcessor
     }
 
     @Override
-    public boolean process(IObserver<String> observer, String line)
+    public boolean process(IObserver<Completion> observer, String line)
     {
         Preconditions.checkNotNull(observer);
-        if (line == null || line.length() < DATA_LINE_PREFIX.length() + 1 || !line.startsWith(DATA_LINE_PREFIX))
-        {
-            return true;
-        }
-
-        line = line.substring(DATA_LINE_PREFIX.length());
         try
         {
-            return json.deserialize(line, AIResponse.class)
-                .map(aiResponse -> process(observer, aiResponse))
+            if (line == null || line.isBlank())
+            {
+                return true;
+            }
+
+            var sb = new StringBuilder(line.length() + 2);
+            sb.append('{');
+            sb.append(line);
+            sb.append('}');
+            return json.deserialize(sb.toString(), CompletionResponse.class)
+                .map(aiResponse -> process(observer, aiResponse.data))
                 .orElse(true);
         }
         catch (Exception e)
@@ -45,32 +48,20 @@ public class ResponseLineProcessor implements IResponseLineProcessor
         return false;
     }
 
-    private Boolean process(IObserver<String> observer, AIResponse aiResponse)
+    private Boolean process(IObserver<Completion> observer, Completion data)
     {
-        var token = aiResponse.getToken();
-        if (token == null)
+        if (data == null)
         {
             return true;
         }
 
-        var text = token.getText();
+        var text = data.text;
         if (text == null || text.isEmpty())
         {
-            return true;
+            return data.finishReason == null;
         }
 
-        if (aiResponse.getGeneratedText() != null)
-        {
-            if (text.endsWith("</s>")) //$NON-NLS-1$
-            {
-                return false;
-            }
-
-            observer.onNext(text);
-            return false;
-        }
-
-        observer.onNext(text);
-        return true;
+        observer.onNext(data);
+        return data.finishReason == null;
     }
 }

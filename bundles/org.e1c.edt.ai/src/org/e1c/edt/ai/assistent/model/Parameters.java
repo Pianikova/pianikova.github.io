@@ -31,7 +31,7 @@ public class Parameters
     public Double frequencyPenalty;
 
     @SerializedName("return_full_text")
-    public boolean returnFullText;
+    public Boolean returnFullText;
 
     public Boolean seed;
 
@@ -63,6 +63,111 @@ public class Parameters
 
     @SerializedName("trim_stop")
     public Boolean trimStop;
+
+    public Parameters merge(Parameters params)
+    {
+        if (params.bestOf != null)
+        {
+            bestOf = params.bestOf;
+        }
+
+        if (params.decoderInputDetails != null)
+        {
+            decoderInputDetails = params.decoderInputDetails;
+        }
+
+        if (params.details != null)
+        {
+            details = params.details;
+        }
+
+        if (params.doSample != null)
+        {
+            doSample = params.doSample;
+        }
+
+        if (params.maxNewTokens != null)
+        {
+            maxNewTokens = params.maxNewTokens;
+        }
+
+        if (params.repetitionPenalty != null)
+        {
+            repetitionPenalty = params.repetitionPenalty;
+        }
+
+        if (params.frequencyPenalty != null)
+        {
+            frequencyPenalty = params.frequencyPenalty;
+        }
+
+        if (params.returnFullText != null)
+        {
+            returnFullText = params.returnFullText;
+        }
+
+        if (params.seed != null)
+        {
+            seed = params.seed;
+        }
+
+        if (params.stop != null && params.stop.size() > 0)
+        {
+            stop = params.stop;
+        }
+
+        if (params.temperature != null)
+        {
+            temperature = params.temperature;
+        }
+
+        if (params.topK != null)
+        {
+            topK = params.topK;
+        }
+
+        if (params.topNTokens != null)
+        {
+            topNTokens = params.topNTokens;
+        }
+
+        if (params.topP != null)
+        {
+            topP = params.topP;
+        }
+
+        if (params.truncate != null)
+        {
+            truncate = params.truncate;
+        }
+
+        if (params.typicalP != null)
+        {
+            typicalP = params.typicalP;
+        }
+
+        if (params.watermark != null)
+        {
+            watermark = params.watermark;
+        }
+
+        if (params.tokenHealing != null)
+        {
+            tokenHealing = params.tokenHealing;
+        }
+
+        if (params.returnLine != null)
+        {
+            returnLine = params.returnLine;
+        }
+
+        if (params.trimStop != null)
+        {
+            trimStop = params.trimStop;
+        }
+
+        return params;
+    }
 
     @Override
     public int hashCode()

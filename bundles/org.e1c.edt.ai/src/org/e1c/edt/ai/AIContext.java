@@ -9,19 +9,22 @@ public class AIContext
 {
     private final int cursorOffset;
     private final String text;
-    private final String context;
     private final CodeCompletionType complitionType;
+    private final String prefix;
+    private final String sufix;
 
-    public AIContext(int cursorOffset, String text, String context, CodeCompletionType complitionType)
+    public AIContext(int cursorOffset, String text, CodeCompletionType complitionType, String prefix,
+        String sufix)
     {
         Preconditions.checkNotNull(text);
-        Preconditions.checkNotNull(context);
         Preconditions.checkArgument(cursorOffset >= 0 && (text.isEmpty() || cursorOffset <= text.length()));
+        Preconditions.checkNotNull(prefix);
+        Preconditions.checkNotNull(sufix);
         this.cursorOffset = cursorOffset;
         this.text = text;
-        this.context = context;
         this.complitionType = complitionType;
-
+        this.prefix = prefix;
+        this.sufix = sufix;
     }
 
     public int getCursorOffset()
@@ -32,11 +35,6 @@ public class AIContext
     public String getText()
     {
         return text;
-    }
-
-    public String getContext()
-    {
-        return context;
     }
 
     @Override
@@ -58,8 +56,12 @@ public class AIContext
         str.append(format(textWithCursor));
         str.append(System.lineSeparator());
 
-        str.append("context:"); //$NON-NLS-1$
-        str.append(format(context));
+        str.append("prefix:"); //$NON-NLS-1$
+        str.append(format(prefix));
+        str.append(System.lineSeparator());
+
+        str.append("sufix:"); //$NON-NLS-1$
+        str.append(format(sufix));
         str.append(System.lineSeparator());
 
         str.append("raw text:"); //$NON-NLS-1$
@@ -78,5 +80,15 @@ public class AIContext
     public CodeCompletionType getComplitionType()
     {
         return complitionType;
+    }
+
+    public String getPrefix()
+    {
+        return prefix;
+    }
+
+    public String getSufix()
+    {
+        return sufix;
     }
 }

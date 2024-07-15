@@ -22,7 +22,7 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observers;
-import org.e1c.edt.ai.assistent.IAICodeAssistant;
+import org.e1c.edt.ai.assistent.ICodeAssistant;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -43,7 +43,7 @@ public class CodeCompletionViewModel
     private final Object lockObject = new Object();
     private final ILog log;
     private final IUISettings uiSettings;
-    private final IAICodeAssistant codeAssistant;
+    private final ICodeAssistant codeAssistant;
     private final IAIContextProvider<Void> aiContextProvider;
     private final IDispatcher dispatcher;
     private final IHintPainter hintPainter;
@@ -59,7 +59,7 @@ public class CodeCompletionViewModel
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
-        IAICodeAssistant codeAssistant,
+        ICodeAssistant codeAssistant,
         IAIContextProvider<Void> aiContextProvider,
         IDispatcher dispatcher, IHintPainter hintPainter, IInputDelayStatistics inputRateStatistics,
         IClock clock,
@@ -214,22 +214,14 @@ public class CodeCompletionViewModel
 
             // @formatter:off
             codeCompletionSource.subscribe(Observers.create(
-                value -> {
+                data -> {
                     if (cancellationTokenSource.isCanceled())
                     {
                         return;
                     }
 
                     var hint = session.getHint();
-
-                    // temporarily for comments
-                    if (complitionType == CodeCompletionType.CodeComments
-                        || complitionType == CodeCompletionType.CodeCommentsContinue)
-                    {
-                        value = value.replace("`", ""); //$NON-NLS-1$ //$NON-NLS-2$
-                    }
-
-                    hint.append(value);
+                    hint.append(data.text);
                     showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
                 },
                 error -> {
@@ -252,11 +244,6 @@ public class CodeCompletionViewModel
                     if (hint.isBlank())
                     {
                         hint.clear();
-                    }
-
-                    if (complitionType != CodeCompletionType.CodeSingleWord && hint.isEmpty())
-                    {
-                        hint.append("\n"); //$NON-NLS-1$
                     }
 
                     session.complete();

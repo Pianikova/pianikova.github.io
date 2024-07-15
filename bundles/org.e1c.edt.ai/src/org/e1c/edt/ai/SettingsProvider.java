@@ -5,8 +5,6 @@ package org.e1c.edt.ai;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
@@ -49,11 +47,7 @@ public class SettingsProvider
         URL chatURL = null;
         try
         {
-            var rootURL = new URL(normalize(settingsStore.getString(ISettingsStore.APIURL)));
-            apiURL = new URL(rootURL,
-                normalize(rootURL.getFile())
-                    + String.format(QUERY_TEMPLATE, URLEncoder.encode(clientToken, StandardCharsets.UTF_8),
-                        URLEncoder.encode(clientUID, StandardCharsets.UTF_8)));
+            apiURL = new URL(normalize(settingsStore.getString(ISettingsStore.APIURL)));
             chatURL = new URL(normalize(settingsStore.getString(ISettingsStore.CHATURL)));
         }
         catch (MalformedURLException e)
@@ -82,10 +76,9 @@ public class SettingsProvider
         }
 
         text = text.trim();
-
-        if (text.endsWith("/")) //$NON-NLS-1$
+        if (!text.endsWith("/")) //$NON-NLS-1$
         {
-            text = text.substring(0, text.length() - 1);
+            text = text + "/"; //$NON-NLS-1$
         }
 
         return text;

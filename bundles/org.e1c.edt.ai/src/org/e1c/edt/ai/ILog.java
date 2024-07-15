@@ -7,5 +7,7 @@ public interface ILog
 {
     void logError(Throwable error);
 
+    void logError(String error);
+
     void trace(String topic, String details);
 }

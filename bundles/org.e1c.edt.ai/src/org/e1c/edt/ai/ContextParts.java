@@ -7,20 +7,17 @@ import java.util.Objects;
 
 import com.google.common.base.Preconditions;
 
-public class AIContextParts
+public class ContextParts
 {
     private final Range prefix;
     private final Range sufix;
-    private final Range middle;
 
-    public AIContextParts(Range prefix, Range sufix, Range middle)
+    public ContextParts(Range prefix, Range sufix)
     {
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
-        Preconditions.checkNotNull(middle);
         this.prefix = prefix;
         this.sufix = sufix;
-        this.middle = middle;
     }
 
     public Range getPrefix()
@@ -33,15 +30,10 @@ public class AIContextParts
         return sufix;
     }
 
-    public Range getMiddle()
-    {
-        return middle;
-    }
-
     @Override
     public int hashCode()
     {
-        return Objects.hash(prefix, sufix, middle);
+        return Objects.hash(prefix, sufix);
     }
 
     @Override
@@ -53,14 +45,14 @@ public class AIContextParts
             return false;
         if (getClass() != obj.getClass())
             return false;
-        AIContextParts other = (AIContextParts)obj;
-        return Objects.equals(prefix, other.prefix) && Objects.equals(sufix, other.sufix)
-            && Objects.equals(middle, other.middle);
+        ContextParts other = (ContextParts)obj;
+        return Objects.equals(prefix, other.prefix) && Objects.equals(sufix, other.sufix);
     }
 
+    @SuppressWarnings("nls")
     @Override
     public String toString()
     {
-        return "AIContextParts [prefix=" + prefix + ", sufix=" + sufix + ", middle=" + middle + "]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        return "AIContextParts [prefix=" + prefix + ", sufix=" + sufix + "]";
     }
 }

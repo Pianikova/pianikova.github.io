@@ -84,7 +84,7 @@ public class SettingsProviderTest
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/?client_id=Abc&client_uid=345"),
+            Assert.assertEquals(new URL("http://api.com/"),
                 settings.get().getApiURL());
         }
         catch (MalformedURLException e)
@@ -108,7 +108,7 @@ public class SettingsProviderTest
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/?client_id=Abc&client_uid=345"), settings.get().getApiURL());
+            Assert.assertEquals(new URL("http://api.com/"), settings.get().getApiURL());
         }
         catch (MalformedURLException e)
         {
@@ -131,7 +131,7 @@ public class SettingsProviderTest
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc&client_uid=345"),
+            Assert.assertEquals(new URL("http://api.com/generate/"),
                 settings.get().getApiURL());
         }
         catch (MalformedURLException e)
@@ -155,7 +155,7 @@ public class SettingsProviderTest
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://api.com/generate?client_id=Abc&client_uid=345"),
+            Assert.assertEquals(new URL("http://api.com/generate/"),
                 settings.get().getApiURL());
         }
         catch (MalformedURLException e)
@@ -177,7 +177,7 @@ public class SettingsProviderTest
         // Then
         try
         {
-            Assert.assertEquals(new URL("http://chat.com"), settings.get().getChatURL());
+            Assert.assertEquals(new URL("http://chat.com/"), settings.get().getChatURL());
         }
         catch (MalformedURLException e)
         {

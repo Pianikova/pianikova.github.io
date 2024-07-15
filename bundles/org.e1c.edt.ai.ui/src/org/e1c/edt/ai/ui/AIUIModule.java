@@ -13,11 +13,11 @@ import java.lang.annotation.Target;
 
 import javax.inject.Qualifier;
 
-import org.e1c.edt.ai.AIContextSettings;
+import org.e1c.edt.ai.ContextSettings;
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.CodeCompletionActionHandler;
 import org.e1c.edt.ai.CodeCompletionSession;
-import org.e1c.edt.ai.IAIContextSettings;
+import org.e1c.edt.ai.IContextSettings;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionSession;
 import org.e1c.edt.ai.ILog;
@@ -60,7 +60,7 @@ public class AIUIModule
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
-        bind(IAIContextSettings.class).to(AIContextSettings.class).in(Singleton.class);
+        bind(IContextSettings.class).to(ContextSettings.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<Void>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceMethodComments.class).to(AISourceMethodCommentsContextProvider.class).in(Singleton.class);
         bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceCodeSizeReducer.class).to(AISourceCodeSizeReducerContextProvider.class).in(Singleton.class);

@@ -40,12 +40,6 @@ public class UISettings
     }
 
     @Override
-    public boolean isTemplatedContext()
-    {
-        return settingsStore.getBoolean(ISettingsStore.CONTINUOUS_TEMPLATED_CONTEXT);
-    }
-
-    @Override
     public int getMaxAssistantTextSize()
     {
         return settingsStore.getInt(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE);

@@ -3,9 +3,7 @@
  */
 package org.e1c.edt.ai;
 
-public interface IAIContextSettings
+public interface IContextSettings
 {
     int getMaxLength();
-
-    boolean isTempleted();
 }

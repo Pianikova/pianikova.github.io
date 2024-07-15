@@ -4,8 +4,9 @@
 package org.e1c.edt.ai.assistent;
 
 import org.e1c.edt.ai.IObserver;
+import org.e1c.edt.ai.assistent.model.Completion;
 
 public interface IResponseLineProcessor
 {
-    boolean process(IObserver<String> observer, String line);
+    boolean process(IObserver<Completion> observer, String line);
 }

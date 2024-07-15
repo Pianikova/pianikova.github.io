@@ -6,12 +6,12 @@ package org.e1c.edt.ai;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class AIContextSettings implements IAIContextSettings
+public class ContextSettings implements IContextSettings
 {
     private final IUISettings uiSettings;
 
     @Inject
-    public AIContextSettings(IUISettings uiSettings)
+    public ContextSettings(IUISettings uiSettings)
     {
         Preconditions.checkNotNull(uiSettings);
         this.uiSettings = uiSettings;
@@ -21,11 +21,5 @@ public class AIContextSettings implements IAIContextSettings
     public int getMaxLength()
     {
         return uiSettings.getMaxAssistantTextSize();
-    }
-
-    @Override
-    public boolean isTempleted()
-    {
-        return uiSettings.isTemplatedContext();
     }
 }

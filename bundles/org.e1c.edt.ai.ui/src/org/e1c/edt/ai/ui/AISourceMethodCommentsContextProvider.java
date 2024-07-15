@@ -7,7 +7,7 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.IAIContextFactory;
+import org.e1c.edt.ai.IContextFactory;
 import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
@@ -18,10 +18,10 @@ import com.google.inject.Inject;
 public class AISourceMethodCommentsContextProvider
     implements IAIContextProvider<AISourceContext>
 {
-    private final IAIContextFactory contextFactory;
+    private final IContextFactory contextFactory;
 
     @Inject
-    public AISourceMethodCommentsContextProvider(IAIContextFactory contextFactory,
+    public AISourceMethodCommentsContextProvider(IContextFactory contextFactory,
         BslMultiLineCommentDocumentationProvider commentProvider)
     {
         Preconditions.checkNotNull(contextFactory);

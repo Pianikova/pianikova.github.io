@@ -10,11 +10,11 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.e1c.edt.ai.AIContextFactory;
-import org.e1c.edt.ai.AIContextParts;
+import org.e1c.edt.ai.ContextFactory;
+import org.e1c.edt.ai.ContextParts;
 import org.e1c.edt.ai.CodeCompletionType;
-import org.e1c.edt.ai.IAIContextSettings;
-import org.e1c.edt.ai.IAIContextSplitter;
+import org.e1c.edt.ai.IContextSettings;
+import org.e1c.edt.ai.IContextSplitter;
 import org.e1c.edt.ai.IStringNormalizer;
 import org.e1c.edt.ai.Range;
 import org.junit.Assert;
@@ -27,42 +27,24 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class AIContextFactoryTest
 {
-    private final IAIContextSplitter splitter = mock(IAIContextSplitter.class);
+    private final IContextSplitter splitter = mock(IContextSplitter.class);
     private final IStringNormalizer stringNormalizer = mock(IStringNormalizer.class);
-    private final IAIContextSettings contextSettings = mock(IAIContextSettings.class);
+    private final IContextSettings contextSettings = mock(IContextSettings.class);
 
     @Parameter(0)
-    public String source;
-
-    @Parameter(1)
-    public int sourceOffset;
-
-    @Parameter(2)
     public String prefix;
 
-    @Parameter(3)
-    public String middle;
-
-    @Parameter(4)
+    @Parameter(1)
     public String sufix;
 
-    @Parameter(5)
+    @Parameter(2)
     public int offset;
 
-    @Parameter(6)
-    public CodeCompletionType type;
-
-    @Parameter(7)
+    @Parameter(3)
     public int expectedOffset;
 
-    @Parameter(8)
-    public boolean templeted;
-
-    @Parameter(9)
+    @Parameter(4)
     public boolean success;
-
-    @Parameter(10)
-    public String expectedContext;
 
     @Test
     @Parameters()
@@ -74,16 +56,14 @@ public class AIContextFactoryTest
             return text.replace(System.lineSeparator(), "\n"); //$NON-NLS-1$
         });
 
-        var text = prefix + middle + sufix;
-        var parts = new AIContextParts(new Range(0, prefix.length()),
-            new Range(prefix.length(), middle.length()), new Range(prefix.length() + middle.length(), sufix.length()));
+        var text = prefix + sufix;
+        var parts = new ContextParts(new Range(0, prefix.length()), new Range(prefix.length(), sufix.length()));
         when(splitter.split(text, expectedOffset, 99)).thenReturn(parts);
         when(contextSettings.getMaxLength()).thenReturn(99);
-        when(contextSettings.isTempleted()).thenReturn(templeted);
         var factory = createInstance();
 
         // When
-        var actualContext = factory.create(source, sourceOffset, text, offset, type);
+        var actualContext = factory.create("", 0, text, offset, CodeCompletionType.CodeLines); //$NON-NLS-1$
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());
@@ -92,13 +72,14 @@ public class AIContextFactoryTest
             var ctx = actualContext.get();
             Assert.assertEquals(text, ctx.getText());
             Assert.assertEquals(expectedOffset, ctx.getCursorOffset());
-            Assert.assertEquals(expectedContext, ctx.getContext());
+            Assert.assertEquals(prefix, ctx.getPrefix());
+            Assert.assertEquals(sufix, ctx.getSufix());
         }
     }
 
-    private AIContextFactory createInstance()
+    private ContextFactory createInstance()
     {
-        return new AIContextFactory(splitter, contextSettings, stringNormalizer);
+        return new ContextFactory(splitter, contextSettings, stringNormalizer);
     }
 
     @SuppressWarnings("nls")
@@ -108,19 +89,10 @@ public class AIContextFactoryTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "", 0, "", "", "", 0, CodeCompletionType.CodeLines, 0, false, true, "" },
-                { "", 0, "Abc", "Xyz", "Qwe", 33, CodeCompletionType.CodeLines, 9, false, true, "AbcQwe" },
-
-                { "", 0, "Abc", "Xyz", "Qwe", 1, CodeCompletionType.CodeLines, 1, false, true, "AbcQwe" },
-                { "", 0, "Ab" + System.lineSeparator() + "c", "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.CodeLines, 1, false, true, "Ab\ncQwe\n" },
-
-                { "", 0, "Abc", "Xyz", "Qwe", 1, CodeCompletionType.CodeLines, 1, true, true, "<PRE> Abc <SUF>Xyz <MID>Qwe" },
-                { "", 0, "Abc" + System.lineSeparator(), System.lineSeparator() + "Xyz", "Qwe" + System.lineSeparator(), 1, CodeCompletionType.CodeLines, 1, true, true, "<PRE> Abc\n <SUF>\nXyz <MID>Qwe\n" },
-
-                { "Abc\nXyzAsd", 7, "Method", " - ", "Body", 1, CodeCompletionType.CodeComments, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nНапиши комментарий к методу ```Method - Body``` [/INST]" },
-                { "Abc\nXyzAsd", 7, "Method", " - ", "Body", 1, CodeCompletionType.CodeCommentsContinue, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nПродолжай писать комментария к методу ```Method - Body``` [/INST]Xyz" },
-                { "Abc\nXyzAsd", 0, "Method", " - ", "Body", 1, CodeCompletionType.CodeCommentsContinue, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nПродолжай писать комментария к методу ```Method - Body``` [/INST]" },
-                { "AbcXyzAsd", 6, "Method", " - ", "Body", 1, CodeCompletionType.CodeCommentsContinue, 1, false, true, "<s>[INST] <<SYS>>\nТы русскоязычный ассистент разработчика в среде 1C Enterprise, помогаешь вести разработку на языке bsl.\n<</SYS>>\nПродолжай писать комментария к методу ```Method - Body``` [/INST]AbcXyz" },
+                { "", "", 0, 0, true },
+                { "Abc", "Xyz", 0, 0, true },
+                { "Abc", "Xyz", 3, 3, true },
+                { "Abc", "Xyz", 7, 6, true },
             });
      // @formatter:on
     }

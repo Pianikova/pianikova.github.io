@@ -5,17 +5,17 @@ package org.e1c.edt.ai;
 
 import com.google.common.base.Preconditions;
 
-public class AIContextSplitter implements IAIContextSplitter
+public class ContextSplitter implements IContextSplitter
 {
     private Double midpointFactor;
     private String separator;
 
-    public AIContextSplitter()
+    public ContextSplitter()
     {
         this("\n", .6666); //$NON-NLS-1$
     }
 
-    public AIContextSplitter(String separator, Double midpointFactor)
+    public ContextSplitter(String separator, Double midpointFactor)
     {
         Preconditions.checkNotNull(separator);
         Preconditions.checkArgument(separator.length() > 0);
@@ -25,64 +25,19 @@ public class AIContextSplitter implements IAIContextSplitter
     }
 
     @Override
-    public AIContextParts split(String text, int offset, int maxLength)
+    public ContextParts split(String text, int offset, int maxLength)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0 && offset <= text.length());
-        return splitOnPrefixAndSufixAndMiddle(text, offset, maxLength);
-    }
-
-    private AIContextParts splitOnPrefixAndSufixAndMiddle(String text, int offset, int maxLength)
-    {
-        var parts = splitOnPrefixAndSufix(text, offset, maxLength);
-
-        var prefix = parts.getPrefix();
-        if (!prefix.isEmpty())
-        {
-            var prefixFinish = prefix.getStart() + prefix.getLength();
-            var separatorPosition = text.substring(prefix.getStart(), prefixFinish).lastIndexOf(separator);
-            if (separatorPosition >= 0)
-            {
-                separatorPosition = prefix.getStart() + separatorPosition + separator.length();
-                var middleLength = prefixFinish - separatorPosition;
-                var middle = new Range(separatorPosition, middleLength);
-                var prefixLength = prefix.getLength() - middleLength;
-                if (prefixLength > 0)
-                {
-                    prefix = new Range(prefix.getStart(), prefixLength);
-                }
-                else
-                {
-                    prefix = Range.EMPTY;
-                }
-
-                return new AIContextParts(prefix, parts.getSufix(), middle);
-            }
-            else
-            {
-                return new AIContextParts(Range.EMPTY, parts.getSufix(), prefix);
-            }
-        }
-
-        return parts;
-    }
-
-    private AIContextParts splitOnPrefixAndSufix(String text, int offset, int maxLength)
-    {
         if (text.isEmpty())
         {
-            return new AIContextParts(Range.EMPTY, Range.EMPTY, Range.EMPTY);
+            return new ContextParts(Range.EMPTY, Range.EMPTY);
         }
 
         var length = text.length();
-        if (text.isBlank())
-        {
-            return new AIContextParts(new Range(0, length), Range.EMPTY, Range.EMPTY);
-        }
-
         if (length <= maxLength)
         {
-            return new AIContextParts(new Range(0, offset), new Range(offset, length - offset), Range.EMPTY);
+            return new ContextParts(new Range(0, offset), new Range(offset, length - offset));
         }
 
         var maxPrefixLength = (int)(maxLength * midpointFactor + .5555);
@@ -130,6 +85,6 @@ public class AIContextSplitter implements IAIContextSplitter
         }
 
         var sufix = new Range(offset, sufixLength);
-        return new AIContextParts(prefix, sufix, Range.EMPTY);
+        return new ContextParts(prefix, sufix);
     }
 }

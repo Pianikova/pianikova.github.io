@@ -35,7 +35,7 @@ public class CancellationTokenSource
                 return;
             }
 
-            for (var runnable : attached)
+            for (var runnable : new ArrayList<>(attached))
             {
                 runnable.run();
             }

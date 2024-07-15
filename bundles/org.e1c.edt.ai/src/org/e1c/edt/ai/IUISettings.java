@@ -11,7 +11,5 @@ public interface IUISettings
 
     boolean isContinuousCodeCompletion();
 
-    boolean isTemplatedContext();
-
     int getMaxAssistantTextSize();
 }

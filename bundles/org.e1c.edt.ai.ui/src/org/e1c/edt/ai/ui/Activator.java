@@ -118,7 +118,24 @@ public class Activator
     @Override
     public void logError(Throwable throwable)
     {
-        log(createErrorStatus(throwable.getMessage(), throwable));
+        if (throwable != null)
+        {
+            log(createErrorStatus(throwable.getMessage(), throwable));
+        }
+    }
+
+    /**
+     * Запись исключения в лог журнал плагина
+     *
+     * @param throwable выкинутое исключение, не может быть <code>null</code>
+     */
+    @Override
+    public void logError(String error)
+    {
+        if (error != null && !error.isBlank())
+        {
+            log(createErrorStatus(error));
+        }
     }
 
     /**
@@ -158,6 +175,11 @@ public class Activator
     private static IStatus createWarningStatus(String message)
     {
         return new Status(IStatus.WARNING, PLUGIN_ID, 0, message, null);
+    }
+
+    private static IStatus createErrorStatus(String message)
+    {
+        return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, null);
     }
 
     /**

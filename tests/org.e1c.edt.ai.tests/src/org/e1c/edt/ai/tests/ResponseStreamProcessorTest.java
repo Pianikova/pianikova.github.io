@@ -10,18 +10,19 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
-import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.CancellationTokenSource;
+import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.assistent.IResponseLineProcessor;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
+import org.e1c.edt.ai.assistent.model.Completion;
 import org.junit.Test;
 
 public class ResponseStreamProcessorTest
 {
     private final IResponseLineProcessor lineProcessor = mock(IResponseLineProcessor.class);
     @SuppressWarnings("unchecked")
-    private final IObserver<String> observer = mock(IObserver.class);
+    private final IObserver<Completion> observer = mock(IObserver.class);
 
     @SuppressWarnings("nls")
     @Test
