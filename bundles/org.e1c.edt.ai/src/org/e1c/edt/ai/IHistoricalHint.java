@@ -8,9 +8,9 @@ public interface IHistoricalHint
 {
     void initiaize(IHintHistory history, int maxLines, boolean isSingleWordMode);
 
-    String pull(HintPart part);
+    Text pull(HintPart part);
 
-    String pullChar(char ch);
+    Text pullChar(char ch);
 
-    String rollback();
+    Text rollback();
 }

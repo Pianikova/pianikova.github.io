@@ -18,7 +18,9 @@ import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.ICodeCompletionContext;
 import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IHistoricalHint;
+import org.e1c.edt.ai.ISource;
 import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.Text;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,6 +30,7 @@ public class CodeCompletionSessionTest
     private final IHistoricalHint hint = mock(IHistoricalHint.class);
     private final IHintHistory history = mock(IHintHistory.class);
     private final ICodeCompletionContext context = mock(ICodeCompletionContext.class);
+    private final ISource source = mock(ISource.class);
 
     @Test
     public void shouldProvideContext()
@@ -119,7 +122,7 @@ public class CodeCompletionSessionTest
         // Given
         var session = createInstance(false);
         when(hint.isEmpty()).thenReturn(false);
-        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        when(hint.pull(HintPart.TOKEN)).thenReturn(new Text("Abc", source));
 
         // When
         var actualAction = session.accept(HintPart.TOKEN, 37);
@@ -136,7 +139,7 @@ public class CodeCompletionSessionTest
         // Given
         var session = createInstance(false);
         when(hint.isEmpty()).thenReturn(false);
-        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        when(hint.pull(HintPart.TOKEN)).thenReturn(new Text("Abc", source));
         doAnswer(i -> {
             Assert.assertTrue(session.isAccepting());
             return null;
@@ -190,7 +193,7 @@ public class CodeCompletionSessionTest
         // When
         when(hint.isEmpty()).thenReturn(false);
         when(hint.isBlank()).thenReturn(true);
-        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        when(hint.pull(HintPart.TOKEN)).thenReturn(new Text("Abc", source));
         var actualAction = session.accept(HintPart.TOKEN, 37);
 
         // Then
@@ -204,7 +207,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(true);
-        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        when(hint.pull(HintPart.TOKEN)).thenReturn(new Text("Abc", source));
 
         // When
         when(hint.isEmpty()).thenReturn(false);
@@ -223,7 +226,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(true);
-        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        when(hint.pull(HintPart.TOKEN)).thenReturn(new Text("Abc", source));
 
         // When
         when(hint.isEmpty()).thenReturn(false);
@@ -242,7 +245,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(false);
-        when(hint.pull(HintPart.TOKEN)).thenReturn("Abc");
+        when(hint.pull(HintPart.TOKEN)).thenReturn(new Text("Abc", source));
 
         // When
         when(hint.isEmpty()).thenReturn(false);
@@ -262,7 +265,7 @@ public class CodeCompletionSessionTest
         // Given
         var session = createInstance(false);
         when(hint.isEmpty()).thenReturn(false);
-        when(hint.pullChar('A')).thenReturn("A");
+        when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
         var actualAction = session.acceptChar(37, 'A');
@@ -294,7 +297,7 @@ public class CodeCompletionSessionTest
         // Given
         var session = createInstance(false);
         when(hint.isEmpty()).thenReturn(false);
-        when(hint.pullChar('A')).thenReturn("");
+        when(hint.pullChar('A')).thenReturn(new Text("", source));
 
         // When
         var actualAction = session.acceptChar(37, 'A');
@@ -310,7 +313,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(true);
-        when(hint.pullChar('A')).thenReturn("A");
+        when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
         when(hint.isEmpty()).thenReturn(false);
@@ -328,7 +331,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(true);
-        when(hint.pullChar('A')).thenReturn("A");
+        when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
         when(hint.isEmpty()).thenReturn(false);
@@ -347,7 +350,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(true);
-        when(hint.pullChar('A')).thenReturn("A");
+        when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
         when(hint.isEmpty()).thenReturn(false);
@@ -366,7 +369,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(false);
-        when(hint.pullChar('A')).thenReturn("A");
+        when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
         when(hint.isEmpty()).thenReturn(false);
@@ -385,7 +388,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(false);
-        when(hint.rollback()).thenReturn("Abc");
+        when(hint.rollback()).thenReturn(new Text("Abc", source));
 
         // When
         var actualAction = session.rollback(37);
@@ -401,7 +404,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(false);
-        when(hint.rollback()).thenReturn("Abc");
+        when(hint.rollback()).thenReturn(new Text("Abc", source));
         doAnswer(i -> {
             Assert.assertTrue(session.isAccepting());
             return null;
@@ -419,7 +422,7 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(false);
-        when(hint.rollback()).thenReturn("");
+        when(hint.rollback()).thenReturn(new Text("", source));
 
         // When
         var actualAction = session.rollback(37);

@@ -4,8 +4,11 @@
 package org.e1c.edt.ai;
 
 public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
+    extends ISource
 {
     ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history, boolean singleWordMode);
+
+    void setId(String uuid);
 
     TContext getContext();
 

@@ -6,7 +6,8 @@ package org.e1c.edt.ai;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class CodeCompletionSession<TContext extends ICodeCompletionContext> implements ICodeCompletionSession<TContext>
+public class CodeCompletionSession<TContext extends ICodeCompletionContext>
+    implements ICodeCompletionSession<TContext>
 {
     private final IUISettings uiSettings;
     private final IHistoricalHint hint;
@@ -14,6 +15,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
     private IHintHistory history;
     private boolean singleWordMode;
     private boolean isAccepting, inDone;
+    private String uuid = ""; //$NON-NLS-1$
 
     @Inject
     public CodeCompletionSession(IUISettings uiSettings, IHistoricalHint hint, IHintHistory history)
@@ -37,6 +39,20 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
         this.singleWordMode = singleWordMode;
         hint.initiaize(history, singleWordMode ? 1 : uiSettings.getCodeCompletionLinesCount(), singleWordMode);
         return this;
+    }
+
+    @Override
+    public String getId()
+    {
+        return uuid;
+    }
+
+    @Override
+    public void setId(String uuid)
+    {
+        Preconditions.checkNotNull(uuid);
+        Preconditions.checkArgument(!uuid.isBlank());
+        this.uuid = uuid;
     }
 
     @Override
@@ -147,8 +163,9 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
         hint.clear();
     }
 
-    private void rollback(String hintText, int offset)
+    private void rollback(Text text, int offset)
     {
+        var hintText = text.getText();
         var len = hintText.length();
         if (len == 0)
         {
@@ -172,8 +189,9 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext> impl
         }
     }
 
-    private void apply(String hintText, int offset)
+    private void apply(Text text, int offset)
     {
+        var hintText = text.getText();
         var len = hintText.length();
         if (len == 0)
         {

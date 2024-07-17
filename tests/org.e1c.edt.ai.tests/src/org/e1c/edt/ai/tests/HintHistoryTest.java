@@ -3,12 +3,18 @@
  */
 package org.e1c.edt.ai.tests;
 
+import static org.mockito.Mockito.mock;
+
 import org.e1c.edt.ai.HintHistory;
+import org.e1c.edt.ai.ISource;
+import org.e1c.edt.ai.Text;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class HintHistoryTest
 {
+    private final ISource source = mock(ISource.class);
+
     @Test
     public void shouldBeEmptyWhenCreated()
     {
@@ -31,7 +37,7 @@ public class HintHistoryTest
         var actualStr = history.pull();
 
         // Then
-        Assert.assertEquals("", actualStr); //$NON-NLS-1$
+        Assert.assertEquals(Text.EMPTY, actualStr);
     }
 
     @SuppressWarnings("nls")
@@ -42,14 +48,14 @@ public class HintHistoryTest
         var history = new HintHistory();
 
         // When
-        history.push("Abc");
-        history.push("Xyz");
+        history.push(new Text("Abc", source));
+        history.push(new Text("Xyz", source));
         var actualItem1 = history.pull();
         var actualItem2 = history.pull();
 
         // Then
-        Assert.assertEquals("Xyz", actualItem1);
-        Assert.assertEquals("Abc", actualItem2);
+        Assert.assertEquals(new Text("Xyz", source), actualItem1);
+        Assert.assertEquals(new Text("Abc", source), actualItem2);
     }
 
     @SuppressWarnings("nls")
@@ -60,8 +66,8 @@ public class HintHistoryTest
         var history = new HintHistory();
 
         // When
-        history.push("Abc");
-        history.push("Xyz");
+        history.push(new Text("Abc", source));
+        history.push(new Text("Xyz", source));
         history.pull();
         history.pull();
 
@@ -75,8 +81,8 @@ public class HintHistoryTest
     {
         // Given
         var history = new HintHistory();
-        history.push("Abc");
-        history.push("Xyz");
+        history.push(new Text("Abc", source));
+        history.push(new Text("Xyz", source));
 
         // When
         history.clear();
@@ -84,6 +90,6 @@ public class HintHistoryTest
 
         // Then
         Assert.assertTrue(history.isEmpty());
-        Assert.assertEquals("", actualItem);
+        Assert.assertEquals(Text.EMPTY, actualItem);
     }
 }

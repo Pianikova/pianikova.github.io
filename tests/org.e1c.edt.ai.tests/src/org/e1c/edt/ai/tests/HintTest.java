@@ -14,6 +14,8 @@ import org.e1c.edt.ai.Hint;
 import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.ICodeCompletionTokenizer;
 import org.e1c.edt.ai.IHintHistory;
+import org.e1c.edt.ai.ISource;
+import org.e1c.edt.ai.Text;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,6 +23,8 @@ public class HintTest
 {
     private final ICodeCompletionTokenizer tokenizer = mock(ICodeCompletionTokenizer.class);
     private final IHintHistory history = mock(IHintHistory.class);
+    private final ISource source1 = mock(ISource.class);
+    private final ISource source2 = mock(ISource.class);
 
     @Test
     public void shouldBeEmptyWhenCreated()
@@ -44,15 +48,37 @@ public class HintTest
         hint.initiaize(history, 5, false);
 
         // When
-        hint.append("Abc");
-        hint.append("Xyz\n");
-        hint.append("Asd");
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz\n", source1));
+        hint.append(new Text("Asd", source1));
         var actualText = hint.getText(HintPart.TEXT);
 
         // Then
         Assert.assertFalse(hint.isEmpty());
         Assert.assertFalse(hint.isBlank());
-        Assert.assertEquals("AbcXyz\nAsd", actualText);
+        Assert.assertEquals(new Text("AbcXyz\nAsd", source1), actualText);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldAppendTextWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.initiaize(history, 5, false);
+
+        // When
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz\n", source1));
+        hint.append(new Text("Asd", source2));
+        var actualText1 = hint.pull(HintPart.TEXT);
+        var actualText2 = hint.pull(HintPart.TEXT);
+
+        // Then
+        Assert.assertEquals(new Text("AbcXyz\n", source1), actualText1);
+        Assert.assertEquals(new Text("Asd", source2), actualText2);
+        Assert.assertTrue(hint.isEmpty());
+        Assert.assertTrue(hint.isBlank());
     }
 
     @SuppressWarnings("nls")
@@ -64,15 +90,15 @@ public class HintTest
         hint.initiaize(history, 5, true);
 
         // When
-        hint.append("Abc");
-        hint.append("Xyz\n");
-        hint.append("Asd");
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz\n", source1));
+        hint.append(new Text("Asd", source1));
         var actualText = hint.getText(HintPart.TEXT);
 
         // Then
         Assert.assertFalse(hint.isEmpty());
         Assert.assertFalse(hint.isBlank());
-        Assert.assertEquals("AbcXyz", actualText);
+        Assert.assertEquals(new Text("AbcXyz", source1), actualText);
     }
 
     @SuppressWarnings("nls")
@@ -83,7 +109,7 @@ public class HintTest
         var hint = createInstance();
 
         // When
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
 
         // Then
         Assert.assertFalse(hint.isEmpty());
@@ -95,7 +121,7 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
 
         // When
         hint.clear();
@@ -112,9 +138,27 @@ public class HintTest
         var hint = createInstance();
 
         // When
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
 
         // Then
+        Assert.assertFalse(hint.isBlank());
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldNotBeEmptyWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.initiaize(history, 5, false);
+
+        // When
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz\n", source1));
+        hint.append(new Text("Asd", source2));
+
+        // Then
+        Assert.assertFalse(hint.isEmpty());
         Assert.assertFalse(hint.isBlank());
     }
 
@@ -124,7 +168,8 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source2));
 
         // When
         hint.clear();
@@ -141,7 +186,22 @@ public class HintTest
         var hint = createInstance();
 
         // When
-        hint.append("  \r   \n  \t\t\r");
+        hint.append(new Text("  \r   \n  \t\t\r", source1));
+
+        // Then
+        Assert.assertTrue(hint.isBlank());
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldBeBlankWhenHasBlankTextAndDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+
+        // When
+        hint.append(new Text("  \r   \n  \t\t\r", source1));
+        hint.append(new Text("  \t\r", source2));
 
         // Then
         Assert.assertTrue(hint.isBlank());
@@ -153,7 +213,23 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
+
+        // When
+        var actualResult = hint.startsWith('A');
+
+        // Then
+        Assert.assertTrue(actualResult);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldCheckWhenStartWithWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source2));
 
         // When
         var actualResult = hint.startsWith('A');
@@ -168,7 +244,23 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
+
+        // When
+        var actualResult = hint.startsWith('B');
+
+        // Then
+        Assert.assertFalse(actualResult);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldCheckWhenDoesNotStartWithAndDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("B", source2));
 
         // When
         var actualResult = hint.startsWith('B');
@@ -196,16 +288,31 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
 
         // When
         var actualText = hint.getText(HintPart.TEXT);
 
         // Then
-        Assert.assertEquals("Abc", actualText);
+        Assert.assertEquals(new Text("Abc", source1), actualText);
     }
 
     @SuppressWarnings("nls")
+    @Test
+    public void shouldGetTextWhenDifferentSouurces()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source1));
+
+        // When
+        var actualText = hint.getText(HintPart.TEXT);
+
+        // Then
+        Assert.assertEquals(new Text("AbcXyz", source1), actualText);
+    }
+
     @Test
     public void shouldGetTextWhenEmpty()
     {
@@ -216,7 +323,7 @@ public class HintTest
         var actualText = hint.getText(HintPart.TEXT);
 
         // Then
-        Assert.assertEquals("", actualText);
+        Assert.assertEquals(Text.EMPTY, actualText);
     }
 
     @SuppressWarnings("nls")
@@ -225,14 +332,35 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
 
         // When
         var actualText = hint.pull(HintPart.TEXT);
 
         // Then
-        Assert.assertEquals("Abc", actualText);
-        verify(history).push("Abc");
+        Assert.assertEquals(new Text("Abc", source1), actualText);
+        verify(history).push(new Text("Abc", source1));
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldPullTextWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source2));
+
+        // When
+        var actualText1 = hint.pull(HintPart.TEXT);
+        var actualText2 = hint.pull(HintPart.TEXT);
+
+        // Then
+        Assert.assertEquals(new Text("Abc", source1), actualText1);
+        verify(history).push(new Text("Abc", source1));
+
+        Assert.assertEquals(new Text("Xyz", source2), actualText2);
+        verify(history).push(new Text("Xyz", source2));
     }
 
     @SuppressWarnings("nls")
@@ -241,17 +369,33 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
         when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
 
         // When
         var actualText = hint.getText(HintPart.LINE);
 
         // Then
-        Assert.assertEquals("Ab", actualText);
+        Assert.assertEquals(new Text("Ab", source1), actualText);
     }
 
     @SuppressWarnings("nls")
+    @Test
+    public void shouldGetLineWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source2));
+        when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Abс", ""));
+
+        // When
+        var actualText = hint.getText(HintPart.LINE);
+
+        // Then
+        Assert.assertEquals(new Text("Abс", source1), actualText);
+    }
+
     @Test
     public void shouldGetLineWhenEmpty()
     {
@@ -262,7 +406,7 @@ public class HintTest
         var actualText = hint.getText(HintPart.LINE);
 
         // Then
-        Assert.assertEquals("", actualText);
+        Assert.assertEquals(Text.EMPTY, actualText);
     }
 
     @SuppressWarnings("nls")
@@ -271,15 +415,43 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
         when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
 
         // When
         var actualText = hint.pull(HintPart.LINE);
 
         // Then
-        Assert.assertEquals("Ab", actualText);
-        verify(history).push("Ab");
+        Assert.assertEquals(new Text("Ab", source1), actualText);
+        verify(history).push(new Text("Ab", source1));
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldPullLineWhenDiferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source2));
+        when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
+        when(tokenizer.getNext(2, "c", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("c", ""));
+        when(tokenizer.getNext(2, "Xyz", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz", ""));
+
+        // When
+        var actualText1 = hint.pull(HintPart.LINE);
+        var actualText2 = hint.pull(HintPart.LINE);
+        var actualText3 = hint.pull(HintPart.LINE);
+
+        // Then
+        Assert.assertEquals(new Text("Ab", source1), actualText1);
+        verify(history).push(new Text("Ab", source1));
+
+        Assert.assertEquals(new Text("c", source1), actualText2);
+        verify(history).push(new Text("c", source1));
+
+        Assert.assertEquals(new Text("Xyz", source2), actualText3);
+        verify(history).push(new Text("Xyz", source2));
     }
 
     @SuppressWarnings("nls")
@@ -288,17 +460,16 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
         when(tokenizer.getNext(1, "Abc", Hint.TOKEN_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
 
         // When
         var actualText = hint.getText(HintPart.TOKEN);
 
         // Then
-        Assert.assertEquals("Ab", actualText);
+        Assert.assertEquals(new Text("Ab", source1), actualText);
     }
 
-    @SuppressWarnings("nls")
     @Test
     public void shouldGetTokenWhenEmpty()
     {
@@ -309,7 +480,7 @@ public class HintTest
         var actualText = hint.getText(HintPart.TOKEN);
 
         // Then
-        Assert.assertEquals("", actualText);
+        Assert.assertEquals(Text.EMPTY, actualText);
     }
 
     @SuppressWarnings("nls")
@@ -318,15 +489,43 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
         when(tokenizer.getNext(1, "Abc", Hint.TOKEN_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
 
         // When
         var actualText = hint.pull(HintPart.TOKEN);
 
         // Then
-        Assert.assertEquals("Ab", actualText);
-        verify(history).push("Ab");
+        Assert.assertEquals(new Text("Ab", source1), actualText);
+        verify(history).push(new Text("Ab", source1));
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldPullTokenWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source2));
+        when(tokenizer.getNext(1, "Abc", Hint.TOKEN_DELIMITER)).thenReturn(new CodeCompletionToken("Ab", "c"));
+        when(tokenizer.getNext(1, "c", Hint.TOKEN_DELIMITER)).thenReturn(new CodeCompletionToken("c", ""));
+        when(tokenizer.getNext(1, "Xyz", Hint.TOKEN_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz", ""));
+
+        // When
+        var actualText1 = hint.pull(HintPart.TOKEN);
+        var actualText2 = hint.pull(HintPart.TOKEN);
+        var actualText3 = hint.pull(HintPart.TOKEN);
+
+        // Then
+        Assert.assertEquals(new Text("Ab", source1), actualText1);
+        verify(history).push(new Text("Ab", source1));
+
+        Assert.assertEquals(new Text("c", source1), actualText2);
+        verify(history).push(new Text("c", source1));
+
+        Assert.assertEquals(new Text("Xyz", source2), actualText3);
+        verify(history).push(new Text("Xyz", source2));
     }
 
     @SuppressWarnings("nls")
@@ -336,7 +535,7 @@ public class HintTest
         // Given
         var hint = createInstance();
         hint.initiaize(history, 5, false);
-        hint.append("Abc|Xyz|Asd");
+        hint.append(new Text("Abc|Xyz|Asd", source1));
         when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
             .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
         when(tokenizer.getNext(1, "Xyz|Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz|", "Asd"));
@@ -346,10 +545,9 @@ public class HintTest
         var actualText = hint.getText(HintPart.LINES);
 
         // Then
-        Assert.assertEquals("Abc|Xyz|Asd", actualText);
+        Assert.assertEquals(new Text("Abc|Xyz|Asd", source1), actualText);
     }
 
-    @SuppressWarnings("nls")
     @Test
     public void shouldGetLinesWhenEmpty()
     {
@@ -361,7 +559,7 @@ public class HintTest
         var actualText = hint.getText(HintPart.LINES);
 
         // Then
-        Assert.assertEquals("", actualText);
+        Assert.assertEquals(Text.EMPTY, actualText);
     }
 
     @SuppressWarnings("nls")
@@ -371,7 +569,7 @@ public class HintTest
         // Given
         var hint = createInstance();
         hint.initiaize(history, 5, false);
-        hint.append("Abc|Xyz|Asd");
+        hint.append(new Text("Abc|Xyz|Asd", source1));
         when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
             .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
         when(tokenizer.getNext(1, "Xyz|Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz|", "Asd"));
@@ -381,8 +579,36 @@ public class HintTest
         var actualText = hint.pull(HintPart.LINES);
 
         // Then
-        Assert.assertEquals("Abc|Xyz|Asd", actualText);
-        verify(history).push("Abc|Xyz|Asd");
+        Assert.assertEquals(new Text("Abc|Xyz|Asd", source1), actualText);
+        verify(history).push(new Text("Abc|Xyz|Asd", source1));
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldPullLinesWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.initiaize(history, 5, false);
+        hint.append(new Text("Abc|Xyz|Asd", source1));
+        hint.append(new Text("Que|rty", source2));
+        when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
+            .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
+        when(tokenizer.getNext(1, "Xyz|Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz|", "Asd"));
+        when(tokenizer.getNext(1, "Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Asd", ""));
+        when(tokenizer.getNext(1, "Que|rty", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Que|", "rty"));
+        when(tokenizer.getNext(1, "rty", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("rty", ""));
+
+        // When
+        var actualText1 = hint.pull(HintPart.LINES);
+        var actualText2 = hint.pull(HintPart.LINES);
+
+        // Then
+        Assert.assertEquals(new Text("Abc|Xyz|Asd", source1), actualText1);
+        verify(history).push(new Text("Abc|Xyz|Asd", source1));
+
+        Assert.assertEquals(new Text("Que|rty", source2), actualText2);
+        verify(history).push(new Text("Que|rty", source2));
     }
 
     @SuppressWarnings("nls")
@@ -392,7 +618,7 @@ public class HintTest
         // Given
         var hint = createInstance();
         hint.initiaize(history, 2, false);
-        hint.append("Abc|Xyz|Asd");
+        hint.append(new Text("Abc|Xyz|Asd", source1));
         when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
             .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
         when(tokenizer.getNext(1, "Xyz|Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz|", "Asd"));
@@ -401,7 +627,67 @@ public class HintTest
         var actualText = hint.getText(HintPart.LINES);
 
         // Then
-        Assert.assertEquals("Abc|Xyz|", actualText);
+        Assert.assertEquals(new Text("Abc|Xyz|", source1), actualText);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldGetLinesWhenLimitedByMaxLinesAndDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.initiaize(history, 4, false);
+        hint.append(new Text("Abc|Xyz|Asd", source1));
+        hint.append(new Text("Que|rty", source2));
+        when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
+            .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
+        when(tokenizer.getNext(1, "Xyz|Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz|", "Asd"));
+        when(tokenizer.getNext(1, "Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Asd", ""));
+        when(tokenizer.getNext(1, "Que|rty", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Que|", "rty"));
+        when(tokenizer.getNext(1, "rty", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("rty", ""));
+
+        // When
+        var actualText1 = hint.pull(HintPart.LINES);
+        var actualText2 = hint.pull(HintPart.LINES);
+
+        // Then
+        Assert.assertEquals(new Text("Abc|Xyz|Asd", source1), actualText1);
+        verify(history).push(new Text("Abc|Xyz|Asd", source1));
+
+        Assert.assertEquals(new Text("Que|rty", source2), actualText2);
+        verify(history).push(new Text("Que|rty", source2));
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldGetLinesWhenLimitedByMaxLinesWasNotReachdAndDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.initiaize(history, 2, false);
+        hint.append(new Text("Abc|Xyz|Asd", source1));
+        hint.append(new Text("Que|rty", source2));
+        when(tokenizer.getNext(1, "Abc|Xyz|Asd", Hint.LINE_DELIMITER))
+            .thenReturn(new CodeCompletionToken("Abc|", "Xyz|Asd"));
+        when(tokenizer.getNext(1, "Xyz|Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Xyz|", "Asd"));
+        when(tokenizer.getNext(1, "Asd", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Asd", ""));
+        when(tokenizer.getNext(1, "Que|rty", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Que|", "rty"));
+        when(tokenizer.getNext(1, "rty", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("rty", ""));
+
+        // When
+        var actualText1 = hint.pull(HintPart.LINES);
+        var actualText2 = hint.pull(HintPart.LINES);
+        var actualText3 = hint.pull(HintPart.LINES);
+
+        // Then
+        Assert.assertEquals(new Text("Abc|Xyz|", source1), actualText1);
+        verify(history).push(new Text("Abc|Xyz|", source1));
+
+        Assert.assertEquals(new Text("Asd", source1), actualText2);
+        verify(history).push(new Text("Asd", source1));
+
+        Assert.assertEquals(new Text("Que|rty", source2), actualText3);
+        verify(history).push(new Text("Que|rty", source2));
     }
 
     @SuppressWarnings("nls")
@@ -410,14 +696,35 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
 
         // When
         var actualText = hint.pullChar('A');
 
         // Then
-        Assert.assertEquals("A", actualText);
-        verify(history).push("A");
+        Assert.assertEquals(new Text("A", source1), actualText);
+        verify(history).push(new Text("A", source1));
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldPullCharWhenMatchWhenDifferentSources()
+    {
+        // Given
+        var hint = createInstance();
+        hint.append(new Text("A", source1));
+        hint.append(new Text("xyz", source2));
+
+        // When
+        var actualText1 = hint.pullChar('A');
+        var actualText2 = hint.pullChar('x');
+
+        // Then
+        Assert.assertEquals(new Text("A", source1), actualText1);
+        verify(history).push(new Text("A", source1));
+
+        Assert.assertEquals(new Text("x", source2), actualText2);
+        verify(history).push(new Text("x", source2));
     }
 
     @SuppressWarnings("nls")
@@ -426,17 +733,16 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
+        hint.append(new Text("Abc", source1));
 
         // When
         var actualText = hint.pullChar('b');
 
         // Then
-        Assert.assertEquals("", actualText);
+        Assert.assertEquals(new Text("", source1), actualText);
         verify(history, times(0)).push(any());
     }
 
-    @SuppressWarnings("nls")
     @Test
     public void shouldNotPullCharWhenEmpty()
     {
@@ -447,7 +753,7 @@ public class HintTest
         var actualText = hint.pullChar('A');
 
         // Then
-        Assert.assertEquals("", actualText);
+        Assert.assertEquals(Text.EMPTY, actualText);
         verify(history, times(0)).push(any());
     }
 
@@ -457,8 +763,8 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
-        hint.append("Xyz");
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text("Xyz", source2));
 
         // When
         hint.clear();
@@ -473,18 +779,18 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
-        hint.append(" Xyz");
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text(" Xyz", source1));
         when(tokenizer.getNext(1, "Abc Xyz", Hint.TOKEN_DELIMITER)).thenReturn(new CodeCompletionToken("Abc ", "Xyz"));
         hint.pull(HintPart.TOKEN);
-        when(history.pull()).thenReturn("Asd ");
+        when(history.pull()).thenReturn(new Text("Asd ", source1));
 
         // When
         hint.rollback();
         var actualText = hint.getText(HintPart.TEXT);
 
         // Then
-        Assert.assertEquals("Asd Xyz", actualText);
+        Assert.assertEquals(new Text("Asd Xyz", source1), actualText);
     }
 
     @SuppressWarnings("nls")
@@ -493,18 +799,18 @@ public class HintTest
     {
         // Given
         var hint = createInstance();
-        hint.append("Abc");
-        hint.append(" Xyz");
+        hint.append(new Text("Abc", source1));
+        hint.append(new Text(" Xyz", source1));
         when(tokenizer.getNext(1, "Abc Xyz", Hint.TOKEN_DELIMITER)).thenReturn(new CodeCompletionToken("Abc ", "Xyz"));
         hint.pull(HintPart.TOKEN);
-        when(history.pull()).thenReturn("");
+        when(history.pull()).thenReturn(new Text("", source1));
 
         // When
         hint.rollback();
         var actualText = hint.getText(HintPart.TEXT);
 
         // Then
-        Assert.assertEquals("Xyz", actualText);
+        Assert.assertEquals(new Text("Xyz", source1), actualText);
     }
 
     private Hint createInstance()

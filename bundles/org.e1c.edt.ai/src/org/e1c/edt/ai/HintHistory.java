@@ -7,7 +7,7 @@ import java.util.Stack;
 
 public class HintHistory implements IHintHistory
 {
-    private final Stack<String> history = new Stack<>();
+    private final Stack<Text> history = new Stack<>();
 
     @Override
     public synchronized boolean isEmpty()
@@ -22,17 +22,17 @@ public class HintHistory implements IHintHistory
     }
 
     @Override
-    public synchronized void push(String text)
+    public synchronized void push(Text text)
     {
         history.push(text);
     }
 
     @Override
-    public synchronized String pull()
+    public synchronized Text pull()
     {
         if (history.isEmpty())
         {
-            return ""; //$NON-NLS-1$
+            return Text.EMPTY;
         }
 
         return history.pop();

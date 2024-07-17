@@ -9,7 +9,7 @@ public interface IHintHistory
 
     void clear();
 
-    void push(String text);
+    void push(Text text);
 
-    String pull();
+    Text pull();
 }

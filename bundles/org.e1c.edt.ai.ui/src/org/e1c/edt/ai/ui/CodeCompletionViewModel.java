@@ -21,6 +21,7 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observers;
+import org.e1c.edt.ai.Text;
 import org.e1c.edt.ai.assistent.ICodeAssistant;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -124,7 +125,8 @@ public class CodeCompletionViewModel
         var offset = widget.getCaretOffset();
         dispatcher.dispatch(() -> {
             hintPainter.pinOffset(widget, offset, true, session.getContext().isSingleWordMode());
-            hintPainter.setHintAt(offset, hint.getText(HintPart.LINES), hint.getText(HintPart.TOKEN));
+            hintPainter.setHintAt(offset, hint.getText(HintPart.LINES).getText(),
+                hint.getText(HintPart.TOKEN).getText());
         });
     }
 
@@ -217,8 +219,14 @@ public class CodeCompletionViewModel
                         return;
                     }
 
+                    var uuid = data.uuid;
+                    if (uuid != null && !uuid.isBlank())
+                    {
+                        session.setId(uuid);
+                    }
+
                     var hint = session.getHint();
-                    hint.append(data.text);
+                    hint.append(new Text(data.text, session));
                     showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
                 },
                 error -> {
@@ -245,7 +253,7 @@ public class CodeCompletionViewModel
 
                     if (!singleWordMode && hint.isEmpty())
                     {
-                        hint.append("\n"); //$NON-NLS-1$
+                        hint.append(new Text("\n", session)); //$NON-NLS-1$
                     }
 
                     session.complete();
@@ -311,7 +319,8 @@ public class CodeCompletionViewModel
         var widget = content.getWidget();
         var hint = session.getHint();
         dispatcher.dispatch(() -> {
-            hintPainter.setHintAt(widget.getCaretOffset(), hint.getText(HintPart.LINES), hint.getText(HintPart.TOKEN));
+            hintPainter.setHintAt(widget.getCaretOffset(), hint.getText(HintPart.LINES).getText(),
+                hint.getText(HintPart.TOKEN).getText());
             widget.redraw();
         });
     }

@@ -5,7 +5,7 @@ package org.e1c.edt.ai;
 
 public interface IHint
 {
-    void append(String text);
+    void append(Text text);
 
     boolean isEmpty();
 
@@ -13,7 +13,7 @@ public interface IHint
 
     boolean startsWith(char ch);
 
-    String getText(HintPart part);
+    Text getText(HintPart part);
 
     void clear();
 }
