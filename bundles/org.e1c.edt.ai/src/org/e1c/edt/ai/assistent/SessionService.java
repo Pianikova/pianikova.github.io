@@ -48,9 +48,9 @@ public class SessionService implements ISessionService
     }
 
     @Override
-    public CompletableFuture<Optional<Session>> getSession()
+    public CompletableFuture<Optional<Session>> getSessionAsync()
     {
-        return parametersService.getParameters().thenApplyAsync(parameters -> getSession(parameters).join());
+        return parametersService.getParametersAsync().thenApplyAsync(parameters -> getSession(parameters).join());
     }
 
     private CompletableFuture<Optional<Session>> getSession(Optional<Parameters> parameters)
@@ -81,10 +81,10 @@ public class SessionService implements ISessionService
             reset = true;
         }
 
-        return responseCache.get(() -> getSession(request, newRequestBody), reset);
+        return responseCache.get(() -> getSessionAsync(request, newRequestBody), reset);
     }
 
-    private CompletableFuture<Optional<Session>> getSession(HttpRequest request, String body)
+    private CompletableFuture<Optional<Session>> getSessionAsync(HttpRequest request, String body)
     {
         log.request(request, null, body);
         return clienBuilder.create()

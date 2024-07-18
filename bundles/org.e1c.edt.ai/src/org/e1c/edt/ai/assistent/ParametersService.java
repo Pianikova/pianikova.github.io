@@ -51,7 +51,7 @@ public class ParametersService
     }
 
     @Override
-    public synchronized CompletableFuture<Optional<Parameters>> getParameters()
+    public synchronized CompletableFuture<Optional<Parameters>> getParametersAsync()
     {
         var builder = requestBuilder.create("./params"); //$NON-NLS-1$
         if (builder.isEmpty())
@@ -76,10 +76,10 @@ public class ParametersService
             reset = true;
         }
 
-        return responseCache.get(() -> getParameters(request, newUserParams), reset);
+        return responseCache.get(() -> getParametersAsync(request, newUserParams), reset);
     }
 
-    private CompletableFuture<Optional<Parameters>> getParameters(HttpRequest request, Parameters userParams)
+    private CompletableFuture<Optional<Parameters>> getParametersAsync(HttpRequest request, Parameters userParams)
     {
         log.request(request, null, null);
         return clienBuilder.create()

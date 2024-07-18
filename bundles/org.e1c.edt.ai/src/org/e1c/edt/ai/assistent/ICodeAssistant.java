@@ -14,5 +14,5 @@ import org.e1c.edt.ai.assistent.model.Completion;
  */
 public interface ICodeAssistant
 {
-    public IObservable<Completion> generate(AIContext aiContext, ICancellationToken cancellationToken);
+    public IObservable<Completion> createSource(AIContext aiContext, ICancellationToken cancellationToken);
 }

@@ -14,6 +14,7 @@ import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
+import org.e1c.edt.ai.ICodeCompletionContext;
 import org.e1c.edt.ai.ICodeCompletionSession;
 import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
@@ -52,10 +53,11 @@ public class CodeCompletionViewModel
     private final Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider;
     private final ICodeCompletionActionHandler<CodeCompletionContext> handler;
     private final IHintHistory history;
+    private final IUserActions userActions;
+    private final ICodeCompletionContext codeCompletionContext;
     private final Timer showTimer = new Timer(true);
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
-    private IUserActions userActions;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -64,7 +66,8 @@ public class CodeCompletionViewModel
         IDispatcher dispatcher, IHintPainter hintPainter, IInputDelayStatistics inputRateStatistics,
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
-        ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions)
+        ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
+        ICodeCompletionContext codeCompletionContext)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -79,6 +82,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(handler);
         Preconditions.checkNotNull(history);
         Preconditions.checkNotNull(userActions);
+        Preconditions.checkNotNull(codeCompletionContext);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -91,6 +95,7 @@ public class CodeCompletionViewModel
         this.handler = handler;
         this.history = history;
         this.userActions = userActions;
+        this.codeCompletionContext = codeCompletionContext;
     }
 
     @Override
@@ -156,6 +161,7 @@ public class CodeCompletionViewModel
 
     private void deactivate()
     {
+        codeCompletionContext.commit();
         reset();
         dispatcher.dispatch(() -> {
             textWidget.removePaintListener(hintPainter);
@@ -165,8 +171,7 @@ public class CodeCompletionViewModel
         });
     }
 
-    private void ask(Duration delayBeforeShow,
-        CancellationTokenSource cancellationTokenSource)
+    private void ask(Duration delayBeforeShow, CancellationTokenSource cancellationTokenSource)
     {
         try
         {
@@ -181,8 +186,9 @@ public class CodeCompletionViewModel
                 return;
             }
 
-            var aiContext = optionalAiContext.get();
-            var codeCompletionCtx = new CodeCompletionContext(aiContext, textWidget, cancellationTokenSource);
+            var aiCtx = optionalAiContext.get();
+            var codeCompletionCtx =
+                new CodeCompletionContext(codeCompletionContext, aiCtx, textWidget, cancellationTokenSource);
             var singleWordMode = dispatcher.dispatch(() -> codeCompletionCtx.isSingleWordMode()).orElse(false);
             var session = sessionProvider.get().initiaize(codeCompletionCtx, history, singleWordMode);
             synchronized (lockObject)
@@ -196,7 +202,7 @@ public class CodeCompletionViewModel
                 lastSession = session;
             }
 
-            log.trace("AI context " + cancellationTokenSource, aiContext.toString()); //$NON-NLS-1$
+            log.trace("AI context " + cancellationTokenSource, aiCtx.toString()); //$NON-NLS-1$
             var delay = calculateDelay(startTime, delayBeforeShow);
             if (cancellationTokenSource.isCanceled())
             {
@@ -209,10 +215,10 @@ public class CodeCompletionViewModel
                     delay.isNegative() || delay == Duration.ZERO, singleWordMode);
             });
 
-            var codeCompletionSource = codeAssistant.generate(aiContext, cancellationTokenSource);
+            var completionSource = codeAssistant.createSource(aiCtx, cancellationTokenSource);
 
             // @formatter:off
-            codeCompletionSource.subscribe(Observers.create(
+            completionSource.subscribe(Observers.create(
                 data -> {
                     if (cancellationTokenSource.isCanceled())
                     {
@@ -223,6 +229,7 @@ public class CodeCompletionViewModel
                     if (uuid != null && !uuid.isBlank())
                     {
                         session.setId(uuid);
+                        cancellationTokenSource.setName(uuid);
                     }
 
                     var hint = session.getHint();
@@ -371,16 +378,26 @@ public class CodeCompletionViewModel
             break;
 
         case ASK_NEW:
+            session.getContext().commit();
             askNew();
             break;
 
         case RESET:
+            session.getContext().commit();
             reset();
             event.doit = false;
             break;
 
         case HANDLE:
             event.doit = false;
+            break;
+
+        case SKIP:
+            if (session != null)
+            {
+                session.getContext().commit();
+            }
+
             break;
 
         default:

@@ -10,5 +10,5 @@ import org.e1c.edt.ai.assistent.model.Session;
 
 public interface ISessionService
 {
-    CompletableFuture<Optional<Session>> getSession();
+    CompletableFuture<Optional<Session>> getSessionAsync();
 }

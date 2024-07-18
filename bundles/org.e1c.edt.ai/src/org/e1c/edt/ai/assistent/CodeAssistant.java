@@ -60,13 +60,13 @@ public class CodeAssistant
     }
 
     @Override
-    public IObservable<Completion> generate(AIContext aiContext,
+    public IObservable<Completion> createSource(AIContext aiContext,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(aiContext);
         Preconditions.checkNotNull(cancellationToken);
         return Observables.create(observer -> {
-            sessionService.getSession().whenComplete((session, error) -> {
+            sessionService.getSessionAsync().whenComplete((session, error) -> {
                 if (error == null)
                 {
                     if (session != null && session.isPresent())

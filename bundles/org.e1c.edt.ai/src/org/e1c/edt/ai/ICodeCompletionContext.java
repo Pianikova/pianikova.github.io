@@ -5,7 +5,9 @@ package org.e1c.edt.ai;
 
 public interface ICodeCompletionContext
 {
-    boolean isSingleWordMode();
+    void apply(Text text, int offset);
 
-    void replace(int start, int replaceLength, String text);
+    void rollback(int offset, int length);
+
+    void commit();
 }

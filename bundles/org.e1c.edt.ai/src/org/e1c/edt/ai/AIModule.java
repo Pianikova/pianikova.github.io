@@ -4,9 +4,11 @@
 package org.e1c.edt.ai;
 
 import org.e1c.edt.ai.assistent.CodeAssistant;
+import org.e1c.edt.ai.assistent.FeedbackService;
 import org.e1c.edt.ai.assistent.HttpClientBuilder;
 import org.e1c.edt.ai.assistent.HttpLog;
 import org.e1c.edt.ai.assistent.ICodeAssistant;
+import org.e1c.edt.ai.assistent.IFeedbackService;
 import org.e1c.edt.ai.assistent.IHttpClientBuilder;
 import org.e1c.edt.ai.assistent.IHttpLog;
 import org.e1c.edt.ai.assistent.IParametersService;
@@ -59,6 +61,7 @@ public class AIModule
         bind(IHistoricalHint.class).to(Hint.class);
         bind(IHintHistory.class).to(HintHistory.class);
         bind(IHintHistory.class).to(HintHistory.class);
+        bind(ICodeCompletionContext.class).to(CodeCompletionStatistics.class).in(Singleton.class);
 
         bind(IHttpLog.class).to(HttpLog.class).in(Singleton.class);
         bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
@@ -67,6 +70,7 @@ public class AIModule
         bind(new TypeLiteral<IResponseCache<Parameters>>() { /**/ }).to(new TypeLiteral<ResponseCache<Parameters>>() { /**/ });
         bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
         bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });
+        bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -34,12 +34,12 @@ public class UI
 {
     private Object lock = new Object();
     private final ILog log;
-    private final Provider<ICodeCompletionViewModel> codeCompletionViewModelProvider;
+    private final Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider;
     private StyledText textWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
-    public UI(ILog log, Provider<ICodeCompletionViewModel> codeCompletionViewModelProvider)
+    public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(codeCompletionViewModelProvider);
@@ -51,6 +51,21 @@ public class UI
     public void handleEvent(Event event)
     {
         Preconditions.checkNotNull(event);
+        if (event.type == SWT.FocusOut)
+        {
+            synchronized (lock)
+            {
+                try
+                {
+                    queryToken.close();
+                }
+                catch (Exception e)
+                {
+                    // ignored
+                }
+            }
+        }
+
         if (event.type == SWT.FocusIn && event.widget instanceof StyledText)
         {
             synchronized (lock)

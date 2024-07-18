@@ -166,8 +166,8 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     private void rollback(Text text, int offset)
     {
         var hintText = text.getText();
-        var len = hintText.length();
-        if (len == 0)
+        var length = hintText.length();
+        if (length == 0)
         {
             return;
         }
@@ -175,13 +175,13 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
         try
         {
             isAccepting = true;
-            var start = offset - len;
+            var start = offset - length;
             if (offset < 0)
             {
                 start = 0;
             }
 
-            getContext().replace(start, len, ""); //$NON-NLS-1$
+            getContext().rollback(start, length);
         }
         finally
         {
@@ -207,7 +207,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
                 start = 0;
             }
 
-            getContext().replace(start, 0, hintText);
+            getContext().apply(text, start);
         }
         finally
         {

@@ -10,5 +10,5 @@ import org.e1c.edt.ai.assistent.model.Parameters;
 
 public interface IParametersService
 {
-    CompletableFuture<Optional<Parameters>> getParameters();
+    CompletableFuture<Optional<Parameters>> getParametersAsync();
 }

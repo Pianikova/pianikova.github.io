@@ -13,13 +13,13 @@ import java.lang.annotation.Target;
 
 import javax.inject.Qualifier;
 
-import org.e1c.edt.ai.ContextSettings;
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.CodeCompletionActionHandler;
 import org.e1c.edt.ai.CodeCompletionSession;
-import org.e1c.edt.ai.IContextSettings;
+import org.e1c.edt.ai.ContextSettings;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionSession;
+import org.e1c.edt.ai.IContextSettings;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
@@ -67,7 +67,7 @@ public class AIUIModule
         bind(new TypeLiteral<ISyntaxWalker<StringSerializerContext>>() { /**/ }).to(new TypeLiteral<BasicPathSyntaxWalker<StringSerializerContext>>() { /**/ }).in(Singleton.class);
         bind(new TypeLiteral<ISyntaxVisitor<StringSerializerContext>>() { /**/ }).to(StringSerializerVisitor.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
-        bind(ICodeCompletionViewModel.class).to(CodeCompletionViewModel.class).in(Singleton.class);
+        bind(new TypeLiteral<ICodeCompletionViewModel<CodeCompletionContext>>() { /**/ }).to(CodeCompletionViewModel.class).in(Singleton.class);
         bind(IHintPainter.class).to(HintPainter.class);
         bind(IHotKeys.class).to(HotKeys.class).in(Singleton.class);
         bind(IUserActions.class).to(UserActions.class).in(Singleton.class);
