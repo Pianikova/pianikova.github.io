@@ -378,12 +378,12 @@ public class CodeCompletionViewModel
             break;
 
         case ASK_NEW:
-            session.getContext().commit();
+            commit(session);
             askNew();
             break;
 
         case RESET:
-            session.getContext().commit();
+            commit(session);
             reset();
             event.doit = false;
             break;
@@ -393,11 +393,7 @@ public class CodeCompletionViewModel
             break;
 
         case SKIP:
-            if (session != null)
-            {
-                session.getContext().commit();
-            }
-
+            commit(session);
             break;
 
         default:
@@ -417,5 +413,15 @@ public class CodeCompletionViewModel
         }
 
         reset();
+    }
+
+    private void commit(ICodeCompletionSession<CodeCompletionContext> session)
+    {
+        if (session == null)
+        {
+            return;
+        }
+
+        session.getContext().commit();
     }
 }
