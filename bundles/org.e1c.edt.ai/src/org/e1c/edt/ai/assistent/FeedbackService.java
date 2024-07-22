@@ -6,13 +6,12 @@ package org.e1c.edt.ai.assistent;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.assistent.model.AcceptedCodeFeedback;
 import org.e1c.edt.ai.assistent.model.CursorInfo;
-import org.e1c.edt.ai.assistent.model.CursorLocation;
-import org.e1c.edt.ai.assistent.model.RelativeLocation;
 import org.e1c.edt.ai.client.AIClientException;
 
 import com.google.common.base.Preconditions;
@@ -40,7 +39,8 @@ public class FeedbackService
     }
 
     @Override
-    public CompletableFuture<Void> acceptedCodeAsync(String uuid, String code)
+    public CompletableFuture<Void> acceptedCodeAsync(String uuid, String code, Optional<CursorInfo> cursorStartInfo,
+        Optional<CursorInfo> cursorEndInfo)
     {
         var builder = requestBuilder.create("./feedbacks/accepted_code"); //$NON-NLS-1$
         if (builder.isEmpty())
@@ -51,12 +51,8 @@ public class FeedbackService
         var feedback = new AcceptedCodeFeedback();
         feedback.requestUuid = uuid;
         feedback.acceptedCode = code;
-        feedback.cursorStartInfo = new CursorInfo();
-        feedback.cursorStartInfo.location = CursorLocation.FunctionBody;
-        feedback.cursorStartInfo.relativeLocation = RelativeLocation.Middle;
-        feedback.cursorEndInfo = new CursorInfo();
-        feedback.cursorEndInfo.location = CursorLocation.FunctionBody;
-        feedback.cursorEndInfo.relativeLocation = RelativeLocation.Middle;
+        feedback.cursorStartInfo = cursorStartInfo.orElse(null);
+        feedback.cursorEndInfo = cursorEndInfo.orElse(null);
         var body = json.serialize(feedback);
         var request = builder.get().POST(BodyPublishers.ofString(body)).build();
         return sendFeebackAsync(request, body);

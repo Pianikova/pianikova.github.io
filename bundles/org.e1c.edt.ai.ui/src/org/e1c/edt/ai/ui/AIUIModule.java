@@ -20,6 +20,7 @@ import org.e1c.edt.ai.ContextSettings;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionSession;
 import org.e1c.edt.ai.IContextSettings;
+import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
@@ -74,6 +75,7 @@ public class AIUIModule
         bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });
         bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
         bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
+        bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
         // @formatter:on
     }
 

@@ -14,26 +14,37 @@ public class CodeCompletionStatistics
     implements ICodeCompletionContext
 {
     private final IFeedbackService feedbackService;
+    private final ICursorInfoProvider cursorInfoProvider;
     private final ArrayList<Text> code = new ArrayList<>();
+    private Integer startOffset;
 
     @Inject
-    public CodeCompletionStatistics(IFeedbackService feedbackService)
+    public CodeCompletionStatistics(IFeedbackService feedbackService, ICursorInfoProvider cursorInfoProvider)
     {
         Preconditions.checkNotNull(feedbackService);
+        Preconditions.checkNotNull(cursorInfoProvider);
         this.feedbackService = feedbackService;
+        this.cursorInfoProvider = cursorInfoProvider;
     }
 
     @Override
     public void apply(Text text, int offset)
     {
+        Preconditions.checkNotNull(text);
         if (offset < 0)
         {
             return;
         }
 
-        if (text.getSource().getId().isBlank())
+        var sourceId = text.getSource().getId();
+        if (sourceId.isBlank())
         {
             return;
+        }
+
+        if (startOffset == null)
+        {
+            startOffset = offset;
         }
 
         code.add(text);
@@ -55,8 +66,8 @@ public class CodeCompletionStatistics
             }
             else
             {
-                length = 0;
                 code.add(new Text(text.substring(0, len - length), lastText.getSource()));
+                length = 0;
             }
         }
     }
@@ -64,13 +75,19 @@ public class CodeCompletionStatistics
     @Override
     public void commit()
     {
-        if (code.isEmpty())
-        {
-            return;
-        }
-
         try
         {
+            if (code.isEmpty())
+            {
+                return;
+            }
+
+            var offset = 0;
+            if (startOffset != null)
+            {
+                offset = startOffset;
+            }
+
             String lastSourceId = null;
             var sb = new StringBuilder();
             for (var text : code)
@@ -78,12 +95,16 @@ public class CodeCompletionStatistics
                 var sourceId = text.getSource().getId();
                 if (!sourceId.equals(lastSourceId))
                 {
-                    lastSourceId = sourceId;
                     if (sb.length() > 0)
                     {
-                        feedbackService.acceptedCodeAsync(lastSourceId, sb.toString());
+                        feedbackService.acceptedCodeAsync(lastSourceId, sb.toString(),
+                            cursorInfoProvider.getCursorInfo(offset),
+                            cursorInfoProvider.getCursorInfo(offset + sb.length()));
+                        offset += sb.length();
                         sb.setLength(0);
                     }
+
+                    lastSourceId = sourceId;
                 }
 
                 sb.append(text.getText());
@@ -91,12 +112,14 @@ public class CodeCompletionStatistics
 
             if (sb.length() > 0)
             {
-                feedbackService.acceptedCodeAsync(lastSourceId, sb.toString());
+                feedbackService.acceptedCodeAsync(lastSourceId, sb.toString(), cursorInfoProvider.getCursorInfo(offset),
+                    cursorInfoProvider.getCursorInfo(offset + sb.length()));
             }
         }
         finally
         {
             code.clear();
+            startOffset = null;
         }
     }
 }

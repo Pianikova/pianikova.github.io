@@ -3,9 +3,11 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.util.stream.Stream;
+
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 public interface ICodePartsProvider
 {
-    Iterable<CodePart> getParts(ICompositeNode rootNode);
+    Stream<CodePart> getParts(ICompositeNode rootNode);
 }

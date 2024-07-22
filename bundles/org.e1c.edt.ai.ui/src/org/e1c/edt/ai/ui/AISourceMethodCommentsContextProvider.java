@@ -39,10 +39,10 @@ public class AISourceMethodCommentsContextProvider
         {
             if (part.getRange().contains(ctx.getOffset()))
             {
-                switch (part.getType())
+                switch (part.getLocation())
                 {
                 case Comment:
-                case MethodPrefix:
+                case OutsideFunction:
                     return create(target, ctx, part);
 
                 default:

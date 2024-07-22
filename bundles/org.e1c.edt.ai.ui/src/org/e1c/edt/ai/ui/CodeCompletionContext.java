@@ -61,15 +61,16 @@ public class CodeCompletionContext
     @Override
     public void apply(Text text, int offset)
     {
-        baseContext.apply(text, offset);
+        Preconditions.checkNotNull(text);
         replace(offset, 0, text.getText());
+        baseContext.apply(text, offset);
     }
 
     @Override
     public void rollback(int offset, int length)
     {
-        baseContext.rollback(offset, length);
         replace(offset, length, ""); //$NON-NLS-1$
+        baseContext.rollback(offset, length);
     }
 
     @Override

@@ -3,10 +3,15 @@
  */
 package org.e1c.edt.ai.ui;
 
-import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.Stack;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.e1c.edt.ai.Range;
+import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.AbstractElement;
 import org.eclipse.xtext.Alternatives;
@@ -18,121 +23,188 @@ import org.eclipse.xtext.nodemodel.ILeafNode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com.google.common.base.Preconditions;
 
 public class CodePartsProvider implements ICodePartsProvider
 {
     @Override
-    @SuppressWarnings("nls")
-    public Iterable<CodePart> getParts(ICompositeNode rootNode)
+    public Stream<CodePart> getParts(ICompositeNode rootNode)
     {
-        var result = new ArrayList<CodePart>();
-        var nodes = new ArrayList<ILeafNode>();
-        var start = 0;
-        CodePartType lastType = CodePartType.Unknown;
-        var methodStarted = false;
-        var argsStarted = false;
-        var hasArgs = false;
-        ILeafNode lastLeafNode = null;
-        for (var leafNode : rootNode.getLeafNodes())
+        Preconditions.checkNotNull(rootNode);
+        var leafNodes = StreamSupport.stream(
+            Spliterators.spliteratorUnknownSize(rootNode.getLeafNodes().iterator(), Spliterator.IMMUTABLE), false);
+        var markers = getMarkers(leafNodes);
+        var codePartIterator = new CodePartIterator(markers);
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(codePartIterator, Spliterator.IMMUTABLE),
+            false);
+    }
+
+    private class CodePartIterator
+        implements Iterator<CodePart>
+    {
+        private final Iterator<CodeMarker> markers;
+        private final Stack<CursorLocation> locations = new Stack<>();
+        private boolean beforeArgs;
+
+        public CodePartIterator(Stream<CodeMarker> markers)
         {
-            var isProcessed = false;
-            lastLeafNode = leafNode;
+            Preconditions.checkNotNull(markers);
+            this.markers = markers.iterator();
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return markers.hasNext();
+        }
+
+        @Override
+        public CodePart next()
+        {
+            var marker = markers.next();
+            CodePart codePart = new CodePart(marker.range, CursorLocation.OutsideFunction);
+            switch (marker.type)
+            {
+            case Comment:
+                if (getLastLocation() == CursorLocation.FunctionBody)
+                {
+                    codePart = new CodePart(marker.range, CursorLocation.FunctionBody);
+                    break;
+                }
+
+                codePart = new CodePart(marker.range, CursorLocation.Comment);
+                break;
+
+            case MethodStart:
+                beforeArgs = true;
+                locations.push(CursorLocation.FunctionBody);
+                codePart = new CodePart(marker.range, CursorLocation.FunctionBody);
+                break;
+
+            case MethodArgStart:
+                if (getLastLocation() != CursorLocation.FunctionBody)
+                {
+                    break;
+                }
+
+                beforeArgs = false;
+                locations.push(CursorLocation.FunctionArguments);
+                codePart = new CodePart(marker.range, CursorLocation.FunctionArguments);
+                break;
+
+            case MethodArgFinish:
+                popLocation();
+                codePart = new CodePart(marker.range, CursorLocation.FunctionArguments);
+                break;
+
+            case MethodFinish:
+                popLocation();
+                codePart = new CodePart(marker.range, CursorLocation.FunctionBody);
+                break;
+
+            case Unknown:
+                var lastLocation = getLastLocation();
+                if (lastLocation == CursorLocation.FunctionBody && beforeArgs)
+                {
+                    lastLocation = CursorLocation.FunctionName;
+                }
+
+                codePart = new CodePart(marker.range, lastLocation);
+                break;
+
+            default:
+                break;
+            }
+
+            return codePart;
+        }
+
+        private void popLocation()
+        {
+            if (locations.size() > 0)
+            {
+                locations.pop();
+            }
+        }
+
+        private CursorLocation getLastLocation()
+        {
+            if (locations.size() > 0)
+            {
+                return locations.peek();
+            }
+
+            return CursorLocation.OutsideFunction;
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private Stream<CodeMarker> getMarkers(Stream<ILeafNode> leafNodes)
+    {
+        return leafNodes.map(leafNode -> {
             var text = leafNode.getText();
-            var type = CodePartType.Unknown;
+            var range = new Range(leafNode.getTotalOffset(), leafNode.getLength());
             var semantic = NodeModelUtils.findActualSemanticObjectFor(leafNode);
-            if (semantic != null)
+            if (semantic == null)
             {
-                var method = EcoreUtil2.getContainerOfType(semantic, Method.class);
-                if (method != null)
-                {
-                    type = methodStarted ? CodePartType.Method : CodePartType.MethodPrefix;
-                    var grammar = leafNode.getGrammarElement();
-                    if (!isProcessed && !methodStarted && grammar instanceof TerminalRule)
-                    {
-                        var terminalRule = (TerminalRule)grammar;
-                        var name = terminalRule.getName();
-                        if ("SL_COMMENT".equals(name))
-                        {
-                            type = CodePartType.Comment;
-                            isProcessed = true;
-                        }
-                    }
-
-                    if (!isProcessed && grammar instanceof Keyword)
-                    {
-                        if (!isProcessed && getAlternatives(grammar).filter(i -> i instanceof Keyword)
-                            .map(i -> (Keyword)i)
-                            .anyMatch(i -> "Процедура".equalsIgnoreCase(i.getValue())
-                                || "Функция".equalsIgnoreCase(i.getValue())))
-                        {
-                            type = CodePartType.Method;
-                            methodStarted = true;
-                            argsStarted = false;
-                            hasArgs = false;
-                            continue;
-                        }
-
-                        if (!isProcessed && getAlternatives(grammar).filter(i -> i instanceof Keyword)
-                            .map(i -> (Keyword)i)
-                            .anyMatch(i -> "КонецПроцедуры".equalsIgnoreCase(i.getValue())
-                                || "КонецФункции".equalsIgnoreCase(i.getValue())))
-                        {
-                            methodStarted = false;
-                            type = CodePartType.MethodPrefix;
-                            continue;
-                        }
-
-                        if (!isProcessed && !hasArgs)
-                        {
-                            var keyword = (Keyword)grammar;
-                            if (!argsStarted)
-                            {
-                                if ("(".equals(keyword.getValue()))
-                                {
-                                    type = CodePartType.MethodArgs;
-                                    argsStarted = true;
-                                }
-                            }
-                            else
-                            {
-                                if (")".equals(keyword.getValue()))
-                                {
-                                    type = CodePartType.Method;
-                                    argsStarted = false;
-                                    hasArgs = true;
-                                }
-                            }
-                        }
-                    }
-                }
+                return new CodeMarker(range, MarkerType.Unknown);
             }
 
-            if (lastType != type)
+            var method = EcoreUtil2.getContainerOfType(semantic, Method.class);
+            if (method == null)
             {
-                var end = leafNode.getOffset();
-                if (end > 0)
-                {
-                    result.add(new CodePart(new Range(start, end - start), lastType, nodes));
-                    start = end;
-                    nodes = new ArrayList<>();
-                }
-                lastType = type;
+                return new CodeMarker(range, MarkerType.Unknown);
             }
 
-            nodes.add(leafNode);
-        }
+            var grammar = leafNode.getGrammarElement();
+            if (grammar instanceof TerminalRule)
+            {
+                var terminalRule = (TerminalRule)grammar;
+                var name = terminalRule.getName();
+                if ("SL_COMMENT".equals(name))
+               {
+                    return new CodeMarker(range, MarkerType.Comment);
+               }
+            }
 
-        if (lastLeafNode != null)
-        {
-            var end = lastLeafNode.getEndOffset();
-            result.add(new CodePart(new Range(start, end + 1 - start), lastType, nodes));
-        }
+            if (grammar instanceof Keyword)
+            {
+                var keyword = (Keyword)grammar;
 
-        return result;
+                if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                    .map(i -> (Keyword)i)
+                    .anyMatch(
+                        i -> "Процедура".equalsIgnoreCase(i.getValue()) || "Функция".equalsIgnoreCase(i.getValue())))
+               {
+                    return new CodeMarker(range, MarkerType.MethodStart);
+               }
+
+                if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
+                    .map(i -> (Keyword)i)
+                    .anyMatch(i -> "КонецПроцедуры".equalsIgnoreCase(i.getValue())
+                        || "КонецФункции".equalsIgnoreCase(i.getValue())))
+               {
+                    return new CodeMarker(range, MarkerType.MethodFinish);
+               }
+
+                if ("(".equals(keyword.getValue()))
+               {
+                    return new CodeMarker(range, MarkerType.MethodArgStart);
+                }
+
+                if (")".equals(keyword.getValue()))
+                {
+                    return new CodeMarker(range, MarkerType.MethodArgFinish);
+               }
+            }
+
+            return new CodeMarker(range, MarkerType.Unknown);
+        });
     }
 
     private Stream<AbstractElement> getAlternatives(EObject obj)
     {
+        Preconditions.checkNotNull(obj);
         var сontainer = obj.eContainer();
         if (сontainer instanceof Alternatives)
         {
@@ -140,5 +212,36 @@ public class CodePartsProvider implements ICodePartsProvider
         }
 
         return Stream.empty();
+    }
+
+    private class CodeMarker
+    {
+        public final Range range;
+        public final MarkerType type;
+
+        public CodeMarker(Range range, MarkerType type)
+        {
+            Preconditions.checkNotNull(range);
+            Preconditions.checkNotNull(type);
+            this.range = range;
+            this.type = type;
+        }
+
+        @SuppressWarnings("nls")
+        @Override
+        public String toString()
+        {
+            return range.toString() + ": " + type;
+        }
+    }
+
+    private enum MarkerType
+    {
+        Unknown,
+        Comment,
+        MethodStart,
+        MethodFinish,
+        MethodArgStart,
+        MethodArgFinish
     }
 }

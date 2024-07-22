@@ -49,6 +49,13 @@ public class Range
         return position >= start && position < start + length;
     }
 
+    public Range merge(Range range)
+    {
+        var start = Integer.min(getStart(), range.getStart());
+        var finish = Integer.max(getStart() + getLength(), range.getStart() + range.getLength());
+        return new Range(start, finish - start);
+    }
+
     @Override
     public int hashCode()
     {
@@ -72,6 +79,6 @@ public class Range
     @Override
     public String toString()
     {
-        return "Range [start=" + start + ", length=" + length + "]";
+        return "[" + start + ", " + length + "]";
     }
 }
