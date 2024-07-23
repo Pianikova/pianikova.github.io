@@ -7,9 +7,10 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
-import org.e1c.edt.ai.IContextFactory;
+import org.e1c.edt.ai.IContextInitializer;
 import org.e1c.edt.ai.IUISettings;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -19,19 +20,19 @@ public class AIContextProvider
 {
     private final IUI ui;
     private final IUISettings uiSettings;
-    private final IContextFactory contextFactory;
+    private final IContextInitializer contextInitializer;
 
     @Inject
     public AIContextProvider(IUI ui,
         IUISettings uiSettings,
-        IContextFactory contextFactory)
+        IContextInitializer contextInitializer)
     {
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(uiSettings);
-        Preconditions.checkNotNull(contextFactory);
+        Preconditions.checkNotNull(contextInitializer);
         this.ui = ui;
         this.uiSettings = uiSettings;
-        this.contextFactory = contextFactory;
+        this.contextInitializer = contextInitializer;
     }
 
     @Override
@@ -58,6 +59,14 @@ public class AIContextProvider
             max = uiSettings.getMaxAssistantTextSize();
         }
 
-        return contextFactory.create(text, offset, text, offset);
+        var doc = sourceViewer.getDocument();
+        var path = ""; //$NON-NLS-1$
+        if (doc instanceof IXtextDocument)
+        {
+            var xtextDoc = (IXtextDocument)doc;
+            path = xtextDoc.getResourceURI().path();
+        }
+
+        return contextInitializer.initialize(new AIContext(text, offset, path, text, offset));
     }
 }

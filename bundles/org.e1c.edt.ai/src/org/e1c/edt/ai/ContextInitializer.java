@@ -8,15 +8,15 @@ import java.util.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ContextFactory
-    implements IContextFactory
+public class ContextInitializer
+    implements IContextInitializer
 {
     private final IContextSplitter contextSplitter;
     private final IContextSettings contextSettings;
     private final IStringNormalizer stringNormalizer;
 
     @Inject
-    public ContextFactory(IContextSplitter contextSplitter, IContextSettings contextSettings,
+    public ContextInitializer(IContextSplitter contextSplitter, IContextSettings contextSettings,
         IStringNormalizer stringNormalizer)
     {
         Preconditions.checkNotNull(contextSplitter);
@@ -28,16 +28,24 @@ public class ContextFactory
     }
 
     @Override
-    public Optional<AIContext> create(String source, int sourceOffset, String text, int offset)
+    public Optional<AIContext> initialize(AIContext ctx)
     {
-        Preconditions.checkNotNull(source);
-        Preconditions.checkNotNull(text);
-        Preconditions.checkArgument(offset >= 0);
+        Preconditions.checkNotNull(ctx);
+        var text = ctx.getText();
         if (text.isEmpty())
         {
-            return Optional.of(new AIContext(0, "", "", "")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            return Optional
+                .of(new AIContext(ctx.getSource(), ctx.getSourceOffset(), ctx.getPath(), text, ctx.getTextOffset()));
         }
 
+        var source = ctx.getSource();
+        var sourceOffset = ctx.getSourceOffset();
+        if (sourceOffset > source.length())
+        {
+            sourceOffset = source.length();
+        }
+
+        var offset = ctx.getTextOffset();
         if (offset > text.length())
         {
             offset = text.length();
@@ -46,6 +54,7 @@ public class ContextFactory
         var parts = contextSplitter.split(text, offset, contextSettings.getMaxLength());
         var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
         var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
-        return Optional.of(new AIContext(offset, text, prefix, sufix));
+        return Optional
+            .of(new AIContext(source, sourceOffset, ctx.getPath(), text, offset, prefix, sufix));
     }
 }

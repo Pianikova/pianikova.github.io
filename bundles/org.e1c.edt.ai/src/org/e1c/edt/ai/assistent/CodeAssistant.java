@@ -93,6 +93,7 @@ public class CodeAssistant
         ICancellationToken cancellationToken)
     {
         var localContext = new LocalContext();
+        localContext.path = aiContext.getPath();
         localContext.prefix = aiContext.getPrefix();
         localContext.suffix = aiContext.getSufix();
 

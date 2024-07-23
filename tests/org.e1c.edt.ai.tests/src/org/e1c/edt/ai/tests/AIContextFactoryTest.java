@@ -10,7 +10,8 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.e1c.edt.ai.ContextFactory;
+import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.ContextInitializer;
 import org.e1c.edt.ai.ContextParts;
 import org.e1c.edt.ai.IContextSettings;
 import org.e1c.edt.ai.IContextSplitter;
@@ -37,7 +38,7 @@ public class AIContextFactoryTest
     public String sufix;
 
     @Parameter(2)
-    public int offset;
+    public int textOffset;
 
     @Parameter(3)
     public int expectedOffset;
@@ -45,6 +46,7 @@ public class AIContextFactoryTest
     @Parameter(4)
     public boolean success;
 
+    @SuppressWarnings("nls")
     @Test
     @Parameters()
     public void shouldCreateContext()
@@ -52,7 +54,7 @@ public class AIContextFactoryTest
         // Given
         when(stringNormalizer.normalize(any(String.class), any(Boolean.class))).thenAnswer(state -> {
             var text = (String)state.getArguments()[0];
-            return text.replace(System.lineSeparator(), "\n"); //$NON-NLS-1$
+            return text.replace(System.lineSeparator(), "\n");
         });
 
         var text = prefix + sufix;
@@ -62,23 +64,25 @@ public class AIContextFactoryTest
         var factory = createInstance();
 
         // When
-        var actualContext = factory.create("", 0, text, offset); //$NON-NLS-1$
+        var actualContext = factory.initialize(new AIContext("full_" + text, textOffset + 3, "", text, textOffset));
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());
         if (success)
         {
             var ctx = actualContext.get();
+            Assert.assertEquals("full_" + text, ctx.getSource());
+            Assert.assertEquals(textOffset + 3, ctx.getSourceOffset());
             Assert.assertEquals(text, ctx.getText());
-            Assert.assertEquals(expectedOffset, ctx.getCursorOffset());
+            Assert.assertEquals(expectedOffset, ctx.getTextOffset());
             Assert.assertEquals(prefix, ctx.getPrefix());
             Assert.assertEquals(sufix, ctx.getSufix());
         }
     }
 
-    private ContextFactory createInstance()
+    private ContextInitializer createInstance()
     {
-        return new ContextFactory(splitter, contextSettings, stringNormalizer);
+        return new ContextInitializer(splitter, contextSettings, stringNormalizer);
     }
 
     @SuppressWarnings("nls")

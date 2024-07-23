@@ -9,7 +9,7 @@ import java.util.Optional;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
-import org.e1c.edt.ai.IContextFactory;
+import org.e1c.edt.ai.IContextInitializer;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.xtext.nodemodel.ILeafNode;
 import org.eclipse.xtext.nodemodel.INode;
@@ -21,23 +21,23 @@ public class AISourceCodeSizeReducerContextProvider
     implements IAIContextProvider<AISourceContext>
 {
     private final ILog log;
-    private final IContextFactory contextFactory;
+    private final IContextInitializer contextInitializer;
     private final ISyntaxWalker<StringSerializerContext> basicPathSyntaxWalker;
     private final ISyntaxVisitor<StringSerializerContext> serializerVisitor;
     private IClock clock;
 
     @Inject
-    public AISourceCodeSizeReducerContextProvider(ILog log, IContextFactory contextFactory,
+    public AISourceCodeSizeReducerContextProvider(ILog log, IContextInitializer contextInitializer,
         ISyntaxWalker<StringSerializerContext> basicPathSyntaxWalker,
         ISyntaxVisitor<StringSerializerContext> serializerVisitor, IClock clock)
     {
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(contextFactory);
+        Preconditions.checkNotNull(contextInitializer);
         Preconditions.checkNotNull(basicPathSyntaxWalker);
         Preconditions.checkNotNull(serializerVisitor);
         Preconditions.checkNotNull(clock);
         this.log = log;
-        this.contextFactory = contextFactory;
+        this.contextInitializer = contextInitializer;
         this.basicPathSyntaxWalker = basicPathSyntaxWalker;
         this.serializerVisitor = serializerVisitor;
         this.clock = clock;
@@ -89,7 +89,8 @@ public class AISourceCodeSizeReducerContextProvider
             return Optional.empty();
         }
 
-        return contextFactory.create(target.getTextWidget().getText(), offset, text, serializerContext.getOffset());
+        return contextInitializer.initialize(
+            new AIContext(target.getTextWidget().getText(), offset, "", text, serializerContext.getOffset()));
     }
 
     private ILeafNode findVisibleLeafNodeAtOffset(INode rootNode, int leafNodeOffset)

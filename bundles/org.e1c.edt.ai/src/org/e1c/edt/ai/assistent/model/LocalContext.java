@@ -8,4 +8,6 @@ public class LocalContext
     public String prefix;
 
     public String suffix;
+
+    public String path;
 }

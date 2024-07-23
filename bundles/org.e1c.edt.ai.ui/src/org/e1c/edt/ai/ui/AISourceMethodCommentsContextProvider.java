@@ -8,25 +8,22 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
-import org.e1c.edt.ai.IContextFactory;
+import org.e1c.edt.ai.IContextInitializer;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
-import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class AISourceMethodCommentsContextProvider
     implements IAIContextProvider<AISourceContext>
 {
-    private final IContextFactory contextFactory;
+    private final IContextInitializer contextInitializer;
 
     @Inject
-    public AISourceMethodCommentsContextProvider(IContextFactory contextFactory,
-        BslMultiLineCommentDocumentationProvider commentProvider)
+    public AISourceMethodCommentsContextProvider(IContextInitializer contextInitializer)
     {
-        Preconditions.checkNotNull(contextFactory);
-        Preconditions.checkNotNull(commentProvider);
-        this.contextFactory = contextFactory;
+        Preconditions.checkNotNull(contextInitializer);
+        this.contextInitializer = contextInitializer;
     }
 
     @Override
@@ -80,6 +77,7 @@ public class AISourceMethodCommentsContextProvider
             }
         }
 
-        return contextFactory.create(target.getTextWidget().getText(), ctx.getOffset(), method.toString(), offset);
+        return contextInitializer.initialize(
+            new AIContext(target.getTextWidget().getText(), ctx.getOffset(), "", method.toString(), offset)); //$NON-NLS-1$
     }
 }

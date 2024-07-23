@@ -56,7 +56,7 @@ public class AIModule
         bind(IClock.class).to(Clock.class).in(Singleton.class);
         bind(IMath.class).to(Math.class).in(Singleton.class);
         bind(IInputDelayStatistics.class).to(InputDelayStatistics.class).in(Singleton.class);
-        bind(IContextFactory.class).to(ContextFactory.class).in(Singleton.class);
+        bind(IContextInitializer.class).to(ContextInitializer.class).in(Singleton.class);
         bind(IStringNormalizer.class).to(StringNormalizer.class).in(Singleton.class);
         bind(IHistoricalHint.class).to(Hint.class);
         bind(IHintHistory.class).to(HintHistory.class);

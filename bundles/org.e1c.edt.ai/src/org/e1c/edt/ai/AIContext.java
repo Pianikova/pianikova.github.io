@@ -7,26 +7,51 @@ import com.google.common.base.Preconditions;
 
 public class AIContext
 {
-    private final int cursorOffset;
+    private final String source;
+    private final int sourceOffset;
+    private final String path;
+    private final int textOffset;
     private final String text;
     private final String prefix;
     private final String sufix;
 
-    public AIContext(int cursorOffset, String text, String prefix, String sufix)
+    public AIContext(String source, int sourceOffset, String path, String text, int textOffset, String prefix,
+        String sufix)
     {
+        Preconditions.checkNotNull(source);
+        Preconditions.checkArgument(sourceOffset >= 0);
+        Preconditions.checkNotNull(path);
         Preconditions.checkNotNull(text);
-        Preconditions.checkArgument(cursorOffset >= 0 && (text.isEmpty() || cursorOffset <= text.length()));
+        Preconditions.checkArgument(textOffset >= 0);
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
-        this.cursorOffset = cursorOffset;
+        this.source = source;
+        this.sourceOffset = sourceOffset;
+        this.path = path;
+        this.textOffset = textOffset;
         this.text = text;
         this.prefix = prefix;
         this.sufix = sufix;
     }
 
-    public int getCursorOffset()
+    public AIContext(String source, int sourceOffset, String path, String text, int textOffset)
     {
-        return cursorOffset;
+        this(source, sourceOffset, path, text, textOffset, "", ""); //$NON-NLS-1$//$NON-NLS-2$
+    }
+
+    public String getSource()
+    {
+        return source;
+    }
+
+    public int getSourceOffset()
+    {
+        return sourceOffset;
+    }
+
+    public String getPath()
+    {
+        return path;
     }
 
     public String getText()
@@ -34,16 +59,35 @@ public class AIContext
         return text;
     }
 
+    public int getTextOffset()
+    {
+        return textOffset;
+    }
+
+    public String getPrefix()
+    {
+        return prefix;
+    }
+
+    public String getSufix()
+    {
+        return sufix;
+    }
+
     @Override
     public String toString()
     {
         var str = new StringBuilder();
 
-        str.append("cursorOffset:"); //$NON-NLS-1$
-        str.append(cursorOffset);
+        str.append("path:"); //$NON-NLS-1$
+        str.append(path);
         str.append(System.lineSeparator());
 
-        var textWithCursor = text.substring(0, cursorOffset) + "█" + text.substring(cursorOffset); //$NON-NLS-1$
+        str.append("cursorOffset:"); //$NON-NLS-1$
+        str.append(textOffset);
+        str.append(System.lineSeparator());
+
+        var textWithCursor = text.substring(0, textOffset) + "█" + text.substring(textOffset); //$NON-NLS-1$
 
         str.append("text:"); //$NON-NLS-1$
         str.append(format(textWithCursor));
@@ -68,15 +112,5 @@ public class AIContext
     private static String format(String text)
     {
         return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
-    }
-
-    public String getPrefix()
-    {
-        return prefix;
-    }
-
-    public String getSufix()
-    {
-        return sufix;
     }
 }
