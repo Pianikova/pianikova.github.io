@@ -18,7 +18,7 @@ import com.google.inject.Inject;
 public class HintPainter
     implements PaintListener, IHintPainter
 {
-    private static final String LABEL_TEXT = "Tab → ← Esc"; //$NON-NLS-1$
+    private static final String LABEL_TEXT = "Tab → ↓ ← Esc"; //$NON-NLS-1$
     private static final char CONTINUATION_SIGN = '…';
     private static final char RETURN_SIGN = '↵';
     private static final int BORDER = 1;

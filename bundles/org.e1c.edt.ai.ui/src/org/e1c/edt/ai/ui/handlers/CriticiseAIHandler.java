@@ -41,7 +41,7 @@ public class CriticiseAIHandler
     {
         ui.getTextWidget()
             .flatMap(textWidget -> aiContextProvider.create(
-                new AITarget(textWidget, Integer.MAX_VALUE), null,
+                new AITarget(textWidget, Integer.MAX_VALUE, true), null,
                 CancellationTokens.NONE))
             .ifPresent(ctx -> chat.reviewCode(ctx.getText()));
         ui.showView(ChatView.ID);

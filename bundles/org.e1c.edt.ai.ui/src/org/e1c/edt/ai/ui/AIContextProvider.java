@@ -9,6 +9,7 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextInitializer;
 import org.e1c.edt.ai.IUISettings;
+import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
@@ -51,8 +52,28 @@ public class AIContextProvider
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
         var textWidget = sourceViewer.getTextWidget();
-        var text = textWidget.getText();
-        var offset = textWidget.getCaretOffset();
+        var source = textWidget.getText();
+        var sourceOffset = textWidget.getCaretOffset();
+        var text = source;
+        var textOffset = sourceOffset;
+        if (target.isPreferSelection())
+        {
+            var selection = sourceViewer.getSelection();
+            if (!selection.isEmpty())
+            {
+                if (selection instanceof ITextSelection)
+                {
+                    var textSelection = (ITextSelection)selection;
+                    var selectionOffset = sourceOffset - textSelection.getOffset();
+                    if (selectionOffset >= 0 && selectionOffset <= textSelection.getLength())
+                    {
+                        textOffset = selectionOffset;
+                        text = textSelection.getText();
+                    }
+                }
+            }
+        }
+
         var max = target.getMaxLength();
         if (max <= 0)
         {
@@ -67,6 +88,6 @@ public class AIContextProvider
             path = xtextDoc.getResourceURI().path();
         }
 
-        return contextInitializer.initialize(new AIContext(text, offset, path, text, offset));
+        return contextInitializer.initialize(new AIContext(source, sourceOffset, path, text, textOffset));
     }
 }

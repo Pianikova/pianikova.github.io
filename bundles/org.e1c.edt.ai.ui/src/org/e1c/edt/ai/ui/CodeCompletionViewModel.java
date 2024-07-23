@@ -178,7 +178,7 @@ public class CodeCompletionViewModel
             var startTime = clock.now();
             var optionalAiContext = dispatcher.dispatch(
                 () -> aiContextProvider
-                    .create(new AITarget(textWidget, 0), null, cancellationTokenSource)
+                    .create(new AITarget(textWidget, 0, false), null, cancellationTokenSource)
                     .orElse(null));
 
             if (optionalAiContext.isEmpty())
