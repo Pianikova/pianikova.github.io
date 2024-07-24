@@ -3,7 +3,6 @@
  */
 package org.e1c.edt.ai.assistent;
 
-import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
@@ -25,27 +24,28 @@ public class ParametersService
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clienBuilder;
     private final IJson json;
+    private final ISettingsTracker settingsTracker;
     private final IResponseCache<Parameters> responseCache;
     private final ISettingsProvider settingsProvider;
-    private String lastClientToken;
-    private URI lastUri;
-    private Parameters lastUserParams;
 
     @Inject
     public ParametersService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder,
         IJson json,
+        ISettingsTracker settingsTracker,
         IResponseCache<Parameters> responseCache, ISettingsProvider settingsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(responseCache);
         Preconditions.checkNotNull(settingsProvider);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
         this.json = json;
+        this.settingsTracker = settingsTracker;
         this.responseCache = responseCache;
         this.settingsProvider = settingsProvider;
     }
@@ -60,23 +60,10 @@ public class ParametersService
         }
 
         var request = builder.get().GET().build();
-        var newUri = request.uri();
-        var newClientToken = settingsProvider.getSettings().map(i -> i.getClientToken()).orElse(""); //$NON-NLS-1$
-        var newUserParams = settingsProvider.getSettings().map(i -> i.getLlmParameters()).orElse(new Parameters());
-        boolean reset;
-        if (newClientToken.equals(lastClientToken) && newUri.equals(lastUri) && newUserParams.equals(lastUserParams))
-        {
-            reset = false;
-        }
-        else
-        {
-            lastClientToken = newClientToken;
-            lastUri = newUri;
-            lastUserParams = newUserParams;
-            reset = true;
-        }
-
-        return responseCache.get(() -> getParametersAsync(request, newUserParams), reset);
+        var settings = settingsProvider.getSettings();
+        var reset = settingsTracker.register(ParametersService.class.getName(), settings);
+        var params = settingsProvider.getSettings().map(i -> i.getLlmParameters()).orElse(new Parameters());
+        return responseCache.get(() -> getParametersAsync(request, params), reset);
     }
 
     private CompletableFuture<Optional<Parameters>> getParametersAsync(HttpRequest request, Parameters userParams)

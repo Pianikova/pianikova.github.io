@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.IJson;
+import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.assistent.model.SessionRequest;
@@ -25,26 +26,32 @@ public class SessionService implements ISessionService
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clienBuilder;
     private final IJson json;
+    private final ISettingsTracker settingsTracker;
     private final IResponseCache<Session> responseCache;
     private final IParametersService parametersService;
-    private String lastRequestBody;
+    private final ISettingsProvider settingsProvider;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
-        IResponseCache<Session> responseCache, IParametersService parametersService)
+        ISettingsTracker settingsTracker,
+        IResponseCache<Session> responseCache, IParametersService parametersService, ISettingsProvider settingsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(responseCache);
         Preconditions.checkNotNull(parametersService);
+        Preconditions.checkNotNull(settingsProvider);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
         this.json = json;
+        this.settingsTracker = settingsTracker;
         this.responseCache = responseCache;
         this.parametersService = parametersService;
+        this.settingsProvider = settingsProvider;
     }
 
     @Override
@@ -66,22 +73,15 @@ public class SessionService implements ISessionService
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
+        var settings = settingsProvider.getSettings();
+        var reset = settingsTracker.register(SessionService.class.getName(), settings);
+
         var sessionRequest = new SessionRequest();
         sessionRequest.serviceParameters = parameters.get();
-        var newRequestBody = json.serialize(sessionRequest);
-        var request = builder.get().POST(BodyPublishers.ofString(newRequestBody)).build();
-        boolean reset;
-        if (newRequestBody.equals(lastRequestBody))
-        {
-            reset = false;
-        }
-        else
-        {
-            lastRequestBody = newRequestBody;
-            reset = true;
-        }
 
-        return responseCache.get(() -> getSessionAsync(request, newRequestBody), reset);
+        var requestBody = json.serialize(sessionRequest);
+        var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
+        return responseCache.get(() -> getSessionAsync(request, requestBody), reset);
     }
 
     private CompletableFuture<Optional<Session>> getSessionAsync(HttpRequest request, String body)

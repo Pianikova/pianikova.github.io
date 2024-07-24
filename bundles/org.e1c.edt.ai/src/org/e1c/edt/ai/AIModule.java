@@ -17,12 +17,14 @@ import org.e1c.edt.ai.assistent.IResponseCache;
 import org.e1c.edt.ai.assistent.IResponseLineProcessor;
 import org.e1c.edt.ai.assistent.IResponseStreamProcessor;
 import org.e1c.edt.ai.assistent.ISessionService;
+import org.e1c.edt.ai.assistent.ISettingsTracker;
 import org.e1c.edt.ai.assistent.ParametersService;
 import org.e1c.edt.ai.assistent.RequestBuilder;
 import org.e1c.edt.ai.assistent.ResponseCache;
 import org.e1c.edt.ai.assistent.ResponseLineProcessor;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
 import org.e1c.edt.ai.assistent.SessionService;
+import org.e1c.edt.ai.assistent.SettingsTracker;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.Session;
 
@@ -71,6 +73,7 @@ public class AIModule
         bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
         bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
+        bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
         // @formatter:on
     }
 }

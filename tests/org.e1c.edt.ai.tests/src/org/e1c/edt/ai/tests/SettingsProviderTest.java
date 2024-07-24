@@ -56,6 +56,20 @@ public class SettingsProviderTest
     }
 
     @Test
+    public void shouldProvideAndTrimClientToken()
+    {
+        // Given
+        var provider = createInstance();
+
+        // When
+        when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn(" \tAbc  \t");
+        var settings = provider.getSettings();
+
+        // Then
+        Assert.assertEquals("Abc", settings.get().getClientToken());
+    }
+
+    @Test
     public void shouldProvideDataBaseName()
     {
         // Given
@@ -244,7 +258,7 @@ public class SettingsProviderTest
     }
 
     @Test
-    public void shouldProvideLlmParametersWhenEppty()
+    public void shouldProvideDefaultLlmParametersWhenEppty()
     {
         // Given
         var provider = createInstance();
@@ -255,7 +269,7 @@ public class SettingsProviderTest
         var settings = provider.getSettings();
 
         // Then
-        Assert.assertEquals(true, settings.isEmpty());
+        Assert.assertEquals(true, settings.isPresent());
     }
 
     private SettingsProvider createInstance()

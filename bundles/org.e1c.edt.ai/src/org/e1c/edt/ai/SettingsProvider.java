@@ -18,7 +18,6 @@ import com.google.inject.Inject;
 public class SettingsProvider
     implements ISettingsProvider
 {
-    private final static String QUERY_TEMPLATE = "?client_id=%s&client_uid=%s"; //$NON-NLS-1$
     private final ILog log;
     private final ISettingsStore settingsStore;
     private final IParser<String, Parameters> parametersParser;
@@ -37,8 +36,18 @@ public class SettingsProvider
     @Override
     public Optional<AISettings> getSettings()
     {
-        var clientToken = settingsStore.getString(ISettingsStore.CLIENT_TOKEN);
+        var clientToken = settingsStore.getString(ISettingsStore.CLIENT_TOKEN).trim();
+        if (clientToken != null)
+        {
+            clientToken = clientToken.trim();
+        }
+
         var clientUID = settingsStore.getString(ISettingsStore.CLIENT_UID);
+        if (clientUID != null)
+        {
+            clientUID = clientUID.trim();
+        }
+
         var accessRoles =
             new ArrayList<>(Arrays.asList(settingsStore.getString(ISettingsStore.ACCESS_ROLES).split(","))); //$NON-NLS-1$
         var tags =
@@ -60,12 +69,10 @@ public class SettingsProvider
         var databaseName = settingsStore.getString(ISettingsStore.DATABASE_NAME);
         var docPath = settingsStore.getString(ISettingsStore.DOCUMENT_PATH);
         var llmParameters = settingsStore.getString(ISettingsStore.LLM_PARAMETERS);
-        var _apiURL = apiURL;
-        var _chatURL = chatURL;
-        return parametersParser.parse(llmParameters)
-            .map(params -> new AISettings(accessRoles, tags, _apiURL, _chatURL, clientToken, clientUID, modelName,
-                databaseName,
-                docPath, params));
+        var parameters = parametersParser.parse(llmParameters).orElseGet(() -> new Parameters());
+        var settings = new AISettings(accessRoles, tags, apiURL, chatURL, clientToken, clientUID, modelName,
+            databaseName, docPath, parameters);
+        return Optional.of(settings);
     }
 
     private String normalize(String text)
