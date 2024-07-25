@@ -5,5 +5,5 @@ package org.e1c.edt.ai;
 
 public interface IContextSplitter
 {
-    ContextParts split(String text, int offset, int maxLength);
+    ContextParts split(String text, int offset);
 }

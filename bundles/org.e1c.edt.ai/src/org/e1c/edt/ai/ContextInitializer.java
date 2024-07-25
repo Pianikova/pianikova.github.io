@@ -12,18 +12,15 @@ public class ContextInitializer
     implements IContextInitializer
 {
     private final IContextSplitter contextSplitter;
-    private final IContextSettings contextSettings;
     private final IStringNormalizer stringNormalizer;
 
     @Inject
-    public ContextInitializer(IContextSplitter contextSplitter, IContextSettings contextSettings,
+    public ContextInitializer(IContextSplitter contextSplitter,
         IStringNormalizer stringNormalizer)
     {
         Preconditions.checkNotNull(contextSplitter);
-        Preconditions.checkNotNull(contextSettings);
         Preconditions.checkNotNull(stringNormalizer);
         this.contextSplitter = contextSplitter;
-        this.contextSettings = contextSettings;
         this.stringNormalizer = stringNormalizer;
     }
 
@@ -51,7 +48,7 @@ public class ContextInitializer
             offset = text.length();
         }
 
-        var parts = contextSplitter.split(text, offset, contextSettings.getMaxLength());
+        var parts = contextSplitter.split(text, offset);
         var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
         var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
         return Optional

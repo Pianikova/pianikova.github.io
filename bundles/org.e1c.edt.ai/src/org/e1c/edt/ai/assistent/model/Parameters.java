@@ -10,6 +10,12 @@ import com.google.gson.annotations.SerializedName;
 
 public class Parameters
 {
+    @SerializedName("prefix_length")
+    public Integer prefixLength;
+
+    @SerializedName("suffix_length")
+    public Integer suffixLength;
+
     @SerializedName("best_of")
     public Integer bestOf;
 
@@ -66,6 +72,21 @@ public class Parameters
 
     public Parameters merge(Parameters params)
     {
+        if (params.prefixLength != null)
+        {
+            prefixLength = params.prefixLength;
+        }
+
+        if (params.suffixLength != null)
+        {
+            suffixLength = params.suffixLength;
+        }
+
+        if (params.bestOf != null)
+        {
+            bestOf = params.bestOf;
+        }
+
         if (params.bestOf != null)
         {
             bestOf = params.bestOf;

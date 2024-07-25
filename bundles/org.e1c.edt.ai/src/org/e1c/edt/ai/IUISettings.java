@@ -10,6 +10,4 @@ public interface IUISettings
     int getCodeCompletionLinesCount();
 
     boolean isContinuousCodeCompletion();
-
-    int getMaxAssistantTextSize();
 }

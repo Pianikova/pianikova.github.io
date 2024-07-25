@@ -5,5 +5,7 @@ package org.e1c.edt.ai;
 
 public interface IContextSettings
 {
-    int getMaxLength();
+    int getPrefixLength();
+
+    int getSuffixLength();
 }

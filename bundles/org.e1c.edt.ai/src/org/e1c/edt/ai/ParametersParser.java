@@ -63,6 +63,12 @@ public class ParametersParser
 
         var names = new HashSet<>(properties.stringPropertyNames());
 
+        names.remove(parse(properties, "prefix_length", validationResult,
+            val -> parameters.prefixLength = Integer.parseInt(val)));
+
+        names.remove(parse(properties, "suffix_length", validationResult,
+            val -> parameters.suffixLength = Integer.parseInt(val)));
+
         names.remove(
             parse(properties, "best_of", validationResult, val -> parameters.bestOf = Integer.parseInt(val)));
 

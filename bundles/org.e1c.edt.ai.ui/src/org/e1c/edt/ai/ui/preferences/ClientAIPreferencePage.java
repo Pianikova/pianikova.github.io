@@ -89,13 +89,6 @@ public class ClientAIPreferencePage
             Messages.ClientAIPreferencePage_LLL_parameters,
             parent, parametersValidator));
 
-        var maxAssistTextSize = new IntegerFieldEditor(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE,
-            Messages.ClientAIPreferencePage_MaxAssistantTextSize,
-            parent);
-        maxAssistTextSize.setValidRange(ISettingsStore.MIN_ASSISTANT_TEXT_SIZE,
-            ISettingsStore.MAX_MAX_ASSISTANT_TEXT_SIZE);
-        addField(maxAssistTextSize);
-
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
             Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
         codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);

@@ -13,7 +13,6 @@ import java.util.Collection;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ContextInitializer;
 import org.e1c.edt.ai.ContextParts;
-import org.e1c.edt.ai.IContextSettings;
 import org.e1c.edt.ai.IContextSplitter;
 import org.e1c.edt.ai.IStringNormalizer;
 import org.e1c.edt.ai.Range;
@@ -29,7 +28,6 @@ public class AIContextFactoryTest
 {
     private final IContextSplitter splitter = mock(IContextSplitter.class);
     private final IStringNormalizer stringNormalizer = mock(IStringNormalizer.class);
-    private final IContextSettings contextSettings = mock(IContextSettings.class);
 
     @Parameter(0)
     public String prefix;
@@ -59,8 +57,7 @@ public class AIContextFactoryTest
 
         var text = prefix + sufix;
         var parts = new ContextParts(new Range(0, prefix.length()), new Range(prefix.length(), sufix.length()));
-        when(splitter.split(text, expectedOffset, 99)).thenReturn(parts);
-        when(contextSettings.getMaxLength()).thenReturn(99);
+        when(splitter.split(text, expectedOffset)).thenReturn(parts);
         var factory = createInstance();
 
         // When
@@ -82,7 +79,7 @@ public class AIContextFactoryTest
 
     private ContextInitializer createInstance()
     {
-        return new ContextInitializer(splitter, contextSettings, stringNormalizer);
+        return new ContextInitializer(splitter, stringNormalizer);
     }
 
     @SuppressWarnings("nls")

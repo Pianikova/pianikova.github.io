@@ -27,7 +27,6 @@ public class ClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.DATABASE_NAME, "edt_doc"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.MODEL_NAME, "openchat_7b"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.LLM_PARAMETERS, ""); //$NON-NLS-1$
-        store.setDefault(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE, ISettingsStore.DEFAULT_MAX_ASSISTANT_TEXT_SIZE);
         store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
         store.setDefault(ISettingsStore.CONTINUOUS_CODE_COMPLETION, true);
     }

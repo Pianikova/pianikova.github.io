@@ -38,10 +38,4 @@ public class UISettings
     {
         return settingsStore.getBoolean(ISettingsStore.CONTINUOUS_CODE_COMPLETION);
     }
-
-    @Override
-    public int getMaxAssistantTextSize()
-    {
-        return settingsStore.getInt(ISettingsStore.MAX_ASSISTANT_TEXT_SIZE);
-    }
 }

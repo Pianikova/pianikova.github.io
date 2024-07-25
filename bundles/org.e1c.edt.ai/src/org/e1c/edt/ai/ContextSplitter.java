@@ -4,28 +4,21 @@
 package org.e1c.edt.ai;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
 public class ContextSplitter implements IContextSplitter
 {
-    private Double midpointFactor;
-    private String separator;
+    private final IContextSettings contextSettings;
 
-    public ContextSplitter()
+    @Inject
+    public ContextSplitter(IContextSettings contextSettings)
     {
-        this("\n", .6666); //$NON-NLS-1$
-    }
-
-    public ContextSplitter(String separator, Double midpointFactor)
-    {
-        Preconditions.checkNotNull(separator);
-        Preconditions.checkArgument(separator.length() > 0);
-        Preconditions.checkArgument(midpointFactor > 0 && midpointFactor < 1);
-        this.separator = separator;
-        this.midpointFactor = midpointFactor;
+        Preconditions.checkNotNull(contextSettings);
+        this.contextSettings = contextSettings;
     }
 
     @Override
-    public ContextParts split(String text, int offset, int maxLength)
+    public ContextParts split(String text, int offset)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0 && offset <= text.length());
@@ -34,57 +27,35 @@ public class ContextSplitter implements IContextSplitter
             return new ContextParts(Range.EMPTY, Range.EMPTY);
         }
 
+        var maxPrefixLength = contextSettings.getPrefixLength();
+        if (maxPrefixLength < 0)
+        {
+            maxPrefixLength = 0;
+        }
+
+        var maxSuffixLength = contextSettings.getSuffixLength();
+        if (maxSuffixLength < 0)
+        {
+            maxSuffixLength = 0;
+        }
+
         var length = text.length();
-        if (length <= maxLength)
+        if (offset < maxPrefixLength)
         {
-            return new ContextParts(new Range(0, offset), new Range(offset, length - offset));
+            maxSuffixLength += (maxPrefixLength - offset);
         }
 
-        var maxPrefixLength = (int)(maxLength * midpointFactor + .5555);
-        var maxSufixLength = maxLength - maxPrefixLength;
-        var sufixFinish = offset + maxSufixLength - 1;
-        if (sufixFinish >= length)
+        if ((length - offset) < maxSuffixLength)
         {
-            var dif = sufixFinish - length;
-            maxPrefixLength += dif;
-            sufixFinish -= dif;
+            maxPrefixLength += (maxSuffixLength - (length - offset));
         }
 
-        var prefixStart = offset - maxPrefixLength;
-        if (prefixStart < 0)
-        {
-            prefixStart = 0;
-        }
+        var prefixLen = Integer.min(offset, maxPrefixLength);
+        var prefix = new Range(offset - prefixLen, prefixLen);
 
-        var separatorPosition = text.indexOf(separator, prefixStart);
-        if (separatorPosition >= 0 && separatorPosition < offset)
-        {
-            var newVal = separatorPosition + 1;
-            if (offset - newVal > 1)
-            {
-                prefixStart = newVal;
-            }
-        }
+        var suffixLen = Integer.min(length - offset, maxSuffixLength);
+        var suffix = new Range(offset, suffixLen);
 
-        separatorPosition = text.lastIndexOf(separator, sufixFinish);
-        if (separatorPosition >= offset)
-        {
-            var newVal = separatorPosition + 1;
-            if (newVal - offset > 1)
-            {
-                sufixFinish = separatorPosition - 1;
-            }
-        }
-
-        var prefix = new Range(prefixStart, offset - prefixStart);
-
-        var sufixLength = sufixFinish - offset + 1;
-        if (offset + sufixLength > length)
-        {
-            sufixLength -= ((offset + sufixLength) - length);
-        }
-
-        var sufix = new Range(offset, sufixLength);
-        return new ContextParts(prefix, sufix);
+        return new ContextParts(prefix, suffix);
     }
 }

@@ -8,7 +8,6 @@ import java.util.Optional;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextInitializer;
-import org.e1c.edt.ai.IUISettings;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.ui.editor.model.IXtextDocument;
@@ -20,19 +19,14 @@ public class AIContextProvider
     implements IAIContextProvider<Void>
 {
     private final IUI ui;
-    private final IUISettings uiSettings;
     private final IContextInitializer contextInitializer;
 
     @Inject
-    public AIContextProvider(IUI ui,
-        IUISettings uiSettings,
-        IContextInitializer contextInitializer)
+    public AIContextProvider(IUI ui, IContextInitializer contextInitializer)
     {
         Preconditions.checkNotNull(ui);
-        Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(contextInitializer);
         this.ui = ui;
-        this.uiSettings = uiSettings;
         this.contextInitializer = contextInitializer;
     }
 
@@ -72,12 +66,6 @@ public class AIContextProvider
                     }
                 }
             }
-        }
-
-        var max = target.getMaxLength();
-        if (max <= 0)
-        {
-            max = uiSettings.getMaxAssistantTextSize();
         }
 
         var doc = sourceViewer.getDocument();
