@@ -29,5 +29,6 @@ public class ClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.LLM_PARAMETERS, ""); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
         store.setDefault(ISettingsStore.CONTINUOUS_CODE_COMPLETION, true);
+        store.setDefault(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY, 300);
     }
 }

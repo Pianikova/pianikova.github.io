@@ -96,6 +96,10 @@ public class ClientAIPreferencePage
 
         addField(new BooleanFieldEditor(ISettingsStore.CONTINUOUS_CODE_COMPLETION,
             Messages.ClientAIPreferencePage_ContinuousCodeCompletition, parent));
+
+        var codeCompletionMinRequestDelay = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY,
+            Messages.ClientAIPreferencePage_CodeCompletionMinRequestDelay, parent);
+        addField(codeCompletionMinRequestDelay);
     }
 
     @Override

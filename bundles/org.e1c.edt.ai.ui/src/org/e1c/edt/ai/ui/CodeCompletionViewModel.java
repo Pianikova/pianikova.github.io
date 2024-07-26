@@ -58,6 +58,7 @@ public class CodeCompletionViewModel
     private final Timer showTimer = new Timer(true);
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
+    private Job lastJob;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -143,20 +144,35 @@ public class CodeCompletionViewModel
         askWithDelay(delayBeforeShow);
     }
 
-    private void askWithDelay(Duration delayBeforeShow)
+    private synchronized void askWithDelay(Duration delayBeforeShow)
     {
         cancel();
-        new Job(Messages.CodeCompletionJobName)
+        var lastJob = this.lastJob;
+        if (lastJob != null)
+        {
+            lastJob.cancel();
+        }
+
+        var delay = delayBeforeShow.toMillis();
+        if (delay < uiSettings.getMinRequestDelay())
+        {
+            delay = uiSettings.getMinRequestDelay();
+        }
+
+        var job = new Job(Messages.CodeCompletionJobName)
         {
             @Override
             protected IStatus run(IProgressMonitor monitor)
             {
                 var cancellationTokenSource = new JobCancellationTokenSource();
                 cancellationTokenSource.attachMonitor(monitor);
-                ask(delayBeforeShow, cancellationTokenSource);
+                ask(Duration.ofMillis(150), cancellationTokenSource);
                 return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
             }
-        }.schedule();
+        };
+
+        this.lastJob = job;
+        job.schedule(delay);
     }
 
     private void deactivate()

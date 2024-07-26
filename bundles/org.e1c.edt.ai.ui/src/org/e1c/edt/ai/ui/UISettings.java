@@ -38,4 +38,10 @@ public class UISettings
     {
         return settingsStore.getBoolean(ISettingsStore.CONTINUOUS_CODE_COMPLETION);
     }
+
+    @Override
+    public int getMinRequestDelay()
+    {
+        return settingsStore.getInt(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY);
+    }
 }
