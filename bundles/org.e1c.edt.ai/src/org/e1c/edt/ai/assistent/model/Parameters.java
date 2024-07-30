@@ -187,7 +187,7 @@ public class Parameters
             trimStop = params.trimStop;
         }
 
-        return params;
+        return this;
     }
 
     @Override

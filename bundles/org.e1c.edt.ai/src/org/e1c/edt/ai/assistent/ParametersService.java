@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.assistent.model.Parameters;
+import org.e1c.edt.ai.assistent.model.ParametersReponse;
 import org.e1c.edt.ai.client.AIClientException;
 
 import com.google.common.base.Preconditions;
@@ -88,7 +89,7 @@ public class ParametersService
 
     private Optional<Parameters> createParameters(String content, Parameters userParams)
     {
-        return json.deserialize(content, Parameters.class)
-            .map(params -> params.merge(userParams));
+        return json.deserialize(content, ParametersReponse.class)
+            .map(response -> response.serviceParameters.merge(userParams));
     }
 }
