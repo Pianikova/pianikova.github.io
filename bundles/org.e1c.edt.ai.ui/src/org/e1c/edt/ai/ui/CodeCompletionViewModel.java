@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
@@ -28,11 +29,17 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.jface.text.contentassist.ContentAssistEvent;
+import org.eclipse.jface.text.contentassist.ContentAssistant;
+import org.eclipse.jface.text.contentassist.ICompletionListener;
+import org.eclipse.jface.text.contentassist.ICompletionProposal;
+import org.eclipse.jface.text.contentassist.IContentAssistant;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
+import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -56,9 +63,12 @@ public class CodeCompletionViewModel
     private final IUserActions userActions;
     private final ICodeCompletionContext codeCompletionContext;
     private final Timer showTimer = new Timer(true);
+    private final IUI ui;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private Job lastJob;
+    private boolean isProposalMenuOpened = false;
+
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -68,7 +78,8 @@ public class CodeCompletionViewModel
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
-        ICodeCompletionContext codeCompletionContext)
+        ICodeCompletionContext codeCompletionContext, IUI ui)
+
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -84,6 +95,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(history);
         Preconditions.checkNotNull(userActions);
         Preconditions.checkNotNull(codeCompletionContext);
+        Preconditions.checkNotNull(ui);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -97,12 +109,15 @@ public class CodeCompletionViewModel
         this.history = history;
         this.userActions = userActions;
         this.codeCompletionContext = codeCompletionContext;
+        this.ui = ui;
     }
 
     @Override
     public AutoCloseable activate(StyledText textWidget)
     {
         this.textWidget = textWidget;
+        getContentAssistant().ifPresent(assistant -> addCompletionListener(assistant));
+        this.isProposalMenuOpened = false;
         reset();
         dispatcher.dispatch(() -> {
             textWidget.addPaintListener(hintPainter);
@@ -342,6 +357,11 @@ public class CodeCompletionViewModel
         var widget = content.getWidget();
         var hint = session.getHint();
         dispatcher.dispatch(() -> {
+            if (isProposalMenuOpened)
+            {
+                // close proposal menu before rising UI-hint
+                getContentAssistant().ifPresent(assistant -> assistant.requestWidgetToken(null, 40));
+            }
             hintPainter.setHintAt(widget.getCaretOffset(), hint.getText(HintPart.LINES).getText(),
                 hint.getText(HintPart.TOKEN).getText());
             widget.redraw();
@@ -373,6 +393,7 @@ public class CodeCompletionViewModel
         action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
         switch (action)
         {
+
         case SUGGEST:
             reset();
             askWithDelay(Duration.ZERO);
@@ -390,7 +411,6 @@ public class CodeCompletionViewModel
 
                 event.doit = false;
             }
-
             break;
 
         case ASK_NEW:
@@ -439,5 +459,48 @@ public class CodeCompletionViewModel
         }
 
         session.getContext().commit();
+    }
+
+    private Optional<ContentAssistant> getContentAssistant()
+    {
+        var viewer = ui.getSourceViewer(textWidget).get();
+        if (viewer instanceof XtextSourceViewer)
+        {
+            IContentAssistant assistant = ((XtextSourceViewer)viewer).getContentAssistant();
+            if (assistant instanceof ContentAssistant)
+            {
+                return Optional.ofNullable((ContentAssistant)assistant);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private void addCompletionListener(ContentAssistant contentAssistant)
+    {
+        if (contentAssistant != null)
+        {
+            contentAssistant.addCompletionListener(new ICompletionListener()
+            {
+                @Override
+                public void assistSessionStarted(ContentAssistEvent event)
+                {
+                    isProposalMenuOpened = true;
+                    reset();
+                }
+
+                @Override
+                public void assistSessionEnded(ContentAssistEvent event)
+                {
+                    isProposalMenuOpened = false;
+                }
+
+                @Override
+                public void selectionChanged(ICompletionProposal proposal, boolean smartToggle)
+                {
+                    isProposalMenuOpened = true;
+                    reset();
+                }
+            });
+        }
     }
 }
