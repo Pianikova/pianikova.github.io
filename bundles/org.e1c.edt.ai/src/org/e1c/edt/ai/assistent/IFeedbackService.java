@@ -12,4 +12,6 @@ public interface IFeedbackService
 {
     CompletableFuture<Void> acceptedCodeAsync(String uuid, String code, Optional<CursorInfo> cursorStartInfo,
         Optional<CursorInfo> cursorEndInfo);
+
+    CompletableFuture<Void> finalizeCodeAsync(String uuid, String code);
 }

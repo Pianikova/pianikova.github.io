@@ -64,10 +64,13 @@ public class CodeCompletionViewModel
     private final ICodeCompletionContext codeCompletionContext;
     private final Timer showTimer = new Timer(true);
     private final IUI ui;
+    private final ICodeProvider codeProvider;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
+    private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
+
 
 
     @Inject
@@ -78,8 +81,7 @@ public class CodeCompletionViewModel
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
-        ICodeCompletionContext codeCompletionContext, IUI ui)
-
+        ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -96,6 +98,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(userActions);
         Preconditions.checkNotNull(codeCompletionContext);
         Preconditions.checkNotNull(ui);
+        Preconditions.checkNotNull(codeProvider);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -110,6 +113,7 @@ public class CodeCompletionViewModel
         this.userActions = userActions;
         this.codeCompletionContext = codeCompletionContext;
         this.ui = ui;
+        this.codeProvider = codeProvider;
     }
 
     @Override
@@ -193,6 +197,15 @@ public class CodeCompletionViewModel
     private void deactivate()
     {
         codeCompletionContext.commit();
+        try
+        {
+            feedbackToken.close();
+        }
+        catch (Exception e)
+        {
+            // ignored
+        }
+
         reset();
         dispatcher.dispatch(() -> {
             textWidget.removePaintListener(hintPainter);
@@ -242,9 +255,13 @@ public class CodeCompletionViewModel
 
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
+                var offset = textWidget.getCaretOffset();
                 hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
                     delay.isNegative() || delay == Duration.ZERO, singleWordMode);
-            });
+                return codeProvider.getParseResult(textWidget)
+                    .map(parseResult -> codeProvider.getMethod(parseResult, offset).orElse(null))
+                    .orElse(null);
+            }).ifPresent(method -> session.setMethod(method));
 
             var completionSource = codeAssistant.createSource(aiCtx, cancellationTokenSource);
 

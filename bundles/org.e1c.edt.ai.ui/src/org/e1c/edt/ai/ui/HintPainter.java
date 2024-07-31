@@ -293,6 +293,7 @@ public class HintPainter
             italicFont.dispose();
             boldFont.dispose();
             smalFont.dispose();
+            gc.setFont(font);
         }
     }
 }

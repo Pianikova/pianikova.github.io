@@ -15,7 +15,8 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     private IHintHistory history;
     private boolean singleWordMode;
     private boolean isAccepting, inDone;
-    private String uuid = ""; //$NON-NLS-1$
+    private String uuid = Sources.UNKNOWN.getId();
+    private CodeMethod method = Sources.UNKNOWN.getMethod();
 
     @Inject
     public CodeCompletionSession(IUISettings uiSettings, IHistoricalHint hint, IHintHistory history)
@@ -53,6 +54,19 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
         Preconditions.checkNotNull(uuid);
         Preconditions.checkArgument(!uuid.isBlank());
         this.uuid = uuid;
+    }
+
+    @Override
+    public CodeMethod getMethod()
+    {
+        return method;
+    }
+
+    @Override
+    public void setMethod(CodeMethod method)
+    {
+        Preconditions.checkNotNull(method);
+        this.method = method;
     }
 
     @Override

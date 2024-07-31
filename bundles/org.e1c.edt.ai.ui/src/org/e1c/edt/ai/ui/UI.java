@@ -35,16 +35,20 @@ public class UI
     private Object lock = new Object();
     private final ILog log;
     private final Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider;
+    private final Provider<IFeedbackViewModel> feedbackViewModelProvider;
     private StyledText textWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
-    public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider)
+    public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider,
+        Provider<IFeedbackViewModel> feedbackViewModelProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(codeCompletionViewModelProvider);
+        Preconditions.checkNotNull(feedbackViewModelProvider);
         this.log = log;
         this.codeCompletionViewModelProvider = codeCompletionViewModelProvider;
+        this.feedbackViewModelProvider = feedbackViewModelProvider;
     }
 
     @Override
@@ -83,7 +87,8 @@ public class UI
                 if (isValidWidget(newTextWidget))
                 {
                     textWidget = newTextWidget;
-                    queryToken = codeCompletionViewModelProvider.get().activate(newTextWidget);
+                    queryToken = Closeables.create(codeCompletionViewModelProvider.get().activate(newTextWidget),
+                        feedbackViewModelProvider.get().activate(newTextWidget));
                 }
             }
         }

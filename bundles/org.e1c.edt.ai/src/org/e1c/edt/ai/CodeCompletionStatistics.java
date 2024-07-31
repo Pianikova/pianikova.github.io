@@ -4,6 +4,9 @@
 package org.e1c.edt.ai;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.function.Function;
 
 import org.e1c.edt.ai.assistent.IFeedbackService;
 
@@ -11,11 +14,12 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class CodeCompletionStatistics
-    implements ICodeCompletionContext
+    implements ICodeCompletionContext, ICodeCompletionStatistics
 {
     private final IFeedbackService feedbackService;
     private final ICursorInfoProvider cursorInfoProvider;
     private final ArrayList<Text> code = new ArrayList<>();
+    private final HashMap<CodeMethod, HashSet<String>> methods = new HashMap<>();
     private Integer startOffset;
 
     @Inject
@@ -28,7 +32,7 @@ public class CodeCompletionStatistics
     }
 
     @Override
-    public void apply(Text text, int offset)
+    public synchronized void apply(Text text, int offset)
     {
         Preconditions.checkNotNull(text);
         if (offset < 0)
@@ -51,7 +55,7 @@ public class CodeCompletionStatistics
     }
 
     @Override
-    public void rollback(int offset, int length)
+    public synchronized void rollback(int offset, int length)
     {
         while (length > 0 && code.size() > 0)
         {
@@ -92,7 +96,9 @@ public class CodeCompletionStatistics
             var sb = new StringBuilder();
             for (var text : code)
             {
-                var sourceId = text.getSource().getId();
+                var source = text.getSource();
+                var sourceId = source.getId();
+                attchSourceIdToMethod(sourceId, source.getMethod());
                 if (!sourceId.equals(lastSourceId))
                 {
                     if (sb.length() > 0)
@@ -121,5 +127,32 @@ public class CodeCompletionStatistics
             code.clear();
             startOffset = null;
         }
+    }
+
+    @Override
+    public synchronized <T> void addMethod(CodeMethod method, T state,
+        Function<? super T, ? extends String> methodBodyProvider)
+    {
+        var sourceIds = methods.remove(method);
+        if (sourceIds == null || sourceIds.isEmpty())
+        {
+            return;
+        }
+
+        var body = methodBodyProvider.apply(state);
+        if (body == null || body.isBlank())
+        {
+            return;
+        }
+
+        for (var sourceId : sourceIds)
+        {
+            feedbackService.finalizeCodeAsync(sourceId, body);
+        }
+    }
+
+    private void attchSourceIdToMethod(String sourceId, CodeMethod method)
+    {
+        methods.computeIfAbsent(method, k -> new HashSet<>()).add(sourceId);
     }
 }

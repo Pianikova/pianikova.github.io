@@ -10,6 +10,8 @@ public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
 
     void setId(String uuid);
 
+    void setMethod(CodeMethod method);
+
     TContext getContext();
 
     IHint getHint();

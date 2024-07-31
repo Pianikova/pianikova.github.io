@@ -34,4 +34,30 @@ public class Closeables
             }
         };
     }
+
+    public static AutoCloseable create(AutoCloseable... closeables)
+    {
+        Preconditions.checkNotNull(closeables);
+        var closed = new AtomicReference<>(false);
+        return new Closeable() {
+            @Override
+            public void close()
+            {
+                if (closed.compareAndSet(false, true))
+                {
+                    for (int i = closeables.length - 1; i >= 0; i--)
+                    {
+                        try
+                        {
+                            closeables[i].close();
+                        }
+                        catch (Exception e)
+                        {
+                            // ignored
+                        }
+                    }
+                }
+            }
+        };
+    }
 }

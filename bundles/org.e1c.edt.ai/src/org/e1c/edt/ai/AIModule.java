@@ -62,8 +62,11 @@ public class AIModule
         bind(IStringNormalizer.class).to(StringNormalizer.class).in(Singleton.class);
         bind(IHistoricalHint.class).to(Hint.class);
         bind(IHintHistory.class).to(HintHistory.class);
-        bind(IHintHistory.class).to(HintHistory.class);
-        bind(ICodeCompletionContext.class).to(CodeCompletionStatistics.class).in(Singleton.class);
+        bind(CodeCompletionStatistics.class).in(Singleton.class);
+        bind(ICodeCompletionContext.class).to(CodeCompletionStatistics.class);
+        bind(ICodeCompletionStatistics.class).to(CodeCompletionStatistics.class);
+
+        // ICodeCompletionStatistics
 
         bind(IHttpLog.class).to(HttpLog.class).in(Singleton.class);
         bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
