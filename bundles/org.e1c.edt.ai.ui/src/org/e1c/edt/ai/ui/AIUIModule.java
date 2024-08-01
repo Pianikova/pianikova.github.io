@@ -76,9 +76,11 @@ public class AIUIModule
         bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
         bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
-        bind(IFeedbackViewModel.class).to(FeedbackViewModel.class).in(Singleton.class);
+        bind(IFinalCodeFeedbackViewModel.class).to(FinalCodeFeedbackViewModel.class).in(Singleton.class);
         bind(IFeedbackPainter.class).to(FeedbackPainter.class);
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
+        bind(IFeedbackDialog.class).to(FeedbackDialog.class);
+        bind(IIssueFeedbackViewModel.class).to(IssueFeedbackViewModel.class);
         // @formatter:on
     }
 

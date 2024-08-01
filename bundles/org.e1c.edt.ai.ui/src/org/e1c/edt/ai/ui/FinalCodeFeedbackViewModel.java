@@ -22,8 +22,8 @@ import org.eclipse.xtext.parser.IParseResult;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class FeedbackViewModel
-    implements IFeedbackViewModel, VerifyKeyListener, ITextListener
+public class FinalCodeFeedbackViewModel
+    implements IFinalCodeFeedbackViewModel, VerifyKeyListener, ITextListener
 {
     private final IDispatcher dispatcher;
     private final IUI ui;
@@ -36,7 +36,7 @@ public class FeedbackViewModel
     private Job lastJob;
 
     @Inject
-    public FeedbackViewModel(IDispatcher dispatcher, IUI ui, IFeedbackPainter feedbackPainter,
+    public FinalCodeFeedbackViewModel(IDispatcher dispatcher, IUI ui, IFeedbackPainter feedbackPainter,
         ICodeProvider codeProvider, ICodeCompletionStatistics statistics)
     {
         Preconditions.checkNotNull(dispatcher);

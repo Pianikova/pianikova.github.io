@@ -96,6 +96,11 @@
                 name="%command.name.generatedoccomments">
         </command>
         <command
+                categoryId="org.e1c.edt.ai.ui.commands.category.ai"
+                id="org.e1c.edt.ai.ui.commands.feedback.ai"
+                name="%command.name.feedback">
+        </command>
+        <command
                 id="org.e1c.edt.ai.ui.inlinedAnnotations.ai"
                 name="Аннотации">
         </command>
@@ -116,6 +121,9 @@
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
         <key sequence="Alt+I G"
              commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I B"
+             commandId="org.e1c.edt.ai.ui.commands.feedback.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
         <key sequence="Tab"
              commandId="org.e1c.edt.ai.ui.commands.accept.ai"
@@ -151,7 +159,11 @@
         <handler
                 class="org.e1c.edt.ai.ui.handlers.GenerateDocCommentsAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai">
-        </handler>        
+        </handler>
+        <handler
+                class="org.e1c.edt.ai.ui.handlers.FeedbackAIHandler"
+                commandId="org.e1c.edt.ai.ui.commands.feedback.ai">
+        </handler>
     </extension>
 
     <extension
@@ -161,30 +173,37 @@
                 locationURI="popup:org.e1c.edt.ai.ui.groupMenu?after=additions">
             <command
                     commandId="org.e1c.edt.ai.ui.commands.explain.ai"
-                    icon="icons/obj16/teach.png"
+                    icon="icons/obj16/explain.png"
                     id="org.e1c.edt.ai.ui.commands.explain.ai.id"
                     label="%command.label.explain"
                     style="push">
             </command>
             <command
                     commandId="org.e1c.edt.ai.ui.commands.criticise.ai"
-                    icon="icons/obj16/feedback.png"
+                    icon="icons/obj16/criticise.png"
                     id="org.e1c.edt.ai.ui.commands.criticise.ai.id"
                     label="%command.label.critic"
                     style="push">
             </command>
             <command
                     commandId="org.e1c.edt.ai.ui.commands.fixcode.ai"
-                    icon="icons/obj16/bug.png"
+                    icon="icons/obj16/fixcode.png"
                     id="org.e1c.edt.ai.ui.commands.fixcode.ai.id"
                     label="%command.label.fixcode"
                     style="push">
             </command>
             <command
                     commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai"
-                    icon="icons/obj16/docs.png"
+                    icon="icons/obj16/generatedoccomments.png"
                     id="org.e1c.edt.ai.ui.commands.generatedoccomments.ai.id"
                     label="%command.label.generatedoccomments"
+                    style="push">
+            </command>
+            <command
+                    commandId="org.e1c.edt.ai.ui.commands.feedback.ai"
+                    icon="icons/obj16/feedback.png"
+                    id="org.e1c.edt.ai.ui.commands.feedback.ai.id"
+                    label="%command.label.feedback"
                     style="push">
             </command>
         </menuContribution>

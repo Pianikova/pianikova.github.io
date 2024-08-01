@@ -6,6 +6,7 @@ package org.e1c.edt.ai;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.function.Function;
 
 import org.e1c.edt.ai.assistent.IFeedbackService;
@@ -20,6 +21,7 @@ public class CodeCompletionStatistics
     private final ICursorInfoProvider cursorInfoProvider;
     private final ArrayList<Text> code = new ArrayList<>();
     private final HashMap<CodeMethod, HashSet<String>> methods = new HashMap<>();
+    private String lastAcceptedSourceId = null;
     private Integer startOffset;
 
     @Inject
@@ -103,6 +105,7 @@ public class CodeCompletionStatistics
                 {
                     if (sb.length() > 0)
                     {
+                        lastAcceptedSourceId = lastSourceId;
                         feedbackService.acceptedCodeAsync(lastSourceId, sb.toString(),
                             cursorInfoProvider.getCursorInfo(offset),
                             cursorInfoProvider.getCursorInfo(offset + sb.length()));
@@ -118,6 +121,7 @@ public class CodeCompletionStatistics
 
             if (sb.length() > 0)
             {
+                lastAcceptedSourceId = lastSourceId;
                 feedbackService.acceptedCodeAsync(lastSourceId, sb.toString(), cursorInfoProvider.getCursorInfo(offset),
                     cursorInfoProvider.getCursorInfo(offset + sb.length()));
             }
@@ -149,6 +153,12 @@ public class CodeCompletionStatistics
         {
             feedbackService.finalizeCodeAsync(sourceId, body);
         }
+    }
+
+    @Override
+    public synchronized Optional<String> getLastAcceptedSourceId()
+    {
+        return Optional.ofNullable(lastAcceptedSourceId);
     }
 
     private void attchSourceIdToMethod(String sourceId, CodeMethod method)

@@ -17,9 +17,11 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -35,13 +37,13 @@ public class UI
     private Object lock = new Object();
     private final ILog log;
     private final Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider;
-    private final Provider<IFeedbackViewModel> feedbackViewModelProvider;
+    private final Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider;
     private StyledText textWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
     public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider,
-        Provider<IFeedbackViewModel> feedbackViewModelProvider)
+        Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(codeCompletionViewModelProvider);
@@ -49,6 +51,12 @@ public class UI
         this.log = log;
         this.codeCompletionViewModelProvider = codeCompletionViewModelProvider;
         this.feedbackViewModelProvider = feedbackViewModelProvider;
+    }
+
+    @Override
+    public Optional<Shell> getShell()
+    {
+        return Optional.ofNullable(Display.getCurrent().getActiveShell());
     }
 
     @Override

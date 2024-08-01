@@ -13,6 +13,8 @@ import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.assistent.model.AcceptedCodeFeedback;
 import org.e1c.edt.ai.assistent.model.CursorInfo;
 import org.e1c.edt.ai.assistent.model.FinalCodeFeedback;
+import org.e1c.edt.ai.assistent.model.IssueFeedback;
+import org.e1c.edt.ai.assistent.model.IssueType;
 import org.e1c.edt.ai.client.AIClientException;
 
 import com.google.common.base.Preconditions;
@@ -71,6 +73,24 @@ public class FeedbackService
         var feedback = new FinalCodeFeedback();
         feedback.requestUuid = uuid;
         feedback.finalCode = code;
+        var body = json.serialize(feedback);
+        var request = builder.get().POST(BodyPublishers.ofString(body)).build();
+        return sendFeebackAsync(request, body);
+    }
+
+    @Override
+    public CompletableFuture<Void> issueAsync(String uuid, IssueType type, String description)
+    {
+        var builder = requestBuilder.create("./feedbacks/issue"); //$NON-NLS-1$
+        if (builder.isEmpty())
+        {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        var feedback = new IssueFeedback();
+        feedback.requestUuid = uuid;
+        feedback.issueType = type;
+        feedback.issueDescription = description;
         var body = json.serialize(feedback);
         var request = builder.get().POST(BodyPublishers.ofString(body)).build();
         return sendFeebackAsync(request, body);

@@ -16,6 +16,13 @@ public class Messages
     private static final String BUNDLE_NAME = "org.e1c.edt.ai.ui.messages"; //$NON-NLS-1$
     public static String CodeCompletionJobName;
     public static String ChatInteractionJobName;
+    public static String FeedbackDialogBoxTitle;
+    public static String FeedbackDialogTitle;
+    public static String FeedbackDialogMessage;
+    public static String FeedbackDialogRefersToCodeCompletion;
+    public static String FeedbackDialogIssueType;
+    public static String FeedbackDialogDescription;
+
     static
     {
         // initialize resource bundle
