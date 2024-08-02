@@ -3,10 +3,12 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.assistent.model.IssueType;
 import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -15,25 +17,30 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.Text;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class FeedbackDialog
     extends TitleAreaDialog
     implements IFeedbackDialog
 {
+    public final static String BOUNDS_STORE_KEY = "FeedbackDialogBounds"; //$NON-NLS-1$
+
+    private final ISettingsStore settingsStore;
     private Button attachCodeCompletionCheckbox;
     private List issueTypeList;
-    private Text issueDescriptionText;
+    private StyledText issueDescriptionText;
     private boolean hasCodeCompletion;
     private IssueType issueType;
     private String issueDescription;
 
     @Inject
-    public FeedbackDialog(IUI ui)
+    public FeedbackDialog(IUI ui, ISettingsStore settingsStore)
     {
         super(ui.getShell().get());
+        this.settingsStore = settingsStore;
+        Preconditions.checkNotNull(settingsStore);
     }
 
     @Override
@@ -52,10 +59,19 @@ public class FeedbackDialog
     }
 
     @Override
-    protected void configureShell(Shell newShell)
+    protected void configureShell(Shell shell)
     {
-        super.configureShell(newShell);
-        newShell.setText(Messages.FeedbackDialogBoxTitle);
+        super.configureShell(shell);
+        shell.setText(Messages.FeedbackDialogBoxTitle);
+        settingsStore.getValue(BOUNDS_STORE_KEY, org.eclipse.swt.graphics.Rectangle.class)
+            .ifPresent(bounds -> shell.setBounds(bounds));
+    }
+
+    @Override
+    public boolean close()
+    {
+        settingsStore.setValue(BOUNDS_STORE_KEY, getShell().getBounds());
+        return super.close();
     }
 
     @Override
@@ -65,6 +81,7 @@ public class FeedbackDialog
         Composite container = new Composite(area, SWT.NONE);
         container.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
         GridLayout layout = new GridLayout(2, false);
+        layout.marginWidth = 10;
         container.setLayout(layout);
 
         // Attach last code completion
@@ -82,6 +99,9 @@ public class FeedbackDialog
         // Type
         Label issueTypeLabel = new Label(container, SWT.NONE);
         issueTypeLabel.setText(Messages.FeedbackDialogIssueType);
+        GridData issueTypeLabelGrid = new GridData();
+        issueTypeLabelGrid.verticalAlignment = GridData.BEGINNING;
+        issueTypeLabel.setLayoutData(issueTypeLabelGrid);
         GridData issueTypeGrid = new GridData();
         issueTypeGrid.grabExcessHorizontalSpace = true;
         issueTypeGrid.horizontalAlignment = GridData.FILL;
@@ -97,11 +117,16 @@ public class FeedbackDialog
         // Description
         Label issueDescriptionLabel = new Label(container, SWT.NONE);
         issueDescriptionLabel.setText(Messages.FeedbackDialogDescription);
+        GridData issueDescriptionLabelGrid = new GridData();
+        issueDescriptionLabelGrid.verticalAlignment = GridData.BEGINNING;
+        issueDescriptionLabel.setLayoutData(issueDescriptionLabelGrid);
         GridData issueDescriptionGrid = new GridData();
         issueDescriptionGrid.grabExcessHorizontalSpace = true;
         issueDescriptionGrid.horizontalAlignment = GridData.FILL;
-        issueDescriptionGrid.heightHint = 150;
-        issueDescriptionText = new Text(container, SWT.BORDER);
+        issueDescriptionGrid.grabExcessVerticalSpace = true;
+        issueDescriptionGrid.verticalAlignment = SWT.FILL;
+        issueDescriptionGrid.heightHint = 100;
+        issueDescriptionText = new StyledText(container, SWT.BORDER);
         issueDescriptionText.setLayoutData(issueDescriptionGrid);
 
         return area;

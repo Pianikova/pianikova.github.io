@@ -8,13 +8,16 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Properties;
 
+import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.jface.preference.IPreferenceStore;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
@@ -24,13 +27,18 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     private final Object lock = new Object();
     private final ILog log;
     private final IPreferenceStore preferenceStore;
+    private final IJson json;
     private Properties props;
 
     @Inject
-    public PreferenceStoreToSettingsStoreAdapter(ILog log, IPreferenceStore preferenceStore)
+    public PreferenceStoreToSettingsStoreAdapter(ILog log, IPreferenceStore preferenceStore, IJson json)
     {
+        Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(preferenceStore);
+        Preconditions.checkNotNull(json);
         this.log = log;
         this.preferenceStore = preferenceStore;
+        this.json = json;
     }
 
     @Override
@@ -122,5 +130,24 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
             .append(AI_PROPS_FILE_NAME)
             .toFile()
             .getAbsolutePath());
+    }
+
+    @Override
+    public <T> Optional<T> getValue(String key, Class<T> classOfT)
+    {
+        var value = preferenceStore.getString(key);
+        if (value == null)
+        {
+            return Optional.empty();
+        }
+
+        return json.deserialize(value, classOfT);
+    }
+
+    @Override
+    public <T> void setValue(String key, T value)
+    {
+        var serializedValue = json.serialize(value);
+        preferenceStore.setValue(key, serializedValue);
     }
 }

@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.Optional;
+
 public interface ISettingsStore
 {
     public final static String MODEL_NAME = "stringPreferenceModelName"; //$NON-NLS-1$
@@ -28,4 +30,8 @@ public interface ISettingsStore
     int getInt(String key);
 
     boolean getBoolean(String key);
+
+    <T> Optional<T> getValue(String key, Class<T> classOfT);
+
+    <T> void setValue(String key, T value);
 }
