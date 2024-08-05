@@ -48,7 +48,8 @@ public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext
         }
 
         if (isContinuousCodeCompletion && character != '.'
-            && (Character.getType(character) != Character.CONTROL || character == '\r' || character == '\n'))
+            && (Character.getType(character) != Character.CONTROL || character == '\r' || character == '\n'
+                || character == '\t'))
         {
             return CodeCompletionAction.ASK_NEW;
         }

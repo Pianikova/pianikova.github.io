@@ -10,6 +10,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
 
+import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.HintPart;
@@ -70,8 +71,6 @@ public class CodeCompletionViewModel
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
-
-
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -158,40 +157,39 @@ public class CodeCompletionViewModel
     private void askNew()
     {
         var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
-        log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$
-        reset();
-        askWithDelay(delayBeforeShow);
-    }
-
-    private synchronized void askWithDelay(Duration delayBeforeShow)
-    {
-        cancel();
-        var lastJob = this.lastJob;
-        if (lastJob != null)
-        {
-            lastJob.cancel();
-        }
-
         var delay = delayBeforeShow.toMillis();
         if (delay < uiSettings.getMinRequestDelay())
         {
             delay = uiSettings.getMinRequestDelay();
         }
 
-        var job = new Job(Messages.CodeCompletionJobName)
-        {
-            @Override
-            protected IStatus run(IProgressMonitor monitor)
-            {
-                var cancellationTokenSource = new JobCancellationTokenSource();
-                cancellationTokenSource.attachMonitor(monitor);
-                ask(Duration.ofMillis(150), cancellationTokenSource);
-                return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
-            }
-        };
+        log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        reset();
+        askWithDelay(Duration.ofMillis(delay), Duration.ofMillis(150));
+    }
 
-        this.lastJob = job;
-        job.schedule(delay);
+    private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow)
+    {
+        cancel();
+        var cancellationTokenSource = new JobCancellationTokenSource();
+        dispatcher
+            .dispatchAsync(
+                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), null, cancellationTokenSource)
+                .ifPresent(aiCtx -> {
+                    var job = new Job(Messages.CodeCompletionJobName)
+                    {
+                        @Override
+                        protected IStatus run(IProgressMonitor monitor)
+                        {
+                            cancellationTokenSource.attachMonitor(monitor);
+                            ask(aiCtx, delayBeforeShow, cancellationTokenSource);
+                            return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
+                        }
+                    };
+
+                    this.lastJob = job;
+                    job.schedule(delayBeforeAsk.toMillis());
+                }));
     }
 
     private void deactivate()
@@ -215,22 +213,11 @@ public class CodeCompletionViewModel
         });
     }
 
-    private void ask(Duration delayBeforeShow, CancellationTokenSource cancellationTokenSource)
+    private void ask(AIContext aiCtx, Duration delayBeforeShow, CancellationTokenSource cancellationTokenSource)
     {
         try
         {
             var startTime = clock.now();
-            var optionalAiContext = dispatcher.dispatch(
-                () -> aiContextProvider
-                    .create(new AITarget(textWidget, 0, false), null, cancellationTokenSource)
-                    .orElse(null));
-
-            if (optionalAiContext.isEmpty())
-            {
-                return;
-            }
-
-            var aiCtx = optionalAiContext.get();
             var codeCompletionCtx =
                 new CodeCompletionContext(codeCompletionContext, aiCtx, textWidget, cancellationTokenSource);
             var singleWordMode = dispatcher.dispatch(() -> codeCompletionCtx.isSingleWordMode()).orElse(false);
@@ -255,11 +242,10 @@ public class CodeCompletionViewModel
 
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
-                var offset = textWidget.getCaretOffset();
-                hintPainter.pinOffset(textWidget, textWidget.getCaretOffset(),
+                hintPainter.pinOffset(textWidget, aiCtx.getTextOffset(),
                     delay.isNegative() || delay == Duration.ZERO, singleWordMode);
                 return codeProvider.getParseResult(textWidget)
-                    .map(parseResult -> codeProvider.getMethod(parseResult, offset).orElse(null))
+                    .map(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()).orElse(null))
                     .orElse(null);
             }).ifPresent(method -> session.setMethod(method));
 
@@ -332,6 +318,13 @@ public class CodeCompletionViewModel
         showTimer.purge();
         synchronized (lockObject)
         {
+            var lastJob = this.lastJob;
+            if (lastJob != null)
+            {
+                lastJob.cancel();
+                lastJob = null;
+            }
+
             if (lastSession != null)
             {
                 lastSession.getContext().getCancellationTokenSource().cancel();
@@ -379,7 +372,8 @@ public class CodeCompletionViewModel
                 // close proposal menu before rising UI-hint
                 getContentAssistant().ifPresent(assistant -> assistant.requestWidgetToken(null, 40));
             }
-            hintPainter.setHintAt(widget.getCaretOffset(), hint.getText(HintPart.LINES).getText(),
+            hintPainter.setHintAt(session.getContext().getAiContext().getTextOffset(),
+                hint.getText(HintPart.LINES).getText(),
                 hint.getText(HintPart.TOKEN).getText());
             widget.redraw();
         });
@@ -410,10 +404,9 @@ public class CodeCompletionViewModel
         action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
         switch (action)
         {
-
         case SUGGEST:
             reset();
-            askWithDelay(Duration.ZERO);
+            askWithDelay(Duration.ZERO, Duration.ZERO);
             event.doit = false;
             break;
 
@@ -423,7 +416,7 @@ public class CodeCompletionViewModel
                 update(session);
                 if (session.isDone() && !session.getContext().isSingleWordMode())
                 {
-                    askWithDelay(Duration.ZERO);
+                    askWithDelay(Duration.ZERO, Duration.ZERO);
                 }
 
                 event.doit = false;

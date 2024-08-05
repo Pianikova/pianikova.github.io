@@ -28,24 +28,7 @@ public class Dispatcher implements IDispatcher
     public <T> Optional<T> dispatch(Supplier<? extends T> supplier)
     {
         Preconditions.checkNotNull(supplier);
-        var vals = new ArrayList<T>();
-        Display.getDefault().syncExec(() -> {
-            try
-            {
-                vals.add(supplier.get());
-            }
-            catch (Exception ex)
-            {
-                log.logError(ex);
-            }
-        });
-
-        if (vals.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        return Optional.ofNullable(vals.get(0));
+        return dispatch(supplier, false);
     }
 
     @Override
@@ -55,6 +38,55 @@ public class Dispatcher implements IDispatcher
         return dispatch(() -> {
             runnable.run();
             return 0;
-        }).isPresent();
+        }, false).isPresent();
+    }
+
+    @Override
+    public void dispatchAsync(Runnable runnable)
+    {
+        Preconditions.checkNotNull(runnable);
+        dispatch(() -> {
+            runnable.run();
+            return 0;
+        }, true);
+    }
+
+    private <T> Optional<T> dispatch(Supplier<? extends T> supplier, boolean async)
+    {
+        Preconditions.checkNotNull(supplier);
+        var vals = new ArrayList<T>();
+        if(async)
+        {
+            Display.getDefault().asyncExec(() -> {
+                try
+                {
+                    vals.add(supplier.get());
+                }
+                catch (Exception ex)
+                {
+                    log.logError(ex);
+                }
+            });
+        }
+        else
+        {
+            Display.getDefault().syncExec(() -> {
+                try
+                {
+                    vals.add(supplier.get());
+                }
+                catch (Exception ex)
+                {
+                    log.logError(ex);
+                }
+            });
+        }
+
+        if (vals.isEmpty())
+        {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(vals.get(0));
     }
 }

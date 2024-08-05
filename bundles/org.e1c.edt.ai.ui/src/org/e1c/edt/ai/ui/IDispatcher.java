@@ -12,4 +12,6 @@ public interface IDispatcher
     <T> Optional<T> dispatch(Supplier<? extends T> supplier);
 
     Boolean dispatch(Runnable runnable);
+
+    void dispatchAsync(Runnable runnable);
 }

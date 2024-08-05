@@ -105,10 +105,12 @@ public class CodeCompletionActionHandlerTest
                 { "ASK_NEW when session is null and continuous and some non CONTROL char", null, CodeCompletionAction.ACCEPT, 'a', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
                 { "ASK_NEW when session is null and continuous and \n", null, CodeCompletionAction.ACCEPT, '\n', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
                 { "ASK_NEW when session is null and continuous and \r", null, CodeCompletionAction.ACCEPT, '\r', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
+                { "ASK_NEW when session is null and continuous and \t", null, CodeCompletionAction.ACCEPT, '\t', DEFAULT_OFFSET, true, CodeCompletionAction.ASK_NEW, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
 
                 { "SKIP when session is null and continuous and . char", null, CodeCompletionAction.ACCEPT, '.', DEFAULT_OFFSET, true, CodeCompletionAction.SKIP, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
                 { "SKIP when session is null and not continuous and \n", null, CodeCompletionAction.ACCEPT, '\n', DEFAULT_OFFSET, false, CodeCompletionAction.SKIP, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
                 { "SKIP when session is null and not continuous and \r", null, CodeCompletionAction.ACCEPT, '\r', DEFAULT_OFFSET, false, CodeCompletionAction.SKIP, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
+                { "SKIP when session is null and not continuous and \t", null, CodeCompletionAction.ACCEPT, '\t', DEFAULT_OFFSET, false, CodeCompletionAction.SKIP, verifyActions(() -> { verify(DefaultSesssion, never()).accept(HintPart.LINES, DEFAULT_OFFSET); })},
             });
         // @formatter:on
     }
