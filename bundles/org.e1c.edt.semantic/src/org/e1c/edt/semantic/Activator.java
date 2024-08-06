@@ -1,24 +1,35 @@
 package org.e1c.edt.semantic;
 
+import org.e1c.edt.ai.ILog;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
+
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 
 /**
  * The activator class controls the plug-in life cycle
  */
-public class Activator extends AbstractUIPlugin {
+public class Activator
+    extends AbstractUIPlugin
+    implements ILog
+{
+    private Injector injector;
 
 	// The plug-in ID
 	public static final String PLUGIN_ID = "org.e1c.edt.semantic"; //$NON-NLS-1$
 
-	// The shared instance
 	private static Activator plugin;
-	
-	/**
-	 * The constructor
-	 */
+
 	public Activator() {
 	}
+
+    public static void injectMembers(Object instance)
+    {
+        getDefault().getInjector().injectMembers(instance);
+    }
 
 	@Override
 	public void start(BundleContext context) throws Exception {
@@ -32,13 +43,76 @@ public class Activator extends AbstractUIPlugin {
 		super.stop(context);
 	}
 
-	/**
-	 * Returns the shared instance
-	 *
-	 * @return the shared instance
-	 */
+    private static void log(IStatus status)
+    {
+        plugin.getLog().log(status);
+    }
+
+    @Override
+    public void logError(Throwable throwable)
+    {
+        if (throwable != null)
+        {
+            log(createErrorStatus(throwable.getMessage(), throwable));
+        }
+    }
+
+    @Override
+    public void logError(String error)
+    {
+        if (error != null && !error.isBlank())
+        {
+            log(createErrorStatus(error));
+        }
+    }
+
+    @Override
+    public void trace(String topic, String details)
+    {
+        if (topic == null || topic.isBlank())
+        {
+            topic = ""; //$NON-NLS-1$
+        }
+
+        var sb = new StringBuilder();
+        sb.append("Semantic server "); //$NON-NLS-1$
+        sb.append(topic);
+        sb.append(System.lineSeparator());
+        sb.append(details);
+        log(Status.info(sb.toString()));
+    }
+
+    private static IStatus createErrorStatus(String message, Throwable throwable)
+    {
+        return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, throwable);
+    }
+
+    private static IStatus createErrorStatus(String message)
+    {
+        return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, null);
+    }
+
 	public static Activator getDefault() {
 		return plugin;
 	}
 
+    private synchronized Injector getInjector()
+    {
+        if (injector == null)
+        {
+            try
+            {
+                injector = Guice.createInjector(new SemanticModule(this));
+            }
+            catch (Exception e)
+            {
+                log(createErrorStatus("Failed to create injector for " //$NON-NLS-1$
+                    + getBundle().getSymbolicName(), e));
+                throw new RuntimeException("Failed to create injector for " //$NON-NLS-1$
+                    + getBundle().getSymbolicName(), e);
+            }
+        }
+
+        return injector;
+    }
 }

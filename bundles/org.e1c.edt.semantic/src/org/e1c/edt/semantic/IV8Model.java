@@ -1,0 +1,35 @@
+/**
+ * Copyright (C) 2024, 1C
+ */
+package org.e1c.edt.semantic;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.eclipse.emf.ecore.EObject;
+
+import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
+import com._1c.g5.v8.dt.bsl.model.FeatureEntry;
+import com._1c.g5.v8.dt.bsl.model.Module;
+import com._1c.g5.v8.dt.bsl.model.typesytem.VariableTypeStateProviderCollector;
+import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
+import com._1c.g5.v8.dt.mcore.Type;
+import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.mcore.util.Environments;
+
+public interface IV8Model
+{
+    Optional<Module> getModule(String filePath);
+
+    Optional<Type> getLastType(VariableTypeStateProviderCollector typeStateProviders);
+
+    List<TypeItem> getTypes(EObject eObject);
+
+    List<FeatureEntry> getFeatureEntries(FeatureAccess featureAccess);
+
+    Optional<String> getPath(FeatureAccess featureAccess);
+
+    TypesComputer getTypesComputer();
+
+    Environments getEnvironments(EObject eObject);
+}
