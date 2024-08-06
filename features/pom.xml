@@ -24,6 +24,7 @@
 
   <modules>
     <module>org.e1c.edt.ai.feature</module>
+    <module>org.e1c.edt.semantic.feature</module>
   </modules>
 
   <profiles>

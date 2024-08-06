@@ -20,6 +20,7 @@
 
   <modules>
     <module>org.e1c.edt.ai.repository</module>
+    <module>org.e1c.edt.semantic.repository</module>
   </modules>
 
   <properties>
