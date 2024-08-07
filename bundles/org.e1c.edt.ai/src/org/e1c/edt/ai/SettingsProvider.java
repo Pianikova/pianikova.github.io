@@ -53,11 +53,9 @@ public class SettingsProvider
         var tags =
             new ArrayList<>(Arrays.asList(settingsStore.getString(ISettingsStore.TAGS).split(","))); //$NON-NLS-1$
         URL apiURL = null;
-        URL chatURL = null;
         try
         {
             apiURL = new URL(normalize(settingsStore.getString(ISettingsStore.APIURL)));
-            chatURL = new URL(normalize(settingsStore.getString(ISettingsStore.CHATURL)));
         }
         catch (MalformedURLException e)
         {
@@ -70,7 +68,7 @@ public class SettingsProvider
         var docPath = settingsStore.getString(ISettingsStore.DOCUMENT_PATH);
         var llmParameters = settingsStore.getString(ISettingsStore.LLM_PARAMETERS);
         var parameters = parametersParser.parse(llmParameters).orElseGet(() -> new Parameters());
-        var settings = new AISettings(accessRoles, tags, apiURL, chatURL, clientToken, clientUID, modelName,
+        var settings = new AISettings(accessRoles, tags, apiURL, clientToken, clientUID, modelName,
             databaseName, docPath, parameters);
         return Optional.of(settings);
     }

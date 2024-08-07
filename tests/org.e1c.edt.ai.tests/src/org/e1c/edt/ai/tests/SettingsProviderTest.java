@@ -179,27 +179,6 @@ public class SettingsProviderTest
     }
 
     @Test
-    public void shouldProvideChatURL()
-    {
-        // Given
-        var provider = createInstance();
-
-        // When
-        when(settingsStore.getString(ISettingsStore.CHATURL)).thenReturn("http://chat.com");
-        var settings = provider.getSettings();
-
-        // Then
-        try
-        {
-            Assert.assertEquals(new URL("http://chat.com/"), settings.get().getChatURL());
-        }
-        catch (MalformedURLException e)
-        {
-            Assert.fail(e.getMessage());
-        }
-    }
-
-    @Test
     public void shouldProvideTags()
     {
         // Given
@@ -278,7 +257,6 @@ public class SettingsProviderTest
         when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("");
         when(settingsStore.getInt(Mockito.anyString())).thenReturn(0);
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com");
-        when(settingsStore.getString(ISettingsStore.CHATURL)).thenReturn("http://chat.com");
         when(parametersParser.parse(Mockito.anyString())).thenReturn(Optional.of(new Parameters()));
         return new SettingsProvider(log, settingsStore, parametersParser);
     }

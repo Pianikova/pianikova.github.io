@@ -70,6 +70,9 @@ public class Parameters
     @SerializedName("trim_stop")
     public Boolean trimStop;
 
+    @SerializedName("chat_url")
+    public String chatUrl;
+
     public Parameters merge(Parameters params)
     {
         if (params.prefixLength != null)
@@ -187,6 +190,11 @@ public class Parameters
             trimStop = params.trimStop;
         }
 
+        if (params.chatUrl != null)
+        {
+            chatUrl = params.chatUrl;
+        }
+
         return this;
     }
 
@@ -195,7 +203,7 @@ public class Parameters
     {
         return Objects.hash(bestOf, decoderInputDetails, details, doSample, frequencyPenalty, maxNewTokens,
             repetitionPenalty, returnFullText, seed, stop, temperature, topK, topNTokens, topP, truncate, typicalP,
-            watermark, tokenHealing, returnLine, trimStop);
+            watermark, tokenHealing, returnLine, trimStop, chatUrl);
     }
 
     @Override
@@ -218,6 +226,7 @@ public class Parameters
             && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
             && Objects.equals(truncate, other.truncate) && Objects.equals(typicalP, other.typicalP)
             && Objects.equals(watermark, other.watermark) && Objects.equals(tokenHealing, other.tokenHealing)
-            && Objects.equals(returnLine, other.returnLine) && Objects.equals(trimStop, other.trimStop);
+            && Objects.equals(returnLine, other.returnLine) && Objects.equals(trimStop, other.trimStop)
+            && Objects.equals(chatUrl, other.chatUrl);
     }
 }

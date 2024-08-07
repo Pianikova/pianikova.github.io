@@ -33,12 +33,10 @@ public class SettingsTrackerTest
         var tags =  new ArrayList<String>();
         URL apiURL = null;
         URL apiURL2 = null;
-        URL chatURL = null;
         try
         {
             apiURL = new URL("https://llms.1c.ai/code/api/v1/");
             apiURL2 = new URL("https://llms.1c.ai/code_stage/api/v1/");
-            chatURL = new URL("http://1.7.3.171:4000/");
         }
         catch (MalformedURLException e)
         {
@@ -55,17 +53,17 @@ public class SettingsTrackerTest
         Parameters llmParameters2 = new Parameters();
         llmParameters2.maxNewTokens = 123;
 
-        Settings = new AISettings(accessRoles, tags, apiURL, chatURL, clientToken, clientUniqueId, modelName,
+        Settings = new AISettings(accessRoles, tags, apiURL, clientToken, clientUniqueId, modelName,
             dataBaseName,
             documentPath, llmParameters);
 
-        NewURLSettings = new AISettings(accessRoles, tags, apiURL2, chatURL, clientToken, clientUniqueId, modelName,
+        NewURLSettings = new AISettings(accessRoles, tags, apiURL2, clientToken, clientUniqueId, modelName,
             dataBaseName, documentPath, llmParameters);
 
-        NewTokenSettings = new AISettings(accessRoles, tags, apiURL, chatURL, clientToken2, clientUniqueId, modelName,
+        NewTokenSettings = new AISettings(accessRoles, tags, apiURL, clientToken2, clientUniqueId, modelName,
             dataBaseName, documentPath, llmParameters);
 
-        NewLllmParamsSettings = new AISettings(accessRoles, tags, apiURL, chatURL, clientToken, clientUniqueId,
+        NewLllmParamsSettings = new AISettings(accessRoles, tags, apiURL, clientToken, clientUniqueId,
             modelName, dataBaseName, documentPath, llmParameters2);
 
         when(json.serialize(Settings)).thenReturn("my Settings");

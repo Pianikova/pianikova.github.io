@@ -88,6 +88,7 @@ public class ParametersParserTest
                 { "token_healing=None", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.NONE; } ) },
                 { "return_line=true", ValidationResult.SUCCESS, createParams(p -> { p.returnLine = true; } ) },
                 { "trim_stop=true", ValidationResult.SUCCESS, createParams(p -> { p.trimStop = true; } ) },
+                { "chat_url=http://chat.com/Abc", ValidationResult.SUCCESS, createParams(p -> { p.chatUrl = "http://chat.com/Abc"; } ) },
             });
         // @formatter:on
     }

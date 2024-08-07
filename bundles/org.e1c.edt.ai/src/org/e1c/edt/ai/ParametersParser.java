@@ -120,6 +120,8 @@ public class ParametersParser
 
         names.remove(parse(properties, "trim_stop", validationResult, val -> parameters.trimStop = parseBoolean(val)));
 
+        names.remove(parse(properties, "chat_url", validationResult, val -> parameters.chatUrl = val));
+
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
         for (var unknowName : unknowNames)
