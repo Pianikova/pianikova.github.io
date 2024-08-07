@@ -8,5 +8,7 @@ import org.eclipse.swt.events.VerifyEvent;
 
 public interface IUserActions
 {
+    String getCodeCompletionLabels(char separator);
+
     CodeCompletionAction getAction(VerifyEvent event);
 }
