@@ -126,7 +126,8 @@ public class FeedbackDialog
         issueDescriptionGrid.grabExcessVerticalSpace = true;
         issueDescriptionGrid.verticalAlignment = SWT.FILL;
         issueDescriptionGrid.heightHint = 100;
-        issueDescriptionText = new StyledText(container, SWT.BORDER);
+        issueDescriptionText = new StyledText(container, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
+        issueDescriptionText.setAlwaysShowScrollBars(false);
         issueDescriptionText.setLayoutData(issueDescriptionGrid);
 
         return area;
