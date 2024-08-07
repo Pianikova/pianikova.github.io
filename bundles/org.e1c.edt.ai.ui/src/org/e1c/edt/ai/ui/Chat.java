@@ -4,10 +4,15 @@
 package org.e1c.edt.ai.ui;
 
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.assistent.IParametersService;
+import org.e1c.edt.ai.assistent.model.Parameters;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -37,20 +42,23 @@ public class Chat implements IChat, IChatDialog
     private final IUI ui;
     private final IDispatcher dispatcher;
     private final IdeApiHandler handler;
-    private Optional<WebView> webView = Optional.empty();
+    private final IParametersService parametersService;
+    private Optional<CompletableFuture<WebView>> webView = Optional.empty();
 
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
-        IdeApiHandler handler)
+        IdeApiHandler handler, IParametersService parametersService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(handler);
+        Preconditions.checkNotNull(parametersService);
         this.settingsProvider = settingsProvider;
         this.ui = ui;
         this.dispatcher = dispatcher;
         this.handler = handler;
+        this.parametersService = parametersService;
     }
 
     @Override
@@ -91,28 +99,21 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void chat(String topic, String subject)
     {
-        var script = "window.chatApi." + topic + "(`" + StringEscapeUtils.escapeJavaScript(subject) + "`)";
-        new Job(Messages.ChatInteractionJobName)
-        {
-            @Override
-            protected IStatus run(IProgressMonitor monitor)
-            {
-                dispatcher.dispatch(() -> {
-                    ui.showView(ChatView.ID).ifPresent(view -> view.setFocus());
-                    getWebView().ifPresent(view -> view.getEngine().executeScript(script));
-                });
-
-                return Status.OK_STATUS;
-            }
-        }.schedule();
+        ui.showView(ChatView.ID);
+        chatInJob(view -> {
+            var script = "window.chatApi." + topic + "(`" + StringEscapeUtils.escapeJavaScript(subject) + "`)";
+            view.getEngine().executeScript(script);
+        });
     }
 
     @Override
     public void show(ScrollPane pane)
     {
-        getWebView().ifPresent(view -> {
+        chatInJob(view -> {
             pane.setContent(view);
             view.setFocusTraversable(true);
+            view.setPrefWidth(pane.getWidth());
+            view.setPrefHeight(pane.getHeight());
             pane.widthProperty().addListener(new ChangeListener<Object>()
             {
                 @Override
@@ -132,21 +133,51 @@ public class Chat implements IChat, IChatDialog
                     view.setPrefHeight(height);
                 }
             });
-
         });
     }
 
-    private Optional<WebView> getWebView()
+    private void chatInJob(Consumer<WebView> consumer)
     {
-        return webView = webView.or(() -> dispatcher.dispatch(() -> createWebView()));
+        new Job(Messages.ChatInteractionJobName)
+        {
+            @Override
+            protected IStatus run(IProgressMonitor monitor)
+            {
+                Optional<Parameters> parameters;
+                try
+                {
+                    parameters = parametersService.getParametersAsync().get();
+                }
+                catch (InterruptedException | ExecutionException e)
+                {
+                    return Status.error(e.getMessage());
+                }
+
+                if (!parameters.isPresent())
+                {
+                    return Status.error("Failed to get the parameters."); //$NON-NLS-1$
+                }
+
+                dispatcher
+                    .dispatch(() -> webView = webView.or(() -> Optional.of(createWebView(parameters.get().chatUrl))));
+                if (webView.isEmpty())
+                {
+                    return Status.error("Failed to get the parameters."); //$NON-NLS-1$
+                }
+
+                webView.get().thenAcceptAsync(view -> dispatcher.dispatchAsync(() -> consumer.accept(view)));
+                return Status.OK_STATUS;
+            }
+        }.schedule();
     }
 
-    private WebView createWebView()
+    private CompletableFuture<WebView> createWebView(String chatUrl)
     {
         var view = new WebView();
         view.setLayoutX(-1);
         view.setLayoutY(-1);
         WebEngine webEngine = view.getEngine();
+        var result = new CompletableFuture<WebView>();
         webEngine.titleProperty().addListener(new ChangeListener<String>()
         {
             @Override
@@ -162,11 +193,12 @@ public class Chat implements IChat, IChatDialog
                     settingsProvider.getSettings()
                         .ifPresent(settings -> webEngine.executeScript(String.format(CHAT_API_WINK_TEMPLATE,
                             settings.getClientToken(), settings.getClientUniqueId())));
+                    result.complete(view);
                 }
             }
         });
 
-        settingsProvider.getSettings().ifPresent(settings -> webEngine.load(settings.getChatURL().toString()));
-        return view;
+        webEngine.load(chatUrl);
+        return result;
     }
 }

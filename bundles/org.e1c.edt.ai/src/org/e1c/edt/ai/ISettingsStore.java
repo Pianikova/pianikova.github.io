@@ -12,7 +12,6 @@ public interface ISettingsStore
     public final static String CLIENT_UID = "stringPreferenceClientUID"; //$NON-NLS-1$
     public final static String DATABASE_NAME = "stringPreferenceDataBaseName"; //$NON-NLS-1$
     public final static String APIURL = "stringPreferenceApiURL"; //$NON-NLS-1$
-    public final static String CHATURL = "stringPreferenceChatURL"; //$NON-NLS-1$
     public final static String TAGS = "stringPreferenceTags"; //$NON-NLS-1$
     public final static String ACCESS_ROLES = "stringPreferenceAccessRoles"; //$NON-NLS-1$
     public final static String DOCUMENT_PATH = "stringPreferenceDocumentPath"; //$NON-NLS-1$

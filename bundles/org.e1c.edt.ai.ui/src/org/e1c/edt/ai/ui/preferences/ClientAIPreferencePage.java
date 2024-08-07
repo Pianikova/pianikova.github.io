@@ -5,7 +5,6 @@ package org.e1c.edt.ai.ui.preferences;
 
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IValidator;
-import org.e1c.edt.ai.client.ClientAI;
 import org.e1c.edt.ai.ui.AIUIModule;
 import org.e1c.edt.ai.ui.Activator;
 import org.eclipse.jface.preference.BooleanFieldEditor;
@@ -58,9 +57,6 @@ public class ClientAIPreferencePage
     {
         var parent = getFieldEditorParent();
         addField(new ValidatingStringFieldEditor(ISettingsStore.APIURL, Messages.ClientAIPreferencePage_Api_URL,
-            parent, urlValidator));
-
-        addField(new ValidatingStringFieldEditor(ISettingsStore.CHATURL, Messages.ClientAIPreferencePage_Chat_URL,
             parent, urlValidator));
 
         addField(

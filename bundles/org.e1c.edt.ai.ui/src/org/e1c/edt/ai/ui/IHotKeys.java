@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.eclipse.jface.bindings.keys.KeyBinding;
 import org.eclipse.swt.events.KeyEvent;
 
 public interface IHotKeys
@@ -16,4 +17,6 @@ public interface IHotKeys
     public static String FINISH = PREFIX + "stop.ai"; //$NON-NLS-1$
 
     boolean isTriggered(String bindingId, KeyEvent event);
+
+    KeyBinding getBinding(String bindingId);
 }

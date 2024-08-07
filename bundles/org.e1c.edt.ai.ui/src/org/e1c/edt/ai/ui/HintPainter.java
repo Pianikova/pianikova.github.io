@@ -18,13 +18,12 @@ import com.google.inject.Inject;
 public class HintPainter
     implements PaintListener, IHintPainter
 {
-    private static final String LABEL_TEXT = "Tab → ↓ ← Esc"; //$NON-NLS-1$
     private static final char CONTINUATION_SIGN = '…';
-    private static final char RETURN_SIGN = '↵';
     private static final int BORDER = 1;
 
     private final IHintTextBuilder hintTextBuilder;
     private final IUISettings uiSettings;
+    private final IUserActions userActions;
     private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
     private String nextToken = ""; //$NON-NLS-1$
@@ -33,12 +32,14 @@ public class HintPainter
     private boolean isSingleWordMode;
 
     @Inject
-    public HintPainter(IHintTextBuilder hintTextBuilder, IUISettings uiSettings)
+    public HintPainter(IHintTextBuilder hintTextBuilder, IUISettings uiSettings, IUserActions userActions)
     {
         Preconditions.checkNotNull(hintTextBuilder);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(userActions);
         this.hintTextBuilder = hintTextBuilder;
         this.uiSettings = uiSettings;
+        this.userActions = userActions;
     }
 
     @Override
@@ -149,11 +150,6 @@ public class HintPainter
 
     private void drawHint(GC gc, String nextToken, String firstLine, String otherLines)
     {
-        if (!isSingleWordMode)
-        {
-            firstLine = firstLine + RETURN_SIGN;
-        }
-
         var caretLocation = textWidget.getCaret().getLocation();
         var x = caretLocation.x;
         var y = caretLocation.y;
@@ -197,7 +193,8 @@ public class HintPainter
 
             gc.setFont(smalFont);
 
-            var labelSize = gc.textExtent(LABEL_TEXT);
+            var codeCompletionLabels = userActions.getCodeCompletionLabels(' ');
+            var labelSize = gc.textExtent(codeCompletionLabels);
             var labelX = BORDER + 1;
             var labelY = firstLineY + firstLineH + otherLinesH;
             var labelW = labelSize.x + BORDER * 4;
@@ -260,7 +257,7 @@ public class HintPainter
             else
             {
                 gc.setFont(smalFont);
-                gc.drawText(LABEL_TEXT, labelX + BORDER * 2, labelY, true);
+                gc.drawText(codeCompletionLabels, labelX + BORDER * 2, labelY, true);
 
                 gc.drawPolyline(new int[] {
                     firstLineX, firstLineY,

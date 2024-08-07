@@ -33,6 +33,22 @@ public class UserActions implements IUserActions
     }
 
     @Override
+    public String getCodeCompletionLabels(char separator)
+    {
+        var labels = new StringBuilder();
+        labels.append(hotKeys.getBinding(IHotKeys.ACCEPT_PART).getKeySequence().format());
+        labels.append(separator);
+        labels.append(hotKeys.getBinding(IHotKeys.ACCEPT_LINE).getKeySequence().format());
+        labels.append(separator);
+        labels.append(hotKeys.getBinding(IHotKeys.ACCEPT).getKeySequence().format());
+        labels.append(separator);
+        labels.append(hotKeys.getBinding(IHotKeys.ROLLBACK_PART).getKeySequence().format());
+        labels.append(separator);
+        labels.append(hotKeys.getBinding(IHotKeys.FINISH).getKeySequence().format());
+        return labels.toString();
+    }
+
+    @Override
     public CodeCompletionAction getAction(VerifyEvent event)
     {
         Preconditions.checkNotNull(event);

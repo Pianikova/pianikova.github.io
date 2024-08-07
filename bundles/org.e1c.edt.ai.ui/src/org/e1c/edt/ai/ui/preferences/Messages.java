@@ -16,7 +16,6 @@ public class Messages
     private static final String BUNDLE_NAME = "org.e1c.edt.ai.ui.preferences.messages"; //$NON-NLS-1$
     public static String ClientAIPreferencePage_Service_parameters;
     public static String ClientAIPreferencePage_Api_URL;
-    public static String ClientAIPreferencePage_Chat_URL;
     public static String ClientAIPreferencePage_Client_token;
     public static String ClientAIPreferencePage_Database_name;
     public static String ClientAIPreferencePage_AI_model;

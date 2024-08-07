@@ -18,7 +18,6 @@ public class AISettings
     private final List<String> accessRoles;
     private final List<String> tags;
     private final URL apiURL;
-    private final URL chatURL;
     private final String clientToken;
     private final String clientUniqueId;
     private final String modelName;
@@ -26,14 +25,12 @@ public class AISettings
     private final String documentPath;
     private final Parameters llmParameters;
 
-    public AISettings(List<String> accessRoles, List<String> tags, URL apiURL, URL chatURL,
-        String clientToken, String clientUniqueId,
-        String modelName, String dataBaseName, String documentPath, Parameters llmParameters)
+    public AISettings(List<String> accessRoles, List<String> tags, URL apiURL, String clientToken,
+        String clientUniqueId, String modelName, String dataBaseName, String documentPath, Parameters llmParameters)
     {
         this.accessRoles = accessRoles;
         this.tags = tags;
         this.apiURL = apiURL;
-        this.chatURL = chatURL;
         this.clientToken = clientToken;
         this.clientUniqueId = clientUniqueId;
         this.modelName = modelName;
@@ -55,11 +52,6 @@ public class AISettings
     public URL getApiURL()
     {
         return apiURL;
-    }
-
-    public URL getChatURL()
-    {
-        return chatURL;
     }
 
     public String getClientToken()

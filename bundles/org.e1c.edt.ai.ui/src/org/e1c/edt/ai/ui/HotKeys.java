@@ -47,6 +47,14 @@ public class HotKeys
         return Arrays.asList(bindingKeyStrokes).equals(eventKeyStrokes);
     }
 
+    @Override
+    public KeyBinding getBinding(String bindingId)
+    {
+        var binding = _keyBindigs.get(bindingId);
+        Preconditions.checkArgument(binding != null, "Cannot find binding " + bindingId); //$NON-NLS-1$
+        return binding;
+    }
+
     private static List<KeyStroke> generatePossibleKeyStrokes(KeyEvent event)
     {
         var keyStrokes = new ArrayList<KeyStroke>(3);
