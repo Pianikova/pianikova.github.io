@@ -19,7 +19,6 @@ public class HintPainter
     implements PaintListener, IHintPainter
 {
     private static final char CONTINUATION_SIGN = '…';
-    private static final char RETURN_SIGN = '↵';
     private static final int BORDER = 1;
 
     private final IHintTextBuilder hintTextBuilder;
@@ -151,11 +150,6 @@ public class HintPainter
 
     private void drawHint(GC gc, String nextToken, String firstLine, String otherLines)
     {
-        if (!isSingleWordMode)
-        {
-            firstLine = firstLine + RETURN_SIGN;
-        }
-
         var caretLocation = textWidget.getCaret().getLocation();
         var x = caretLocation.x;
         var y = caretLocation.y;
