@@ -63,24 +63,6 @@ public class ClientAIPreferencePage
             new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_token,
                 parent));
 
-        addField(
-            new StringFieldEditor(ISettingsStore.DATABASE_NAME, Messages.ClientAIPreferencePage_Database_name,
-                parent));
-
-        addField(new StringFieldEditor(ISettingsStore.MODEL_NAME, Messages.ClientAIPreferencePage_AI_model,
-            parent));
-
-        addField(
-            new StringFieldEditor(ISettingsStore.TAGS, Messages.ClientAIPreferencePage_Tags, parent));
-
-        addField(
-            new StringFieldEditor(ISettingsStore.ACCESS_ROLES, Messages.ClientAIPreferencePage_Access_roles,
-                parent));
-
-        addField(
-            new StringFieldEditor(ISettingsStore.DOCUMENT_PATH, Messages.ClientAIPreferencePage_Document_path,
-                parent));
-
         addField(new ValidatingStringFieldEditor(ISettingsStore.LLM_PARAMETERS,
             Messages.ClientAIPreferencePage_LLL_parameters,
             parent, parametersValidator));

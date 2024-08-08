@@ -5,8 +5,6 @@ package org.e1c.edt.ai;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Optional;
 
 import org.e1c.edt.ai.assistent.model.Parameters;
@@ -48,10 +46,6 @@ public class SettingsProvider
             clientUID = clientUID.trim();
         }
 
-        var accessRoles =
-            new ArrayList<>(Arrays.asList(settingsStore.getString(ISettingsStore.ACCESS_ROLES).split(","))); //$NON-NLS-1$
-        var tags =
-            new ArrayList<>(Arrays.asList(settingsStore.getString(ISettingsStore.TAGS).split(","))); //$NON-NLS-1$
         URL apiURL = null;
         try
         {
@@ -63,13 +57,9 @@ public class SettingsProvider
             return Optional.empty();
         }
 
-        var modelName = settingsStore.getString(ISettingsStore.MODEL_NAME);
-        var databaseName = settingsStore.getString(ISettingsStore.DATABASE_NAME);
-        var docPath = settingsStore.getString(ISettingsStore.DOCUMENT_PATH);
         var llmParameters = settingsStore.getString(ISettingsStore.LLM_PARAMETERS);
         var parameters = parametersParser.parse(llmParameters).orElseGet(() -> new Parameters());
-        var settings = new AISettings(accessRoles, tags, apiURL, clientToken, clientUID, modelName,
-            databaseName, docPath, parameters);
+        var settings = new AISettings(apiURL, clientToken, clientUID, parameters);
         return Optional.of(settings);
     }
 

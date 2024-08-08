@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ILog;
@@ -26,20 +25,6 @@ public class SettingsProviderTest
     private final ISettingsStore settingsStore = Mockito.mock(ISettingsStore.class);
     @SuppressWarnings("unchecked")
     private final IParser<String, Parameters> parametersParser = Mockito.mock(IParser.class);
-
-    @Test
-    public void shouldProvideModelName()
-    {
-        // Given
-        var provider = createInstance();
-
-        // When
-        when(settingsStore.getString(ISettingsStore.MODEL_NAME)).thenReturn("Abc");
-        var settings = provider.getSettings();
-
-        // Then
-        Assert.assertEquals("Abc", settings.get().getModelName());
-    }
 
     @Test
     public void shouldProvideClientToken()
@@ -67,20 +52,6 @@ public class SettingsProviderTest
 
         // Then
         Assert.assertEquals("Abc", settings.get().getClientToken());
-    }
-
-    @Test
-    public void shouldProvideDataBaseName()
-    {
-        // Given
-        var provider = createInstance();
-
-        // When
-        when(settingsStore.getString(ISettingsStore.DATABASE_NAME)).thenReturn("Abc");
-        var settings = provider.getSettings();
-
-        // Then
-        Assert.assertEquals("Abc", settings.get().getDataBaseName());
     }
 
     @Test
@@ -176,48 +147,6 @@ public class SettingsProviderTest
         {
             Assert.fail(e.getMessage());
         }
-    }
-
-    @Test
-    public void shouldProvideTags()
-    {
-        // Given
-        var provider = createInstance();
-
-        // When
-        when(settingsStore.getString(ISettingsStore.TAGS)).thenReturn("Tag1,Tag2");
-        var settings = provider.getSettings();
-
-        // Then
-        Assert.assertEquals(Arrays.asList("Tag1", "Tag2"), settings.get().getTags());
-    }
-
-    @Test
-    public void shouldProvideAccessRoles()
-    {
-        // Given
-        var provider = createInstance();
-
-        // When
-        when(settingsStore.getString(ISettingsStore.ACCESS_ROLES)).thenReturn("Role1,Role2");
-        var settings = provider.getSettings();
-
-        // Then
-        Assert.assertEquals(Arrays.asList("Role1", "Role2"), settings.get().getAccessRoles());
-    }
-
-    @Test
-    public void shouldProvideDocumentPath()
-    {
-        // Given
-        var provider = createInstance();
-
-        // When
-        when(settingsStore.getString(ISettingsStore.DOCUMENT_PATH)).thenReturn("Abc");
-        var settings = provider.getSettings();
-
-        // Then
-        Assert.assertEquals("Abc", settings.get().getDocumentPath());
     }
 
     @Test

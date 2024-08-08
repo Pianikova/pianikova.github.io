@@ -7,14 +7,9 @@ import java.util.Optional;
 
 public interface ISettingsStore
 {
-    public final static String MODEL_NAME = "stringPreferenceModelName"; //$NON-NLS-1$
     public final static String CLIENT_TOKEN = "stringPreferenceClientID"; //$NON-NLS-1$
     public final static String CLIENT_UID = "stringPreferenceClientUID"; //$NON-NLS-1$
-    public final static String DATABASE_NAME = "stringPreferenceDataBaseName"; //$NON-NLS-1$
     public final static String APIURL = "stringPreferenceApiURL"; //$NON-NLS-1$
-    public final static String TAGS = "stringPreferenceTags"; //$NON-NLS-1$
-    public final static String ACCESS_ROLES = "stringPreferenceAccessRoles"; //$NON-NLS-1$
-    public final static String DOCUMENT_PATH = "stringPreferenceDocumentPath"; //$NON-NLS-1$
     public final static String LLM_PARAMETERS = "stringPreferenceLLMParameters"; //$NON-NLS-1$
     public final static String CODE_COMPLETION_LINES_COUNT = "stringPreferenceCodeCompletionLinesCount"; //$NON-NLS-1$
     public final static String CONTINUOUS_CODE_COMPLETION = "stringPreferenceContinuousCodeCompletion"; //$NON-NLS-1$

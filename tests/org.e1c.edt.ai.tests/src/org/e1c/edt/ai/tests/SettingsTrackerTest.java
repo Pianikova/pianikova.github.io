@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Optional;
 
 import org.e1c.edt.ai.IJson;
@@ -29,8 +28,6 @@ public class SettingsTrackerTest
     @SuppressWarnings("nls")
     public SettingsTrackerTest()
     {
-        var accessRoles = new ArrayList<String>();
-        var tags =  new ArrayList<String>();
         URL apiURL = null;
         URL apiURL2 = null;
         try
@@ -46,25 +43,13 @@ public class SettingsTrackerTest
         String clientToken = "abc";
         String clientToken2 = "abc2";
         String clientUniqueId = "Nik";
-        String modelName = "xyz";
-        String dataBaseName = "qwerty";
-        String documentPath = "asdf";
         Parameters llmParameters = new Parameters();
         Parameters llmParameters2 = new Parameters();
         llmParameters2.maxNewTokens = 123;
-
-        Settings = new AISettings(accessRoles, tags, apiURL, clientToken, clientUniqueId, modelName,
-            dataBaseName,
-            documentPath, llmParameters);
-
-        NewURLSettings = new AISettings(accessRoles, tags, apiURL2, clientToken, clientUniqueId, modelName,
-            dataBaseName, documentPath, llmParameters);
-
-        NewTokenSettings = new AISettings(accessRoles, tags, apiURL, clientToken2, clientUniqueId, modelName,
-            dataBaseName, documentPath, llmParameters);
-
-        NewLllmParamsSettings = new AISettings(accessRoles, tags, apiURL, clientToken, clientUniqueId,
-            modelName, dataBaseName, documentPath, llmParameters2);
+        Settings = new AISettings(apiURL, clientToken, clientUniqueId, llmParameters);
+        NewURLSettings = new AISettings(apiURL2, clientToken, clientUniqueId, llmParameters);
+        NewTokenSettings = new AISettings(apiURL, clientToken2, clientUniqueId, llmParameters);
+        NewLllmParamsSettings = new AISettings(apiURL, clientToken, clientUniqueId, llmParameters2);
 
         when(json.serialize(Settings)).thenReturn("my Settings");
         when(json.serialize(NewURLSettings)).thenReturn("my NewURLSettings");
