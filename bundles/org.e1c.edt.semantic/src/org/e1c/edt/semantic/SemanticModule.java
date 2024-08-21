@@ -38,6 +38,7 @@ public class SemanticModule
         bind(IEntityInfo.class).to(EntityInfo.class).in(Singleton.class);
         bind(IV8Model.class).to(V8Model.class).in(Singleton.class);
         bind(IIdFactory.class).to(IdFactory.class).in(Singleton.class);
+        bind(IEndpointDialog.class).to(EndpointDialog.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -10,14 +10,14 @@
       </category>
       <command
             categoryId="org.e1c.edt.semantic.commands.category"
-            name="Activate"
+            name="Activate/Deactivate"
             id="org.e1c.edt.semantic.commands.activateCommand">
       </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="org.e1c.edt.semantic.handlers.SampleHandler"
+            class="org.e1c.edt.semantic.handlers.ActivateHandler"
             commandId="org.e1c.edt.semantic.commands.activateCommand">
       </handler>
    </extension>
