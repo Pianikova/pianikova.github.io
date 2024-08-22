@@ -8,8 +8,11 @@ import java.util.Optional;
 
 import org.eclipse.emf.ecore.EObject;
 
+import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
+import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.FeatureEntry;
+import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.typesytem.VariableTypeStateProviderCollector;
 import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
@@ -32,4 +35,10 @@ public interface IV8Model
     TypesComputer getTypesComputer();
 
     Environments getEnvironments(EObject eObject);
+
+    List<String> getComment(EObject eObject);
+
+    BslDocumentationComment getComment(Method method, boolean oldFormat);
+
+    BslDocumentationComment getComment(BslContextDefMethod method, boolean oldFormat);
 }

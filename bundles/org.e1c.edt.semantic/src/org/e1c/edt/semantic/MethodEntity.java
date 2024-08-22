@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.semantic;
 
+import java.util.List;
+
 import com.google.gson.annotations.SerializedName;
 
 public class MethodEntity
@@ -24,4 +26,9 @@ public class MethodEntity
 
     @SerializedName("signature_structurized")
     SignatureStructurized signatureStructurized;
+
+    List<String> comment;
+
+    @SerializedName("сomment_structurized")
+    Comment structurizedСomment;
 }

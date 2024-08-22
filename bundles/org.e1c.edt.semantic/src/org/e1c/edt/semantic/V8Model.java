@@ -23,12 +23,17 @@ import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.util.CancelIndicator;
 
 import com._1c.g5.v8.dt.bm.xtext.BmAwareResourceSetProvider;
+import com._1c.g5.v8.dt.bsl.documentation.comment.BslCommentUtils;
+import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
+import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
+import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
 import com._1c.g5.v8.dt.bsl.model.BslContextDefPackage;
 import com._1c.g5.v8.dt.bsl.model.BslPackage;
 import com._1c.g5.v8.dt.bsl.model.DynamicFeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Expression;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.FeatureEntry;
+import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.SourceObjectLinkProvider;
 import com._1c.g5.v8.dt.bsl.model.StaticFeatureAccess;
@@ -48,12 +53,15 @@ public class V8Model implements IV8Model
 {
     private static final String RESOURCE_PREFIX = "/resource"; //$NON-NLS-1$
     private final ILog log;
+    private final BslMultiLineCommentDocumentationProvider commentDocumentationProvider;
 
     @Inject
-    public V8Model(ILog log)
+    public V8Model(ILog log, BslMultiLineCommentDocumentationProvider commentDocumentationProvider)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(commentDocumentationProvider);
         this.log = log;
+        this.commentDocumentationProvider = commentDocumentationProvider;
     }
 
     @Override
@@ -215,6 +223,24 @@ public class V8Model implements IV8Model
     public TypesComputer getTypesComputer()
     {
         return getResourceService(TypesComputer.class);
+    }
+
+    @Override
+    public List<String> getComment(EObject eObject)
+    {
+        return commentDocumentationProvider.getCommentLines(eObject);
+    }
+
+    @Override
+    public BslDocumentationComment getComment(Method method, boolean oldFormat)
+    {
+        return BslCommentUtils.parseTemplateComment(method, oldFormat, commentDocumentationProvider);
+    }
+
+    @Override
+    public BslDocumentationComment getComment(BslContextDefMethod method, boolean oldFormat)
+    {
+        return BslCommentUtils.parseTemplateComment(method, oldFormat);
     }
 
     private Optional<String> getPath(List<FeatureEntry> features)

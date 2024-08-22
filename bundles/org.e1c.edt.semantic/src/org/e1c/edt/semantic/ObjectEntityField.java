@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.semantic;
 
+import java.util.List;
+
 public class ObjectEntityField
 {
     public String uuid;
@@ -12,4 +14,6 @@ public class ObjectEntityField
     public String type;
 
     public String typeRu;
+
+    List<String> comment;
 }

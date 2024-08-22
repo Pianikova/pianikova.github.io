@@ -6,6 +6,7 @@ package org.e1c.edt.semantic;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ILog;
@@ -13,6 +14,8 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
+import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
+import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
@@ -33,18 +36,22 @@ public class EntityInfo
     private final IV8Model v8Model;
     private final IEntitiesWalker entitiesWalker;
     private final IIdFactory idFactory;
+    private final ICommentFactory commentFactory;
 
     @Inject
-    public EntityInfo(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker, IIdFactory idFactory)
+    public EntityInfo(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker, IIdFactory idFactory,
+        ICommentFactory commentFactory)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(entitiesWalker);
         Preconditions.checkNotNull(idFactory);
+        Preconditions.checkNotNull(commentFactory);
         this.log = log;
         this.v8Model = v8Model;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
+        this.commentFactory = commentFactory;
     }
 
     @SuppressWarnings("nls")
@@ -89,6 +96,12 @@ public class EntityInfo
                 objectEntity.start = node.getTotalOffset();
                 objectEntity.finish = node.getTotalEndOffset();
                 objectEntity.code = node.getText();
+                var comment = v8Model.getComment(variable);
+                if (comment != null && !comment.isEmpty())
+                {
+                    objectEntity.comment = comment;
+                }
+
                 v8Model.getLastType(variable.getTypeStateProvider()).ifPresent(type -> fillType(objectEntity, type));
                 return true;
             }
@@ -107,6 +120,12 @@ public class EntityInfo
                 objectEntity.start = node.getTotalOffset();
                 objectEntity.finish = node.getTotalEndOffset();
                 objectEntity.code = node.getText();
+                var comment = v8Model.getComment(featureAccess);
+                if (comment != null && !comment.isEmpty())
+                {
+                    objectEntity.comment = comment;
+                }
+
                 var hasType = false;
                 for (var type : v8Model.getTypesComputer()
                     .compute(featureAccess, v8Model.getEnvironments(featureAccess)))
@@ -173,6 +192,12 @@ public class EntityInfo
                                     }
                                 });
                             }
+
+                            var comment = v8Model.getComment(featureAccess);
+                            if (comment != null && !comment.isEmpty())
+                            {
+                                field.comment = comment;
+                            }
                         }
                     }
                 }
@@ -195,6 +220,8 @@ public class EntityInfo
                     methodEntity.path = path;
                 });
 
+                List<String> comment = null;
+                BslDocumentationComment structurizedComment = null;
                 for (var featureEntry : v8Model.getFeatureEntries(methodAccess))
                 {
                     var feature = featureEntry.getFeature();
@@ -286,6 +313,9 @@ public class EntityInfo
                             signatureStructurized.returnType = returnType.getName();
                             signatureStructurized.returnTypeRu = returnType.getNameRu();
                         }
+
+                        comment = v8Model.getComment(method);
+                        structurizedComment = v8Model.getComment(method, true);
                     }
 
                     if (feature instanceof com._1c.g5.v8.dt.mcore.Method)
@@ -332,7 +362,24 @@ public class EntityInfo
                             signatureStructurized.returnType = returnType.getName();
                             signatureStructurized.returnTypeRu = returnType.getNameRu();
                         }
+
+                        if (method instanceof BslContextDefMethod)
+                        {
+                            var defMethod = (BslContextDefMethod)method;
+                            comment = defMethod.getCommentLines();
+                            structurizedComment = v8Model.getComment(defMethod, true);
+                        }
                     }
+                }
+
+                if (comment != null && !comment.isEmpty())
+                {
+                    methodEntity.comment = comment;
+                }
+
+                if (structurizedComment != null)
+                {
+                    methodEntity.structurizedСomment = commentFactory.create(structurizedComment);
                 }
 
                 var simpleStatement = EcoreUtil2.getContainerOfType(invocation, SimpleStatement.class);

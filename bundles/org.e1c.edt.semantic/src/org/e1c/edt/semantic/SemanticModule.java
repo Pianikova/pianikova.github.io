@@ -8,6 +8,7 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.Json;
 import org.eclipse.jetty.server.Handler;
 
+import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.google.common.base.Preconditions;
 import com.google.inject.Singleton;
@@ -39,6 +40,8 @@ public class SemanticModule
         bind(IV8Model.class).to(V8Model.class).in(Singleton.class);
         bind(IIdFactory.class).to(IdFactory.class).in(Singleton.class);
         bind(IEndpointDialog.class).to(EndpointDialog.class).in(Singleton.class);
+        bind(BslMultiLineCommentDocumentationProvider.class).toInstance(new BslMultiLineCommentDocumentationProvider());
+        bind(ICommentFactory.class).to(CommentFactory.class).in(Singleton.class);
         // @formatter:on
     }
 }

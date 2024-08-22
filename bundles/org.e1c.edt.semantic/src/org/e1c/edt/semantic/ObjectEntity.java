@@ -20,4 +20,6 @@ public class ObjectEntity
     String code;
 
     List<ObjectEntityField> fields;
+
+    List<String> comment;
 }
