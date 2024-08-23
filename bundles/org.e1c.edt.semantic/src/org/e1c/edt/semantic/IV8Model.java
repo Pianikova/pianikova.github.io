@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
 import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
@@ -41,4 +42,10 @@ public interface IV8Model
     BslDocumentationComment getComment(Method method, boolean oldFormat);
 
     BslDocumentationComment getComment(BslContextDefMethod method, boolean oldFormat);
+
+    ICompositeNode getNode(EObject eObject);
+
+    Optional<Type> getType(FeatureAccess featureAccess);
+
+    Optional<EObject> getMethodFeature(FeatureAccess methodAccess);
 }

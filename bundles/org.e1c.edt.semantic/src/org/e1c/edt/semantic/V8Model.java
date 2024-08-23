@@ -19,6 +19,8 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.nodemodel.ICompositeNode;
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.util.CancelIndicator;
 
@@ -339,6 +341,119 @@ public class V8Model implements IV8Model
         }
 
         return Environments.EMPTY;
+    }
+
+    @Override
+    public ICompositeNode getNode(EObject eObject)
+    {
+        var obj = eObject;
+        while (obj != null)
+        {
+            var node = NodeModelUtils.getNode(obj);
+            if (node != null)
+            {
+                return node;
+            }
+
+            obj = obj.eContainer();
+        }
+
+        return null;
+    }
+
+    @Override
+    public Optional<Type> getType(FeatureAccess featureAccess)
+    {
+        if (featureAccess == null)
+        {
+            return Optional.empty();
+        }
+
+        return getType(featureAccess, getTypesComputer().compute(featureAccess, getEnvironments(featureAccess)));
+    }
+
+    private Optional<Type> getType(EObject contextObject, List<TypeItem> typeItems)
+    {
+        for (var typeItem : typeItems)
+        {
+            var type = getType(contextObject, typeItem);
+            if (type.isPresent())
+            {
+                return type;
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private Optional<Type> getType(EObject contextObject, TypeItem typeItem)
+    {
+        if (typeItem instanceof Type)
+        {
+            var type = (Type)typeItem;
+            if (type.eIsProxy())
+            {
+                var proxy = (TypeItem)EcoreUtil.resolve(type, contextObject);
+                return getType(type, proxy);
+            }
+
+            return Optional.ofNullable(type);
+        }
+        else
+        {
+            for (var ref : typeItem.eCrossReferences())
+            {
+                if (ref instanceof Type)
+                {
+                    Optional.ofNullable((Type)ref);
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<EObject> getMethodFeature(FeatureAccess methodAccess)
+    {
+        if (methodAccess == null)
+        {
+            return Optional.empty();
+        }
+
+        var modules = new ArrayList<com._1c.g5.v8.dt.bsl.model.Module>();
+        getPath(methodAccess).ifPresent(path -> {
+            getModule(path).ifPresent(module -> modules.add(module));
+        });
+
+        for (var featureEntry : getFeatureEntries(methodAccess))
+        {
+            var feature = featureEntry.getFeature();
+            if (feature instanceof SourceObjectLinkProvider)
+            {
+                var sourceLinkProvider = (SourceObjectLinkProvider)feature;
+                if (!modules.isEmpty())
+                {
+                    var methodUri = sourceLinkProvider.getSourceUri().toString();
+                    var module = modules.get(0);
+                    for (var method : module.allMethods())
+                    {
+                        if (method.getUniqueName().equals(methodUri))
+                        {
+                            feature = method;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (feature instanceof Method || feature instanceof com._1c.g5.v8.dt.mcore.Method)
+            {
+                return Optional.of(feature);
+            }
+        }
+
+        return Optional.empty();
     }
 
     private static interface IFileVisitor

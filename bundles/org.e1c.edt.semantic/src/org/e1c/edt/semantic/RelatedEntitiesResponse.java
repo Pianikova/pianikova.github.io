@@ -10,8 +10,8 @@ import com.google.gson.annotations.SerializedName;
 public class RelatedEntitiesResponse
 {
     @SerializedName("related_objects")
-    public ArrayList<String> relatedObjects;
+    public ArrayList<Entity> relatedObjects;
 
     @SerializedName("related_functions")
-    public ArrayList<String> relatedFunctions;
+    public ArrayList<Entity> relatedFunctions;
 }

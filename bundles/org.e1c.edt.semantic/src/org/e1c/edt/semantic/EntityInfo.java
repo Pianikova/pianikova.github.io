@@ -3,8 +3,6 @@
  */
 package org.e1c.edt.semantic;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,17 +19,14 @@ import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
-import com._1c.g5.v8.dt.bsl.model.SourceObjectLinkProvider;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.mcore.Type;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
 import com.google.inject.Inject;
 
 public class EntityInfo
     implements IEntityInfo
 {
-    private static String MAX_INT = Integer.toString(Integer.MAX_VALUE);
     private final ILog log;
     private final IV8Model v8Model;
     private final IEntitiesWalker entitiesWalker;
@@ -59,33 +54,26 @@ public class EntityInfo
     public Optional<EntityInfoResponse> geInfo(EntityInfoRequest request)
     {
         Preconditions.checkNotNull(request);
-        if (request.uuid == null || request.uuid.isBlank())
+        if (request.ref == null || request.ref.isBlank())
         {
             return Optional.empty();
         }
 
-        URL url;
-        try
-        {
-            url = new URL(request.uuid);
-        }
-        catch (MalformedURLException e)
+        var nodeIdOptional = idFactory.paeNodeId(request.ref);
+        if (nodeIdOptional.isEmpty())
         {
             return Optional.empty();
         }
 
-        var path = url.getPath();
-        var params = Splitter.on('&').trimResults().withKeyValueSeparator('=').split(url.getQuery());
-        var span = new ArrayList<Integer>();
-        span.add(Integer.parseInt(params.getOrDefault("start", "0")));
-        span.add(Integer.parseInt(params.getOrDefault("finish", MAX_INT)));
+        var nodeId = nodeIdOptional.get();
         var response = new EntityInfoResponse();
-        var result = entitiesWalker.walk(path, span, new IEntityVisitor()
+        response.ref = request.ref;
+        var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), new IEntityVisitor()
         {
             @Override
-            public boolean visitVariable(String id, Variable variable, ICompositeNode node)
+            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {
-                if (!request.uuid.equals(id))
+                if (!request.ref.equals(nodeId))
                 {
                     return false;
                 }
@@ -107,9 +95,9 @@ public class EntityInfo
             }
 
             @Override
-            public boolean visitFeatureAccess(String id, FeatureAccess featureAccess, ICompositeNode node)
+            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
             {
-                if (!request.uuid.equals(id))
+                if (!request.ref.equals(nodeId))
                 {
                     return false;
                 }
@@ -126,33 +114,7 @@ public class EntityInfo
                     objectEntity.comment = comment;
                 }
 
-                var hasType = false;
-                for (var type : v8Model.getTypesComputer()
-                    .compute(featureAccess, v8Model.getEnvironments(featureAccess)))
-                {
-                    if (type instanceof Type)
-                    {
-                        fillType(objectEntity, (Type)type);
-                    }
-                    else
-                    {
-                        for (var ref : type.eCrossReferences())
-                        {
-                            if (ref instanceof Type)
-                            {
-                                fillType(objectEntity, (Type)ref);
-                                hasType = true;
-                                break;
-                            }
-                        }
-
-                        if (hasType)
-                        {
-                            break;
-                        }
-                    }
-                }
-
+                v8Model.getType(featureAccess).ifPresent(type -> fillType(objectEntity, type));
                 return true;
             }
 
@@ -181,15 +143,8 @@ public class EntityInfo
                             {
                                 v8Model.getPath(featureAccess).ifPresent(path -> {
                                     v8Model.getModule(path);
-                                    try
-                                    {
-                                        var fieldNode = NodeModelUtils.getNode(featureAccess);
-                                        field.uuid = idFactory.create(path, fieldNode);
-                                    }
-                                    catch (MalformedURLException e)
-                                    {
-                                        //
-                                    }
+                                    var fieldNode = NodeModelUtils.getNode(featureAccess);
+                                    field.uuid = idFactory.createNodeId(path, fieldNode);
                                 });
                             }
 
@@ -204,45 +159,26 @@ public class EntityInfo
             }
 
             @Override
-            public boolean visitInvocation(String id, Invocation invocation, ICompositeNode node)
+            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
             {
-                if (!request.uuid.equals(id))
+                if (!request.ref.equals(nodeId))
                 {
                     return false;
                 }
 
+                var methodAccess = invocation.getMethodAccess();
+                var methodAccessFeatureOptional = v8Model.getMethodFeature(methodAccess);
                 var methodEntity = new MethodEntity();
                 response.method = methodEntity;
-                var methodAccess = invocation.getMethodAccess();
-                var modules = new ArrayList<com._1c.g5.v8.dt.bsl.model.Module>();
                 v8Model.getPath(methodAccess).ifPresent(path -> {
-                    v8Model.getModule(path).ifPresent(module -> modules.add(module));
                     methodEntity.path = path;
                 });
 
                 List<String> comment = null;
                 BslDocumentationComment structurizedComment = null;
-                for (var featureEntry : v8Model.getFeatureEntries(methodAccess))
+                if (methodAccessFeatureOptional.isPresent())
                 {
-                    var feature = featureEntry.getFeature();
-                    if (feature instanceof SourceObjectLinkProvider)
-                    {
-                        var sourceLinkProvider = (SourceObjectLinkProvider)feature;
-                        if (!modules.isEmpty())
-                        {
-                            var methodUri = sourceLinkProvider.getSourceUri().toString();
-                            var module = modules.get(0);
-                            for (var method : module.allMethods())
-                            {
-                                if (method.getUniqueName().equals(methodUri))
-                                {
-                                    feature = method;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
+                    var methodAccessFeature = methodAccessFeatureOptional.get();
                     var signatureStructurized = new SignatureStructurized();
                     methodEntity.signatureStructurized = signatureStructurized;
                     var preprocess = new ArrayList<String>();
@@ -251,23 +187,17 @@ public class EntityInfo
                     signatureStructurized.parameters = parameters;
                     var attributes = new ArrayList<String>();
                     signatureStructurized.attributes = attributes;
-                    if (feature instanceof Method)
+                    if (methodAccessFeature instanceof Method)
                     {
-                        var method = (Method)feature;
-                        var methodNode = NodeModelUtils.getNode(feature);
+                        var method = (Method)methodAccessFeature;
+                        var methodNode = NodeModelUtils.getNode(methodAccessFeature);
+                        methodEntity.name = method.getName();
                         methodEntity.start = methodNode.getTotalOffset();
                         methodEntity.finish = methodNode.getTotalEndOffset();
                         methodEntity.code = methodNode.getText();
                         if (methodEntity.path != null)
                         {
-                            try
-                            {
-                                methodEntity.uuid = idFactory.create(methodEntity.path, methodNode);
-                            }
-                            catch (MalformedURLException e)
-                            {
-                                //
-                            }
+                            methodEntity.uuid = idFactory.createNodeId(methodEntity.path, methodNode);
                         }
 
                         if (method.isAsync())
@@ -318,9 +248,10 @@ public class EntityInfo
                         structurizedComment = v8Model.getComment(method, true);
                     }
 
-                    if (feature instanceof com._1c.g5.v8.dt.mcore.Method)
+                    if (methodAccessFeature instanceof com._1c.g5.v8.dt.mcore.Method)
                     {
-                        var method = (com._1c.g5.v8.dt.mcore.Method)feature;
+                        var method = (com._1c.g5.v8.dt.mcore.Method)methodAccessFeature;
+                        methodEntity.name = method.getName();
                         var paramsSet = method.getParamSet();
                         if (!paramsSet.isEmpty())
                         {
@@ -399,7 +330,7 @@ public class EntityInfo
 
         if (!result)
         {
-            log.trace("Entity not found", request.uuid);
+            log.trace("Entity not found", request.ref);
             return Optional.empty();
         }
 

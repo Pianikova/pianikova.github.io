@@ -3,15 +3,7 @@
  */
 package org.e1c.edt.semantic;
 
-import java.util.List;
-
-/**
- * @author Nikolay Pyanikov
- *
- */
 public interface IEntitiesWalker
 {
-
-    boolean walk(String path, List<Integer> span, IEntityVisitor visitor);
-
+    boolean walk(String path, int start, int finish, IEntityVisitor visitor);
 }

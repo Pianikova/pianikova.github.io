@@ -17,6 +17,8 @@ public class MethodEntity
 
     Integer finish;
 
+    String name;
+
     String code;
 
     String area;

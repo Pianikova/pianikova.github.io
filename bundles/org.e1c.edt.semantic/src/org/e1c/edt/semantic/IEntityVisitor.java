@@ -11,9 +11,9 @@ import com._1c.g5.v8.dt.bsl.model.Variable;
 
 public interface IEntityVisitor
 {
-    boolean visitInvocation(String id, Invocation invocation, ICompositeNode node);
+    boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node);
 
-    boolean visitFeatureAccess(String id, FeatureAccess featureAccess, ICompositeNode node);
+    boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node);
 
-    boolean visitVariable(String id, Variable variable, ICompositeNode node);
+    boolean visitVariable(String nodeId, Variable variable, ICompositeNode node);
 }

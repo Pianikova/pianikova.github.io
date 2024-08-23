@@ -5,5 +5,5 @@ package org.e1c.edt.semantic;
 
 public class EntityInfoRequest
 {
-    String uuid;
+    String ref;
 }

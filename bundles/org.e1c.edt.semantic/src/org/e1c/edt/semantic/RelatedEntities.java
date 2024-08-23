@@ -24,16 +24,19 @@ public class RelatedEntities implements IRelatedEntities
     private final ILog log;
     private final IV8Model v8Model;
     private final IEntitiesWalker entitiesWalker;
+    private final IIdFactory idFactory;
 
     @Inject
-    public RelatedEntities(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker)
+    public RelatedEntities(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker, IIdFactory idFactory)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(entitiesWalker);
+        Preconditions.checkNotNull(idFactory);
         this.log = log;
         this.v8Model = v8Model;
         this.entitiesWalker = entitiesWalker;
+        this.idFactory = idFactory;
     }
 
     @SuppressWarnings("nls")
@@ -49,26 +52,28 @@ public class RelatedEntities implements IRelatedEntities
         var response = new RelatedEntitiesResponse();
         response.relatedObjects = new ArrayList<>();
         response.relatedFunctions = new ArrayList<>();
-        var ids = new HashSet<String>();
-        var result = entitiesWalker.walk(request.path, request.span, new IEntityVisitor()
+        var entities = new HashSet<Entity>();
+        var result = entitiesWalker.walk(request.path, request.start, request.finish, new IEntityVisitor()
         {
             @Override
-            public boolean visitVariable(String id, Variable variable, ICompositeNode node)
+            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {
-                if (!ids.add(id))
+                var entity = createEntity(request.path, nodeId, variable, node);
+                if (!entities.add(entity))
                 {
                     return false;
                 }
 
-                response.relatedObjects.add(id);
-                traceEntity("object", id, variable, node);
+                response.relatedObjects.add(entity);
+                traceEntity("object", entity, variable, node);
                 return false;
             }
 
             @Override
-            public boolean visitFeatureAccess(String id, FeatureAccess featureAccess, ICompositeNode node)
+            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
             {
-                if (!ids.add(id))
+                var entity = createEntity(request.path, nodeId, featureAccess, node);
+                if (!entities.add(entity))
                 {
                     return false;
                 }
@@ -87,21 +92,22 @@ public class RelatedEntities implements IRelatedEntities
                     }
                 }
 
-                response.relatedObjects.add(id);
-                traceEntity("object", id, featureAccess, node);
+                response.relatedObjects.add(entity);
+                traceEntity("object", entity, featureAccess, node);
                 return false;
             }
 
             @Override
-            public boolean visitInvocation(String id, Invocation invocation, ICompositeNode node)
+            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
             {
-                if (!ids.add(id))
+                var entity = createEntity(request.path, nodeId, invocation, node);
+                if (!entities.add(entity))
                 {
                     return false;
                 }
 
-                response.relatedFunctions.add(id);
-                traceEntity("function", id, invocation, node);
+                response.relatedFunctions.add(entity);
+                traceEntity("function", entity, invocation, node);
                 return false;
             }
         });
@@ -114,8 +120,18 @@ public class RelatedEntities implements IRelatedEntities
         return Optional.of(response);
     }
 
+    private Entity createEntity(String path, String nodeId, EObject eObject, ICompositeNode node)
+    {
+        var entity = new Entity();
+        entity.uuid = idFactory.createObjectId(path, eObject);
+        entity.ref = nodeId;
+        entity.start = node.getTotalOffset();
+        entity.finish = node.getTotalEndOffset();
+        return entity;
+    }
+
     @SuppressWarnings("nls")
-    private void traceEntity(String type, String id, EObject eObject, ICompositeNode node)
+    private void traceEntity(String type, Entity entity, EObject eObject, ICompositeNode node)
     {
         var sb = new StringBuilder();
         sb.append("Node type:");
@@ -124,6 +140,6 @@ public class RelatedEntities implements IRelatedEntities
         sb.append("Code:");
         sb.append(System.lineSeparator());
         sb.append(node.getText());
-        log.trace(type + ": " + id, sb.toString());
+        log.trace(type + ": " + entity, sb.toString());
     }
 }
