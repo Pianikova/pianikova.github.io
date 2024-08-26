@@ -4,6 +4,7 @@
 package org.e1c.edt.semantic;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,12 +18,14 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.util.CancelIndicator;
+import org.eclipse.xtext.util.Pair;
 
 import com._1c.g5.v8.dt.bm.xtext.BmAwareResourceSetProvider;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslCommentUtils;
@@ -45,6 +48,7 @@ import com._1c.g5.v8.dt.bsl.resource.BslResource;
 import com._1c.g5.v8.dt.bsl.resource.DynamicFeatureAccessComputer;
 import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
 import com._1c.g5.v8.dt.mcore.Environmental;
+import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.mcore.util.Environments;
@@ -172,6 +176,13 @@ public class V8Model implements IV8Model
     {
         return getResourceService(TypesComputer.class).computeTypes(eObject,
             getEnvironments(eObject));
+    }
+
+    @Override
+    public Collection<Pair<Collection<Property>, TypeItem>> getProperties(Collection<TypeItem> types, Resource resource)
+    {
+        var dynamicComputer = getResourceService(DynamicFeatureAccessComputer.class);
+        return dynamicComputer.getAllProperties(types, resource);
     }
 
     @Override

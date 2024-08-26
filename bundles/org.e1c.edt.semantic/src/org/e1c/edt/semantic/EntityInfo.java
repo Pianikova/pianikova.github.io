@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ILog;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
@@ -20,6 +21,7 @@ import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -90,7 +92,8 @@ public class EntityInfo
                     objectEntity.comment = comment;
                 }
 
-                v8Model.getLastType(variable.getTypeStateProvider()).ifPresent(type -> fillType(objectEntity, type));
+                v8Model.getLastType(variable.getTypeStateProvider())
+                    .ifPresent(type -> fillType(variable, objectEntity, type));
                 return true;
             }
 
@@ -114,48 +117,71 @@ public class EntityInfo
                     objectEntity.comment = comment;
                 }
 
-                v8Model.getType(featureAccess).ifPresent(type -> fillType(objectEntity, type));
+                v8Model.getType(featureAccess).ifPresent(type -> fillType(featureAccess, objectEntity, type));
                 return true;
             }
 
-            private void fillType(ObjectEntity objectEntity, Type type)
+            private void fillType(EObject eObject, ObjectEntity objectEntity, Type type)
             {
-                objectEntity.type = type.getName();
-                objectEntity.typeRu = type.getNameRu();
                 var fields = new ArrayList<ObjectEntityField>();
                 objectEntity.fields = fields;
-                var contexDef = type.getContextDef();
-                if (contexDef != null)
+                objectEntity.type = type.getName();
+                objectEntity.typeRu = type.getNameRu();
+                var resouce = eObject.eResource();
+                if (resouce != null)
                 {
-                    for (var prop : contexDef.getProperties())
+                    var types = v8Model.getTypes(eObject);
+                    for (var pair : v8Model.getProperties(types, resouce))
                     {
-                        var field = new ObjectEntityField();
-                        fields.add(field);
-                        field.name = prop.getName();
-                        var types = prop.getTypes();
-                        if (!types.isEmpty())
+                        for (var dynamicProp : pair.getFirst())
                         {
-                            var propType = types.get(types.size() - 1);
-                            field.type = propType.getName();
-                            field.typeRu = propType.getNameRu();
-                            var featureAccess = EcoreUtil2.getContainerOfType(propType, FeatureAccess.class);
-                            if (featureAccess != null)
-                            {
-                                v8Model.getPath(featureAccess).ifPresent(path -> {
-                                    v8Model.getModule(path);
-                                    var fieldNode = NodeModelUtils.getNode(featureAccess);
-                                    field.uuid = idFactory.createNodeId(path, fieldNode);
-                                });
-                            }
-
-                            var comment = v8Model.getComment(featureAccess);
-                            if (comment != null && !comment.isEmpty())
-                            {
-                                field.comment = comment;
-                            }
+                            var field = createField(dynamicProp);
+                            objectEntity.fields.add(field);
                         }
                     }
                 }
+                else
+                {
+                    var contexDef = type.getContextDef();
+                    if (contexDef != null)
+                    {
+                        for (var prop : contexDef.getProperties())
+                        {
+                            var field = createField(prop);
+                            objectEntity.fields.add(field);
+                        }
+                    }
+                }
+            }
+
+            private ObjectEntityField createField(Property prop)
+            {
+                var field = new ObjectEntityField();
+                field.name = prop.getName();
+                var types = prop.getTypes();
+                if (!types.isEmpty())
+                {
+                    var propType = types.get(types.size() - 1);
+                    field.type = propType.getName();
+                    field.typeRu = propType.getNameRu();
+                    var featureAccess = EcoreUtil2.getContainerOfType(propType, FeatureAccess.class);
+                    if (featureAccess != null)
+                    {
+                        v8Model.getPath(featureAccess).ifPresent(path -> {
+                            v8Model.getModule(path);
+                            var fieldNode = NodeModelUtils.getNode(featureAccess);
+                            field.uuid = idFactory.createNodeId(path, fieldNode);
+                        });
+                    }
+
+                    var comment = v8Model.getComment(featureAccess);
+                    if (comment != null && !comment.isEmpty())
+                    {
+                        field.comment = comment;
+                    }
+                }
+
+                return field;
             }
 
             @Override

@@ -3,11 +3,14 @@
  */
 package org.e1c.edt.semantic;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
+import org.eclipse.xtext.util.Pair;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
 import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
@@ -17,6 +20,7 @@ import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.typesytem.VariableTypeStateProviderCollector;
 import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
+import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.mcore.util.Environments;
@@ -28,6 +32,8 @@ public interface IV8Model
     Optional<Type> getLastType(VariableTypeStateProviderCollector typeStateProviders);
 
     List<TypeItem> getTypes(EObject eObject);
+
+    Collection<Pair<Collection<Property>, TypeItem>> getProperties(Collection<TypeItem> types, Resource resource);
 
     List<FeatureEntry> getFeatureEntries(FeatureAccess featureAccess);
 
