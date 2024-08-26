@@ -1,0 +1,150 @@
+/**
+ * Copyright (C) 2024, 1C
+ */
+package org.e1c.edt.ai.context;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.Optional;
+
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.nodemodel.ICompositeNode;
+
+import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
+import com._1c.g5.v8.dt.bsl.model.Invocation;
+import com._1c.g5.v8.dt.bsl.model.Method;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.inject.Inject;
+
+public class IdFactory
+    implements IIdFactory
+{
+    private static String MAX_INT = Integer.toString(Integer.MAX_VALUE);
+    private final IV8Model v8Model;
+
+    @Inject
+    public IdFactory(IV8Model v8Model)
+    {
+        Preconditions.checkNotNull(v8Model);
+        this.v8Model = v8Model;
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String createNodeId(String path, ICompositeNode node)
+    {
+        try {
+            var requestPathUrl = new URL("file", "", -1, path);
+            var start = node.getTotalOffset();
+            var finish = node.getTotalEndOffset();
+            return requestPathUrl.toString() + "?start=" + start + "&finish=" + finish;
+        }
+        catch (MalformedURLException e)
+        {
+            return "";
+        }
+    }
+
+    @Override
+    public String createObjectId(String path, EObject eObject)
+    {
+        if (eObject instanceof FeatureAccess)
+        {
+            var featureAccess = (FeatureAccess)eObject;
+            var typeOptional = v8Model.getType(featureAccess);
+            if (typeOptional.isPresent())
+            {
+                var type = typeOptional.get();
+                var resource = type.eResource();
+                if (resource != null)
+                {
+                    var uri = resource.getURI();
+                    if (uri != null)
+                    {
+                        return uri.toString();
+                    }
+                }
+            }
+        }
+
+        var node = v8Model.getNode(eObject);
+        if (eObject instanceof Invocation)
+        {
+            var invocation = (Invocation)eObject;
+            var methodAccessFeatureOptional = v8Model.getMethodFeature(invocation.getMethodAccess());
+            if (methodAccessFeatureOptional.isPresent())
+            {
+                var methodAccessFeature = methodAccessFeatureOptional.get();
+                if (methodAccessFeature instanceof Method)
+                {
+                    var method = (Method)methodAccessFeature;
+                    return method.getUniqueName();
+                }
+
+                if (methodAccessFeature instanceof com._1c.g5.v8.dt.mcore.Method)
+                {
+                    var method = (com._1c.g5.v8.dt.mcore.Method)methodAccessFeature;
+                    var resource = method.eResource();
+                    if (resource != null)
+                    {
+                        var uri = resource.getURI();
+                        if (uri != null)
+                        {
+                            var id = new StringBuilder();
+                            id.append(uri);
+                            id.append('.');
+                            id.append(method.getName());
+                            id.append('(');
+                            var hasParam = false;
+                            for(var paramSet: method.getParamSet())
+                            {
+                                for(var param: paramSet.getParams())
+                                {
+                                    if(hasParam)
+                                    {
+                                        id.append(',');
+                                    }
+                                    else
+                                    {
+                                        hasParam = true;
+                                    }
+
+                                    id.append(param.getName());
+                                }
+                            }
+
+                            id.append(')');
+                            id.append(method.environments());
+                            return id.toString();
+                        }
+                    }
+
+                }
+            }
+        }
+
+        return createNodeId(path, node);
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public Optional<SourceSpan> paeNodeId(String nodeId)
+    {
+        URL url;
+        try
+        {
+            url = new URL(nodeId);
+        }
+        catch (MalformedURLException e)
+        {
+            return Optional.empty();
+        }
+
+        var path = url.getPath();
+        var params = Splitter.on('&').trimResults().withKeyValueSeparator('=').split(url.getQuery());
+        var start = Integer.parseInt(params.getOrDefault("start", "0"));
+        var finish = Integer.parseInt(params.getOrDefault("finish", MAX_INT));
+        return Optional.of(new SourceSpan(path, start, finish));
+    }
+}

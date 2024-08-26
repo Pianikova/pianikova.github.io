@@ -13,6 +13,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.context.EntityInfoRequest;
+import org.e1c.edt.ai.context.IEntityInfo;
+import org.e1c.edt.ai.context.IRelatedEntities;
+import org.e1c.edt.ai.context.RelatedEntitiesRequest;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 

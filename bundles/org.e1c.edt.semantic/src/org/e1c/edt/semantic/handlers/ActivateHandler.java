@@ -1,9 +1,9 @@
 package org.e1c.edt.semantic.handlers;
 
 import org.e1c.edt.ai.Closeables;
+import org.e1c.edt.ai.context.IV8Model;
 import org.e1c.edt.semantic.Activator;
 import org.e1c.edt.semantic.IEndpointDialog;
-import org.e1c.edt.semantic.IV8Model;
 import org.e1c.edt.semantic.IWebServer;
 import org.e1c.edt.semantic.WebServerSettings;
 import org.eclipse.core.commands.AbstractHandler;
