@@ -129,7 +129,7 @@ public class IdFactory
 
     @Override
     @SuppressWarnings("nls")
-    public Optional<SourceSpan> paeNodeId(String nodeId)
+    public Optional<SourceSpan> getNodeId(String nodeId)
     {
         URL url;
         try

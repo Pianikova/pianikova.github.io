@@ -5,9 +5,9 @@ package org.e1c.edt.ai.context;
 
 public class EntityInfoResponse
 {
-    String ref;
+    public String ref;
 
-    ObjectEntity object;
+    public ObjectEntity object;
 
-    MethodEntity method;
+    public MethodEntity method;
 }

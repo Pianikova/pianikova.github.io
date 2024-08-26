@@ -27,6 +27,7 @@ import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.util.Pair;
 
+import com._1c.g5.v8.dt.bm.index.emf.IBmEmfIndexManager;
 import com._1c.g5.v8.dt.bm.xtext.BmAwareResourceSetProvider;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslCommentUtils;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
@@ -87,7 +88,8 @@ public class V8Model implements IV8Model
                         return;
                     }
 
-                    if (!path.equals(file.getFullPath()))
+                    if (!path.equals(file.getFullPath())
+                        && !path.toString().equals("/resource" + file.getFullPath().toString())) //$NON-NLS-1$
                     {
                         return;
                     }
@@ -120,7 +122,7 @@ public class V8Model implements IV8Model
 
             try
             {
-                walkFiles(project, uriVisitor);
+                walkFiles(project, uriVisitor, "bsl"); //$NON-NLS-1$
             }
             catch (CoreException e)
             {
@@ -139,6 +141,58 @@ public class V8Model implements IV8Model
         }
 
         return Optional.of(modules.get(0));
+    }
+
+    public void getForm(String filePath)
+    {
+        Preconditions.checkNotNull(filePath);
+        IPath path = new Path(filePath);
+        var modules = new ArrayList<Module>();
+        for (var project : getProjects())
+        {
+            var uriVisitor = new IFileVisitor()
+            {
+                @Override
+                public void visit(IFile file)
+                {
+                    if (!modules.isEmpty())
+                    {
+                        return;
+                    }
+
+                    if (!path.equals(file.getFullPath()))
+                    {
+                        return;
+                    }
+
+                    var moduleUri =
+                        URI.createPlatformResourceURI(file.getFullPath().toPortableString(), true).appendFragment("/0"); //$NON-NLS-1$
+                    var resourceSetProvider = getResourceService(BmAwareResourceSetProvider.class);
+                    var resourceSet = resourceSetProvider.get(file.getProject());
+                    if (resourceSet == null)
+                    {
+                        return;
+                    }
+
+                    var indexManager = getResourceService(IBmEmfIndexManager.class);
+                    var indexProvider = indexManager.getEmfIndexProvider(project);
+                }
+            };
+
+            try
+            {
+                walkFiles(project, uriVisitor, "form"); //$NON-NLS-1$
+            }
+            catch (CoreException e)
+            {
+                log.logError(e);
+            }
+
+            if (!modules.isEmpty())
+            {
+                break;
+            }
+        }
     }
 
     @Override
@@ -314,13 +368,13 @@ public class V8Model implements IV8Model
         return root.getProjects();
     }
 
-    private void walkFiles(IProject project, IFileVisitor visitor) throws CoreException
+    private void walkFiles(IProject project, IFileVisitor visitor, String extension) throws CoreException
     {
         project.accept(resource -> {
             if (resource instanceof IFile)
             {
                 IFile file = (IFile)resource;
-                if ("bsl".equalsIgnoreCase(file.getFileExtension())) //$NON-NLS-1$
+                if (extension.equalsIgnoreCase(file.getFileExtension()))
                 {
                     visitor.visit(file);
                 }
@@ -465,6 +519,7 @@ public class V8Model implements IV8Model
 
         return Optional.empty();
     }
+
 
     private static interface IFileVisitor
     {

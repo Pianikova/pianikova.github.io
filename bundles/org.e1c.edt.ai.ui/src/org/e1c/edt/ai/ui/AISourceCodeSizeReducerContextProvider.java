@@ -90,7 +90,8 @@ public class AISourceCodeSizeReducerContextProvider
         }
 
         return contextInitializer.initialize(
-            new AIContext(target.getTextWidget().getText(), offset, "", text, serializerContext.getOffset()));
+            new AIContext(target.getTextWidget().getText(), offset, "", text, //$NON-NLS-1$
+                serializerContext.getOffset()));
     }
 
     private ILeafNode findVisibleLeafNodeAtOffset(INode rootNode, int leafNodeOffset)

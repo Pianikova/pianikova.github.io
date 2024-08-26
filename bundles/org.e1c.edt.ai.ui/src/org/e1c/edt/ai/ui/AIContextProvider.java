@@ -76,6 +76,7 @@ public class AIContextProvider
             path = xtextDoc.getResourceURI().path();
         }
 
-        return contextInitializer.initialize(new AIContext(source, sourceOffset, path, text, textOffset));
+        return contextInitializer
+            .initialize(new AIContext(source, sourceOffset, path, text, textOffset));
     }
 }

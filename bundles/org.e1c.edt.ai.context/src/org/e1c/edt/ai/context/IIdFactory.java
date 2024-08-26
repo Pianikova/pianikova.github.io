@@ -14,5 +14,5 @@ public interface IIdFactory
 
     String createObjectId(String path, EObject eObject);
 
-    Optional<SourceSpan> paeNodeId(String nodeId);
+    Optional<SourceSpan> getNodeId(String nodeId);
 }

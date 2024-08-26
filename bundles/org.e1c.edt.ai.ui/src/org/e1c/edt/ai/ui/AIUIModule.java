@@ -24,6 +24,7 @@ import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.context.ContextModule;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import org.eclipse.jface.preference.IPreferenceStore;
 
@@ -51,6 +52,7 @@ public class AIUIModule
     {
         // @formatter:off
         install(new AIModule());
+        install(new ContextModule());
         bind(ILog.class).toInstance(activator);
         bind(IPluginVersion.class).toInstance(activator);
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
