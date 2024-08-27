@@ -16,6 +16,7 @@ import org.eclipse.xtext.nodemodel.ICompositeNode;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.form.model.Form;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -62,6 +63,12 @@ public class EntityInfo
         var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), new IEntityVisitor()
         {
             @Override
+            public void visitForm(Form form)
+            {
+                response.form = entityFactory.createFormEntity(form).orElse(null);
+            }
+
+            @Override
             public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {
                 if (request.ref == null || !request.ref.equals(nodeId))
@@ -69,9 +76,9 @@ public class EntityInfo
                     return false;
                 }
 
-                var object = entityFactory.crateObjectEntity(variable, node);
-                response.object = object.orElse(null);
-                return object.isPresent();
+                var objectEntity = entityFactory.crateObjectEntity(variable, node);
+                response.object = objectEntity.orElse(null);
+                return objectEntity.isPresent();
             }
 
             @Override
@@ -82,9 +89,9 @@ public class EntityInfo
                     return false;
                 }
 
-                var object = entityFactory.crateObjectEntity(featureAccess, node);
-                response.object = object.orElse(null);
-                return object.isPresent();
+                var objectEntity = entityFactory.crateObjectEntity(featureAccess, node);
+                response.object = objectEntity.orElse(null);
+                return objectEntity.isPresent();
             }
 
             @Override
@@ -95,9 +102,9 @@ public class EntityInfo
                     return false;
                 }
 
-                var method = entityFactory.createMethodEntity(invocation);
-                response.method = method.orElse(null);
-                return method.isPresent();
+                var methodEntity = entityFactory.createMethodEntity(invocation);
+                response.method = methodEntity.orElse(null);
+                return methodEntity.isPresent();
             }
         });
 
@@ -121,6 +128,12 @@ public class EntityInfo
         var uuids = new HashSet<String>();
         entitiesWalker.walk(filePath, start, finish, new IEntityVisitor()
         {
+            @Override
+            public void visitForm(Form form)
+            {
+                context.form = entityFactory.createFormEntity(form).orElse(null);
+            }
+
             @Override
             public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {

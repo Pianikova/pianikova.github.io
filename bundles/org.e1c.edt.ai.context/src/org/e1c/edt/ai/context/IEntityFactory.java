@@ -10,9 +10,12 @@ import org.eclipse.xtext.nodemodel.ICompositeNode;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.form.model.Form;
 
 public interface IEntityFactory
 {
+    Optional<FormEntity> createFormEntity(Form form);
+
     Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node);
 
     Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node);

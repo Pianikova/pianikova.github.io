@@ -14,4 +14,6 @@ public class RelatedEntitiesResponse
 
     @SerializedName("related_functions")
     public ArrayList<Entity> relatedFunctions;
+
+    public FormEntity form;
 }

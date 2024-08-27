@@ -15,6 +15,7 @@ import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.mcore.AbstractMethod;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -25,18 +26,22 @@ public class RelatedEntities implements IRelatedEntities
     private final IV8Model v8Model;
     private final IEntitiesWalker entitiesWalker;
     private final IIdFactory idFactory;
+    private final IEntityFactory entityFactory;
 
     @Inject
-    public RelatedEntities(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker, IIdFactory idFactory)
+    public RelatedEntities(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker, IIdFactory idFactory,
+        IEntityFactory entityFactory)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(entitiesWalker);
         Preconditions.checkNotNull(idFactory);
+        Preconditions.checkNotNull(entityFactory);
         this.log = log;
         this.v8Model = v8Model;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
+        this.entityFactory = entityFactory;
     }
 
     @SuppressWarnings("nls")
@@ -55,6 +60,12 @@ public class RelatedEntities implements IRelatedEntities
         var entities = new HashSet<Entity>();
         var result = entitiesWalker.walk(request.path, request.start, request.finish, new IEntityVisitor()
         {
+            @Override
+            public void visitForm(Form form)
+            {
+                entityFactory.createFormEntity(form).ifPresent(i -> response.form = i);
+            }
+
             @Override
             public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {

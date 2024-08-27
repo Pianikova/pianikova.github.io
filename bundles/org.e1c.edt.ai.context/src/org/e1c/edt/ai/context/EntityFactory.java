@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.context;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,15 @@ import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.form.model.Addition;
+import com._1c.g5.v8.dt.form.model.Decoration;
+import com._1c.g5.v8.dt.form.model.Form;
+import com._1c.g5.v8.dt.form.model.FormAttribute;
+import com._1c.g5.v8.dt.form.model.FormField;
+import com._1c.g5.v8.dt.form.model.FormItem;
+import com._1c.g5.v8.dt.form.model.Group;
+import com._1c.g5.v8.dt.form.model.Table;
+import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
 import com.google.common.base.Preconditions;
@@ -30,16 +40,177 @@ public class EntityFactory implements IEntityFactory
     private final IV8Model v8Model;
     private final IIdFactory idFactory;
     private final ICommentFactory commentFactory;
+    private final IFormWalker formWalker;
 
     @Inject
-    public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory)
+    public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory, IFormWalker formWalker)
     {
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
         Preconditions.checkNotNull(commentFactory);
+        Preconditions.checkNotNull(formWalker);
         this.v8Model = v8Model;
         this.idFactory = idFactory;
         this.commentFactory = commentFactory;
+        this.formWalker = formWalker;
+    }
+
+    @Override
+    public Optional<FormEntity> createFormEntity(Form form)
+    {
+        var formEntity = new FormEntity();
+        var groups = new HashMap<EObject, FormGrp>();
+        groups.put(form, formEntity);
+        formWalker.walk(form, new IFormVisitor()
+        {
+            @Override
+            public void visitFormField(Optional<EObject> parent, FormField field)
+            {
+                parent.map(p -> groups.get(p)).ifPresent(group -> addField(group, createField(field)));
+            }
+
+            @Override
+            public void visitField(Optional<EObject> parent, Field field)
+            {
+                //
+            }
+
+            @Override
+            public void visitTable(Optional<EObject> parent, Table table)
+            {
+                //
+            }
+
+            @Override
+            public void visitAddition(Optional<EObject> parent, Addition addition)
+            {
+                //
+            }
+
+            @Override
+            public void visitDecoration(Optional<EObject> parent, Decoration decoration)
+            {
+                //
+            }
+
+            @Override
+            public void visitForm(Optional<EObject> parent, Form form)
+            {
+                formEntity.title = form.getTitle().map();
+                var attributes = form.getAttributes();
+                if (attributes != null && !attributes.isEmpty())
+                {
+                    if (formEntity.attributes == null)
+                    {
+                        formEntity.attributes = new ArrayList<>();
+                    }
+
+                    for (var attribute : attributes)
+                    {
+                        formEntity.attributes.add(createAttribute(attribute));
+                    }
+                }
+            }
+
+            @Override
+            public void visitGroup(Optional<EObject> parent, Group group)
+            {
+                parent.map(p -> groups.get(p)).ifPresent(parentNode -> {
+                    var node = createGroup(group);
+                    if (parentNode.groups == null)
+                    {
+                        parentNode.groups = new ArrayList<>();
+                    }
+
+                    parentNode.groups.add(node);
+                    groups.put(group, node);
+                });
+            }
+
+            @Override
+            public void visitFormItem(Optional<EObject> parent, FormItem formItem)
+            {
+                //
+            }
+
+            @Override
+            public void visitEObject(Optional<EObject> parent, EObject eObject)
+            {
+                //
+            }
+        });
+
+        return Optional.of(formEntity);
+    }
+
+    private void addField(FormGrp group, FormFld field)
+    {
+        if (group.fields == null)
+        {
+            group.fields = new ArrayList<>();
+        }
+
+        group.fields.add(field);
+    }
+
+    private FormAttr createAttribute(FormAttribute attribute)
+    {
+        var attr = new FormAttr();
+        attr.name = attribute.getName();
+        if (!attribute.getTitle().isEmpty())
+        {
+            attr.title = attribute.getTitle().map();
+        }
+
+        var typeDescription = attribute.getValueType();
+        if (typeDescription != null)
+        {
+            var types = typeDescription.getTypes();
+            if (types != null && !types.isEmpty())
+            {
+                var type = types.get(types.size() - 1);
+                attr.type = type.getName();
+                attr.typeRu = type.getNameRu();
+            }
+        }
+
+        return attr;
+    }
+
+    private FormFld createField(FormField field)
+    {
+        var fld = new FormFld();
+        fld.name = field.getName();
+        if (!field.getToolTip().isEmpty())
+        {
+            fld.toolTip = field.getToolTip().map();
+        }
+
+        var fiedType = field.getType();
+        fld.dataPth = field.getDataPath().toString();
+        if (fiedType != null)
+        {
+            fld.fiedType = fiedType.getName();
+        }
+
+        return fld;
+    }
+
+    private FormGrp createGroup(Group group)
+    {
+        var node = new FormGrp();
+        node.name = group.getName();
+        if (!group.getTitle().isEmpty())
+        {
+            node.title = group.getTitle().map();
+        }
+
+        if (!group.getToolTip().isEmpty())
+        {
+            node.toolTip = group.getToolTip().map();
+        }
+
+        return node;
     }
 
     @Override

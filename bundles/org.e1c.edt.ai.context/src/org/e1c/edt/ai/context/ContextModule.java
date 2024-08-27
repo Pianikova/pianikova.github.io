@@ -28,6 +28,7 @@ public class ContextModule
         bind(BslMultiLineCommentDocumentationProvider.class).toInstance(new BslMultiLineCommentDocumentationProvider());
         bind(ICommentFactory.class).to(CommentFactory.class).in(Singleton.class);
         bind(IEntityFactory.class).to(EntityFactory.class).in(Singleton.class);
+        bind(IFormWalker.class).to(FormWalker.class).in(Singleton.class);
         // @formatter:on
     }
 }

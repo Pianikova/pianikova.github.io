@@ -8,6 +8,7 @@ import org.eclipse.emf.ecore.EObject;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.form.model.Form;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -36,6 +37,12 @@ public class EntitiesWalker
         }
 
         var module = optionalModule.get();
+        var owner = module.getOwner();
+        if (owner instanceof Form)
+        {
+            visitor.visitForm((Form)owner);
+        }
+
         var contentsIterator = module.eAllContents();
         while (contentsIterator.hasNext())
         {

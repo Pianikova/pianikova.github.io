@@ -10,4 +10,6 @@ public class EntityInfoResponse
     public ObjectEntity object;
 
     public MethodEntity method;
+
+    public FormEntity form;
 }
