@@ -100,7 +100,7 @@ public class CodeAssistant
         localContext.path = aiContext.getPath();
         localContext.prefix = aiContext.getPrefix();
         localContext.suffix = aiContext.getSufix();
-        contextEntities.fill(aiContext, localContext);
+        contextEntities.fill(aiContext, localContext, cancellationToken);
 
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;

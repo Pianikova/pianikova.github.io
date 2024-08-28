@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.assistent.model.LocalContext;
@@ -43,7 +44,7 @@ public class EntityInfo
 
     @SuppressWarnings("nls")
     @Override
-    public Optional<EntityInfoResponse> geInfo(EntityInfoRequest request)
+    public Optional<EntityInfoResponse> getInfo(EntityInfoRequest request, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(request);
         if (request.ref == null || request.ref.isBlank())
@@ -65,7 +66,7 @@ public class EntityInfo
             @Override
             public void visitForm(Form form)
             {
-                response.form = entityFactory.createFormEntity(form).orElse(null);
+                response.form = entityFactory.createFormEntity(form, cancellationToken).orElse(null);
             }
 
             @Override
@@ -76,7 +77,7 @@ public class EntityInfo
                     return false;
                 }
 
-                var objectEntity = entityFactory.crateObjectEntity(variable, node);
+                var objectEntity = entityFactory.crateObjectEntity(variable, node, cancellationToken);
                 response.object = objectEntity.orElse(null);
                 return objectEntity.isPresent();
             }
@@ -89,7 +90,7 @@ public class EntityInfo
                     return false;
                 }
 
-                var objectEntity = entityFactory.crateObjectEntity(featureAccess, node);
+                var objectEntity = entityFactory.crateObjectEntity(featureAccess, node, cancellationToken);
                 response.object = objectEntity.orElse(null);
                 return objectEntity.isPresent();
             }
@@ -102,11 +103,11 @@ public class EntityInfo
                     return false;
                 }
 
-                var methodEntity = entityFactory.createMethodEntity(invocation);
+                var methodEntity = entityFactory.createMethodEntity(invocation, cancellationToken);
                 response.method = methodEntity.orElse(null);
                 return methodEntity.isPresent();
             }
-        });
+        }, cancellationToken);
 
         if (!result)
         {
@@ -118,7 +119,7 @@ public class EntityInfo
     }
 
     @Override
-    public void fill(AIContext aiContext, LocalContext context)
+    public void fill(AIContext aiContext, LocalContext context, ICancellationToken cancellationToken)
     {
         var filePath = aiContext.getPath();
         var start = aiContext.getStart();
@@ -131,30 +132,31 @@ public class EntityInfo
             @Override
             public void visitForm(Form form)
             {
-                context.form = entityFactory.createFormEntity(form).orElse(null);
+                context.form = entityFactory.createFormEntity(form, cancellationToken).orElse(null);
             }
 
             @Override
             public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {
-                if (!uuids.add(idFactory.createObjectId(filePath, variable)))
+                if (!uuids.add(idFactory.createObjectId(filePath, variable, cancellationToken)))
                 {
                     return false;
                 }
 
-                entityFactory.crateObjectEntity(variable, node).ifPresent(object -> context.relatedObjects.add(object));
+                entityFactory.crateObjectEntity(variable, node, cancellationToken)
+                    .ifPresent(object -> context.relatedObjects.add(object));
                 return false;
             }
 
             @Override
             public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
             {
-                if (!uuids.add(idFactory.createObjectId(filePath, featureAccess)))
+                if (!uuids.add(idFactory.createObjectId(filePath, featureAccess, cancellationToken)))
                 {
                     return false;
                 }
 
-                entityFactory.crateObjectEntity(featureAccess, node)
+                entityFactory.crateObjectEntity(featureAccess, node, cancellationToken)
                     .ifPresent(object -> context.relatedObjects.add(object));
                 return false;
             }
@@ -162,14 +164,15 @@ public class EntityInfo
             @Override
             public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
             {
-                if (!uuids.add(idFactory.createObjectId(filePath, invocation)))
+                if (!uuids.add(idFactory.createObjectId(filePath, invocation, cancellationToken)))
                 {
                     return false;
                 }
 
-                entityFactory.createMethodEntity(invocation).ifPresent(method -> context.relatedFunctions.add(method));
+                entityFactory.createMethodEntity(invocation, cancellationToken)
+                    .ifPresent(method -> context.relatedFunctions.add(method));
                 return false;
             }
-        });
+        }, cancellationToken);
     }
 }

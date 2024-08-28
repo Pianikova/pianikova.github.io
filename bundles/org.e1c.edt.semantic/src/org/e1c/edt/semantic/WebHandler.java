@@ -5,12 +5,14 @@ package org.e1c.edt.semantic;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.e1c.edt.ai.CancellationTokens;
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.context.EntityInfoRequest;
@@ -75,8 +77,7 @@ public class WebHandler
                     handle(request, RelatedEntitiesRequest.class, relatedEntities::getRelatedEntities, response);
                 break;
             case "/entity":
-                isHandled =
-                    handle(request, EntityInfoRequest.class, entityInfo::geInfo, response);
+                isHandled = handle(request, EntityInfoRequest.class, entityInfo::getInfo, response);
                 break;
             }
 
@@ -106,14 +107,14 @@ public class WebHandler
     }
 
     private <TRequest, TResponse> boolean handle(HttpServletRequest request, Class<TRequest> classOfTRequest,
-        Function<TRequest, Optional<TResponse>> handler, HttpServletResponse response)
+        BiFunction<TRequest, ICancellationToken, Optional<TResponse>> handler, HttpServletResponse response)
     {
         Preconditions.checkNotNull(request);
         Preconditions.checkNotNull(classOfTRequest);
         Preconditions.checkNotNull(handler);
         Preconditions.checkNotNull(response);
         return readContent(request).flatMap(content -> json.deserialize(content, classOfTRequest))
-            .flatMap(r -> handler.apply(r))
+            .flatMap(r -> handler.apply(r, CancellationTokens.NONE))
             .map(r -> json.serialize(r))
             .map(content -> wrireContent(response, content))
             .orElse(false);

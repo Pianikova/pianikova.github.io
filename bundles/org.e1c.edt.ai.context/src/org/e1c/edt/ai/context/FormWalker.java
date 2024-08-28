@@ -6,6 +6,7 @@ package org.e1c.edt.ai.context;
 import java.util.Optional;
 import java.util.Stack;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.dt.form.model.Addition;
@@ -27,7 +28,7 @@ import com.google.common.base.Preconditions;
 public class FormWalker implements IFormWalker
 {
     @Override
-    public void walk(EObject root, IFormVisitor visitor)
+    public void walk(EObject root, IFormVisitor visitor, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(root);
         Preconditions.checkNotNull(visitor);
@@ -35,6 +36,11 @@ public class FormWalker implements IFormWalker
         visit(stack, null, root, visitor);
         while(stack.size() > 0)
         {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
             var parent = stack.pop();
             if (parent instanceof FormItemContainer)
             {

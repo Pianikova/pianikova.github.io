@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
@@ -56,7 +57,7 @@ public class EntityFactory implements IEntityFactory
     }
 
     @Override
-    public Optional<FormEntity> createFormEntity(Form form)
+    public Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken)
     {
         var formEntity = new FormEntity();
         var groups = new HashMap<EObject, FormGrp>();
@@ -138,7 +139,7 @@ public class EntityFactory implements IEntityFactory
             {
                 //
             }
-        });
+        }, cancellationToken);
 
         return Optional.of(formEntity);
     }
@@ -214,7 +215,8 @@ public class EntityFactory implements IEntityFactory
     }
 
     @Override
-    public Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node)
+    public Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node,
+        ICancellationToken cancellationToken)
     {
         var objectEntity = new ObjectEntity();
         objectEntity.name = variable.getName();
@@ -227,12 +229,14 @@ public class EntityFactory implements IEntityFactory
             objectEntity.comment = comment;
         }
 
-        v8Model.getLastType(variable.getTypeStateProvider()).ifPresent(type -> fillType(variable, objectEntity, type));
+        v8Model.getLastType(variable.getTypeStateProvider())
+            .ifPresent(type -> fillType(variable, objectEntity, type, cancellationToken));
         return Optional.of(objectEntity);
     }
 
     @Override
-    public Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node)
+    public Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node,
+        ICancellationToken cancellationToken)
     {
         var objectEntity = new ObjectEntity();
         objectEntity.name = featureAccess.getName();
@@ -245,16 +249,17 @@ public class EntityFactory implements IEntityFactory
             objectEntity.comment = comment;
         }
 
-        v8Model.getType(featureAccess).ifPresent(type -> fillType(featureAccess, objectEntity, type));
+        v8Model.getType(featureAccess)
+            .ifPresent(type -> fillType(featureAccess, objectEntity, type, cancellationToken));
         return Optional.of(objectEntity);
     }
 
     @Override
     @SuppressWarnings("nls")
-    public Optional<MethodEntity> createMethodEntity(Invocation invocation)
+    public Optional<MethodEntity> createMethodEntity(Invocation invocation, ICancellationToken cancellationToken)
     {
         var methodAccess = invocation.getMethodAccess();
-        var methodAccessFeatureOptional = v8Model.getMethodFeature(methodAccess);
+        var methodAccessFeatureOptional = v8Model.getMethodFeature(methodAccess, cancellationToken);
         var methodEntity = new MethodEntity();
         v8Model.getPath(methodAccess).ifPresent(path -> {
             methodEntity.path = path;
@@ -414,7 +419,7 @@ public class EntityFactory implements IEntityFactory
         return Optional.of(methodEntity);
     }
 
-    private void fillType(EObject eObject, ObjectEntity objectEntity, Type type)
+    private void fillType(EObject eObject, ObjectEntity objectEntity, Type type, ICancellationToken cancellationToken)
     {
         var fields = new ArrayList<ObjectEntityField>();
         objectEntity.fields = fields;
@@ -428,7 +433,7 @@ public class EntityFactory implements IEntityFactory
             {
                 for (var dynamicProp : pair.getFirst())
                 {
-                    var field = createField(dynamicProp);
+                    var field = createField(dynamicProp, cancellationToken);
                     objectEntity.fields.add(field);
                 }
             }
@@ -440,14 +445,14 @@ public class EntityFactory implements IEntityFactory
             {
                 for (var prop : contexDef.getProperties())
                 {
-                    var field = createField(prop);
+                    var field = createField(prop, cancellationToken);
                     objectEntity.fields.add(field);
                 }
             }
         }
     }
 
-    private ObjectEntityField createField(Property prop)
+    private ObjectEntityField createField(Property prop, ICancellationToken cancellationToken)
     {
         var field = new ObjectEntityField();
         field.name = prop.getName();
@@ -461,7 +466,7 @@ public class EntityFactory implements IEntityFactory
             if (featureAccess != null)
             {
                 v8Model.getPath(featureAccess).ifPresent(path -> {
-                    v8Model.getModule(path);
+                    v8Model.getModule(path, cancellationToken);
                     var fieldNode = NodeModelUtils.getNode(featureAccess);
                     field.uuid = idFactory.createNodeId(path, fieldNode);
                 });

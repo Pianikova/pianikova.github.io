@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -70,7 +71,7 @@ public class V8Model implements IV8Model
     }
 
     @Override
-    public Optional<Module> getModule(String filePath)
+    public Optional<Module> getModule(String filePath, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(filePath);
         IPath path = new Path(filePath);
@@ -422,7 +423,7 @@ public class V8Model implements IV8Model
     }
 
     @Override
-    public Optional<EObject> getMethodFeature(FeatureAccess methodAccess)
+    public Optional<EObject> getMethodFeature(FeatureAccess methodAccess, ICancellationToken cancellationToken)
     {
         if (methodAccess == null)
         {
@@ -431,7 +432,7 @@ public class V8Model implements IV8Model
 
         var modules = new ArrayList<com._1c.g5.v8.dt.bsl.model.Module>();
         getPath(methodAccess).ifPresent(path -> {
-            getModule(path).ifPresent(module -> modules.add(module));
+            getModule(path, cancellationToken).ifPresent(module -> modules.add(module));
         });
 
         for (var featureEntry : getFeatureEntries(methodAccess))

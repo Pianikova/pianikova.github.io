@@ -7,6 +7,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Optional;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
@@ -47,7 +48,7 @@ public class IdFactory
     }
 
     @Override
-    public String createObjectId(String path, EObject eObject)
+    public String createObjectId(String path, EObject eObject, ICancellationToken cancellationToken)
     {
         if (eObject instanceof FeatureAccess)
         {
@@ -72,7 +73,7 @@ public class IdFactory
         if (eObject instanceof Invocation)
         {
             var invocation = (Invocation)eObject;
-            var methodAccessFeatureOptional = v8Model.getMethodFeature(invocation.getMethodAccess());
+            var methodAccessFeatureOptional = v8Model.getMethodFeature(invocation.getMethodAccess(), cancellationToken);
             if (methodAccessFeatureOptional.isPresent())
             {
                 var methodAccessFeature = methodAccessFeatureOptional.get();

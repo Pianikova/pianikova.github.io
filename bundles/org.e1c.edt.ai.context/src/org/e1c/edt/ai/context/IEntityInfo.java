@@ -5,7 +5,9 @@ package org.e1c.edt.ai.context;
 
 import java.util.Optional;
 
+import org.e1c.edt.ai.ICancellationToken;
+
 public interface IEntityInfo
 {
-    Optional<EntityInfoResponse> geInfo(EntityInfoRequest request);
+    Optional<EntityInfoResponse> getInfo(EntityInfoRequest request, ICancellationToken cancellationToken);
 }

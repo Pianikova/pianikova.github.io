@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
@@ -27,7 +28,7 @@ import com._1c.g5.v8.dt.mcore.util.Environments;
 
 public interface IV8Model
 {
-    Optional<Module> getModule(String filePath);
+    Optional<Module> getModule(String filePath, ICancellationToken cancellationToken);
 
     Optional<Type> getLastType(VariableTypeStateProviderCollector typeStateProviders);
 
@@ -53,5 +54,5 @@ public interface IV8Model
 
     Optional<Type> getType(FeatureAccess featureAccess);
 
-    Optional<EObject> getMethodFeature(FeatureAccess methodAccess);
+    Optional<EObject> getMethodFeature(FeatureAccess methodAccess, ICancellationToken cancellationToken);
 }

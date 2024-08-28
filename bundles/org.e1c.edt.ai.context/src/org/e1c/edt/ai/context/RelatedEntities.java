@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
@@ -46,7 +47,8 @@ public class RelatedEntities implements IRelatedEntities
 
     @SuppressWarnings("nls")
     @Override
-    public Optional<RelatedEntitiesResponse> getRelatedEntities(RelatedEntitiesRequest request)
+    public Optional<RelatedEntitiesResponse> getRelatedEntities(RelatedEntitiesRequest request,
+        ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(request);
         if (request.path == null || request.path.isBlank())
@@ -63,13 +65,13 @@ public class RelatedEntities implements IRelatedEntities
             @Override
             public void visitForm(Form form)
             {
-                entityFactory.createFormEntity(form).ifPresent(i -> response.form = i);
+                entityFactory.createFormEntity(form, cancellationToken).ifPresent(i -> response.form = i);
             }
 
             @Override
             public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {
-                var entity = createEntity(request.path, nodeId, variable, node);
+                var entity = createEntity(request.path, nodeId, variable, node, cancellationToken);
                 if (!entities.add(entity))
                 {
                     return false;
@@ -83,7 +85,7 @@ public class RelatedEntities implements IRelatedEntities
             @Override
             public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
             {
-                var entity = createEntity(request.path, nodeId, featureAccess, node);
+                var entity = createEntity(request.path, nodeId, featureAccess, node, cancellationToken);
                 if (!entities.add(entity))
                 {
                     return false;
@@ -91,6 +93,11 @@ public class RelatedEntities implements IRelatedEntities
 
                 for (var featureEntry : v8Model.getFeatureEntries(featureAccess))
                 {
+                    if (cancellationToken.isCanceled())
+                    {
+                        break;
+                    }
+
                     var feature = featureEntry.getFeature();
                     if (feature instanceof AbstractMethod)
                     {
@@ -111,7 +118,7 @@ public class RelatedEntities implements IRelatedEntities
             @Override
             public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
             {
-                var entity = createEntity(request.path, nodeId, invocation, node);
+                var entity = createEntity(request.path, nodeId, invocation, node, cancellationToken);
                 if (!entities.add(entity))
                 {
                     return false;
@@ -121,7 +128,7 @@ public class RelatedEntities implements IRelatedEntities
                 traceEntity("function", entity, invocation, node);
                 return false;
             }
-        });
+        }, cancellationToken);
 
         if (!result)
         {
@@ -131,10 +138,11 @@ public class RelatedEntities implements IRelatedEntities
         return Optional.of(response);
     }
 
-    private Entity createEntity(String path, String nodeId, EObject eObject, ICompositeNode node)
+    private Entity createEntity(String path, String nodeId, EObject eObject, ICompositeNode node,
+        ICancellationToken cancellationToken)
     {
         var entity = new Entity();
-        entity.uuid = idFactory.createObjectId(path, eObject);
+        entity.uuid = idFactory.createObjectId(path, eObject, cancellationToken);
         entity.ref = nodeId;
         entity.start = node.getTotalOffset();
         entity.finish = node.getTotalEndOffset();

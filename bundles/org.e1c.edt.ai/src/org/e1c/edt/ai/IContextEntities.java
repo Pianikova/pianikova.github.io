@@ -7,5 +7,5 @@ import org.e1c.edt.ai.assistent.model.LocalContext;
 
 public interface IContextEntities
 {
-    void fill(AIContext aiContext, LocalContext context);
+    void fill(AIContext aiContext, LocalContext context, ICancellationToken cancellationToken);
 }

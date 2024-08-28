@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
@@ -28,9 +29,10 @@ public class EntitiesWalker
     }
 
     @Override
-    public boolean walk(String path, int start, int finish, IEntityVisitor visitor)
+    public boolean walk(String path, int start, int finish, IEntityVisitor visitor,
+        ICancellationToken cancellationToken)
     {
-        var optionalModule = v8Model.getModule(path);
+        var optionalModule = v8Model.getModule(path, cancellationToken);
         if (optionalModule.isEmpty())
         {
             return false;
@@ -46,6 +48,11 @@ public class EntitiesWalker
         var contentsIterator = module.eAllContents();
         while (contentsIterator.hasNext())
         {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
             var obj = contentsIterator.next();
             if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess)
             {
