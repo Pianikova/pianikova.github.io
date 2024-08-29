@@ -6,6 +6,9 @@ package org.e1c.edt.ai.context;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.context.DTO.FormEntity;
+import org.e1c.edt.ai.context.DTO.MethodEntity;
+import org.e1c.edt.ai.context.DTO.ObjectEntity;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;

@@ -12,6 +12,8 @@ import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.assistent.model.LocalContext;
+import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
+import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;

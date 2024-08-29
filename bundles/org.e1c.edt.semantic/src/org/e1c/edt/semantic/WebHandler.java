@@ -15,10 +15,10 @@ import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
-import org.e1c.edt.ai.context.EntityInfoRequest;
 import org.e1c.edt.ai.context.IEntityInfo;
 import org.e1c.edt.ai.context.IRelatedEntities;
-import org.e1c.edt.ai.context.RelatedEntitiesRequest;
+import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
+import org.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 

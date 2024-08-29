@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.context;
+package org.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
@@ -15,5 +15,5 @@ public class ObjectEntityField
 
     public String typeRu;
 
-    List<String> comment;
+    public List<String> comment;
 }

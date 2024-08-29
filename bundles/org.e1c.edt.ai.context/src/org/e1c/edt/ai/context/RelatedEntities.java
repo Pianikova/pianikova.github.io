@@ -9,6 +9,8 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
+import org.e1c.edt.ai.context.DTO.RelatedEntitiesResponse;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 

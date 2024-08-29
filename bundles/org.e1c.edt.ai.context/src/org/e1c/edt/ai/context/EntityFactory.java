@@ -9,6 +9,15 @@ import java.util.List;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.context.DTO.FormAttr;
+import org.e1c.edt.ai.context.DTO.FormEntity;
+import org.e1c.edt.ai.context.DTO.FormFld;
+import org.e1c.edt.ai.context.DTO.FormGrp;
+import org.e1c.edt.ai.context.DTO.MethodEntity;
+import org.e1c.edt.ai.context.DTO.ObjectEntity;
+import org.e1c.edt.ai.context.DTO.ObjectEntityField;
+import org.e1c.edt.ai.context.DTO.Parameter;
+import org.e1c.edt.ai.context.DTO.SignatureStructurized;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;

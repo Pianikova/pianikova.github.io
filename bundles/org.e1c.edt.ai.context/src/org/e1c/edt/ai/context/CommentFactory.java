@@ -6,6 +6,15 @@ package org.e1c.edt.ai.context;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.e1c.edt.ai.context.DTO.Comment;
+import org.e1c.edt.ai.context.DTO.CommentDescriptionPart;
+import org.e1c.edt.ai.context.DTO.CommentFieldDefinition;
+import org.e1c.edt.ai.context.DTO.CommentParameter;
+import org.e1c.edt.ai.context.DTO.CommentParameters;
+import org.e1c.edt.ai.context.DTO.CommentReturn;
+import org.e1c.edt.ai.context.DTO.CommentType;
+import org.e1c.edt.ai.context.DTO.CommentTypeDefinition;
+
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment.Description;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment.ParametersSection;

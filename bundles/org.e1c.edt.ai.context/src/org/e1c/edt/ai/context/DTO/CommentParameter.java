@@ -1,15 +1,15 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.context;
+package org.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
-public class CommentFieldDefinition
+public class CommentParameter
 {
-    public String name;
-
     public List<CommentDescriptionPart> description;
+
+    public String name;
 
     public List<CommentType> types;
 }
