@@ -419,11 +419,25 @@ public class EntityFactory implements IEntityFactory
             methodEntity.structurizedСomment = commentFactory.create(structurizedComment);
         }
 
-        var simpleStatement = EcoreUtil2.getContainerOfType(invocation, SimpleStatement.class);
-        if (simpleStatement != null)
+        if (methodEntity.signatureStructurized == null)
         {
-            var target = simpleStatement.getLeft();
-            var types = v8Model.getTypes(target);
+            var simpleStatement = EcoreUtil2.getContainerOfType(invocation, SimpleStatement.class);
+            if (simpleStatement != null)
+            {
+                var target = simpleStatement.getLeft();
+                if (target != null)
+                {
+                    var types = v8Model.getTypes(target);
+                    if (types != null && !types.isEmpty())
+                    {
+                        var signatureStructurized = new SignatureStructurized();
+                        methodEntity.signatureStructurized = signatureStructurized;
+                        var type = types.get(types.size() - 1);
+                        signatureStructurized.returnType = type.getName();
+                        signatureStructurized.returnTypeRu = type.getNameRu();
+                    }
+                }
+            }
         }
 
         if (!hasData)
