@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.assistent.ITextPreprocessor;
 import org.eclipse.jface.text.TextSelection;
 
 import com.google.common.base.Preconditions;
@@ -10,13 +11,16 @@ import com.google.inject.Inject;
 
 public class IdeApiHandler
 {
-    private IUI ui;
+    private final IUI ui;
+    private final ITextPreprocessor textPreprocessor;
 
     @Inject
-    public IdeApiHandler(IUI ui)
+    public IdeApiHandler(IUI ui, ITextPreprocessor textPreprocessor)
     {
         Preconditions.checkNotNull(ui);
+        Preconditions.checkNotNull(textPreprocessor);
         this.ui = ui;
+        this.textPreprocessor = textPreprocessor;
     }
 
     public void wink(String parameter)
@@ -27,7 +31,12 @@ public class IdeApiHandler
 
     public void paste_code(String code)
     {
-        Preconditions.checkNotNull(code);
+        if (code == null)
+        {
+            return;
+        }
+
+        final var processedCode = textPreprocessor.process(code);
         ui.getTextWidget().ifPresent(textWidget -> {
             var contet = textWidget.getContent();
             ui.getSourceViewer(textWidget).ifPresent(sourceViewer -> {
@@ -35,11 +44,11 @@ public class IdeApiHandler
                 if (selection instanceof TextSelection)
                 {
                     var textSelection = (TextSelection)selection;
-                    contet.replaceTextRange(textSelection.getOffset(), textSelection.getLength(), code);
+                    contet.replaceTextRange(textSelection.getOffset(), textSelection.getLength(), processedCode);
                     return;
                 }
 
-                contet.replaceTextRange(textWidget.getCaretOffset(), 0, code);
+                contet.replaceTextRange(textWidget.getCaretOffset(), 0, processedCode);
             });
         });
     }

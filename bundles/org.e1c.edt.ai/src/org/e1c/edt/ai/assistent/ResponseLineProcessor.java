@@ -5,8 +5,8 @@ package org.e1c.edt.ai.assistent;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObserver;
-import org.e1c.edt.ai.assistent.model.CompletionResponse;
 import org.e1c.edt.ai.assistent.model.Completion;
+import org.e1c.edt.ai.assistent.model.CompletionResponse;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -14,11 +14,15 @@ import com.google.inject.Inject;
 public class ResponseLineProcessor implements IResponseLineProcessor
 {
     private final IJson json;
+    private final ITextPreprocessor textPreprocessor;
 
     @Inject
-    public ResponseLineProcessor(IJson json)
+    public ResponseLineProcessor(IJson json, ITextPreprocessor textPreprocessor)
     {
+        Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(textPreprocessor);
         this.json = json;
+        this.textPreprocessor = textPreprocessor;
     }
 
     @Override
@@ -61,6 +65,7 @@ public class ResponseLineProcessor implements IResponseLineProcessor
             return data.finishReason == null;
         }
 
+        data.text = textPreprocessor.process(text);
         observer.onNext(data);
         return data.finishReason == null;
     }

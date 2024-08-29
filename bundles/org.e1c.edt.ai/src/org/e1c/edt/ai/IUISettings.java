@@ -12,4 +12,6 @@ public interface IUISettings
     boolean isContinuousCodeCompletion();
 
     int getMinRequestDelay();
+
+    String getLineSeparator();
 }

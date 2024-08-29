@@ -44,4 +44,10 @@ public class UISettings
     {
         return settingsStore.getInt(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY);
     }
+
+    @Override
+    public String getLineSeparator()
+    {
+        return System.lineSeparator();
+    }
 }

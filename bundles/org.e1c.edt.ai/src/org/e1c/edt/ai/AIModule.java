@@ -18,6 +18,7 @@ import org.e1c.edt.ai.assistent.IResponseLineProcessor;
 import org.e1c.edt.ai.assistent.IResponseStreamProcessor;
 import org.e1c.edt.ai.assistent.ISessionService;
 import org.e1c.edt.ai.assistent.ISettingsTracker;
+import org.e1c.edt.ai.assistent.ITextPreprocessor;
 import org.e1c.edt.ai.assistent.ParametersService;
 import org.e1c.edt.ai.assistent.RequestBuilder;
 import org.e1c.edt.ai.assistent.ResponseCache;
@@ -25,6 +26,7 @@ import org.e1c.edt.ai.assistent.ResponseLineProcessor;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
 import org.e1c.edt.ai.assistent.SessionService;
 import org.e1c.edt.ai.assistent.SettingsTracker;
+import org.e1c.edt.ai.assistent.TextPreprocessor;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.Session;
 
@@ -65,9 +67,6 @@ public class AIModule
         bind(CodeCompletionStatistics.class).in(Singleton.class);
         bind(ICodeCompletionContext.class).to(CodeCompletionStatistics.class);
         bind(ICodeCompletionStatistics.class).to(CodeCompletionStatistics.class);
-
-        // ICodeCompletionStatistics
-
         bind(IHttpLog.class).to(HttpLog.class).in(Singleton.class);
         bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
         bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
@@ -77,6 +76,7 @@ public class AIModule
         bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
+        bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
         // @formatter:on
     }
 }

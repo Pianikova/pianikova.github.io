@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.tests;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -12,26 +13,33 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObserver;
+import org.e1c.edt.ai.assistent.ITextPreprocessor;
 import org.e1c.edt.ai.assistent.ResponseLineProcessor;
-import org.e1c.edt.ai.assistent.model.CompletionResponse;
 import org.e1c.edt.ai.assistent.model.Completion;
+import org.e1c.edt.ai.assistent.model.CompletionResponse;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class ResponseLineProcessorTest
 {
     private final IJson json = mock(IJson.class);
+    private final ITextPreprocessor textPreprocessor = mock(ITextPreprocessor.class);
     @SuppressWarnings("unchecked")
     private final IObserver<Completion> observer = mock(IObserver.class);
+
+    public ResponseLineProcessorTest()
+    {
+        when(textPreprocessor.process(anyString())).then(i -> i.getArgument(0));
+    }
 
     @Test
     public void shouldProcessNullLine()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
 
         // When
-        var actualResult = provcessor.process(observer, null);
+        var actualResult = processor.process(observer, null);
 
         // Then
         Assert.assertTrue(actualResult);
@@ -42,10 +50,10 @@ public class ResponseLineProcessorTest
     public void shouldProcessEmptyLine()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
 
         // When
-        var actualResult = provcessor.process(observer, "");
+        var actualResult = processor.process(observer, "");
 
         // Then
         Assert.assertTrue(actualResult);
@@ -56,7 +64,7 @@ public class ResponseLineProcessorTest
     public void shouldProcess()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
 
         var data = new Completion();
         data.text = "Xyz";
@@ -67,7 +75,31 @@ public class ResponseLineProcessorTest
 
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
-        var actualResult = provcessor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc");
+
+        // Then
+        Assert.assertTrue(actualResult);
+        verify(observer).onNext(data);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldProcessUsingPreprocessor()
+    {
+        // Given
+        var processor = createInstance(1);
+
+        var data = new Completion();
+        data.text = "Asd";
+        data.uuid = "123";
+
+        var response = new CompletionResponse();
+        response.data = data;
+
+        // When
+        when(textPreprocessor.process("Xyz")).thenReturn("Asd");
+        when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
+        var actualResult = processor.process(observer, "Abc");
 
         // Then
         Assert.assertTrue(actualResult);
@@ -79,7 +111,7 @@ public class ResponseLineProcessorTest
     public void shouldProcessWhenHasFinishReason()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
 
         var data = new Completion();
         data.text = "Xyz";
@@ -91,7 +123,7 @@ public class ResponseLineProcessorTest
 
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
-        var actualResult = provcessor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc");
 
         // Then
         Assert.assertFalse(actualResult);
@@ -103,7 +135,7 @@ public class ResponseLineProcessorTest
     public void shouldProcessWhenHasEmptyLineFinishReason()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
 
         var data = new Completion();
         data.text = "";
@@ -115,7 +147,7 @@ public class ResponseLineProcessorTest
 
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
-        var actualResult = provcessor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc");
 
         // Then
         Assert.assertFalse(actualResult);
@@ -127,12 +159,10 @@ public class ResponseLineProcessorTest
     public void shouldProcessWhenDataIsNull()
     {
         // Given
-        var provcessor = createInstance(1);
-
-        var response = new CompletionResponse();
+        var processor = createInstance(1);
 
         // When
-        var actualResult = provcessor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc");
 
         // Then
         Assert.assertTrue(actualResult);
@@ -144,7 +174,7 @@ public class ResponseLineProcessorTest
     public void shouldHandleException()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
         var data = new Completion();
         data.text = "Xyz";
         data.uuid = "123";
@@ -153,7 +183,7 @@ public class ResponseLineProcessorTest
         response.data = data;
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenThrow(NullPointerException.class);
-        var actualResult = provcessor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc");
 
         // Then
         Assert.assertFalse(actualResult);
@@ -161,6 +191,6 @@ public class ResponseLineProcessorTest
 
     private ResponseLineProcessor createInstance(int codeCompletionLinesCount)
     {
-        return new ResponseLineProcessor(json);
+        return new ResponseLineProcessor(json, textPreprocessor);
     }
 }
