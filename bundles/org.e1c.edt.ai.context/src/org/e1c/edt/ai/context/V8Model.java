@@ -117,7 +117,14 @@ public class V8Model implements IV8Model
                         ((BslResource)moduleResource).setDeepAnalysis(true);
                     }
 
-                    EcoreUtil2.resolveLazyCrossReferences(moduleResource, CancelIndicator.NullImpl);
+                    EcoreUtil2.resolveLazyCrossReferences(moduleResource, new CancelIndicator()
+                    {
+                        @Override
+                        public boolean isCanceled()
+                        {
+                            return cancellationToken.isCanceled();
+                        }
+                    });
                 }
             };
 
