@@ -5,6 +5,7 @@ package org.e1c.edt.ai.context;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,7 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
+import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
@@ -60,6 +62,7 @@ public class V8Model implements IV8Model
     private static final String RESOURCE_PREFIX = "/resource"; //$NON-NLS-1$
     private final ILog log;
     private final BslMultiLineCommentDocumentationProvider commentDocumentationProvider;
+    private final HashMap<IProject, ResourceSet> resources = new HashMap<>();
 
     @Inject
     public V8Model(ILog log, BslMultiLineCommentDocumentationProvider commentDocumentationProvider)
@@ -96,7 +99,8 @@ public class V8Model implements IV8Model
                     var moduleUri =
                         URI.createPlatformResourceURI(file.getFullPath().toPortableString(), true).appendFragment("/0"); //$NON-NLS-1$
                     var resourceSetProvider = getResourceService(BmAwareResourceSetProvider.class);
-                    var resourceSet = resourceSetProvider.get(file.getProject());
+                    var resourceSet =
+                        resources.computeIfAbsent(project, curProject -> resourceSetProvider.get(curProject));
                     if (resourceSet == null)
                     {
                         return;
