@@ -167,9 +167,10 @@ public class EntityFactory implements IEntityFactory
     {
         var attr = new FormAttr();
         attr.name = attribute.getName();
-        if (!attribute.getTitle().isEmpty())
+        var title = attribute.getTitle();
+        if (title != null && !title.isEmpty())
         {
-            attr.title = attribute.getTitle().map();
+            attr.title = title.map();
         }
 
         var typeDescription = attribute.getValueType();
@@ -191,16 +192,21 @@ public class EntityFactory implements IEntityFactory
     {
         var fld = new FormFld();
         fld.name = field.getName();
-        if (!field.getToolTip().isEmpty())
+        var toolTip = field.getToolTip();
+        if (toolTip != null && !toolTip.isEmpty())
         {
-            fld.toolTip = field.getToolTip().map();
+            fld.toolTip = toolTip.map();
         }
 
         var fiedType = field.getType();
-        fld.dataPth = field.getDataPath().toString();
-        if (fiedType != null)
+        var dataPath = field.getDataPath();
+        if (dataPath != null)
         {
-            fld.fiedType = fiedType.getName();
+            fld.dataPth = dataPath.toString();
+            if (fiedType != null)
+            {
+                fld.fiedType = fiedType.getName();
+            }
         }
 
         return fld;
@@ -210,14 +216,16 @@ public class EntityFactory implements IEntityFactory
     {
         var node = new FormGrp();
         node.name = group.getName();
-        if (!group.getTitle().isEmpty())
+        var title = group.getTitle();
+        if (title != null && !title.isEmpty())
         {
-            node.title = group.getTitle().map();
+            node.title = title.map();
         }
 
-        if (!group.getToolTip().isEmpty())
+        var toolTip = group.getToolTip();
+        if (toolTip != null && !toolTip.isEmpty())
         {
-            node.toolTip = group.getToolTip().map();
+            node.toolTip = toolTip.map();
         }
 
         return node;
@@ -335,8 +343,7 @@ public class EntityFactory implements IEntityFactory
                 }
 
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-
-                if (!returnTypes.isEmpty())
+                if (returnTypes != null && !returnTypes.isEmpty())
                 {
                     var returnType = returnTypes.get(0);
                     signatureStructurized.returnType = returnType.getName();
@@ -353,7 +360,7 @@ public class EntityFactory implements IEntityFactory
                 var method = (com._1c.g5.v8.dt.mcore.Method)methodAccessFeature;
                 methodEntity.name = method.getName();
                 var paramsSet = method.getParamSet();
-                if (!paramsSet.isEmpty())
+                if (paramsSet != null && !paramsSet.isEmpty())
                 {
                     var paramSet = paramsSet.get(paramsSet.size() - 1);
                     for (var param : paramSet.getParams())
@@ -362,7 +369,7 @@ public class EntityFactory implements IEntityFactory
                         parameters.add(parameter);
                         parameter.name = param.getName();
                         var paramTypes = param.getType();
-                        if (!paramTypes.isEmpty())
+                        if (paramTypes != null && !paramTypes.isEmpty())
                         {
                             var paramType = paramTypes.get(paramTypes.size() - 1);
                             // parameter.required = param.getDefaultValue() == null;
@@ -384,8 +391,7 @@ public class EntityFactory implements IEntityFactory
                 }
 
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-
-                if (!returnTypes.isEmpty())
+                if (returnTypes != null && !returnTypes.isEmpty())
                 {
                     var returnType = returnTypes.get(0);
                     signatureStructurized.returnType = returnType.getName();
@@ -466,7 +472,7 @@ public class EntityFactory implements IEntityFactory
         var field = new ObjectEntityField();
         field.name = prop.getName();
         var types = prop.getTypes();
-        if (!types.isEmpty())
+        if (types != null && !types.isEmpty())
         {
             var propType = types.get(types.size() - 1);
             field.type = propType.getName();
