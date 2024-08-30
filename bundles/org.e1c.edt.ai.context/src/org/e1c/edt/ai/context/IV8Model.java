@@ -55,4 +55,6 @@ public interface IV8Model
     Optional<Type> getType(FeatureAccess featureAccess);
 
     Optional<EObject> getMethodFeature(FeatureAccess methodAccess, ICancellationToken cancellationToken);
+
+    <T> T getResourceService(Class<T> type);
 }

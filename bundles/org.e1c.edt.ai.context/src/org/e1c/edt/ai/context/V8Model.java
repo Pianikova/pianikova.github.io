@@ -5,7 +5,6 @@ package org.e1c.edt.ai.context;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,7 +20,6 @@ import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
@@ -30,7 +28,6 @@ import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.util.Pair;
 
-import com._1c.g5.v8.dt.bm.xtext.BmAwareResourceSetProvider;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslCommentUtils;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
@@ -62,15 +59,18 @@ public class V8Model implements IV8Model
     private static final String RESOURCE_PREFIX = "/resource"; //$NON-NLS-1$
     private final ILog log;
     private final BslMultiLineCommentDocumentationProvider commentDocumentationProvider;
-    private final HashMap<IProject, ResourceSet> resources = new HashMap<>();
+    private final IResourceSetProvider resourceSetProvider;
 
     @Inject
-    public V8Model(ILog log, BslMultiLineCommentDocumentationProvider commentDocumentationProvider)
+    public V8Model(ILog log, BslMultiLineCommentDocumentationProvider commentDocumentationProvider,
+        IResourceSetProvider resourceSetProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(commentDocumentationProvider);
+        Preconditions.checkNotNull(resourceSetProvider);
         this.log = log;
         this.commentDocumentationProvider = commentDocumentationProvider;
+        this.resourceSetProvider = resourceSetProvider;
     }
 
     @Override
@@ -98,9 +98,7 @@ public class V8Model implements IV8Model
 
                     var moduleUri =
                         URI.createPlatformResourceURI(file.getFullPath().toPortableString(), true).appendFragment("/0"); //$NON-NLS-1$
-                    var resourceSetProvider = getResourceService(BmAwareResourceSetProvider.class);
-                    var resourceSet =
-                        resources.computeIfAbsent(project, curProject -> resourceSetProvider.get(curProject));
+                    var resourceSet = resourceSetProvider.getResourceSet(project);
                     if (resourceSet == null)
                     {
                         return;
@@ -344,7 +342,8 @@ public class V8Model implements IV8Model
         });
     }
 
-    private static <T> T getResourceService(Class<T> type)
+    @Override
+    public <T> T getResourceService(Class<T> type)
     {
         IResourceServiceProvider resourceServiceProvider =
             IResourceServiceProvider.Registry.INSTANCE.getResourceServiceProvider(URI.createFileURI("*.bsl")); //$NON-NLS-1$

@@ -25,6 +25,8 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.context.ContextModule;
+import org.e1c.edt.ai.context.IResourceSetProvider;
+import org.e1c.edt.ai.context.ResourceSetProvider;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import org.eclipse.jface.preference.IPreferenceStore;
 
@@ -84,6 +86,8 @@ public class AIUIModule
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IFeedbackDialog.class).to(FeedbackDialog.class);
         bind(IIssueFeedbackViewModel.class).to(IssueFeedbackViewModel.class);
+        bind(IResourceSetProvider.class).annotatedWith(BaseResourceSetProvider.class).to(ResourceSetProvider.class);
+        bind(IResourceSetProvider.class).to(CurrentEditorResourceSetProvider.class);
         // @formatter:on
     }
 
@@ -99,6 +103,14 @@ public class AIUIModule
     @Target({ FIELD, PARAMETER, METHOD })
     @Retention(RUNTIME)
     public @interface SourceMethodComments
+    {
+        //
+    }
+
+    @Qualifier
+    @Target({ FIELD, PARAMETER, METHOD })
+    @Retention(RUNTIME)
+    public @interface BaseResourceSetProvider
     {
         //
     }
