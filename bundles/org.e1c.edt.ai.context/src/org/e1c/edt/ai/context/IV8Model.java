@@ -30,7 +30,7 @@ public interface IV8Model
 {
     Optional<Module> getModule(String filePath, ICancellationToken cancellationToken);
 
-    Optional<Type> getLastType(VariableTypeStateProviderCollector typeStateProviders);
+    List<Type> getTypes(VariableTypeStateProviderCollector typeStateProviders, ICompositeNode node);
 
     List<TypeItem> getTypes(EObject eObject);
 
@@ -52,7 +52,7 @@ public interface IV8Model
 
     ICompositeNode getNode(EObject eObject);
 
-    Optional<Type> getType(FeatureAccess featureAccess);
+    List<Type> getTypes(FeatureAccess featureAccess);
 
     Optional<EObject> getMethodFeature(FeatureAccess methodAccess, ICancellationToken cancellationToken);
 

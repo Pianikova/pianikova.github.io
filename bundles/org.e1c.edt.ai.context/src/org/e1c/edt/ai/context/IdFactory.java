@@ -53,17 +53,25 @@ public class IdFactory
         if (eObject instanceof FeatureAccess)
         {
             var featureAccess = (FeatureAccess)eObject;
-            var typeOptional = v8Model.getType(featureAccess);
-            if (typeOptional.isPresent())
+            var types = v8Model.getTypes(featureAccess);
+            if (!types.isEmpty())
             {
-                var type = typeOptional.get();
-                var resource = type.eResource();
-                if (resource != null)
+                var urls = new StringBuilder();
+                for (var type : types)
                 {
-                    var uri = resource.getURI();
-                    if (uri != null)
+                    var resource = type.eResource();
+                    if (resource != null)
                     {
-                        return uri.toString();
+                        var uri = resource.getURI();
+                        if (uri != null)
+                        {
+                            if (urls.length() != 0)
+                            {
+                                urls.append(';');
+                            }
+
+                            urls.append(uri);
+                        }
                     }
                 }
             }

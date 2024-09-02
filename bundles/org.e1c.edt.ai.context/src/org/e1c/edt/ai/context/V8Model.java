@@ -154,32 +154,38 @@ public class V8Model implements IV8Model
     }
 
     @Override
-    public Optional<Type> getLastType(VariableTypeStateProviderCollector typeStateProviders)
+    public List<Type> getTypes(VariableTypeStateProviderCollector typeStateProviders, ICompositeNode node)
     {
+        var result = new ArrayList<Type>();
         if (typeStateProviders == null)
         {
-            return Optional.empty();
+            return result;
         }
 
         var typeStateProvider = typeStateProviders.get(TypeSystemMode.NORMAL);
         if (typeStateProvider == null)
         {
-            return Optional.empty();
+            return result;
         }
 
-        Type lastType = null;
         for (var state : typeStateProvider.getAll())
         {
+            var offset = state.getOffset();
+            if (offset < node.getTotalOffset() || offset > node.getTotalEndOffset())
+            {
+                continue;
+            }
+
             for (var type : state.getTypes())
             {
                 if (type instanceof Type)
                 {
-                    lastType = (Type)type;
+                    result.add((Type)type);
                 }
             }
         }
 
-        return Optional.ofNullable(lastType);
+        return result;
     }
 
     @Override
@@ -381,31 +387,28 @@ public class V8Model implements IV8Model
     }
 
     @Override
-    public Optional<Type> getType(FeatureAccess featureAccess)
+    public List<Type> getTypes(FeatureAccess featureAccess)
     {
         if (featureAccess == null)
         {
-            return Optional.empty();
+            return new ArrayList<>();
         }
 
-        return getType(featureAccess, getTypesComputer().compute(featureAccess, getEnvironments(featureAccess)));
+        return getTypes(featureAccess, getTypesComputer().compute(featureAccess, getEnvironments(featureAccess)));
     }
 
-    private Optional<Type> getType(EObject contextObject, List<TypeItem> typeItems)
+    private List<Type> getTypes(EObject contextObject, List<TypeItem> typeItems)
     {
+        var types = new ArrayList<Type>();
         for (var typeItem : typeItems)
         {
-            var type = getType(contextObject, typeItem);
-            if (type.isPresent())
-            {
-                return type;
-            }
+            fillType(contextObject, typeItem, types);
         }
 
-        return Optional.empty();
+        return types;
     }
 
-    private Optional<Type> getType(EObject contextObject, TypeItem typeItem)
+    private void fillType(EObject contextObject, TypeItem typeItem, List<Type> types)
     {
         if (typeItem instanceof Type)
         {
@@ -413,10 +416,8 @@ public class V8Model implements IV8Model
             if (type.eIsProxy())
             {
                 var proxy = (TypeItem)EcoreUtil.resolve(type, contextObject);
-                return getType(type, proxy);
+                fillType(type, proxy, types);
             }
-
-            return Optional.ofNullable(type);
         }
         else
         {
@@ -424,12 +425,10 @@ public class V8Model implements IV8Model
             {
                 if (ref instanceof Type)
                 {
-                    Optional.ofNullable((Type)ref);
+                    types.add((Type)ref);
                 }
             }
         }
-
-        return Optional.empty();
     }
 
     @Override

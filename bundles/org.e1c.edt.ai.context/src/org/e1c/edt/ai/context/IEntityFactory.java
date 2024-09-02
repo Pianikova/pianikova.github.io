@@ -26,5 +26,6 @@ public interface IEntityFactory
     Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node,
         ICancellationToken cancellationToken);
 
-    Optional<MethodEntity> createMethodEntity(Invocation invocation, ICancellationToken cancellationToken);
+    Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node,
+        ICancellationToken cancellationToken);
 }

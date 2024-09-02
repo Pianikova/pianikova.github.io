@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.context.DTO.DataType;
 import org.e1c.edt.ai.context.DTO.FormAttr;
 import org.e1c.edt.ai.context.DTO.FormBtn;
 import org.e1c.edt.ai.context.DTO.FormEntity;
@@ -44,6 +45,7 @@ import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
+import com._1c.g5.v8.dt.mcore.TypeItem;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -197,9 +199,14 @@ public class EntityFactory implements IEntityFactory
             var types = typeDescription.getTypes();
             if (types != null && !types.isEmpty())
             {
-                var type = types.get(types.size() - 1);
-                attr.type = type.getName();
-                attr.typeRu = type.getNameRu();
+                attr.types = new ArrayList<>();
+                for(var type: types)
+                {
+                    var dataType = new DataType();
+                    attr.types.add(dataType);
+                    dataType.type = type.getName();
+                    dataType.typeRu = type.getNameRu();
+                }
             }
         }
 
@@ -286,8 +293,8 @@ public class EntityFactory implements IEntityFactory
             objectEntity.comment = comment;
         }
 
-        v8Model.getLastType(variable.getTypeStateProvider())
-            .ifPresent(type -> fillType(variable, objectEntity, type, cancellationToken));
+        var types = v8Model.getTypes(variable.getTypeStateProvider(), node);
+        fillType(variable, objectEntity, types, cancellationToken);
         return Optional.of(objectEntity);
     }
 
@@ -306,14 +313,16 @@ public class EntityFactory implements IEntityFactory
             objectEntity.comment = comment;
         }
 
-        v8Model.getType(featureAccess)
-            .ifPresent(type -> fillType(featureAccess, objectEntity, type, cancellationToken));
+
+        var types = v8Model.getTypes(featureAccess);
+        fillType(featureAccess, objectEntity, types, cancellationToken);
         return Optional.of(objectEntity);
     }
 
     @Override
     @SuppressWarnings("nls")
-    public Optional<MethodEntity> createMethodEntity(Invocation invocation, ICancellationToken cancellationToken)
+    public Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node,
+        ICancellationToken cancellationToken)
     {
         var methodAccess = invocation.getMethodAccess();
         var methodAccessFeatureOptional = v8Model.getMethodFeature(methodAccess, cancellationToken);
@@ -365,10 +374,7 @@ public class EntityFactory implements IEntityFactory
                     parameters.add(parameter);
                     parameter.name = param.getName();
                     parameter.required = param.getDefaultValue() == null;
-                    v8Model.getLastType(param.getTypeStateProvider()).ifPresent(type -> {
-                        parameter.type = type.getName();
-                        parameter.typeRu = type.getNameRu();
-                    });
+                    parameter.types = createDataTypes(v8Model.getTypes(param.getTypeStateProvider(), node));
                 }
 
                 for (var pragma : method.getPragmas())
@@ -383,13 +389,7 @@ public class EntityFactory implements IEntityFactory
                 }
 
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-                if (returnTypes != null && !returnTypes.isEmpty())
-                {
-                    var returnType = returnTypes.get(0);
-                    signatureStructurized.returnType = returnType.getName();
-                    signatureStructurized.returnTypeRu = returnType.getNameRu();
-                }
-
+                signatureStructurized.returnTypes = createDataTypes2(returnTypes);
                 comment = v8Model.getComment(method);
                 structurizedComment = v8Model.getComment(method, true);
                 hasData = true;
@@ -408,14 +408,7 @@ public class EntityFactory implements IEntityFactory
                         var parameter = new Parameter();
                         parameters.add(parameter);
                         parameter.name = param.getName();
-                        var paramTypes = param.getType();
-                        if (paramTypes != null && !paramTypes.isEmpty())
-                        {
-                            var paramType = paramTypes.get(paramTypes.size() - 1);
-                            // parameter.required = param.getDefaultValue() == null;
-                            parameter.type = paramType.getName();
-                            parameter.typeRu = paramType.getNameRu();
-                        }
+                        parameter.types = createDataTypes2(param.getType());
                     }
                 }
 
@@ -431,13 +424,7 @@ public class EntityFactory implements IEntityFactory
                 }
 
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-                if (returnTypes != null && !returnTypes.isEmpty())
-                {
-                    var returnType = returnTypes.get(0);
-                    signatureStructurized.returnType = returnType.getName();
-                    signatureStructurized.returnTypeRu = returnType.getNameRu();
-                }
-
+                signatureStructurized.returnTypes = createDataTypes2(returnTypes);
                 if (method instanceof BslContextDefMethod)
                 {
                     var defMethod = (BslContextDefMethod)method;
@@ -468,14 +455,9 @@ public class EntityFactory implements IEntityFactory
                 if (target != null)
                 {
                     var types = v8Model.getTypes(target);
-                    if (types != null && !types.isEmpty())
-                    {
-                        var signatureStructurized = new SignatureStructurized();
-                        methodEntity.signatureStructurized = signatureStructurized;
-                        var type = types.get(types.size() - 1);
-                        signatureStructurized.returnType = type.getName();
-                        signatureStructurized.returnTypeRu = type.getNameRu();
-                    }
+                    var signatureStructurized = new SignatureStructurized();
+                    methodEntity.signatureStructurized = signatureStructurized;
+                    signatureStructurized.returnTypes = createDataTypes2(types);
                 }
             }
         }
@@ -488,26 +470,14 @@ public class EntityFactory implements IEntityFactory
         return Optional.of(methodEntity);
     }
 
-    private void fillType(EObject eObject, ObjectEntity objectEntity, Type type, ICancellationToken cancellationToken)
+    private void fillType(EObject eObject, ObjectEntity objectEntity, List<Type> types,
+        ICancellationToken cancellationToken)
     {
         var fields = new ArrayList<ObjectEntityField>();
+
         objectEntity.fields = fields;
-        objectEntity.type = type.getName();
-        objectEntity.typeRu = type.getNameRu();
-        var resouce = eObject.eResource();
-        if (resouce != null)
-        {
-            var types = v8Model.getTypes(eObject);
-            for (var pair : v8Model.getProperties(types, resouce))
-            {
-                for (var dynamicProp : pair.getFirst())
-                {
-                    var field = createField(dynamicProp, cancellationToken);
-                    objectEntity.fields.add(field);
-                }
-            }
-        }
-        else
+        objectEntity.types = createDataTypes(types);
+        for (var type : types)
         {
             var contexDef = type.getContextDef();
             if (contexDef != null)
@@ -519,6 +489,58 @@ public class EntityFactory implements IEntityFactory
                 }
             }
         }
+
+        var resouce = eObject.eResource();
+        if (resouce != null)
+        {
+            var typeItems = v8Model.getTypes(eObject);
+            for (var pair : v8Model.getProperties(typeItems, resouce))
+            {
+                for (var dynamicProp : pair.getFirst())
+                {
+                    var field = createField(dynamicProp, cancellationToken);
+                    objectEntity.fields.add(field);
+                }
+            }
+        }
+    }
+
+    private List<DataType> createDataTypes(List<Type> types)
+    {
+        if (types == null || types.isEmpty())
+        {
+            return null;
+        }
+
+        var dataTypes = new ArrayList<DataType>();
+        for (var type : types)
+        {
+            var dataType = new DataType();
+            dataTypes.add(dataType);
+            dataType.type = type.getName();
+            dataType.typeRu = type.getNameRu();
+        }
+
+        return dataTypes;
+    }
+
+    private List<DataType> createDataTypes2(List<TypeItem> types)
+    {
+        if (types == null || types.isEmpty())
+        {
+            return null;
+        }
+
+        var dataTypes = new ArrayList<DataType>();
+        for (var type : types)
+        {
+            var dataType = new DataType();
+            dataTypes.add(dataType);
+            dataType.type = type.getName();
+            dataType.typeRu = type.getNameRu();
+        }
+
+        return dataTypes;
     }
 
     private ObjectEntityField createField(Property prop, ICancellationToken cancellationToken)
@@ -526,25 +548,28 @@ public class EntityFactory implements IEntityFactory
         var field = new ObjectEntityField();
         field.name = prop.getName();
         var types = prop.getTypes();
+        field.types = createDataTypes2(types);
         if (types != null && !types.isEmpty())
         {
-            var propType = types.get(types.size() - 1);
-            field.type = propType.getName();
-            field.typeRu = propType.getNameRu();
-            var featureAccess = EcoreUtil2.getContainerOfType(propType, FeatureAccess.class);
-            if (featureAccess != null)
+            for (var i = 0; i < types.size(); i++)
             {
-                v8Model.getPath(featureAccess).ifPresent(path -> {
-                    v8Model.getModule(path, cancellationToken);
-                    var fieldNode = NodeModelUtils.getNode(featureAccess);
-                    field.uuid = idFactory.createNodeId(path, fieldNode);
-                });
-            }
+                var propType = types.get(i);
+                var propDataType = field.types.get(i);
+                var featureAccess = EcoreUtil2.getContainerOfType(propType, FeatureAccess.class);
+                if (featureAccess != null)
+                {
+                    v8Model.getPath(featureAccess).ifPresent(path -> {
+                        v8Model.getModule(path, cancellationToken);
+                        var fieldNode = NodeModelUtils.getNode(featureAccess);
+                        propDataType.uuid = idFactory.createNodeId(path, fieldNode);
+                    });
+                }
 
-            var comment = v8Model.getComment(featureAccess);
-            if (comment != null && !comment.isEmpty())
-            {
-                field.comment = comment;
+                var comment = v8Model.getComment(featureAccess);
+                if (comment != null && !comment.isEmpty())
+                {
+                    propDataType.comment = comment;
+                }
             }
         }
 

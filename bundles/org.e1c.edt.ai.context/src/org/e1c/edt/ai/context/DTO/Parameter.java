@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai.context.DTO;
 
-import com.google.gson.annotations.SerializedName;
+import java.util.List;
 
 public class Parameter
 {
@@ -11,8 +11,5 @@ public class Parameter
 
     public Boolean required;
 
-    public String type;
-
-    @SerializedName("type_ru")
-    public String typeRu;
+    public List<DataType> types;
 }

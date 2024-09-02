@@ -3,9 +3,8 @@
  */
 package org.e1c.edt.ai.context.DTO;
 
+import java.util.List;
 import java.util.Map;
-
-import com.google.gson.annotations.SerializedName;
 
 public class FormAttr
 {
@@ -13,8 +12,5 @@ public class FormAttr
 
     public Map<String, String> title;
 
-    public String type;
-
-    @SerializedName("type_ru")
-    public String typeRu;
+    public List<DataType> types;
 }

@@ -34,6 +34,7 @@ public class FormWalker implements IFormWalker
         Preconditions.checkNotNull(root);
         Preconditions.checkNotNull(visitor);
         var stack = new Stack<EObject>();
+        visit(stack, null, root, visitor);
         stack.push(root);
         while(stack.size() > 0)
         {

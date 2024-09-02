@@ -106,7 +106,7 @@ public class EntityInfo
                     return false;
                 }
 
-                var methodEntity = entityFactory.createMethodEntity(invocation, cancellationToken);
+                var methodEntity = entityFactory.createMethodEntity(invocation, node, cancellationToken);
                 response.method = methodEntity.orElse(null);
                 return methodEntity.isPresent();
             }
@@ -185,7 +185,7 @@ public class EntityInfo
                         return false;
                     }
 
-                    entityFactory.createMethodEntity(invocation, cancellationToken)
+                    entityFactory.createMethodEntity(invocation, node, cancellationToken)
                         .ifPresent(method -> context.relatedFunctions.add(method));
                     return false;
                 }

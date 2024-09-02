@@ -5,19 +5,18 @@ package org.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
-public class ObjectEntity
-{
-    public String name;
+import com.google.gson.annotations.SerializedName;
 
-    public List<DataType> types;
+public class DataType
+{
+    public String type;
+
+    @SerializedName("type_ru")
+    public String typeRu;
 
     public List<ObjectEntityField> fields;
 
-    public Integer start;
-
-    public Integer finish;
-
-    public String code;
+    public String uuid;
 
     public List<String> comment;
 }

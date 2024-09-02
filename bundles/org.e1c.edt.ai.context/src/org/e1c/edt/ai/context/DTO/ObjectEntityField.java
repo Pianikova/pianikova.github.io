@@ -7,13 +7,7 @@ import java.util.List;
 
 public class ObjectEntityField
 {
-    public String uuid;
-
     public String name;
 
-    public String type;
-
-    public String typeRu;
-
-    public List<String> comment;
+    public List<DataType> types;
 }

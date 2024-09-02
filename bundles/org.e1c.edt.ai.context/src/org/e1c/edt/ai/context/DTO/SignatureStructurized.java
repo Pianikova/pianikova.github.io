@@ -17,9 +17,6 @@ public class SignatureStructurized
 
     public List<Parameter> parameters;
 
-    @SerializedName("return_type")
-    public String returnType;
-
-    @SerializedName("return_type_ru")
-    public String returnTypeRu;
+    @SerializedName("return_types")
+    public List<DataType> returnTypes;
 }
