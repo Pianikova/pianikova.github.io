@@ -8,6 +8,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import org.eclipse.jface.bindings.BindingManagerEvent;
+import org.eclipse.jface.bindings.IBindingManagerListener;
 import org.eclipse.jface.bindings.keys.KeyBinding;
 import org.eclipse.jface.bindings.keys.KeyStroke;
 import org.eclipse.jface.bindings.keys.SWTKeySupport;
@@ -16,14 +18,22 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.keys.IBindingService;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
 public class HotKeys
-    implements IHotKeys
+    implements IHotKeys, IBindingManagerListener
 {
     private final HashMap<String, KeyBinding> _keyBindigs = new HashMap<>();
 
+    @Inject
+    public HotKeys()
+    {
+        var bindingService = PlatformUI.getWorkbench().getAdapter(IBindingService.class);
+        bindingService.addBindingManagerListener(this);
+    }
+
     @Override
-    public boolean isTriggered(String bindingId, KeyEvent event)
+    public synchronized boolean isTriggered(String bindingId, KeyEvent event)
     {
         Preconditions.checkNotNull(bindingId);
         Preconditions.checkNotNull(event);
@@ -48,7 +58,7 @@ public class HotKeys
     }
 
     @Override
-    public KeyBinding getBinding(String bindingId)
+    public synchronized KeyBinding getBinding(String bindingId)
     {
         var binding = _keyBindigs.get(bindingId);
         Preconditions.checkArgument(binding != null, "Cannot find binding " + bindingId); //$NON-NLS-1$
@@ -68,37 +78,48 @@ public class HotKeys
         return keyStrokes;
     }
 
-    private void ensureBindingsExists()
+    private synchronized void ensureBindingsExists()
     {
-        synchronized (_keyBindigs)
+        if (_keyBindigs.size() > 0)
         {
-            if (_keyBindigs.size() > 0)
+            return;
+        }
+
+        var bindingService = getBindingManager();
+        for (var binding : bindingService.getBindings())
+        {
+            if (!(binding instanceof KeyBinding))
             {
-                return;
+                continue;
             }
 
-            var bindingService = PlatformUI.getWorkbench().getAdapter(IBindingService.class);
-            for (var binding : bindingService.getBindings())
+            var command = binding.getParameterizedCommand();
+            if (command == null)
             {
-                if (!(binding instanceof KeyBinding))
-                {
-                    continue;
-                }
-
-                var command = binding.getParameterizedCommand();
-                if (command == null)
-                {
-                    continue;
-                }
-
-                var id = command.getId();
-                if (id == null || !id.startsWith(PREFIX))
-                {
-                    continue;
-                }
-
-                _keyBindigs.put(id, (KeyBinding)binding);
+                continue;
             }
+
+            var id = command.getId();
+            if (id == null || !id.startsWith(PREFIX))
+            {
+                continue;
+            }
+
+            _keyBindigs.put(id, (KeyBinding)binding);
+        }
+    }
+
+    private IBindingService getBindingManager()
+    {
+        return PlatformUI.getWorkbench().getAdapter(IBindingService.class);
+    }
+
+    @Override
+    public synchronized void bindingManagerChanged(BindingManagerEvent event)
+    {
+        if (event.isSchemeChanged())
+        {
+            _keyBindigs.clear();
         }
     }
 }
