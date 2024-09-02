@@ -10,6 +10,7 @@ import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.dt.form.model.Addition;
+import com._1c.g5.v8.dt.form.model.Button;
 import com._1c.g5.v8.dt.form.model.CommandBarHolder;
 import com._1c.g5.v8.dt.form.model.ContextMenuHolder;
 import com._1c.g5.v8.dt.form.model.Decoration;
@@ -33,7 +34,7 @@ public class FormWalker implements IFormWalker
         Preconditions.checkNotNull(root);
         Preconditions.checkNotNull(visitor);
         var stack = new Stack<EObject>();
-        visit(stack, null, root, visitor);
+        stack.push(root);
         while(stack.size() > 0)
         {
             if (cancellationToken.isCanceled())
@@ -49,8 +50,6 @@ public class FormWalker implements IFormWalker
                 {
                     visit(stack, parent, item, visitor);
                 }
-
-                continue;
             }
 
             if (parent instanceof FieldSource)
@@ -61,42 +60,36 @@ public class FormWalker implements IFormWalker
                     visit(stack, parent, item, visitor);
                 }
 
-                continue;
             }
 
             if (parent instanceof CommandBarHolder)
             {
                 var holder = (CommandBarHolder)parent;
                 visit(stack, parent, holder.getAutoCommandBar(), visitor);
-                continue;
             }
 
             if (parent instanceof ContextMenuHolder)
             {
                 var holder = (ContextMenuHolder)parent;
                 visit(stack, parent, holder.getContextMenu(), visitor);
-                continue;
             }
 
             if (parent instanceof ExtendedTooltipHolder)
             {
                 var holder = (ExtendedTooltipHolder)parent;
                 visit(stack, parent, holder.getExtendedTooltip(), visitor);
-                continue;
             }
 
             if (parent instanceof ExtendedTooltipHolder)
             {
                 var holder = (ExtendedTooltipHolder)parent;
                 visit(stack, parent, holder.getExtendedTooltip(), visitor);
-                continue;
             }
 
             if (parent instanceof TableHolder)
             {
                 var holder = (TableHolder)parent;
                 visit(stack, parent, holder.getAutoTable(), visitor);
-                continue;
             }
         }
     }
@@ -122,10 +115,17 @@ public class FormWalker implements IFormWalker
             visitor.visitField(Optional.ofNullable(parent), field);
         }
 
+        if (item instanceof Button)
+        {
+            var button = (Button)item;
+            visitor.visitButton(Optional.ofNullable(parent), button);
+        }
+
         if (item instanceof Table)
         {
             var table = (Table)item;
             visitor.visitTable(Optional.ofNullable(parent), table);
+            return;
         }
 
         if (item instanceof Addition)

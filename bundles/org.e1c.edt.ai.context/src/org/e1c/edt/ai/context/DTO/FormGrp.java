@@ -20,4 +20,6 @@ public class FormGrp
 
     @SerializedName("tool_tip")
     public Map<String, String> toolTip;
+
+    public List<FormBtn> buttons;
 }

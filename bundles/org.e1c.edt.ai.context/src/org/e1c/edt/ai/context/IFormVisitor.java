@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.dt.form.model.Addition;
+import com._1c.g5.v8.dt.form.model.Button;
 import com._1c.g5.v8.dt.form.model.Decoration;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormField;
@@ -21,6 +22,8 @@ public interface IFormVisitor
     void visitFormField(Optional<EObject> parent, FormField field);
 
     void visitField(Optional<EObject> parent, Field field);
+
+    void visitButton(Optional<EObject> parent, Button button);
 
     void visitTable(Optional<EObject> parent, Table table);
 

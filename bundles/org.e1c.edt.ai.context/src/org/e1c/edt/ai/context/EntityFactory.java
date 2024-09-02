@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.context.DTO.FormAttr;
+import org.e1c.edt.ai.context.DTO.FormBtn;
 import org.e1c.edt.ai.context.DTO.FormEntity;
 import org.e1c.edt.ai.context.DTO.FormFld;
 import org.e1c.edt.ai.context.DTO.FormGrp;
@@ -32,6 +33,7 @@ import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.form.model.Addition;
+import com._1c.g5.v8.dt.form.model.Button;
 import com._1c.g5.v8.dt.form.model.Decoration;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
@@ -83,6 +85,12 @@ public class EntityFactory implements IEntityFactory
             public void visitField(Optional<EObject> parent, Field field)
             {
                 //
+            }
+
+            @Override
+            public void visitButton(Optional<EObject> parent, Button button)
+            {
+                parent.map(p -> groups.get(p)).ifPresent(group -> addButton(group, createButton(button)));
             }
 
             @Override
@@ -163,6 +171,16 @@ public class EntityFactory implements IEntityFactory
         group.fields.add(field);
     }
 
+    private void addButton(FormGrp group, FormBtn button)
+    {
+        if (group.buttons == null)
+        {
+            group.buttons = new ArrayList<>();
+        }
+
+        group.buttons.add(button);
+    }
+
     private FormAttr createAttribute(FormAttribute attribute)
     {
         var attr = new FormAttr();
@@ -202,11 +220,12 @@ public class EntityFactory implements IEntityFactory
         var dataPath = field.getDataPath();
         if (dataPath != null)
         {
-            fld.dataPth = dataPath.toString();
-            if (fiedType != null)
-            {
-                fld.fieldType = fiedType.getName();
-            }
+            fld.dataPath = dataPath.toString();
+        }
+
+        if (fiedType != null)
+        {
+            fld.fieldType = fiedType.getName();
         }
 
         return fld;
@@ -229,6 +248,27 @@ public class EntityFactory implements IEntityFactory
         }
 
         return node;
+    }
+
+    private FormBtn createButton(Button button)
+    {
+        var btn = new FormBtn();
+        btn.name = button.getName();
+        var title = button.getTitle();
+        if (title != null && !title.isEmpty())
+        {
+            btn.title = title.map();
+        }
+
+        var dataPath = button.getDataPath();
+        if (dataPath != null)
+        {
+            btn.dataPath = dataPath.toString();
+        }
+
+        button.getCommandName();
+        // button.getCommandName()
+        return btn;
     }
 
     @Override
