@@ -205,7 +205,7 @@ public class EntityFactory implements IEntityFactory
             fld.dataPth = dataPath.toString();
             if (fiedType != null)
             {
-                fld.fiedType = fiedType.getName();
+                fld.fieldType = fiedType.getName();
             }
         }
 

@@ -11,7 +11,8 @@ public class FormFld
 {
     public String name;
 
-    public String fiedType;
+    @SerializedName("field_type")
+    public String fieldType;
 
     @SerializedName("tool_tip")
     public Map<String, String> toolTip;
