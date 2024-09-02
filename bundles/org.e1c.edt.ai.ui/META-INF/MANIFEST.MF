@@ -25,6 +25,7 @@ Require-Bundle: com.google.inject;bundle-version="[5.0.1,6.0.0)",
  org.apache.commons.lang;bundle-version="2.6.0",
  com._1c.g5.v8.dt.bsl.model;bundle-version="11.1.100",
  com._1c.g5.v8.dt.mcore;bundle-version="8.2.0",
- com._1c.g5.v8.dt.bsl.comment;bundle-version="4.0.200"
+ com._1c.g5.v8.dt.bsl.comment;bundle-version="4.0.200",
+ org.eclipse.osgi
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Automatic-Module-Name: org.e1c.edt.ai.ui

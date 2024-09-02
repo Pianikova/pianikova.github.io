@@ -28,11 +28,14 @@ public class PluginStartup
     public PluginStartup()
     {
         Activator.injectMembers(this);
+        var activator = Activator.getDefault();
+        activator.trace("Plugin version: " + activator.getPluginVersion().get().toString(), ""); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Override
     public void earlyStartup()
     {
+
         PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable()
         {
             @Override

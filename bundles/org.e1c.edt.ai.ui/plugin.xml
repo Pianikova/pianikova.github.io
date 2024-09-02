@@ -161,9 +161,14 @@
                 commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai">
         </handler>
         <handler
+              class="org.e1c.edt.ai.ui.handlers.StatusHandler"
+              commandId="org.e1c.edt.ai.ui.statusIndicator">
+        </handler>        
+        <handler
                 class="org.e1c.edt.ai.ui.handlers.FeedbackAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.feedback.ai">
         </handler>
+
     </extension>
 
     <extension
@@ -230,6 +235,16 @@
                 </separator>
             </menu>
         </menuContribution>
+        <menuContribution
+            locationURI="toolbar:org.eclipse.ui.trim.status">
+         <toolbar
+               id="org.e1c.edt.ai.ui.statusBar">
+            <control
+                  class="org.e1c.edt.ai.ui.StatusBarControl"
+                  id="org.e1c.edt.ai.ui.status">
+            </control>
+         </toolbar>
+      </menuContribution>
         
     </extension>
     
@@ -254,6 +269,6 @@
         <initializer
                 class="org.e1c.edt.ai.ui.preferences.ClientAIPreferencePageInitializer">
         </initializer>
-    </extension>    
+    </extension>
 
 </plugin>

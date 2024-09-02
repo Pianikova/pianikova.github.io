@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.util.Optional;
+
 import org.e1c.edt.ai.ILog;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -11,7 +13,9 @@ import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.resource.ResourceLocator;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.Version;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -25,7 +29,7 @@ import com.google.inject.Injector;
  */
 public class Activator
     extends AbstractUIPlugin
-    implements ILog
+    implements ILog, IPluginVersion
 {
     public static final String PLUGIN_ID = "org.e1c.edt.ai.ui.plugin.ui"; //$NON-NLS-1$
 
@@ -264,5 +268,12 @@ public class Activator
         }
 
         return injector;
+    }
+
+    @Override
+    public Optional<Version> getPluginVersion()
+    {
+        Bundle bundle = getDefault().getBundle();
+        return Optional.ofNullable(bundle.getVersion());
     }
 }

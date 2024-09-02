@@ -3,10 +3,12 @@
  */
 package org.e1c.edt.ai;
 
+import org.e1c.edt.ai.assistent.CheckStatusService;
 import org.e1c.edt.ai.assistent.CodeAssistant;
 import org.e1c.edt.ai.assistent.FeedbackService;
 import org.e1c.edt.ai.assistent.HttpClientBuilder;
 import org.e1c.edt.ai.assistent.HttpLog;
+import org.e1c.edt.ai.assistent.ICheckStatusService;
 import org.e1c.edt.ai.assistent.ICodeAssistant;
 import org.e1c.edt.ai.assistent.IFeedbackService;
 import org.e1c.edt.ai.assistent.IHttpClientBuilder;
@@ -71,6 +73,7 @@ public class AIModule
         bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
         bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
         bind(IParametersService.class).to(ParametersService.class).in(Singleton.class);
+        bind(ICheckStatusService.class).to(CheckStatusService.class).in(Singleton.class);
         bind(new TypeLiteral<IResponseCache<Parameters>>() { /**/ }).to(new TypeLiteral<ResponseCache<Parameters>>() { /**/ });
         bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
         bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });

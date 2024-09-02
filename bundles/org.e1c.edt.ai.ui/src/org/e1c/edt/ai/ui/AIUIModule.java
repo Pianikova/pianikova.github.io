@@ -52,6 +52,7 @@ public class AIUIModule
         // @formatter:off
         install(new AIModule());
         bind(ILog.class).toInstance(activator);
+        bind(IPluginVersion.class).toInstance(activator);
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);

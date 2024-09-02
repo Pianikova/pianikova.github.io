@@ -14,6 +14,7 @@ public class Messages
     extends NLS
 {
     private static final String BUNDLE_NAME = "org.e1c.edt.ai.ui.messages"; //$NON-NLS-1$
+    public static String AIName;
     public static String CodeCompletionJobName;
     public static String ChatInteractionJobName;
     public static String FeedbackDialogBoxTitle;
