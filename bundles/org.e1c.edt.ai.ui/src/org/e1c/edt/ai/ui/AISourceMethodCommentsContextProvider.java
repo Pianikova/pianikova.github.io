@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextInitializer;
+import org.e1c.edt.ai.context.CodePart;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com.google.common.base.Preconditions;

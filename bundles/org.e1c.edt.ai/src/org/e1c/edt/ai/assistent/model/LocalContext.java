@@ -21,5 +21,8 @@ public class LocalContext
     @SerializedName("related_functions")
     public List<Object> relatedFunctions;
 
+    @SerializedName("local_functions")
+    public List<Object> localFunctions;
+
     public Object form;
 }

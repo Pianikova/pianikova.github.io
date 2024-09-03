@@ -18,6 +18,7 @@ import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
+import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.form.model.Form;
 import com.google.common.base.Preconditions;
@@ -110,6 +111,13 @@ public class EntityInfo
                 response.method = methodEntity.orElse(null);
                 return methodEntity.isPresent();
             }
+
+            @Override
+            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+            {
+                // TODO Auto-generated method stub
+                return false;
+            }
         }, cancellationToken);
 
         if (!result)
@@ -134,6 +142,7 @@ public class EntityInfo
             var finish = aiContext.getFinish();
             context.relatedObjects = new ArrayList<>();
             context.relatedFunctions = new ArrayList<>();
+            context.localFunctions = new ArrayList<>();
             var uuids = new HashSet<String>();
             entitiesWalker.walk(filePath, start, finish, new IEntityVisitor()
             {
@@ -187,6 +196,13 @@ public class EntityInfo
 
                     entityFactory.createMethodEntity(invocation, node, cancellationToken)
                         .ifPresent(method -> context.relatedFunctions.add(method));
+                    return false;
+                }
+
+                @Override
+                public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+                {
+                    // TODO Auto-generated method stub
                     return false;
                 }
             }, cancellationToken);

@@ -8,6 +8,7 @@ import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
+import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.form.model.Form;
 import com.google.common.base.Preconditions;
@@ -54,7 +55,8 @@ public class EntitiesWalker
             }
 
             var obj = contentsIterator.next();
-            if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess)
+            if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
+                || obj instanceof Method)
             {
                 var node = v8Model.getNode(obj);
                 var nodeStart = node.getTotalOffset();
@@ -84,6 +86,12 @@ public class EntitiesWalker
                 }
 
                 if (obj instanceof FeatureAccess && visitor.visitFeatureAccess(nodeId, (FeatureAccess)obj, node))
+                {
+                    traceVisit(obj, true);
+                    return true;
+                }
+
+                if (obj instanceof Method && visitor.visitMethod(nodeId, (Method)obj, node))
                 {
                     traceVisit(obj, true);
                     return true;

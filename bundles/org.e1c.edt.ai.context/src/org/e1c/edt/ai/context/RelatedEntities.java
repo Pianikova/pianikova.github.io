@@ -61,6 +61,7 @@ public class RelatedEntities implements IRelatedEntities
         var response = new RelatedEntitiesResponse();
         response.relatedObjects = new ArrayList<>();
         response.relatedFunctions = new ArrayList<>();
+        response.localFunctions = new ArrayList<>();
         var entities = new HashSet<Entity>();
         var result = entitiesWalker.walk(request.path, request.start, request.finish, new IEntityVisitor()
         {
@@ -130,7 +131,49 @@ public class RelatedEntities implements IRelatedEntities
                 traceEntity("function", entity, invocation, node);
                 return false;
             }
+
+            @Override
+            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+            {
+                return false;
+            }
         }, cancellationToken);
+
+        entitiesWalker.walk(request.path, 0, Integer.MAX_VALUE, new IEntityVisitor()
+        {
+            @Override
+            public void visitForm(Form form)
+            {
+                //
+            }
+
+            @Override
+            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
+            {
+                return false;
+            }
+
+            @Override
+            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
+            {
+                return false;
+            }
+
+            @Override
+            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
+            {
+                return false;
+            }
+
+            @Override
+            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+            {
+                entityFactory.createMethodEntity(method, node, cancellationToken)
+                    .ifPresent(i -> response.localFunctions.add(i));
+                return false;
+            }
+        }, cancellationToken);
+
 
         if (!result)
         {

@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai.context.DTO;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import org.e1c.edt.ai.context.Entity;
 
@@ -12,10 +12,13 @@ import com.google.gson.annotations.SerializedName;
 public class RelatedEntitiesResponse
 {
     @SerializedName("related_objects")
-    public ArrayList<Entity> relatedObjects;
+    public List<Entity> relatedObjects;
 
     @SerializedName("related_functions")
-    public ArrayList<Entity> relatedFunctions;
+    public List<Entity> relatedFunctions;
+
+    @SerializedName("local_functions")
+    public List<MethodEntity> localFunctions;
 
     public FormEntity form;
 }

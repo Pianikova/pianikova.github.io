@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.context.DTO.DataType;
 import org.e1c.edt.ai.context.DTO.FormAttr;
 import org.e1c.edt.ai.context.DTO.FormBtn;
@@ -25,7 +27,6 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
-import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
 import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
@@ -55,18 +56,22 @@ public class EntityFactory implements IEntityFactory
     private final IIdFactory idFactory;
     private final ICommentFactory commentFactory;
     private final IFormWalker formWalker;
+    private final ICodePartsProvider codePartsProvider;
 
     @Inject
-    public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory, IFormWalker formWalker)
+    public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory, IFormWalker formWalker,
+        ICodePartsProvider codePartsProvider)
     {
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
         Preconditions.checkNotNull(commentFactory);
         Preconditions.checkNotNull(formWalker);
+        Preconditions.checkNotNull(codePartsProvider);
         this.v8Model = v8Model;
         this.idFactory = idFactory;
         this.commentFactory = commentFactory;
         this.formWalker = formWalker;
+        this.codePartsProvider = codePartsProvider;
     }
 
     @Override
@@ -320,7 +325,6 @@ public class EntityFactory implements IEntityFactory
     }
 
     @Override
-    @SuppressWarnings("nls")
     public Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node,
         ICancellationToken cancellationToken)
     {
@@ -332,8 +336,6 @@ public class EntityFactory implements IEntityFactory
         });
 
         var hasData = false;
-        List<String> comment = null;
-        BslDocumentationComment structurizedComment = null;
         if (methodAccessFeatureOptional.isPresent())
         {
             var methodAccessFeature = methodAccessFeatureOptional.get();
@@ -349,49 +351,9 @@ public class EntityFactory implements IEntityFactory
             {
                 var method = (Method)methodAccessFeature;
                 var methodNode = NodeModelUtils.getNode(methodAccessFeature);
-                methodEntity.name = method.getName();
-                methodEntity.start = methodNode.getTotalOffset();
-                methodEntity.finish = methodNode.getTotalEndOffset();
-                methodEntity.code = methodNode.getText();
-                if (methodEntity.path != null)
-                {
-                    methodEntity.uuid = idFactory.createNodeId(methodEntity.path, methodNode);
-                }
-
-                if (method.isAsync())
-                {
-                    attributes.add("Async");
-                }
-
-                if (method.isExport())
-                {
-                    attributes.add("Export");
-                }
-
-                for (var param : method.getFormalParams())
-                {
-                    var parameter = new Parameter();
-                    parameters.add(parameter);
-                    parameter.name = param.getName();
-                    parameter.required = param.getDefaultValue() == null;
-                    parameter.types = createDataTypes(v8Model.getTypes(param.getTypeStateProvider(), node));
-                }
-
-                for (var pragma : method.getPragmas())
-                {
-                    preprocess.add(pragma.getSymbol());
-                }
-
-                var region = EcoreUtil2.getContainerOfType(method, RegionPreprocessorDeclareStatement.class);
-                if (region != null)
-                {
-                    methodEntity.area = region.getName();
-                }
-
+                fillMethod(methodEntity, method, methodNode, node);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypes2(returnTypes);
-                comment = v8Model.getComment(method);
-                structurizedComment = v8Model.getComment(method, true);
                 hasData = true;
             }
 
@@ -428,22 +390,12 @@ public class EntityFactory implements IEntityFactory
                 if (method instanceof BslContextDefMethod)
                 {
                     var defMethod = (BslContextDefMethod)method;
-                    comment = defMethod.getCommentLines();
-                    structurizedComment = v8Model.getComment(defMethod, true);
+                    methodEntity.comment = defMethod.getCommentLines();
+                    methodEntity.structurizedСomment = commentFactory.create(v8Model.getComment(defMethod, true));
                 }
 
                 hasData = true;
             }
-        }
-
-        if (comment != null && !comment.isEmpty())
-        {
-            methodEntity.comment = comment;
-        }
-
-        if (structurizedComment != null)
-        {
-            methodEntity.structurizedСomment = commentFactory.create(structurizedComment);
         }
 
         if (methodEntity.signatureStructurized == null)
@@ -468,6 +420,88 @@ public class EntityFactory implements IEntityFactory
         }
 
         return Optional.of(methodEntity);
+    }
+
+    @Override
+    public Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node,
+        ICancellationToken cancellationToken)
+    {
+        var methodEntity = new MethodEntity();
+        var signatureStructurized = new SignatureStructurized();
+        methodEntity.signatureStructurized = signatureStructurized;
+        var preprocess = new ArrayList<String>();
+        signatureStructurized.preprocess = preprocess;
+        var parameters = new ArrayList<Parameter>();
+        signatureStructurized.parameters = parameters;
+        var attributes = new ArrayList<String>();
+        signatureStructurized.attributes = attributes;
+        fillMethod(methodEntity, method, node, node);
+        var returnTypes = v8Model.getTypesComputer().compute(method, v8Model.getEnvironments(method));
+        signatureStructurized.returnTypes = createDataTypes2(returnTypes);
+        return Optional.of(methodEntity);
+    }
+
+    @SuppressWarnings("nls")
+    private void fillMethod(MethodEntity methodEntity, Method method, ICompositeNode methodNode, ICompositeNode node)
+    {
+        methodEntity.name = method.getName();
+        methodEntity.start = methodNode.getTotalOffset();
+        methodEntity.finish = methodNode.getTotalEndOffset();
+        methodEntity.code = methodNode.getText();
+        var signatureParts = codePartsProvider.getParts(methodNode)
+            .filter(i -> i.getLocation() == CursorLocation.FunctionName
+                || i.getLocation() == CursorLocation.FunctionArguments)
+            .map(i -> i.getText())
+            .collect(Collectors.toList());
+        var signature = new StringBuilder();
+        for (var signaturePart : signatureParts)
+        {
+            signature.append(signaturePart);
+        }
+
+        var signatureStr = signature.toString().trim();
+        if (!signatureStr.isBlank())
+        {
+            methodEntity.signatureStr = signatureStr;
+        }
+
+        if (methodEntity.path != null)
+        {
+            methodEntity.uuid = idFactory.createNodeId(methodEntity.path, methodNode);
+        }
+
+        if (method.isAsync())
+        {
+            methodEntity.signatureStructurized.attributes.add("Async");
+        }
+
+        if (method.isExport())
+        {
+            methodEntity.signatureStructurized.attributes.add("Export");
+        }
+
+        for (var param : method.getFormalParams())
+        {
+            var parameter = new Parameter();
+            methodEntity.signatureStructurized.parameters.add(parameter);
+            parameter.name = param.getName();
+            parameter.required = param.getDefaultValue() == null;
+            parameter.types = createDataTypes(v8Model.getTypes(param.getTypeStateProvider(), node));
+        }
+
+        for (var pragma : method.getPragmas())
+        {
+            methodEntity.signatureStructurized.preprocess.add(pragma.getSymbol());
+        }
+
+        var region = EcoreUtil2.getContainerOfType(method, RegionPreprocessorDeclareStatement.class);
+        if (region != null)
+        {
+            methodEntity.area = region.getName();
+        }
+
+        methodEntity.comment = v8Model.getComment(method);
+        methodEntity.structurizedСomment = commentFactory.create(v8Model.getComment(method, true));
     }
 
     private void fillType(EObject eObject, ObjectEntity objectEntity, List<Type> types,

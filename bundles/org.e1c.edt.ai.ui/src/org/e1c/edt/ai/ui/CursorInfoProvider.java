@@ -9,6 +9,7 @@ import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.Range;
 import org.e1c.edt.ai.assistent.model.CursorInfo;
 import org.e1c.edt.ai.assistent.model.RelativeLocation;
+import org.e1c.edt.ai.context.ICodePartsProvider;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.ui.editor.XtextSourceViewer;
