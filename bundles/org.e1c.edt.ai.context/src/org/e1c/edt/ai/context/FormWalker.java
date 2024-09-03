@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Stack;
 
@@ -33,8 +34,9 @@ public class FormWalker implements IFormWalker
     {
         Preconditions.checkNotNull(root);
         Preconditions.checkNotNull(visitor);
+        var items = new HashSet<EObject>();
         var stack = new Stack<EObject>();
-        visit(stack, null, root, visitor);
+        visit(stack, null, root, visitor, items);
         stack.push(root);
         while(stack.size() > 0)
         {
@@ -49,7 +51,7 @@ public class FormWalker implements IFormWalker
                 var container = (FormItemContainer)parent;
                 for (var item : container.getItems())
                 {
-                    visit(stack, parent, item, visitor);
+                    visit(stack, parent, item, visitor, items);
                 }
             }
 
@@ -58,7 +60,7 @@ public class FormWalker implements IFormWalker
                 var fieldSource = (FieldSource)parent;
                 for (var item : fieldSource.getFields())
                 {
-                    visit(stack, parent, item, visitor);
+                    visit(stack, parent, item, visitor, items);
                 }
 
             }
@@ -66,38 +68,38 @@ public class FormWalker implements IFormWalker
             if (parent instanceof CommandBarHolder)
             {
                 var holder = (CommandBarHolder)parent;
-                visit(stack, parent, holder.getAutoCommandBar(), visitor);
+                visit(stack, parent, holder.getAutoCommandBar(), visitor, items);
             }
 
             if (parent instanceof ContextMenuHolder)
             {
                 var holder = (ContextMenuHolder)parent;
-                visit(stack, parent, holder.getContextMenu(), visitor);
+                visit(stack, parent, holder.getContextMenu(), visitor, items);
             }
 
             if (parent instanceof ExtendedTooltipHolder)
             {
                 var holder = (ExtendedTooltipHolder)parent;
-                visit(stack, parent, holder.getExtendedTooltip(), visitor);
-            }
-
-            if (parent instanceof ExtendedTooltipHolder)
-            {
-                var holder = (ExtendedTooltipHolder)parent;
-                visit(stack, parent, holder.getExtendedTooltip(), visitor);
+                visit(stack, parent, holder.getExtendedTooltip(), visitor, items);
             }
 
             if (parent instanceof TableHolder)
             {
                 var holder = (TableHolder)parent;
-                visit(stack, parent, holder.getAutoTable(), visitor);
+                visit(stack, parent, holder.getAutoTable(), visitor, items);
             }
         }
     }
 
-    private void visit(final Stack<EObject> stack, final EObject parent, final EObject item, final IFormVisitor visitor)
+    private void visit(final Stack<EObject> stack, final EObject parent, final EObject item, final IFormVisitor visitor,
+        HashSet<EObject> items)
     {
         if (item == null)
+        {
+            return;
+        }
+
+        if (!items.add(item))
         {
             return;
         }
