@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.context.CodePart;
 import org.eclipse.xtext.parser.IParseResult;
 import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 

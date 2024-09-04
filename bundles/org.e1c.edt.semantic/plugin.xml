@@ -10,14 +10,14 @@
       </category>
       <command
             categoryId="org.e1c.edt.semantic.commands.category"
-            name="Activate"
+            name="Activate/Deactivate"
             id="org.e1c.edt.semantic.commands.activateCommand">
       </command>
    </extension>
    <extension
          point="org.eclipse.ui.handlers">
       <handler
-            class="org.e1c.edt.semantic.handlers.SampleHandler"
+            class="org.e1c.edt.semantic.handlers.ActivateHandler"
             commandId="org.e1c.edt.semantic.commands.activateCommand">
       </handler>
    </extension>
@@ -37,25 +37,13 @@
          <menu
                id="org.e1c.edt.semantic.menus.semanticEndpointMenu"
                label="Semantic Endpoint"
-               mnemonic="M">
+               mnemonic="S">
             <command
                   commandId="org.e1c.edt.semantic.commands.activateCommand"
                   id="org.e1c.edt.semantic.menus.activateCommand"
                   mnemonic="A">
             </command>
          </menu>
-      </menuContribution>
-      <menuContribution
-            locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
-         <toolbar
-               id="org.e1c.edt.semantic.toolbars.sampleToolbar">
-            <command
-                  id="org.e1c.edt.semantic.toolbars.activateCommand"
-                  commandId="org.e1c.edt.semantic.commands.activateCommand"
-                  icon="icons/sample.png"
-                  tooltip="Activate Semantic Endpoint">
-            </command>
-         </toolbar>
       </menuContribution>
    </extension>
 

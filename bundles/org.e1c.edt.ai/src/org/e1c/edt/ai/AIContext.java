@@ -14,9 +14,12 @@ public class AIContext
     private final String text;
     private final String prefix;
     private final String sufix;
+    private final int start;
+    private final int finish;
 
-    public AIContext(String source, int sourceOffset, String path, String text, int textOffset, String prefix,
-        String sufix)
+    public AIContext(String source, int sourceOffset, String path, String text, int textOffset,
+        String prefix,
+        String sufix, int start, int finish)
     {
         Preconditions.checkNotNull(source);
         Preconditions.checkArgument(sourceOffset >= 0);
@@ -32,11 +35,13 @@ public class AIContext
         this.text = text;
         this.prefix = prefix;
         this.sufix = sufix;
+        this.start = start;
+        this.finish = finish;
     }
 
     public AIContext(String source, int sourceOffset, String path, String text, int textOffset)
     {
-        this(source, sourceOffset, path, text, textOffset, "", ""); //$NON-NLS-1$//$NON-NLS-2$
+        this(source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
     }
 
     public String getSource()
@@ -74,6 +79,16 @@ public class AIContext
         return sufix;
     }
 
+    public int getStart()
+    {
+        return start;
+    }
+
+    public int getFinish()
+    {
+        return finish;
+    }
+
     @Override
     public String toString()
     {
@@ -85,6 +100,14 @@ public class AIContext
 
         str.append("cursorOffset:"); //$NON-NLS-1$
         str.append(textOffset);
+        str.append(System.lineSeparator());
+
+        str.append("start:"); //$NON-NLS-1$
+        str.append(getStart());
+        str.append(System.lineSeparator());
+
+        str.append("finish:"); //$NON-NLS-1$
+        str.append(getFinish());
         str.append(System.lineSeparator());
 
         var textWithCursor = text.substring(0, textOffset) + "█" + text.substring(textOffset); //$NON-NLS-1$

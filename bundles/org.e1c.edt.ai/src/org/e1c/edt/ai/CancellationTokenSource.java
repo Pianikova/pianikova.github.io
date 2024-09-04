@@ -16,7 +16,7 @@ public class CancellationTokenSource
     private final Object lock = new Object();
     private final ArrayList<Runnable> attached = new ArrayList<>();
     private boolean cancelled;
-    private String name = "";
+    private String name = ""; //$NON-NLS-1$
 
     @Override
     public Boolean isCanceled()

@@ -32,7 +32,8 @@ public class ContextInitializer
         if (text.isEmpty())
         {
             return Optional
-                .of(new AIContext(ctx.getSource(), ctx.getSourceOffset(), ctx.getPath(), text, ctx.getTextOffset()));
+                .of(new AIContext(ctx.getSource(), ctx.getSourceOffset(), ctx.getPath(), text,
+                    ctx.getTextOffset()));
         }
 
         var source = ctx.getSource();
@@ -52,6 +53,7 @@ public class ContextInitializer
         var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
         var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
         return Optional
-            .of(new AIContext(source, sourceOffset, ctx.getPath(), text, offset, prefix, sufix));
+            .of(new AIContext(source, sourceOffset, ctx.getPath(), text, offset, prefix, sufix,
+                sourceOffset - parts.getPrefix().getLength(), sourceOffset + parts.getSufix().getLength()));
     }
 }

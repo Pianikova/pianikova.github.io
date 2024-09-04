@@ -15,6 +15,7 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
@@ -37,13 +38,14 @@ public class CodeAssistant
     private final IJson json;
     private final ISessionService sessionService;
     private final IResponseStreamProcessor responseStreamProcessor;
+    private final IContextEntities contextEntities;
 
     @Inject
     public CodeAssistant(IHttpLog log,
         IRequestBuilder requestBuilder,
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
-        IResponseStreamProcessor responseStreamProcessor)
+        IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -51,12 +53,14 @@ public class CodeAssistant
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(responseStreamProcessor);
+        Preconditions.checkNotNull(contextEntities);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
         this.json = json;
         this.sessionService = sessionService;
         this.responseStreamProcessor = responseStreamProcessor;
+        this.contextEntities = contextEntities;
     }
 
     @Override
@@ -96,6 +100,7 @@ public class CodeAssistant
         localContext.path = aiContext.getPath();
         localContext.prefix = aiContext.getPrefix();
         localContext.suffix = aiContext.getSufix();
+        contextEntities.fill(aiContext, localContext, cancellationToken);
 
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;
