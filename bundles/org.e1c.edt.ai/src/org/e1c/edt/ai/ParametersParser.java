@@ -68,6 +68,12 @@ public class ParametersParser
 
         names.remove(parse(properties, "suffix_length", validationResult,
             val -> parameters.suffixLength = Integer.parseInt(val)));
+        
+        names.remove(parse(properties, "form_length", validationResult,
+            val -> parameters.formLength = Integer.parseInt(val)));
+        
+        names.remove(parse(properties, "meta_length", validationResult,
+            val -> parameters.metaLength = Integer.parseInt(val)));
 
         names.remove(
             parse(properties, "best_of", validationResult, val -> parameters.bestOf = Integer.parseInt(val)));

@@ -16,6 +16,12 @@ public class Parameters
     @SerializedName("suffix_length")
     public Integer suffixLength;
 
+    @SerializedName("form_length")
+    public Integer formLength;
+
+    @SerializedName("meta_length")
+    public Integer metaLength;
+
     @SerializedName("best_of")
     public Integer bestOf;
 
@@ -83,6 +89,16 @@ public class Parameters
         if (params.suffixLength != null)
         {
             suffixLength = params.suffixLength;
+        }
+
+        if (params.formLength != null)
+        {
+            formLength = params.formLength;
+        }
+
+        if (params.metaLength != null)
+        {
+            metaLength = params.metaLength;
         }
 
         if (params.bestOf != null)
@@ -201,9 +217,9 @@ public class Parameters
     @Override
     public int hashCode()
     {
-        return Objects.hash(bestOf, decoderInputDetails, details, doSample, frequencyPenalty, maxNewTokens,
-            repetitionPenalty, returnFullText, seed, stop, temperature, topK, topNTokens, topP, truncate, typicalP,
-            watermark, tokenHealing, returnLine, trimStop, chatUrl);
+        return Objects.hash(bestOf, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
+            maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
+            suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark);
     }
 
     @Override
@@ -216,17 +232,19 @@ public class Parameters
         if (getClass() != obj.getClass())
             return false;
         Parameters other = (Parameters)obj;
-        return Objects.equals(bestOf, other.bestOf) && Objects.equals(decoderInputDetails, other.decoderInputDetails)
-            && Objects.equals(details, other.details) && Objects.equals(doSample, other.doSample)
+        return Objects.equals(bestOf, other.bestOf) && Objects.equals(chatUrl, other.chatUrl)
+            && Objects.equals(decoderInputDetails, other.decoderInputDetails) && Objects.equals(details, other.details)
+            && Objects.equals(doSample, other.doSample) && Objects.equals(formLength, other.formLength)
             && Objects.equals(frequencyPenalty, other.frequencyPenalty)
-            && Objects.equals(maxNewTokens, other.maxNewTokens)
-            && Objects.equals(repetitionPenalty, other.repetitionPenalty) && returnFullText == other.returnFullText
+            && Objects.equals(maxNewTokens, other.maxNewTokens) && Objects.equals(metaLength, other.metaLength)
+            && Objects.equals(prefixLength, other.prefixLength)
+            && Objects.equals(repetitionPenalty, other.repetitionPenalty)
+            && Objects.equals(returnFullText, other.returnFullText) && Objects.equals(returnLine, other.returnLine)
             && Objects.equals(seed, other.seed) && Objects.equals(stop, other.stop)
-            && Objects.equals(temperature, other.temperature) && Objects.equals(topK, other.topK)
+            && Objects.equals(suffixLength, other.suffixLength) && Objects.equals(temperature, other.temperature)
+            && tokenHealing == other.tokenHealing && Objects.equals(topK, other.topK)
             && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
-            && Objects.equals(truncate, other.truncate) && Objects.equals(typicalP, other.typicalP)
-            && Objects.equals(watermark, other.watermark) && Objects.equals(tokenHealing, other.tokenHealing)
-            && Objects.equals(returnLine, other.returnLine) && Objects.equals(trimStop, other.trimStop)
-            && Objects.equals(chatUrl, other.chatUrl);
+            && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
+            && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark);
     }
 }
