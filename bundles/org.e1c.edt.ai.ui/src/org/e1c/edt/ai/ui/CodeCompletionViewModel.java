@@ -18,6 +18,7 @@ import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionContext;
 import org.e1c.edt.ai.ICodeCompletionSession;
+import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILog;
@@ -26,6 +27,7 @@ import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observers;
 import org.e1c.edt.ai.Text;
 import org.e1c.edt.ai.assistent.ICodeAssistant;
+import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -66,11 +68,13 @@ public class CodeCompletionViewModel
     private final Timer showTimer = new Timer(true);
     private final IUI ui;
     private final ICodeProvider codeProvider;
+    private final IContextEntities contextEntities;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
+    private Duration contextDuration;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -80,7 +84,8 @@ public class CodeCompletionViewModel
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
-        ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider)
+        ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
+        IContextEntities contextEntities)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -98,6 +103,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(codeCompletionContext);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(codeProvider);
+        Preconditions.checkNotNull(contextEntities);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -113,6 +119,7 @@ public class CodeCompletionViewModel
         this.codeCompletionContext = codeCompletionContext;
         this.ui = ui;
         this.codeProvider = codeProvider;
+        this.contextEntities = contextEntities;
     }
 
     @Override
@@ -127,9 +134,35 @@ public class CodeCompletionViewModel
             textWidget.addCaretListener(this);
             textWidget.addVerifyKeyListener(this);
             textWidget.redraw();
+            warmUp();
         });
 
         return Closeables.create(() -> deactivate());
+    }
+
+    private void warmUp()
+    {
+        cancel();
+        contextDuration = Duration.ZERO;
+        var cancellationTokenSource = new JobCancellationTokenSource();
+        dispatcher.dispatchAsync(
+            () -> aiContextProvider.create(new AITarget(textWidget, 0, false), null, cancellationTokenSource)
+                .ifPresent(aiCtx -> {
+                    var job = new Job(Messages.CodeCompletionJobName)
+                    {
+                        @Override
+                        protected IStatus run(IProgressMonitor monitor)
+                        {
+                            cancellationTokenSource.attachMonitor(monitor);
+                            contextEntities.fill(aiCtx, new LocalContext(), cancellationTokenSource);
+                            contextDuration = contextEntities.fill(aiCtx, new LocalContext(), cancellationTokenSource);
+                            return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
+                        }
+                    };
+
+                    this.lastJob = job;
+                    job.schedule(0);
+                }));
     }
 
     private void reset()
@@ -157,7 +190,7 @@ public class CodeCompletionViewModel
     private void askNew()
     {
         var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
-        var delay = delayBeforeShow.toMillis();
+        var delay = delayBeforeShow.toMillis() - contextDuration.toMillis();
         if (delay < uiSettings.getMinRequestDelay())
         {
             delay = uiSettings.getMinRequestDelay();

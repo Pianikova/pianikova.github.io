@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
@@ -130,7 +131,7 @@ public class EntityInfo
     }
 
     @Override
-    public void fill(AIContext aiContext, LocalContext context, ICancellationToken cancellationToken)
+    public Duration fill(AIContext aiContext, LocalContext context, ICancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.createStarted();
         var formStopwatch = Stopwatch.createUnstarted();
@@ -202,7 +203,6 @@ public class EntityInfo
                 @Override
                 public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
                 {
-                    // TODO Auto-generated method stub
                     return false;
                 }
             }, cancellationToken);
@@ -223,5 +223,7 @@ public class EntityInfo
             trace.append(stopwatch.elapsed());
             log.trace("AI context statistics " + cancellationToken, trace.toString()); //$NON-NLS-1$
         }
+
+        return stopwatch.elapsed();
     }
 }
