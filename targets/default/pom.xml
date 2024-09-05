@@ -13,11 +13,7 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <groupId>org.e1c.edt.ai</groupId>
   <artifactId>default</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
-  
   <packaging>eclipse-target-definition</packaging>
-
   <name>Target Platform</name>
 </project>

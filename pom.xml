@@ -14,11 +14,8 @@
     <relativePath>./bom/pom.xml</relativePath>
   </parent>
 
-  <groupId>org.e1c.edt.ai</groupId>
   <artifactId>parent</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-
   <name>Tycho Build</name>
 
   <modules>

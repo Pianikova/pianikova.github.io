@@ -159,11 +159,7 @@
         <handler
                 class="org.e1c.edt.ai.ui.handlers.GenerateDocCommentsAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai">
-        </handler>
-        <handler
-              class="org.e1c.edt.ai.ui.handlers.StatusHandler"
-              commandId="org.e1c.edt.ai.ui.statusIndicator">
-        </handler>        
+        </handler>     
         <handler
                 class="org.e1c.edt.ai.ui.handlers.FeedbackAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.feedback.ai">

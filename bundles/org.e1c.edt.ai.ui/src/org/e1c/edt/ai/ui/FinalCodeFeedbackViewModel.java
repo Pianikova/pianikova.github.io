@@ -55,31 +55,10 @@ public class FinalCodeFeedbackViewModel
     public AutoCloseable activate(StyledText textWidget)
     {
         this.textWidget = textWidget;
-        var textInputToken = ui.getSourceViewer(textWidget).map(source -> {
+        return ui.getSourceViewer(textWidget).map(source -> {
             source.addTextListener(this);
             return Closeables.create(() -> source.removeTextListener(this));
         }).orElse(Closeables.Empty);
-
-        return textInputToken;
-        /*
-        dispatcher.dispatch(() -> {
-            textWidget.addPaintListener(feedbackPainter);
-            textWidget.addVerifyKeyListener(this);
-            textWidget.redraw();
-        });
-
-        var keyToken = Closeables.create(() -> deactivate());
-        return Closeables.create(textInputToken, keyToken);
-        */
-    }
-
-    private void deactivate()
-    {
-        dispatcher.dispatch(() -> {
-            textWidget.removePaintListener(feedbackPainter);
-            textWidget.removeVerifyKeyListener(this);
-            textWidget.redraw();
-        });
     }
 
     @Override
