@@ -6,11 +6,13 @@ package org.e1c.edt.ai.assistent;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import com.google.common.base.Stopwatch;
+
 public interface IHttpLog
 {
     HttpRequest request(HttpRequest request, String ref, String body);
 
-    <T> HttpResponse<T> response(HttpResponse<T> response, String ref);
+    <T> HttpResponse<T> response(HttpResponse<T> response, String ref, Stopwatch stopwatch);
 
     void error(Throwable error, String ref);
 

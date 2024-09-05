@@ -10,6 +10,7 @@ import java.net.http.HttpResponse;
 import org.e1c.edt.ai.ILog;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
 public class HttpLog implements IHttpLog
@@ -31,7 +32,7 @@ public class HttpLog implements IHttpLog
         sb.append(request);
         if (body != null)
         {
-            sb.append(", "); //$NON-NLS-1$
+            sb.append(System.lineSeparator());
             sb.append(body);
         }
 
@@ -41,23 +42,28 @@ public class HttpLog implements IHttpLog
 
     @SuppressWarnings("nls")
     @Override
-    public <T> HttpResponse<T> response(HttpResponse<T> response, String ref)
+    public <T> HttpResponse<T> response(HttpResponse<T> response, String ref, Stopwatch stopwatch)
     {
         Preconditions.checkNotNull(response);
         var statusCode = response.statusCode();
+        var sb = new StringBuilder();
+        sb.append("status code: ");
+        sb.append(statusCode);
+        sb.append(System.lineSeparator());
+        sb.append("duration: ");
+        sb.append(stopwatch.elapsed());
+        sb.append(System.lineSeparator());
+        sb.append(response.toString());
+        sb.append(System.lineSeparator());
+        sb.append(response.body());
+
         if (statusCode >= 300)
         {
-            var sb = new StringBuilder();
-            sb.append(createHeader("AI response", response.uri(), ref));
-            sb.append(", ");
-            sb.append(response.toString());
-            sb.append(", ");
-            sb.append(response.body());
-            log.logError(sb.toString());
+            log.logError(createHeader("AI response", response.uri(), ref) + System.lineSeparator() + sb.toString());
         }
         else
         {
-            log.trace(createHeader("AI response", response.uri(), ref), response.toString() + ", " + response.body());
+            log.trace(createHeader("AI response", response.uri(), ref), sb.toString());
         }
 
         return response;

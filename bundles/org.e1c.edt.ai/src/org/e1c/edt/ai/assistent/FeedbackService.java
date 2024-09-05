@@ -18,6 +18,7 @@ import org.e1c.edt.ai.assistent.model.IssueType;
 import org.e1c.edt.ai.client.AIClientException;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
 public class FeedbackService
@@ -99,10 +100,11 @@ public class FeedbackService
     private CompletableFuture<Void> sendFeebackAsync(HttpRequest request, String body)
     {
         log.request(request, null, body);
+        var stopwatch = Stopwatch.createStarted();
         return clienBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch))
             .thenApplyAsync(response -> {
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)

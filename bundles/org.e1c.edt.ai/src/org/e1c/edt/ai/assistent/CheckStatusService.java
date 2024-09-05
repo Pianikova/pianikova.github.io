@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
 /**
@@ -49,10 +50,11 @@ public class CheckStatusService
         }
 
         var request = builder.get().GET().build();
+        var stopwatch = Stopwatch.createStarted();
         return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch))
             .thenApplyAsync(response -> {
                 return response.statusCode();
             });

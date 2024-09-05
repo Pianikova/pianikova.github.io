@@ -16,6 +16,7 @@ import org.e1c.edt.ai.assistent.model.ParametersReponse;
 import org.e1c.edt.ai.client.AIClientException;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
 public class ParametersService
@@ -70,10 +71,11 @@ public class ParametersService
     private CompletableFuture<Optional<Parameters>> getParametersAsync(HttpRequest request, Parameters userParams)
     {
         log.request(request, null, null);
+        var stopwatch = Stopwatch.createStarted();
         return clienBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch))
             .thenApplyAsync(response -> {
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)

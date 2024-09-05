@@ -27,6 +27,7 @@ import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.client.AIClientException;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
 public class CodeAssistant
@@ -120,9 +121,10 @@ public class CodeAssistant
 
         var clien = clientBuilder.create().build();
         var asyncRequest = clien.sendAsync(request, BodyHandlers.ofLines());
+        var stopwatch = Stopwatch.createStarted();
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> asyncRequest.cancel(true));
         asyncRequest
-            .thenApplyAsync(response -> log.response(response, cancellationToken.toString()))
+            .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch))
             .thenApplyAsync(response -> checkResponse(response, observer, cancellationToken))
             .thenApplyAsync(HttpResponse::body)
             .thenAcceptAsync(stream -> processStream(asyncRequest, stream, observer, cancellationToken))
