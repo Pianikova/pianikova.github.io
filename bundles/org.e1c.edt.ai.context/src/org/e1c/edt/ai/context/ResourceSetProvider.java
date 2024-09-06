@@ -28,10 +28,10 @@ public class ResourceSetProvider implements IResourceSetProvider
     public synchronized ResourceSet getResourceSet(IProject project)
     {
         Preconditions.checkNotNull(project);
-        if (isLowMemory())
+        /*if (isLowMemory())
         {
             resources.clear();
-        }
+        }*/
 
         var resourceSet = resources.computeIfAbsent(project,
             curProject -> v8Model.getResourceService(BmAwareResourceSetProvider.class).get(curProject));

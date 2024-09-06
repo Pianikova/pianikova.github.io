@@ -144,7 +144,7 @@ public class FinalCodeFeedbackViewModel
 
     private Optional<IParseResult> getParseResult()
     {
-        var parserResultOptional = codeProvider.getParseResult(textWidget);
+        var parserResultOptional = dispatcher.dispatch(() -> codeProvider.getParseResult(textWidget).orElse(null));
         if (parserResultOptional.isEmpty())
         {
             return Optional.empty();
@@ -161,15 +161,18 @@ public class FinalCodeFeedbackViewModel
 
     private Optional<CodeMethod> getMethod()
     {
-        return dispatcher.dispatch(() -> getParseResult()
-            .map(parseResult -> codeProvider.getMethod(parseResult, textWidget.getCaretOffset()).orElse(null))
-            .orElse(null));
+        var offset = dispatcher.dispatch(() -> textWidget.getCaretOffset());
+        if (offset.isEmpty())
+        {
+            return Optional.empty();
+        }
+
+        return getParseResult()
+            .flatMap(parseResult -> codeProvider.getMethod(parseResult, offset.get()));
     }
 
     private Optional<String> getMethodBody(CodeMethod codeMethod)
     {
-        return dispatcher.dispatch(
-            () -> getParseResult().map(parseResult -> codeProvider.getMethodBody(parseResult, codeMethod).orElse(null))
-                .orElse(null));
+        return getParseResult().flatMap(parseResult -> codeProvider.getMethodBody(parseResult, codeMethod));
     }
 }

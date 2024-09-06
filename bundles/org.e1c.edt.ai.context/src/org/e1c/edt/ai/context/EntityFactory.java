@@ -566,8 +566,19 @@ public class EntityFactory implements IEntityFactory
         }
 
         var dataTypes = new ArrayList<DataType>();
-        for (var type : types)
+        var iterator = types.iterator();
+        while (iterator.hasNext())
         {
+            TypeItem type;
+            try
+            {
+                type = iterator.next();
+            }
+            catch (Exception ex)
+            {
+                continue;
+            }
+
             var dataType = new DataType();
             dataTypes.add(dataType);
             dataType.type = type.getName();
