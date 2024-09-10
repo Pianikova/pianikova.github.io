@@ -15,7 +15,8 @@ import com.google.inject.Inject;
 public class ResourceSetProvider implements IResourceSetProvider
 {
     private final IV8Model v8Model;
-    private final HashMap<IProject, ResourceSet> resources = new HashMap<>();
+    private HashMap<IProject, ResourceSet> resources = new HashMap<>();
+    private int counter;
 
     @Inject
     public ResourceSetProvider(IV8Model v8Model)
@@ -28,21 +29,15 @@ public class ResourceSetProvider implements IResourceSetProvider
     public synchronized ResourceSet getResourceSet(IProject project)
     {
         Preconditions.checkNotNull(project);
-        /*if (isLowMemory())
+        if (counter++ > 300)
         {
-            resources.clear();
-        }*/
+            counter = 0;
+            resources = new HashMap<>();
+        }
 
         var resourceSet = resources.computeIfAbsent(project,
             curProject -> v8Model.getResourceService(BmAwareResourceSetProvider.class).get(curProject));
 
         return resourceSet;
-    }
-
-    private boolean isLowMemory()
-    {
-        long totalMemory = Runtime.getRuntime().totalMemory();
-        long freeMemory = Runtime.getRuntime().freeMemory();
-        return freeMemory < totalMemory / 100 * 0.5;
     }
 }
