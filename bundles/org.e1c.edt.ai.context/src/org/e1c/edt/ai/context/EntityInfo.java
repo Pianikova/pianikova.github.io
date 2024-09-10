@@ -12,6 +12,7 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
@@ -33,18 +34,22 @@ public class EntityInfo
     private final IEntitiesWalker entitiesWalker;
     private final IIdFactory idFactory;
     private final IEntityFactory entityFactory;
+    private final IUISettings uiSettings;
 
     @Inject
-    public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory)
+    public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
+        IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
         Preconditions.checkNotNull(idFactory);
         Preconditions.checkNotNull(entityFactory);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
         this.entityFactory = entityFactory;
+        this.uiSettings = uiSettings;
     }
 
     @SuppressWarnings("nls")
@@ -163,6 +168,11 @@ public class EntityInfo
                 @Override
                 public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
                 {
+                    if (!uiSettings.sendContext())
+                    {
+                        return false;
+                    }
+
                     if (!uuids.add(idFactory.createObjectId(filePath, variable, cancellationToken)))
                     {
                         return false;
@@ -176,6 +186,11 @@ public class EntityInfo
                 @Override
                 public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
                 {
+                    if (!uiSettings.sendContext())
+                    {
+                        return false;
+                    }
+
                     if (!uuids.add(idFactory.createObjectId(filePath, featureAccess, cancellationToken)))
                     {
                         return false;
@@ -189,6 +204,11 @@ public class EntityInfo
                 @Override
                 public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
                 {
+                    if (!uiSettings.sendContext())
+                    {
+                        return false;
+                    }
+
                     if (!uuids.add(idFactory.createObjectId(filePath, invocation, cancellationToken)))
                     {
                         return false;

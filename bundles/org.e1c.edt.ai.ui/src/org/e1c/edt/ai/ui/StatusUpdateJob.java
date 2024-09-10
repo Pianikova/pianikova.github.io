@@ -48,7 +48,11 @@ public class StatusUpdateJob
         }
         catch (ExecutionException e)
         {
-            Activator.getDefault().logError(e);
+            var activator = Activator.getDefault();
+            if (activator != null)
+            {
+                activator.logError(e);
+            }
         }
 
         status.ifPresent(serverStatus -> Display.getDefault().asyncExec(() -> {

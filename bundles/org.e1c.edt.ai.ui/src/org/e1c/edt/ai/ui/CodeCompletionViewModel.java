@@ -142,11 +142,6 @@ public class CodeCompletionViewModel
 
     private void warmUp()
     {
-        if (!uiSettings.sendContext())
-        {
-            return;
-        }
-
         cancel();
         contextDuration = Duration.ZERO;
         var cancellationTokenSource = new JobCancellationTokenSource();
