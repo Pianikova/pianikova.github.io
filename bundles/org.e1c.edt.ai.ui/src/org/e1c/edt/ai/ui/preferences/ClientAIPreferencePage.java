@@ -78,6 +78,9 @@ public class ClientAIPreferencePage
         var codeCompletionMinRequestDelay = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY,
             Messages.ClientAIPreferencePage_CodeCompletionMinRequestDelay, parent);
         addField(codeCompletionMinRequestDelay);
+
+        addField(new BooleanFieldEditor(ISettingsStore.SEND_CONTEXT,
+            Messages.ClientAIPreferencePage_SendContext, parent));
     }
 
     @Override

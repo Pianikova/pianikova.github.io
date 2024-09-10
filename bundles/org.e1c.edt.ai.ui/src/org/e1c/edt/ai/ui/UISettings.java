@@ -50,4 +50,10 @@ public class UISettings
     {
         return System.lineSeparator();
     }
+
+    @Override
+    public boolean sendContext()
+    {
+        return settingsStore.getBoolean(ISettingsStore.SEND_CONTEXT);
+    }
 }

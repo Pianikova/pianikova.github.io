@@ -14,4 +14,6 @@ public interface IUISettings
     int getMinRequestDelay();
 
     String getLineSeparator();
+
+    boolean sendContext();
 }

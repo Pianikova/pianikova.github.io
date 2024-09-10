@@ -19,6 +19,7 @@ import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
@@ -40,13 +41,14 @@ public class CodeAssistant
     private final ISessionService sessionService;
     private final IResponseStreamProcessor responseStreamProcessor;
     private final IContextEntities contextEntities;
+    private final IUISettings uiSettings;
 
     @Inject
     public CodeAssistant(IHttpLog log,
         IRequestBuilder requestBuilder,
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
-        IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities)
+        IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -55,6 +57,7 @@ public class CodeAssistant
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(responseStreamProcessor);
         Preconditions.checkNotNull(contextEntities);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -62,6 +65,7 @@ public class CodeAssistant
         this.sessionService = sessionService;
         this.responseStreamProcessor = responseStreamProcessor;
         this.contextEntities = contextEntities;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -101,7 +105,10 @@ public class CodeAssistant
         localContext.path = aiContext.getPath();
         localContext.prefix = aiContext.getPrefix();
         localContext.suffix = aiContext.getSufix();
-        contextEntities.fill(aiContext, localContext, cancellationToken);
+        if (uiSettings.sendContext())
+        {
+            contextEntities.fill(aiContext, localContext, cancellationToken);
+        }
 
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;

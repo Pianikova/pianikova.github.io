@@ -74,7 +74,7 @@ public class CodeCompletionViewModel
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
-    private Duration contextDuration;
+    private Duration contextDuration = Duration.ZERO;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -142,6 +142,11 @@ public class CodeCompletionViewModel
 
     private void warmUp()
     {
+        if (!uiSettings.sendContext())
+        {
+            return;
+        }
+
         cancel();
         contextDuration = Duration.ZERO;
         var cancellationTokenSource = new JobCancellationTokenSource();
