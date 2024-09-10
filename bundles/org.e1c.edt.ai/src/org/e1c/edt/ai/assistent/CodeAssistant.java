@@ -102,7 +102,6 @@ public class CodeAssistant
         localContext.prefix = aiContext.getPrefix();
         localContext.suffix = aiContext.getSufix();
         contextEntities.fill(aiContext, localContext, cancellationToken);
-
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;
         var requestBody = json.serialize(aiRequest);
