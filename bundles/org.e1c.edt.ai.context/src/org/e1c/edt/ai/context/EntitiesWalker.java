@@ -62,7 +62,8 @@ public class EntitiesWalker
                 var nodeStart = node.getTotalOffset();
                 var nodeFinish = node.getTotalEndOffset();
 
-                if (!((nodeStart >= start && nodeStart <= finish) || (nodeFinish >= start && nodeFinish <= finish)))
+                if (!((nodeStart >= start && nodeStart <= finish) || (nodeFinish >= start && nodeFinish <= finish))
+                    && !(obj instanceof Method))
                 {
                     continue;
                 }

@@ -116,7 +116,6 @@ public class EntityInfo
             @Override
             public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
             {
-                // TODO Auto-generated method stub
                 return false;
             }
         }, cancellationToken);
@@ -203,6 +202,8 @@ public class EntityInfo
                 @Override
                 public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
                 {
+                    entityFactory.createMethodEntity(method, node, cancellationToken)
+                        .ifPresent(i -> context.localFunctions.add(i));
                     return false;
                 }
             }, cancellationToken);
