@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.assistent;
 
+import java.io.ByteArrayOutputStream;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
@@ -10,6 +11,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
+import java.util.zip.GZIPOutputStream;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
@@ -105,15 +107,29 @@ public class CodeAssistant
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;
         var requestBody = json.serialize(aiRequest);
+        byte[] compressedBody = null;
+        try
+        {
+            compressedBody = compress(requestBody).toByteArray();
+        }
+        catch (Exception e)
+        {
+            log.error(e, cancellationToken.toString());
+            observer.onCompleted();
+            return;
+        }
+
         var optionalReauest = requestBuilder.create("./complete"); //$NON-NLS-1$
         if (optionalReauest.isEmpty())
         {
+            observer.onCompleted();
             return;
         }
 
         var request = optionalReauest.get()
             .header("Session-Id", session.sessionId) //$NON-NLS-1$
-            .POST(BodyPublishers.ofString(requestBody))
+            .header("Content-Encoding", "gzip") //$NON-NLS-1$ //$NON-NLS-2$
+            .POST(BodyPublishers.ofByteArray(compressedBody))
             .build();
 
         log.request(request, cancellationToken.toString(), requestBody);
@@ -143,6 +159,18 @@ public class CodeAssistant
                     //
                 }
             });
+    }
+
+    public static ByteArrayOutputStream compress(String str) throws Exception
+    {
+        ByteArrayOutputStream obj = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(obj))
+        {
+            gzip.write(str.getBytes("UTF-8")); //$NON-NLS-1$
+            gzip.close();
+        }
+
+        return obj;
     }
 
     private boolean isCancellationException(Throwable error)
