@@ -6,7 +6,7 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.CodeMethod;
-import org.eclipse.swt.custom.StyledText;
+import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.parser.IParseResult;
@@ -28,22 +28,25 @@ public class CodeProvider implements ICodeProvider
     }
 
     @Override
-    public Optional<IParseResult> getParseResult(StyledText textWidget)
+    public Optional<IParseResult> getParseResult(SourceViewer sourceViewer)
     {
-        return ui.getSourceViewer(textWidget).map(sourceViewer -> {
-            var doc = sourceViewer.getDocument();
-            if (!(doc instanceof IXtextDocument))
-            {
-                return null;
-            }
+        var doc = sourceViewer.getDocument();
+        if (!(doc instanceof IXtextDocument))
+        {
+            return Optional.empty();
+        }
 
-            return ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
-        });
+        return Optional.ofNullable(((IXtextDocument)doc).readOnly(s -> s.getParseResult()));
     }
 
     @Override
     public Optional<CodeMethod> getMethod(IParseResult parseResult, int offset)
     {
+        if (parseResult == null)
+        {
+            return Optional.empty();
+        }
+
         var rootNode = parseResult.getRootNode();
         if (rootNode == null)
         {

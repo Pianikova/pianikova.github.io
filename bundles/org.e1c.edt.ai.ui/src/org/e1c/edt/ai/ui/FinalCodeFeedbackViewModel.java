@@ -144,7 +144,9 @@ public class FinalCodeFeedbackViewModel
 
     private Optional<IParseResult> getParseResult()
     {
-        var parserResultOptional = dispatcher.dispatch(() -> codeProvider.getParseResult(textWidget).orElse(null));
+        var parserResultOptional = dispatcher
+            .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> ui.getSourceViewer(textWidget)).orElse(null))
+            .flatMap(sourceViewer -> codeProvider.getParseResult(sourceViewer));
         if (parserResultOptional.isEmpty())
         {
             return Optional.empty();

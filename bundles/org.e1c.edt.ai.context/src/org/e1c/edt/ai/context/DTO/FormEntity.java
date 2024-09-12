@@ -8,5 +8,5 @@ import java.util.List;
 public class FormEntity
     extends FormGrp
 {
-    public List<FormAttr> attributes;
+    public List<AttributeEntity> attributes;
 }

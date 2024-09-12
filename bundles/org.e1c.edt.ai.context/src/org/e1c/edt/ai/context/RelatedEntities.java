@@ -14,12 +14,18 @@ import org.e1c.edt.ai.context.DTO.RelatedEntitiesResponse;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
+import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.mcore.AbstractMethod;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -63,8 +69,43 @@ public class RelatedEntities implements IRelatedEntities
         response.relatedFunctions = new ArrayList<>();
         response.localFunctions = new ArrayList<>();
         var entities = new HashSet<Entity>();
-        var result = entitiesWalker.walk(request.path, request.start, request.finish, new IEntityVisitor()
+        var attributes = new ArrayList<BasicFeature>();
+        var tabularSections = new ArrayList<DbObjectTabularSection>();
+        var registerResources = new ArrayList<RegisterResource>();
+        var registerDimensions = new ArrayList<RegisterDimension>();
+        var registerRecords = new ArrayList<BasicRegister>();
+        var result = entitiesWalker.walk(request.path, request.start, request.finish, new EntityVisitor()
         {
+            @Override
+            public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
+            {
+                attributes.add(attribute);
+            }
+
+            @Override
+            public void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection)
+            {
+                tabularSections.add(tabularSection);
+            }
+
+            @Override
+            public void visitOwnerResource(IBmObject owner, RegisterResource resource)
+            {
+                registerResources.add(resource);
+            }
+
+            @Override
+            public void visitOwnerDimension(IBmObject owner, RegisterDimension dimension)
+            {
+                registerDimensions.add(dimension);
+            }
+
+            @Override
+            public void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord)
+            {
+                registerRecords.add(registerRecord);
+            }
+
             @Override
             public void visitForm(Form form)
             {
@@ -131,40 +172,15 @@ public class RelatedEntities implements IRelatedEntities
                 traceEntity("function", entity, invocation, node);
                 return false;
             }
-
-            @Override
-            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
-            {
-                return false;
-            }
         }, cancellationToken);
 
-        entitiesWalker.walk(request.path, 0, Integer.MAX_VALUE, new IEntityVisitor()
+        entityFactory
+            .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,
+                cancellationToken)
+            .ifPresent(meta -> response.meta = meta);
+
+        entitiesWalker.walk(request.path, 0, Integer.MAX_VALUE, new EntityVisitor()
         {
-            @Override
-            public void visitForm(Form form)
-            {
-                //
-            }
-
-            @Override
-            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
-            {
-                return false;
-            }
-
-            @Override
-            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
-            {
-                return false;
-            }
-
-            @Override
-            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
-            {
-                return false;
-            }
-
             @Override
             public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
             {
@@ -173,7 +189,6 @@ public class RelatedEntities implements IRelatedEntities
                 return false;
             }
         }, cancellationToken);
-
 
         if (!result)
         {

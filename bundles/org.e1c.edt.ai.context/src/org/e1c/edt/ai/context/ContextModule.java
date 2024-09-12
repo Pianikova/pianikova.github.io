@@ -6,16 +6,24 @@ package org.e1c.edt.ai.context;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.Json;
+import org.eclipse.core.runtime.Plugin;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
-import com.google.inject.AbstractModule;
+import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
+import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.google.inject.Singleton;
 
 public class ContextModule
-    extends AbstractModule
+    extends AbstractServiceAwareModule
 {
+    public ContextModule(Plugin plugin)
+    {
+        super(plugin);
+    }
+
     @Override
-    protected void configure()
+    protected void doConfigure()
     {
         // @formatter:off
         bind(IJson.class).to(Json.class).in(Singleton.class);
@@ -30,6 +38,8 @@ public class ContextModule
         bind(IEntityFactory.class).to(EntityFactory.class).in(Singleton.class);
         bind(IFormWalker.class).to(FormWalker.class).in(Singleton.class);
         bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
+        bind(IExternalPropertyManagerRegistry.class).toService();
+        bind(IBmModelManager.class).toService();
         // @formatter:on
     }
 }

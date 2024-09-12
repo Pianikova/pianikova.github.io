@@ -1,6 +1,7 @@
 package org.e1c.edt.semantic;
 
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.context.ContextModule;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -8,6 +9,7 @@ import org.osgi.framework.BundleContext;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.util.Modules;
 
 /**
  * The activator class controls the plug-in life cycle
@@ -102,7 +104,8 @@ public class Activator
         {
             try
             {
-                injector = Guice.createInjector(new SemanticModule(this));
+                var mergedModule = Modules.override(new ContextModule(this)).with(new SemanticModule(this));
+                injector = Guice.createInjector(mergedModule);
             }
             catch (Exception e)
             {

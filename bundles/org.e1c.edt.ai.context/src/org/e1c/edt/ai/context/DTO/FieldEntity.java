@@ -4,13 +4,15 @@
 package org.e1c.edt.ai.context.DTO;
 
 import java.util.List;
-import java.util.Map;
 
-public class FormAttr
+import com.google.gson.annotations.SerializedName;
+
+public class FieldEntity
 {
     public String name;
 
-    public Map<String, String> title;
+    @SerializedName("name_ru")
+    public String nameRu;
 
     public List<DataType> types;
 }

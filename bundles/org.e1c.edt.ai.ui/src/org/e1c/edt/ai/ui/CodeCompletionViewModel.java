@@ -276,14 +276,16 @@ public class CodeCompletionViewModel
                 return;
             }
 
-            dispatcher.dispatch(() -> {
-                hintPainter.reset();
-                hintPainter.pinOffset(textWidget, aiCtx.getTextOffset(),
-                    delay.isNegative() || delay == Duration.ZERO, singleWordMode);
-                return codeProvider.getParseResult(textWidget)
-                    .map(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()).orElse(null))
-                    .orElse(null);
-            }).ifPresent(method -> session.setMethod(method));
+            dispatcher
+                .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> {
+                    hintPainter.reset();
+                    hintPainter.pinOffset(textWidget, aiCtx.getTextOffset(),
+                        delay.isNegative() || delay == Duration.ZERO, singleWordMode);
+                    return ui.getSourceViewer(textWidget);
+                }).orElse(null))
+                .flatMap(sourceViewer -> codeProvider.getParseResult(sourceViewer))
+                .flatMap(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()))
+                .ifPresent(method -> session.setMethod(method));
 
             var completionSource = codeAssistant.createSource(aiCtx, cancellationTokenSource);
 

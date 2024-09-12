@@ -28,6 +28,8 @@ import org.eclipse.xtext.resource.IResourceServiceProvider;
 import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.util.Pair;
 
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.bm.integration.IBmModel;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslCommentUtils;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
@@ -46,11 +48,13 @@ import com._1c.g5.v8.dt.bsl.model.typesytem.VariableTypeStateProviderCollector;
 import com._1c.g5.v8.dt.bsl.resource.BslResource;
 import com._1c.g5.v8.dt.bsl.resource.DynamicFeatureAccessComputer;
 import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
+import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.mcore.Environmental;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.mcore.util.Environments;
+import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -60,27 +64,36 @@ public class V8Model implements IV8Model
     private final ILog log;
     private final BslMultiLineCommentDocumentationProvider commentDocumentationProvider;
     private final IResourceSetProvider resourceSetProvider;
+    private final IExternalPropertyManagerRegistry externalPropertyManagerRegistry;
+    private final IBmModelManager modelManager;
 
     @Inject
     public V8Model(ILog log, BslMultiLineCommentDocumentationProvider commentDocumentationProvider,
-        IResourceSetProvider resourceSetProvider)
+        IResourceSetProvider resourceSetProvider, IExternalPropertyManagerRegistry externalPropertyManagerRegistry,
+        IBmModelManager modelManager)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(commentDocumentationProvider);
         Preconditions.checkNotNull(resourceSetProvider);
+        Preconditions.checkNotNull(externalPropertyManagerRegistry);
+        Preconditions.checkNotNull(modelManager);
         this.log = log;
         this.commentDocumentationProvider = commentDocumentationProvider;
         this.resourceSetProvider = resourceSetProvider;
+        this.externalPropertyManagerRegistry = externalPropertyManagerRegistry;
+        this.modelManager = modelManager;
     }
 
     @Override
-    public Optional<Module> getModule(String filePath, ICancellationToken cancellationToken)
+    public Optional<ModuleInfo> getModuleInfo(String filePath, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(filePath);
+        Preconditions.checkNotNull(cancellationToken);
         IPath path = new Path(filePath);
-        var modules = new ArrayList<Module>();
+        var modules = new ArrayList<ModuleInfo>();
         for (var project : getProjects())
         {
+            var bmModel = modelManager.getModel(project);
             var uriVisitor = new IFileVisitor()
             {
                 @Override
@@ -111,8 +124,7 @@ public class V8Model implements IV8Model
                     }
 
                     var module = (Module)eObject;
-                    modules.add(module);
-
+                    modules.add(new ModuleInfo(project, bmModel, module));
                     var moduleResource = module.eResource();
                     if (moduleResource instanceof BslResource)
                     {
@@ -151,6 +163,15 @@ public class V8Model implements IV8Model
         }
 
         return Optional.of(modules.get(0));
+    }
+
+    @Override
+    public IBmObject getBmObjectOwner(IBmModel bmModel, EObject object)
+    {
+        Preconditions.checkNotNull(bmModel);
+        Preconditions.checkNotNull(object);
+        var externalPropertyManager = externalPropertyManagerRegistry.getExternalPropertyManager(bmModel);
+        return externalPropertyManager.getOwner(object, IBmObject.class);
     }
 
     @Override
@@ -441,7 +462,7 @@ public class V8Model implements IV8Model
 
         var modules = new ArrayList<com._1c.g5.v8.dt.bsl.model.Module>();
         getPath(methodAccess).ifPresent(path -> {
-            getModule(path, cancellationToken).ifPresent(module -> modules.add(module));
+            getModuleInfo(path, cancellationToken).ifPresent(moduleInfo -> modules.add(moduleInfo.getModule()));
         });
 
         for (var featureEntry : getFeatureEntries(methodAccess))

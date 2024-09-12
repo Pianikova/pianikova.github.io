@@ -5,7 +5,6 @@ package org.e1c.edt.semantic;
 
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IUISettings;
-import org.e1c.edt.ai.context.ContextModule;
 import org.e1c.edt.ai.context.IResourceSetProvider;
 import org.e1c.edt.ai.context.ResourceSetProvider;
 import org.eclipse.jetty.server.Handler;
@@ -30,7 +29,6 @@ public class SemanticModule
     protected void doConfigure()
     {
         // @formatter:off
-        install(new ContextModule());
         bind(ILog.class).toInstance(activator);
         bind(IWebServer.class).to(WebServer.class).in(Singleton.class);
         bind(Handler.class).to(WebHandler.class).in(Singleton.class);

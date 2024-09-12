@@ -13,12 +13,13 @@ import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.util.Pair;
 
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.bm.integration.IBmModel;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslDocumentationComment;
 import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.FeatureEntry;
 import com._1c.g5.v8.dt.bsl.model.Method;
-import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.typesytem.VariableTypeStateProviderCollector;
 import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
 import com._1c.g5.v8.dt.mcore.Property;
@@ -28,7 +29,9 @@ import com._1c.g5.v8.dt.mcore.util.Environments;
 
 public interface IV8Model
 {
-    Optional<Module> getModule(String filePath, ICancellationToken cancellationToken);
+    Optional<ModuleInfo> getModuleInfo(String filePath, ICancellationToken cancellationToken);
+
+    IBmObject getBmObjectOwner(IBmModel bmModel, EObject object);
 
     List<Type> getTypes(VariableTypeStateProviderCollector typeStateProviders, ICompositeNode node);
 

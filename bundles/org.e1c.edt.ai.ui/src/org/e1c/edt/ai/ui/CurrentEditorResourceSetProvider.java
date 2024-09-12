@@ -41,7 +41,8 @@ public class CurrentEditorResourceSetProvider
     {
         Preconditions.checkNotNull(project);
         return dispatcher
-            .dispatch(() -> ui.getTextWidget().flatMap(widget -> codeProvider.getParseResult(widget)).orElse(null))
+            .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> ui.getSourceViewer(textWidget)).orElse(null))
+            .flatMap(sourceViewer -> codeProvider.getParseResult(sourceViewer))
             .flatMap(parseResult -> getResourceSet(parseResult))
             .orElseGet(() -> baseResourceSetProvider.getResourceSet(project));
     }

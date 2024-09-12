@@ -25,4 +25,6 @@ public class LocalContext
     public List<Object> localFunctions;
 
     public Object form;
+
+    public Object meta;
 }

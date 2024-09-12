@@ -11,16 +11,21 @@ import java.util.stream.Collectors;
 
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
+import org.e1c.edt.ai.context.DTO.AttributeEntity;
 import org.e1c.edt.ai.context.DTO.DataType;
-import org.e1c.edt.ai.context.DTO.FormAttr;
+import org.e1c.edt.ai.context.DTO.FieldEntity;
 import org.e1c.edt.ai.context.DTO.FormBtn;
 import org.e1c.edt.ai.context.DTO.FormEntity;
 import org.e1c.edt.ai.context.DTO.FormFld;
 import org.e1c.edt.ai.context.DTO.FormGrp;
+import org.e1c.edt.ai.context.DTO.MetaEntity;
 import org.e1c.edt.ai.context.DTO.MethodEntity;
 import org.e1c.edt.ai.context.DTO.ObjectEntity;
 import org.e1c.edt.ai.context.DTO.ObjectEntityField;
 import org.e1c.edt.ai.context.DTO.Parameter;
+import org.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
+import org.e1c.edt.ai.context.DTO.RegisterRecordEntity;
+import org.e1c.edt.ai.context.DTO.RegisterResourceEntity;
 import org.e1c.edt.ai.context.DTO.SignatureStructurized;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
@@ -34,19 +39,21 @@ import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
-import com._1c.g5.v8.dt.form.model.Addition;
 import com._1c.g5.v8.dt.form.model.Button;
-import com._1c.g5.v8.dt.form.model.Decoration;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
 import com._1c.g5.v8.dt.form.model.FormField;
-import com._1c.g5.v8.dt.form.model.FormItem;
 import com._1c.g5.v8.dt.form.model.Group;
-import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
+import com._1c.g5.v8.dt.mcore.TypeDescription;
 import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -80,7 +87,7 @@ public class EntityFactory implements IEntityFactory
         var formEntity = new FormEntity();
         var groups = new HashMap<EObject, FormGrp>();
         groups.put(form, formEntity);
-        formWalker.walk(form, new IFormVisitor()
+        formWalker.walk(form, new FormVisitor()
         {
             @Override
             public void visitFormField(Optional<EObject> parent, FormField field)
@@ -89,33 +96,9 @@ public class EntityFactory implements IEntityFactory
             }
 
             @Override
-            public void visitField(Optional<EObject> parent, Field field)
-            {
-                //
-            }
-
-            @Override
             public void visitButton(Optional<EObject> parent, Button button)
             {
                 parent.map(p -> groups.get(p)).ifPresent(group -> addButton(group, createButton(button)));
-            }
-
-            @Override
-            public void visitTable(Optional<EObject> parent, Table table)
-            {
-                //
-            }
-
-            @Override
-            public void visitAddition(Optional<EObject> parent, Addition addition)
-            {
-                //
-            }
-
-            @Override
-            public void visitDecoration(Optional<EObject> parent, Decoration decoration)
-            {
-                //
             }
 
             @Override
@@ -151,18 +134,6 @@ public class EntityFactory implements IEntityFactory
                     groups.put(group, node);
                 });
             }
-
-            @Override
-            public void visitFormItem(Optional<EObject> parent, FormItem formItem)
-            {
-                //
-            }
-
-            @Override
-            public void visitEObject(Optional<EObject> parent, EObject eObject)
-            {
-                //
-            }
         }, cancellationToken);
 
         return Optional.of(formEntity);
@@ -188,9 +159,9 @@ public class EntityFactory implements IEntityFactory
         group.buttons.add(button);
     }
 
-    private FormAttr createAttribute(FormAttribute attribute)
+    private AttributeEntity createAttribute(FormAttribute attribute)
     {
-        var attr = new FormAttr();
+        var attr = new AttributeEntity();
         attr.name = attribute.getName();
         var title = attribute.getTitle();
         if (title != null && !title.isEmpty())
@@ -441,6 +412,163 @@ public class EntityFactory implements IEntityFactory
         return Optional.of(methodEntity);
     }
 
+    @Override
+    public Optional<MetaEntity> createMetaEntity(List<BasicFeature> attributes,
+        List<DbObjectTabularSection> tabularSections, List<RegisterResource> registerResources,
+        List<RegisterDimension> registerDimensions, List<BasicRegister> registerRecords,
+        ICancellationToken cancellationToken)
+    {
+        var meta = new MetaEntity();
+        if (!attributes.isEmpty())
+        {
+            meta.attributes = new ArrayList<>();
+            for (var attribute : attributes)
+            {
+                var entity = new AttributeEntity();
+                meta.attributes.add(entity);
+                entity.name = attribute.getName();
+                var toolTip = attribute.getToolTip();
+                if (toolTip != null && !toolTip.isEmpty())
+                {
+                    entity.toolTip = toolTip.map();
+                }
+
+                entity.types = getTypes(attribute.getTypeDescription());
+            }
+        }
+
+        if (!tabularSections.isEmpty())
+        {
+            meta.tabularSections = new ArrayList<>();
+            for (var tabularSection : tabularSections)
+            {
+                var entity = new TabularSectionEntity();
+                meta.tabularSections.add(entity);
+                entity.name = tabularSection.getName();
+                entity.comment = tabularSection.getComment();
+                var fields = tabularSection.getFields();
+                if (!fields.isEmpty())
+                {
+                    entity.fields = new ArrayList<>();
+                    for (var field : fields)
+                    {
+                        entity.fields.add(createField(field));
+                    }
+                }
+            }
+        }
+
+        if (!registerResources.isEmpty())
+        {
+            meta.registerResources = new ArrayList<>();
+            for (var registerResource : registerResources)
+            {
+                var entity = new RegisterResourceEntity();
+                meta.registerResources.add(entity);
+                entity.name = registerResource.getName();
+                entity.comment = registerResource.getComment();
+                var toolTip = registerResource.getToolTip();
+                if (toolTip != null && !toolTip.isEmpty())
+                {
+                    entity.toolTip = toolTip.map();
+                }
+
+                var synonym = registerResource.getSynonym();
+                if (synonym != null && !synonym.isEmpty())
+                {
+                    entity.synonym = synonym.map();
+                }
+
+                entity.types = getTypes(registerResource.getType());
+            }
+        }
+
+        if (!registerDimensions.isEmpty())
+        {
+            meta.registerDimensions = new ArrayList<>();
+            for (var registerDimension : registerDimensions)
+            {
+                var entity = new RegisterDimensionEntity();
+                meta.registerDimensions.add(entity);
+                entity.name = registerDimension.getName();
+                entity.comment = registerDimension.getComment();
+                var toolTip = registerDimension.getToolTip();
+                if (toolTip != null && !toolTip.isEmpty())
+                {
+                    entity.toolTip = toolTip.map();
+                }
+
+                var synonym = registerDimension.getSynonym();
+                if (synonym != null && !synonym.isEmpty())
+                {
+                    entity.synonym = synonym.map();
+                }
+
+                entity.types = getTypes(registerDimension.getType());
+            }
+        }
+
+        if (!registerRecords.isEmpty())
+        {
+            meta.registerRecords = new ArrayList<>();
+            for (var registerRecord : registerRecords)
+            {
+                var entity = new RegisterRecordEntity();
+                meta.registerRecords.add(entity);
+                entity.name = registerRecord.getName();
+                entity.comment = registerRecord.getComment();
+                var synonym = registerRecord.getSynonym();
+                if (synonym != null && !synonym.isEmpty())
+                {
+                    entity.synonym = synonym.map();
+                }
+
+                var fields = registerRecord.getFields();
+                if (!fields.isEmpty())
+                {
+                    entity.fields = new ArrayList<>();
+                    for (var field : fields)
+                    {
+                        entity.fields.add(createField(field));
+                    }
+                }
+            }
+        }
+
+        return Optional.of(meta);
+    }
+
+    private List<DataType> getTypes(TypeDescription typeDescription)
+    {
+        if (typeDescription == null)
+        {
+            return null;
+        }
+
+        List<DataType> result = new ArrayList<>();
+        var types = typeDescription.getTypes();
+        if (types != null && !types.isEmpty())
+        {
+            for (var type : types)
+            {
+                var dataType = new DataType();
+                result.add(dataType);
+                dataType.type = type.getName();
+                dataType.typeRu = type.getNameRu();
+            }
+        }
+        return result;
+    }
+
+    private FieldEntity createField(Field field)
+    {
+        var entity = new FieldEntity();
+        entity.name = field.getName();
+        entity.nameRu = field.getNameRu();
+        entity.types = getTypes(field.getType());
+        return entity;
+    }
+
     @SuppressWarnings("nls")
     private void fillMethod(MethodEntity methodEntity, Method method, ICompositeNode methodNode, ICompositeNode node)
     {
@@ -604,7 +732,7 @@ public class EntityFactory implements IEntityFactory
                 if (featureAccess != null)
                 {
                     v8Model.getPath(featureAccess).ifPresent(path -> {
-                        v8Model.getModule(path, cancellationToken);
+                        v8Model.getModuleInfo(path, cancellationToken);
                         var fieldNode = NodeModelUtils.getNode(featureAccess);
                         propDataType.uuid = idFactory.createNodeId(path, fieldNode);
                     });

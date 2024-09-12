@@ -21,4 +21,6 @@ public class RelatedEntitiesResponse
     public List<MethodEntity> localFunctions;
 
     public FormEntity form;
+
+    public MetaEntity meta;
 }

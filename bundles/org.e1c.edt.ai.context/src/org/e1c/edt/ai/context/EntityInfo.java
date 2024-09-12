@@ -18,11 +18,17 @@ import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
+import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.form.model.Form;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -71,14 +77,8 @@ public class EntityInfo
         var nodeId = nodeIdOptional.get();
         var response = new EntityInfoResponse();
         response.ref = request.ref;
-        var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), new IEntityVisitor()
+        var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), new EntityVisitor()
         {
-            @Override
-            public void visitForm(Form form)
-            {
-                response.form = entityFactory.createFormEntity(form, cancellationToken).orElse(null);
-            }
-
             @Override
             public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
             {
@@ -117,12 +117,6 @@ public class EntityInfo
                 response.method = methodEntity.orElse(null);
                 return methodEntity.isPresent();
             }
-
-            @Override
-            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
-            {
-                return false;
-            }
         }, cancellationToken);
 
         if (!result)
@@ -149,8 +143,43 @@ public class EntityInfo
             context.relatedFunctions = new ArrayList<>();
             context.localFunctions = new ArrayList<>();
             var uuids = new HashSet<String>();
-            entitiesWalker.walk(filePath, start, finish, new IEntityVisitor()
+            var attributes = new ArrayList<BasicFeature>();
+            var tabularSections = new ArrayList<DbObjectTabularSection>();
+            var registerResources = new ArrayList<RegisterResource>();
+            var registerDimensions = new ArrayList<RegisterDimension>();
+            var registerRecords = new ArrayList<BasicRegister>();
+            entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
             {
+                @Override
+                public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
+                {
+                    attributes.add(attribute);
+                }
+
+                @Override
+                public void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection)
+                {
+                    tabularSections.add(tabularSection);
+                }
+
+                @Override
+                public void visitOwnerResource(IBmObject owner, RegisterResource resource)
+                {
+                    registerResources.add(resource);
+                }
+
+                @Override
+                public void visitOwnerDimension(IBmObject owner, RegisterDimension dimension)
+                {
+                    registerDimensions.add(dimension);
+                }
+
+                @Override
+                public void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord)
+                {
+                    registerRecords.add(registerRecord);
+                }
+
                 @Override
                 public void visitForm(Form form)
                 {
@@ -227,6 +256,11 @@ public class EntityInfo
                     return false;
                 }
             }, cancellationToken);
+
+            entityFactory
+                .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,
+                    cancellationToken)
+                .ifPresent(meta -> context.meta = meta);
         }
         finally
         {
