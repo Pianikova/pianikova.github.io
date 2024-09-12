@@ -100,9 +100,10 @@ public class CodeAssistant
         ICancellationToken cancellationToken)
     {
         var localContext = new LocalContext();
-        localContext.path = aiContext.getPath();
         localContext.prefix = aiContext.getPrefix();
         localContext.suffix = aiContext.getSufix();
+        localContext.path = aiContext.getPath();
+        localContext.offset = aiContext.getSourceOffset();
         contextEntities.fill(aiContext, localContext, cancellationToken);
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;

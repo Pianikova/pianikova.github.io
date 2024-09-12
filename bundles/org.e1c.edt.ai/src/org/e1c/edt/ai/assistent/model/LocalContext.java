@@ -15,6 +15,8 @@ public class LocalContext
 
     public String path;
 
+    public Integer offset;
+
     @SerializedName("related_objects")
     public List<Object> relatedObjects;
 
