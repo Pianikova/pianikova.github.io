@@ -4,6 +4,7 @@
 package org.e1c.edt.semantic;
 
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.context.ContextModule;
 import org.e1c.edt.ai.context.IResourceSetProvider;
 import org.e1c.edt.ai.context.ResourceSetProvider;
@@ -35,6 +36,7 @@ public class SemanticModule
         bind(Handler.class).to(WebHandler.class).in(Singleton.class);
         bind(IEndpointDialog.class).to(EndpointDialog.class).in(Singleton.class);
         bind(IResourceSetProvider.class).to(ResourceSetProvider.class).in(Singleton.class);
+        bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         // @formatter:on
     }
 }
