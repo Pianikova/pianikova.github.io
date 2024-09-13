@@ -1,11 +1,12 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.context;
+package org.e1c.edt.ai.context.DTO;
 
 import java.util.List;
+import java.util.Map;
 
-import org.e1c.edt.ai.context.DTO.FieldEntity;
+import com.google.gson.annotations.SerializedName;
 
 public class TabularSectionEntity
 {
@@ -14,4 +15,7 @@ public class TabularSectionEntity
     public String comment;
 
     public List<FieldEntity> fields;
+
+    @SerializedName("tool_tip")
+    public Map<String, String> toolTip;
 }

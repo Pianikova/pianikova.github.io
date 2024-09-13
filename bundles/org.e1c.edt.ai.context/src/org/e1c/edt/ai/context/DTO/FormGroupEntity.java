@@ -8,18 +8,18 @@ import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 
-public class FormGrp
+public class FormGroupEntity
 {
     public String name;
 
     public Map<String, String> title;
 
-    public List<FormFld> fields;
-
-    public List<FormGrp> groups;
-
     @SerializedName("tool_tip")
     public Map<String, String> toolTip;
 
-    public List<FormBtn> buttons;
+    public List<FormFieldEntity> fields;
+
+    public List<FormGroupEntity> groups;
+
+    public List<FormButtonEntity> buttons;
 }

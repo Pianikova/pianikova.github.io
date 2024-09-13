@@ -5,8 +5,6 @@ package org.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
-import org.e1c.edt.ai.context.TabularSectionEntity;
-
 import com.google.gson.annotations.SerializedName;
 
 public class MetaEntity

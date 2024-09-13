@@ -62,7 +62,6 @@ public class FormWalker implements IFormWalker
                 {
                     visit(stack, parent, item, visitor, items);
                 }
-
             }
 
             if (parent instanceof CommandBarHolder)
@@ -87,6 +86,15 @@ public class FormWalker implements IFormWalker
             {
                 var holder = (TableHolder)parent;
                 visit(stack, parent, holder.getAutoTable(), visitor, items);
+            }
+
+            if (parent instanceof Table)
+            {
+                var table = (Table)parent;
+                for (var item : table.getItems())
+                {
+                    visit(stack, table, item, visitor, items);
+                }
             }
         }
     }
@@ -128,7 +136,6 @@ public class FormWalker implements IFormWalker
         {
             var table = (Table)item;
             visitor.visitTable(Optional.ofNullable(parent), table);
-            return;
         }
 
         if (item instanceof Addition)

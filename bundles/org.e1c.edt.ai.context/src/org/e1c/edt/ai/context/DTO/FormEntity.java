@@ -6,7 +6,7 @@ package org.e1c.edt.ai.context.DTO;
 import java.util.List;
 
 public class FormEntity
-    extends FormGrp
+    extends FormGroupEntity
 {
     public List<AttributeEntity> attributes;
 }

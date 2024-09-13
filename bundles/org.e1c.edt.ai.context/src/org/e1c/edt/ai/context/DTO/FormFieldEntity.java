@@ -7,7 +7,7 @@ import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 
-public class FormFld
+public class FormFieldEntity
 {
     public String name;
 

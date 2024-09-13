@@ -6,6 +6,7 @@ package org.e1c.edt.ai.context;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -13,11 +14,13 @@ import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.context.DTO.AttributeEntity;
 import org.e1c.edt.ai.context.DTO.DataType;
+import org.e1c.edt.ai.context.DTO.DynamicListEntity;
 import org.e1c.edt.ai.context.DTO.FieldEntity;
-import org.e1c.edt.ai.context.DTO.FormBtn;
+import org.e1c.edt.ai.context.DTO.FormButtonEntity;
 import org.e1c.edt.ai.context.DTO.FormEntity;
-import org.e1c.edt.ai.context.DTO.FormFld;
-import org.e1c.edt.ai.context.DTO.FormGrp;
+import org.e1c.edt.ai.context.DTO.FormFieldEntity;
+import org.e1c.edt.ai.context.DTO.FormGroupEntity;
+import org.e1c.edt.ai.context.DTO.FormTableEntity;
 import org.e1c.edt.ai.context.DTO.MetaEntity;
 import org.e1c.edt.ai.context.DTO.MethodEntity;
 import org.e1c.edt.ai.context.DTO.ObjectEntity;
@@ -27,6 +30,9 @@ import org.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
 import org.e1c.edt.ai.context.DTO.RegisterRecordEntity;
 import org.e1c.edt.ai.context.DTO.RegisterResourceEntity;
 import org.e1c.edt.ai.context.DTO.SignatureStructurized;
+import org.e1c.edt.ai.context.DTO.TabularSectionEntity;
+import org.e1c.edt.ai.context.DTO.ValueListEntity;
+import org.eclipse.emf.common.util.EMap;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
@@ -40,10 +46,13 @@ import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.form.model.Button;
+import com._1c.g5.v8.dt.form.model.DynamicListExtInfo;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
 import com._1c.g5.v8.dt.form.model.FormField;
 import com._1c.g5.v8.dt.form.model.Group;
+import com._1c.g5.v8.dt.form.model.Table;
+import com._1c.g5.v8.dt.form.model.ValueListExtInfo;
 import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
@@ -85,7 +94,7 @@ public class EntityFactory implements IEntityFactory
     public Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken)
     {
         var formEntity = new FormEntity();
-        var groups = new HashMap<EObject, FormGrp>();
+        var groups = new HashMap<EObject, FormGroupEntity>();
         groups.put(form, formEntity);
         formWalker.walk(form, new FormVisitor()
         {
@@ -104,7 +113,7 @@ public class EntityFactory implements IEntityFactory
             @Override
             public void visitForm(Optional<EObject> parent, Form form)
             {
-                formEntity.title = form.getTitle().map();
+                formEntity.title = getMap(form.getTitle());
                 var attributes = form.getAttributes();
                 if (attributes != null && !attributes.isEmpty())
                 {
@@ -134,12 +143,27 @@ public class EntityFactory implements IEntityFactory
                     groups.put(group, node);
                 });
             }
+
+            @Override
+            public void visitTable(Optional<EObject> parent, Table table)
+            {
+                parent.map(p -> groups.get(p)).ifPresent(parentNode -> {
+                    var node = createTable(table);
+                    if (parentNode.groups == null)
+                    {
+                        parentNode.groups = new ArrayList<>();
+                    }
+
+                    parentNode.groups.add(node);
+                    groups.put(table, node);
+                });
+            }
         }, cancellationToken);
 
         return Optional.of(formEntity);
     }
 
-    private void addField(FormGrp group, FormFld field)
+    private void addField(FormGroupEntity group, FormFieldEntity field)
     {
         if (group.fields == null)
         {
@@ -149,7 +173,7 @@ public class EntityFactory implements IEntityFactory
         group.fields.add(field);
     }
 
-    private void addButton(FormGrp group, FormBtn button)
+    private void addButton(FormGroupEntity group, FormButtonEntity button)
     {
         if (group.buttons == null)
         {
@@ -163,12 +187,12 @@ public class EntityFactory implements IEntityFactory
     {
         var attr = new AttributeEntity();
         attr.name = attribute.getName();
-        var title = attribute.getTitle();
-        if (title != null && !title.isEmpty())
+        if (attribute.isMain())
         {
-            attr.title = title.map();
+            attr.isMain = true;
         }
 
+        attr.title = getMap(attribute.getTitle());
         var typeDescription = attribute.getValueType();
         if (typeDescription != null)
         {
@@ -186,92 +210,130 @@ public class EntityFactory implements IEntityFactory
             }
         }
 
+        var extInfo = attribute.getExtInfo();
+        if (extInfo != null)
+        {
+            if (extInfo instanceof DynamicListExtInfo)
+            {
+                var info = (DynamicListExtInfo)extInfo;
+                var dynamicList = new DynamicListEntity();
+                attr.dynamicList = dynamicList;
+                dynamicList.query = info.getQueryText();
+                dynamicList.keyField = info.getKeyField();
+                var keyType = info.getKeyType();
+                if (keyType != null)
+                {
+                    dynamicList.keyTypeName = keyType.getName();
+                }
+
+                var mainTable = info.getMainTable();
+                if (mainTable != null)
+                {
+                    dynamicList.mainTableName = mainTable.getName();
+                    dynamicList.mainTableNameRu = mainTable.getNameRu();
+                }
+            }
+
+            if (extInfo instanceof ValueListExtInfo)
+            {
+                var info = (ValueListExtInfo)extInfo;
+                var valueList = new ValueListEntity();
+                attr.valueList = valueList;
+                valueList.itemTypes = getTypes(info.getItemValueType());
+            }
+        }
+
         return attr;
     }
 
-    private FormFld createField(FormField field)
+    private FormFieldEntity createField(FormField field)
     {
-        var fld = new FormFld();
-        fld.name = field.getName();
-        var toolTip = field.getToolTip();
-        if (toolTip != null && !toolTip.isEmpty())
-        {
-            fld.toolTip = toolTip.map();
-        }
-
+        var entity = new FormFieldEntity();
+        entity.name = field.getName();
+        entity.toolTip = getMap(field.getToolTip());
         var fiedType = field.getType();
         var dataPath = field.getDataPath();
         if (dataPath != null)
         {
-            fld.dataPath = dataPath.toString();
+            entity.dataPath = dataPath.toString();
         }
 
         if (fiedType != null)
         {
-            fld.fieldType = fiedType.getName();
+            entity.fieldType = fiedType.getName();
         }
 
-        return fld;
+        return entity;
     }
 
-    private FormGrp createGroup(Group group)
+    private FormGroupEntity createGroup(Group group)
     {
-        var node = new FormGrp();
-        node.name = group.getName();
-        var title = group.getTitle();
-        if (title != null && !title.isEmpty())
-        {
-            node.title = title.map();
-        }
-
-        var toolTip = group.getToolTip();
-        if (toolTip != null && !toolTip.isEmpty())
-        {
-            node.toolTip = toolTip.map();
-        }
-
-        return node;
+        var entity = new FormGroupEntity();
+        entity.name = group.getName();
+        entity.title = getMap(group.getTitle());
+        entity.toolTip = getMap(group.getToolTip());
+        return entity;
     }
 
-    private FormBtn createButton(Button button)
+    private FormButtonEntity createButton(Button button)
     {
-        var btn = new FormBtn();
-        btn.name = button.getName();
-        var title = button.getTitle();
-        if (title != null && !title.isEmpty())
-        {
-            btn.title = title.map();
-        }
-
+        var entity = new FormButtonEntity();
+        entity.name = button.getName();
+        entity.title = getMap(button.getTitle());
         var dataPath = button.getDataPath();
         if (dataPath != null)
         {
-            btn.dataPath = dataPath.toString();
+            entity.dataPath = dataPath.toString();
         }
 
         button.getCommandName();
         // button.getCommandName()
-        return btn;
+        return entity;
+    }
+
+    private FormTableEntity createTable(Table table)
+    {
+        var entity = new FormTableEntity();
+        entity.name = table.getName();
+        entity.title = getMap(table.getTitle());
+        entity.toolTip = getMap(table.getToolTip());
+        var dataPath = table.getDataPath();
+        if (dataPath != null)
+        {
+            entity.dataPath = dataPath.toString();
+        }
+
+        var fields = table.getFields();
+        if (!fields.isEmpty())
+        {
+            entity.fields = new ArrayList<>();
+            for (var field : fields)
+            {
+                entity.tableFields.add(createField(field));
+            }
+        }
+
+        return entity;
     }
 
     @Override
     public Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node,
         ICancellationToken cancellationToken)
     {
-        var objectEntity = new ObjectEntity();
-        objectEntity.name = variable.getName();
-        objectEntity.start = node.getTotalOffset();
-        objectEntity.finish = node.getTotalEndOffset();
-        objectEntity.code = node.getText();
+        var entity = new ObjectEntity();
+        entity.name = variable.getName();
+        entity.start = node.getTotalOffset();
+        entity.finish = node.getTotalEndOffset();
+        entity.code = node.getText();
         var comment = v8Model.getComment(variable);
         if (comment != null && !comment.isEmpty())
         {
-            objectEntity.comment = comment;
+            entity.comment = comment;
         }
 
         var types = v8Model.getTypes(variable.getTypeStateProvider(), node);
-        fillType(variable, objectEntity, types, cancellationToken);
-        return Optional.of(objectEntity);
+        fillType(variable, entity, types, cancellationToken);
+        return Optional.of(entity);
     }
 
     @Override
@@ -427,12 +489,7 @@ public class EntityFactory implements IEntityFactory
                 var entity = new AttributeEntity();
                 meta.attributes.add(entity);
                 entity.name = attribute.getName();
-                var toolTip = attribute.getToolTip();
-                if (toolTip != null && !toolTip.isEmpty())
-                {
-                    entity.toolTip = toolTip.map();
-                }
-
+                entity.toolTip = getMap(attribute.getToolTip());
                 entity.types = getTypes(attribute.getTypeDescription());
             }
         }
@@ -446,6 +503,7 @@ public class EntityFactory implements IEntityFactory
                 meta.tabularSections.add(entity);
                 entity.name = tabularSection.getName();
                 entity.comment = tabularSection.getComment();
+                entity.toolTip = getMap(tabularSection.getToolTip());
                 var fields = tabularSection.getFields();
                 if (!fields.isEmpty())
                 {
@@ -467,18 +525,8 @@ public class EntityFactory implements IEntityFactory
                 meta.registerResources.add(entity);
                 entity.name = registerResource.getName();
                 entity.comment = registerResource.getComment();
-                var toolTip = registerResource.getToolTip();
-                if (toolTip != null && !toolTip.isEmpty())
-                {
-                    entity.toolTip = toolTip.map();
-                }
-
-                var synonym = registerResource.getSynonym();
-                if (synonym != null && !synonym.isEmpty())
-                {
-                    entity.synonym = synonym.map();
-                }
-
+                entity.toolTip = getMap(registerResource.getToolTip());
+                entity.synonym = getMap(registerResource.getSynonym());
                 entity.types = getTypes(registerResource.getType());
             }
         }
@@ -492,18 +540,8 @@ public class EntityFactory implements IEntityFactory
                 meta.registerDimensions.add(entity);
                 entity.name = registerDimension.getName();
                 entity.comment = registerDimension.getComment();
-                var toolTip = registerDimension.getToolTip();
-                if (toolTip != null && !toolTip.isEmpty())
-                {
-                    entity.toolTip = toolTip.map();
-                }
-
-                var synonym = registerDimension.getSynonym();
-                if (synonym != null && !synonym.isEmpty())
-                {
-                    entity.synonym = synonym.map();
-                }
-
+                entity.toolTip = getMap(registerDimension.getToolTip());
+                entity.synonym = getMap(registerDimension.getSynonym());
                 entity.types = getTypes(registerDimension.getType());
             }
         }
@@ -517,12 +555,7 @@ public class EntityFactory implements IEntityFactory
                 meta.registerRecords.add(entity);
                 entity.name = registerRecord.getName();
                 entity.comment = registerRecord.getComment();
-                var synonym = registerRecord.getSynonym();
-                if (synonym != null && !synonym.isEmpty())
-                {
-                    entity.synonym = synonym.map();
-                }
-
+                entity.synonym = getMap(registerRecord.getSynonym());
                 var fields = registerRecord.getFields();
                 if (!fields.isEmpty())
                 {
@@ -536,6 +569,16 @@ public class EntityFactory implements IEntityFactory
         }
 
         return Optional.of(meta);
+    }
+
+    private Map<String, String> getMap(EMap<String, String> map)
+    {
+        if (map == null || map.isEmpty())
+        {
+            return null;
+        }
+
+        return map.map();
     }
 
     private List<DataType> getTypes(TypeDescription typeDescription)
