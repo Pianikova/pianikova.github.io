@@ -1,11 +1,8 @@
 package org.e1c.edt.semantic.handlers;
 
-import org.e1c.edt.ai.Closeables;
-import org.e1c.edt.ai.context.IV8Model;
 import org.e1c.edt.semantic.Activator;
 import org.e1c.edt.semantic.IEndpointDialog;
-import org.e1c.edt.semantic.IWebServer;
-import org.e1c.edt.semantic.WebServerSettings;
+import org.e1c.edt.semantic.IEndpointViewModel;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
@@ -19,15 +16,10 @@ import com.google.inject.Inject;
 public class ActivateHandler extends AbstractHandler {
 
     @Inject
-    IWebServer server;
-
-    @Inject
-    IV8Model model;
+    IEndpointViewModel endpointViewModel;
 
     @Inject
     IEndpointDialog endpointDialog;
-
-    private AutoCloseable serverStartToken = Closeables.Empty;
 
     public ActivateHandler()
     {
@@ -36,23 +28,11 @@ public class ActivateHandler extends AbstractHandler {
 
 	@Override
 	public Object execute(ExecutionEvent event) throws ExecutionException {
-        if (serverStartToken != Closeables.Empty)
+        if (endpointViewModel.isActive())
         {
-            try
-            {
-                serverStartToken.close();
-            }
-            catch (Exception e)
-            {
-                // ignored
-            }
-            finally
-            {
-                serverStartToken = Closeables.Empty;
-                IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
-                MessageDialog.openInformation(window.getShell(), "Semantic Endpoint", "Deactivated"); //$NON-NLS-1$ //$NON-NLS-2$
-            }
-
+            endpointViewModel.deactivate();
+            IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
+            MessageDialog.openInformation(window.getShell(), "Semantic Endpoint", "Deactivated"); //$NON-NLS-1$ //$NON-NLS-2$
             return null;
         }
 
@@ -61,9 +41,7 @@ public class ActivateHandler extends AbstractHandler {
             return null;
         }
 
-	    var settings = new WebServerSettings();
-        settings.Port = endpointDialog.getPort();
-        serverStartToken = server.start(settings);
-		return null;
+        endpointViewModel.activate(endpointDialog.getPort());
+        return null;
 	}
 }

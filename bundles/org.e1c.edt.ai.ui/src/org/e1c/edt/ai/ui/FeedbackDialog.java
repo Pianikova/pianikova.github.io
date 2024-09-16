@@ -39,8 +39,8 @@ public class FeedbackDialog
     public FeedbackDialog(IUI ui, ISettingsStore settingsStore)
     {
         super(ui.getShell().get());
-        this.settingsStore = settingsStore;
         Preconditions.checkNotNull(settingsStore);
+        this.settingsStore = settingsStore;
     }
 
     @Override

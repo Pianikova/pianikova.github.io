@@ -8,6 +8,7 @@ import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.context.IResourceSetProvider;
 import org.e1c.edt.ai.context.ResourceSetProvider;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jface.preference.IPreferenceStore;
 
 import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.google.common.base.Preconditions;
@@ -30,11 +31,13 @@ public class SemanticModule
     {
         // @formatter:off
         bind(ILog.class).toInstance(activator);
+        bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(IWebServer.class).to(WebServer.class).in(Singleton.class);
         bind(Handler.class).to(WebHandler.class).in(Singleton.class);
         bind(IEndpointDialog.class).to(EndpointDialog.class).in(Singleton.class);
         bind(IResourceSetProvider.class).to(ResourceSetProvider.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
+        bind(IEndpointViewModel.class).to(EndpointViewModel.class).in(Singleton.class);
         // @formatter:on
     }
 }

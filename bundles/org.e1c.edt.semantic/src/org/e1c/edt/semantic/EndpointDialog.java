@@ -3,7 +3,9 @@
  */
 package org.e1c.edt.semantic;
 
+import org.e1c.edt.ai.IJson;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
@@ -15,6 +17,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class EndpointDialog
@@ -22,14 +25,19 @@ public class EndpointDialog
     implements IEndpointDialog
 {
     public final static String BOUNDS_STORE_KEY = "EndpointDialogBounds"; //$NON-NLS-1$
-
+    private final IPreferenceStore preferenceStore;
+    private final IJson json;
     private Text portText;
     private int port = 9000;
 
     @Inject
-    public EndpointDialog()
+    public EndpointDialog(IPreferenceStore preferenceStore, IJson json)
     {
         super(Display.getCurrent().getActiveShell());
+        Preconditions.checkNotNull(preferenceStore);
+        Preconditions.checkNotNull(json);
+        this.preferenceStore = preferenceStore;
+        this.json = json;
     }
 
     @Override
@@ -51,6 +59,19 @@ public class EndpointDialog
     {
         super.configureShell(shell);
         shell.setText("Semantic Endpoint"); //$NON-NLS-1$
+        var boundsStr = preferenceStore.getString(BOUNDS_STORE_KEY);
+        if (boundsStr != null)
+        {
+            json.deserialize(boundsStr, org.eclipse.swt.graphics.Rectangle.class)
+                .ifPresent(bounds -> shell.setBounds(bounds));
+        }
+    }
+
+    @Override
+    public boolean close()
+    {
+        preferenceStore.setValue(BOUNDS_STORE_KEY, json.serialize(getShell().getBounds()));
+        return super.close();
     }
 
     @Override

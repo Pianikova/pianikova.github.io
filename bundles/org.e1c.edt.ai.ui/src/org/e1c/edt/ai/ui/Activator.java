@@ -113,7 +113,11 @@ public class Activator
      */
     private static void log(IStatus status)
     {
-        plugin.getLog().log(status);
+        var logger = plugin.getLog();
+        if (logger != null)
+        {
+            logger.log(status);
+        }
     }
 
     /**
