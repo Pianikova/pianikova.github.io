@@ -121,6 +121,11 @@ public class UI
     public Optional<SourceViewer> getSourceViewer(StyledText textWidget)
     {
         Preconditions.checkNotNull(textWidget);
+        if (textWidget.isDisposed())
+        {
+            return Optional.empty();
+        }
+
         return getAncestors(textWidget).filter(i -> i instanceof Canvas)
             .map(i -> getSourceViewer(((Canvas)i).getLayout()))
             .filter(i -> i != null)

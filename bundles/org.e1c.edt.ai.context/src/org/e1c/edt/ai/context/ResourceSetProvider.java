@@ -6,6 +6,7 @@ package org.e1c.edt.ai.context;
 import java.util.HashMap;
 
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 
 import com._1c.g5.v8.dt.bm.xtext.BmAwareResourceSetProvider;
@@ -39,5 +40,12 @@ public class ResourceSetProvider implements IResourceSetProvider
             curProject -> v8Model.getResourceService(BmAwareResourceSetProvider.class).get(curProject));
 
         return resourceSet;
+    }
+
+    @Override
+    public IProject[] getProjects()
+    {
+        var root = ResourcesPlugin.getWorkspace().getRoot();
+        return root.getProjects();
     }
 }

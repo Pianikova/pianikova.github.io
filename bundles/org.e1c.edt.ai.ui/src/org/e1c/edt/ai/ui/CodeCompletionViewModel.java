@@ -238,11 +238,11 @@ public class CodeCompletionViewModel
 
         reset();
         dispatcher.dispatch(() -> {
+            textWidget.removePaintListener(hintPainter);
+            textWidget.removeCaretListener(this);
+            textWidget.removeVerifyKeyListener(this);
             if (!textWidget.isDisposed())
             {
-                textWidget.removePaintListener(hintPainter);
-                textWidget.removeCaretListener(this);
-                textWidget.removeVerifyKeyListener(this);
                 textWidget.redraw();
             }
         });

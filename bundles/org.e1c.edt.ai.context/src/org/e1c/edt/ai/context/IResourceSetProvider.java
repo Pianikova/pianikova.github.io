@@ -8,5 +8,7 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 
 public interface IResourceSetProvider
 {
+    IProject[] getProjects();
+
     ResourceSet getResourceSet(IProject project);
 }

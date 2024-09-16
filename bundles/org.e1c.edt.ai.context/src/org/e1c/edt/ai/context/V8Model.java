@@ -13,7 +13,6 @@ import org.e1c.edt.ai.ILog;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
@@ -91,8 +90,13 @@ public class V8Model implements IV8Model
         Preconditions.checkNotNull(cancellationToken);
         IPath path = new Path(filePath);
         var modules = new ArrayList<ModuleInfo>();
-        for (var project : getProjects())
+        for (var project : resourceSetProvider.getProjects())
         {
+            if (!project.isOpen())
+            {
+                continue;
+            }
+
             var bmModel = modelManager.getModel(project);
             var uriVisitor = new IFileVisitor()
             {
@@ -345,12 +349,6 @@ public class V8Model implements IV8Model
         }
 
         return Optional.ofNullable(path);
-    }
-
-    private IProject[] getProjects()
-    {
-        var root = ResourcesPlugin.getWorkspace().getRoot();
-        return root.getProjects();
     }
 
     private void walkFiles(IProject project, IFileVisitor visitor) throws CoreException
