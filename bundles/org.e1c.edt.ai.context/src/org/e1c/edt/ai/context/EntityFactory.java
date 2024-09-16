@@ -270,6 +270,7 @@ public class EntityFactory implements IEntityFactory
     {
         var entity = new FormGroupEntity();
         entity.name = group.getName();
+        entity.kind = group.getClass().getSimpleName();
         entity.title = getMap(group.getTitle());
         entity.toolTip = getMap(group.getToolTip());
         return entity;
@@ -295,6 +296,7 @@ public class EntityFactory implements IEntityFactory
     {
         var entity = new FormTableEntity();
         entity.name = table.getName();
+        entity.kind = table.getClass().getSimpleName();
         entity.title = getMap(table.getTitle());
         entity.toolTip = getMap(table.getToolTip());
         var dataPath = table.getDataPath();
@@ -309,6 +311,11 @@ public class EntityFactory implements IEntityFactory
             entity.fields = new ArrayList<>();
             for (var field : fields)
             {
+                if (!isPublishedField(field))
+                {
+                    continue;
+                }
+
                 entity.tableFields.add(createField(field));
             }
         }
@@ -510,6 +517,11 @@ public class EntityFactory implements IEntityFactory
                     entity.fields = new ArrayList<>();
                     for (var field : fields)
                     {
+                        if (!isPublishedField(field))
+                        {
+                            continue;
+                        }
+
                         entity.fields.add(createField(field));
                     }
                 }
@@ -569,6 +581,12 @@ public class EntityFactory implements IEntityFactory
         }
 
         return Optional.of(meta);
+    }
+
+    private boolean isPublishedField(Field field)
+    {
+        var name = field.getName();
+        return name != null && !name.equals("Ref") && !name.equals("LineNumber"); //$NON-NLS-1$//$NON-NLS-2$
     }
 
     private Map<String, String> getMap(EMap<String, String> map)

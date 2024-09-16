@@ -12,6 +12,8 @@ public class FormGroupEntity
 {
     public String name;
 
+    public String kind;
+
     public Map<String, String> title;
 
     @SerializedName("tool_tip")

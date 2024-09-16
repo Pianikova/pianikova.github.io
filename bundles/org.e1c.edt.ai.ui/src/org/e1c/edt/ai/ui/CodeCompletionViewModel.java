@@ -154,7 +154,6 @@ public class CodeCompletionViewModel
                         protected IStatus run(IProgressMonitor monitor)
                         {
                             cancellationTokenSource.attachMonitor(monitor);
-                            contextEntities.fill(aiCtx, new LocalContext(), cancellationTokenSource);
                             contextDuration = contextEntities.fill(aiCtx, new LocalContext(), cancellationTokenSource);
                             return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                         }
