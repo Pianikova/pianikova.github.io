@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.IJson;
+import org.e1c.edt.ai.ServerAccessType;
 import org.e1c.edt.ai.assistent.model.AcceptedCodeFeedback;
 import org.e1c.edt.ai.assistent.model.CursorInfo;
 import org.e1c.edt.ai.assistent.model.FinalCodeFeedback;
@@ -27,19 +28,23 @@ public class FeedbackService
     private final IHttpLog log;
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clienBuilder;
+    private final IServerAccessService serverAccess;
     private final IJson json;
 
     @Inject
-    public FeedbackService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json)
+    public FeedbackService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
+        IServerAccessService serverAccess)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(serverAccess);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
         this.json = json;
+        this.serverAccess = serverAccess;
     }
 
     @Override
@@ -109,6 +114,10 @@ public class FeedbackService
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)
                 {
+                    if (statusCode >= 500)
+                    {
+                        serverAccess.accessChanged(FeedbackService.class.getName(), ServerAccessType.ACCESS_ABSENT);
+                    }
                     throw new AIClientException("AI HTTP feedback response status code is " + statusCode, null); //$NON-NLS-1$
                 }
 

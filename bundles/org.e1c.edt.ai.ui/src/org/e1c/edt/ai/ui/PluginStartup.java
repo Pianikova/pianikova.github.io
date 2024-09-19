@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.assistent.IServerAccessService;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IStartup;
@@ -24,6 +25,8 @@ public class PluginStartup
 {
     @Inject
     UI ui;
+    @Inject
+    IServerAccessService accessHolder;
 
     public PluginStartup()
     {
@@ -41,6 +44,7 @@ public class PluginStartup
             @Override
             public void run()
             {
+                accessHolder.startMonitoring(3000);
                 var display = Display.getCurrent();
                 display.addFilter(SWT.FocusIn, ui);
                 display.addFilter(SWT.FocusOut, ui);

@@ -18,6 +18,7 @@ import org.e1c.edt.ai.assistent.IRequestBuilder;
 import org.e1c.edt.ai.assistent.IResponseCache;
 import org.e1c.edt.ai.assistent.IResponseLineProcessor;
 import org.e1c.edt.ai.assistent.IResponseStreamProcessor;
+import org.e1c.edt.ai.assistent.IServerAccessService;
 import org.e1c.edt.ai.assistent.ISessionService;
 import org.e1c.edt.ai.assistent.ISettingsTracker;
 import org.e1c.edt.ai.assistent.ITextPreprocessor;
@@ -26,6 +27,7 @@ import org.e1c.edt.ai.assistent.RequestBuilder;
 import org.e1c.edt.ai.assistent.ResponseCache;
 import org.e1c.edt.ai.assistent.ResponseLineProcessor;
 import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
+import org.e1c.edt.ai.assistent.ServerAccessService;
 import org.e1c.edt.ai.assistent.SessionService;
 import org.e1c.edt.ai.assistent.SettingsTracker;
 import org.e1c.edt.ai.assistent.TextPreprocessor;
@@ -80,6 +82,7 @@ public class AIModule
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
         bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
+        bind(IServerAccessService.class).to(ServerAccessService.class);
         // @formatter:on
     }
 }

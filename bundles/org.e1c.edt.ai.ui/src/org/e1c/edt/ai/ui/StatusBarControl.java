@@ -3,9 +3,11 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.ServerAccessType;
+import org.e1c.edt.ai.assistent.IServerAccessService;
+import org.e1c.edt.ai.assistent.ServerAccessListener;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.DisposeEvent;
@@ -19,6 +21,8 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
+import com.google.inject.Inject;
+
 /**
  *
  * @author Bogdan Sushkov
@@ -26,15 +30,19 @@ import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
  */
 public class StatusBarControl
     extends WorkbenchWindowControlContribution
-    implements IHealthChecker
 {
     private Image image;
     private ImageDescriptor imageDesc;
     private Label iconLabel;
+    @Inject
+    private IServerAccessService serverAccess;
+    @Inject
+    private IDispatcher dispatcher;
 
     @Override
     protected Control createControl(Composite parent)
     {
+        Activator.injectMembers(this);
         var version = Activator.getDefault().getPluginVersion().get().toString();
         Composite composite = new Composite(parent, SWT.NONE);
         GridLayout gridLayout = new GridLayout(2, false);
@@ -61,6 +69,16 @@ public class StatusBarControl
             }
         });
 
+        serverAccess.addServerAccessListener(new ServerAccessListener()
+        {
+
+            @Override
+            public void onServerAccessChange(ServerAccessType currentStatus)
+            {
+                dispatcher.dispatchAsync(() -> changeStatus(currentStatus));
+            }
+        });
+
         // Status
         Label status = new Label(composite, SWT.NONE);
         status.setToolTipText(version);
@@ -74,10 +92,6 @@ public class StatusBarControl
         var statusGridData = new GridData(SWT.CENTER, SWT.CENTER, true, true);
         status.setLayoutData(statusGridData);
 
-        var job = new StatusUpdateJob("Server status updater", this); //$NON-NLS-1$
-        job.setPriority(Job.DECORATE);
-        job.schedule();
-
         parent.getParent().setRedraw(true);
         return composite;
     }
@@ -88,10 +102,10 @@ public class StatusBarControl
         return true;
     }
 
-    @Override
-    public void setStatus(int status)
+    private void changeStatus(ServerAccessType status)
     {
-        String path = status == 200 ? "icons/obj16/status_ok.png" : "icons/obj16/status_not_ok.png"; //$NON-NLS-1$ //$NON-NLS-2$
+        String path =
+            status == ServerAccessType.ACCESS_PRESENT ? "icons/obj16/status_ok.png" : "icons/obj16/status_not_ok.png"; //$NON-NLS-1$ //$NON-NLS-2$
         imageDesc =
             ImageDescriptor.createFromURL(FileLocator.find(Activator.getDefault().getBundle(), new Path(path), null));
         if (!iconLabel.isDisposed())

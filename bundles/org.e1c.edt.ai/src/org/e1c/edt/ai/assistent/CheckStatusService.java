@@ -41,7 +41,7 @@ public class CheckStatusService
         try {
             builder = requestBuilder.create("./health"); //$NON-NLS-1$
         } catch (IllegalArgumentException e) {
-            log.error(e, "Illegal http request");
+            log.error(e, "Illegal http request"); //$NON-NLS-1$
             return CompletableFuture.completedFuture(0);
         }
         if (builder.isEmpty())
