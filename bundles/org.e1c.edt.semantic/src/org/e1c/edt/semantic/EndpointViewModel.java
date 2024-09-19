@@ -17,6 +17,7 @@ public class EndpointViewModel implements IEndpointViewModel
     private final IWebServer server;
     private final IPreferenceStore preferenceStore;
     private AutoCloseable serverStartToken = Closeables.Empty;
+    private WebServerSettings settings = new WebServerSettings();
 
     @Inject
     public EndpointViewModel(ILog log, IWebServer server, IPreferenceStore preferenceStore)
@@ -36,16 +37,14 @@ public class EndpointViewModel implements IEndpointViewModel
     }
 
     @Override
-    public void activate(int port)
+    public void activate()
     {
         if (isActive())
         {
             return;
         }
 
-        preferenceStore.setValue(PORT_STORE_KEY, port);
-        var settings = new WebServerSettings();
-        settings.Port = port;
+        preferenceStore.setValue(PORT_STORE_KEY, getPort());
         serverStartToken = server.start(settings);
     }
 
@@ -80,12 +79,25 @@ public class EndpointViewModel implements IEndpointViewModel
             var port = preferenceStore.getInt(PORT_STORE_KEY);
             if (port > 0)
             {
-                activate(port);
+                settings.Port = port;
+                activate();
             }
         }
         catch (Exception ex)
         {
             log.logError(ex);
         }
+    }
+
+    @Override
+    public int getPort()
+    {
+        return settings.Port;
+    }
+
+    @Override
+    public void setPort(int port)
+    {
+        settings.Port = port;
     }
 }

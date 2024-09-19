@@ -27,17 +27,19 @@ public class EndpointDialog
     public final static String BOUNDS_STORE_KEY = "EndpointDialogBounds"; //$NON-NLS-1$
     private final IPreferenceStore preferenceStore;
     private final IJson json;
+    private final IEndpointViewModel viewModel;
     private Text portText;
-    private int port = 9000;
 
     @Inject
-    public EndpointDialog(IPreferenceStore preferenceStore, IJson json)
+    public EndpointDialog(IPreferenceStore preferenceStore, IJson json, IEndpointViewModel viewModel)
     {
         super(Display.getCurrent().getActiveShell());
         Preconditions.checkNotNull(preferenceStore);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(viewModel);
         this.preferenceStore = preferenceStore;
         this.json = json;
+        this.viewModel = viewModel;
     }
 
     @Override
@@ -93,7 +95,7 @@ public class EndpointDialog
         portTextGrid.horizontalAlignment = GridData.FILL;
 
         portText = new Text(container, SWT.BORDER);
-        portText.setText(Integer.toString(port));
+        portText.setText(Integer.toString(viewModel.getPort()));
         portText.setLayoutData(portTextGrid);
         portText.setFocus();
         portText.selectAll();
@@ -115,7 +117,7 @@ public class EndpointDialog
     private void saveData()
     {
         try {
-            port = Integer.parseInt(portText.getText());
+            viewModel.setPort(Integer.parseInt(portText.getText()));
         }
         catch (NumberFormatException e)
         {
@@ -128,11 +130,5 @@ public class EndpointDialog
     {
         saveData();
         super.okPressed();
-    }
-
-    @Override
-    public int getPort()
-    {
-        return port;
     }
 }
