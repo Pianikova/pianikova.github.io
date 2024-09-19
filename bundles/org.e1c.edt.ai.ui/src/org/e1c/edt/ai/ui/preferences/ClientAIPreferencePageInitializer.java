@@ -22,8 +22,8 @@ public class ClientAIPreferencePageInitializer
     {
         IPreferenceStore store = Activator.getDefault().getPreferenceStore();
         store.setDefault(ISettingsStore.APIURL, "https://llms.1c.ai/code/api/v1/"); //$NON-NLS-1$
-        store.setDefault(ISettingsStore.CLIENT_TOKEN, "user_test"); //$NON-NLS-1$
-        store.setDefault(ISettingsStore.LLM_PARAMETERS, "chat_url=http://llm-code.ailab:4000/"); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.CLIENT_TOKEN, ""); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.LLM_PARAMETERS, ""); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
         store.setDefault(ISettingsStore.CONTINUOUS_CODE_COMPLETION, true);
         store.setDefault(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY, 300);
