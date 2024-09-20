@@ -327,6 +327,7 @@ public class CodeCompletionViewModel
                     if (hint.isBlank())
                     {
                         hint.clear();
+                        reset();
                     }
 
                     session.complete();
@@ -463,7 +464,6 @@ public class CodeCompletionViewModel
         case RESET:
             commit(session);
             reset();
-            event.doit = false;
             break;
 
         case HANDLE:
