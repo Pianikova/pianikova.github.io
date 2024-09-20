@@ -329,11 +329,6 @@ public class CodeCompletionViewModel
                         hint.clear();
                     }
 
-                    if (!singleWordMode && hint.isEmpty())
-                    {
-                        hint.append(new Text("\n", session)); //$NON-NLS-1$
-                    }
-
                     session.complete();
                     showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
                 }));

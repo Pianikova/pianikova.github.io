@@ -7,9 +7,13 @@ public interface IEndpointViewModel
 {
     boolean isActive();
 
-    void activate(int port);
+    void activate();
 
     void deactivate();
 
     void restore();
+
+    int getPort();
+
+    void setPort(int port);
 }

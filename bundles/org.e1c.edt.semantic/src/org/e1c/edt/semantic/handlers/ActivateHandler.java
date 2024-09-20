@@ -32,7 +32,8 @@ public class ActivateHandler extends AbstractHandler {
         {
             endpointViewModel.deactivate();
             IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
-            MessageDialog.openInformation(window.getShell(), "Semantic Endpoint", "Deactivated"); //$NON-NLS-1$ //$NON-NLS-2$
+            MessageDialog.openInformation(window.getShell(), "Semantic Endpoint", //$NON-NLS-1$
+                "Deactivated on the port " + endpointViewModel.getPort()); //$NON-NLS-1$
             return null;
         }
 
@@ -41,7 +42,7 @@ public class ActivateHandler extends AbstractHandler {
             return null;
         }
 
-        endpointViewModel.activate(endpointDialog.getPort());
+        endpointViewModel.activate();
         return null;
 	}
 }
