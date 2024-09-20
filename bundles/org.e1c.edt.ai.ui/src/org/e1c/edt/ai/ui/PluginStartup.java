@@ -44,7 +44,7 @@ public class PluginStartup
             @Override
             public void run()
             {
-                accessHolder.startMonitoring(3000);
+                accessHolder.startMonitoring(30000);
                 var display = Display.getCurrent();
                 display.addFilter(SWT.FocusIn, ui);
                 display.addFilter(SWT.FocusOut, ui);
