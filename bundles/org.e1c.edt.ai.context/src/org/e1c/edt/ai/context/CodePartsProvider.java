@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -46,7 +47,9 @@ public class CodePartsProvider implements ICodePartsProvider
     {
         private final Iterator<CodeMarker> markers;
         private final Stack<CursorLocation> locations = new Stack<>();
+        private final HashSet<Method> methods = new HashSet<>();
         private boolean beforeArgs;
+        private int lastMethodId;
 
         public CodePartIterator(Stream<CodeMarker> markers)
         {
@@ -64,23 +67,35 @@ public class CodePartsProvider implements ICodePartsProvider
         public CodePart next()
         {
             var marker = markers.next();
-            CodePart codePart = new CodePart(marker.range, CursorLocation.OutsideFunction, marker.text);
+            var method = marker.method;
+            Integer methodId = null;
+            if (method != null)
+            {
+                if (methods.add(method))
+                {
+                    lastMethodId++;
+                }
+
+                methodId = lastMethodId;
+            }
+
+            CodePart codePart = new CodePart(methodId, marker.range, CursorLocation.OutsideFunction, marker.text);
             switch (marker.type)
             {
             case Comment:
                 if (getLastLocation() == CursorLocation.FunctionBody)
                 {
-                    codePart = new CodePart(marker.range, CursorLocation.FunctionBody, marker.text);
+                    codePart = new CodePart(methodId, marker.range, CursorLocation.FunctionBody, marker.text);
                     break;
                 }
 
-                codePart = new CodePart(marker.range, CursorLocation.Comment, marker.text);
+                codePart = new CodePart(methodId, marker.range, CursorLocation.Comment, marker.text);
                 break;
 
             case MethodStart:
                 beforeArgs = true;
                 locations.push(CursorLocation.FunctionBody);
-                codePart = new CodePart(marker.range, CursorLocation.FunctionBody, marker.text);
+                codePart = new CodePart(methodId, marker.range, CursorLocation.FunctionBody, marker.text);
                 break;
 
             case MethodArgStart:
@@ -91,17 +106,17 @@ public class CodePartsProvider implements ICodePartsProvider
 
                 beforeArgs = false;
                 locations.push(CursorLocation.FunctionArguments);
-                codePart = new CodePart(marker.range, CursorLocation.FunctionArguments, marker.text);
+                codePart = new CodePart(methodId, marker.range, CursorLocation.FunctionArguments, marker.text);
                 break;
 
             case MethodArgFinish:
                 popLocation();
-                codePart = new CodePart(marker.range, CursorLocation.FunctionArguments, marker.text);
+                codePart = new CodePart(methodId, marker.range, CursorLocation.FunctionArguments, marker.text);
                 break;
 
             case MethodFinish:
                 popLocation();
-                codePart = new CodePart(marker.range, CursorLocation.FunctionBody, marker.text);
+                codePart = new CodePart(methodId, marker.range, CursorLocation.FunctionBody, marker.text);
                 break;
 
             case Unknown:
@@ -111,7 +126,7 @@ public class CodePartsProvider implements ICodePartsProvider
                     lastLocation = CursorLocation.FunctionName;
                 }
 
-                codePart = new CodePart(marker.range, lastLocation, marker.text);
+                codePart = new CodePart(methodId, marker.range, lastLocation, marker.text);
                 break;
 
             default:
@@ -149,13 +164,13 @@ public class CodePartsProvider implements ICodePartsProvider
             var semantic = NodeModelUtils.findActualSemanticObjectFor(leafNode);
             if (semantic == null)
             {
-                return new CodeMarker(range, MarkerType.Unknown, text);
+                return new CodeMarker(null, range, MarkerType.Unknown, text);
             }
 
             var method = EcoreUtil2.getContainerOfType(semantic, Method.class);
             if (method == null)
             {
-                return new CodeMarker(range, MarkerType.Unknown, text);
+                return new CodeMarker(method, range, MarkerType.Unknown, text);
             }
 
             var grammar = leafNode.getGrammarElement();
@@ -165,7 +180,7 @@ public class CodePartsProvider implements ICodePartsProvider
                 var name = terminalRule.getName();
                 if ("SL_COMMENT".equals(name))
                {
-                    return new CodeMarker(range, MarkerType.Comment, text);
+                    return new CodeMarker(method, range, MarkerType.Comment, text);
                }
             }
 
@@ -178,7 +193,7 @@ public class CodePartsProvider implements ICodePartsProvider
                     .anyMatch(
                         i -> "Процедура".equalsIgnoreCase(i.getValue()) || "Функция".equalsIgnoreCase(i.getValue())))
                {
-                    return new CodeMarker(range, MarkerType.MethodStart, text);
+                    return new CodeMarker(method, range, MarkerType.MethodStart, text);
                }
 
                 if (getAlternatives(grammar).filter(i -> i instanceof Keyword)
@@ -186,21 +201,21 @@ public class CodePartsProvider implements ICodePartsProvider
                     .anyMatch(i -> "КонецПроцедуры".equalsIgnoreCase(i.getValue())
                         || "КонецФункции".equalsIgnoreCase(i.getValue())))
                {
-                    return new CodeMarker(range, MarkerType.MethodFinish, text);
+                    return new CodeMarker(method, range, MarkerType.MethodFinish, text);
                }
 
                 if (isArgRelated(leafNode) && "(".equals(keyword.getValue()))
                {
-                    return new CodeMarker(range, MarkerType.MethodArgStart, text);
+                    return new CodeMarker(method, range, MarkerType.MethodArgStart, text);
                 }
 
                 if (isArgRelated(leafNode) && ")".equals(keyword.getValue()))
                 {
-                    return new CodeMarker(range, MarkerType.MethodArgFinish, text);
+                    return new CodeMarker(method, range, MarkerType.MethodArgFinish, text);
                }
             }
 
-            return new CodeMarker(range, MarkerType.Unknown, text);
+            return new CodeMarker(method, range, MarkerType.Unknown, text);
         });
     }
 
@@ -236,15 +251,17 @@ public class CodePartsProvider implements ICodePartsProvider
 
     private class CodeMarker
     {
+        private final Method method;
         public final Range range;
         public final MarkerType type;
         public final String text;
 
-        public CodeMarker(Range range, MarkerType type, String text)
+        public CodeMarker(Method method, Range range, MarkerType type, String text)
         {
             Preconditions.checkNotNull(range);
             Preconditions.checkNotNull(type);
             Preconditions.checkNotNull(text);
+            this.method = method;
             this.range = range;
             this.type = type;
             this.text = text;

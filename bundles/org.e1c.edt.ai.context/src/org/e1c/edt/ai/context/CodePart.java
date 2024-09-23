@@ -10,17 +10,24 @@ import com.google.common.base.Preconditions;
 
 public class CodePart
 {
+    private final Integer methodId;
     private final Range range;
     private final CursorLocation location;
     private final String text;
 
-    public CodePart(Range range, CursorLocation location, String text)
+    public CodePart(Integer methodId, Range range, CursorLocation location, String text)
     {
         Preconditions.checkNotNull(range);
         Preconditions.checkNotNull(text);
+        this.methodId = methodId;
         this.range = range;
         this.location = location;
         this.text = text;
+    }
+
+    public Integer getMethodId()
+    {
+        return methodId;
     }
 
     public Range getRange()

@@ -23,6 +23,7 @@ public class Messages
     public static String FeedbackDialogRefersToCodeCompletion;
     public static String FeedbackDialogIssueType;
     public static String FeedbackDialogDescription;
+    public static String ReplaceCode;
 
     static
     {

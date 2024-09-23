@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.assistent.ITextPreprocessor;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
 
 import com.google.common.base.Preconditions;
@@ -44,6 +45,19 @@ public class IdeApiHandler
                 if (selection instanceof TextSelection)
                 {
                     var textSelection = (TextSelection)selection;
+                    if (textSelection.getLength() > 0)
+                    {
+                        var shellOptional = ui.getShell();
+                        if (shellOptional.isPresent())
+                        {
+                            if (!MessageDialog.openQuestion(shellOptional.get(), Messages.AIName,
+                                Messages.ReplaceCode))
+                            {
+                                return;
+                            }
+                        }
+                    }
+
                     contet.replaceTextRange(textSelection.getOffset(), textSelection.getLength(), processedCode);
                     return;
                 }

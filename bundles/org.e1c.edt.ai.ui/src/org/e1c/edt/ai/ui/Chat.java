@@ -165,7 +165,7 @@ public class Chat implements IChat, IChatDialog
                     return Status.error("Failed to get the parameters."); //$NON-NLS-1$
                 }
 
-                webView.get().thenAcceptAsync(view -> dispatcher.dispatchAsync(() -> consumer.accept(view)));
+                webView.get().thenAcceptAsync(view -> dispatcher.dispatch(() -> consumer.accept(view)));
                 return Status.OK_STATUS;
             }
         }.schedule();
