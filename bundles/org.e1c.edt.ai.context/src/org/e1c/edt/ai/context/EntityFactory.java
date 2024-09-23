@@ -26,6 +26,7 @@ import org.e1c.edt.ai.context.DTO.MethodEntity;
 import org.e1c.edt.ai.context.DTO.ObjectEntity;
 import org.e1c.edt.ai.context.DTO.ObjectEntityField;
 import org.e1c.edt.ai.context.DTO.Parameter;
+import org.e1c.edt.ai.context.DTO.PropertyEntity;
 import org.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
 import org.e1c.edt.ai.context.DTO.RegisterRecordEntity;
 import org.e1c.edt.ai.context.DTO.RegisterResourceEntity;
@@ -51,8 +52,11 @@ import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
 import com._1c.g5.v8.dt.form.model.FormField;
 import com._1c.g5.v8.dt.form.model.Group;
+import com._1c.g5.v8.dt.form.model.MultiLanguageDataPath;
+import com._1c.g5.v8.dt.form.model.PropertyInfo;
 import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.form.model.ValueListExtInfo;
+import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
@@ -73,21 +77,24 @@ public class EntityFactory implements IEntityFactory
     private final ICommentFactory commentFactory;
     private final IFormWalker formWalker;
     private final ICodePartsProvider codePartsProvider;
+    private final IDataSourceInfoAssociationService dataSourceInfoAssociationService;
 
     @Inject
     public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory, IFormWalker formWalker,
-        ICodePartsProvider codePartsProvider)
+        ICodePartsProvider codePartsProvider, IDataSourceInfoAssociationService dataSourceInfoAssociationService)
     {
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
         Preconditions.checkNotNull(commentFactory);
         Preconditions.checkNotNull(formWalker);
         Preconditions.checkNotNull(codePartsProvider);
+        Preconditions.checkNotNull(dataSourceInfoAssociationService);
         this.v8Model = v8Model;
         this.idFactory = idFactory;
         this.commentFactory = commentFactory;
         this.formWalker = formWalker;
         this.codePartsProvider = codePartsProvider;
+        this.dataSourceInfoAssociationService = dataSourceInfoAssociationService;
     }
 
     @Override
@@ -124,7 +131,7 @@ public class EntityFactory implements IEntityFactory
 
                     for (var attribute : attributes)
                     {
-                        formEntity.attributes.add(createAttribute(attribute));
+                        formEntity.attributes.add(createAttribute(form, attribute));
                     }
                 }
             }
@@ -183,7 +190,7 @@ public class EntityFactory implements IEntityFactory
         group.buttons.add(button);
     }
 
-    private AttributeEntity createAttribute(FormAttribute attribute)
+    private AttributeEntity createAttribute(Form form, FormAttribute attribute)
     {
         var attr = new AttributeEntity();
         attr.name = attribute.getName();
@@ -206,6 +213,24 @@ public class EntityFactory implements IEntityFactory
                     attr.types.add(dataType);
                     dataType.type = type.getName();
                     dataType.typeRu = type.getNameRu();
+                }
+            }
+        }
+
+        var proprtyInfo = dataSourceInfoAssociationService.findPropertyInfo(form, attribute);
+        if (proprtyInfo != null)
+        {
+            attr.dataPaths = getDataPaths(proprtyInfo.getMultyLanguageDataPath());
+            var propInfos = proprtyInfo.getPropertyInfos();
+            if (propInfos != null && !propInfos.isEmpty())
+            {
+                attr.properties = new ArrayList<>();
+                var properties = new HashMap<PropertyInfo, PropertyEntity>();
+                for(var propInfo: propInfos)
+                {
+                    var property = new PropertyEntity();
+                    fillProperty(property, propInfo, properties, 4);
+                    attr.properties.add(property);
                 }
             }
         }
@@ -244,6 +269,58 @@ public class EntityFactory implements IEntityFactory
         }
 
         return attr;
+    }
+
+    private List<String> getDataPaths(MultiLanguageDataPath dataPath)
+    {
+        if (dataPath != null)
+        {
+            var paths = dataPath.getPaths();
+            if (paths != null && !paths.isEmpty())
+            {
+                var result = new ArrayList<String>();
+                for (var path : paths)
+                {
+                    result.add(path.toString());
+                }
+
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    private void fillProperty(PropertyEntity propery, PropertyInfo proprtyInfo,
+        HashMap<PropertyInfo, PropertyEntity> properties, int dept)
+    {
+        propery.name = proprtyInfo.getName();
+        propery.nameRu = proprtyInfo.getNameRu();
+        propery.description = proprtyInfo.getStaticDescription();
+        propery.dataPaths = getDataPaths(proprtyInfo.getMultyLanguageDataPath());
+        propery.types = getTypes(proprtyInfo.getValueType());
+        if (dept < 0)
+        {
+            return;
+        }
+
+        var propInfos = proprtyInfo.getPropertyInfos();
+        if (propInfos != null && !propInfos.isEmpty())
+        {
+            propery.properties = new ArrayList<>();
+            dept--;
+            for (var propInfo : propInfos)
+            {
+                var prop = properties.get(propInfo);
+                if (prop == null)
+                {
+                    prop = new PropertyEntity();
+                    fillProperty(prop, propInfo, properties, dept);
+                }
+
+                propery.properties.add(prop);
+            }
+        }
     }
 
     private FormFieldEntity createField(FormField field)

@@ -11,6 +11,7 @@ import org.eclipse.core.runtime.Plugin;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
+import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.google.inject.Singleton;
@@ -42,6 +43,7 @@ public class ContextModule
         bind(IExternalPropertyManagerRegistry.class).toService();
         bind(IBmModelManager.class).toService();
         bind(IResourceLookup.class).toService();
+        bind(IDataSourceInfoAssociationService.class).toService();
         // @formatter:on
     }
 }

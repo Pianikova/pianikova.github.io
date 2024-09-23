@@ -3,7 +3,6 @@
  */
 package org.e1c.edt.ai.tests;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -14,7 +13,6 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ContextInitializer;
 import org.e1c.edt.ai.ContextParts;
 import org.e1c.edt.ai.IContextSplitter;
-import org.e1c.edt.ai.IStringNormalizer;
 import org.e1c.edt.ai.Range;
 import org.junit.Assert;
 import org.junit.Test;
@@ -24,10 +22,9 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public class AIContextFactoryTest
+public class ContextInitializerTest
 {
     private final IContextSplitter splitter = mock(IContextSplitter.class);
-    private final IStringNormalizer stringNormalizer = mock(IStringNormalizer.class);
 
     @Parameter(0)
     public String prefix;
@@ -50,11 +47,6 @@ public class AIContextFactoryTest
     public void shouldCreateContext()
     {
         // Given
-        when(stringNormalizer.normalize(any(String.class), any(Boolean.class))).thenAnswer(state -> {
-            var text = (String)state.getArguments()[0];
-            return text.replace(System.lineSeparator(), "\n");
-        });
-
         var text = prefix + sufix;
         var parts = new ContextParts(new Range(0, prefix.length()), new Range(prefix.length(), sufix.length()));
         when(splitter.split(text, expectedOffset)).thenReturn(parts);
@@ -80,7 +72,7 @@ public class AIContextFactoryTest
 
     private ContextInitializer createInstance()
     {
-        return new ContextInitializer(splitter, stringNormalizer);
+        return new ContextInitializer(splitter);
     }
 
     @SuppressWarnings("nls")

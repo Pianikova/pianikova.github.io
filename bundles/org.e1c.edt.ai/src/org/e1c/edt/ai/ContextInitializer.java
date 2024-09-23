@@ -12,16 +12,12 @@ public class ContextInitializer
     implements IContextInitializer
 {
     private final IContextSplitter contextSplitter;
-    private final IStringNormalizer stringNormalizer;
 
     @Inject
-    public ContextInitializer(IContextSplitter contextSplitter,
-        IStringNormalizer stringNormalizer)
+    public ContextInitializer(IContextSplitter contextSplitter)
     {
         Preconditions.checkNotNull(contextSplitter);
-        Preconditions.checkNotNull(stringNormalizer);
         this.contextSplitter = contextSplitter;
-        this.stringNormalizer = stringNormalizer;
     }
 
     @Override
@@ -50,8 +46,8 @@ public class ContextInitializer
         }
 
         var parts = contextSplitter.split(text, offset);
-        var prefix = stringNormalizer.normalize(parts.getPrefix().apply(text), true);
-        var sufix = stringNormalizer.normalize(parts.getSufix().apply(text), true);
+        var prefix = parts.getPrefix().apply(text);
+        var sufix = parts.getSufix().apply(text);
         return Optional
             .of(new AIContext(source, sourceOffset, ctx.getPath(), text, offset, prefix, sufix,
                 sourceOffset - parts.getPrefix().getLength(), sourceOffset + parts.getSufix().getLength()));

@@ -22,6 +22,11 @@ public class AttributeEntity
 
     public List<DataType> types;
 
+    @SerializedName("data_paths")
+    public List<String> dataPaths;
+
+    public List<PropertyEntity> properties;
+
     @SerializedName("dynamic_list")
     public DynamicListEntity dynamicList;
 
