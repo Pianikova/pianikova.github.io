@@ -6,7 +6,6 @@ package org.e1c.edt.ai.ui.handlers;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.ui.AITarget;
 import org.e1c.edt.ai.ui.Activator;
-import org.e1c.edt.ai.ui.ChatView;
 import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IUI;
@@ -37,6 +36,12 @@ public class ExplainAIHandler
     }
 
     @Override
+    public boolean isEnabled()
+    {
+        return ui.getTextWidget().map(textWidget -> !textWidget.getSelectionText().isBlank()).orElse(false);
+    }
+
+    @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         ui.getTextWidget()
@@ -44,7 +49,6 @@ public class ExplainAIHandler
                 new AITarget(textWidget, Integer.MAX_VALUE, true), null,
                 CancellationTokens.NONE))
             .ifPresent(ctx -> chat.explainCode(ctx.getText()));
-        ui.showView(ChatView.ID);
         return null;
     }
 }

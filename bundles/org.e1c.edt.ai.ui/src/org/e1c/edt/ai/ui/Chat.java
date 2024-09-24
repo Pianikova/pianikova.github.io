@@ -65,44 +65,55 @@ public class Chat implements IChat, IChatDialog
     public void reviewCode(String codeSnippet)
     {
         Preconditions.checkNotNull(codeSnippet);
-        chat("review_code", codeSnippet); //$NON-NLS-1$
+        chat("review_code", codeSnippet, null); //$NON-NLS-1$
     }
 
     @Override
     public void explainCode(String codeSnippet)
     {
         Preconditions.checkNotNull(codeSnippet);
-        chat("comment_code", codeSnippet); //$NON-NLS-1$
+        chat("comment_code", codeSnippet, null); //$NON-NLS-1$
     }
 
     @Override
-    public void fixCode(String codeSnippet)
+    public void fixCode(String codeSnippet, String details)
     {
         Preconditions.checkNotNull(codeSnippet);
-        chat("fix_code", codeSnippet); //$NON-NLS-1$
+        chat("fix_code", codeSnippet, details); //$NON-NLS-1$
     }
 
     @Override
     public void generateDocComments(String method)
     {
         Preconditions.checkNotNull(method);
-        chat("document_code", method); //$NON-NLS-1$
+        chat("document_code", method, null); //$NON-NLS-1$
     }
 
     @Override
     public void askQuestion(String userQuestion)
     {
         Preconditions.checkNotNull(userQuestion);
-        chat("plain_message", userQuestion); //$NON-NLS-1$
+        chat("plain_message", userQuestion, null); //$NON-NLS-1$
     }
 
     @SuppressWarnings("nls")
-    private void chat(String topic, String subject)
+    private void chat(String topic, String subject, String details)
     {
         ui.showView(ChatView.ID);
         chatInJob(view -> {
-            var script = "window.chatApi." + topic + "(`" + StringEscapeUtils.escapeJavaScript(subject) + "`)";
-            view.getEngine().executeScript(script);
+            var script = new StringBuilder();
+            script.append("window.chatApi.");
+            script.append(topic);
+            script.append("(`");
+            script.append(StringEscapeUtils.escapeJavaScript(subject));
+            if (details != null && !details.isBlank())
+            {
+                script.append("`, `");
+                script.append(StringEscapeUtils.escapeJavaScript(details));
+            }
+
+            script.append("`)");
+            view.getEngine().executeScript(script.toString());
         });
     }
 
