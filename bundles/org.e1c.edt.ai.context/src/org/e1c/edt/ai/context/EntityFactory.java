@@ -229,7 +229,7 @@ public class EntityFactory implements IEntityFactory
                 for(var propInfo: propInfos)
                 {
                     var property = new PropertyEntity();
-                    fillProperty(property, propInfo, properties, 4);
+                    fillProperty(property, propInfo, properties, 4, 64);
                     attr.properties.add(property);
                 }
             }
@@ -292,14 +292,14 @@ public class EntityFactory implements IEntityFactory
     }
 
     private void fillProperty(PropertyEntity propery, PropertyInfo proprtyInfo,
-        HashMap<PropertyInfo, PropertyEntity> properties, int dept)
+        HashMap<PropertyInfo, PropertyEntity> properties, int dept, int maxCount)
     {
         propery.name = proprtyInfo.getName();
         propery.nameRu = proprtyInfo.getNameRu();
         propery.description = proprtyInfo.getStaticDescription();
         propery.dataPaths = getDataPaths(proprtyInfo.getMultyLanguageDataPath());
         propery.types = getTypes(proprtyInfo.getValueType());
-        if (dept < 0)
+        if (dept < 0 || maxCount < 0)
         {
             return;
         }
@@ -307,6 +307,7 @@ public class EntityFactory implements IEntityFactory
         var propInfos = proprtyInfo.getPropertyInfos();
         if (propInfos != null && !propInfos.isEmpty())
         {
+            maxCount -= propInfos.size();
             propery.properties = new ArrayList<>();
             dept--;
             for (var propInfo : propInfos)
@@ -315,7 +316,7 @@ public class EntityFactory implements IEntityFactory
                 if (prop == null)
                 {
                     prop = new PropertyEntity();
-                    fillProperty(prop, propInfo, properties, dept);
+                    fillProperty(prop, propInfo, properties, dept, maxCount);
                 }
 
                 propery.properties.add(prop);
