@@ -9,10 +9,9 @@ public interface IChat
 
     void explainCode(String codeSnippet);
 
-    void fixCode(String codeSnippet);
+    void fixCode(String codeSnippet, String details);
 
     void generateDocComments(String method);
 
     void askQuestion(String userQuestion);
-
 }

@@ -6,12 +6,14 @@ package org.e1c.edt.ai.ui.handlers;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.ui.AITarget;
 import org.e1c.edt.ai.ui.Activator;
+import org.e1c.edt.ai.ui.ChatView;
 import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IUI;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.jface.window.Window;
 
 import com.google.inject.Inject;
 
@@ -29,6 +31,8 @@ public class FixCodeAIHandler
     IChat chat;
     @Inject
     IUI ui;
+    @Inject
+    IFixDialog fixDialog;
 
     public FixCodeAIHandler()
     {
@@ -45,10 +49,15 @@ public class FixCodeAIHandler
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         ui.getTextWidget()
-            .flatMap(textWidget -> aiContextProvider.create(
-                new AITarget(textWidget, Integer.MAX_VALUE, true), null,
+            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true), null,
                 CancellationTokens.NONE))
-            .ifPresent(ctx -> chat.fixCode(ctx.getText()));
+            .ifPresent(ctx -> {
+                if (fixDialog.show() == Window.OK)
+                {
+                    chat.fixCode(ctx.getText(), fixDialog.getDetails());
+                }
+            });
+        ui.showView(ChatView.ID);
         return null;
     }
 }

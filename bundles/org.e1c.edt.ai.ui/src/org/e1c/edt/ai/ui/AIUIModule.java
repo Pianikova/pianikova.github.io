@@ -26,6 +26,8 @@ import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.context.IResourceSetProvider;
 import org.e1c.edt.ai.context.ResourceSetProvider;
+import org.e1c.edt.ai.ui.handlers.FixDialog;
+import org.e1c.edt.ai.ui.handlers.IFixDialog;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import org.eclipse.jface.preference.IPreferenceStore;
 
@@ -85,6 +87,7 @@ public class AIUIModule
         bind(IIssueFeedbackViewModel.class).to(IssueFeedbackViewModel.class);
         bind(IResourceSetProvider.class).annotatedWith(BaseResourceSetProvider.class).to(ResourceSetProvider.class);
         bind(IResourceSetProvider.class).to(CurrentEditorResourceSetProvider.class);
+        bind(IFixDialog.class).to(FixDialog.class).in(Singleton.class);
         // @formatter:on
     }
 
