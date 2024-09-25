@@ -3,15 +3,13 @@
  */
 package org.e1c.edt.ai.context.DTO;
 
-import java.util.List;
 import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 
 public class AttributeEntity
+    extends PropertyEntity
 {
-    public String name;
-
     @SerializedName("is_main")
     public Boolean isMain;
 
@@ -19,13 +17,6 @@ public class AttributeEntity
 
     @SerializedName("tool_tip")
     public Map<String, String> toolTip;
-
-    public List<DataType> types;
-
-    @SerializedName("data_paths")
-    public List<String> dataPaths;
-
-    public List<PropertyEntity> properties;
 
     @SerializedName("dynamic_list")
     public DynamicListEntity dynamicList;

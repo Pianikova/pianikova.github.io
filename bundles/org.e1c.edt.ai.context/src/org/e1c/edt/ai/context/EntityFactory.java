@@ -220,19 +220,7 @@ public class EntityFactory implements IEntityFactory
         var proprtyInfo = dataSourceInfoAssociationService.findPropertyInfo(form, attribute);
         if (proprtyInfo != null)
         {
-            attr.dataPaths = getDataPaths(proprtyInfo.getMultyLanguageDataPath());
-            var propInfos = proprtyInfo.getPropertyInfos();
-            if (propInfos != null && !propInfos.isEmpty())
-            {
-                attr.properties = new ArrayList<>();
-                var properties = new HashMap<PropertyInfo, PropertyEntity>();
-                for(var propInfo: propInfos)
-                {
-                    var property = new PropertyEntity();
-                    fillProperty(property, propInfo, properties, 4, 64);
-                    attr.properties.add(property);
-                }
-            }
+            fillProperty(attr, proprtyInfo, 2);
         }
 
         var extInfo = attribute.getExtInfo();
@@ -291,34 +279,38 @@ public class EntityFactory implements IEntityFactory
         return null;
     }
 
-    private void fillProperty(PropertyEntity propery, PropertyInfo proprtyInfo,
-        HashMap<PropertyInfo, PropertyEntity> properties, int dept, int maxCount)
+    private void fillProperty(PropertyEntity propery, PropertyInfo propertyInfo, int dept)
     {
-        propery.name = proprtyInfo.getName();
-        propery.nameRu = proprtyInfo.getNameRu();
-        propery.description = proprtyInfo.getStaticDescription();
-        propery.dataPaths = getDataPaths(proprtyInfo.getMultyLanguageDataPath());
-        propery.types = getTypes(proprtyInfo.getValueType());
-        if (dept < 0 || maxCount < 0)
+        propery.name = propertyInfo.getName();
+        propery.nameRu = propertyInfo.getNameRu();
+        propery.description = propertyInfo.getStaticDescription();
+        propery.dataPaths = getDataPaths(propertyInfo.getMultyLanguageDataPath());
+        propery.types = getTypes(propertyInfo.getValueType());
+        if (dept <= 0 || "Ref".equals(propery.name)) //$NON-NLS-1$
         {
             return;
         }
 
-        var propInfos = proprtyInfo.getPropertyInfos();
+        switch (propertyInfo.getType())
+        {
+        case COLUMN_TABLE_TYPE_PROPERTY:
+        case COMMON_TABLE_TYPE_PROPERTY:
+            dept = 0;
+            break;
+
+        default:
+            dept--;
+            break;
+        }
+
+        var propInfos = propertyInfo.getPropertyInfos();
         if (propInfos != null && !propInfos.isEmpty())
         {
-            maxCount -= propInfos.size();
             propery.properties = new ArrayList<>();
-            dept--;
             for (var propInfo : propInfos)
             {
-                var prop = properties.get(propInfo);
-                if (prop == null)
-                {
-                    prop = new PropertyEntity();
-                    fillProperty(prop, propInfo, properties, dept, maxCount);
-                }
-
+                var prop = new PropertyEntity();
+                fillProperty(prop, propInfo, dept);
                 propery.properties.add(prop);
             }
         }
