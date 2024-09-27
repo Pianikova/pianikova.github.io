@@ -129,9 +129,15 @@ public class EntityFactory implements IEntityFactory
                         formEntity.attributes = new ArrayList<>();
                     }
 
+                    var hasMainAttribute = false;
                     for (var attribute : attributes)
                     {
-                        formEntity.attributes.add(createAttribute(form, attribute));
+                        hasMainAttribute |= attribute.isMain();
+                    }
+
+                    for (var attribute : attributes)
+                    {
+                        formEntity.attributes.add(createAttribute(form, attribute, hasMainAttribute));
                     }
                 }
             }
@@ -190,7 +196,7 @@ public class EntityFactory implements IEntityFactory
         group.buttons.add(button);
     }
 
-    private AttributeEntity createAttribute(Form form, FormAttribute attribute)
+    private AttributeEntity createAttribute(Form form, FormAttribute attribute, boolean hasMainAttribute)
     {
         var attr = new AttributeEntity();
         attr.name = attribute.getName();
@@ -217,42 +223,45 @@ public class EntityFactory implements IEntityFactory
             }
         }
 
-        var proprtyInfo = dataSourceInfoAssociationService.findPropertyInfo(form, attribute);
-        if (proprtyInfo != null)
+        if (!attribute.isMain())
         {
-            fillProperty(attr, proprtyInfo, 2);
-        }
-
-        var extInfo = attribute.getExtInfo();
-        if (extInfo != null)
-        {
-            if (extInfo instanceof DynamicListExtInfo)
+            var proprtyInfo = dataSourceInfoAssociationService.findPropertyInfo(form, attribute);
+            if (proprtyInfo != null)
             {
-                var info = (DynamicListExtInfo)extInfo;
-                var dynamicList = new DynamicListEntity();
-                attr.dynamicList = dynamicList;
-                dynamicList.query = info.getQueryText();
-                dynamicList.keyField = info.getKeyField();
-                var keyType = info.getKeyType();
-                if (keyType != null)
-                {
-                    dynamicList.keyTypeName = keyType.getName();
-                }
-
-                var mainTable = info.getMainTable();
-                if (mainTable != null)
-                {
-                    dynamicList.mainTableName = mainTable.getName();
-                    dynamicList.mainTableNameRu = mainTable.getNameRu();
-                }
+                fillProperty(attr, proprtyInfo, hasMainAttribute ? 1 : 2);
             }
 
-            if (extInfo instanceof ValueListExtInfo)
+            var extInfo = attribute.getExtInfo();
+            if (extInfo != null)
             {
-                var info = (ValueListExtInfo)extInfo;
-                var valueList = new ValueListEntity();
-                attr.valueList = valueList;
-                valueList.itemTypes = getTypes(info.getItemValueType());
+                if (extInfo instanceof DynamicListExtInfo)
+                {
+                    var info = (DynamicListExtInfo)extInfo;
+                    var dynamicList = new DynamicListEntity();
+                    attr.dynamicList = dynamicList;
+                    dynamicList.query = info.getQueryText();
+                    dynamicList.keyField = info.getKeyField();
+                    var keyType = info.getKeyType();
+                    if (keyType != null)
+                    {
+                        dynamicList.keyTypeName = keyType.getName();
+                    }
+
+                    var mainTable = info.getMainTable();
+                    if (mainTable != null)
+                    {
+                        dynamicList.mainTableName = mainTable.getName();
+                        dynamicList.mainTableNameRu = mainTable.getNameRu();
+                    }
+                }
+
+                if (extInfo instanceof ValueListExtInfo)
+                {
+                    var info = (ValueListExtInfo)extInfo;
+                    var valueList = new ValueListEntity();
+                    attr.valueList = valueList;
+                    valueList.itemTypes = getTypes(info.getItemValueType());
+                }
             }
         }
 

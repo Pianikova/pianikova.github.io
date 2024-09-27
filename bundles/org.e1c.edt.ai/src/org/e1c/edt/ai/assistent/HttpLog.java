@@ -33,6 +33,10 @@ public class HttpLog implements IHttpLog
         if (body != null)
         {
             sb.append(System.lineSeparator());
+            sb.append("size: "); //$NON-NLS-1$
+            sb.append(body.length());
+
+            sb.append(System.lineSeparator());
             sb.append(body);
         }
 

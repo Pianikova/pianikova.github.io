@@ -100,13 +100,14 @@ public class CodeAssistant
         });
     }
 
+    @SuppressWarnings("nls")
     private void generateText(Session session, AIContext aiContext,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
         var localContext = new LocalContext();
-        localContext.prefix = aiContext.getPrefix();
-        localContext.suffix = aiContext.getSufix();
+        localContext.prefix = aiContext.getPrefix().replace("\r\n", "\n").replace("\r", "\n");
+        localContext.suffix = aiContext.getSufix().replace("\r\n", "\n").replace("\r", "\n");
         localContext.path = aiContext.getPath();
         localContext.offset = aiContext.getSourceOffset();
         contextEntities.fill(aiContext, localContext, cancellationToken);
