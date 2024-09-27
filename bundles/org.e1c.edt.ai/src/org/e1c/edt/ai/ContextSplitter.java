@@ -40,22 +40,20 @@ public class ContextSplitter implements IContextSplitter
         }
 
         var length = text.length();
-        if (offset < maxPrefixLength)
+        if (offset == 0)
         {
-            maxSuffixLength += (maxPrefixLength - offset);
+            return new ContextParts(Range.EMPTY, new Range(0, Integer.min(length, maxSuffixLength)));
         }
 
-        if ((length - offset) < maxSuffixLength)
+        if (offset >= length)
         {
-            maxPrefixLength += (maxSuffixLength - (length - offset));
+            return new ContextParts(new Range(0, Integer.min(length, maxPrefixLength)), Range.EMPTY);
         }
 
-        var prefixLen = Integer.min(offset, maxPrefixLength);
-        var prefix = new Range(offset - prefixLen, prefixLen);
-
-        var suffixLen = Integer.min(length - offset, maxSuffixLength);
-        var suffix = new Range(offset, suffixLen);
-
+        var start = Integer.max(offset - maxPrefixLength, 0);
+        var finish = Integer.min(offset + maxSuffixLength - 1, length - 1);
+        var prefix = new Range(start, offset - start);
+        var suffix = new Range(offset, finish - offset + 1);
         return new ContextParts(prefix, suffix);
     }
 }
