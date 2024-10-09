@@ -79,7 +79,7 @@ public class AISourceMethodCommentsContextProvider
         }
 
         return contextInitializer.initialize(
-            new AIContext(target.getTextWidget().getText(), ctx.getOffset(), "", method.toString(), //$NON-NLS-1$
+            new AIContext(ctx.getOffset(), target.getTextWidget().getText(), ctx.getOffset(), "", method.toString(), //$NON-NLS-1$
                 offset));
     }
 }

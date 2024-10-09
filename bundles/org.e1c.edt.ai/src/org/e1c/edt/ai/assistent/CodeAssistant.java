@@ -109,7 +109,8 @@ public class CodeAssistant
         localContext.prefix = aiContext.getPrefix().replace("\r\n", "\n").replace("\r", "\n");
         localContext.suffix = aiContext.getSufix().replace("\r\n", "\n").replace("\r", "\n");
         localContext.path = aiContext.getPath();
-        localContext.offset = aiContext.getSourceOffset();
+        var additionalPrefixLenght = localContext.prefix.length() - aiContext.getPrefix().length();
+        localContext.offset = aiContext.getSourceOffset() + additionalPrefixLenght;
         contextEntities.fill(aiContext, localContext, cancellationToken);
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;

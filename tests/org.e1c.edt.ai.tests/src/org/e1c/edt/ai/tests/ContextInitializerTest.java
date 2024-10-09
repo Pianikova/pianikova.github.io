@@ -54,7 +54,7 @@ public class ContextInitializerTest
 
         // When
         var actualContext =
-            factory.initialize(new AIContext("full_" + text, textOffset + 3, "", text, textOffset));
+            factory.initialize(new AIContext(textOffset + 3, "full_" + text, textOffset + 3, "", text, textOffset));
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());

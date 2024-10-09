@@ -88,6 +88,7 @@ public class AIUIModule
         bind(IResourceSetProvider.class).annotatedWith(BaseResourceSetProvider.class).to(ResourceSetProvider.class);
         bind(IResourceSetProvider.class).to(CurrentEditorResourceSetProvider.class);
         bind(IFixDialog.class).to(FixDialog.class).in(Singleton.class);
+        bind(IContentProvider.class).to(ContentProvider.class).in(Singleton.class);
         // @formatter:on
     }
 

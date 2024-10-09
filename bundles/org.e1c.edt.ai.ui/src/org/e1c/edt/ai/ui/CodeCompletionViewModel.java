@@ -154,7 +154,8 @@ public class CodeCompletionViewModel
                         protected IStatus run(IProgressMonitor monitor)
                         {
                             cancellationTokenSource.attachMonitor(monitor);
-                            contextDuration = contextEntities.fill(aiCtx, new LocalContext(), cancellationTokenSource);
+                            contextDuration =
+                                contextEntities.fill(aiCtx, new LocalContext(), cancellationTokenSource);
                             return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                         }
                     };
@@ -278,7 +279,7 @@ public class CodeCompletionViewModel
             dispatcher
                 .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> {
                     hintPainter.reset();
-                    hintPainter.pinOffset(textWidget, aiCtx.getTextOffset(),
+                    hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(),
                         delay.isNegative() || delay == Duration.ZERO, singleWordMode);
                     return ui.getSourceViewer(textWidget);
                 }).orElse(null))
@@ -405,7 +406,7 @@ public class CodeCompletionViewModel
                 // close proposal menu before rising UI-hint
                 getContentAssistant().ifPresent(assistant -> assistant.requestWidgetToken(null, 40));
             }
-            hintPainter.setHintAt(session.getContext().getAiContext().getTextOffset(),
+            hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(),
                 hint.getText(HintPart.LINES).getText(),
                 hint.getText(HintPart.TOKEN).getText());
             widget.redraw();

@@ -90,7 +90,7 @@ public class AISourceCodeSizeReducerContextProvider
         }
 
         return contextInitializer.initialize(
-            new AIContext(target.getTextWidget().getText(), offset, "", text, //$NON-NLS-1$
+            new AIContext(offset, target.getTextWidget().getText(), offset, "", text, //$NON-NLS-1$
                 serializerContext.getOffset()));
     }
 

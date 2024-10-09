@@ -8,8 +8,8 @@ import java.util.Optional;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextInitializer;
-import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
@@ -19,14 +19,16 @@ public class AIContextProvider
     implements IAIContextProvider<Void>
 {
     private final IUI ui;
+    private final IContentProvider contentProvider;
     private final IContextInitializer contextInitializer;
 
     @Inject
-    public AIContextProvider(IUI ui, IContextInitializer contextInitializer)
+    public AIContextProvider(IUI ui, IContentProvider contentProvider, IContextInitializer contextInitializer)
     {
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(contextInitializer);
         this.ui = ui;
+        this.contentProvider = contentProvider;
         this.contextInitializer = contextInitializer;
     }
 
@@ -35,39 +37,17 @@ public class AIContextProvider
     {
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
-        return ui.getSourceViewer(target.getTextWidget())
-            .flatMap(sourceViewer -> create(sourceViewer, target, state, cancellationToken));
+        var textWidget = target.getTextWidget();
+        return ui.getSourceViewer(textWidget)
+            .flatMap(sourceViewer -> create(textWidget, sourceViewer, target, state, cancellationToken));
     }
 
-    private Optional<AIContext> create(SourceViewer sourceViewer, AITarget target, Void state,
+    private Optional<AIContext> create(StyledText textWidget, SourceViewer sourceViewer, AITarget target, Void state,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
-        var textWidget = sourceViewer.getTextWidget();
-        var source = textWidget.getText();
-        var sourceOffset = textWidget.getCaretOffset();
-        var text = source;
-        var textOffset = sourceOffset;
-        if (target.isPreferSelection())
-        {
-            var selection = sourceViewer.getSelection();
-            if (!selection.isEmpty())
-            {
-                if (selection instanceof ITextSelection)
-                {
-                    var textSelection = (ITextSelection)selection;
-                    var selectionOffset = sourceOffset - textSelection.getOffset();
-                    if (selectionOffset >= 0 && selectionOffset <= textSelection.getLength())
-                    {
-                        textOffset = selectionOffset;
-                        text = textSelection.getText();
-                    }
-                }
-            }
-        }
-
         var doc = sourceViewer.getDocument();
         var path = ""; //$NON-NLS-1$
         if (doc instanceof IXtextDocument)
@@ -76,7 +56,19 @@ public class AIContextProvider
             path = xtextDoc.getResourceURI().path();
         }
 
-        return contextInitializer
-            .initialize(new AIContext(source, sourceOffset, path, text, textOffset));
+        var content = contentProvider.get(textWidget);
+        AIContext aiContext;
+        if (target.isPreferSelection() && !content.selectionText.isBlank())
+        {
+            aiContext = new AIContext(textWidget.getCaretOffset(), content.text, content.offset, path,
+                content.selectionText, content.selectionOffset);
+        }
+        else
+        {
+            aiContext = new AIContext(textWidget.getCaretOffset(), content.text, content.offset, path, content.text,
+                content.offset);
+        }
+
+        return contextInitializer.initialize(aiContext);
     }
 }
