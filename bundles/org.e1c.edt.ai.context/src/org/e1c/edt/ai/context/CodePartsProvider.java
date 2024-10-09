@@ -74,6 +74,7 @@ public class CodePartsProvider implements ICodePartsProvider
                 if (methods.add(method))
                 {
                     lastMethodId++;
+                    beforeArgs = true;
                 }
 
                 methodId = lastMethodId;
@@ -93,7 +94,6 @@ public class CodePartsProvider implements ICodePartsProvider
                 break;
 
             case MethodStart:
-                beforeArgs = true;
                 locations.push(CursorLocation.FunctionBody);
                 codePart = new CodePart(methodId, marker.range, CursorLocation.FunctionBody, marker.text);
                 break;
@@ -104,9 +104,9 @@ public class CodePartsProvider implements ICodePartsProvider
                     break;
                 }
 
-                beforeArgs = false;
                 locations.push(CursorLocation.FunctionArguments);
                 codePart = new CodePart(methodId, marker.range, CursorLocation.FunctionArguments, marker.text);
+                beforeArgs = false;
                 break;
 
             case MethodArgFinish:
