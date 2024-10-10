@@ -41,8 +41,10 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
+import com._1c.g5.v8.dt.bsl.model.Function;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com._1c.g5.v8.dt.bsl.model.Procedure;
 import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
@@ -715,6 +717,18 @@ public class EntityFactory implements IEntityFactory
         methodEntity.name = method.getName();
         methodEntity.start = methodNode.getTotalOffset();
         methodEntity.finish = methodNode.getTotalEndOffset();
+        if (method instanceof Function)
+        {
+            methodEntity.kind = "Function";
+        }
+        else
+        {
+            if (method instanceof Procedure)
+            {
+                methodEntity.kind = "Procedure";
+            }
+        }
+
         methodEntity.code = methodNode.getText();
         var signatureParts = codePartsProvider.getParts(methodNode)
             .filter(i -> i.getLocation() == CursorLocation.FunctionName
