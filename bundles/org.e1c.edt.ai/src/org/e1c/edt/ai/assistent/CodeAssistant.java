@@ -21,6 +21,7 @@ import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
+import org.e1c.edt.ai.ITextNormilizer;
 import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.ServerAccessType;
 import org.e1c.edt.ai.assistent.model.Completion;
@@ -44,6 +45,7 @@ public class CodeAssistant
     private final IServerAccessService serverAccess;
     private final IResponseStreamProcessor responseStreamProcessor;
     private final IContextEntities contextEntities;
+    private final ITextNormilizer textNormilizer;
 
     @Inject
     public CodeAssistant(IHttpLog log,
@@ -51,7 +53,7 @@ public class CodeAssistant
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
         IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities,
-        IServerAccessService serverAccess)
+        IServerAccessService serverAccess, ITextNormilizer textNormilizer)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -61,6 +63,7 @@ public class CodeAssistant
         Preconditions.checkNotNull(responseStreamProcessor);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(serverAccess);
+        Preconditions.checkNotNull(textNormilizer);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -69,6 +72,7 @@ public class CodeAssistant
         this.responseStreamProcessor = responseStreamProcessor;
         this.contextEntities = contextEntities;
         this.serverAccess = serverAccess;
+        this.textNormilizer = textNormilizer;
     }
 
     @Override
@@ -100,17 +104,15 @@ public class CodeAssistant
         });
     }
 
-    @SuppressWarnings("nls")
     private void generateText(Session session, AIContext aiContext,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
         var localContext = new LocalContext();
-        localContext.prefix = aiContext.getPrefix().replace("\r\n", "\n").replace("\r", "\n");
-        localContext.suffix = aiContext.getSufix().replace("\r\n", "\n").replace("\r", "\n");
+        localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
+        localContext.suffix = textNormilizer.normalize(aiContext.getSufix());
         localContext.path = aiContext.getPath();
-        var additionalPrefixLenght = localContext.prefix.length() - aiContext.getPrefix().length();
-        localContext.offset = aiContext.getSourceOffset() + additionalPrefixLenght;
+        localContext.offset = aiContext.getSourceOffset();
         contextEntities.fill(aiContext, localContext, cancellationToken);
         var aiRequest = new CompletionRequest();
         aiRequest.localContext = localContext;
