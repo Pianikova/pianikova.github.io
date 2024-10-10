@@ -11,8 +11,10 @@ import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.context.CodePart;
 import org.e1c.edt.ai.context.ICodePartsProvider;
 import org.e1c.edt.ai.ui.Activator;
+import org.e1c.edt.ai.ui.Content;
 import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
+import org.e1c.edt.ai.ui.IContentProvider;
 import org.e1c.edt.ai.ui.IUI;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -37,6 +39,8 @@ public class GenerateDocCommentsAIHandler
     IChat chat;
     @Inject
     IUI ui;
+    @Inject
+    IContentProvider contentProvider;
     @Inject
     ICodePartsProvider codePartsProvider;
 
@@ -66,10 +70,11 @@ public class GenerateDocCommentsAIHandler
     {
         return ui.getTextWidget()
             .flatMap(textWidget -> ui.getSourceViewer(textWidget))
-            .flatMap(sourceViewer -> getCommentingMethod(sourceViewer.getTextWidget().getCaretOffset(), sourceViewer));
+            .flatMap(
+                sourceViewer -> getCommentingMethod(contentProvider.get(sourceViewer.getTextWidget()), sourceViewer));
     }
 
-    private Optional<CommentingMethod> getCommentingMethod(int cursorOffset, SourceViewer sourceViewer)
+    private Optional<CommentingMethod> getCommentingMethod(Content content, SourceViewer sourceViewer)
     {
         if (!(sourceViewer instanceof XtextSourceViewer))
         {
@@ -95,7 +100,7 @@ public class GenerateDocCommentsAIHandler
             return Optional.empty();
         }
 
-        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNoode, cursorOffset);
+        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNoode, content.offset);
         if (cursorNode == null)
         {
             return Optional.empty();
@@ -145,7 +150,7 @@ public class GenerateDocCommentsAIHandler
                 commentingMethod.commentRange = range;
             }
 
-            if (range.contains(cursorOffset))
+            if (range.contains(content.offset))
             {
                 methodId = curMethodId;
             }
@@ -162,8 +167,7 @@ public class GenerateDocCommentsAIHandler
         }
 
         commentingMethod.methodText =
-            sourceViewer.getTextWidget().getText(range.getStart(), range.getStart() + range.getLength() - 1);
-
+            content.text.substring(range.getStart(), range.getStart() + range.getLength() - 1);
         if (commentingMethod.methodText.isBlank())
         {
             return Optional.empty();

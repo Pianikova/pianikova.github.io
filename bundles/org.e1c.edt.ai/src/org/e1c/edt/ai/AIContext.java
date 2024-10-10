@@ -7,6 +7,7 @@ import com.google.common.base.Preconditions;
 
 public class AIContext
 {
+    private final int editorOffset;
     private final String source;
     private final int sourceOffset;
     private final String path;
@@ -17,7 +18,7 @@ public class AIContext
     private final int start;
     private final int finish;
 
-    public AIContext(String source, int sourceOffset, String path, String text, int textOffset,
+    public AIContext(int caretOffset, String source, int sourceOffset, String path, String text, int textOffset,
         String prefix,
         String sufix, int start, int finish)
     {
@@ -28,6 +29,7 @@ public class AIContext
         Preconditions.checkArgument(textOffset >= 0);
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
+        this.editorOffset = caretOffset;
         this.source = source;
         this.sourceOffset = sourceOffset;
         this.path = path;
@@ -39,9 +41,14 @@ public class AIContext
         this.finish = finish;
     }
 
-    public AIContext(String source, int sourceOffset, String path, String text, int textOffset)
+    public AIContext(int caretOffset, String source, int sourceOffset, String path, String text, int textOffset)
     {
-        this(source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
+        this(caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
+    }
+
+    public int getСaretOffset()
+    {
+        return editorOffset;
     }
 
     public String getSource()

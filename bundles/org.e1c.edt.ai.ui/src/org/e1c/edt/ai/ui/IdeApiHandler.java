@@ -58,7 +58,8 @@ public class IdeApiHandler
                         }
                     }
 
-                    contet.replaceTextRange(textSelection.getOffset(), textSelection.getLength(), processedCode);
+                    contet.replaceTextRange(sourceViewer.modelOffset2WidgetOffset(textSelection.getOffset()),
+                        textSelection.getLength(), processedCode);
                     return;
                 }
 
