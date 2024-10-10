@@ -48,6 +48,8 @@ import com._1c.g5.v8.dt.bsl.model.Procedure;
 import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.bsl.util.BslUtil;
+import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.Button;
 import com._1c.g5.v8.dt.form.model.DynamicListExtInfo;
 import com._1c.g5.v8.dt.form.model.Form;
@@ -80,10 +82,12 @@ public class EntityFactory implements IEntityFactory
     private final IFormWalker formWalker;
     private final ICodePartsProvider codePartsProvider;
     private final IDataSourceInfoAssociationService dataSourceInfoAssociationService;
+    private final IV8ProjectManager v8ProjectManager;
 
     @Inject
     public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory, IFormWalker formWalker,
-        ICodePartsProvider codePartsProvider, IDataSourceInfoAssociationService dataSourceInfoAssociationService)
+        ICodePartsProvider codePartsProvider, IDataSourceInfoAssociationService dataSourceInfoAssociationService,
+        IV8ProjectManager v8ProjectManager)
     {
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
@@ -91,12 +95,14 @@ public class EntityFactory implements IEntityFactory
         Preconditions.checkNotNull(formWalker);
         Preconditions.checkNotNull(codePartsProvider);
         Preconditions.checkNotNull(dataSourceInfoAssociationService);
+        Preconditions.checkNotNull(v8ProjectManager);
         this.v8Model = v8Model;
         this.idFactory = idFactory;
         this.commentFactory = commentFactory;
         this.formWalker = formWalker;
         this.codePartsProvider = codePartsProvider;
         this.dataSourceInfoAssociationService = dataSourceInfoAssociationService;
+        this.v8ProjectManager = v8ProjectManager;
     }
 
     @Override
@@ -749,12 +755,14 @@ public class EntityFactory implements IEntityFactory
 
         if (method.isAsync())
         {
-            methodEntity.signatureStructurized.attributes.add("Async");
+            methodEntity.signatureStructurized.attributes
+                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Асинх" : "Async");
         }
 
         if (method.isExport())
         {
-            methodEntity.signatureStructurized.attributes.add("Export");
+            methodEntity.signatureStructurized.attributes
+                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Экспорт" : "Export");
         }
 
         for (var param : method.getFormalParams())
