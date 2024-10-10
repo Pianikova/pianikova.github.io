@@ -82,6 +82,7 @@ public class AIModule
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
         bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
         bind(IServerAccessService.class).to(ServerAccessService.class);
+        bind(ITextNormilizer.class).to(TextNormilizer.class).in(Singleton.class);
         // @formatter:on
     }
 }
