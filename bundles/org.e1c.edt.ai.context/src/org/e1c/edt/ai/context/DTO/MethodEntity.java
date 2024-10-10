@@ -23,7 +23,7 @@ public class MethodEntity
 
     public String code;
 
-    public String area;
+    public List<String> areas;
 
     @SerializedName("signature_str")
     public String signatureStr;

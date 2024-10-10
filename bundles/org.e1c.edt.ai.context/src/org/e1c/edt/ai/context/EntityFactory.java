@@ -500,12 +500,7 @@ public class EntityFactory implements IEntityFactory
                     preprocess.add(pragma.getSymbol());
                 }*/
 
-                var region = EcoreUtil2.getContainerOfType(method, RegionPreprocessorDeclareStatement.class);
-                if (region != null)
-                {
-                    methodEntity.area = region.getName();
-                }
-
+                getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypes2(returnTypes);
                 if (method instanceof BslContextDefMethod)
@@ -776,14 +771,35 @@ public class EntityFactory implements IEntityFactory
             methodEntity.signatureStructurized.preprocess.add(pragma.getSymbol());
         }
 
-        var region = EcoreUtil2.getContainerOfType(method, RegionPreprocessorDeclareStatement.class);
-        if (region != null)
-        {
-            methodEntity.area = region.getName();
-        }
-
+        getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
         methodEntity.comment = v8Model.getComment(method);
         methodEntity.structurizedСomment = commentFactory.create(v8Model.getComment(method, true));
+    }
+
+    private static Optional<List<String>> getAreas(EObject object)
+    {
+        var areas = new ArrayList<String>();
+        do
+        {
+            var region = EcoreUtil2.getContainerOfType(object, RegionPreprocessorDeclareStatement.class);
+            if (region != null)
+            {
+                areas.add(0, region.getName());
+                object = region.eContainer();
+            }
+            else
+            {
+                break;
+            }
+        }
+        while (object != null);
+
+        if (areas.size() == 0)
+        {
+            return Optional.empty();
+        }
+
+        return Optional.of(areas);
     }
 
     private void fillType(EObject eObject, ObjectEntity objectEntity, List<Type> types,
