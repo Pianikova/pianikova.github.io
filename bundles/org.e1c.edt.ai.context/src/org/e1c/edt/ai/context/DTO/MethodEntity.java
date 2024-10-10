@@ -19,6 +19,8 @@ public class MethodEntity
 
     public String name;
 
+    public String kind;
+
     public String code;
 
     public String area;
