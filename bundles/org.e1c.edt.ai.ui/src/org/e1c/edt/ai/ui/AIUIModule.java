@@ -33,6 +33,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
+import com.google.inject.BindingAnnotation;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 
@@ -92,6 +93,7 @@ public class AIUIModule
         // @formatter:on
     }
 
+    @BindingAnnotation
     @Qualifier
     @Target({ FIELD, PARAMETER, METHOD })
     @Retention(RUNTIME)
@@ -100,6 +102,7 @@ public class AIUIModule
         //
     }
 
+    @BindingAnnotation
     @Qualifier
     @Target({ FIELD, PARAMETER, METHOD })
     @Retention(RUNTIME)
@@ -108,6 +111,7 @@ public class AIUIModule
         //
     }
 
+    @BindingAnnotation
     @Qualifier
     @Target({ FIELD, PARAMETER, METHOD })
     @Retention(RUNTIME)
