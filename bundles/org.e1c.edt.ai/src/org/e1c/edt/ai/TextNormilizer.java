@@ -52,6 +52,11 @@ public class TextNormilizer
             }
         }
 
+        if (retCh)
+        {
+            result.append('\n');
+        }
+
         return result.toString();
     }
 }

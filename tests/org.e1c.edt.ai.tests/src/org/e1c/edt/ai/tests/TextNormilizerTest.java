@@ -54,6 +54,10 @@ public class TextNormilizerTest
                 { "Abc\r\r\rXyz", "Abc\r\n\nXyz" },
                 { "Abc\r\r\r\rXyz", "Abc\r\n\r\nXyz" },
                 { "\r\r\r\r", "\r\n\r\n" },
+                { "Abc\r\n\rXyz", "Abc\r\n\nXyz" },
+                { "Abc\r\n\r", "Abc\r\n\n" },
+                { "\r\n\rXyz", "\r\n\nXyz" },
+                { "\r\n\r", "\r\n\n" },
             });
         // @formatter:on
     }

@@ -45,7 +45,7 @@ import com._1c.g5.v8.dt.bsl.model.Function;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Procedure;
-import com._1c.g5.v8.dt.bsl.model.RegionPreprocessorDeclareStatement;
+import com._1c.g5.v8.dt.bsl.model.RegionPreprocessor;
 import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.bsl.util.BslUtil;
@@ -784,15 +784,42 @@ public class EntityFactory implements IEntityFactory
         methodEntity.structurizedСomment = commentFactory.create(v8Model.getComment(method, true));
     }
 
-    private static Optional<List<String>> getAreas(EObject object)
+    private static Optional<List<String>> getAreas(EObject method)
     {
+        EObject object = method;
         var areas = new ArrayList<String>();
         do
         {
-            var region = EcoreUtil2.getContainerOfType(object, RegionPreprocessorDeclareStatement.class);
+            var region = EcoreUtil2.getContainerOfType(object, RegionPreprocessor.class);
             if (region != null)
             {
-                areas.add(0, region.getName());
+                var it = region.eAllContents();
+                var started = false;
+                while (it.hasNext())
+                {
+                    var item = it.next();
+                    if (!started)
+                    {
+                        if (region.getItem() == item)
+                        {
+                            started = true;
+                        }
+                    }
+                    else
+                    {
+                        if (region.getItemAfter() == item)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (started && item == method)
+                    {
+                        areas.add(0, region.getName());
+                        break;
+                    }
+                }
+
                 object = region.eContainer();
             }
             else
