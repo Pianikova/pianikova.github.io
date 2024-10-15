@@ -76,7 +76,23 @@ public class EndpointViewModel implements IEndpointViewModel
     {
         try
         {
-            var port = preferenceStore.getInt(PORT_STORE_KEY);
+            var port = 0;
+            try
+            {
+                @SuppressWarnings("nls")
+                var porpProperty = System.getProperties().getProperty("semantic.port", "");
+                port = Integer.parseInt(porpProperty);
+            }
+            catch (Exception ex)
+            {
+                //
+            }
+
+            if (port == 0)
+            {
+                port = preferenceStore.getInt(PORT_STORE_KEY);
+            }
+
             if (port > 0)
             {
                 settings.Port = port;
