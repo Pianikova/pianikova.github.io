@@ -30,14 +30,38 @@ public class HttpLog implements IHttpLog
         Preconditions.checkNotNull(request);
         var sb = new StringBuilder();
         sb.append(request);
+        var headers = request.headers();
+        if (headers != null)
+        {
+            var headersMap = headers.map();
+            if (headersMap.size() != 0)
+            {
+                sb.append(System.lineSeparator());
+                sb.append("headers:"); //$NON-NLS-1$
+                for (var header : headersMap.entrySet())
+                {
+                    sb.append(System.lineSeparator());
+                    sb.append('\t');
+                    sb.append(header.getKey());
+                    sb.append('=');
+                    sb.append(String.join(", ", header.getValue()));//$NON-NLS-1$
+                }
+            }
+        }
+
         if (body != null)
         {
             sb.append(System.lineSeparator());
             sb.append("size: "); //$NON-NLS-1$
             sb.append(body.length());
-
             sb.append(System.lineSeparator());
-            sb.append(body);
+            sb.append("body:"); //$NON-NLS-1$
+            var it = body.lines().iterator();
+            while (it.hasNext())
+            {
+                sb.append(System.lineSeparator());
+                sb.append(it.next());
+            }
         }
 
         log.trace(createHeader("AI request", request.uri(), ref), sb.toString()); //$NON-NLS-1$
