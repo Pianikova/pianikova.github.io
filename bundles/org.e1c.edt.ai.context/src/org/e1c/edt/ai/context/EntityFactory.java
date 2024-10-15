@@ -720,13 +720,13 @@ public class EntityFactory implements IEntityFactory
         methodEntity.finish = methodNode.getTotalEndOffset();
         if (method instanceof Function)
         {
-            methodEntity.kind = "Function";
+            methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Функция" : "Function";
         }
         else
         {
             if (method instanceof Procedure)
             {
-                methodEntity.kind = "Procedure";
+                methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Процедура" : "Procedure";
             }
         }
 
