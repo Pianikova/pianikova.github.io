@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class Json implements IJson
 {
@@ -14,7 +15,7 @@ public class Json implements IJson
 
     public Json()
     {
-        gson = new Gson();
+        gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
     @Override

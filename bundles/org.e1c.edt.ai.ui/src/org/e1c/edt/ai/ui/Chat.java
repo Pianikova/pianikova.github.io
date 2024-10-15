@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Worker.State;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
@@ -34,10 +35,11 @@ import netscape.javascript.JSObject;
  */
 public class Chat implements IChat, IChatDialog
 {
+    private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
     private static final String CHAT_API_WINK_TEMPLATE = "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"})"; //$NON-NLS-1$
     private static final String IDE_API = "ideApi"; //$NON-NLS-1$
-    private static final String WELCOME_PAGE_TITLE = "Welcome page"; //$NON-NLS-1$
 
+    private final ILog log;
     private final ISettingsProvider settingsProvider;
     private final IUI ui;
     private final IDispatcher dispatcher;
@@ -54,6 +56,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(handler);
         Preconditions.checkNotNull(parametersService);
+        this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -113,7 +116,10 @@ public class Chat implements IChat, IChatDialog
             }
 
             script.append("`)");
-            view.getEngine().executeScript(script.toString());
+            var scriptText = script.toString();
+            log.trace(AI_CHAT, "executing script: " + scriptText);
+            view.getEngine().executeScript(scriptText);
+            log.trace(AI_CHAT, "script executed");
         });
     }
 
@@ -151,6 +157,7 @@ public class Chat implements IChat, IChatDialog
     {
         new Job(Messages.ChatInteractionJobName)
         {
+            @SuppressWarnings("nls")
             @Override
             protected IStatus run(IProgressMonitor monitor)
             {
@@ -161,19 +168,22 @@ public class Chat implements IChat, IChatDialog
                 }
                 catch (InterruptedException | ExecutionException e)
                 {
+                    log.logError(e);
                     return Status.error(e.getMessage());
                 }
 
                 if (!parameters.isPresent())
                 {
-                    return Status.error("Failed to get the parameters."); //$NON-NLS-1$
+                    log.logError("Failed to get the parameters for chat.");
+                    return Status.error("Failed to get the parameters.");
                 }
 
                 dispatcher
                     .dispatch(() -> webView = webView.or(() -> Optional.of(createWebView(parameters.get().chatUrl))));
                 if (webView.isEmpty())
                 {
-                    return Status.error("Failed to get the parameters."); //$NON-NLS-1$
+                    log.logError("Failed to create chat web view.");
+                    return Status.error("Failed to create web view.");
                 }
 
                 webView.get().thenAcceptAsync(view -> dispatcher.dispatchAsync(() -> consumer.accept(view)));
@@ -182,6 +192,7 @@ public class Chat implements IChat, IChatDialog
         }.schedule();
     }
 
+    @SuppressWarnings("nls")
     private CompletableFuture<WebView> createWebView(String chatUrl)
     {
         var view = new WebView();
@@ -189,26 +200,49 @@ public class Chat implements IChat, IChatDialog
         view.setLayoutY(-1);
         WebEngine webEngine = view.getEngine();
         var result = new CompletableFuture<WebView>();
-        webEngine.titleProperty().addListener(new ChangeListener<String>()
+        var worker = webEngine.getLoadWorker();
+        worker.stateProperty().addListener(new ChangeListener<State>()
         {
             @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue)
+            public void changed(ObservableValue<? extends State> observable, State oldValue, State newValue)
             {
-                if (newValue.contains(WELCOME_PAGE_TITLE))
+                log.trace(AI_CHAT, "new state: " + newValue);
+                switch (newValue)
                 {
-                    // initialize only once, no need this listener anymore
-                    webEngine.titleProperty().removeListener(this);
-
+                case SUCCEEDED:
                     JSObject window = (JSObject)webEngine.executeScript("window"); //$NON-NLS-1$
                     window.setMember(IDE_API, handler);
                     settingsProvider.getSettings()
-                        .ifPresent(settings -> webEngine.executeScript(String.format(CHAT_API_WINK_TEMPLATE,
-                            settings.getClientToken(), settings.getClientUniqueId())));
+                        .ifPresent(settings -> {
+                            try
+                            {
+                                webEngine.executeScript(String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
+                                    settings.getClientUniqueId()));
+                            }
+                            catch (Throwable error)
+                            {
+                                log.logError(error);
+                            }
+                        });
                     result.complete(view);
+                    break;
+
+                default:
+                    break;
                 }
             }
         });
 
+        worker.runningProperty().addListener(new ChangeListener<Boolean>()
+        {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue)
+            {
+                log.trace(AI_CHAT, "is running: " + newValue);
+            }
+        });
+
+        log.trace(AI_CHAT, "loading...");
         webEngine.load(chatUrl);
         return result;
     }

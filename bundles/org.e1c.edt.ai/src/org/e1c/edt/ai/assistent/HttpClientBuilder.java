@@ -3,7 +3,6 @@
  */
 package org.e1c.edt.ai.assistent;
 
-import java.net.Authenticator;
 import java.net.ProxySelector;
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;
@@ -17,7 +16,6 @@ public class HttpClientBuilder implements IHttpClientBuilder
         return HttpClient.newBuilder()
             .version(Version.HTTP_2)
             .followRedirects(Redirect.NORMAL)
-            .authenticator(Authenticator.getDefault())
             .proxy(ProxySelector.getDefault());
     }
 }
