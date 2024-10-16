@@ -3,20 +3,27 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.assistent.IParametersService;
+import org.e1c.edt.ai.assistent.ISettingsTracker;
+import org.e1c.edt.ai.assistent.ParametersService;
 import org.e1c.edt.ai.assistent.model.Parameters;
+import org.e1c.edt.ai.client.AISettings;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.preferences.ConfigurationScope;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -24,8 +31,9 @@ import com.google.inject.Inject;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker.State;
+import javafx.event.EventHandler;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebErrorEvent;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
 
@@ -35,6 +43,7 @@ import netscape.javascript.JSObject;
  */
 public class Chat implements IChat, IChatDialog
 {
+    private static final String AI_CHAT_DIR = "ai.chat"; //$NON-NLS-1$
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
     private static final String CHAT_API_WINK_TEMPLATE = "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"})"; //$NON-NLS-1$
     private static final String IDE_API = "ideApi"; //$NON-NLS-1$
@@ -45,23 +54,28 @@ public class Chat implements IChat, IChatDialog
     private final IDispatcher dispatcher;
     private final IdeApiHandler handler;
     private final IParametersService parametersService;
-    private Optional<CompletableFuture<WebView>> webView = Optional.empty();
+    private final ISettingsTracker settingsTracker;
+    private WebView webView;
+    private String lastChatUrl;
+    private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
 
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
-        IdeApiHandler handler, IParametersService parametersService)
+        IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(handler);
         Preconditions.checkNotNull(parametersService);
+        Preconditions.checkNotNull(settingsTracker);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
         this.dispatcher = dispatcher;
         this.handler = handler;
         this.parametersService = parametersService;
+        this.settingsTracker = settingsTracker;
     }
 
     @Override
@@ -102,7 +116,7 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void chat(String topic, String subject, String details)
     {
-        ui.showView(ChatView.ID);
+        dispatcher.dispatch(() -> ui.showView(ChatView.ID));
         chatInJob(view -> {
             var script = new StringBuilder();
             script.append("window.chatApi.");
@@ -118,7 +132,7 @@ public class Chat implements IChat, IChatDialog
             script.append("`)");
             var scriptText = script.toString();
             log.trace(AI_CHAT, "executing script: " + scriptText);
-            view.getEngine().executeScript(scriptText);
+            dispatcher.dispatch(() -> view.getEngine().executeScript(scriptText));
             log.trace(AI_CHAT, "script executed");
         });
     }
@@ -126,38 +140,86 @@ public class Chat implements IChat, IChatDialog
     @Override
     public void show(ScrollPane pane)
     {
-        chatInJob(view -> {
-            pane.setContent(view);
-            view.setFocusTraversable(true);
-            view.setPrefWidth(pane.getWidth());
-            view.setPrefHeight(pane.getHeight());
-            pane.widthProperty().addListener(new ChangeListener<Object>()
+        ensureWebViewExists();
+        pane.setContent(webView);
+        webView.setFocusTraversable(true);
+        webView.setPrefWidth(pane.getWidth());
+        webView.setPrefHeight(pane.getHeight());
+        pane.widthProperty().addListener(new ChangeListener<Object>()
+        {
+            @Override
+            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
             {
-                @Override
-                public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
-                {
-                    Double width = (Double)newValue;
-                    view.setPrefWidth(width);
-                }
-            });
+                Double width = (Double)newValue;
+                webView.setPrefWidth(width);
+            }
+        });
 
-            pane.heightProperty().addListener(new ChangeListener<Object>()
+        pane.heightProperty().addListener(new ChangeListener<Object>()
+        {
+            @Override
+            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
             {
-                @Override
-                public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
-                {
-                    Double height = (Double)newValue;
-                    view.setPrefHeight(height);
-                }
-            });
+                Double height = (Double)newValue;
+                webView.setPrefHeight(height);
+            }
+        });
+
+        chatInJob(v -> {
+            /**/ });
+    }
+
+    private void ensureWebViewExists()
+    {
+        if (webView != null)
+        {
+            return;
+        }
+
+        var view = new WebView();
+        webView = view;
+        view.setLayoutX(-1);
+        view.setLayoutY(-1);
+
+        var webEngine = view.getEngine();
+        webEngine.setUserDataDirectory(getUserDataDirectory().toFile());
+        webEngine.setOnError(new EventHandler<WebErrorEvent>()
+        {
+            @Override
+            public void handle(WebErrorEvent event)
+            {
+                log.logError(event.getMessage());
+                log.logError(event.getException());
+            }
+        });
+
+        var worker = webEngine.getLoadWorker();
+        worker.runningProperty().addListener(new ChangeListener<Boolean>()
+        {
+            @SuppressWarnings("nls")
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue)
+            {
+                log.trace(AI_CHAT, "is running: " + newValue);
+            }
         });
     }
 
+    private static Path getUserDataDirectory()
+    {
+        return Path.of(ConfigurationScope.INSTANCE.getLocation()
+            .addTrailingSeparator()
+            .append(AI_CHAT_DIR)
+            .toFile()
+            .getAbsolutePath());
+    }
+
+    @SuppressWarnings("nls")
     private void chatInJob(Consumer<WebView> consumer)
     {
+        ensureWebViewExists();
         new Job(Messages.ChatInteractionJobName)
         {
-            @SuppressWarnings("nls")
             @Override
             protected IStatus run(IProgressMonitor monitor)
             {
@@ -172,36 +234,66 @@ public class Chat implements IChat, IChatDialog
                     return Status.error(e.getMessage());
                 }
 
-                if (!parameters.isPresent())
+                var settings = settingsProvider.getSettings();
+                if (parameters.isEmpty() || settings.isEmpty())
                 {
                     log.logError("Failed to get the parameters for chat.");
                     return Status.error("Failed to get the parameters.");
                 }
 
-                dispatcher
-                    .dispatch(() -> webView = webView.or(() -> Optional.of(createWebView(parameters.get().chatUrl))));
-                if (webView.isEmpty())
-                {
-                    log.logError("Failed to create chat web view.");
-                    return Status.error("Failed to create web view.");
-                }
+                var chatUrl = parameters.get().chatUrl;
+                var reset = settingsTracker.register(ParametersService.class.getName(), settings);
+                dispatcher.dispatch(() -> {
+                    if (lastChatUrl != chatUrl || reset)
+                    {
+                        lastChatUrl = chatUrl;
+                        initializing = initialize(webView -> webView.getEngine().load(lastChatUrl),
+                            webView -> wink(settings.get()), 10000);
+                    }
+                });
 
-                webView.get().thenAcceptAsync(view -> dispatcher.dispatchAsync(() -> consumer.accept(view)));
-                return Status.OK_STATUS;
+                final var statuses = new ArrayList<IStatus>();
+                initializing.whenComplete((r, e) -> {
+                    if (e == null)
+                    {
+                        consumer.accept(webView);
+                    }
+                    else
+                    {
+                        statuses.add(Status.error(e.getMessage(), e));
+                        lastChatUrl = null;
+                    }
+                }).join();
+
+                return statuses.size() == 0 ? Status.OK_STATUS : statuses.get(0);
             }
         }.schedule();
     }
 
     @SuppressWarnings("nls")
-    private CompletableFuture<WebView> createWebView(String chatUrl)
+    private void wink(AISettings settings)
     {
-        var view = new WebView();
-        view.setLayoutX(-1);
-        view.setLayoutY(-1);
-        WebEngine webEngine = view.getEngine();
-        var result = new CompletableFuture<WebView>();
+        try
+        {
+            var winkScript =
+                String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(), settings.getClientUniqueId());
+            log.trace(AI_CHAT, "wink script: " + winkScript); //$NON-NLS-1$
+            webView.getEngine().executeScript(winkScript);
+            log.trace(AI_CHAT, "wink script executed");
+        }
+        catch (Throwable error)
+        {
+            log.logError(error);
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private CompletableFuture<Boolean> initialize(Consumer<WebView> loader, Consumer<WebView> initializer, int timeout)
+    {
+        var webEngine = webView.getEngine();
+        var result = new CompletableFuture<Boolean>();
         var worker = webEngine.getLoadWorker();
-        worker.stateProperty().addListener(new ChangeListener<State>()
+        var stateListener = new ChangeListener<State>()
         {
             @Override
             public void changed(ObservableValue<? extends State> observable, State oldValue, State newValue)
@@ -210,40 +302,21 @@ public class Chat implements IChat, IChatDialog
                 switch (newValue)
                 {
                 case SUCCEEDED:
-                    JSObject window = (JSObject)webEngine.executeScript("window"); //$NON-NLS-1$
+                    var window = (JSObject)webEngine.executeScript("window"); //$NON-NLS-1$
                     window.setMember(IDE_API, handler);
-                    settingsProvider.getSettings()
-                        .ifPresent(settings -> {
-                            try
-                            {
-                                webEngine.executeScript(String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
-                                    settings.getClientUniqueId()));
-                            }
-                            catch (Throwable error)
-                            {
-                                log.logError(error);
-                            }
-                        });
-                    result.complete(view);
+                    initializer.accept(webView);
+                    result.complete(true);
                     break;
 
                 default:
                     break;
                 }
             }
-        });
+        };
 
-        worker.runningProperty().addListener(new ChangeListener<Boolean>()
-        {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue)
-            {
-                log.trace(AI_CHAT, "is running: " + newValue);
-            }
-        });
-
-        log.trace(AI_CHAT, "loading...");
-        webEngine.load(chatUrl);
-        return result;
+        worker.stateProperty().addListener(stateListener);
+        loader.accept(webView);
+        return result.orTimeout(timeout, TimeUnit.MILLISECONDS)
+            .whenComplete((r, e) -> worker.stateProperty().removeListener(stateListener));
     }
 }
