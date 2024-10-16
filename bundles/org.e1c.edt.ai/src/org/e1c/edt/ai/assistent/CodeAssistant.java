@@ -193,6 +193,10 @@ public class CodeAssistant
         IObserver<Completion> observer, ICancellationToken cancellationToken)
     {
         var statusCode = response.statusCode();
+        if (statusCode == 401)
+        {
+            sessionService.getSessionAsync();
+        }
         if (statusCode >= 300)
         {
             if (statusCode >= 500)

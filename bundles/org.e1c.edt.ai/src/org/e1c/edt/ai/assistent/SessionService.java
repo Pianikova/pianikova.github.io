@@ -107,7 +107,7 @@ public class SessionService implements ISessionService
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)
                 {
-                    if (statusCode >= 500)
+                    if (statusCode == 401 || statusCode >= 500)
                     {
                         serverAccess.accessChanged(FeedbackService.class.getName(), ServerAccessType.ACCESS_ABSENT);
                     }
