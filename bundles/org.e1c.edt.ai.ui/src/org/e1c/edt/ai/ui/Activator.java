@@ -3,9 +3,8 @@
  */
 package org.e1c.edt.ai.ui;
 
-import java.util.Optional;
-
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.context.ContextModule;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -31,7 +30,7 @@ import com.google.inject.util.Modules;
  */
 public class Activator
     extends AbstractUIPlugin
-    implements ILog, IPluginVersion
+    implements ILog, IVersionProvider
 {
     public static final String PLUGIN_ID = "org.e1c.edt.ai.ui.plugin.ui"; //$NON-NLS-1$
 
@@ -285,9 +284,15 @@ public class Activator
     }
 
     @Override
-    public Optional<Version> getPluginVersion()
+    public Version getPluginVersion()
     {
         Bundle bundle = getDefault().getBundle();
-        return Optional.ofNullable(bundle.getVersion());
+        return bundle.getVersion();
+    }
+
+    @Override
+    public String getPlatformVersion()
+    {
+        return System.getProperty("eclipse.buildId"); //$NON-NLS-1$
     }
 }

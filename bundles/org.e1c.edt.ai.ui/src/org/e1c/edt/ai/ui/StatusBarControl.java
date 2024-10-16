@@ -32,6 +32,7 @@ public class StatusBarControl
     extends WorkbenchWindowControlContribution
 {
     private Image image;
+    private Font font;
     private ImageDescriptor imageDesc;
     private Label iconLabel;
     @Inject
@@ -43,7 +44,7 @@ public class StatusBarControl
     protected Control createControl(Composite parent)
     {
         Activator.injectMembers(this);
-        var version = Activator.getDefault().getPluginVersion().get().toString();
+        var version = Activator.getDefault().getPluginVersion().toString();
         Composite composite = new Composite(parent, SWT.NONE);
         GridLayout gridLayout = new GridLayout(2, false);
         gridLayout.marginWidth = 2;
@@ -66,6 +67,7 @@ public class StatusBarControl
             public void widgetDisposed(DisposeEvent e)
             {
                 image.dispose();
+                font.dispose();
             }
         });
 
@@ -86,8 +88,8 @@ public class StatusBarControl
         var font = status.getFont();
         var fontData = font.getFontData()[0];
         fontData.setHeight((int)(fontData.getHeight() * .9));
-        var smalFont = new Font(font.getDevice(), fontData);
-        status.setFont(smalFont);
+        this.font = new Font(font.getDevice(), fontData);
+        status.setFont(this.font);
 
         var statusGridData = new GridData(SWT.CENTER, SWT.CENTER, true, true);
         status.setLayoutData(statusGridData);

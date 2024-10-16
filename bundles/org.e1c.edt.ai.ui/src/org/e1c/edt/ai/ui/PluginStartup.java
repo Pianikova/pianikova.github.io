@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.assistent.IServerAccessService;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
@@ -27,12 +28,19 @@ public class PluginStartup
     UI ui;
     @Inject
     IServerAccessService accessHolder;
+    @Inject
+    ILog log;
 
     public PluginStartup()
     {
         Activator.injectMembers(this);
         var activator = Activator.getDefault();
-        activator.trace("Plugin version: " + activator.getPluginVersion().get().toString(), ""); //$NON-NLS-1$ //$NON-NLS-2$
+        var pluginVersion = activator.getPluginVersion();
+        var platformVersion = activator.getPlatformVersion();
+        activator.trace(
+            platformVersion == null ? "Not 1C:EDT Platform" : "1C:EDT version: " + platformVersion.toString(), //$NON-NLS-1$//$NON-NLS-2$
+            ""); //$NON-NLS-1$
+        activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), ""); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     @Override

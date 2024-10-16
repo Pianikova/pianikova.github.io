@@ -24,6 +24,7 @@ import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.context.IResourceSetProvider;
 import org.e1c.edt.ai.context.ResourceSetProvider;
 import org.e1c.edt.ai.ui.handlers.FixDialog;
@@ -57,7 +58,7 @@ public class AIUIModule
         // @formatter:off
         install(new AIModule());
         bind(ILog.class).toInstance(activator);
-        bind(IPluginVersion.class).toInstance(activator);
+        bind(IVersionProvider.class).toInstance(activator);
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);

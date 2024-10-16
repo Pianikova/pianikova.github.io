@@ -12,6 +12,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.ServerAccessType;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.Session;
@@ -33,12 +34,13 @@ public class SessionService implements ISessionService
     private final IParametersService parametersService;
     private final ISettingsProvider settingsProvider;
     private final IServerAccessService serverAccess;
+    private final IVersionProvider versionProvider;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker,
         IResponseCache<Session> responseCache, IParametersService parametersService, ISettingsProvider settingsProvider,
-        IServerAccessService serverAccess)
+        IServerAccessService serverAccess, IVersionProvider versionProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -49,6 +51,7 @@ public class SessionService implements ISessionService
         Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(settingsProvider);
         Preconditions.checkNotNull(serverAccess);
+        Preconditions.checkNotNull(versionProvider);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
@@ -58,6 +61,7 @@ public class SessionService implements ISessionService
         this.parametersService = parametersService;
         this.settingsProvider = settingsProvider;
         this.serverAccess = serverAccess;
+        this.versionProvider = versionProvider;
     }
 
     @Override
@@ -84,6 +88,7 @@ public class SessionService implements ISessionService
 
         var sessionRequest = new SessionRequest();
         sessionRequest.serviceParameters = parameters.get();
+        sessionRequest.setUserParameters(versionProvider.getPluginVersion(), versionProvider.getPlatformVersion());
 
         var requestBody = json.serialize(sessionRequest);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
