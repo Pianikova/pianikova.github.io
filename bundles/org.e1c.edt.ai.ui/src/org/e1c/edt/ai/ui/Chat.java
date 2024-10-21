@@ -9,7 +9,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.e1c.edt.ai.ILog;
@@ -117,7 +116,7 @@ public class Chat implements IChat, IChatDialog
     private void chat(String topic, String subject, String details)
     {
         dispatcher.dispatch(() -> ui.showView(ChatView.ID));
-        chatInJob(view -> {
+        chatInJob(() -> {
             var script = new StringBuilder();
             script.append("window.chatApi.");
             script.append(topic);
@@ -132,7 +131,7 @@ public class Chat implements IChat, IChatDialog
             script.append("`)");
             var scriptText = script.toString();
             log.trace(AI_CHAT, "executing script: " + scriptText);
-            dispatcher.dispatch(() -> view.getEngine().executeScript(scriptText));
+            dispatcher.dispatch(() -> webView.getEngine().executeScript(scriptText));
             log.trace(AI_CHAT, "script executed");
         });
     }
@@ -165,7 +164,7 @@ public class Chat implements IChat, IChatDialog
             }
         });
 
-        chatInJob(v -> {
+        chatInJob(() -> {
             /**/ });
     }
 
@@ -215,7 +214,7 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private void chatInJob(Consumer<WebView> consumer)
+    private void chatInJob(Runnable chatAction)
     {
         ensureWebViewExists();
         new Job(Messages.ChatInteractionJobName)
@@ -247,8 +246,8 @@ public class Chat implements IChat, IChatDialog
                     if (lastChatUrl != chatUrl || reset)
                     {
                         lastChatUrl = chatUrl;
-                        initializing = initialize(webView -> webView.getEngine().load(lastChatUrl),
-                            webView -> wink(settings.get()), 10000);
+                        initializing =
+                            initialize(() -> webView.getEngine().load(lastChatUrl), () -> wink(settings.get()), 10000);
                     }
                 });
 
@@ -256,7 +255,7 @@ public class Chat implements IChat, IChatDialog
                 initializing.whenComplete((r, e) -> {
                     if (e == null)
                     {
-                        consumer.accept(webView);
+                        chatAction.run();
                     }
                     else
                     {
@@ -288,11 +287,12 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private CompletableFuture<Boolean> initialize(Consumer<WebView> loader, Consumer<WebView> initializer, int timeout)
+    private CompletableFuture<Boolean> initialize(Runnable loader, Runnable initializer, int timeout)
     {
         var webEngine = webView.getEngine();
+        webEngine.setJavaScriptEnabled(true);
+        log.trace(AI_CHAT, "user agent: " + webEngine.getUserAgent());
         var result = new CompletableFuture<Boolean>();
-        var worker = webEngine.getLoadWorker();
         var stateListener = new ChangeListener<State>()
         {
             @Override
@@ -304,7 +304,7 @@ public class Chat implements IChat, IChatDialog
                 case SUCCEEDED:
                     var window = (JSObject)webEngine.executeScript("window"); //$NON-NLS-1$
                     window.setMember(IDE_API, handler);
-                    initializer.accept(webView);
+                    initializer.run();
                     result.complete(true);
                     break;
 
@@ -314,8 +314,9 @@ public class Chat implements IChat, IChatDialog
             }
         };
 
+        var worker = webEngine.getLoadWorker();
         worker.stateProperty().addListener(stateListener);
-        loader.accept(webView);
+        loader.run();
         return result.orTimeout(timeout, TimeUnit.MILLISECONDS)
             .whenComplete((r, e) -> worker.stateProperty().removeListener(stateListener));
     }

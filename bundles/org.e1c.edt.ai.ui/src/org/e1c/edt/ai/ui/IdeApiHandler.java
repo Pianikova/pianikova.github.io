@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.assistent.ITextPreprocessor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
@@ -12,14 +13,18 @@ import com.google.inject.Inject;
 
 public class IdeApiHandler
 {
+    private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
+    private final ILog log;
     private final IUI ui;
     private final ITextPreprocessor textPreprocessor;
 
     @Inject
-    public IdeApiHandler(IUI ui, ITextPreprocessor textPreprocessor)
+    public IdeApiHandler(ILog log, IUI ui, ITextPreprocessor textPreprocessor)
     {
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(textPreprocessor);
+        this.log = log;
         this.ui = ui;
         this.textPreprocessor = textPreprocessor;
     }
@@ -27,7 +32,7 @@ public class IdeApiHandler
     public void wink(String parameter)
     {
         Preconditions.checkNotNull(parameter);
-        System.out.println("Winked: " + parameter); //$NON-NLS-1$
+        log.trace(AI_CHAT, "winked: " + parameter); //$NON-NLS-1$
     }
 
     public void paste_code(String code)
@@ -66,5 +71,11 @@ public class IdeApiHandler
                 contet.replaceTextRange(textWidget.getCaretOffset(), 0, processedCode);
             });
         });
+    }
+
+    public void trace(String message)
+    {
+        // Chat tracing
+        // log.trace(AI_CHAT, message);
     }
 }
