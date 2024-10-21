@@ -203,6 +203,7 @@ public class CommentFactory implements ICommentFactory
             {
                 var linkPart = (LinkPart)part;
                 descriptionPart.kind = "link"; //$NON-NLS-1$
+                descriptionPart.text = linkPart.getInitialContent();
                 descriptionPart.link = linkPart.getLinkText();
                 continue;
             }
