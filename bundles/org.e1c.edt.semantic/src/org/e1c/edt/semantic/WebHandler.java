@@ -19,6 +19,8 @@ import org.e1c.edt.ai.context.IEntityInfo;
 import org.e1c.edt.ai.context.IRelatedEntities;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
+import org.e1c.edt.semantic.handlers.CloseRequest;
+import org.e1c.edt.semantic.handlers.IIDE;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
@@ -32,18 +34,21 @@ public class WebHandler
     private final IJson json;
     private final IRelatedEntities relatedEntities;
     private final IEntityInfo entityInfo;
+    private final IIDE ide;
 
     @Inject
-    public WebHandler(ILog log, IJson json, IRelatedEntities relatedEntities, IEntityInfo entityInfo)
+    public WebHandler(ILog log, IJson json, IRelatedEntities relatedEntities, IEntityInfo entityInfo, IIDE ide)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(relatedEntities);
         Preconditions.checkNotNull(entityInfo);
+        Preconditions.checkNotNull(ide);
         this.log = log;
         this.json = json;
         this.relatedEntities = relatedEntities;
         this.entityInfo = entityInfo;
+        this.ide = ide;
     }
 
     @SuppressWarnings("nls")
@@ -78,6 +83,9 @@ public class WebHandler
                 break;
             case "/entity":
                 isHandled = handle(request, EntityInfoRequest.class, entityInfo::getInfo, response);
+                break;
+            case "/ide_close":
+                isHandled = handle(request, CloseRequest.class, ide::close, response);
                 break;
             }
 

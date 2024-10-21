@@ -7,6 +7,8 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.context.IResourceSetProvider;
 import org.e1c.edt.ai.context.ResourceSetProvider;
+import org.e1c.edt.semantic.handlers.IDE;
+import org.e1c.edt.semantic.handlers.IIDE;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jface.preference.IPreferenceStore;
 
@@ -38,6 +40,7 @@ public class SemanticModule
         bind(IResourceSetProvider.class).to(ResourceSetProvider.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(IEndpointViewModel.class).to(EndpointViewModel.class).in(Singleton.class);
+        bind(IIDE.class).to(IDE.class).in(Singleton.class);
         // @formatter:on
     }
 }
