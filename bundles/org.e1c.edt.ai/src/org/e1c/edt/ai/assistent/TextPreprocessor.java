@@ -19,16 +19,11 @@ public class TextPreprocessor implements ITextPreprocessor
         this.uiSettings = uiSettings;
     }
 
+    @SuppressWarnings("nls")
     @Override
     public String process(String text)
     {
         var lineSeparator = uiSettings.getLineSeparator();
-        if (lineSeparator.length() == 1 && lineSeparator.charAt(0) == '\n')
-        {
-            return text;
-
-        }
-
-        return text.replace("\n", lineSeparator); //$NON-NLS-1$
+        return text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", lineSeparator);
     }
 }

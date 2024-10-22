@@ -76,6 +76,6 @@ public class IdeApiHandler
     public void trace(String message)
     {
         // Chat tracing
-        // log.trace(AI_CHAT, message);
+        log.trace(AI_CHAT, message);
     }
 }
