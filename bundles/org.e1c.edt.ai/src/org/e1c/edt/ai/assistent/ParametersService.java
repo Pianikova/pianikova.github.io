@@ -11,7 +11,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ISettingsProvider;
-import org.e1c.edt.ai.ServerAccessType;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.ParametersReponse;
 import org.e1c.edt.ai.client.AIClientException;
@@ -29,14 +28,13 @@ public class ParametersService
     private final IJson json;
     private final ISettingsTracker settingsTracker;
     private final IResponseCache<Parameters> responseCache;
-    private final IServerAccessService serverAccess;
     private final ISettingsProvider settingsProvider;
 
     @Inject
     public ParametersService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder,
         IJson json,
         ISettingsTracker settingsTracker,
-        IResponseCache<Parameters> responseCache, ISettingsProvider settingsProvider, IServerAccessService serverAccess)
+        IResponseCache<Parameters> responseCache, ISettingsProvider settingsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -45,14 +43,12 @@ public class ParametersService
         Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(responseCache);
         Preconditions.checkNotNull(settingsProvider);
-        Preconditions.checkNotNull(serverAccess);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
         this.json = json;
         this.settingsTracker = settingsTracker;
         this.responseCache = responseCache;
-        this.serverAccess = serverAccess;
         this.settingsProvider = settingsProvider;
     }
 
@@ -84,10 +80,6 @@ public class ParametersService
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)
                 {
-                    if (statusCode >= 500)
-                    {
-                        serverAccess.accessChanged(FeedbackService.class.getName(), ServerAccessType.ACCESS_ABSENT);
-                    }
                     throw new AIClientException("AI HTTP parameters response status code is " + statusCode, null); //$NON-NLS-1$
                 }
 

@@ -81,7 +81,7 @@ public class AIModule
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
         bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
-        bind(IServerAccessService.class).to(ServerAccessService.class);
+        bind(IServerAccessService.class).to(ServerAccessService.class).in(Singleton.class);
         bind(ITextNormilizer.class).to(TextNormilizer.class).in(Singleton.class);
         // @formatter:on
     }

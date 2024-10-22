@@ -13,7 +13,6 @@ import java.util.concurrent.CompletableFuture;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.IVersionProvider;
-import org.e1c.edt.ai.ServerAccessType;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.assistent.model.SessionRequest;
@@ -33,14 +32,13 @@ public class SessionService implements ISessionService
     private final IResponseCache<Session> responseCache;
     private final IParametersService parametersService;
     private final ISettingsProvider settingsProvider;
-    private final IServerAccessService serverAccess;
     private final IVersionProvider versionProvider;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker,
         IResponseCache<Session> responseCache, IParametersService parametersService, ISettingsProvider settingsProvider,
-        IServerAccessService serverAccess, IVersionProvider versionProvider)
+        IVersionProvider versionProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -50,7 +48,6 @@ public class SessionService implements ISessionService
         Preconditions.checkNotNull(responseCache);
         Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(settingsProvider);
-        Preconditions.checkNotNull(serverAccess);
         Preconditions.checkNotNull(versionProvider);
         this.log = log;
         this.requestBuilder = requestBuilder;
@@ -60,7 +57,6 @@ public class SessionService implements ISessionService
         this.responseCache = responseCache;
         this.parametersService = parametersService;
         this.settingsProvider = settingsProvider;
-        this.serverAccess = serverAccess;
         this.versionProvider = versionProvider;
     }
 
@@ -107,10 +103,6 @@ public class SessionService implements ISessionService
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)
                 {
-                    if (statusCode == 401 || statusCode >= 500)
-                    {
-                        serverAccess.accessChanged(FeedbackService.class.getName(), ServerAccessType.ACCESS_ABSENT);
-                    }
                     throw new AIClientException("AI HTTP session response status code is " + statusCode, null); //$NON-NLS-1$
                 }
 
