@@ -13,20 +13,9 @@ import org.eclipse.xtext.parser.IParseResult;
 import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com._1c.g5.v8.dt.bsl.model.Method;
-import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
 
 public class CodeProvider implements ICodeProvider
 {
-    private final IUI ui;
-
-    @Inject
-    public CodeProvider(IUI ui)
-    {
-        Preconditions.checkNotNull(ui);
-        this.ui = ui;
-    }
-
     @Override
     public Optional<IParseResult> getParseResult(SourceViewer sourceViewer)
     {

@@ -23,7 +23,6 @@ import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.ITextNormilizer;
 import org.e1c.edt.ai.Observables;
-import org.e1c.edt.ai.ServerAccessType;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.e1c.edt.ai.assistent.model.LocalContext;
@@ -42,7 +41,6 @@ public class CodeAssistant
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
     private final ISessionService sessionService;
-    private final IServerAccessService serverAccess;
     private final IResponseStreamProcessor responseStreamProcessor;
     private final IContextEntities contextEntities;
     private final ITextNormilizer textNormilizer;
@@ -53,7 +51,7 @@ public class CodeAssistant
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
         IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities,
-        IServerAccessService serverAccess, ITextNormilizer textNormilizer)
+        ITextNormilizer textNormilizer)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -62,7 +60,6 @@ public class CodeAssistant
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(responseStreamProcessor);
         Preconditions.checkNotNull(contextEntities);
-        Preconditions.checkNotNull(serverAccess);
         Preconditions.checkNotNull(textNormilizer);
         this.log = log;
         this.requestBuilder = requestBuilder;
@@ -71,7 +68,6 @@ public class CodeAssistant
         this.sessionService = sessionService;
         this.responseStreamProcessor = responseStreamProcessor;
         this.contextEntities = contextEntities;
-        this.serverAccess = serverAccess;
         this.textNormilizer = textNormilizer;
     }
 
@@ -193,16 +189,8 @@ public class CodeAssistant
         IObserver<Completion> observer, ICancellationToken cancellationToken)
     {
         var statusCode = response.statusCode();
-        if (statusCode == 401)
-        {
-            sessionService.getSessionAsync();
-        }
         if (statusCode >= 300)
         {
-            if (statusCode >= 500)
-            {
-                serverAccess.accessChanged(FeedbackService.class.getName(), ServerAccessType.ACCESS_ABSENT);
-            }
             observer.onError(
                 new AIClientException("AI HTTP response " + cancellationToken + " status code is " + statusCode, null)); //$NON-NLS-1$ //$NON-NLS-2$
         }

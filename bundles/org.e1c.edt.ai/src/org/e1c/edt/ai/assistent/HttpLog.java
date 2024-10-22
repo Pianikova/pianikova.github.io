@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.ServerAccessType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -16,12 +17,14 @@ import com.google.inject.Inject;
 public class HttpLog implements IHttpLog
 {
     private final ILog log;
+    private final IServerAccessService serverAccess;
 
     @Inject
-    public HttpLog(ILog log)
+    public HttpLog(ILog log, IServerAccessService serverAccess)
     {
         Preconditions.checkNotNull(log);
         this.log = log;
+        this.serverAccess = serverAccess;
     }
 
     @Override
@@ -74,6 +77,9 @@ public class HttpLog implements IHttpLog
     {
         Preconditions.checkNotNull(response);
         var statusCode = response.statusCode();
+        serverAccess.accessChanged(HttpLog.class.getName(),
+            statusCode >= 400 ? ServerAccessType.ACCESS_ABSENT : ServerAccessType.ACCESS_PRESENT);
+
         var sb = new StringBuilder();
         sb.append("status code: ");
         sb.append(statusCode);

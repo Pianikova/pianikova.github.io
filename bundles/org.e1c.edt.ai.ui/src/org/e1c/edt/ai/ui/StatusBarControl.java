@@ -73,7 +73,6 @@ public class StatusBarControl
 
         serverAccess.addServerAccessListener(new ServerAccessListener()
         {
-
             @Override
             public void onServerAccessChange(ServerAccessType currentStatus)
             {

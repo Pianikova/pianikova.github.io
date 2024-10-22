@@ -13,7 +13,7 @@ public interface IServerAccessService
 {
     void accessChanged(String className, ServerAccessType status);
 
-    void startMonitoring(int pauseTime);
+    void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs);
 
-    void addServerAccessListener(ServerAccessListener serverAccessListener);
+    void addServerAccessListener(IServerAccessListener serverAccessListener);
 }

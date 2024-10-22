@@ -4,7 +4,7 @@
 package org.e1c.edt.ai.assistent;
 
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ServerAccessType;
@@ -29,7 +29,6 @@ public class ServerAccessService
     private final ICheckStatusService checker;
     private final ILog log;
 
-
     @Inject
     public ServerAccessService(ICheckStatusService checker, ILog log)
     {
@@ -40,7 +39,7 @@ public class ServerAccessService
     }
 
     @Override
-    public void addServerAccessListener(ServerAccessListener newListener)
+    public void addServerAccessListener(IServerAccessListener newListener)
     {
         listeners.add(newListener);
     }
@@ -49,7 +48,6 @@ public class ServerAccessService
     {
         listeners.remove(listener);
     }
-
 
     @Override
     public synchronized void accessChanged(String className, ServerAccessType status)
@@ -62,46 +60,40 @@ public class ServerAccessService
     }
 
     @Override
-    public void startMonitoring(int pauseTime)
+    public void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs)
     {
         var jobName = "Updating server status..."; //$NON-NLS-1$
         var job = new Job(jobName)
         {
             @Override
             protected IStatus run(IProgressMonitor monitor) {
-                Optional<Integer> status = Optional.ofNullable(0);
+                Optional<Integer> status = Optional.empty();
                 try
                 {
-                    status = Optional.ofNullable(checker.getStatusAsync().get());
+                    status =
+                        Optional.ofNullable(checker.getStatusAsync().orTimeout(10000, TimeUnit.MILLISECONDS).get());
                 }
-                catch (InterruptedException e)
-                {
-                    log.logError(e);
-                }
-                catch (ExecutionException e)
+                catch (Throwable e)
                 {
                     log.logError(e);
                 }
 
                 status.ifPresentOrElse(
-                    serverStatus -> {
-                        if (serverStatus >= 200 && serverStatus < 300)
-                        {
-                            accessChanged(this.getName(), ServerAccessType.ACCESS_PRESENT);
-                        }
-                        else
-                        {
-                            accessChanged(this.getName(), ServerAccessType.ACCESS_ABSENT);
-                        }
+                    statusCode -> {
+                        accessChanged(this.getName(),
+                            statusCode >= 400 ? ServerAccessType.ACCESS_ABSENT : ServerAccessType.ACCESS_PRESENT);
+
+                        schedule(checkPeriodMs);
                     },
                     () -> {
-                        log.logError(this.getName() + ": Server returned null-status"); //$NON-NLS-1$
+                        log.logError(this.getName() + ": Server dose not return status"); //$NON-NLS-1$
                         if (access == ServerAccessType.ACCESS_PRESENT)
                         {
                             accessChanged(this.getName(), ServerAccessType.ACCESS_ABSENT);
                         }
+
+                        schedule(checkPeriodAfterErrorMs);
                     });
-                schedule(pauseTime);
                 return Status.OK_STATUS;
             }
         };
@@ -113,7 +105,14 @@ public class ServerAccessService
     {
         for (var listener : listeners)
         {
-            listener.onServerAccessChange(access);
+            try
+            {
+                listener.onServerAccessChange(access);
+            }
+            catch (Throwable error)
+            {
+                log.logError(error);
+            }
         }
     }
 }

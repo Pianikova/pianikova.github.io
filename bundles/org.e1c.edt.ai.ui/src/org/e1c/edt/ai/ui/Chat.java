@@ -4,7 +4,6 @@
 package org.e1c.edt.ai.ui;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -229,15 +228,13 @@ public class Chat implements IChat, IChatDialog
                 }
                 catch (InterruptedException | ExecutionException e)
                 {
-                    log.logError(e);
-                    return Status.error(e.getMessage());
+                    return Status.warning(AI_CHAT + ": " + e.getMessage());
                 }
 
                 var settings = settingsProvider.getSettings();
                 if (parameters.isEmpty() || settings.isEmpty())
                 {
-                    log.logError("Failed to get the parameters for chat.");
-                    return Status.error("Failed to get the parameters.");
+                    return Status.warning(AI_CHAT + ": Failed to get the parameters.");
                 }
 
                 var chatUrl = parameters.get().chatUrl;
@@ -251,20 +248,21 @@ public class Chat implements IChat, IChatDialog
                     }
                 });
 
-                final var statuses = new ArrayList<IStatus>();
-                initializing.whenComplete((r, e) -> {
-                    if (e == null)
-                    {
-                        chatAction.run();
-                    }
-                    else
-                    {
-                        statuses.add(Status.error(e.getMessage(), e));
-                        lastChatUrl = null;
-                    }
-                }).join();
+                try
+                {
+                    initializing.whenComplete((r, e) -> {
+                        if (e == null)
+                        {
+                            chatAction.run();
+                        }
+                    }).join();
+                }
+                catch (Throwable error)
+                {
+                    return Status.warning(AI_CHAT + ": " + error.getMessage(), error);
+                }
 
-                return statuses.size() == 0 ? Status.OK_STATUS : statuses.get(0);
+                return Status.OK_STATUS;
             }
         }.schedule();
     }
