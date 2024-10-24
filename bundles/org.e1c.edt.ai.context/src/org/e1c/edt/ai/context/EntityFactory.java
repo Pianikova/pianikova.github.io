@@ -701,7 +701,7 @@ public class EntityFactory implements IEntityFactory
             }
         }
 
-        return result;
+        return distinct(result);
     }
 
     private FieldEntity createField(Field field)
@@ -842,7 +842,6 @@ public class EntityFactory implements IEntityFactory
         ICancellationToken cancellationToken)
     {
         var fields = new ArrayList<ObjectEntityField>();
-
         objectEntity.fields = fields;
         objectEntity.types = createDataTypes(types);
         for (var type : types)
@@ -889,7 +888,7 @@ public class EntityFactory implements IEntityFactory
             dataType.typeRu = type.getNameRu();
         }
 
-        return dataTypes;
+        return distinct(dataTypes);
     }
 
     private List<DataType> createDataTypes2(List<TypeItem> types)
@@ -919,7 +918,18 @@ public class EntityFactory implements IEntityFactory
             dataType.typeRu = type.getNameRu();
         }
 
-        return dataTypes;
+        return distinct(dataTypes);
+    }
+
+
+    private static <T> List<T> distinct(List<T> source)
+    {
+        if (source == null || source.size() == 0)
+        {
+            return source;
+        }
+
+        return source.stream().distinct().collect(Collectors.toList());
     }
 
     private ObjectEntityField createField(Property prop, ICancellationToken cancellationToken)
