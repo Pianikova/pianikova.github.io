@@ -29,7 +29,6 @@ import org.e1c.edt.ai.context.DTO.Parameter;
 import org.e1c.edt.ai.context.DTO.PropertyEntity;
 import org.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
 import org.e1c.edt.ai.context.DTO.RegisterRecordEntity;
-import org.e1c.edt.ai.context.DTO.RegisterResourceEntity;
 import org.e1c.edt.ai.context.DTO.SignatureStructurized;
 import org.e1c.edt.ai.context.DTO.TabularSectionEntity;
 import org.e1c.edt.ai.context.DTO.ValueListEntity;
@@ -610,6 +609,7 @@ public class EntityFactory implements IEntityFactory
             }
         }
 
+        /*// There's a lot of data here (IDEAI-134):
         if (!registerResources.isEmpty())
         {
             meta.registerResources = new ArrayList<>();
@@ -623,7 +623,7 @@ public class EntityFactory implements IEntityFactory
                 entity.synonym = getMap(registerResource.getSynonym());
                 entity.types = getTypes(registerResource.getType());
             }
-        }
+        }*/
 
         if (!registerDimensions.isEmpty())
         {
@@ -700,6 +700,7 @@ public class EntityFactory implements IEntityFactory
                 dataType.typeRu = type.getNameRu();
             }
         }
+
         return result;
     }
 
