@@ -15,13 +15,17 @@ import com.google.inject.Inject;
 
 public class ResponseStreamProcessor implements IResponseStreamProcessor
 {
+    private final IThreadManager threadManager;
     private final IResponseLineProcessor lineProcessor;
 
     @Inject
     public ResponseStreamProcessor(
+        IThreadManager threadManager,
         IResponseLineProcessor lineProcessor)
     {
+        Preconditions.checkNotNull(threadManager);
         Preconditions.checkNotNull(lineProcessor);
+        this.threadManager = threadManager;
         this.lineProcessor = lineProcessor;
     }
 
@@ -31,16 +35,24 @@ public class ResponseStreamProcessor implements IResponseStreamProcessor
         Preconditions.checkNotNull(stream);
         Preconditions.checkNotNull(observer);
         Preconditions.checkNotNull(cancellationToken);
-        stream.takeWhile(line -> {
-            try
-            {
-                return !cancellationToken.isCanceled() && lineProcessor.process(observer, line);
-            }
-            catch (Throwable error)
-            {
-                observer.onError(error);
-                return false;
-            }
-        }).collect(Collectors.toList());
+        stream.takeWhile(line -> process(observer, cancellationToken, line)).collect(Collectors.toList());
+    }
+
+    private boolean process(IObserver<Completion> observer, ICancellationToken cancellationToken, String line)
+    {
+        if (cancellationToken.isCanceled())
+        {
+            threadManager.cancel();
+        }
+
+        try
+        {
+            return lineProcessor.process(observer, line);
+        }
+        catch (Throwable error)
+        {
+            observer.onError(error);
+            return false;
+        }
     }
 }
