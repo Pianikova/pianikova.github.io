@@ -7,6 +7,7 @@ import java.io.ByteArrayOutputStream;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -21,8 +22,10 @@ import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
+import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.ITextNormilizer;
 import org.e1c.edt.ai.Observables;
+import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.e1c.edt.ai.assistent.model.LocalContext;
@@ -32,6 +35,7 @@ import org.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class CodeAssistant
     implements ICodeAssistant
@@ -44,6 +48,7 @@ public class CodeAssistant
     private final IResponseStreamProcessor responseStreamProcessor;
     private final IContextEntities contextEntities;
     private final ITextNormilizer textNormilizer;
+    private final Provider<IStatistics> statisticsProvider;
 
     @Inject
     public CodeAssistant(IHttpLog log,
@@ -51,7 +56,7 @@ public class CodeAssistant
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
         IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities,
-        ITextNormilizer textNormilizer)
+        ITextNormilizer textNormilizer, Provider<IStatistics> statisticsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -61,6 +66,7 @@ public class CodeAssistant
         Preconditions.checkNotNull(responseStreamProcessor);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(textNormilizer);
+        Preconditions.checkNotNull(statisticsProvider);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -69,6 +75,7 @@ public class CodeAssistant
         this.responseStreamProcessor = responseStreamProcessor;
         this.contextEntities = contextEntities;
         this.textNormilizer = textNormilizer;
+        this.statisticsProvider = statisticsProvider;
     }
 
     @Override
@@ -104,23 +111,36 @@ public class CodeAssistant
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
-        var localContext = new LocalContext();
-        localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
-        localContext.suffix = textNormilizer.normalize(aiContext.getSufix());
-        localContext.path = aiContext.getPath();
-        localContext.offset = aiContext.getSourceOffset();
-        contextEntities.fill(aiContext, localContext, cancellationToken);
-        var aiRequest = new CompletionRequest();
-        aiRequest.localContext = localContext;
-        var requestBody = json.serialize(aiRequest);
+        var statistics = statisticsProvider.get();
+        String requestBody;
         byte[] compressedBody = null;
-        try
+        try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL))
         {
-            compressedBody = compress(requestBody).toByteArray();
+            var localContext = new LocalContext();
+            localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
+            localContext.suffix = textNormilizer.normalize(aiContext.getSufix());
+            localContext.path = aiContext.getPath();
+            localContext.offset = aiContext.getSourceOffset();
+            try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT))
+            {
+                contextEntities.fill(aiContext, localContext, statistics, cancellationToken);
+            }
+
+            var aiRequest = new CompletionRequest();
+            aiRequest.localContext = localContext;
+            try (var measurement = statistics.measureDuration(StatisticsType.SERIALIZATION))
+            {
+                requestBody = json.serialize(aiRequest);
+            }
+
+            try (var measurement = statistics.measureDuration(StatisticsType.COMPRESSION))
+            {
+                compressedBody = compress(requestBody).toByteArray();
+            }
         }
-        catch (Exception e)
+        catch (Exception error)
         {
-            log.error(e, cancellationToken.toString());
+            log.error(error, cancellationToken.toString());
             observer.onCompleted();
             return;
         }
@@ -132,11 +152,19 @@ public class CodeAssistant
             return;
         }
 
-        var request = optionalReauest.get()
+        var requestBuilder = optionalReauest.get()
             .header("Session-Id", session.sessionId) //$NON-NLS-1$
-            .header("Content-Encoding", "gzip") //$NON-NLS-1$ //$NON-NLS-2$
-            .POST(BodyPublishers.ofByteArray(compressedBody))
-            .build();
+            .header("Content-Encoding", "gzip"); //$NON-NLS-1$ //$NON-NLS-2$
+
+        for (var statisticsData : statistics.get())
+        {
+            var durationSeconds = statisticsData.getDuration().toNanos() / 1000000000d;
+            requestBuilder =
+                requestBuilder.header(statisticsData.getStatisticsType().getHeader(),
+                    String.format(Locale.US, "%.9f", durationSeconds)); //$NON-NLS-1$
+        }
+
+        var request = requestBuilder.POST(BodyPublishers.ofByteArray(compressedBody)).build();
 
         log.request(request, cancellationToken.toString(), requestBody);
 

@@ -9,6 +9,7 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
 import org.e1c.edt.ai.context.DTO.RelatedEntitiesResponse;
 import org.eclipse.emf.ecore.EObject;
@@ -172,7 +173,7 @@ public class RelatedEntities implements IRelatedEntities
                 traceEntity("function", entity, invocation, node);
                 return false;
             }
-        }, cancellationToken);
+        }, IStatistics.Empty, cancellationToken);
 
         entityFactory
             .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,
@@ -188,7 +189,7 @@ public class RelatedEntities implements IRelatedEntities
                     .ifPresent(i -> response.localFunctions.add(i));
                 return false;
             }
-        }, cancellationToken);
+        }, IStatistics.Empty, cancellationToken);
 
         if (!result)
         {
