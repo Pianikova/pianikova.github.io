@@ -23,6 +23,7 @@ import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
+import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observers;
 import org.e1c.edt.ai.Text;
@@ -154,8 +155,8 @@ public class CodeCompletionViewModel
                         protected IStatus run(IProgressMonitor monitor)
                         {
                             cancellationTokenSource.attachMonitor(monitor);
-                            contextDuration =
-                                contextEntities.fill(aiCtx, new LocalContext(), cancellationTokenSource);
+                            contextDuration = contextEntities.fill(aiCtx, new LocalContext(), IStatistics.Empty,
+                                cancellationTokenSource);
                             return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                         }
                     };

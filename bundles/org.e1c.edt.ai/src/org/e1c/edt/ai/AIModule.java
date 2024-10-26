@@ -86,6 +86,7 @@ public class AIModule
         bind(IServerAccessService.class).to(ServerAccessService.class).in(Singleton.class);
         bind(ITextNormilizer.class).to(TextNormilizer.class).in(Singleton.class);
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
+        bind(IStatistics.class).to(Statistics.class);
         // @formatter:on
     }
 }

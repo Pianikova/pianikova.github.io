@@ -12,7 +12,9 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
@@ -117,7 +119,7 @@ public class EntityInfo
                 response.method = methodEntity.orElse(null);
                 return methodEntity.isPresent();
             }
-        }, cancellationToken);
+        }, IStatistics.Empty, cancellationToken);
 
         if (!result)
         {
@@ -129,79 +131,77 @@ public class EntityInfo
     }
 
     @Override
-    public Duration fill(AIContext aiContext, LocalContext context, ICancellationToken cancellationToken)
+    public Duration fill(AIContext aiContext, LocalContext context, IStatistics statistics,
+        ICancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.createStarted();
-        var formStopwatch = Stopwatch.createUnstarted();
-        var trace = new StringBuilder();
-        try
+        var filePath = aiContext.getPath();
+        var start = aiContext.getStart();
+        var finish = aiContext.getFinish();
+        context.relatedObjects = new ArrayList<>();
+        context.relatedFunctions = new ArrayList<>();
+        context.localFunctions = new ArrayList<>();
+        var uuids = new HashSet<String>();
+        var attributes = new ArrayList<BasicFeature>();
+        var tabularSections = new ArrayList<DbObjectTabularSection>();
+        var registerResources = new ArrayList<RegisterResource>();
+        var registerDimensions = new ArrayList<RegisterDimension>();
+        var registerRecords = new ArrayList<BasicRegister>();
+        entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
-            var filePath = aiContext.getPath();
-            var start = aiContext.getStart();
-            var finish = aiContext.getFinish();
-            context.relatedObjects = new ArrayList<>();
-            context.relatedFunctions = new ArrayList<>();
-            context.localFunctions = new ArrayList<>();
-            var uuids = new HashSet<String>();
-            var attributes = new ArrayList<BasicFeature>();
-            var tabularSections = new ArrayList<DbObjectTabularSection>();
-            var registerResources = new ArrayList<RegisterResource>();
-            var registerDimensions = new ArrayList<RegisterDimension>();
-            var registerRecords = new ArrayList<BasicRegister>();
-            entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
+            @Override
+            public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
             {
-                @Override
-                public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
+                attributes.add(attribute);
+            }
+
+            @Override
+            public void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection)
+            {
+                tabularSections.add(tabularSection);
+            }
+
+            @Override
+            public void visitOwnerResource(IBmObject owner, RegisterResource resource)
+            {
+                registerResources.add(resource);
+            }
+
+            @Override
+            public void visitOwnerDimension(IBmObject owner, RegisterDimension dimension)
+            {
+                registerDimensions.add(dimension);
+            }
+
+            @Override
+            public void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord)
+            {
+                registerRecords.add(registerRecord);
+            }
+
+            @Override
+            public void visitForm(Form form)
+            {
+                try (var measurement = statistics.measureDuration(StatisticsType.FORM))
                 {
-                    attributes.add(attribute);
+                    context.form = entityFactory.createFormEntity(form, cancellationToken).orElse(null);
+                }
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
+            }
+
+            @Override
+            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
+            {
+                if (!uiSettings.sendContext())
+                {
+                    return false;
                 }
 
-                @Override
-                public void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection)
+                try (var measurement = statistics.measureDuration(StatisticsType.RELATED_OBJECTS))
                 {
-                    tabularSections.add(tabularSection);
-                }
-
-                @Override
-                public void visitOwnerResource(IBmObject owner, RegisterResource resource)
-                {
-                    registerResources.add(resource);
-                }
-
-                @Override
-                public void visitOwnerDimension(IBmObject owner, RegisterDimension dimension)
-                {
-                    registerDimensions.add(dimension);
-                }
-
-                @Override
-                public void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord)
-                {
-                    registerRecords.add(registerRecord);
-                }
-
-                @Override
-                public void visitForm(Form form)
-                {
-                    formStopwatch.start();
-                    try
-                    {
-                        context.form = entityFactory.createFormEntity(form, cancellationToken).orElse(null);
-                    }
-                    finally
-                    {
-                        formStopwatch.stop();
-                    }
-                }
-
-                @Override
-                public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
-                {
-                    if (!uiSettings.sendContext())
-                    {
-                        return false;
-                    }
-
                     if (!uuids.add(idFactory.createObjectId(filePath, variable, cancellationToken)))
                     {
                         return false;
@@ -209,17 +209,25 @@ public class EntityInfo
 
                     entityFactory.crateObjectEntity(variable, node, cancellationToken)
                         .ifPresent(object -> context.relatedObjects.add(object));
+                }
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
+
+                return false;
+            }
+
+            @Override
+            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
+            {
+                if (!uiSettings.sendContext())
+                {
                     return false;
                 }
 
-                @Override
-                public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
+                try (var measurement = statistics.measureDuration(StatisticsType.RELATED_OBJECTS))
                 {
-                    if (!uiSettings.sendContext())
-                    {
-                        return false;
-                    }
-
                     if (!uuids.add(idFactory.createObjectId(filePath, featureAccess, cancellationToken)))
                     {
                         return false;
@@ -227,17 +235,25 @@ public class EntityInfo
 
                     entityFactory.crateObjectEntity(featureAccess, node, cancellationToken)
                         .ifPresent(object -> context.relatedObjects.add(object));
+                }
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
+
+                return false;
+            }
+
+            @Override
+            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
+            {
+                if (!uiSettings.sendContext())
+                {
                     return false;
                 }
 
-                @Override
-                public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
+                try (var measurement = statistics.measureDuration(StatisticsType.RELATED_FUNCTIONS))
                 {
-                    if (!uiSettings.sendContext())
-                    {
-                        return false;
-                    }
-
                     if (!uuids.add(idFactory.createObjectId(filePath, invocation, cancellationToken)))
                     {
                         return false;
@@ -245,38 +261,41 @@ public class EntityInfo
 
                     entityFactory.createMethodEntity(invocation, node, cancellationToken)
                         .ifPresent(method -> context.relatedFunctions.add(method));
-                    return false;
                 }
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
+                return false;
+            }
 
-                @Override
-                public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+            @Override
+            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+            {
+                try (var measurement = statistics.measureDuration(StatisticsType.LOCAL_FUNCTIONS))
                 {
                     entityFactory.createMethodEntity(method, node, cancellationToken)
                         .ifPresent(i -> context.localFunctions.add(i));
-                    return false;
                 }
-            }, cancellationToken);
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
 
+                return false;
+            }
+        }, statistics, cancellationToken);
+
+        try (var measurement = statistics.measureDuration(StatisticsType.META))
+        {
             entityFactory
                 .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,
                     cancellationToken)
                 .ifPresent(meta -> context.meta = meta);
         }
-        finally
+        catch (Exception error)
         {
-            stopwatch.stop(); // optional
-            trace.append("objects count: "); //$NON-NLS-1$
-            trace.append(context.relatedObjects.size());
-            trace.append(System.lineSeparator());
-            trace.append("methods count: "); //$NON-NLS-1$
-            trace.append(context.relatedFunctions.size());
-            trace.append(System.lineSeparator());
-            trace.append("form duration: "); //$NON-NLS-1$
-            trace.append(formStopwatch.elapsed());
-            trace.append(System.lineSeparator());
-            trace.append("total duration: "); //$NON-NLS-1$
-            trace.append(stopwatch.elapsed());
-            log.trace("AI context statistics " + cancellationToken, trace.toString()); //$NON-NLS-1$
+            log.logError(error);
         }
 
         return stopwatch.elapsed();
