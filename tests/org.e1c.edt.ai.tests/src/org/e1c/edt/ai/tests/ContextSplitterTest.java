@@ -19,7 +19,7 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public class AIContextSplitterTest
+public class ContextSplitterTest
 {
     private final IContextSettings contextSettings = mock(IContextSettings.class);
 
@@ -68,6 +68,9 @@ public class AIContextSplitterTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
+                { "0123456789", 5, 2, 10, "34", "56789" },
+                { "0123456789", 10, 2, 10, "89", "" },
+                { "0123456789", 0, 2, 2, "", "01" },
                 { "0123456789", 2, 10, 10, "01", "23456789" },
                 { "0123456789", 0, 10, 10, "", "0123456789" },
                 { "0123456789", 10, 10, 10, "0123456789", "" },

@@ -45,11 +45,6 @@ public class ContextSplitter implements IContextSplitter
             return new ContextParts(Range.EMPTY, new Range(0, Integer.min(length, maxSuffixLength)));
         }
 
-        if (offset >= length)
-        {
-            return new ContextParts(new Range(0, Integer.min(length, maxPrefixLength)), Range.EMPTY);
-        }
-
         var start = Integer.max(offset - maxPrefixLength, 0);
         var finish = Integer.min(offset + maxSuffixLength - 1, length - 1);
         var prefix = new Range(start, offset - start);
