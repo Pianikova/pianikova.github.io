@@ -121,12 +121,7 @@ public class HintPainter
         }
 
         var text = getHintText();
-        if (text.length() == 0)
-        {
-            return;
-        }
-
-        if (!isSingleWordMode)
+        if (!isSingleWordMode || text.length() == 0)
         {
             text = hintTextBuilder.build(text, uiSettings.getTabWidth(), CONTINUATION_SIGN);
         }
