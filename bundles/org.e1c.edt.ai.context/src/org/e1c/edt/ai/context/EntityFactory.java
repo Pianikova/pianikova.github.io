@@ -719,6 +719,16 @@ public class EntityFactory implements IEntityFactory
         methodEntity.name = method.getName();
         methodEntity.start = methodNode.getTotalOffset();
         methodEntity.finish = methodNode.getTotalEndOffset();
+        var code = methodNode.getText();
+
+        // IDEAI-137
+        var length = code.length();
+        code = code.stripLeading();
+        methodEntity.start += (length - code.length());
+        code = code.stripTrailing();
+        methodEntity.finish -= (length - code.length());
+
+        methodEntity.code = code;
         if (method instanceof Function)
         {
             methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Функция" : "Function";
@@ -731,7 +741,6 @@ public class EntityFactory implements IEntityFactory
             }
         }
 
-        methodEntity.code = methodNode.getText();
         var signatureParts = codePartsProvider.getParts(methodNode)
             .filter(i -> i.getLocation() == CursorLocation.FunctionName
                 || i.getLocation() == CursorLocation.FunctionArguments)
