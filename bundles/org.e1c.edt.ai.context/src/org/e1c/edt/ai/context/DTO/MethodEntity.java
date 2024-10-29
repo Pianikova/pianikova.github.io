@@ -25,6 +25,8 @@ public class MethodEntity
 
     public List<String> areas;
 
+    public List<String> environments;
+
     @SerializedName("signature_str")
     public String signatureStr;
 

@@ -468,12 +468,10 @@ public class EntityFactory implements IEntityFactory
             var methodAccessFeature = methodAccessFeatureOptional.get();
             var signatureStructurized = new SignatureStructurized();
             methodEntity.signatureStructurized = signatureStructurized;
-            var preprocess = new ArrayList<String>();
-            signatureStructurized.preprocess = preprocess;
+            signatureStructurized.preprocess = new ArrayList<>();
             var parameters = new ArrayList<Parameter>();
             signatureStructurized.parameters = parameters;
-            var attributes = new ArrayList<String>();
-            signatureStructurized.attributes = attributes;
+            signatureStructurized.attributes = new ArrayList<>();
             if (methodAccessFeature instanceof Method)
             {
                 var method = (Method)methodAccessFeature;
@@ -551,12 +549,9 @@ public class EntityFactory implements IEntityFactory
         var methodEntity = new MethodEntity();
         var signatureStructurized = new SignatureStructurized();
         methodEntity.signatureStructurized = signatureStructurized;
-        var preprocess = new ArrayList<String>();
-        signatureStructurized.preprocess = preprocess;
-        var parameters = new ArrayList<Parameter>();
-        signatureStructurized.parameters = parameters;
-        var attributes = new ArrayList<String>();
-        signatureStructurized.attributes = attributes;
+        signatureStructurized.preprocess = new ArrayList<>();
+        signatureStructurized.parameters = new ArrayList<>();
+        signatureStructurized.attributes = new ArrayList<>();
         fillMethod(methodEntity, method, node, node);
         var returnTypes = v8Model.getTypesComputer().compute(method, v8Model.getEnvironments(method));
         signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes);
@@ -787,6 +782,16 @@ public class EntityFactory implements IEntityFactory
         for (var pragma : method.getPragmas())
         {
             methodEntity.signatureStructurized.preprocess.add(pragma.getSymbol());
+        }
+
+        var environments = v8Model.getEnvironments(method).toArray();
+        if (environments.length != 0)
+        {
+            methodEntity.environments = new ArrayList<>();
+            for (var environment : environments)
+            {
+                methodEntity.environments.add(environment.name());
+            }
         }
 
         getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
