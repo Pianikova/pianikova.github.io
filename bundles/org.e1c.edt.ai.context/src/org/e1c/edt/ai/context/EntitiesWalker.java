@@ -113,10 +113,11 @@ public class EntitiesWalker
                 }
 
                 var obj = contentsIterator.next();
+                var node = v8Model.getNode(obj);
+                visitor.visitNode(obj, node);
                 if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
                     || obj instanceof Method)
                 {
-                    var node = v8Model.getNode(obj);
                     var nodeStart = node.getTotalOffset();
                     var nodeFinish = node.getTotalEndOffset();
 

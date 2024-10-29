@@ -22,6 +22,7 @@ import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.bm.core.IBmObject;
@@ -172,8 +173,20 @@ public class EntityInfo
         var registerDimensions = new ArrayList<RegisterDimension>();
         var registerRecords = new ArrayList<BasicRegister>();
         var actions = new ArrayList<Action>();
+        var cursorObjects = new EObject[1];
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
+            @Override
+            public void visitNode(EObject eObject, ICompositeNode node)
+            {
+                var nodeStart = node.getTotalOffset();
+                var nodeFinish = node.getTotalEndOffset();
+                if (nodeStart <= offset && offset <= nodeFinish)
+                {
+                    cursorObjects[0] = eObject;
+                }
+            }
+
             @Override
             public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
             {
@@ -277,6 +290,20 @@ public class EntityInfo
                 return false;
             }
         }, statistics, cancellationToken);
+
+        var cursorObject = cursorObjects[0];
+        if (cursorObject != null)
+        {
+            var type = cursorObject.getClass();
+            for (var modelInterface : type.getInterfaces())
+            {
+                if (modelInterface.getName().startsWith("com._1c.g5.v8.dt.bsl.model.")) //$NON-NLS-1$
+                {
+                    context.cursorObject = modelInterface.getSimpleName();
+                    break;
+                }
+            }
+        }
 
         Collections.sort(actions, new Comparator<Action>()
         {

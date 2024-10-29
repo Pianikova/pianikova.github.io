@@ -17,6 +17,9 @@ public class LocalContext
 
     public Integer offset;
 
+    @SerializedName("cursor_object")
+    public String cursorObject;
+
     @SerializedName("related_objects")
     public List<Object> relatedObjects;
 
