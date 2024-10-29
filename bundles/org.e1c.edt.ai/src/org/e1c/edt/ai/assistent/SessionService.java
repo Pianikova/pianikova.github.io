@@ -12,10 +12,12 @@ import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.assistent.model.SessionRequest;
+import org.e1c.edt.ai.assistent.model.UserParameters;
 import org.e1c.edt.ai.client.AIClientException;
 
 import com.google.common.base.Preconditions;
@@ -33,12 +35,13 @@ public class SessionService implements ISessionService
     private final IParametersService parametersService;
     private final ISettingsProvider settingsProvider;
     private final IVersionProvider versionProvider;
+    private final IUISettings uiSettings;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker,
         IResponseCache<Session> responseCache, IParametersService parametersService, ISettingsProvider settingsProvider,
-        IVersionProvider versionProvider)
+        IVersionProvider versionProvider, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -49,6 +52,7 @@ public class SessionService implements ISessionService
         Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(settingsProvider);
         Preconditions.checkNotNull(versionProvider);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
@@ -58,6 +62,7 @@ public class SessionService implements ISessionService
         this.parametersService = parametersService;
         this.settingsProvider = settingsProvider;
         this.versionProvider = versionProvider;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -84,7 +89,27 @@ public class SessionService implements ISessionService
 
         var sessionRequest = new SessionRequest();
         sessionRequest.serviceParameters = parameters.get();
-        sessionRequest.setUserParameters(versionProvider.getPluginVersion(), versionProvider.getPlatformVersion());
+        var userParameters = new UserParameters();
+        sessionRequest.userParameters = userParameters;
+        var pluginVersion = versionProvider.getPluginVersion();
+        if (pluginVersion != null)
+        {
+            userParameters.pluginVersion = pluginVersion.toString();
+        }
+
+        var platformVersion = versionProvider.getPlatformVersion();
+        if (platformVersion != null && !platformVersion.isBlank())
+        {
+            userParameters.edtVersion = platformVersion;
+        }
+
+        userParameters.tabWidth = uiSettings.getTabWidth();
+        userParameters.codeCompletionLinesCount = uiSettings.getCodeCompletionLinesCount();
+        userParameters.isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
+        userParameters.minRequestDelayMs = uiSettings.getMinRequestDelay().toMillis();
+        userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
+        userParameters.lineSeparator = uiSettings.getLineSeparator();
+        userParameters.sendContex = uiSettings.sendContext();
 
         var requestBody = json.serialize(sessionRequest);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
