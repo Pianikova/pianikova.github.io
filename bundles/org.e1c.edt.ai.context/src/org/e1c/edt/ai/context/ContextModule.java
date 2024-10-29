@@ -41,6 +41,7 @@ public class ContextModule
         bind(IEntityFactory.class).to(EntityFactory.class).in(Singleton.class);
         bind(IFormWalker.class).to(FormWalker.class).in(Singleton.class);
         bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
+        bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(IExternalPropertyManagerRegistry.class).toService();
         bind(IBmModelManager.class).toService();
         bind(IResourceLookup.class).toService();

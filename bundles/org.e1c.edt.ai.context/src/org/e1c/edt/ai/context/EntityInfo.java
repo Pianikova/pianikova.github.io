@@ -5,8 +5,12 @@ package org.e1c.edt.ai.context;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
@@ -43,11 +47,14 @@ public class EntityInfo
     private final IIdFactory idFactory;
     private final IEntityFactory entityFactory;
     private final IUISettings uiSettings;
+    private final Lock lock = new ReentrantLock(true);
+    private final IDispatcher dispatcher;
 
     @Inject
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
-        IUISettings uiSettings)
+        IUISettings uiSettings, IDispatcher dispatcher)
     {
+        this.dispatcher = dispatcher;
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
         Preconditions.checkNotNull(idFactory);
@@ -134,9 +141,26 @@ public class EntityInfo
     public Duration fill(AIContext aiContext, LocalContext context, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
+        lock.lock();
+        try
+        {
+            var timeout = uiSettings.getTimeout();
+            return dispatcher.dispatch(() -> fillInternal(aiContext, context, statistics, cancellationToken), timeout)
+                .orElse(timeout);
+        }
+        finally
+        {
+            lock.unlock();
+        }
+    }
+
+    private Duration fillInternal(AIContext aiContext, LocalContext context, IStatistics statistics,
+        ICancellationToken cancellationToken)
+    {
         var stopwatch = Stopwatch.createStarted();
         var filePath = aiContext.getPath();
         var start = aiContext.getStart();
+        var offset = aiContext.getTextOffset();
         var finish = aiContext.getFinish();
         context.relatedObjects = new ArrayList<>();
         context.relatedFunctions = new ArrayList<>();
@@ -147,6 +171,7 @@ public class EntityInfo
         var registerResources = new ArrayList<RegisterResource>();
         var registerDimensions = new ArrayList<RegisterDimension>();
         var registerRecords = new ArrayList<BasicRegister>();
+        var actions = new ArrayList<Action>();
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
             @Override
@@ -200,21 +225,15 @@ public class EntityInfo
                     return false;
                 }
 
-                try (var measurement = statistics.measureDuration(StatisticsType.RELATED_OBJECTS))
+                if (!uuids.add(idFactory.createObjectId(filePath, variable, cancellationToken)))
                 {
-                    if (!uuids.add(idFactory.createObjectId(filePath, variable, cancellationToken)))
-                    {
-                        return false;
-                    }
-
-                    entityFactory.crateObjectEntity(variable, node, cancellationToken)
-                        .ifPresent(object -> context.relatedObjects.add(object));
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
+                    return false;
                 }
 
+                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS,
+                    () -> entityFactory.crateObjectEntity(variable, node, cancellationToken)
+                        .ifPresent(object -> context.relatedObjects.add(object)));
+                actions.add(action);
                 return false;
             }
 
@@ -226,21 +245,10 @@ public class EntityInfo
                     return false;
                 }
 
-                try (var measurement = statistics.measureDuration(StatisticsType.RELATED_OBJECTS))
-                {
-                    if (!uuids.add(idFactory.createObjectId(filePath, featureAccess, cancellationToken)))
-                    {
-                        return false;
-                    }
-
-                    entityFactory.crateObjectEntity(featureAccess, node, cancellationToken)
-                        .ifPresent(object -> context.relatedObjects.add(object));
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
-                }
-
+                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS,
+                    () -> entityFactory.crateObjectEntity(featureAccess, node, cancellationToken)
+                        .ifPresent(object -> context.relatedObjects.add(object)));
+                actions.add(action);
                 return false;
             }
 
@@ -252,39 +260,50 @@ public class EntityInfo
                     return false;
                 }
 
-                try (var measurement = statistics.measureDuration(StatisticsType.RELATED_FUNCTIONS))
-                {
-                    if (!uuids.add(idFactory.createObjectId(filePath, invocation, cancellationToken)))
-                    {
-                        return false;
-                    }
-
-                    entityFactory.createMethodEntity(invocation, node, cancellationToken)
-                        .ifPresent(method -> context.relatedFunctions.add(method));
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
-                }
+                var action = new Action(node, offset, statistics, StatisticsType.RELATED_FUNCTIONS,
+                    () -> entityFactory.createMethodEntity(invocation, node, cancellationToken)
+                        .ifPresent(method -> context.relatedFunctions.add(method)));
+                actions.add(action);
                 return false;
             }
 
             @Override
             public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
             {
-                try (var measurement = statistics.measureDuration(StatisticsType.LOCAL_FUNCTIONS))
-                {
-                    entityFactory.createMethodEntity(method, node, cancellationToken)
-                        .ifPresent(i -> context.localFunctions.add(i));
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
-                }
-
+                var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS,
+                    () -> entityFactory.createMethodEntity(method, node, cancellationToken)
+                        .ifPresent(i -> context.localFunctions.add(i)));
+                actions.add(action);
                 return false;
             }
         }, statistics, cancellationToken);
+
+        Collections.sort(actions, new Comparator<Action>()
+        {
+            @Override
+            public int compare(Action left, Action right)
+            {
+                return left.getPriority() > right.getPriority() ? 1
+                    : (left.getPriority() < right.getPriority()) ? -1 : 0;
+            }
+        });
+
+        try
+        {
+            for (var action : actions)
+            {
+                if (cancellationToken.isCanceled())
+                {
+                    break;
+                }
+
+                action.apply();
+            }
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+        }
 
         try (var measurement = statistics.measureDuration(StatisticsType.META))
         {
@@ -299,5 +318,43 @@ public class EntityInfo
         }
 
         return stopwatch.elapsed();
+    }
+
+    private class Action
+    {
+        private final int priority;
+        private final IStatistics statistics;
+        private final StatisticsType statisticsType;
+        private final Runnable runnable;
+
+        public Action(ICompositeNode node, int offset, IStatistics statistics, StatisticsType statisticsType,
+            Runnable runnable)
+        {
+            this.statistics = statistics;
+            this.statisticsType = statisticsType;
+            this.runnable = runnable;
+            var start = node.getTotalOffset();
+            var finish = node.getTotalEndOffset();
+            var pr = (offset - start) * (finish - offset);
+            if (pr < 0)
+            {
+                pr *= -1;
+            }
+
+            priority = pr;
+        }
+
+        public int getPriority()
+        {
+            return priority;
+        }
+
+        public void apply() throws Exception
+        {
+            try (var measurement = statistics.measureDuration(statisticsType))
+            {
+                runnable.run();
+            }
+        }
     }
 }

@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.time.Duration;
+
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.eclipse.ui.editors.text.EditorsUI;
@@ -40,9 +42,15 @@ public class UISettings
     }
 
     @Override
-    public int getMinRequestDelay()
+    public Duration getMinRequestDelay()
     {
-        return settingsStore.getInt(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY);
+        return Duration.ofMillis(settingsStore.getInt(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY));
+    }
+
+    @Override
+    public Duration getTimeout()
+    {
+        return Duration.ofMillis(settingsStore.getInt(ISettingsStore.TIMEOUT));
     }
 
     @Override

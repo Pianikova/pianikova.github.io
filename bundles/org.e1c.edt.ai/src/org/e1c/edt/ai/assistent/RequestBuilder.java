@@ -6,10 +6,10 @@ package org.e1c.edt.ai.assistent;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpRequest;
-import java.time.Duration;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
 
 import com.google.common.base.Preconditions;
@@ -19,14 +19,17 @@ public class RequestBuilder implements IRequestBuilder
 {
     private final ISettingsProvider settingsProvider;
     private final IVersionProvider versionProvider;
+    private final IUISettings uiSettings;
 
     @Inject
-    public RequestBuilder(ISettingsProvider settingsProvider, IVersionProvider versionProvider)
+    public RequestBuilder(ISettingsProvider settingsProvider, IVersionProvider versionProvider, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(settingsProvider);
         Preconditions.checkNotNull(versionProvider);
+        Preconditions.checkNotNull(uiSettings);
         this.versionProvider = versionProvider;
         this.settingsProvider = settingsProvider;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -51,7 +54,7 @@ public class RequestBuilder implements IRequestBuilder
 
         var request = HttpRequest.newBuilder()
             .uri(uri)
-            .timeout(Duration.ofMinutes(1))
+            .timeout(uiSettings.getTimeout())
             .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
             .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
             .header("Authorization", settings.getClientToken()); //$NON-NLS-1$

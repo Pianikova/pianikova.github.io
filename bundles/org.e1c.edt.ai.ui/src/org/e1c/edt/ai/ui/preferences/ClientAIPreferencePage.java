@@ -79,8 +79,13 @@ public class ClientAIPreferencePage
             Messages.ClientAIPreferencePage_CodeCompletionMinRequestDelay, parent);
         addField(codeCompletionMinRequestDelay);
 
-        addField(new BooleanFieldEditor(ISettingsStore.SEND_CONTEXT,
-            Messages.ClientAIPreferencePage_SendContext, parent));
+        var timeout = new IntegerFieldEditor(ISettingsStore.TIMEOUT,
+            Messages.ClientAIPreferencePage_Timeout, parent);
+        codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_TIMEOUT);
+        addField(timeout);
+
+        addField(
+            new BooleanFieldEditor(ISettingsStore.SEND_CONTEXT, Messages.ClientAIPreferencePage_SendContext, parent));
     }
 
     @Override

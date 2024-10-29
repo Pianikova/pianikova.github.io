@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai;
 
+import java.time.Duration;
+
 public interface IUISettings
 {
     int getTabWidth();
@@ -11,7 +13,9 @@ public interface IUISettings
 
     boolean isContinuousCodeCompletion();
 
-    int getMinRequestDelay();
+    Duration getMinRequestDelay();
+
+    Duration getTimeout();
 
     String getLineSeparator();
 

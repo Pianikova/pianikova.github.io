@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.ServerAccessType;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -28,14 +29,17 @@ public class ServerAccessService
     private static final ListenerList<IServerAccessListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
     private final ICheckStatusService checker;
     private final ILog log;
+    private final IUISettings uiSettings;
 
     @Inject
-    public ServerAccessService(ICheckStatusService checker, ILog log)
+    public ServerAccessService(ICheckStatusService checker, ILog log, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(checker);
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(uiSettings);
         this.checker = checker;
         this.log = log;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -71,7 +75,9 @@ public class ServerAccessService
                 try
                 {
                     status =
-                        Optional.ofNullable(checker.getStatusAsync().orTimeout(10000, TimeUnit.MILLISECONDS).get());
+                        Optional.ofNullable(checker.getStatusAsync()
+                            .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+                            .get());
                 }
                 catch (Throwable e)
                 {

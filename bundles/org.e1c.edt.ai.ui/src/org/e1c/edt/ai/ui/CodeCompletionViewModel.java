@@ -75,7 +75,7 @@ public class CodeCompletionViewModel
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
-    private Duration contextDuration = Duration.ZERO;
+    private Duration requestDuration = Duration.ZERO;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -144,7 +144,6 @@ public class CodeCompletionViewModel
     private void warmUp()
     {
         cancel();
-        contextDuration = Duration.ZERO;
         var cancellationTokenSource = new JobCancellationTokenSource();
         dispatcher.dispatchAsync(
             () -> aiContextProvider.create(new AITarget(textWidget, 0, false), null, cancellationTokenSource)
@@ -155,8 +154,7 @@ public class CodeCompletionViewModel
                         protected IStatus run(IProgressMonitor monitor)
                         {
                             cancellationTokenSource.attachMonitor(monitor);
-                            contextDuration = contextEntities.fill(aiCtx, new LocalContext(), IStatistics.Empty,
-                                cancellationTokenSource);
+                            contextEntities.fill(aiCtx, new LocalContext(), IStatistics.Empty, cancellationTokenSource);
                             return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                         }
                     };
@@ -191,15 +189,16 @@ public class CodeCompletionViewModel
     private void askNew()
     {
         var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
-        var delay = delayBeforeShow.toMillis() - contextDuration.toMillis();
-        if (delay < uiSettings.getMinRequestDelay())
+        var delay = delayBeforeShow.minus(requestDuration);
+        if (delay.toNanos() < uiSettings.getMinRequestDelay().toNanos())
         {
             delay = uiSettings.getMinRequestDelay();
         }
 
-        log.trace("Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        log.trace(
+            "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
         reset();
-        askWithDelay(Duration.ofMillis(delay), Duration.ofMillis(150));
+        askWithDelay(delay, Duration.ofMillis(150));
     }
 
     private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow)
@@ -289,6 +288,7 @@ public class CodeCompletionViewModel
                 .ifPresent(method -> session.setMethod(method));
 
             var completionSource = codeAssistant.createSource(aiCtx, cancellationTokenSource);
+            requestDuration = Duration.between(startTime, clock.now());
 
             // @formatter:off
             completionSource.subscribe(Observers.create(
