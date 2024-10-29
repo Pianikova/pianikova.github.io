@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.bm.core.IBmObject;
@@ -19,6 +20,8 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
 public interface IEntityVisitor
 {
+    void visitNode(EObject eObject, ICompositeNode node);
+
     void visitOwnerAttribute(IBmObject owner, BasicFeature attribute);
 
     void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection);

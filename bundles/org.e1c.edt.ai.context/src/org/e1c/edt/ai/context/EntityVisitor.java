@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.bm.core.IBmObject;
@@ -20,6 +21,12 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 public class EntityVisitor
     implements IEntityVisitor
 {
+    @Override
+    public void visitNode(EObject eObject, ICompositeNode node)
+    {
+        //
+    }
+
     @Override
     public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
     {
