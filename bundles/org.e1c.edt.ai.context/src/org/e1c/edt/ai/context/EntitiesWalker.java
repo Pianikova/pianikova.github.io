@@ -338,10 +338,11 @@ public class EntitiesWalker
                 visitor.visitOwnerTabularSection(owner, tabularSection);
             }
 
-            for (var registerRecord : element.getRegisterRecords())
+            // There's a lot of data here (IDEAI-134):
+            /*for (var registerRecord : element.getRegisterRecords())
             {
                 visitor.visitOwnerRegisterRecord(owner, registerRecord);
-            }
+            }*/
         }
 
         if (owner instanceof ExchangePlan)

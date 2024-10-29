@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.semantic;
 
+import java.time.Duration;
+
 import org.e1c.edt.ai.IUISettings;
 
 public class UISettings
@@ -27,9 +29,15 @@ public class UISettings
     }
 
     @Override
-    public int getMinRequestDelay()
+    public Duration getMinRequestDelay()
     {
-        return 0;
+        return Duration.ZERO;
+    }
+
+    @Override
+    public Duration getTimeout()
+    {
+        return Duration.ofSeconds(15);
     }
 
     @Override

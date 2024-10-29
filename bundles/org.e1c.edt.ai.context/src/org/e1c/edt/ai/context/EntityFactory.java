@@ -29,6 +29,7 @@ import org.e1c.edt.ai.context.DTO.Parameter;
 import org.e1c.edt.ai.context.DTO.PropertyEntity;
 import org.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
 import org.e1c.edt.ai.context.DTO.RegisterRecordEntity;
+import org.e1c.edt.ai.context.DTO.RegisterResourceEntity;
 import org.e1c.edt.ai.context.DTO.SignatureStructurized;
 import org.e1c.edt.ai.context.DTO.TabularSectionEntity;
 import org.e1c.edt.ai.context.DTO.ValueListEntity;
@@ -479,7 +480,7 @@ public class EntityFactory implements IEntityFactory
                 var methodNode = NodeModelUtils.getNode(methodAccessFeature);
                 fillMethod(methodEntity, method, methodNode, node);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-                signatureStructurized.returnTypes = createDataTypes2(returnTypes);
+                signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes);
                 hasData = true;
             }
 
@@ -496,7 +497,7 @@ public class EntityFactory implements IEntityFactory
                         var parameter = new Parameter();
                         parameters.add(parameter);
                         parameter.name = param.getName();
-                        parameter.types = createDataTypes2(param.getType());
+                        parameter.types = createDataTypesFromTypeItemsSafety(param.getType());
                     }
                 }
 
@@ -507,7 +508,7 @@ public class EntityFactory implements IEntityFactory
 
                 getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-                signatureStructurized.returnTypes = createDataTypes2(returnTypes);
+                signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes);
                 if (method instanceof BslContextDefMethod)
                 {
                     var defMethod = (BslContextDefMethod)method;
@@ -530,7 +531,7 @@ public class EntityFactory implements IEntityFactory
                     var types = v8Model.getTypes(target);
                     var signatureStructurized = new SignatureStructurized();
                     methodEntity.signatureStructurized = signatureStructurized;
-                    signatureStructurized.returnTypes = createDataTypes2(types);
+                    signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(types);
                 }
             }
         }
@@ -558,7 +559,7 @@ public class EntityFactory implements IEntityFactory
         signatureStructurized.attributes = attributes;
         fillMethod(methodEntity, method, node, node);
         var returnTypes = v8Model.getTypesComputer().compute(method, v8Model.getEnvironments(method));
-        signatureStructurized.returnTypes = createDataTypes2(returnTypes);
+        signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes);
         return Optional.of(methodEntity);
     }
 
@@ -609,7 +610,6 @@ public class EntityFactory implements IEntityFactory
             }
         }
 
-        /*// There's a lot of data here (IDEAI-134):
         if (!registerResources.isEmpty())
         {
             meta.registerResources = new ArrayList<>();
@@ -623,7 +623,7 @@ public class EntityFactory implements IEntityFactory
                 entity.synonym = getMap(registerResource.getSynonym());
                 entity.types = getTypes(registerResource.getType());
             }
-        }*/
+        }
 
         if (!registerDimensions.isEmpty())
         {
@@ -900,7 +900,7 @@ public class EntityFactory implements IEntityFactory
         return distinct(dataTypes);
     }
 
-    private List<DataType> createDataTypes2(List<TypeItem> types)
+    private List<DataType> createDataTypesFromTypeItemsSafety(List<TypeItem> types)
     {
         if (types == null || types.isEmpty())
         {
@@ -930,7 +930,6 @@ public class EntityFactory implements IEntityFactory
         return distinct(dataTypes);
     }
 
-
     private static <T> List<T> distinct(List<T> source)
     {
         if (source == null || source.size() == 0)
@@ -946,7 +945,7 @@ public class EntityFactory implements IEntityFactory
         var field = new ObjectEntityField();
         field.name = prop.getName();
         var types = prop.getTypes();
-        field.types = createDataTypes2(types);
+        field.types = createDataTypesFromTypeItemsSafety(types);
         if (types != null && !types.isEmpty())
         {
             for (var i = 0; i < types.size(); i++)

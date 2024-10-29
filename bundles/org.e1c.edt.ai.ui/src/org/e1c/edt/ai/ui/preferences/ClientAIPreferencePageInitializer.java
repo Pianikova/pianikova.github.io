@@ -28,5 +28,6 @@ public class ClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.CONTINUOUS_CODE_COMPLETION, true);
         store.setDefault(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY, 300);
         store.setDefault(ISettingsStore.SEND_CONTEXT, false);
+        store.setDefault(ISettingsStore.TIMEOUT, 15000);
     }
 }

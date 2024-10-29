@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.IParametersService;
 import org.e1c.edt.ai.assistent.ISettingsTracker;
 import org.e1c.edt.ai.assistent.ParametersService;
@@ -53,13 +54,15 @@ public class Chat implements IChat, IChatDialog
     private final IdeApiHandler handler;
     private final IParametersService parametersService;
     private final ISettingsTracker settingsTracker;
+    private final IUISettings uiSettings;
     private WebView webView;
     private String lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
 
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
-        IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker)
+        IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
+        IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -67,6 +70,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(handler);
         Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(settingsTracker);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -74,6 +78,7 @@ public class Chat implements IChat, IChatDialog
         this.handler = handler;
         this.parametersService = parametersService;
         this.settingsTracker = settingsTracker;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -244,7 +249,7 @@ public class Chat implements IChat, IChatDialog
                     {
                         lastChatUrl = chatUrl;
                         initializing =
-                            initialize(() -> webView.getEngine().load(lastChatUrl), () -> wink(settings.get()), 10000);
+                            initialize(() -> webView.getEngine().load(lastChatUrl), () -> wink(settings.get()));
                     }
                 });
 
@@ -285,7 +290,7 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private CompletableFuture<Boolean> initialize(Runnable loader, Runnable initializer, int timeout)
+    private CompletableFuture<Boolean> initialize(Runnable loader, Runnable initializer)
     {
         var webEngine = webView.getEngine();
         webEngine.setJavaScriptEnabled(true);
@@ -315,7 +320,7 @@ public class Chat implements IChat, IChatDialog
         var worker = webEngine.getLoadWorker();
         worker.stateProperty().addListener(stateListener);
         loader.run();
-        return result.orTimeout(timeout, TimeUnit.MILLISECONDS)
+        return result.orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .whenComplete((r, e) -> worker.stateProperty().removeListener(stateListener));
     }
 }

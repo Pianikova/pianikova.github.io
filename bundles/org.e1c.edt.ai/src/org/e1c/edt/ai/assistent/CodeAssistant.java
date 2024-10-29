@@ -11,19 +11,23 @@ import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
+import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.ITextNormilizer;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.Completion;
@@ -49,6 +53,8 @@ public class CodeAssistant
     private final IContextEntities contextEntities;
     private final ITextNormilizer textNormilizer;
     private final Provider<IStatistics> statisticsProvider;
+    private final IClock clock;
+    private final IUISettings uiSettings;
 
     @Inject
     public CodeAssistant(IHttpLog log,
@@ -56,7 +62,7 @@ public class CodeAssistant
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
         IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities,
-        ITextNormilizer textNormilizer, Provider<IStatistics> statisticsProvider)
+        ITextNormilizer textNormilizer, Provider<IStatistics> statisticsProvider, IClock clock, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -67,6 +73,8 @@ public class CodeAssistant
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(textNormilizer);
         Preconditions.checkNotNull(statisticsProvider);
+        Preconditions.checkNotNull(clock);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -76,6 +84,8 @@ public class CodeAssistant
         this.contextEntities = contextEntities;
         this.textNormilizer = textNormilizer;
         this.statisticsProvider = statisticsProvider;
+        this.clock = clock;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -123,7 +133,9 @@ public class CodeAssistant
             localContext.offset = aiContext.getSourceOffset();
             try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT))
             {
-                contextEntities.fill(aiContext, localContext, statistics, cancellationToken);
+                var expirationDate = clock.now().plus(uiSettings.getMinRequestDelay());
+                var expiringCancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
+                contextEntities.fill(aiContext, localContext, statistics, expiringCancellationToken);
             }
 
             var aiRequest = new CompletionRequest();
@@ -173,6 +185,7 @@ public class CodeAssistant
         var stopwatch = Stopwatch.createStarted();
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> asyncRequest.cancel(true));
         asyncRequest
+            .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch))
             .thenApplyAsync(response -> checkResponse(response, observer, cancellationToken))
             .thenApplyAsync(HttpResponse::body)
