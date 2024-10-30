@@ -84,9 +84,6 @@ public class SessionService implements ISessionService
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
-        var settings = settingsProvider.getSettings();
-        var reset = settingsTracker.register(SessionService.class.getName(), settings);
-
         var sessionRequest = new SessionRequest();
         sessionRequest.serviceParameters = parameters.get();
         var userParameters = new UserParameters();
@@ -109,9 +106,10 @@ public class SessionService implements ISessionService
         userParameters.minRequestDelayMs = uiSettings.getMinRequestDelay().toMillis();
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();
-        userParameters.sendContex = uiSettings.sendContext();
+        userParameters.sendContext = uiSettings.sendContext();
 
         var requestBody = json.serialize(sessionRequest);
+        var reset = settingsTracker.register(SessionService.class.getName(), requestBody);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
         return responseCache.get(() -> getSessionAsync(request, requestBody), reset);
     }

@@ -3,11 +3,7 @@
  */
 package org.e1c.edt.ai.assistent;
 
-import java.util.Optional;
-
-import org.e1c.edt.ai.client.AISettings;
-
 public interface ISettingsTracker
 {
-    boolean register(String owner, Optional<AISettings> settings);
+    boolean register(String owner, String settings);
 }

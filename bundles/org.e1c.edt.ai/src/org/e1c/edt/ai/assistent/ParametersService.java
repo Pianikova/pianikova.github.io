@@ -62,7 +62,7 @@ public class ParametersService
         }
 
         var request = builder.get().GET().build();
-        var settings = settingsProvider.getSettings();
+        var settings = settingsProvider.getSettings().map(i -> json.serialize(i)).orElse(null);
         var reset = settingsTracker.register(ParametersService.class.getName(), settings);
         var params = settingsProvider.getSettings().map(i -> i.getLlmParameters()).orElse(new Parameters());
         return responseCache.get(() -> getParametersAsync(request, params), reset);
