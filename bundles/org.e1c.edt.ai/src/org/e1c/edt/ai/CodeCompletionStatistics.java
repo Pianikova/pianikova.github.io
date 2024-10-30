@@ -83,8 +83,14 @@ public class CodeCompletionStatistics
     {
         try
         {
+            if (lastSourceId == null || lastSourceId.equals(lastAcceptedSourceId))
+            {
+                return;
+            }
+
             if (code.isEmpty() && lastOffset >= 0 && !lastSourceId.isBlank())
             {
+                lastAcceptedSourceId = lastSourceId;
                 var cursorInfo = cursorInfoProvider.getCursorInfo(lastOffset);
                 feedbackService.acceptedCodeAsync(lastSourceId, "", cursorInfo, cursorInfo); //$NON-NLS-1$
                 return;

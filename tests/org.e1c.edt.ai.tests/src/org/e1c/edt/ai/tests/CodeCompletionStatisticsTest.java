@@ -111,6 +111,23 @@ public class CodeCompletionStatisticsTest
 
     @SuppressWarnings("nls")
     @Test
+    public void shouldNotCommitWhenNoCodeWasAcceptedTwice()
+    {
+        // Given
+        var statistics = createInstance();
+        when(cursorInfoProvider.getCursorInfo(0)).thenReturn(Cursor1);
+
+        // When
+        statistics.commit(SOURCE1_ID, 0);
+        statistics.commit(SOURCE1_ID, 0);
+        statistics.commit(SOURCE1_ID, 0);
+
+        // Then
+        verify(feedbackService, times(1)).acceptedCodeAsync(SOURCE1_ID, "", Cursor1, Cursor1);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
     public void shouldNotCommitCursorOffsetIsNegative()
     {
         // Given
