@@ -437,6 +437,7 @@ public class CodeCompletionViewModel
         var action = userActions.getAction(event);
         var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
         action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
+        System.out.println(action);
         switch (action)
         {
         case SUGGEST:
@@ -466,6 +467,7 @@ public class CodeCompletionViewModel
         case RESET:
             commit(session);
             reset();
+            event.doit = false;
             break;
 
         case HANDLE:
