@@ -53,7 +53,7 @@ public class CodeCompletionStatisticsTest
 
         // When
         statistics.apply(new Text("Abc", source1), 0);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "Abc", Cursor1, Cursor2);
@@ -70,7 +70,7 @@ public class CodeCompletionStatisticsTest
 
         // When
         statistics.apply(new Text("Abc", source1), 10);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "Abc", Cursor1, Cursor2);
@@ -87,11 +87,56 @@ public class CodeCompletionStatisticsTest
 
         // When
         statistics.apply(new Text("Abc", source1), 0);
-        statistics.commit();
-        statistics.commit();
+        statistics.commit("", 0);
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService, times(1)).acceptedCodeAsync(SOURCE1_ID, "Abc", Cursor1, Cursor2);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldCommitWhenNoCodeWasAccepted()
+    {
+        // Given
+        var statistics = createInstance();
+        when(cursorInfoProvider.getCursorInfo(0)).thenReturn(Cursor1);
+
+        // When
+        statistics.commit(SOURCE1_ID, 0);
+
+        // Then
+        verify(feedbackService, times(1)).acceptedCodeAsync(SOURCE1_ID, "", Cursor1, Cursor1);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldNotCommitCursorOffsetIsNegative()
+    {
+        // Given
+        var statistics = createInstance();
+        when(cursorInfoProvider.getCursorInfo(0)).thenReturn(Cursor1);
+
+        // When
+        statistics.commit(SOURCE1_ID, -1);
+
+        // Then
+        verify(feedbackService, times(0)).acceptedCodeAsync(SOURCE1_ID, "", Cursor1, Cursor1);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldNotCommitWhenSourceIdIsEmpty()
+    {
+        // Given
+        var statistics = createInstance();
+        when(cursorInfoProvider.getCursorInfo(0)).thenReturn(Cursor1);
+
+        // When
+        statistics.commit("", 0);
+
+        // Then
+        verify(feedbackService, times(0)).acceptedCodeAsync("", "", Cursor1, Cursor1);
     }
 
     @SuppressWarnings("nls")
@@ -105,7 +150,7 @@ public class CodeCompletionStatisticsTest
 
         // When
         statistics.apply(new Text("Abc", source1), -1);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService, never()).acceptedCodeAsync(SOURCE1_ID, "Abc", Cursor1, Cursor2);
@@ -122,7 +167,7 @@ public class CodeCompletionStatisticsTest
 
         // When
         statistics.apply(new Text("Abc", source0), -1);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService, never()).acceptedCodeAsync("", "Abc", Cursor1, Cursor2);
@@ -141,7 +186,7 @@ public class CodeCompletionStatisticsTest
         // When
         statistics.apply(new Text("Abc", source1), 0);
         statistics.apply(new Text("Xyz", source1), 3);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "AbcXyz", Cursor1, Cursor3);
@@ -160,7 +205,7 @@ public class CodeCompletionStatisticsTest
         // When
         statistics.apply(new Text("Abc", source1), 0);
         statistics.apply(new Text("Xyz", source2), 3);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "Abc", Cursor1, Cursor2);
@@ -182,7 +227,7 @@ public class CodeCompletionStatisticsTest
         statistics.apply(new Text("Abc", source1), 0);
         statistics.apply(new Text("Xyz", source1), 3);
         statistics.apply(new Text("Qwerty", source2), 6);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "AbcXyz", Cursor1, Cursor3);
@@ -205,7 +250,7 @@ public class CodeCompletionStatisticsTest
         statistics.apply(new Text("Xyz", source1), 3);
         statistics.apply(new Text("Qwerty", source2), 6);
         statistics.rollback(12, 6);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "AbcXyz", Cursor1, Cursor3);
@@ -229,7 +274,7 @@ public class CodeCompletionStatisticsTest
         statistics.apply(new Text("Xyz", source1), 3);
         statistics.apply(new Text("Qwerty", source2), 6);
         statistics.rollback(12, 2);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "AbcXyz", Cursor1, Cursor3);
@@ -255,7 +300,7 @@ public class CodeCompletionStatisticsTest
         statistics.rollback(12, 2);
         statistics.rollback(10, 4);
         statistics.rollback(6, 3);
-        statistics.commit();
+        statistics.commit("", 0);
 
         // Then
         verify(feedbackService).acceptedCodeAsync(SOURCE1_ID, "Abc", Cursor1, Cursor2);

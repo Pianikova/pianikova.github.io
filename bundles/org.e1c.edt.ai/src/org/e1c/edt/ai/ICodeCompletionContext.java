@@ -9,5 +9,5 @@ public interface ICodeCompletionContext
 
     void rollback(int offset, int length);
 
-    void commit();
+    void commit(String lastSourceId, int lastOffset);
 }
