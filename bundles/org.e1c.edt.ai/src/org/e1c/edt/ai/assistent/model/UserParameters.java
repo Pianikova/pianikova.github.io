@@ -31,6 +31,6 @@ public class UserParameters
     @SerializedName("line_separator")
     public String lineSeparator;
 
-    @SerializedName("send_contex")
-    public boolean sendContex;
+    @SerializedName("send_context")
+    public boolean sendContext;
 }

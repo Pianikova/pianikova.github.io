@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.IUISettings;
@@ -55,6 +56,7 @@ public class Chat implements IChat, IChatDialog
     private final IParametersService parametersService;
     private final ISettingsTracker settingsTracker;
     private final IUISettings uiSettings;
+    private final IJson json;
     private WebView webView;
     private String lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
@@ -62,7 +64,7 @@ public class Chat implements IChat, IChatDialog
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
-        IUISettings uiSettings)
+        IUISettings uiSettings, IJson json)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -71,6 +73,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(json);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -79,6 +82,7 @@ public class Chat implements IChat, IChatDialog
         this.parametersService = parametersService;
         this.settingsTracker = settingsTracker;
         this.uiSettings = uiSettings;
+        this.json = json;
     }
 
     @Override
@@ -243,7 +247,7 @@ public class Chat implements IChat, IChatDialog
                 }
 
                 var chatUrl = parameters.get().chatUrl;
-                var reset = settingsTracker.register(ParametersService.class.getName(), settings);
+                var reset = settingsTracker.register(ParametersService.class.getName(), json.serialize(settings));
                 dispatcher.dispatch(() -> {
                     if (lastChatUrl != chatUrl || reset)
                     {

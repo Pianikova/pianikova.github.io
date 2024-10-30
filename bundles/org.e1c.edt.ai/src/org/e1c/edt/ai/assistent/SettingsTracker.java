@@ -4,26 +4,13 @@
 package org.e1c.edt.ai.assistent;
 
 import java.util.HashMap;
-import java.util.Optional;
-
-import org.e1c.edt.ai.IJson;
-import org.e1c.edt.ai.client.AISettings;
 
 import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
 
 public class SettingsTracker
     implements ISettingsTracker
 {
-    private final IJson json;
     private final HashMap<String, String> currentSettings = new HashMap<>();
-
-    @Inject
-    public SettingsTracker(IJson json)
-    {
-        Preconditions.checkNotNull(json);
-        this.json = json;
-    }
 
     public synchronized int size()
     {
@@ -31,17 +18,15 @@ public class SettingsTracker
     }
 
     @Override
-    public synchronized boolean register(String owner, Optional<AISettings> settings)
+    public synchronized boolean register(String owner, String settings)
     {
         Preconditions.checkNotNull(owner);
-        Preconditions.checkNotNull(settings);
         var currentSettnigs = currentSettings.get(owner);
-        var newSettings = settings.map(i -> json.serialize(i)).orElse(null);
-        if (currentSettnigs == null || !currentSettnigs.equals(newSettings))
+        if (currentSettnigs == null || !currentSettnigs.equals(settings))
         {
-            if (newSettings != null)
+            if (settings != null)
             {
-                currentSettings.put(owner, newSettings);
+                currentSettings.put(owner, settings);
             }
             else
             {
