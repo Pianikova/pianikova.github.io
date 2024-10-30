@@ -79,12 +79,14 @@ public class CodeCompletionStatistics
     }
 
     @Override
-    public void commit()
+    public void commit(String lastSourceId, int lastOffset)
     {
         try
         {
-            if (code.isEmpty())
+            if (code.isEmpty() && lastOffset >= 0 && !lastSourceId.isBlank())
             {
+                var cursorInfo = cursorInfoProvider.getCursorInfo(lastOffset);
+                feedbackService.acceptedCodeAsync(lastSourceId, "", cursorInfo, cursorInfo); //$NON-NLS-1$
                 return;
             }
 
@@ -94,7 +96,7 @@ public class CodeCompletionStatistics
                 offset = startOffset;
             }
 
-            String lastSourceId = null;
+            lastSourceId = null;
             var sb = new StringBuilder();
             for (var text : code)
             {

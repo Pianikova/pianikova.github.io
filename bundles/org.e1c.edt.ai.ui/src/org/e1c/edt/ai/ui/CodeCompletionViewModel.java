@@ -227,7 +227,7 @@ public class CodeCompletionViewModel
 
     private void deactivate()
     {
-        codeCompletionContext.commit();
+        codeCompletionContext.commit("", -1); //$NON-NLS-1$
         try
         {
             feedbackToken.close();
@@ -502,7 +502,7 @@ public class CodeCompletionViewModel
             return;
         }
 
-        session.getContext().commit();
+        session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset());
     }
 
     private Optional<ContentAssistant> getContentAssistant()

@@ -74,9 +74,9 @@ public class CodeCompletionContext
     }
 
     @Override
-    public void commit()
+    public void commit(String lastSourceId, int lastOffset)
     {
-        baseContext.commit();
+        baseContext.commit(lastSourceId, lastOffset);
     }
 
     public StyledText getWidget()
