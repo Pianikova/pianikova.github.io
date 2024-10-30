@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.IJson;
-import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.assistent.model.Parameters;
@@ -33,14 +32,13 @@ public class SessionService implements ISessionService
     private final ISettingsTracker settingsTracker;
     private final IResponseCache<Session> responseCache;
     private final IParametersService parametersService;
-    private final ISettingsProvider settingsProvider;
     private final IVersionProvider versionProvider;
     private final IUISettings uiSettings;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker,
-        IResponseCache<Session> responseCache, IParametersService parametersService, ISettingsProvider settingsProvider,
+        IResponseCache<Session> responseCache, IParametersService parametersService,
         IVersionProvider versionProvider, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
@@ -50,7 +48,6 @@ public class SessionService implements ISessionService
         Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(responseCache);
         Preconditions.checkNotNull(parametersService);
-        Preconditions.checkNotNull(settingsProvider);
         Preconditions.checkNotNull(versionProvider);
         Preconditions.checkNotNull(uiSettings);
         this.log = log;
@@ -60,7 +57,6 @@ public class SessionService implements ISessionService
         this.settingsTracker = settingsTracker;
         this.responseCache = responseCache;
         this.parametersService = parametersService;
-        this.settingsProvider = settingsProvider;
         this.versionProvider = versionProvider;
         this.uiSettings = uiSettings;
     }

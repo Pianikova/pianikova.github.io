@@ -5,4 +5,5 @@ package org.e1c.edt.semantic.handlers;
 
 public class CloseResponse
 {
+    //
 }

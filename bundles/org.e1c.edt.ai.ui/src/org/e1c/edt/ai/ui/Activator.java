@@ -182,34 +182,9 @@ public class Activator
         return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, throwable);
     }
 
-    /**
-     * Создание записи с описанием предупреждения в лог журнале плагина
-     *
-     * @param message описание предупреждения, не может быть <code>null</code>
-     * @return созданное статус событие, не может быть <code>null</code>
-     */
-    private static IStatus createWarningStatus(String message)
-    {
-        return new Status(IStatus.WARNING, PLUGIN_ID, 0, message, null);
-    }
-
     private static IStatus createErrorStatus(String message)
     {
         return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, null);
-    }
-
-    /**
-     * Создание записи с описанием предупреждения в лог журнале плагина по выкинотому исключению и сообщению,
-     * его описывающим
-     *
-     * @param message описание выкинутого исключения, не может быть <code>null</code>
-     * @param throwable выкинутое исключение, может быть <code>null</code>
-     * @return созданное статус событие, не может быть <code>null</code>
-     */
-    private static IStatus createWarningStatus(final String message,
-        Exception throwable)
-    {
-        return new Status(IStatus.WARNING, PLUGIN_ID, 0, message, throwable);
     }
 
     /**
