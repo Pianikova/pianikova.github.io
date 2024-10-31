@@ -11,6 +11,8 @@ import com.google.gson.annotations.SerializedName;
 
 public class RelatedEntitiesResponse
 {
+    public String code;
+
     @SerializedName("related_objects")
     public List<Entity> relatedObjects;
 
