@@ -20,6 +20,8 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
 public interface IEntityVisitor
 {
+    void visitModule(ModuleInfo moduleInfo);
+
     void visitNode(EObject eObject, ICompositeNode node);
 
     void visitOwnerAttribute(IBmObject owner, BasicFeature attribute);

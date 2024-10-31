@@ -22,6 +22,12 @@ public class EntityVisitor
     implements IEntityVisitor
 {
     @Override
+    public void visitModule(ModuleInfo moduleInfo)
+    {
+        //
+    }
+
+    @Override
     public void visitNode(EObject eObject, ICompositeNode node)
     {
         //

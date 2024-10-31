@@ -73,6 +73,7 @@ public class EntitiesWalker
                 moduleInfo = optionalModuleInfo.get();
             }
 
+            visitor.visitModule(moduleInfo);
             var module = moduleInfo.getModule();
             var owner = module.getOwner();
             var bmModel = moduleInfo.getBmModel();

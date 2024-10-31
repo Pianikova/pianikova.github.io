@@ -128,7 +128,7 @@ public class V8Model implements IV8Model
                     }
 
                     var module = (Module)eObject;
-                    modules.add(new ModuleInfo(project, bmModel, module));
+                    modules.add(new ModuleInfo(file, project, bmModel, module));
                     var moduleResource = module.eResource();
                     if (moduleResource instanceof BslResource)
                     {
