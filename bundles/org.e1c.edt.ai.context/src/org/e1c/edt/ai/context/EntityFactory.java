@@ -784,24 +784,34 @@ public class EntityFactory implements IEntityFactory
             methodEntity.signatureStructurized.preprocess.add(pragma.getSymbol());
         }
 
-        var environments = v8Model.getEnvironments(method).toArray();
-        if (environments.length != 0)
-        {
-            methodEntity.environments = new ArrayList<>();
-            for (var environment : environments)
-            {
-                methodEntity.environments.add(environment.name());
-            }
-        }
-
+        getEnvironments(method).ifPresent(areas -> methodEntity.environments = areas);
         getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
         methodEntity.comment = v8Model.getComment(method);
         methodEntity.structurizedСomment = commentFactory.create(v8Model.getComment(method, true));
     }
 
-    private static Optional<List<String>> getAreas(EObject method)
+    @Override
+    public Optional<List<String>> getEnvironments(EObject obj)
     {
-        EObject object = method;
+        var environments = v8Model.getEnvironments(obj).toArray();
+        if (environments.length == 0)
+        {
+            return Optional.empty();
+        }
+
+        var result = new ArrayList<String>();
+        for (var environment : environments)
+        {
+            result.add(environment.name());
+        }
+
+        return Optional.of(result);
+    }
+
+    @Override
+    public Optional<List<String>> getAreas(EObject obj)
+    {
+        EObject object = obj;
         var areas = new ArrayList<String>();
         do
         {
@@ -828,7 +838,7 @@ public class EntityFactory implements IEntityFactory
                         }
                     }
 
-                    if (started && item == method)
+                    if (started && item == obj)
                     {
                         areas.add(0, region.getName());
                         break;

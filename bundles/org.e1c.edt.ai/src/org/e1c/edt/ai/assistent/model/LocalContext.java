@@ -20,6 +20,12 @@ public class LocalContext
     @SerializedName("cursor_object")
     public String cursorObject;
 
+    @SerializedName("cursor_areas")
+    public List<String> cursorAreas;
+
+    @SerializedName("cursor_environments")
+    public List<String> cursorEnvironments;
+
     @SerializedName("related_objects")
     public List<Object> relatedObjects;
 

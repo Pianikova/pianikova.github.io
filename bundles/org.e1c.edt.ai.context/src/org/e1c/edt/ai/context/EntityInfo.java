@@ -55,17 +55,18 @@ public class EntityInfo
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
         IUISettings uiSettings, IDispatcher dispatcher)
     {
-        this.dispatcher = dispatcher;
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
         Preconditions.checkNotNull(idFactory);
         Preconditions.checkNotNull(entityFactory);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(dispatcher);
         this.log = log;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
         this.entityFactory = entityFactory;
         this.uiSettings = uiSettings;
+        this.dispatcher = dispatcher;
     }
 
     @SuppressWarnings("nls")
@@ -303,6 +304,9 @@ public class EntityInfo
                     break;
                 }
             }
+
+            entityFactory.getEnvironments(cursorObject).ifPresent(areas -> context.cursorEnvironments = areas);
+            entityFactory.getAreas(cursorObject).ifPresent(areas -> context.cursorAreas = areas);
         }
 
         Collections.sort(actions, new Comparator<Action>()
