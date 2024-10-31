@@ -240,12 +240,14 @@ public class Chat implements IChat, IChatDialog
                     return Status.warning(AI_CHAT + ": " + e.getMessage());
                 }
 
-                var settings = settingsProvider.getSettings();
-                if (parameters.isEmpty() || settings.isEmpty())
+                var optionalSettings = settingsProvider.getSettings();
+                if (parameters.isEmpty() || optionalSettings.isEmpty())
                 {
                     return Status.warning(AI_CHAT + ": Failed to get the parameters.");
                 }
 
+                var settings = optionalSettings.get();
+                ;
                 var chatUrl = parameters.get().chatUrl;
                 var reset = settingsTracker.register(ParametersService.class.getName(), json.serialize(settings));
                 dispatcher.dispatch(() -> {
@@ -253,7 +255,7 @@ public class Chat implements IChat, IChatDialog
                     {
                         lastChatUrl = chatUrl;
                         initializing =
-                            initialize(() -> webView.getEngine().load(lastChatUrl), () -> wink(settings.get()));
+                            initialize(() -> webView.getEngine().load(lastChatUrl), () -> wink(settings));
                     }
                 });
 
