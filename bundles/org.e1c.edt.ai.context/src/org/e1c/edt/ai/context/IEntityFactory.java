@@ -11,6 +11,7 @@ import org.e1c.edt.ai.context.DTO.FormEntity;
 import org.e1c.edt.ai.context.DTO.MetaEntity;
 import org.e1c.edt.ai.context.DTO.MethodEntity;
 import org.e1c.edt.ai.context.DTO.ObjectEntity;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
@@ -43,4 +44,8 @@ public interface IEntityFactory
         List<DbObjectTabularSection> tabularSections, List<RegisterResource> registerResources,
         List<RegisterDimension> registerDimensions, List<BasicRegister> registerRecords,
         ICancellationToken cancellationToken);
+
+    Optional<List<String>> getEnvironments(EObject obj);
+
+    Optional<List<String>> getAreas(EObject obj);
 }
