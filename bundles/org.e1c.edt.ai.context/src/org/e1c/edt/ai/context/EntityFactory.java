@@ -478,7 +478,7 @@ public class EntityFactory implements IEntityFactory
                 var methodNode = NodeModelUtils.getNode(methodAccessFeature);
                 fillMethod(methodEntity, method, methodNode, node);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-                signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes);
+                signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
                 hasData = true;
             }
 
@@ -495,7 +495,7 @@ public class EntityFactory implements IEntityFactory
                         var parameter = new Parameter();
                         parameters.add(parameter);
                         parameter.name = param.getName();
-                        parameter.types = createDataTypesFromTypeItemsSafety(param.getType());
+                        parameter.types = createDataTypesFromTypeItemsSafety(param.getType(), true);
                     }
                 }
 
@@ -506,7 +506,7 @@ public class EntityFactory implements IEntityFactory
 
                 getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
-                signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes);
+                signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
                 if (method instanceof BslContextDefMethod)
                 {
                     var defMethod = (BslContextDefMethod)method;
@@ -529,7 +529,7 @@ public class EntityFactory implements IEntityFactory
                     var types = v8Model.getTypes(target);
                     var signatureStructurized = new SignatureStructurized();
                     methodEntity.signatureStructurized = signatureStructurized;
-                    signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(types);
+                    signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(types, true);
                 }
             }
         }
@@ -554,7 +554,7 @@ public class EntityFactory implements IEntityFactory
         signatureStructurized.attributes = new ArrayList<>();
         fillMethod(methodEntity, method, node, node);
         var returnTypes = v8Model.getTypesComputer().compute(method, v8Model.getEnvironments(method));
-        signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes);
+        signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
         return Optional.of(methodEntity);
     }
 
@@ -915,7 +915,7 @@ public class EntityFactory implements IEntityFactory
         return distinct(dataTypes);
     }
 
-    private List<DataType> createDataTypesFromTypeItemsSafety(List<TypeItem> types)
+    private List<DataType> createDataTypesFromTypeItemsSafety(List<TypeItem> types, boolean distinct)
     {
         if (types == null || types.isEmpty())
         {
@@ -942,6 +942,11 @@ public class EntityFactory implements IEntityFactory
             dataType.typeRu = type.getNameRu();
         }
 
+        if (!distinct)
+        {
+            return dataTypes;
+        }
+
         return distinct(dataTypes);
     }
 
@@ -960,7 +965,7 @@ public class EntityFactory implements IEntityFactory
         var field = new ObjectEntityField();
         field.name = prop.getName();
         var types = prop.getTypes();
-        field.types = createDataTypesFromTypeItemsSafety(types);
+        field.types = createDataTypesFromTypeItemsSafety(types, false);
         if (types != null && !types.isEmpty())
         {
             for (var i = 0; i < types.size(); i++)
@@ -985,6 +990,7 @@ public class EntityFactory implements IEntityFactory
             }
         }
 
+        field.types = distinct(field.types);
         return field;
     }
 }
