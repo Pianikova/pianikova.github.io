@@ -9,8 +9,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
@@ -48,7 +46,6 @@ public class EntityInfo
     private final IIdFactory idFactory;
     private final IEntityFactory entityFactory;
     private final IUISettings uiSettings;
-    private final Lock lock = new ReentrantLock(true);
     private final IDispatcher dispatcher;
 
     @Inject
@@ -143,17 +140,9 @@ public class EntityInfo
     public Duration fill(AIContext aiContext, LocalContext context, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        lock.lock();
-        try
-        {
-            var timeout = uiSettings.getTimeout();
-            return dispatcher.dispatch(() -> fillInternal(aiContext, context, statistics, cancellationToken), timeout)
-                .orElse(timeout);
-        }
-        finally
-        {
-            lock.unlock();
-        }
+        var timeout = uiSettings.getTimeout();
+        return dispatcher.dispatch(() -> fillInternal(aiContext, context, statistics, cancellationToken), timeout)
+            .orElse(timeout);
     }
 
     private Duration fillInternal(AIContext aiContext, LocalContext context, IStatistics statistics,
@@ -221,7 +210,7 @@ public class EntityInfo
             @Override
             public void visitForm(Form form)
             {
-                try (var measurement = statistics.measureDuration(StatisticsType.FORM))
+                try (var measurement = statistics.measureDuration(StatisticsType.FORM_DURATUION))
                 {
                     context.form = entityFactory.createFormEntity(form, cancellationToken).orElse(null);
                 }
@@ -244,7 +233,7 @@ public class EntityInfo
                     return false;
                 }
 
-                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS,
+                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
                     () -> entityFactory.crateObjectEntity(variable, node, cancellationToken)
                         .ifPresent(object -> context.relatedObjects.add(object)));
                 actions.add(action);
@@ -259,7 +248,7 @@ public class EntityInfo
                     return false;
                 }
 
-                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS,
+                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
                     () -> entityFactory.crateObjectEntity(featureAccess, node, cancellationToken)
                         .ifPresent(object -> context.relatedObjects.add(object)));
                 actions.add(action);
@@ -274,7 +263,7 @@ public class EntityInfo
                     return false;
                 }
 
-                var action = new Action(node, offset, statistics, StatisticsType.RELATED_FUNCTIONS,
+                var action = new Action(node, offset, statistics, StatisticsType.RELATED_FUNCTIONS_DURATUION,
                     () -> entityFactory.createMethodEntity(invocation, node, cancellationToken)
                         .ifPresent(method -> context.relatedFunctions.add(method)));
                 actions.add(action);
@@ -284,7 +273,7 @@ public class EntityInfo
             @Override
             public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
             {
-                var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS,
+                var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS_DURATUION,
                     () -> entityFactory.createMethodEntity(method, node, cancellationToken)
                         .ifPresent(i -> context.localFunctions.add(i)));
                 actions.add(action);
@@ -319,16 +308,19 @@ public class EntityInfo
             }
         });
 
+        var unptocessedItems = actions.size();
         try
         {
-            for (var action : actions)
+            for (int i = 0; i < actions.size(); i++)
             {
+                var action = actions.get(i);
                 if (cancellationToken.isCanceled())
                 {
                     break;
                 }
 
                 action.apply();
+                unptocessedItems--;
             }
         }
         catch (Exception error)
@@ -336,7 +328,9 @@ public class EntityInfo
             log.logError(error);
         }
 
-        try (var measurement = statistics.measureDuration(StatisticsType.META))
+        statistics.registerInteger(StatisticsType.UNPROCESSED_ITEMS, unptocessedItems);
+
+        try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
         {
             entityFactory
                 .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,

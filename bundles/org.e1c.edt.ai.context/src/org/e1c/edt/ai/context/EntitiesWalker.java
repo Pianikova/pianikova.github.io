@@ -62,7 +62,7 @@ public class EntitiesWalker
         try
         {
             ModuleInfo moduleInfo;
-            try (var measurement = statistics.measureDuration(StatisticsType.LOAD_MODULE))
+            try (var measurement = statistics.measureDuration(StatisticsType.LOAD_MODULE_DURATUION))
             {
                 var optionalModuleInfo = v8Model.getModuleInfo(path, cancellationToken);
                 if (optionalModuleInfo.isEmpty())

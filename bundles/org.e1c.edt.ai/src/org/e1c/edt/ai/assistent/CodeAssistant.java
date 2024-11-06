@@ -7,7 +7,6 @@ import java.io.ByteArrayOutputStream;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
-import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -129,14 +128,14 @@ public class CodeAssistant
         var statistics = statisticsProvider.get();
         String requestBody;
         byte[] compressedBody = null;
-        try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL))
+        try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL_DURATUION))
         {
             var localContext = new LocalContext();
             localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
             localContext.suffix = textNormilizer.normalize(aiContext.getSufix());
             localContext.path = aiContext.getPath();
             localContext.offset = aiContext.getSourceOffset();
-            try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT))
+            try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
             {
                 var expirationDate = clock.now().plus(uiSettings.getMinRequestDelay());
                 var expiringCancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
@@ -145,12 +144,12 @@ public class CodeAssistant
 
             var aiRequest = new CompletionRequest();
             aiRequest.localContext = localContext;
-            try (var measurement = statistics.measureDuration(StatisticsType.SERIALIZATION))
+            try (var measurement = statistics.measureDuration(StatisticsType.SERIALIZATION_DURATUION))
             {
                 requestBody = json.serialize(aiRequest);
             }
 
-            try (var measurement = statistics.measureDuration(StatisticsType.COMPRESSION))
+            try (var measurement = statistics.measureDuration(StatisticsType.COMPRESSION_DURATUION))
             {
                 compressedBody = compress(requestBody).toByteArray();
             }
@@ -180,12 +179,10 @@ public class CodeAssistant
                 requestBuilder.header("X-Free-Physical-Memory-Size", Long.toString(freePhysicalMemorySize.get())); //$NON-NLS-1$
         }
 
-        for (var statisticsData : statistics.get())
+        for (var statValue : statistics.getValues())
         {
-            var durationSeconds = statisticsData.getDuration().toNanos() / 1000000000d;
             requestBuilder =
-                requestBuilder.header(statisticsData.getStatisticsType().getHeader(),
-                    String.format(Locale.US, "%.9f", durationSeconds)); //$NON-NLS-1$
+                requestBuilder.header(statValue.getStatisticsType().getHeader(), statValue.getValue());
         }
 
         var request = requestBuilder.POST(BodyPublishers.ofByteArray(compressedBody)).build();

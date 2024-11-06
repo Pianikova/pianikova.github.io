@@ -3,22 +3,21 @@
  */
 package org.e1c.edt.ai;
 
-import java.time.Duration;
 import java.util.Objects;
 
 import com.google.common.base.Preconditions;
 
-public class StatisticsData
+public class StatisticsValue<T>
 {
     private final StatisticsType statisticsType;
-    private final Duration duration;
+    private final T value;
 
-    public StatisticsData(StatisticsType statisticsType, Duration duration)
+    public StatisticsValue(StatisticsType statisticsType, T value)
     {
         Preconditions.checkNotNull(statisticsType);
-        Preconditions.checkNotNull(duration);
+        Preconditions.checkNotNull(value);
         this.statisticsType = statisticsType;
-        this.duration = duration;
+        this.value = value;
     }
 
     public StatisticsType getStatisticsType()
@@ -26,15 +25,15 @@ public class StatisticsData
         return statisticsType;
     }
 
-    public Duration getDuration()
+    public T getValue()
     {
-        return duration;
+        return value;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(duration, statisticsType);
+        return Objects.hash(value, statisticsType);
     }
 
     @Override
@@ -46,7 +45,7 @@ public class StatisticsData
             return false;
         if (getClass() != obj.getClass())
             return false;
-        StatisticsData other = (StatisticsData)obj;
-        return Objects.equals(duration, other.duration) && statisticsType == other.statisticsType;
+        StatisticsValue<T> other = (StatisticsValue<T>)obj;
+        return Objects.equals(value, other.value) && statisticsType == other.statisticsType;
     }
 }
