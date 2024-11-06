@@ -15,7 +15,7 @@ public enum StatisticsType
     RELATED_OBJECTS_DURATUION("X-Related-Objects-Duration"), //$NON-NLS-1$
     RELATED_FUNCTIONS_DURATUION("X-Related-Functions-Duration"), //$NON-NLS-1$
     LOCAL_FUNCTIONS_DURATUION("X-Local-Functions-Duration"), //$NON-NLS-1$
-    UNPROCESSED_ITEMS("X-Unptocessed-Items"); //$NON-NLS-1$
+    UNPROCESSED_ITEMS("X-Unprocessed-Items"); //$NON-NLS-1$
 
     private final String header;
 
