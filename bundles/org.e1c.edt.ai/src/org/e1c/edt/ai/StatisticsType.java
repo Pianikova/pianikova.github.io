@@ -5,16 +5,17 @@ package org.e1c.edt.ai;
 
 public enum StatisticsType
 {
-    TOTAL("X-Total-Duration"), //$NON-NLS-1$
-    SERIALIZATION("X-Serialization-Duration"), //$NON-NLS-1$
-    COMPRESSION("X-Compression-Duration"), //$NON-NLS-1$
-    CONTEXT("X-Context-Duration"), //$NON-NLS-1$
-    LOAD_MODULE("X-Load-Module-Duration"), //$NON-NLS-1$
-    FORM("X-Form-Duration"), //$NON-NLS-1$
-    META("X-Meta-Duration"), //$NON-NLS-1$
-    RELATED_OBJECTS("X-Related-Objects-Duration"), //$NON-NLS-1$
-    RELATED_FUNCTIONS("X-Related-Functions-Duration"), //$NON-NLS-1$
-    LOCAL_FUNCTIONS("X-Local-Functions-Duration"); //$NON-NLS-1$
+    TOTAL_DURATUION("X-Total-Duration"), //$NON-NLS-1$
+    SERIALIZATION_DURATUION("X-Serialization-Duration"), //$NON-NLS-1$
+    COMPRESSION_DURATUION("X-Compression-Duration"), //$NON-NLS-1$
+    CONTEXT_DURATUION("X-Context-Duration"), //$NON-NLS-1$
+    LOAD_MODULE_DURATUION("X-Load-Module-Duration"), //$NON-NLS-1$
+    FORM_DURATUION("X-Form-Duration"), //$NON-NLS-1$
+    META_DURATUION("X-Meta-Duration"), //$NON-NLS-1$
+    RELATED_OBJECTS_DURATUION("X-Related-Objects-Duration"), //$NON-NLS-1$
+    RELATED_FUNCTIONS_DURATUION("X-Related-Functions-Duration"), //$NON-NLS-1$
+    LOCAL_FUNCTIONS_DURATUION("X-Local-Functions-Duration"), //$NON-NLS-1$
+    UNPROCESSED_ITEMS("X-Unptocessed-Items"); //$NON-NLS-1$
 
     private final String header;
 

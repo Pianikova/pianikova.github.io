@@ -18,11 +18,19 @@ public interface IStatistics
         }
 
         @Override
-        public Collection<StatisticsData> get()
+        public void registerInteger(StatisticsType statisticsType, int value)
+        {
+            //
+        }
+
+        @Override
+        public Collection<StatisticsValue<String>> getValues()
         {
             return Collections.emptyList();
         }
     };
 
     public AutoCloseable measureDuration(StatisticsType statisticsType);
+
+    public void registerInteger(StatisticsType statisticsType, int value);
 }

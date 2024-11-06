@@ -7,5 +7,5 @@ import java.util.Collection;
 
 public interface IStatisticsProvider
 {
-    Collection<StatisticsData> get();
+    Collection<StatisticsValue<String>> getValues();
 }
