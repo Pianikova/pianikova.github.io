@@ -87,6 +87,7 @@ public class AIModule
         bind(ITextNormilizer.class).to(TextNormilizer.class).in(Singleton.class);
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IStatistics.class).to(Statistics.class);
+        bind(IEnvironment.class).to(Environment.class).in(Singleton.class);
         // @formatter:on
     }
 }
