@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
@@ -55,6 +56,9 @@ import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
 
 public class V8Model implements IV8Model
@@ -65,6 +69,17 @@ public class V8Model implements IV8Model
     private final IResourceSetProvider resourceSetProvider;
     private final IExternalPropertyManagerRegistry externalPropertyManagerRegistry;
     private final IBmModelManager modelManager;
+    private final LoadingCache<String, Optional<ModuleInfo>> moduleInfoCache = CacheBuilder.newBuilder()
+        .softValues()
+        .maximumSize(16)
+        .build(new CacheLoader<String, Optional<ModuleInfo>>()
+        {
+            @Override
+            public Optional<ModuleInfo> load(String key) throws Exception
+            {
+                return getModuleInfoInternal(key);
+            }
+        });
 
     @Inject
     public V8Model(ILog log, BslMultiLineCommentDocumentationProvider commentDocumentationProvider,
@@ -88,6 +103,19 @@ public class V8Model implements IV8Model
     {
         Preconditions.checkNotNull(filePath);
         Preconditions.checkNotNull(cancellationToken);
+        try
+        {
+            return moduleInfoCache.get(filePath);
+        }
+        catch (ExecutionException e)
+        {
+            return Optional.empty();
+        }
+    }
+
+    private Optional<ModuleInfo> getModuleInfoInternal(String filePath)
+    {
+        Preconditions.checkNotNull(filePath);
         IPath path = new Path(filePath);
         var modules = new ArrayList<ModuleInfo>();
         for (var project : resourceSetProvider.getProjects())
@@ -140,7 +168,7 @@ public class V8Model implements IV8Model
                         @Override
                         public boolean isCanceled()
                         {
-                            return cancellationToken.isCanceled();
+                            return false;
                         }
                     });
                 }
