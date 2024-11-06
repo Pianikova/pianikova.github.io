@@ -10,12 +10,14 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.e1c.edt.ai.IEnvironment;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.assistent.model.SessionRequest;
+import org.e1c.edt.ai.assistent.model.SystemInfo;
 import org.e1c.edt.ai.assistent.model.UserParameters;
 import org.e1c.edt.ai.client.AIClientException;
 
@@ -34,12 +36,13 @@ public class SessionService implements ISessionService
     private final IParametersService parametersService;
     private final IVersionProvider versionProvider;
     private final IUISettings uiSettings;
+    private final IEnvironment environment;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker,
         IResponseCache<Session> responseCache, IParametersService parametersService,
-        IVersionProvider versionProvider, IUISettings uiSettings)
+        IVersionProvider versionProvider, IUISettings uiSettings, IEnvironment environment)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -50,6 +53,7 @@ public class SessionService implements ISessionService
         Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(versionProvider);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(environment);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
@@ -59,6 +63,7 @@ public class SessionService implements ISessionService
         this.parametersService = parametersService;
         this.versionProvider = versionProvider;
         this.uiSettings = uiSettings;
+        this.environment = environment;
     }
 
     @Override
@@ -103,6 +108,15 @@ public class SessionService implements ISessionService
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();
         userParameters.sendContext = uiSettings.sendContext();
+
+        var systemInfo = new SystemInfo();
+        sessionRequest.systemInfo = systemInfo;
+        systemInfo.osName = environment.getOSName();
+        systemInfo.osVersion = environment.getOSVersion();
+        systemInfo.arch = environment.getArch();
+        systemInfo.availableProcessors = environment.getAvailableProcessors();
+        environment.getProcessorName().ifPresent(val -> systemInfo.processorName = val);
+        environment.getTotalPhysicalMemorySize().ifPresent(val -> systemInfo.totalPhysicalMemorySize = val);
 
         var requestBody = json.serialize(sessionRequest);
         var reset = settingsTracker.register(SessionService.class.getName(), requestBody);

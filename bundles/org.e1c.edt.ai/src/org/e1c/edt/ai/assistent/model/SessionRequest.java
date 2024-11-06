@@ -12,4 +12,7 @@ public class SessionRequest
 
     @SerializedName("user_parameters")
     public UserParameters userParameters;
+
+    @SerializedName("system_info")
+    public SystemInfo systemInfo;
 }

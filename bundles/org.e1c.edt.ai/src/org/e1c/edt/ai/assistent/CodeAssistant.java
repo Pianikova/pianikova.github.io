@@ -22,6 +22,7 @@ import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.IContextEntities;
+import org.e1c.edt.ai.IEnvironment;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
@@ -55,6 +56,7 @@ public class CodeAssistant
     private final Provider<IStatistics> statisticsProvider;
     private final IClock clock;
     private final IUISettings uiSettings;
+    private final IEnvironment environment;
 
     @Inject
     public CodeAssistant(IHttpLog log,
@@ -62,7 +64,8 @@ public class CodeAssistant
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
         IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities,
-        ITextNormilizer textNormilizer, Provider<IStatistics> statisticsProvider, IClock clock, IUISettings uiSettings)
+        ITextNormilizer textNormilizer, Provider<IStatistics> statisticsProvider, IClock clock, IUISettings uiSettings,
+        IEnvironment environment)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -75,6 +78,7 @@ public class CodeAssistant
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(environment);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -86,6 +90,7 @@ public class CodeAssistant
         this.statisticsProvider = statisticsProvider;
         this.clock = clock;
         this.uiSettings = uiSettings;
+        this.environment = environment;
     }
 
     @Override
@@ -168,6 +173,13 @@ public class CodeAssistant
             .header("Session-Id", session.sessionId) //$NON-NLS-1$
             .header("Content-Encoding", "gzip"); //$NON-NLS-1$ //$NON-NLS-2$
 
+        var freePhysicalMemorySize = environment.getFreePhysicalMemorySize();
+        if (freePhysicalMemorySize.isPresent())
+        {
+            requestBuilder =
+                requestBuilder.header("X-Free-Physical-Memory-Size", Long.toString(freePhysicalMemorySize.get())); //$NON-NLS-1$
+        }
+
         for (var statisticsData : statistics.get())
         {
             var durationSeconds = statisticsData.getDuration().toNanos() / 1000000000d;
@@ -177,7 +189,6 @@ public class CodeAssistant
         }
 
         var request = requestBuilder.POST(BodyPublishers.ofByteArray(compressedBody)).build();
-
         log.request(request, cancellationToken.toString(), requestBody);
 
         var clien = clientBuilder.create().build();
