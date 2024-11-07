@@ -83,11 +83,12 @@ public class EntityFactory implements IEntityFactory
     private final ICodePartsProvider codePartsProvider;
     private final IDataSourceInfoAssociationService dataSourceInfoAssociationService;
     private final IV8ProjectManager v8ProjectManager;
+    private final IModuleProvider moduleProvider;
 
     @Inject
     public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory, IFormWalker formWalker,
         ICodePartsProvider codePartsProvider, IDataSourceInfoAssociationService dataSourceInfoAssociationService,
-        IV8ProjectManager v8ProjectManager)
+        IV8ProjectManager v8ProjectManager, IModuleProvider moduleProvider)
     {
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
@@ -96,6 +97,7 @@ public class EntityFactory implements IEntityFactory
         Preconditions.checkNotNull(codePartsProvider);
         Preconditions.checkNotNull(dataSourceInfoAssociationService);
         Preconditions.checkNotNull(v8ProjectManager);
+        Preconditions.checkNotNull(moduleProvider);
         this.v8Model = v8Model;
         this.idFactory = idFactory;
         this.commentFactory = commentFactory;
@@ -103,6 +105,7 @@ public class EntityFactory implements IEntityFactory
         this.codePartsProvider = codePartsProvider;
         this.dataSourceInfoAssociationService = dataSourceInfoAssociationService;
         this.v8ProjectManager = v8ProjectManager;
+        this.moduleProvider = moduleProvider;
     }
 
     @Override
@@ -708,7 +711,6 @@ public class EntityFactory implements IEntityFactory
         return entity;
     }
 
-    @SuppressWarnings("nls")
     private void fillMethod(MethodEntity methodEntity, Method method, ICompositeNode methodNode, ICompositeNode node)
     {
         methodEntity.name = method.getName();
@@ -726,13 +728,13 @@ public class EntityFactory implements IEntityFactory
         methodEntity.code = code;
         if (method instanceof Function)
         {
-            methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Функция" : "Function";
+            methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Функция" : "Function"; //$NON-NLS-1$ //$NON-NLS-2$
         }
         else
         {
             if (method instanceof Procedure)
             {
-                methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Процедура" : "Procedure";
+                methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Процедура" : "Procedure"; //$NON-NLS-1$ //$NON-NLS-2$
             }
         }
 
@@ -761,13 +763,13 @@ public class EntityFactory implements IEntityFactory
         if (method.isAsync())
         {
             methodEntity.signatureStructurized.attributes
-                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Асинх" : "Async");
+                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Асинх" : "Async"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         if (method.isExport())
         {
             methodEntity.signatureStructurized.attributes
-                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Экспорт" : "Export");
+                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Экспорт" : "Export"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         for (var param : method.getFormalParams())
@@ -976,7 +978,7 @@ public class EntityFactory implements IEntityFactory
                 if (featureAccess != null)
                 {
                     v8Model.getPath(featureAccess).ifPresent(path -> {
-                        v8Model.getModuleInfo(path, cancellationToken);
+                        moduleProvider.getModule(path, cancellationToken);
                         var fieldNode = NodeModelUtils.getNode(featureAccess);
                         propDataType.uuid = idFactory.createNodeId(path, fieldNode);
                     });

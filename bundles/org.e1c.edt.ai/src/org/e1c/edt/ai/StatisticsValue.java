@@ -36,6 +36,7 @@ public class StatisticsValue<T>
         return Objects.hash(value, statisticsType);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean equals(Object obj)
     {

@@ -45,10 +45,9 @@ public class CodePart
         return text;
     }
 
-    @SuppressWarnings("nls")
     @Override
     public String toString()
     {
-        return range + ": " + location;
+        return range + ": " + location; //$NON-NLS-1$
     }
 }

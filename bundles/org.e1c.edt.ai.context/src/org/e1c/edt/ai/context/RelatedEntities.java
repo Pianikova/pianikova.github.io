@@ -3,8 +3,6 @@
  */
 package org.e1c.edt.ai.context;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
@@ -82,22 +80,7 @@ public class RelatedEntities implements IRelatedEntities
             @Override
             public void visitModule(ModuleInfo moduleInfo)
             {
-                try (var reader = new BufferedReader(
-                    new InputStreamReader(moduleInfo.getFile().getContents(), moduleInfo.getFile().getCharset())))
-                {
-                    var code = new StringBuilder();
-                    int ch;
-                    while ((ch = reader.read()) != -1)
-                    {
-                        code.append((char)ch);
-                    }
-
-                    response.code = code.toString();
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
-                }
+                response.code = moduleInfo.readContent();
             }
 
             @Override
@@ -146,7 +129,7 @@ public class RelatedEntities implements IRelatedEntities
                 }
 
                 response.relatedObjects.add(entity);
-                traceEntity("object", entity, variable, node);
+                traceEntity("object", entity, variable, node); //$NON-NLS-1$
                 return false;
             }
 

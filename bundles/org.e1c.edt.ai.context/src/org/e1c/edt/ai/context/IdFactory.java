@@ -32,18 +32,17 @@ public class IdFactory
     }
 
     @Override
-    @SuppressWarnings("nls")
     public String createNodeId(String path, ICompositeNode node)
     {
         try {
-            var requestPathUrl = new URL("file", "", -1, path);
+            var requestPathUrl = new URL("file", "", -1, path); //$NON-NLS-1$ //$NON-NLS-2$
             var start = node.getTotalOffset();
             var finish = node.getTotalEndOffset();
-            return requestPathUrl.toString() + "?start=" + start + "&finish=" + finish;
+            return requestPathUrl.toString() + "?start=" + start + "&finish=" + finish; //$NON-NLS-1$ //$NON-NLS-2$
         }
         catch (MalformedURLException e)
         {
-            return "";
+            return ""; //$NON-NLS-1$
         }
     }
 

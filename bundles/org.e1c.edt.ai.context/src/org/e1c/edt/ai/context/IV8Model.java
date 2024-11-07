@@ -29,8 +29,6 @@ import com._1c.g5.v8.dt.mcore.util.Environments;
 
 public interface IV8Model
 {
-    Optional<ModuleInfo> getModuleInfo(String filePath, ICancellationToken cancellationToken);
-
     IBmObject getBmObjectOwner(IBmModel bmModel, EObject object);
 
     List<Type> getTypes(VariableTypeStateProviderCollector typeStateProviders, ICompositeNode node);

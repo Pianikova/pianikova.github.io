@@ -66,7 +66,6 @@ public class EntityInfo
         this.dispatcher = dispatcher;
     }
 
-    @SuppressWarnings("nls")
     @Override
     public Optional<EntityInfoResponse> getInfo(EntityInfoRequest request, ICancellationToken cancellationToken)
     {
@@ -129,7 +128,7 @@ public class EntityInfo
 
         if (!result)
         {
-            log.trace("Entity not found", request.ref);
+            log.trace("Entity not found", request.ref); //$NON-NLS-1$
             return Optional.empty();
         }
 
