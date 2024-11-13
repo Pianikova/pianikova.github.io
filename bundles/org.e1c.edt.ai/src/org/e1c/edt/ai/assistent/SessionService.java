@@ -108,7 +108,7 @@ public class SessionService implements ISessionService
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();
         userParameters.sendContext = uiSettings.sendContext();
-        userParameters.language = uiSettings.getLanguage();
+        userParameters.language = uiSettings.getLanguage().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
 
         var systemInfo = new SystemInfo();
         sessionRequest.systemInfo = systemInfo;

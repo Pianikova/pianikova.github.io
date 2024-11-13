@@ -17,6 +17,9 @@ public class LocalContext
 
     public Integer offset;
 
+    @SerializedName("script_language")
+    public String scriptLanguage;
+
     @SerializedName("cursor_object")
     public String cursorObject;
 
