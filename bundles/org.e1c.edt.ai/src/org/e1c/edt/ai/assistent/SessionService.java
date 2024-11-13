@@ -108,6 +108,7 @@ public class SessionService implements ISessionService
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();
         userParameters.sendContext = uiSettings.sendContext();
+        userParameters.language = uiSettings.getLanguage();
 
         var systemInfo = new SystemInfo();
         sessionRequest.systemInfo = systemInfo;

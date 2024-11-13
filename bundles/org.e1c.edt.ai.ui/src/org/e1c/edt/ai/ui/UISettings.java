@@ -7,6 +7,7 @@ import java.time.Duration;
 
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
@@ -63,5 +64,11 @@ public class UISettings
     public boolean sendContext()
     {
         return settingsStore.getBoolean(ISettingsStore.SEND_CONTEXT);
+    }
+
+    @Override
+    public String getLanguage()
+    {
+        return Platform.getNL();
     }
 }

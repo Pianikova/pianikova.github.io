@@ -33,4 +33,7 @@ public class UserParameters
 
     @SerializedName("send_context")
     public boolean sendContext;
+
+    @SerializedName("language")
+    public String language;
 }

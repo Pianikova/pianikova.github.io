@@ -20,4 +20,6 @@ public interface IUISettings
     String getLineSeparator();
 
     boolean sendContext();
+
+    String getLanguage();
 }
