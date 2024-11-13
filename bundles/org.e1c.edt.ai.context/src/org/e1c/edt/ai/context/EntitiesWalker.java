@@ -14,6 +14,8 @@ import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
@@ -43,16 +45,25 @@ public class EntitiesWalker
     private final ILog log;
     private final IV8Model v8Model;
     private final IIdFactory idFactory;
+    private final IModuleProvider resourceSetProvider;
+    private final IBmModelManager modelManager;
+    private final IResourceLookup resourceLookup;
 
     @Inject
-    public EntitiesWalker(ILog log, IV8Model v8Model, IIdFactory idFactory)
+    public EntitiesWalker(ILog log, IV8Model v8Model, IIdFactory idFactory, IModuleProvider resourceSetProvider,
+        IBmModelManager modelManager, IResourceLookup resourceLookup)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
+        Preconditions.checkNotNull(resourceSetProvider);
+        Preconditions.checkNotNull(resourceLookup);
         this.log = log;
         this.v8Model = v8Model;
         this.idFactory = idFactory;
+        this.resourceSetProvider = resourceSetProvider;
+        this.modelManager = modelManager;
+        this.resourceLookup = resourceLookup;
     }
 
     @Override
@@ -64,7 +75,7 @@ public class EntitiesWalker
             ModuleInfo moduleInfo;
             try (var measurement = statistics.measureDuration(StatisticsType.LOAD_MODULE_DURATUION))
             {
-                var optionalModuleInfo = v8Model.getModuleInfo(path, cancellationToken);
+                var optionalModuleInfo = resourceSetProvider.getModule(path, cancellationToken);
                 if (optionalModuleInfo.isEmpty())
                 {
                     return false;
@@ -76,7 +87,8 @@ public class EntitiesWalker
             visitor.visitModule(moduleInfo);
             var module = moduleInfo.getModule();
             var owner = module.getOwner();
-            var bmModel = moduleInfo.getBmModel();
+            var project = resourceLookup.getProject(module);
+            var bmModel = modelManager.getModel(project);
             while (owner != null)
             {
                 if (cancellationToken.isCanceled())

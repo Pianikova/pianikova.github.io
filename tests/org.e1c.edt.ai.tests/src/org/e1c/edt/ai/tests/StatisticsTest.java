@@ -106,7 +106,6 @@ public class StatisticsTest
             result.contains(new StatisticsValue<>(StatisticsType.META_DURATUION, Duration.ofSeconds(10))));
     }
 
-    @SuppressWarnings("resource")
     @Test
     public void shouldRegisterInteger() throws Exception
     {

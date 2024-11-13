@@ -71,6 +71,7 @@ public class EndpointViewModel implements IEndpointViewModel
         }
     }
 
+    @SuppressWarnings("nls")
     @Override
     public void restore()
     {
@@ -79,7 +80,6 @@ public class EndpointViewModel implements IEndpointViewModel
             var port = 0;
             try
             {
-                @SuppressWarnings("nls")
                 var porpProperty = System.getProperties().getProperty("semantic.port", "");
                 port = Integer.parseInt(porpProperty);
             }

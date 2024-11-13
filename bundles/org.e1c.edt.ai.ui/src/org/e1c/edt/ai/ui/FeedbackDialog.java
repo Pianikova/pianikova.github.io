@@ -85,8 +85,6 @@ public class FeedbackDialog
         container.setLayout(layout);
 
         // Attach last code completion
-        @SuppressWarnings("unused")
-        Label attachCodeCompletionLabel = new Label(container, SWT.NONE);
         GridData attachCodeCompletionGrid = new GridData();
         attachCodeCompletionGrid.grabExcessHorizontalSpace = true;
         attachCodeCompletionGrid.horizontalAlignment = GridData.FILL;

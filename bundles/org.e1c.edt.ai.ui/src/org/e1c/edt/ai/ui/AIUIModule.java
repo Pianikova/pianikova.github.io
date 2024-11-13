@@ -25,8 +25,8 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
-import org.e1c.edt.ai.context.IResourceSetProvider;
-import org.e1c.edt.ai.context.ResourceSetProvider;
+import org.e1c.edt.ai.context.IModuleProvider;
+import org.e1c.edt.ai.context.ModuleProvider;
 import org.e1c.edt.ai.ui.handlers.FixDialog;
 import org.e1c.edt.ai.ui.handlers.IFixDialog;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
@@ -87,8 +87,8 @@ public class AIUIModule
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IFeedbackDialog.class).to(FeedbackDialog.class);
         bind(IIssueFeedbackViewModel.class).to(IssueFeedbackViewModel.class);
-        bind(IResourceSetProvider.class).annotatedWith(BaseResourceSetProvider.class).to(ResourceSetProvider.class);
-        bind(IResourceSetProvider.class).to(CurrentEditorResourceSetProvider.class);
+        bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class);
+        bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
         bind(IFixDialog.class).to(FixDialog.class).in(Singleton.class);
         bind(IContentProvider.class).to(ContentProvider.class).in(Singleton.class);
         // @formatter:on
@@ -116,7 +116,7 @@ public class AIUIModule
     @Qualifier
     @Target({ FIELD, PARAMETER, METHOD })
     @Retention(RUNTIME)
-    public @interface BaseResourceSetProvider
+    public @interface BaseModuleProvider
     {
         //
     }

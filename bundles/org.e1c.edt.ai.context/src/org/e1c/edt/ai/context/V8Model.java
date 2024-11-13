@@ -7,16 +7,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 
 import org.e1c.edt.ai.ICancellationToken;
-import org.e1c.edt.ai.ILog;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -25,7 +17,6 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.resource.IResourceServiceProvider;
-import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.util.Pair;
 
 import com._1c.g5.v8.bm.core.IBmObject;
@@ -40,15 +31,12 @@ import com._1c.g5.v8.dt.bsl.model.DynamicFeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.FeatureEntry;
 import com._1c.g5.v8.dt.bsl.model.Method;
-import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.SourceObjectLinkProvider;
 import com._1c.g5.v8.dt.bsl.model.StaticFeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.typesytem.TypeSystemMode;
 import com._1c.g5.v8.dt.bsl.model.typesytem.VariableTypeStateProviderCollector;
-import com._1c.g5.v8.dt.bsl.resource.BslResource;
 import com._1c.g5.v8.dt.bsl.resource.DynamicFeatureAccessComputer;
 import com._1c.g5.v8.dt.bsl.resource.TypesComputer;
-import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.mcore.Environmental;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
@@ -56,145 +44,25 @@ import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
 
 public class V8Model implements IV8Model
 {
     private static final String RESOURCE_PREFIX = "/resource"; //$NON-NLS-1$
-    private final ILog log;
     private final BslMultiLineCommentDocumentationProvider commentDocumentationProvider;
-    private final IResourceSetProvider resourceSetProvider;
     private final IExternalPropertyManagerRegistry externalPropertyManagerRegistry;
-    private final IBmModelManager modelManager;
-    private final LoadingCache<String, Optional<ModuleInfo>> moduleInfoCache = CacheBuilder.newBuilder()
-        .softValues()
-        .maximumSize(16)
-        .build(new CacheLoader<String, Optional<ModuleInfo>>()
-        {
-            @Override
-            public Optional<ModuleInfo> load(String key) throws Exception
-            {
-                return getModuleInfoInternal(key);
-            }
-        });
+    private final IModuleProvider moduleProvider;
 
     @Inject
-    public V8Model(ILog log, BslMultiLineCommentDocumentationProvider commentDocumentationProvider,
-        IResourceSetProvider resourceSetProvider, IExternalPropertyManagerRegistry externalPropertyManagerRegistry,
-        IBmModelManager modelManager)
+    public V8Model(BslMultiLineCommentDocumentationProvider commentDocumentationProvider,
+        IExternalPropertyManagerRegistry externalPropertyManagerRegistry, IModuleProvider moduleProvider)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(commentDocumentationProvider);
-        Preconditions.checkNotNull(resourceSetProvider);
         Preconditions.checkNotNull(externalPropertyManagerRegistry);
-        Preconditions.checkNotNull(modelManager);
-        this.log = log;
+        Preconditions.checkNotNull(moduleProvider);
         this.commentDocumentationProvider = commentDocumentationProvider;
-        this.resourceSetProvider = resourceSetProvider;
         this.externalPropertyManagerRegistry = externalPropertyManagerRegistry;
-        this.modelManager = modelManager;
-    }
-
-    @Override
-    public Optional<ModuleInfo> getModuleInfo(String filePath, ICancellationToken cancellationToken)
-    {
-        Preconditions.checkNotNull(filePath);
-        Preconditions.checkNotNull(cancellationToken);
-        try
-        {
-            return moduleInfoCache.get(filePath);
-        }
-        catch (ExecutionException e)
-        {
-            return Optional.empty();
-        }
-    }
-
-    private Optional<ModuleInfo> getModuleInfoInternal(String filePath)
-    {
-        Preconditions.checkNotNull(filePath);
-        IPath path = new Path(filePath);
-        var modules = new ArrayList<ModuleInfo>();
-        for (var project : resourceSetProvider.getProjects())
-        {
-            if (!project.isOpen())
-            {
-                continue;
-            }
-
-            var bmModel = modelManager.getModel(project);
-            var uriVisitor = new IFileVisitor()
-            {
-                @Override
-                public void visit(IFile file)
-                {
-                    if (!modules.isEmpty())
-                    {
-                        return;
-                    }
-
-                    if (!isMatch(path, file))
-                    {
-                        return;
-                    }
-
-                    var moduleUri =
-                        URI.createPlatformResourceURI(file.getFullPath().toPortableString(), true).appendFragment("/0"); //$NON-NLS-1$
-                    var resourceSet = resourceSetProvider.getResourceSet(project);
-                    if (resourceSet == null)
-                    {
-                        return;
-                    }
-
-                    var eObject = resourceSet.getEObject(moduleUri, true);
-                    if (eObject == null || !(eObject instanceof Module))
-                    {
-                        return;
-                    }
-
-                    var module = (Module)eObject;
-                    modules.add(new ModuleInfo(file, project, bmModel, module));
-                    var moduleResource = module.eResource();
-                    if (moduleResource instanceof BslResource)
-                    {
-                        ((BslResource)moduleResource).setDeepAnalysis(true);
-                    }
-
-                    EcoreUtil2.resolveLazyCrossReferences(moduleResource, new CancelIndicator()
-                    {
-                        @Override
-                        public boolean isCanceled()
-                        {
-                            return false;
-                        }
-                    });
-                }
-            };
-
-            try
-            {
-                walkFiles(project, uriVisitor);
-            }
-            catch (CoreException e)
-            {
-                log.logError(e);
-            }
-
-            if (!modules.isEmpty())
-            {
-                break;
-            }
-        }
-
-        if (modules.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        return Optional.of(modules.get(0));
+        this.moduleProvider = moduleProvider;
     }
 
     @Override
@@ -379,22 +247,6 @@ public class V8Model implements IV8Model
         return Optional.ofNullable(path);
     }
 
-    private void walkFiles(IProject project, IFileVisitor visitor) throws CoreException
-    {
-        project.accept(resource -> {
-            if (resource instanceof IFile)
-            {
-                visitor.visit((IFile)resource);
-            }
-            else if (resource instanceof IFolder || resource instanceof IProject)
-            {
-                return true;
-            }
-
-            return false;
-        });
-    }
-
     @Override
     public <T> T getResourceService(Class<T> type)
     {
@@ -488,7 +340,8 @@ public class V8Model implements IV8Model
 
         var modules = new ArrayList<com._1c.g5.v8.dt.bsl.model.Module>();
         getPath(methodAccess).ifPresent(path -> {
-            getModuleInfo(path, cancellationToken).ifPresent(moduleInfo -> modules.add(moduleInfo.getModule()));
+            moduleProvider.getModule(path, cancellationToken)
+                .ifPresent(moduleInfo -> modules.add(moduleInfo.getModule()));
         });
 
         for (var featureEntry : getFeatureEntries(methodAccess))
@@ -519,15 +372,5 @@ public class V8Model implements IV8Model
         }
 
         return Optional.empty();
-    }
-
-    private boolean isMatch(IPath path, IFile file)
-    {
-        return path.equals(file.getFullPath()) || path.toString().equals("/resource" + file.getFullPath().toString()); //$NON-NLS-1$
-    }
-
-    private static interface IFileVisitor
-    {
-        void visit(IFile file);
     }
 }

@@ -5,8 +5,8 @@ package org.e1c.edt.semantic;
 
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IUISettings;
-import org.e1c.edt.ai.context.IResourceSetProvider;
-import org.e1c.edt.ai.context.ResourceSetProvider;
+import org.e1c.edt.ai.context.IModuleProvider;
+import org.e1c.edt.ai.context.ModuleProvider;
 import org.e1c.edt.semantic.handlers.IDE;
 import org.e1c.edt.semantic.handlers.IIDE;
 import org.eclipse.jetty.server.Handler;
@@ -37,7 +37,7 @@ public class SemanticModule
         bind(IWebServer.class).to(WebServer.class).in(Singleton.class);
         bind(Handler.class).to(WebHandler.class).in(Singleton.class);
         bind(IEndpointDialog.class).to(EndpointDialog.class).in(Singleton.class);
-        bind(IResourceSetProvider.class).to(ResourceSetProvider.class).in(Singleton.class);
+        bind(IModuleProvider.class).to(ModuleProvider.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(IEndpointViewModel.class).to(EndpointViewModel.class).in(Singleton.class);
         bind(IIDE.class).to(IDE.class).in(Singleton.class);
