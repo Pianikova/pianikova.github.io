@@ -56,6 +56,6 @@ public class UISettings
     @Override
     public String getLanguage()
     {
-        return Platform.getNL();
+        return Platform.getNL().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 }
