@@ -3,8 +3,11 @@
  */
 package org.e1c.edt.ai.ui.quickaccess;
 
+import org.e1c.edt.ai.CancellationTokens;
+import org.e1c.edt.ai.ui.AITarget;
 import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.ChatView;
+import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IModelUIPluginImages;
 import org.e1c.edt.ai.ui.IUI;
@@ -30,6 +33,8 @@ public class AskAIQuickAccessElement
     public static final String ID = Activator.PLUGIN_ID + ".MyQuickAccessElement"; //$NON-NLS-1$
 
     @Inject
+    IAIContextProvider<Void> aiContextProvider;
+    @Inject
     IChat chat;
     @Inject
     IUI ui;
@@ -50,8 +55,13 @@ public class AskAIQuickAccessElement
     @Override
     public void execute()
     {
+        var ctx = ui.getTextWidget()
+            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true), null,
+                CancellationTokens.NONE))
+            .orElse(null);
+
         ui.showView(ChatView.ID).ifPresent(view -> {
-            chat.askQuestion(askText);
+            chat.askQuestion(ctx, askText);
             view.setFocus();
         });
     }

@@ -7,16 +7,23 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.CancellationTokens;
+import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
+import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.IParametersService;
 import org.e1c.edt.ai.assistent.ISettingsTracker;
 import org.e1c.edt.ai.assistent.ParametersService;
+import org.e1c.edt.ai.assistent.model.ChatContext;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.client.AISettings;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -57,14 +64,16 @@ public class Chat implements IChat, IChatDialog
     private final ISettingsTracker settingsTracker;
     private final IUISettings uiSettings;
     private final IJson json;
+    private final IContextEntities contextEntities;
     private WebView webView;
     private String lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
+    private final ExecutorService executor = Executors.newFixedThreadPool(1);
 
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
-        IUISettings uiSettings, IJson json)
+        IUISettings uiSettings, IJson json, IContextEntities contextEntities)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -74,6 +83,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(contextEntities);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -83,59 +93,78 @@ public class Chat implements IChat, IChatDialog
         this.settingsTracker = settingsTracker;
         this.uiSettings = uiSettings;
         this.json = json;
+        this.contextEntities = contextEntities;
     }
 
     @Override
-    public void reviewCode(String codeSnippet)
+    public void reviewCode(AIContext ctx, String codeSnippet)
     {
         Preconditions.checkNotNull(codeSnippet);
-        chat("review_code", codeSnippet, null); //$NON-NLS-1$
+        chat("review_code", codeSnippet, null, ctx); //$NON-NLS-1$
     }
 
     @Override
-    public void explainCode(String codeSnippet)
+    public void explainCode(AIContext ctx, String codeSnippet)
     {
         Preconditions.checkNotNull(codeSnippet);
-        chat("comment_code", codeSnippet, null); //$NON-NLS-1$
+        chat("comment_code", codeSnippet, null, ctx); //$NON-NLS-1$
     }
 
     @Override
-    public void fixCode(String codeSnippet, String details)
+    public void fixCode(AIContext ctx, String codeSnippet, String details)
     {
         Preconditions.checkNotNull(codeSnippet);
-        chat("fix_code", codeSnippet, details); //$NON-NLS-1$
+        chat("fix_code", codeSnippet, details, ctx); //$NON-NLS-1$
     }
 
     @Override
-    public void generateDocComments(String method)
+    public void generateDocComments(AIContext ctx, String method)
     {
         Preconditions.checkNotNull(method);
-        chat("document_code", method, null); //$NON-NLS-1$
+        chat("document_code", method, null, ctx); //$NON-NLS-1$
     }
 
     @Override
-    public void askQuestion(String userQuestion)
+    public void askQuestion(AIContext ctx, String userQuestion)
     {
         Preconditions.checkNotNull(userQuestion);
-        chat("plain_message", userQuestion, null); //$NON-NLS-1$
+        chat("plain_message", userQuestion, null, ctx); //$NON-NLS-1$
     }
 
     @SuppressWarnings("nls")
-    private void chat(String topic, String subject, String details)
+    private void chat(String topic, String subject, String details, AIContext ctx)
     {
         dispatcher.dispatch(() -> ui.showView(ChatView.ID));
         chatInJob(() -> {
+            var uiLanguage = uiSettings.getLanguage();
+            String scriptLanguage = null;
+            if (ctx != null)
+            {
+                var chatContext = new ChatContext();
+                contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
+                scriptLanguage = chatContext.scriptLanguage;
+            }
+
             var script = new StringBuilder();
             script.append("window.chatApi.");
             script.append(topic);
             script.append("(`");
             script.append(StringEscapeUtils.escapeJavaScript(subject));
-            if (details != null && !details.isBlank())
+            script.append("`, `");
+            if (uiLanguage != null)
+            {
+                script.append(uiLanguage);
+            }
+            script.append("`, `");
+            if (scriptLanguage != null)
+            {
+                script.append(scriptLanguage);
+            }
+            if (details != null)
             {
                 script.append("`, `");
                 script.append(StringEscapeUtils.escapeJavaScript(details));
             }
-
             script.append("`)");
             var scriptText = script.toString();
             log.trace(AI_CHAT, "executing script: " + scriptText);
@@ -247,7 +276,6 @@ public class Chat implements IChat, IChatDialog
                 }
 
                 var settings = optionalSettings.get();
-                ;
                 var chatUrl = parameters.get().chatUrl;
                 var reset = settingsTracker.register(ParametersService.class.getName(), json.serialize(settings));
                 dispatcher.dispatch(() -> {
@@ -327,6 +355,9 @@ public class Chat implements IChat, IChatDialog
         worker.stateProperty().addListener(stateListener);
         loader.run();
         return result.orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .whenComplete((r, e) -> worker.stateProperty().removeListener(stateListener));
+            .whenComplete((r, e) -> worker.stateProperty().removeListener(stateListener))
+            .whenCompleteAsync((r, e) -> {
+                //
+            }, executor);
     }
 }

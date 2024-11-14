@@ -17,6 +17,7 @@ import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.StatisticsType;
+import org.e1c.edt.ai.assistent.model.ChatContext;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
@@ -354,6 +355,33 @@ public class EntityInfo
         }
 
         return stopwatch.elapsed();
+    }
+
+    @Override
+    public void fill(AIContext aiContext, ChatContext context, IStatistics statistics,
+        ICancellationToken cancellationToken)
+    {
+        var timeout = uiSettings.getTimeout();
+        dispatcher.dispatch(() -> fillInternal(aiContext, context, statistics, cancellationToken), timeout);
+    }
+
+    private Boolean fillInternal(AIContext aiContext, ChatContext context, IStatistics statistics,
+        ICancellationToken cancellationToken)
+    {
+        var filePath = aiContext.getPath();
+        var start = aiContext.getStart();
+        var finish = aiContext.getFinish();
+        entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
+        {
+            @Override
+            public void visitModule(ModuleInfo moduleInfo)
+            {
+                var module = moduleInfo.getModule();
+                var project = v8ProjectManager.getProject(module);
+                context.scriptLanguage = project.getScriptVariant().getName();
+            }
+        }, statistics, cancellationToken);
+        return null;
     }
 
     private class Action

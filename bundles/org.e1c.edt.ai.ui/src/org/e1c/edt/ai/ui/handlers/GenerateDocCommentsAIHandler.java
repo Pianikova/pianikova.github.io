@@ -6,10 +6,13 @@ package org.e1c.edt.ai.ui.handlers;
 import java.util.HashSet;
 import java.util.Optional;
 
+import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.Range;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.context.CodePart;
 import org.e1c.edt.ai.context.ICodePartsProvider;
+import org.e1c.edt.ai.ui.AITarget;
 import org.e1c.edt.ai.ui.Activator;
 import org.e1c.edt.ai.ui.Content;
 import org.e1c.edt.ai.ui.IAIContextProvider;
@@ -61,7 +64,7 @@ public class GenerateDocCommentsAIHandler
         getCommentingMethod().ifPresent(commentingMethod -> {
             commentingMethod.sourceViewer.setSelectedRange(commentingMethod.commentRange.getStart(),
                 commentingMethod.commentRange.getLength());
-            chat.generateDocComments(commentingMethod.methodText);
+            chat.generateDocComments(commentingMethod.ctx, commentingMethod.methodText);
         });
         return null;
     }
@@ -174,11 +177,15 @@ public class GenerateDocCommentsAIHandler
         }
 
         commentingMethod.sourceViewer = sourceViewer;
+        var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
+        aiContextProvider.create(target, null, CancellationTokens.NONE).ifPresent(ctx -> commentingMethod.ctx = ctx);
         return Optional.of(commentingMethod);
     }
 
     private class CommentingMethod
     {
+        public AIContext ctx;
+
         public SourceViewer sourceViewer;
 
         public String methodText;

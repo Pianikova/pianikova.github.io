@@ -48,7 +48,7 @@ public class ExplainAIHandler
             .flatMap(textWidget -> aiContextProvider.create(
                 new AITarget(textWidget, Integer.MAX_VALUE, true), null,
                 CancellationTokens.NONE))
-            .ifPresent(ctx -> chat.explainCode(ctx.getText()));
+            .ifPresent(ctx -> chat.explainCode(ctx, ctx.getText()));
         return null;
     }
 }

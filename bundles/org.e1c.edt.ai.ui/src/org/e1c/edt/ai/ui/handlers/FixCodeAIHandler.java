@@ -54,7 +54,7 @@ public class FixCodeAIHandler
             .ifPresent(ctx -> {
                 if (fixDialog.show() == Window.OK)
                 {
-                    chat.fixCode(ctx.getText(), fixDialog.getDetails());
+                    chat.fixCode(ctx, ctx.getText(), fixDialog.getDetails());
                 }
             });
         ui.showView(ChatView.ID);
