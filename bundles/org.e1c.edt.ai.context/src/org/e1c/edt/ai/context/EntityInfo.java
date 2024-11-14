@@ -28,6 +28,7 @@ import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
@@ -47,10 +48,11 @@ public class EntityInfo
     private final IEntityFactory entityFactory;
     private final IUISettings uiSettings;
     private final IDispatcher dispatcher;
+    private final IV8ProjectManager v8ProjectManager;
 
     @Inject
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
-        IUISettings uiSettings, IDispatcher dispatcher)
+        IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
@@ -58,12 +60,14 @@ public class EntityInfo
         Preconditions.checkNotNull(entityFactory);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(v8ProjectManager);
         this.log = log;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
         this.entityFactory = entityFactory;
         this.uiSettings = uiSettings;
         this.dispatcher = dispatcher;
+        this.v8ProjectManager = v8ProjectManager;
     }
 
     @Override
@@ -165,6 +169,14 @@ public class EntityInfo
         var cursorObjects = new EObject[1];
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
+            @Override
+            public void visitModule(ModuleInfo moduleInfo)
+            {
+                var module = moduleInfo.getModule();
+                var project = v8ProjectManager.getProject(module);
+                context.scriptLanguage = project.getScriptVariant().getName();
+            }
+
             @Override
             public void visitNode(EObject eObject, ICompositeNode node)
             {

@@ -6,6 +6,7 @@ package org.e1c.edt.semantic;
 import java.time.Duration;
 
 import org.e1c.edt.ai.IUISettings;
+import org.eclipse.core.runtime.Platform;
 
 public class UISettings
     implements IUISettings
@@ -50,5 +51,11 @@ public class UISettings
     public boolean sendContext()
     {
         return true;
+    }
+
+    @Override
+    public String getLanguage()
+    {
+        return Platform.getNL().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 }
