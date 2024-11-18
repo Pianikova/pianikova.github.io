@@ -3,15 +3,17 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.AIContext;
+
 public interface IChat
 {
-    void reviewCode(String codeSnippet);
+    void reviewCode(AIContext ctx, String codeSnippet);
 
-    void explainCode(String codeSnippet);
+    void explainCode(AIContext ctx, String codeSnippet);
 
-    void fixCode(String codeSnippet, String details);
+    void fixCode(AIContext ctx, String codeSnippet, String details);
 
-    void generateDocComments(String method);
+    void generateDocComments(AIContext ctx, String method);
 
-    void askQuestion(String userQuestion);
+    void askQuestion(AIContext ctx, String userQuestion);
 }

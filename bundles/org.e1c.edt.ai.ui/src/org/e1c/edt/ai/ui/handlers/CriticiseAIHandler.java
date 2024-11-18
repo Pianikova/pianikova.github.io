@@ -48,7 +48,7 @@ public class CriticiseAIHandler
             .flatMap(textWidget -> aiContextProvider.create(
                 new AITarget(textWidget, Integer.MAX_VALUE, true), null,
                 CancellationTokens.NONE))
-            .ifPresent(ctx -> chat.reviewCode(ctx.getText()));
+            .ifPresent(ctx -> chat.reviewCode(ctx, ctx.getText()));
         return null;
     }
 }
