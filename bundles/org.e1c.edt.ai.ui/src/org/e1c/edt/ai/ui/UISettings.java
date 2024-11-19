@@ -8,6 +8,8 @@ import java.time.Duration;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.e4.ui.css.swt.theme.IThemeEngine;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
@@ -70,5 +72,24 @@ public class UISettings
     public String getLanguage()
     {
         return Platform.getNL().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+    }
+
+    @SuppressWarnings({ "restriction", "nls" })
+    @Override
+    public String getTheme()
+    {
+        var engine = PlatformUI.getWorkbench().getService(IThemeEngine.class);
+        if (engine != null) {
+            var activeTheme = engine.getActiveTheme();
+            if (activeTheme != null)
+            {
+                if (activeTheme.getId().toLowerCase().contains("dark"))
+                {
+                    return "Dark";
+                }
+            }
+        }
+
+        return "Default";
     }
 }

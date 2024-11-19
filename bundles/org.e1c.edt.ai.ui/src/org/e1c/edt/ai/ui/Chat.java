@@ -52,7 +52,8 @@ public class Chat implements IChat, IChatDialog
 {
     private static final String AI_CHAT_DIR = "ai.chat"; //$NON-NLS-1$
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
-    private static final String CHAT_API_WINK_TEMPLATE = "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"})"; //$NON-NLS-1$
+    private static final String CHAT_API_WINK_TEMPLATE =
+        "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"}, \"%s\", \"%s\")"; //$NON-NLS-1$
     private static final String IDE_API = "ideApi"; //$NON-NLS-1$
 
     private final ILog log;
@@ -136,7 +137,6 @@ public class Chat implements IChat, IChatDialog
     {
         dispatcher.dispatch(() -> ui.showView(ChatView.ID));
         chatInJob(() -> {
-            var uiLanguage = uiSettings.getLanguage();
             String scriptLanguage = null;
             if (ctx != null)
             {
@@ -150,11 +150,6 @@ public class Chat implements IChat, IChatDialog
             script.append(topic);
             script.append("(`");
             script.append(StringEscapeUtils.escapeJavaScript(subject));
-            script.append("`, `");
-            if (uiLanguage != null)
-            {
-                script.append(uiLanguage);
-            }
             script.append("`, `");
             if (scriptLanguage != null)
             {
@@ -312,7 +307,8 @@ public class Chat implements IChat, IChatDialog
         try
         {
             var winkScript =
-                String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(), settings.getClientUniqueId());
+                String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(), settings.getClientUniqueId(),
+                    uiSettings.getLanguage(), uiSettings.getTheme());
             log.trace(AI_CHAT, "wink script: " + winkScript); //$NON-NLS-1$
             webView.getEngine().executeScript(winkScript);
             log.trace(AI_CHAT, "wink script executed");
