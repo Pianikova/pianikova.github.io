@@ -10,6 +10,7 @@ import org.e1c.edt.ai.StatisticsType;
 import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.bm.integration.IBmModel;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
@@ -88,7 +89,12 @@ public class EntitiesWalker
             var module = moduleInfo.getModule();
             var owner = module.getOwner();
             var project = resourceLookup.getProject(module);
-            var bmModel = modelManager.getModel(project);
+            IBmModel bmModel = null;
+            if (project != null)
+            {
+                bmModel = modelManager.getModel(project);
+            }
+
             while (owner != null)
             {
                 if (cancellationToken.isCanceled())

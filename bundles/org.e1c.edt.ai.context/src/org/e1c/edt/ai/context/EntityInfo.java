@@ -175,7 +175,10 @@ public class EntityInfo
             {
                 var module = moduleInfo.getModule();
                 var project = v8ProjectManager.getProject(module);
-                context.scriptLanguage = project.getScriptVariant().getName();
+                if (project != null)
+                {
+                    context.scriptLanguage = project.getScriptVariant().getName();
+                }
             }
 
             @Override
@@ -378,7 +381,10 @@ public class EntityInfo
             {
                 var module = moduleInfo.getModule();
                 var project = v8ProjectManager.getProject(module);
-                context.scriptLanguage = project.getScriptVariant().getName();
+                if (project != null)
+                {
+                    context.scriptLanguage = project.getScriptVariant().getName();
+                }
             }
         }, statistics, cancellationToken);
         return null;
