@@ -58,4 +58,10 @@ public class UISettings
     {
         return Platform.getNL().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
+
+    @Override
+    public String getTheme()
+    {
+        return "Default"; //$NON-NLS-1$
+    }
 }
