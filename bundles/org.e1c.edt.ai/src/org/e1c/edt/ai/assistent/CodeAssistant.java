@@ -14,25 +14,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
-import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
-import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICancellationToken;
-import org.e1c.edt.ai.IClock;
-import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IEnvironment;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.IStatistics;
-import org.e1c.edt.ai.ITextNormilizer;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
-import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.client.AIClientException;
 
@@ -50,10 +44,7 @@ public class CodeAssistant
     private final IJson json;
     private final ISessionService sessionService;
     private final IResponseStreamProcessor responseStreamProcessor;
-    private final IContextEntities contextEntities;
-    private final ITextNormilizer textNormilizer;
     private final Provider<IStatistics> statisticsProvider;
-    private final IClock clock;
     private final IUISettings uiSettings;
     private final IEnvironment environment;
 
@@ -62,8 +53,8 @@ public class CodeAssistant
         IRequestBuilder requestBuilder,
         IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService,
-        IResponseStreamProcessor responseStreamProcessor, IContextEntities contextEntities,
-        ITextNormilizer textNormilizer, Provider<IStatistics> statisticsProvider, IClock clock, IUISettings uiSettings,
+        IResponseStreamProcessor responseStreamProcessor, Provider<IStatistics> statisticsProvider,
+        IUISettings uiSettings,
         IEnvironment environment)
     {
         Preconditions.checkNotNull(log);
@@ -72,10 +63,7 @@ public class CodeAssistant
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(responseStreamProcessor);
-        Preconditions.checkNotNull(contextEntities);
-        Preconditions.checkNotNull(textNormilizer);
         Preconditions.checkNotNull(statisticsProvider);
-        Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(environment);
         this.log = log;
@@ -84,19 +72,16 @@ public class CodeAssistant
         this.json = json;
         this.sessionService = sessionService;
         this.responseStreamProcessor = responseStreamProcessor;
-        this.contextEntities = contextEntities;
-        this.textNormilizer = textNormilizer;
         this.statisticsProvider = statisticsProvider;
-        this.clock = clock;
         this.uiSettings = uiSettings;
         this.environment = environment;
     }
 
     @Override
-    public IObservable<Completion> createSource(AIContext aiContext,
+    public IObservable<Completion> createSource(ILocalContextProvider localContextProvider,
         ICancellationToken cancellationToken)
     {
-        Preconditions.checkNotNull(aiContext);
+        Preconditions.checkNotNull(localContextProvider);
         Preconditions.checkNotNull(cancellationToken);
         return Observables.create(observer -> {
             sessionService.getSessionAsync().whenComplete((session, error) -> {
@@ -104,7 +89,7 @@ public class CodeAssistant
                 {
                     if (session != null && session.isPresent())
                     {
-                        generateText(session.get(), aiContext, observer, cancellationToken);
+                        generateText(session.get(), localContextProvider, observer, cancellationToken);
                     }
                     else
                     {
@@ -121,7 +106,7 @@ public class CodeAssistant
         });
     }
 
-    private void generateText(Session session, AIContext aiContext,
+    private void generateText(Session session, ILocalContextProvider localContextProvider,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
@@ -130,18 +115,7 @@ public class CodeAssistant
         byte[] compressedBody = null;
         try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL_DURATUION))
         {
-            var localContext = new LocalContext();
-            localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
-            localContext.suffix = textNormilizer.normalize(aiContext.getSufix());
-            localContext.path = aiContext.getPath();
-            localContext.offset = aiContext.getSourceOffset();
-            try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
-            {
-                var expirationDate = clock.now().plus(uiSettings.getMinRequestDelay());
-                var expiringCancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
-                contextEntities.fill(aiContext, localContext, statistics, expiringCancellationToken);
-            }
-
+            var localContext = localContextProvider.get(statistics, cancellationToken);
             var aiRequest = new CompletionRequest();
             aiRequest.localContext = localContext;
             try (var measurement = statistics.measureDuration(StatisticsType.SERIALIZATION_DURATUION))
