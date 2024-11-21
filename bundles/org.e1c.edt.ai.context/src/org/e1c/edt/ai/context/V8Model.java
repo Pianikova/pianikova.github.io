@@ -5,6 +5,7 @@ package org.e1c.edt.ai.context;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -298,16 +299,16 @@ public class V8Model implements IV8Model
 
     private List<Type> getTypes(EObject contextObject, List<TypeItem> typeItems)
     {
-        var types = new ArrayList<Type>();
+        var types = new HashSet<Type>();
         for (var typeItem : typeItems)
         {
             fillType(contextObject, typeItem, types);
         }
 
-        return types;
+        return new ArrayList<>(types);
     }
 
-    private void fillType(EObject contextObject, TypeItem typeItem, List<Type> types)
+    private void fillType(EObject contextObject, TypeItem typeItem, HashSet<Type> types)
     {
         if (typeItem instanceof Type)
         {
@@ -315,7 +316,10 @@ public class V8Model implements IV8Model
             if (type.eIsProxy())
             {
                 var proxy = (TypeItem)EcoreUtil.resolve(type, contextObject);
-                fillType(type, proxy, types);
+                if (types.add(type))
+                {
+                    fillType(type, proxy, types);
+                }
             }
         }
         else
