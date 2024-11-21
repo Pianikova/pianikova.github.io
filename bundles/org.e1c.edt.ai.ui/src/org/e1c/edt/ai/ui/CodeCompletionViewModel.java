@@ -12,15 +12,17 @@ import java.util.concurrent.CancellationException;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
+import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.HintPart;
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionContext;
 import org.e1c.edt.ai.ICodeCompletionSession;
-import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
+import org.e1c.edt.ai.ILocalContextFactory;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IStatistics;
@@ -28,6 +30,7 @@ import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observers;
 import org.e1c.edt.ai.Text;
 import org.e1c.edt.ai.assistent.ICodeAssistant;
+import org.e1c.edt.ai.assistent.ILocalContextProvider;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -69,7 +72,7 @@ public class CodeCompletionViewModel
     private final Timer showTimer = new Timer(true);
     private final IUI ui;
     private final ICodeProvider codeProvider;
-    private final IContextEntities contextEntities;
+    private final ILocalContextFactory localContextFactory;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private AutoCloseable feedbackToken = Closeables.Empty;
@@ -86,7 +89,7 @@ public class CodeCompletionViewModel
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
-        IContextEntities contextEntities)
+        ILocalContextFactory localContextFactory)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -104,7 +107,7 @@ public class CodeCompletionViewModel
         Preconditions.checkNotNull(codeCompletionContext);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(codeProvider);
-        Preconditions.checkNotNull(contextEntities);
+        Preconditions.checkNotNull(localContextFactory);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -120,7 +123,7 @@ public class CodeCompletionViewModel
         this.codeCompletionContext = codeCompletionContext;
         this.ui = ui;
         this.codeProvider = codeProvider;
-        this.contextEntities = contextEntities;
+        this.localContextFactory = localContextFactory;
     }
 
     @Override
@@ -135,33 +138,11 @@ public class CodeCompletionViewModel
             textWidget.addCaretListener(this);
             textWidget.addVerifyKeyListener(this);
             textWidget.redraw();
-            warmUp();
+            // Warm up
+            askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getTimeout(), true);
         });
 
         return Closeables.create(() -> deactivate());
-    }
-
-    private void warmUp()
-    {
-        cancel();
-        var cancellationTokenSource = new JobCancellationTokenSource();
-        dispatcher.dispatchAsync(
-            () -> aiContextProvider.create(new AITarget(textWidget, 0, false), null, cancellationTokenSource)
-                .ifPresent(aiCtx -> {
-                    var job = new Job(Messages.CodeCompletionJobName)
-                    {
-                        @Override
-                        protected IStatus run(IProgressMonitor monitor)
-                        {
-                            cancellationTokenSource.attachMonitor(monitor);
-                            contextEntities.fill(aiCtx, new LocalContext(), IStatistics.Empty, cancellationTokenSource);
-                            return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
-                        }
-                    };
-
-                    this.lastJob = job;
-                    job.schedule(0);
-                }));
     }
 
     private void reset()
@@ -198,10 +179,10 @@ public class CodeCompletionViewModel
         log.trace(
             "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
         reset();
-        askWithDelay(delay, Duration.ofMillis(150));
+        askWithDelay(delay, Duration.ofMillis(150), null, false);
     }
 
-    private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow)
+    private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow, Duration maxDuration, boolean warmUp)
     {
         cancel();
         var cancellationTokenSource = new JobCancellationTokenSource();
@@ -214,8 +195,16 @@ public class CodeCompletionViewModel
                         @Override
                         protected IStatus run(IProgressMonitor monitor)
                         {
-                            cancellationTokenSource.attachMonitor(monitor);
-                            ask(aiCtx, delayBeforeShow, cancellationTokenSource);
+                                cancellationTokenSource.attachMonitor(monitor);
+                                var localContextProvider = new LocalContextProvider(aiCtx, maxDuration);
+                                if (warmUp)
+                                {
+                                    localContextProvider.get(IStatistics.Empty, cancellationTokenSource);
+                                }
+                                else
+                                {
+                                    ask(localContextProvider, delayBeforeShow, cancellationTokenSource);
+                                }
                             return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                         }
                     };
@@ -249,11 +238,13 @@ public class CodeCompletionViewModel
         });
     }
 
-    private void ask(AIContext aiCtx, Duration delayBeforeShow, CancellationTokenSource cancellationTokenSource)
+    private void ask(LocalContextProvider localContextProvider, Duration delayBeforeShow,
+        CancellationTokenSource cancellationTokenSource)
     {
         try
         {
             var startTime = clock.now();
+            var aiCtx = localContextProvider.geAIContext();
             var codeCompletionCtx =
                 new CodeCompletionContext(codeCompletionContext, aiCtx, textWidget, cancellationTokenSource);
             var singleWordMode = dispatcher.dispatch(() -> codeCompletionCtx.isSingleWordMode()).orElse(false);
@@ -287,7 +278,7 @@ public class CodeCompletionViewModel
                 .flatMap(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()))
                 .ifPresent(method -> session.setMethod(method));
 
-            var completionSource = codeAssistant.createSource(aiCtx, cancellationTokenSource);
+            var completionSource = codeAssistant.createSource(localContextProvider, cancellationTokenSource);
             requestDuration = Duration.between(startTime, clock.now());
 
             // @formatter:off
@@ -441,7 +432,7 @@ public class CodeCompletionViewModel
         {
         case SUGGEST:
             reset();
-            askWithDelay(Duration.ZERO, Duration.ZERO);
+            askWithDelay(Duration.ZERO, Duration.ZERO, null, false);
             event.doit = false;
             break;
 
@@ -451,7 +442,7 @@ public class CodeCompletionViewModel
                 update(session);
                 if (session.isDone() && !session.getContext().isSingleWordMode())
                 {
-                    askWithDelay(Duration.ZERO, Duration.ZERO);
+                    askWithDelay(Duration.ZERO, Duration.ZERO, null, false);
                 }
 
                 event.doit = false;
@@ -546,6 +537,40 @@ public class CodeCompletionViewModel
                     reset();
                 }
             });
+        }
+    }
+
+    private class LocalContextProvider
+        implements ILocalContextProvider
+    {
+        private final AIContext aiContext;
+        private final Duration maxDuration;
+        private LocalContext _lastContext;
+
+        public LocalContextProvider(AIContext aiContext, Duration maxDuration)
+        {
+            Preconditions.checkNotNull(aiContext);
+            this.aiContext = aiContext;
+            this.maxDuration = maxDuration == null ? uiSettings.getMinRequestDelay() : maxDuration;
+        }
+
+        @Override
+        public synchronized LocalContext get(IStatistics statistics, ICancellationToken cancellationToken)
+        {
+            if (_lastContext != null)
+            {
+                return _lastContext;
+            }
+
+            var expirationDate = clock.now().plus(maxDuration);
+            var expiringCancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
+            _lastContext = localContextFactory.create(geAIContext(), statistics, expiringCancellationToken);
+            return _lastContext;
+        }
+
+        public AIContext geAIContext()
+        {
+            return aiContext;
         }
     }
 }

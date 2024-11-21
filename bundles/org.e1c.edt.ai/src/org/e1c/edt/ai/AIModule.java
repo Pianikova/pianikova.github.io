@@ -88,6 +88,7 @@ public class AIModule
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IStatistics.class).to(Statistics.class);
         bind(IEnvironment.class).to(Environment.class).in(Singleton.class);
+        bind(ILocalContextFactory.class).to(LocalContextFactory.class).in(Singleton.class);
         // @formatter:on
     }
 }
