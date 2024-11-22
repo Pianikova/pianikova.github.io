@@ -9,7 +9,7 @@ import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
-public interface IIdFactory
+interface IIdFactory
 {
     String createNodeId(String path, ICompositeNode node);
 

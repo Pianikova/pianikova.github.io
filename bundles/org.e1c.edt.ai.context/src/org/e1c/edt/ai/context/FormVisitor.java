@@ -17,7 +17,7 @@ import com._1c.g5.v8.dt.form.model.Group;
 import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.mcore.Field;
 
-public class FormVisitor
+class FormVisitor
     implements IFormVisitor
 {
     @Override

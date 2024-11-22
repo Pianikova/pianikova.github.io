@@ -26,7 +26,8 @@ import com._1c.g5.v8.dt.bsl.documentation.comment.TypeSection.FieldDefinition;
 import com._1c.g5.v8.dt.bsl.documentation.comment.TypeSection.LinkContainsTypeDefinition;
 import com._1c.g5.v8.dt.bsl.documentation.comment.TypeSection.TypeDefinition;
 
-public class CommentFactory implements ICommentFactory
+class CommentFactory
+    implements ICommentFactory
 {
     @Override
     public Comment create(BslDocumentationComment bslComment)

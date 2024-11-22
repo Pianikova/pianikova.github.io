@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.semantic;
 
-public interface IEndpointDialog
+interface IEndpointDialog
 {
     int show();
 }

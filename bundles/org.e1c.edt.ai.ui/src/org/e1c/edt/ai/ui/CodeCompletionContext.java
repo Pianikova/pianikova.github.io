@@ -11,7 +11,7 @@ import org.eclipse.swt.custom.StyledText;
 
 import com.google.common.base.Preconditions;
 
-public class CodeCompletionContext
+class CodeCompletionContext
     implements ICodeCompletionContext
 {
     private final ICodeCompletionContext baseContext;

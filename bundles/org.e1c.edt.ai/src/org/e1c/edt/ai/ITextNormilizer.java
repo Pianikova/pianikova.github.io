@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai;
 
-public interface ITextNormilizer
+interface ITextNormilizer
 {
     String normalize(String text);
 }

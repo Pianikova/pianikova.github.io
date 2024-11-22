@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 
-public interface IAIContextProvider<T>
+public interface IAIContextProvider
 {
-    Optional<AIContext> create(AITarget target, T state, ICancellationToken cancellationToken);
+    Optional<AIContext> create(AITarget target, ICancellationToken cancellationToken);
 }

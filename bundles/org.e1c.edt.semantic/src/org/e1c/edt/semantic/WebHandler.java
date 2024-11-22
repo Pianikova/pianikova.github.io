@@ -19,15 +19,13 @@ import org.e1c.edt.ai.context.IEntityInfo;
 import org.e1c.edt.ai.context.IRelatedEntities;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
-import org.e1c.edt.semantic.handlers.CloseRequest;
-import org.e1c.edt.semantic.handlers.IIDE;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class WebHandler
+class WebHandler
     extends AbstractHandler
 {
     private final ILog log;

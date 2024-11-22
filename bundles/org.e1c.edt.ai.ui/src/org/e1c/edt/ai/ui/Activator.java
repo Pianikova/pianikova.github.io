@@ -5,7 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IVersionProvider;
-import org.e1c.edt.ai.context.ContextModule;
+import org.e1c.edt.ai.context.ContextModuleFactory;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -19,7 +19,6 @@ import org.osgi.framework.Version;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.util.Modules;
 
 /**
  * Данный класс представляет собой начальную точку в работе плагина.
@@ -243,7 +242,7 @@ public class Activator
         {
             try
             {
-                var mergedModule = Modules.override(new ContextModule(this)).with(new AIUIModule(this));
+                var mergedModule = ContextModuleFactory.create(plugin).with(new AIUIModule(this));
                 injector = Guice.createInjector(mergedModule);
             }
             catch (Exception e)

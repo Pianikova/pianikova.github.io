@@ -33,7 +33,7 @@ public class AskAIQuickAccessElement
     public static final String ID = Activator.PLUGIN_ID + ".MyQuickAccessElement"; //$NON-NLS-1$
 
     @Inject
-    IAIContextProvider<Void> aiContextProvider;
+    IAIContextProvider aiContextProvider;
     @Inject
     IChat chat;
     @Inject
@@ -56,7 +56,7 @@ public class AskAIQuickAccessElement
     public void execute()
     {
         var ctx = ui.getTextWidget()
-            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true), null,
+            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true),
                 CancellationTokens.NONE))
             .orElse(null);
 

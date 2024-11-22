@@ -10,7 +10,8 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class EndpointViewModel implements IEndpointViewModel
+class EndpointViewModel
+    implements IEndpointViewModel
 {
     public final static String PORT_STORE_KEY = "EndpointPort"; //$NON-NLS-1$
     private final ILog log;

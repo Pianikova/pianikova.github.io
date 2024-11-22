@@ -3,7 +3,8 @@
  */
 package org.e1c.edt.ai;
 
-public class Sample implements ISample
+public class Sample
+    implements ISample
 {
     private final double[] sample;
     private int size = 0;

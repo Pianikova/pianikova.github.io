@@ -10,7 +10,8 @@ import org.e1c.edt.ai.assistent.IParametersService;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ContextSettings implements IContextSettings
+class ContextSettings
+    implements IContextSettings
 {
     private static final int DEFAULT_PREFIX_LEN = 1000;
     private static final int DEFAULT_SUFFIX_LEN = 500;

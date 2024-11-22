@@ -15,7 +15,7 @@ import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
 import com.google.inject.Inject;
 
-public class UISettings
+class UISettings
     implements IUISettings
 {
     private final ISettingsStore settingsStore;

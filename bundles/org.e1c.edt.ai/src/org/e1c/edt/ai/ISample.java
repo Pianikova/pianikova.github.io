@@ -3,17 +3,11 @@
  */
 package org.e1c.edt.ai;
 
-/**
- * @author Nikolay Pyanikov
- *
- */
 public interface ISample
 {
-
     int getSize();
 
     void addValue(double value);
 
     double[] getValues();
-
 }

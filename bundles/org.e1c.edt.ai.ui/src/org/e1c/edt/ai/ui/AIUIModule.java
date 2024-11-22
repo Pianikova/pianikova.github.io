@@ -16,10 +16,8 @@ import javax.inject.Qualifier;
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.CodeCompletionActionHandler;
 import org.e1c.edt.ai.CodeCompletionSession;
-import org.e1c.edt.ai.ContextSettings;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionSession;
-import org.e1c.edt.ai.IContextSettings;
 import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsStore;
@@ -68,12 +66,7 @@ public class AIUIModule
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
-        bind(IContextSettings.class).to(ContextSettings.class).in(Singleton.class);
-        bind(new TypeLiteral<IAIContextProvider<Void>>() { /**/ }).to(AIContextProvider.class).in(Singleton.class);
-        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceMethodComments.class).to(AISourceMethodCommentsContextProvider.class).in(Singleton.class);
-        bind(new TypeLiteral<IAIContextProvider<AISourceContext>>() { /**/ }).annotatedWith(SourceCodeSizeReducer.class).to(AISourceCodeSizeReducerContextProvider.class).in(Singleton.class);
-        bind(new TypeLiteral<ISyntaxWalker<StringSerializerContext>>() { /**/ }).to(new TypeLiteral<BasicPathSyntaxWalker<StringSerializerContext>>() { /**/ }).in(Singleton.class);
-        bind(new TypeLiteral<ISyntaxVisitor<StringSerializerContext>>() { /**/ }).to(StringSerializerVisitor.class).in(Singleton.class);
+        bind(IAIContextProvider.class).to(AIContextProvider.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(new TypeLiteral<ICodeCompletionViewModel<CodeCompletionContext>>() { /**/ }).to(CodeCompletionViewModel.class).in(Singleton.class);
         bind(IHintPainter.class).to(HintPainter.class);
@@ -84,7 +77,6 @@ public class AIUIModule
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
         bind(IFinalCodeFeedbackViewModel.class).to(FinalCodeFeedbackViewModel.class).in(Singleton.class);
         bind(IFeedbackPainter.class).to(FeedbackPainter.class);
-        bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IFeedbackDialog.class).to(FeedbackDialog.class);
         bind(IIssueFeedbackViewModel.class).to(IssueFeedbackViewModel.class);
         bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class);
@@ -95,23 +87,6 @@ public class AIUIModule
         // @formatter:on
     }
 
-    @BindingAnnotation
-    @Qualifier
-    @Target({ FIELD, PARAMETER, METHOD })
-    @Retention(RUNTIME)
-    public @interface SourceCodeSizeReducer
-    {
-        //
-    }
-
-    @BindingAnnotation
-    @Qualifier
-    @Target({ FIELD, PARAMETER, METHOD })
-    @Retention(RUNTIME)
-    public @interface SourceMethodComments
-    {
-        //
-    }
 
     @BindingAnnotation
     @Qualifier

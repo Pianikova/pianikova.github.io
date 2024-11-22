@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.semantic;
 
-public class WebServerSettings
+class WebServerSettings
 {
     public int Port;
 

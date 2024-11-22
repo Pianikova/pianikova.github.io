@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
-public class SourceSpan
+class SourceSpan
 {
     private final String path;
     private final int start;

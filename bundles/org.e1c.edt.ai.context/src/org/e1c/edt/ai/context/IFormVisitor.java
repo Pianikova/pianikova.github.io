@@ -17,7 +17,7 @@ import com._1c.g5.v8.dt.form.model.Group;
 import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.mcore.Field;
 
-public interface IFormVisitor
+interface IFormVisitor
 {
     void visitFormField(Optional<EObject> parent, FormField field);
 

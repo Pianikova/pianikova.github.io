@@ -20,7 +20,7 @@ import org.eclipse.swt.widgets.Text;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class EndpointDialog
+class EndpointDialog
     extends TitleAreaDialog
     implements IEndpointDialog
 {

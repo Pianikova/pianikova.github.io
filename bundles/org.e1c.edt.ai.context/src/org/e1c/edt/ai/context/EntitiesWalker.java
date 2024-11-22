@@ -40,7 +40,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.Task;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class EntitiesWalker
+class EntitiesWalker
     implements IEntitiesWalker
 {
     private final ILog log;

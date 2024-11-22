@@ -5,7 +5,7 @@ package org.e1c.edt.ai;
 
 import java.time.LocalDateTime;
 
-public class Clock
+class Clock
     implements IClock
 {
     @Override

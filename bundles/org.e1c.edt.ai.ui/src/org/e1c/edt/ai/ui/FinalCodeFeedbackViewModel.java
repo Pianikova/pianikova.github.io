@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.CodeMethod;
 import org.e1c.edt.ai.ICodeCompletionStatistics;
+import org.e1c.edt.ai.ICodeProvider;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -18,11 +19,12 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.xtext.parser.IParseResult;
+import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class FinalCodeFeedbackViewModel
+class FinalCodeFeedbackViewModel
     implements IFinalCodeFeedbackViewModel, VerifyKeyListener, ITextListener
 {
     private final IDispatcher dispatcher;
@@ -146,7 +148,15 @@ public class FinalCodeFeedbackViewModel
     {
         var parserResultOptional = dispatcher
             .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> ui.getSourceViewer(textWidget)).orElse(null))
-            .flatMap(sourceViewer -> codeProvider.getParseResult(sourceViewer));
+            .map(sourceViewer -> {
+                var doc = sourceViewer.getDocument();
+                if (!(doc instanceof IXtextDocument))
+                {
+                    return null;
+                }
+
+                return ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
+            });
         if (parserResultOptional.isEmpty())
         {
             return Optional.empty();

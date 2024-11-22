@@ -5,7 +5,8 @@ package org.e1c.edt.ai;
 
 import java.util.function.Predicate;
 
-public class CodeCompletionTokenizer implements ICodeCompletionTokenizer
+public class CodeCompletionTokenizer
+    implements ICodeCompletionTokenizer
 {
     @Override
     public CodeCompletionToken getNext(int minLength, String text, Predicate<Character> isDelimiter)

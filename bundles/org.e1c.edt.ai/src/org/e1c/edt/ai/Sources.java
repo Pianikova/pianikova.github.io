@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai;
 
-public class Sources
+class Sources
 {
     public static final ISource UNKNOWN = new UnknownSource();
 

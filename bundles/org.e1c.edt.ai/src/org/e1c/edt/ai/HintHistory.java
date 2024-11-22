@@ -5,7 +5,8 @@ package org.e1c.edt.ai;
 
 import java.util.Stack;
 
-public class HintHistory implements IHintHistory
+public class HintHistory
+    implements IHintHistory
 {
     private final Stack<Text> history = new Stack<>();
 

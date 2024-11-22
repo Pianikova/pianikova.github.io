@@ -10,7 +10,7 @@ import org.eclipse.swt.custom.StyledText;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ContentProvider
+class ContentProvider
     implements IContentProvider
 {
     private final IUI ui;

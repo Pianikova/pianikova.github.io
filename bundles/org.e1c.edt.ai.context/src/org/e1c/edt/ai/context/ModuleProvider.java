@@ -19,10 +19,14 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.jface.text.IDocument;
+import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.util.concurrent.IUnitOfWork;
 
 import com._1c.g5.v8.bm.core.IBmExternalUriResolver;
 import com._1c.g5.v8.dt.bm.xtext.XtextBmLinkProvider;
 import com._1c.g5.v8.dt.bsl.model.Module;
+import com._1c.g5.v8.dt.bsl.ui.editor.BslXtextDocument;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -60,6 +64,25 @@ public class ModuleProvider implements IModuleProvider
         return Optional.empty();
     }
 
+    @Override
+    public Optional<ModuleInfo> getModuleInfo(IDocument document)
+    {
+        if (document instanceof BslXtextDocument)
+        {
+            IUnitOfWork<XtextResource, XtextResource> work = res -> res;
+            var bslXtextDocument = ((BslXtextDocument)document).readOnlyDataModel(work);
+            for (var content : bslXtextDocument.getContents())
+            {
+                if (content instanceof Module)
+                {
+                    var module = (Module)content;
+                    return Optional.of(new ModuleInfo((Module)content, null));
+                }
+            }
+        }
+
+        return Optional.empty();
+    }
     private Optional<IFile> findFile(IProject project, String filePath, ICancellationToken cancellationToken)
     {
         var files = new ArrayList<IFile>();

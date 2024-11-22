@@ -31,7 +31,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-public class UI
+class UI
     implements IUI, Listener
 {
     private Object lock = new Object();

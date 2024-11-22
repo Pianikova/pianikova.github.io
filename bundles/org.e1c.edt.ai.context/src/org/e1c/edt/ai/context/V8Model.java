@@ -1,6 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
+
 package org.e1c.edt.ai.context;
 
 import java.util.ArrayList;
@@ -47,7 +48,8 @@ import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class V8Model implements IV8Model
+class V8Model
+    implements IV8Model
 {
     private static final String RESOURCE_PREFIX = "/resource"; //$NON-NLS-1$
     private final BslMultiLineCommentDocumentationProvider commentDocumentationProvider;

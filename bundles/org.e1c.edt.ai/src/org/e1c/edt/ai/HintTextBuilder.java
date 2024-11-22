@@ -5,7 +5,8 @@ package org.e1c.edt.ai;
 
 import com.google.common.base.Preconditions;
 
-public class HintTextBuilder implements IHintTextBuilder
+public class HintTextBuilder
+    implements IHintTextBuilder
 {
     @Override
     public String build(String text, int tabWidth, char lineFeedSing)

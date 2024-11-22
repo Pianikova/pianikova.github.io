@@ -28,7 +28,8 @@ import com._1c.g5.v8.dt.bsl.model.Function;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com.google.common.base.Preconditions;
 
-public class CodePartsProvider implements ICodePartsProvider
+class CodePartsProvider
+    implements ICodePartsProvider
 {
     @Override
     public Stream<CodePart> getParts(ICompositeNode rootNode)

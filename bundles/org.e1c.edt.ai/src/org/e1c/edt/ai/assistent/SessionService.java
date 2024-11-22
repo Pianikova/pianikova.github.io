@@ -10,7 +10,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import org.e1c.edt.ai.IEnvironment;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
