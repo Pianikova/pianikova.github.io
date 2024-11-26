@@ -89,7 +89,7 @@ public class FixDialog
         detailsTextGrid.grabExcessVerticalSpace = true;
         detailsTextGrid.verticalAlignment = SWT.FILL;
 
-        detailsText = new Text(container, SWT.BORDER);
+        detailsText = new Text(container, SWT.BORDER | SWT.MULTI);
         detailsText.setText(details);
         detailsText.setLayoutData(detailsTextGrid);
         detailsText.setFocus();

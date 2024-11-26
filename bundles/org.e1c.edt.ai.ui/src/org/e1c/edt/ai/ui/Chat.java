@@ -11,7 +11,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.IContextEntities;
@@ -66,6 +65,7 @@ public class Chat implements IChat, IChatDialog
     private final IUISettings uiSettings;
     private final IJson json;
     private final IContextEntities contextEntities;
+    private final IJavaScript javaScript;
     private WebView webView;
     private String lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
@@ -74,7 +74,7 @@ public class Chat implements IChat, IChatDialog
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
-        IUISettings uiSettings, IJson json, IContextEntities contextEntities)
+        IUISettings uiSettings, IJson json, IContextEntities contextEntities, IJavaScript javaScript)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -85,6 +85,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(contextEntities);
+        Preconditions.checkNotNull(javaScript);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -95,6 +96,7 @@ public class Chat implements IChat, IChatDialog
         this.uiSettings = uiSettings;
         this.json = json;
         this.contextEntities = contextEntities;
+        this.javaScript = javaScript;
     }
 
     @Override
@@ -149,7 +151,7 @@ public class Chat implements IChat, IChatDialog
             script.append("window.chatApi.");
             script.append(topic);
             script.append("(`");
-            script.append(StringEscapeUtils.escapeJavaScript(subject));
+            script.append(javaScript.escape(subject));
             script.append("`, `");
             if (scriptLanguage != null)
             {
@@ -158,7 +160,7 @@ public class Chat implements IChat, IChatDialog
             if (details != null)
             {
                 script.append("`, `");
-                script.append(StringEscapeUtils.escapeJavaScript(details));
+                script.append(javaScript.escape(details));
             }
             script.append("`)");
             var scriptText = script.toString();
