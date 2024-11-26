@@ -26,7 +26,7 @@ public class FixCodeAIHandler
     extends AbstractHandler
 {
     @Inject
-    IAIContextProvider<Void> aiContextProvider;
+    IAIContextProvider aiContextProvider;
     @Inject
     IChat chat;
     @Inject
@@ -49,7 +49,7 @@ public class FixCodeAIHandler
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         ui.getTextWidget()
-            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true), null,
+            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true),
                 CancellationTokens.NONE))
             .ifPresent(ctx -> {
                 if (fixDialog.show() == Window.OK)

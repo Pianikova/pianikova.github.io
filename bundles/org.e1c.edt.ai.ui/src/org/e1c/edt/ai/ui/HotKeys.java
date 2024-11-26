@@ -20,7 +20,7 @@ import org.eclipse.ui.keys.IBindingService;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class HotKeys
+class HotKeys
     implements IHotKeys, IBindingManagerListener
 {
     private final HashMap<String, KeyBinding> _keyBindigs = new HashMap<>();

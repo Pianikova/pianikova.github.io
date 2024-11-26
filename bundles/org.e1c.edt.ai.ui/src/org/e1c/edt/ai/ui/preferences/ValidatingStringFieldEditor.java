@@ -10,7 +10,7 @@ import org.e1c.edt.ai.WellknownError;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.swt.widgets.Composite;
 
-public class ValidatingStringFieldEditor
+class ValidatingStringFieldEditor
     extends StringFieldEditor
 {
     private static final TreeMap<WellknownError, String> Errors = new TreeMap<>();

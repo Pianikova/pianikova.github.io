@@ -11,7 +11,8 @@ import org.eclipse.swt.events.VerifyEvent;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class UserActions implements IUserActions
+class UserActions
+    implements IUserActions
 {
  // @formatter:off
     private static final Map<String, CodeCompletionAction> ACTION_MAP = Map.of(

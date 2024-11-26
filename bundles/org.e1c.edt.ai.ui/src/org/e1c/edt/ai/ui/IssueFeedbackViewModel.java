@@ -10,7 +10,7 @@ import org.eclipse.jface.window.Window;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class IssueFeedbackViewModel implements IIssueFeedbackViewModel
+class IssueFeedbackViewModel implements IIssueFeedbackViewModel
 {
     private final IFeedbackDialog feedbackDialog;
     private final ICodeCompletionStatistics codeCompletionStatistics;

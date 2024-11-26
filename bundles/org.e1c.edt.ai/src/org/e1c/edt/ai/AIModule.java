@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai;
 
+import org.e1c.edt.ai.assistent.AssistentModule;
 import org.e1c.edt.ai.assistent.CheckStatusService;
 import org.e1c.edt.ai.assistent.CodeAssistant;
 import org.e1c.edt.ai.assistent.FeedbackService;
@@ -51,6 +52,7 @@ public class AIModule
     protected void configure()
     {
         // @formatter:off
+        install(new AssistentModule());
         bind(ParametersParser.class).in(Singleton.class);
         bind(new TypeLiteral<IValidator<String>>() { /**/ }).annotatedWith(Names.named(PARAMETERS)).to(ParametersParser.class);
         bind(new TypeLiteral<IParser<String, Parameters>>(){ /**/ }).to(ParametersParser.class);
@@ -87,8 +89,9 @@ public class AIModule
         bind(ITextNormilizer.class).to(TextNormilizer.class).in(Singleton.class);
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IStatistics.class).to(Statistics.class);
-        bind(IEnvironment.class).to(Environment.class).in(Singleton.class);
         bind(ILocalContextFactory.class).to(LocalContextFactory.class).in(Singleton.class);
+        bind(IContextSettings.class).to(ContextSettings.class).in(Singleton.class);
+        bind(IJson.class).to(Json.class).in(Singleton.class);
         // @formatter:on
     }
 }

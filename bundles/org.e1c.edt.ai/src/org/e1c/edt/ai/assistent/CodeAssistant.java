@@ -17,7 +17,6 @@ import java.util.zip.GZIPOutputStream;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICancellationToken;
-import org.e1c.edt.ai.IEnvironment;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.IObserver;

@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.semantic;
 
-public interface IWebServer
+interface IWebServer
 {
     AutoCloseable start(WebServerSettings settings);
 }

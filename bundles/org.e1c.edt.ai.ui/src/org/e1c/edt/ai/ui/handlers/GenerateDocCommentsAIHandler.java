@@ -37,7 +37,7 @@ public class GenerateDocCommentsAIHandler
     extends AbstractHandler
 {
     @Inject
-    IAIContextProvider<Void> aiContextProvider;
+    IAIContextProvider aiContextProvider;
     @Inject
     IChat chat;
     @Inject
@@ -178,7 +178,7 @@ public class GenerateDocCommentsAIHandler
 
         commentingMethod.sourceViewer = sourceViewer;
         var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
-        aiContextProvider.create(target, null, CancellationTokens.NONE).ifPresent(ctx -> commentingMethod.ctx = ctx);
+        aiContextProvider.create(target, CancellationTokens.NONE).ifPresent(ctx -> commentingMethod.ctx = ctx);
         return Optional.of(commentingMethod);
     }
 

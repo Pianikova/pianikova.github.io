@@ -40,7 +40,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
-public class EntityInfo
+class EntityInfo
     implements IEntityInfo, IContextEntities
 {
     private final ILog log;

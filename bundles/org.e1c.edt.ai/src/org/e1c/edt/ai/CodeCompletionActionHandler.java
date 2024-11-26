@@ -3,7 +3,8 @@
  */
 package org.e1c.edt.ai;
 
-public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext> implements ICodeCompletionActionHandler<TContext>
+public class CodeCompletionActionHandler<TContext extends ICodeCompletionContext>
+    implements ICodeCompletionActionHandler<TContext>
 {
     @Override
     public CodeCompletionAction handle(ICodeCompletionSession<TContext> session,

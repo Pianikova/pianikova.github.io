@@ -35,4 +35,8 @@ public class ModuleInfo
         return contentSupplier.get();
     }
 
+    public String getFilePath()
+    {
+        return module.eResource().getURI().path();
+    }
 }

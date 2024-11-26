@@ -17,7 +17,8 @@ import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class CursorInfoProvider implements ICursorInfoProvider
+class CursorInfoProvider
+    implements ICursorInfoProvider
 {
     private final IUI ui;
     private final ICodePartsProvider codePartsProvider;

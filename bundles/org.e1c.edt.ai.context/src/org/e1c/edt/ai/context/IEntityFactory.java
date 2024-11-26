@@ -25,7 +25,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
-public interface IEntityFactory
+interface IEntityFactory
 {
     Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken);
 

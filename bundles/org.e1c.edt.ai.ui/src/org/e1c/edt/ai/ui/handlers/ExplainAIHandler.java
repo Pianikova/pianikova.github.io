@@ -24,7 +24,7 @@ public class ExplainAIHandler
     extends AbstractHandler
 {
     @Inject
-    IAIContextProvider<Void> aiContextProvider;
+    IAIContextProvider aiContextProvider;
     @Inject
     IChat chat;
     @Inject
@@ -46,8 +46,7 @@ public class ExplainAIHandler
     {
         ui.getTextWidget()
             .flatMap(textWidget -> aiContextProvider.create(
-                new AITarget(textWidget, Integer.MAX_VALUE, true), null,
-                CancellationTokens.NONE))
+                new AITarget(textWidget, Integer.MAX_VALUE, true), CancellationTokens.NONE))
             .ifPresent(ctx -> chat.explainCode(ctx, ctx.getText()));
         return null;
     }

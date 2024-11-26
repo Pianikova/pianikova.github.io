@@ -7,7 +7,7 @@ import org.eclipse.xtext.nodemodel.ILeafNode;
 
 import com.google.common.base.Preconditions;
 
-public class StringSerializerContext
+class StringSerializerContext
 {
     private final StringBuilder text = new StringBuilder();
     private final int cursorNodeOffset;

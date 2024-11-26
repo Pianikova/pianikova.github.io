@@ -15,7 +15,7 @@ import org.eclipse.swt.graphics.GC;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class HintPainter
+class HintPainter
     implements PaintListener, IHintPainter
 {
     private static final char CONTINUATION_SIGN = '…';

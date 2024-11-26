@@ -5,7 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.eclipse.swt.custom.StyledText;
 
-public interface IFinalCodeFeedbackViewModel
+interface IFinalCodeFeedbackViewModel
 {
     AutoCloseable activate(StyledText textWidget);
 }

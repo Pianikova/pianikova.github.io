@@ -9,7 +9,7 @@ import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 
 import com.google.common.base.Preconditions;
 
-public class AISourceContext
+class AISourceContext
 {
     private final XtextSourceViewer viewer;
     private final IParseResult parseResult;

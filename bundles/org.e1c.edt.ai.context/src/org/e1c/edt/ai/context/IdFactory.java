@@ -18,7 +18,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.inject.Inject;
 
-public class IdFactory
+class IdFactory
     implements IIdFactory
 {
     private static String MAX_INT = Integer.toString(Integer.MAX_VALUE);

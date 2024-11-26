@@ -27,7 +27,8 @@ import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.FieldSource;
 import com.google.common.base.Preconditions;
 
-public class FormWalker implements IFormWalker
+class FormWalker
+    implements IFormWalker
 {
     @Override
     public void walk(EObject root, IFormVisitor visitor, ICancellationToken cancellationToken)

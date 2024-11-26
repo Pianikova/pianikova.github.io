@@ -6,7 +6,8 @@ package org.e1c.edt.ai;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ContextSplitter implements IContextSplitter
+public class ContextSplitter
+    implements IContextSplitter
 {
     private final IContextSettings contextSettings;
 

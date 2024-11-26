@@ -8,7 +8,7 @@ import org.e1c.edt.ai.assistent.model.LocalContext;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class LocalContextFactory
+class LocalContextFactory
     implements ILocalContextFactory
 {
     private final ILog log;

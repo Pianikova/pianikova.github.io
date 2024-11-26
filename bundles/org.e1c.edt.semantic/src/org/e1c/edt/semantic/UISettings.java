@@ -8,7 +8,7 @@ import java.time.Duration;
 import org.e1c.edt.ai.IUISettings;
 import org.eclipse.core.runtime.Platform;
 
-public class UISettings
+class UISettings
     implements IUISettings
 {
     @Override

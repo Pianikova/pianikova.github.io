@@ -15,8 +15,8 @@ import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class AIContextProvider
-    implements IAIContextProvider<Void>
+class AIContextProvider
+    implements IAIContextProvider
 {
     private final IUI ui;
     private final IContentProvider contentProvider;
@@ -33,16 +33,16 @@ public class AIContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(AITarget target, Void state, ICancellationToken cancellationToken)
+    public Optional<AIContext> create(AITarget target, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
         var textWidget = target.getTextWidget();
         return ui.getSourceViewer(textWidget)
-            .flatMap(sourceViewer -> create(textWidget, sourceViewer, target, state, cancellationToken));
+            .flatMap(sourceViewer -> create(textWidget, sourceViewer, target, cancellationToken));
     }
 
-    private Optional<AIContext> create(StyledText textWidget, SourceViewer sourceViewer, AITarget target, Void state,
+    private Optional<AIContext> create(StyledText textWidget, SourceViewer sourceViewer, AITarget target,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(sourceViewer);

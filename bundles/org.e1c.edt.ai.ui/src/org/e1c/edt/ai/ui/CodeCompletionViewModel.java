@@ -20,6 +20,7 @@ import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionContext;
 import org.e1c.edt.ai.ICodeCompletionSession;
+import org.e1c.edt.ai.ICodeProvider;
 import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILocalContextFactory;
@@ -47,19 +48,20 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.xtext.ui.editor.XtextSourceViewer;
+import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-public class CodeCompletionViewModel
+class CodeCompletionViewModel
     implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener
 {
     private final Object lockObject = new Object();
     private final ILog log;
     private final IUISettings uiSettings;
     private final ICodeAssistant codeAssistant;
-    private final IAIContextProvider<Void> aiContextProvider;
+    private final IAIContextProvider aiContextProvider;
     private final IDispatcher dispatcher;
     private final IHintPainter hintPainter;
     private final IInputDelayStatistics inputRateStatistics;
@@ -83,7 +85,7 @@ public class CodeCompletionViewModel
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
         ICodeAssistant codeAssistant,
-        IAIContextProvider<Void> aiContextProvider,
+        IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, IHintPainter hintPainter, IInputDelayStatistics inputRateStatistics,
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
@@ -188,7 +190,7 @@ public class CodeCompletionViewModel
         var cancellationTokenSource = new JobCancellationTokenSource();
         dispatcher
             .dispatchAsync(
-                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), null, cancellationTokenSource)
+                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationTokenSource)
                 .ifPresent(aiCtx -> {
                     var job = new Job(Messages.CodeCompletionJobName)
                     {
@@ -274,7 +276,15 @@ public class CodeCompletionViewModel
                         delay.isNegative() || delay == Duration.ZERO, singleWordMode);
                     return ui.getSourceViewer(textWidget);
                 }).orElse(null))
-                .flatMap(sourceViewer -> codeProvider.getParseResult(sourceViewer))
+                .map(sourceViewer -> {
+                    var doc = sourceViewer.getDocument();
+                    if (!(doc instanceof IXtextDocument))
+                    {
+                        return null;
+                    }
+
+                    return ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
+                })
                 .flatMap(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()))
                 .ifPresent(method -> session.setMethod(method));
 

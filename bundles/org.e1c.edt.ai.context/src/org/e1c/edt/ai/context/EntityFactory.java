@@ -74,7 +74,8 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class EntityFactory implements IEntityFactory
+class EntityFactory
+    implements IEntityFactory
 {
     private final IV8Model v8Model;
     private final IIdFactory idFactory;

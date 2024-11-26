@@ -8,7 +8,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.google.common.base.Preconditions;
 
-public class JobCancellationTokenSource
+class JobCancellationTokenSource
     extends CancellationTokenSource
 {
     private final Object lock = new Object();

@@ -13,7 +13,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 
-public class Dispatcher implements IDispatcher
+class Dispatcher
+    implements IDispatcher
 {
     private ILog log;
 
