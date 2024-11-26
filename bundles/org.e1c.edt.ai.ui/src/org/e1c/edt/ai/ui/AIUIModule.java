@@ -91,6 +91,7 @@ public class AIUIModule
         bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
         bind(IFixDialog.class).to(FixDialog.class).in(Singleton.class);
         bind(IContentProvider.class).to(ContentProvider.class).in(Singleton.class);
+        bind(IJavaScript.class).to(JavaScript.class).in(Singleton.class);
         // @formatter:on
     }
 
