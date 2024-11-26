@@ -1,0 +1,61 @@
+/*
+ * Copyright (C) 2023, 1C
+ */
+package org.e1c.edt.ai.ui;
+
+import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.assistent.IServerAccessService;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.IStartup;
+import org.eclipse.ui.PlatformUI;
+
+import com.google.inject.Inject;
+
+/**
+ * This class serves as an activation point for plugins
+ * at platform startup. It is instantiated automatically
+ * at platform startup, which causes other plugins to be
+ * pulled in.
+ *
+ * @author Bogdan Sushkov
+ *
+ */
+public class BasePluginStartup
+    implements IStartup
+{
+    @Inject
+    UI ui;
+    @Inject
+    IServerAccessService accessHolder;
+    @Inject
+    ILog log;
+
+    public BasePluginStartup()
+    {
+        BaseActivator.injectMembers(this);
+        var activator = BaseActivator.getDefault();
+        var pluginVersion = activator.getPluginVersion();
+        var platformVersion = activator.getPlatformVersion();
+        activator.trace(
+            platformVersion == null ? "Not 1C:EDT Platform" : "1C:EDT version: " + platformVersion.toString(), //$NON-NLS-1$//$NON-NLS-2$
+            ""); //$NON-NLS-1$
+        activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), ""); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+    }
+
+    @Override
+    public void earlyStartup()
+    {
+        PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                accessHolder.startMonitoring(30000, 3000);
+                var display = Display.getCurrent();
+                display.addFilter(SWT.FocusIn, ui);
+                display.addFilter(SWT.FocusOut, ui);
+            }
+        });
+    }
+}

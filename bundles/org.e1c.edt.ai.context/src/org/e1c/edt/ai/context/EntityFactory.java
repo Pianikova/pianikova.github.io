@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.context.DTO.AttributeEntity;
 import org.e1c.edt.ai.context.DTO.DataType;

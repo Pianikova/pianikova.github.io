@@ -21,6 +21,7 @@
   <modules>
     <module>org.e1c.edt.ai.repository</module>
     <module>org.e1c.edt.semantic.repository</module>
+    <module>org.e1c.edt.ui.eclipse.repository</module>
   </modules>
 
   <properties>
