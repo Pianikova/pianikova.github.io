@@ -3,10 +3,9 @@
  */
 package org.e1c.edt.ai.ui;
 
-import org.e1c.edt.ai.context.ContextModuleFactory;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.util.Modules;
 
 public class Activator
     extends BaseActivator
@@ -14,7 +13,7 @@ public class Activator
     @Override
     protected Injector createInjector()
     {
-        var mergedModule = ContextModuleFactory.create(this).with(new AIUICommonModule(), new AIUIModule(this));
+        var mergedModule = Modules.override(new AIUIModule(this)).with(new AIUICommonModule());
         return Guice.createInjector(mergedModule);
     }
 }

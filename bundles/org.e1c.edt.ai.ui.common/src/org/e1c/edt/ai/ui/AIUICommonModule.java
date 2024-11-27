@@ -54,6 +54,7 @@ public class AIUICommonModule
         bind(IFixDialog.class).to(FixDialog.class).in(Singleton.class);
         bind(IContentProvider.class).to(ContentProvider.class).in(Singleton.class);
         bind(IJavaScript.class).to(JavaScript.class).in(Singleton.class);
+        bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -14,11 +14,11 @@ import java.lang.annotation.Target;
 import javax.inject.Qualifier;
 
 import org.e1c.edt.ai.AIModule;
-import org.e1c.edt.ai.ICursorInfoProvider;
+import org.e1c.edt.ai.ICodePartsProvider;
+import org.e1c.edt.ai.ICodeProvider;
+import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IVersionProvider;
-import org.e1c.edt.ai.context.IModuleProvider;
-import org.e1c.edt.ai.context.ModuleProvider;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.google.common.base.Preconditions;
@@ -48,9 +48,9 @@ public class AIUIModule
         bind(ILog.class).toInstance(activator);
         bind(IVersionProvider.class).toInstance(activator);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
-        bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
-        bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class);
-        bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
+        bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
+        bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
+        bind(IContextEntities.class).to(ContextEntities.class).in(Singleton.class);
         // @formatter:on
     }
 
