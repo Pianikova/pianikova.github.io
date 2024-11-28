@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="org.e1c.edt.ui.eclipse.feature">
+      <category name="org.e1c.edt.ui.eclipse.category"/>
+   </feature>
+   <category-def name="org.e1c.edt.ui.eclipse.category" label="Eclipse AI"/>
+</site>

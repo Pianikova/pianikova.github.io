@@ -15,11 +15,13 @@
   <packaging>pom</packaging>
   <name>Bundles</name>
   
-  <modules>
+  <modules>   
     <module>org.e1c.edt.ai</module>
+    <module>org.e1c.edt.ai.ui.common</module>
     <module>org.e1c.edt.ai.context</module>
     <module>org.e1c.edt.ai.ui</module>
     <module>org.e1c.edt.semantic</module>
+    <module>org.e1c.edt.ui.eclipse</module>
   </modules>
   
   <build>

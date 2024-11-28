@@ -11,6 +11,8 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.e1c.edt.ai.CodePart;
+import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.Range;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.eclipse.emf.ecore.EObject;

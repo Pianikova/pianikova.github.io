@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.context;
 
+import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.ICodeProvider;
 import org.e1c.edt.ai.IContextEntities;
 import org.eclipse.core.runtime.Plugin;
