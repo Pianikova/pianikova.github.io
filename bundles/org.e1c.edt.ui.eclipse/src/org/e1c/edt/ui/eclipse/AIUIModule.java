@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.ui;
+package org.e1c.edt.ui.eclipse;
 
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
@@ -19,6 +19,7 @@ import org.e1c.edt.ai.ICodeProvider;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IVersionProvider;
+import org.e1c.edt.ai.ui.BaseActivator;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.google.common.base.Preconditions;

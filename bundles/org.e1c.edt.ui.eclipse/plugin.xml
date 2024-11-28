@@ -7,11 +7,11 @@
         <category
                 id="org.e1c.edt.ai.ui"
                 name="%category.name"
-                parentCategory="com._1c.g5.v8.dt.ui.v8category">
+                parentCategory="org.eclipse.ui">
         </category>
         <view
                 category="org.e1c.edt.ai.ui"
-                class="org.e1c.edt.ai.ui.ChatView"
+                class="org.e1c.edt.ui.eclipse.ChatView"
                 icon="icons/obj16/chatbot.png"
                 id="org.e1c.edt.ai.ui.views.ChatView"
                 inject="true"
@@ -34,7 +34,7 @@
     <extension
             point="org.eclipse.ui.quickAccess">
         <computer
-                class="org.e1c.edt.ai.ui.quickaccess.AskAIQuickAccessComputer"
+                class="org.e1c.edt.ui.eclipse.quickaccess.AskAIQuickAccessComputer"
                 name="%computer.name">
         </computer>
     </extension>
@@ -145,23 +145,23 @@
     <extension
             point="org.eclipse.ui.handlers">
         <handler
-                class="org.e1c.edt.ai.ui.handlers.ExplainAIHandler"
+                class="org.e1c.edt.ui.eclipse.handlers.ExplainAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.explain.ai">
         </handler>
         <handler
-                class="org.e1c.edt.ai.ui.handlers.CriticiseAIHandler"
+                class="org.e1c.edt.ui.eclipse.handlers.CriticiseAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.criticise.ai">
         </handler>
         <handler
-                class="org.e1c.edt.ai.ui.handlers.FixCodeAIHandler"
+                class="org.e1c.edt.ui.eclipse.handlers.FixCodeAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.fixcode.ai">
         </handler>
         <handler
-                class="org.e1c.edt.ai.ui.handlers.GenerateDocCommentsAIHandler"
+                class="org.e1c.edt.ui.eclipse.handlers.GenerateDocCommentsAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.generatedoccomments.ai">
         </handler>     
         <handler
-                class="org.e1c.edt.ai.ui.handlers.FeedbackAIHandler"
+                class="org.e1c.edt.ui.eclipse.handlers.FeedbackAIHandler"
                 commandId="org.e1c.edt.ai.ui.commands.feedback.ai">
         </handler>
 
@@ -222,10 +222,11 @@
         </menuContribution>
         <menuContribution
                 allPopups="false"
-                locationURI="popup:xtext.embedded.editor">
+                locationURI="popup:org.eclipse.ui.popup.any">
             <menu
-                    id="org.e1c.edt.ai.ui.groupMenu"
-                    label="%menu.label">
+                  icon="icons/obj16/ai.png"
+                  id="org.e1c.edt.ai.ui.groupMenu"
+                  label="%menu.label">
                 <separator
                         name="groupMenuSeparator">
                 </separator>
@@ -236,7 +237,7 @@
          <toolbar
                id="org.e1c.edt.ai.ui.statusBar">
             <control
-                  class="org.e1c.edt.ai.ui.StatusBarControl"
+                  class="org.e1c.edt.ui.eclipse.StatusBarControl"
                   id="org.e1c.edt.ai.ui.status">
             </control>
          </toolbar>
@@ -247,7 +248,7 @@
     <extension
             point="org.eclipse.ui.startup">
         <startup
-                class="org.e1c.edt.ai.ui.PluginStartup">
+                class="org.e1c.edt.ui.eclipse.PluginStartup">
         </startup>
     </extension>
     
@@ -263,7 +264,7 @@
     <extension
             point="org.eclipse.core.runtime.preferences">
         <initializer
-                class="org.e1c.edt.ai.ui.preferences.ClientAIPreferencePageInitializer">
+                class="org.e1c.edt.ui.eclipse.preferences.ClientAIPreferencePageInitializer">
         </initializer>
     </extension>
     

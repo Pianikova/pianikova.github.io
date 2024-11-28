@@ -8,7 +8,6 @@ import org.e1c.edt.ai.IVersionProvider;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.resource.ResourceLocator;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -29,8 +28,6 @@ public abstract class BaseActivator
     extends AbstractUIPlugin
     implements ILog, IVersionProvider
 {
-    public static final String PLUGIN_ID = "org.e1c.edt.ai.ui.plugin.ui"; //$NON-NLS-1$
-
     /**
     * Путь к картинкам плагина
     */
@@ -93,10 +90,10 @@ public abstract class BaseActivator
     * @param key символьный идентификатор картинки
     * @retrun созданный дескриптор картинки
     */
-    public static ImageDescriptor createImageDescriptorFromKey(String key)
+    public ImageDescriptor createImageDescriptorFromKey(String key)
     {
-        String path = ICONS_PATH + key.substring(PLUGIN_ID.length());
-        ImageDescriptor descriptor = ResourceLocator.imageDescriptorFromBundle("org.e1c.edt.ai.ui", path).get(); //$NON-NLS-1$
+        String path = ICONS_PATH + key.substring(getPluginId().length());
+        ImageDescriptor descriptor = ResourceLocator.imageDescriptorFromBundle(getPluginId(), path).get();
         return descriptor;
     }
 
@@ -174,14 +171,14 @@ public abstract class BaseActivator
      * @param throwable выкинутое исключение, может быть <code>null</code>
      * @return созданное статус событие, не может быть <code>null</code>
      */
-    private static IStatus createErrorStatus(String message, Throwable throwable)
+    private IStatus createErrorStatus(String message, Throwable throwable)
     {
-        return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, throwable);
+        return new Status(IStatus.ERROR, getPluginId(), 0, message, throwable);
     }
 
-    private static IStatus createErrorStatus(String message)
+    private IStatus createErrorStatus(String message)
     {
-        return new Status(IStatus.ERROR, PLUGIN_ID, 0, message, null);
+        return new Status(IStatus.ERROR, getPluginId(), 0, message, null);
     }
 
     /**
@@ -227,12 +224,12 @@ public abstract class BaseActivator
     /**
     * Инициализация реестра картинок плагина
     */
-    @Override
+    /*@Override
     protected void initializeImageRegistry(ImageRegistry reg)
     {
         reg.put(IModelUIPluginImages.OBJS_AI_ICON,
             createImageDescriptorFromKey(IModelUIPluginImages.OBJS_AI_ICON));
-    }
+    }*/
 
     private synchronized Injector getInjector()
     {
@@ -268,4 +265,6 @@ public abstract class BaseActivator
     {
         return System.getProperty("eclipse.buildId"); //$NON-NLS-1$
     }
+
+    public abstract String getPluginId();
 }

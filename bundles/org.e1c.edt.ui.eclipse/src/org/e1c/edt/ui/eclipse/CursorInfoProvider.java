@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.ui;
+package org.e1c.edt.ui.eclipse;
 
 import java.util.Optional;
 
@@ -10,6 +10,7 @@ import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.Range;
 import org.e1c.edt.ai.assistent.model.CursorInfo;
 import org.e1c.edt.ai.assistent.model.RelativeLocation;
+import org.e1c.edt.ai.ui.IUI;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.ui.editor.XtextSourceViewer;

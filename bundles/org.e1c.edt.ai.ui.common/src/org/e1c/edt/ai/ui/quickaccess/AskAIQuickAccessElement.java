@@ -5,12 +5,11 @@ package org.e1c.edt.ai.ui.quickaccess;
 
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.ui.AITarget;
+import org.e1c.edt.ai.ui.BaseActivator;
 import org.e1c.edt.ai.ui.BaseChatView;
 import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
-import org.e1c.edt.ai.ui.IModelUIPluginImages;
 import org.e1c.edt.ai.ui.IUI;
-import org.e1c.edt.ai.ui.BaseActivator;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.quickaccess.QuickAccessElement;
 
@@ -30,7 +29,7 @@ import com.google.inject.Inject;
 public class AskAIQuickAccessElement
     extends QuickAccessElement
 {
-    public static final String ID = BaseActivator.PLUGIN_ID + ".MyQuickAccessElement"; //$NON-NLS-1$
+    // public static final String ID = BaseActivator.PLUGIN_ID + ".MyQuickAccessElement"; //$NON-NLS-1$
 
     @Inject
     IAIContextProvider aiContextProvider;
@@ -81,7 +80,8 @@ public class AskAIQuickAccessElement
     @Override
     public ImageDescriptor getImageDescriptor()
     {
-        ImageDescriptor image = BaseActivator.getImageDescriptor(IModelUIPluginImages.OBJS_AI_ICON);
+        ImageDescriptor image =
+            BaseActivator.getImageDescriptor(BaseActivator.getDefault().getPluginId() + "/obj16/ai.png"); //$NON-NLS-1$
         return image;
     }
 }
