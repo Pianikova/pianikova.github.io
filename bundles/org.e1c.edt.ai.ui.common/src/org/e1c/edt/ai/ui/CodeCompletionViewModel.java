@@ -40,6 +40,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.text.contentassist.ContentAssistEvent;
 import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
+import org.eclipse.jface.text.contentassist.ICompletionListenerExtension2;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.contentassist.IContentAssistant;
 import org.eclipse.swt.custom.CaretEvent;
@@ -83,8 +84,13 @@ class CodeCompletionViewModel
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
+    private String proposal = ""; //$NON-NLS-1$
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
+    private int lastСaretOffset;
+    private LocalContextProvider localContext;
+    private AssistantListener listener;
+    private boolean isProposalApplied = false;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -242,11 +248,12 @@ class CodeCompletionViewModel
         {
             // ignored
         }
-
+        
         reset();
         dispatcher.dispatch(() -> {
             if (!textWidget.isDisposed())
             {
+                getContentAssistant().ifPresent(assistant -> assistant.removeCompletionListener(listener));
                 textWidget.removeCaretListener(this);
                 textWidget.removePaintListener(hintPainter);
                 textWidget.removeVerifyKeyListener(this);
@@ -254,6 +261,33 @@ class CodeCompletionViewModel
                 textWidget.redraw();
             }
         });
+    }
+
+    private void askWithProposal(String proposal)
+    {
+        var token = new JobCancellationTokenSource();
+        dispatcher.dispatch(() -> {
+            var job = new Job("ProposalCompletion")
+            {
+                @Override
+                public IStatus run(IProgressMonitor monitor)
+                        {
+
+                    token.attachMonitor(monitor);
+                    if (localContext == null)
+                    {
+                        setLocalContext();
+                    }
+
+                    localContext.setProposal(proposal);
+                    ask(localContext, Duration.ofMillis(0), token);
+                    return token.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
+                        }
+            };
+            lastJob = job;
+            job.schedule(500);
+        });
+
     }
 
     private void ask(LocalContextProvider localContextProvider, Duration delayBeforeShow,
@@ -323,7 +357,12 @@ class CodeCompletionViewModel
                     }
 
                     var hint = session.getHint();
-                    hint.append(new Text(data.text, session));
+                    var text = data.text;
+                    if (isProposalMenuOpened) {
+                        text = proposal + text;
+                        proposal = "";  //$NON-NLS-1$
+                    }
+                    hint.append(new Text(text, session));
                     showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
                 },
                 error -> {
@@ -419,13 +458,13 @@ class CodeCompletionViewModel
         var widget = content.getWidget();
         var hint = session.getHint();
         dispatcher.dispatch(() -> {
-            if (isProposalMenuOpened)
-            {
-                // close proposal menu before rising UI-hint
-                getContentAssistant().ifPresent(assistant -> assistant.requestWidgetToken(null, 40));
-            }
-            hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(),
-                hint.getText(HintPart.LINES).getText(),
+
+            var hintLines =
+                isProposalMenuOpened ? hint.getText(HintPart.LINE).getText()
+                : hint.getText(HintPart.LINES).getText();
+
+            hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset() + proposal.length(),
+                hintLines,
                 hint.getText(HintPart.TOKEN).getText());
             widget.redraw();
         });
@@ -439,7 +478,7 @@ class CodeCompletionViewModel
     @SuppressWarnings("nls")
     private static String format(String text)
     {
-        return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
+        return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$ //$NON-NLS-7$ //$NON-NLS-8$
     }
 
     @Override
@@ -452,6 +491,17 @@ class CodeCompletionViewModel
         }
 
         var action = userActions.getAction(event);
+        log.trace("Action is " + action.name(), "");
+        if (isProposalApplied)
+        {
+            commit(session);
+            update(session);
+//            isFromAssistant = false;
+            isProposalApplied = false;
+            event.doit = false;
+            return;
+        }
+        
         var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
         action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
         switch (action)
@@ -554,28 +604,67 @@ class CodeCompletionViewModel
     {
         if (contentAssistant != null)
         {
-            contentAssistant.addCompletionListener(new ICompletionListener()
+            if (listener == null)
             {
-                @Override
-                public void assistSessionStarted(ContentAssistEvent event)
-                {
-                    isProposalMenuOpened = true;
-                    reset();
-                }
+                listener = new AssistantListener();
+            }
+            contentAssistant.addCompletionListener(listener);
+        }
+    }
 
-                @Override
-                public void assistSessionEnded(ContentAssistEvent event)
-                {
-                    isProposalMenuOpened = false;
-                }
+    private void setLocalContext()
+    {
+        var cancellationTokenSource = new CancellationTokenSource();
+        dispatcher.dispatch(
+            () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationTokenSource)
+                .ifPresent(aiCtx -> {
+                    log.trace("In setLocalContext", proposal); //$NON-NLS-1$
+                    localContext = new LocalContextProvider(aiCtx, Duration.ofMillis(0));
+                }));
+    }
 
-                @Override
-                public void selectionChanged(ICompletionProposal proposal, boolean smartToggle)
-                {
-                    isProposalMenuOpened = true;
-                    reset();
-                }
-            });
+    private class AssistantListener
+        implements ICompletionListener, ICompletionListenerExtension2
+    {
+
+        @Override
+        public void applied(ICompletionProposal proposal)
+        {
+            isProposalApplied = true;
+            log.trace("From applied. Curr proposal is " + proposal.getDisplayString(), "");
+            ICodeCompletionSession<CodeCompletionContext> session;
+            synchronized (lockObject)
+            {
+                session = lastSession;
+            }
+            session.getHistHint().pull(HintPart.TOKEN);
+            update(session);
+        }
+
+        @Override
+        public void assistSessionStarted(ContentAssistEvent event)
+        {
+            isProposalMenuOpened = true;
+            isProposalApplied = false;
+            reset();
+        }
+
+        @Override
+        public void assistSessionEnded(ContentAssistEvent event)
+        {
+            proposal = ""; //$NON-NLS-1$
+            localContext = null;
+            isProposalMenuOpened = false;
+            log.trace("In assistant Session Ended", "");
+        }
+
+        @Override
+        public void selectionChanged(ICompletionProposal prop, boolean smartToggle)
+        {
+            cancel();
+            proposal = prop.getDisplayString();
+            isProposalMenuOpened = true;
+            askWithProposal(proposal);
         }
     }
 
@@ -585,6 +674,8 @@ class CodeCompletionViewModel
         private final AIContext aiContext;
         private final Duration maxDuration;
         private LocalContext _lastContext;
+        private String _proposal = ""; //$NON-NLS-1$
+        private String _originalPrefix;
 
         public LocalContextProvider(AIContext aiContext, Duration maxDuration)
         {
@@ -598,13 +689,21 @@ class CodeCompletionViewModel
         {
             if (_lastContext != null)
             {
+                _lastContext.prefix = _originalPrefix + _proposal;
                 return _lastContext;
             }
 
             var expirationDate = clock.now().plus(maxDuration);
             var expiringCancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
             _lastContext = localContextFactory.create(geAIContext(), statistics, expiringCancellationToken);
+            _originalPrefix = _lastContext.prefix;
+            _lastContext.prefix = _originalPrefix + _proposal;
             return _lastContext;
+        }
+
+        public void setProposal(String proposal)
+        {
+            this._proposal = proposal;
         }
 
         public AIContext geAIContext()
