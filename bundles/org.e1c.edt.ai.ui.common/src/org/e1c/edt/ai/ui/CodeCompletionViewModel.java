@@ -491,12 +491,10 @@ class CodeCompletionViewModel
         }
 
         var action = userActions.getAction(event);
-        log.trace("Action is " + action.name(), "");
         if (isProposalApplied)
         {
             commit(session);
             update(session);
-//            isFromAssistant = false;
             isProposalApplied = false;
             event.doit = false;
             return;
@@ -631,7 +629,6 @@ class CodeCompletionViewModel
         public void applied(ICompletionProposal proposal)
         {
             isProposalApplied = true;
-            log.trace("From applied. Curr proposal is " + proposal.getDisplayString(), "");
             ICodeCompletionSession<CodeCompletionContext> session;
             synchronized (lockObject)
             {
@@ -655,7 +652,6 @@ class CodeCompletionViewModel
             proposal = ""; //$NON-NLS-1$
             localContext = null;
             isProposalMenuOpened = false;
-            log.trace("In assistant Session Ended", "");
         }
 
         @Override
