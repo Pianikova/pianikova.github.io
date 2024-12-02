@@ -20,21 +20,7 @@
    </license>
 
    <plugin
-         id="org.e1c.edt.ai"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
          id="org.e1c.edt.semantic"
-         download-size="0"
-         install-size="0"
-         version="0.0.0"
-         unpack="false"/>
-
-   <plugin
-         id="org.e1c.edt.ai.context"
          download-size="0"
          install-size="0"
          version="0.0.0"

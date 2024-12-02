@@ -17,4 +17,10 @@ public class Activator
         var mergedModule = ContextModuleFactory.create(this).with(new AIUICommonModule(), new AIUIModule(this));
         return Guice.createInjector(mergedModule);
     }
+
+    @Override
+    public String getPluginId()
+    {
+        return "org.e1c.edt.ai.ui"; //$NON-NLS-1$
+    }
 }
