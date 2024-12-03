@@ -92,6 +92,7 @@ public class AIModule
         bind(ILocalContextFactory.class).to(LocalContextFactory.class).in(Singleton.class);
         bind(IContextSettings.class).to(ContextSettings.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
+        bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);
         // @formatter:on
     }
 }

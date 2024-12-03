@@ -14,6 +14,7 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IProgramingLanguage;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.StatisticsType;
@@ -50,10 +51,12 @@ class EntityInfo
     private final IUISettings uiSettings;
     private final IDispatcher dispatcher;
     private final IV8ProjectManager v8ProjectManager;
+    private final IProgramingLanguage programingLanguage;
 
     @Inject
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
-        IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager)
+        IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager,
+        IProgramingLanguage programingLanguage)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
@@ -62,6 +65,7 @@ class EntityInfo
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(v8ProjectManager);
+        Preconditions.checkNotNull(programingLanguage);
         this.log = log;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
@@ -69,6 +73,7 @@ class EntityInfo
         this.uiSettings = uiSettings;
         this.dispatcher = dispatcher;
         this.v8ProjectManager = v8ProjectManager;
+        this.programingLanguage = programingLanguage;
     }
 
     @Override
@@ -168,6 +173,7 @@ class EntityInfo
         var registerRecords = new ArrayList<BasicRegister>();
         var actions = new ArrayList<Action>();
         var cursorObjects = new EObject[1];
+        programingLanguage.getFromPath(filePath).ifPresent(lang -> context.programingLanguage = lang);
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
             @Override
@@ -374,6 +380,7 @@ class EntityInfo
         var filePath = aiContext.getPath();
         var start = aiContext.getStart();
         var finish = aiContext.getFinish();
+        programingLanguage.getFromPath(filePath).ifPresent(lang -> context.programingLanguage = lang);
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
             @Override

@@ -8,17 +8,32 @@ import java.time.Duration;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextEntities;
+import org.e1c.edt.ai.IProgramingLanguage;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.assistent.model.ChatContext;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 class ContextEntities
     implements IContextEntities
 {
+    private final IProgramingLanguage programingLanguage;
+
+    @Inject
+    public ContextEntities(IProgramingLanguage programingLanguage)
+    {
+        Preconditions.checkNotNull(programingLanguage);
+        this.programingLanguage = programingLanguage;
+    }
+
     @Override
     public Duration fill(AIContext aiContext, LocalContext context, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
+        var filePath = aiContext.getPath();
+        programingLanguage.getFromPath(filePath).ifPresent(lang -> context.programingLanguage = lang);
         return Duration.ZERO;
     }
 
@@ -26,6 +41,7 @@ class ContextEntities
     public void fill(AIContext aiContext, ChatContext context, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        //
+        var filePath = aiContext.getPath();
+        programingLanguage.getFromPath(filePath).ifPresent(lang -> context.programingLanguage = lang);
     }
 }

@@ -20,6 +20,9 @@ public class LocalContext
     @SerializedName("script_language")
     public String scriptLanguage;
 
+    @SerializedName("programing_language")
+    public String programingLanguage;
+
     @SerializedName("cursor_object")
     public String cursorObject;
 

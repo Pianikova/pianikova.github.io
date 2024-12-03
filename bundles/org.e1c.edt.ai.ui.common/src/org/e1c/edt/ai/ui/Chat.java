@@ -140,11 +140,13 @@ public class Chat implements IChat, IChatDialog
         dispatcher.dispatch(() -> ui.showView(BaseChatView.ID));
         chatInJob(() -> {
             String scriptLanguage = null;
+            String programingLanguage = null;
             if (ctx != null)
             {
                 var chatContext = new ChatContext();
                 contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
                 scriptLanguage = chatContext.scriptLanguage;
+                programingLanguage = chatContext.programingLanguage;
             }
 
             var script = new StringBuilder();
@@ -156,6 +158,11 @@ public class Chat implements IChat, IChatDialog
             if (scriptLanguage != null)
             {
                 script.append(scriptLanguage);
+            }
+            script.append("`, `");
+            if (programingLanguage != null)
+            {
+                script.append(programingLanguage);
             }
             if (details != null)
             {
