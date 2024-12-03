@@ -13,8 +13,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     private final IHistoricalHint hint;
     private TContext context;
     private IHintHistory history;
-    private boolean singleWordMode;
-    private boolean isAccepting, inDone;
+    private boolean singleWordMode, inDone;
     private String uuid = Sources.UNKNOWN.getId();
     private CodeMethod method = Sources.UNKNOWN.getMethod();
 
@@ -84,12 +83,6 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     public synchronized IHint getHint()
     {
         return hint;
-    }
-
-    @Override
-    public synchronized boolean isAccepting()
-    {
-        return isAccepting;
     }
 
     @Override
@@ -173,7 +166,6 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     public synchronized void reset()
     {
         inDone = false;
-        isAccepting = false;
         hint.clear();
     }
 
@@ -186,21 +178,13 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
             return;
         }
 
-        try
+        var start = offset - length;
+        if (offset < 0)
         {
-            isAccepting = true;
-            var start = offset - length;
-            if (offset < 0)
-            {
-                start = 0;
-            }
+            start = 0;
+        }
 
-            getContext().rollback(start, length);
-        }
-        finally
-        {
-            isAccepting = false;
-        }
+        getContext().rollback(start, length);
     }
 
     private void apply(Text text, int offset)
@@ -212,21 +196,13 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
             return;
         }
 
-        try
+        var start = offset;
+        if (offset < 0)
         {
-            isAccepting = true;
-            var start = offset;
-            if (offset < 0)
-            {
-                start = 0;
-            }
+            start = 0;
+        }
 
-            getContext().apply(text, start);
-        }
-        finally
-        {
-            isAccepting = false;
-        }
+        getContext().apply(text, start);
     }
 
     private boolean isFinishingChar()

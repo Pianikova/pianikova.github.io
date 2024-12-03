@@ -22,6 +22,7 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Widget;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -34,23 +35,42 @@ import com.google.inject.Provider;
 class UI
     implements IUI, Listener
 {
-    private Object lock = new Object();
     private final ILog log;
     private final Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider;
     private final Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider;
+    private final IDispatcher dispatcher;
     private StyledText textWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
     public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider,
-        Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider)
+        Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider, IDispatcher dispatcher)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(codeCompletionViewModelProvider);
         Preconditions.checkNotNull(feedbackViewModelProvider);
+        Preconditions.checkNotNull(dispatcher);
         this.log = log;
         this.codeCompletionViewModelProvider = codeCompletionViewModelProvider;
         this.feedbackViewModelProvider = feedbackViewModelProvider;
+        this.dispatcher = dispatcher;
+    }
+
+    public void initialize()
+    {
+        dispatcher.dispatch(() -> {
+            var display = Display.getDefault();
+            display.addFilter(SWT.FocusIn, this);
+            display.addFilter(SWT.FocusOut, this);
+            var curControl = display.getFocusControl();
+            if (curControl instanceof Widget)
+            {
+                var initEvent = new Event();
+                initEvent.type = SWT.FocusIn;
+                initEvent.widget = curControl;
+                handleEvent(initEvent);
+            }
+        });
     }
 
     @Override
@@ -60,61 +80,40 @@ class UI
     }
 
     @Override
-    public void handleEvent(Event event)
+    public synchronized void handleEvent(Event event)
     {
         Preconditions.checkNotNull(event);
-        if (event.type == SWT.FocusOut)
+        try
         {
-            synchronized (lock)
-            {
-                try
-                {
-                    queryToken.close();
-                }
-                catch (Exception e)
-                {
-                    // ignored
-                }
-            }
+            queryToken.close();
+        }
+        catch (Exception e)
+        {
+            // ignored
         }
 
         if (event.type == SWT.FocusIn && event.widget instanceof StyledText)
         {
-            synchronized (lock)
+            var newTextWidget = (StyledText)event.widget;
+            if (isValidWidget(newTextWidget))
             {
-                try
-                {
-                    queryToken.close();
-                }
-                catch (Exception e)
-                {
-                    // ignored
-                }
-
-                var newTextWidget = (StyledText)event.widget;
-                if (isValidWidget(newTextWidget))
-                {
-                    textWidget = newTextWidget;
-                    queryToken = Closeables.create(codeCompletionViewModelProvider.get().activate(newTextWidget),
-                        feedbackViewModelProvider.get().activate(newTextWidget));
-                }
+                textWidget = newTextWidget;
+                queryToken = Closeables.create(codeCompletionViewModelProvider.get().activate(newTextWidget),
+                    feedbackViewModelProvider.get().activate(newTextWidget));
             }
         }
     }
 
     @Override
-    public Optional<StyledText> getTextWidget()
+    public synchronized Optional<StyledText> getTextWidget()
     {
-        synchronized (lock)
+        var widget = textWidget;
+        if (!isValidWidget(widget))
         {
-            var widget = textWidget;
-            if (!isValidWidget(widget))
-            {
-                return Optional.empty();
-            }
-
-            return Optional.of(widget);
+            return Optional.empty();
         }
+
+        return Optional.of(widget);
     }
 
     @Override

@@ -127,6 +127,90 @@
 <unit id="net.bytebuddy.byte-buddy.source" version="1.9.0.v20181107-1410"/>
 <repository id="artifactory" location="http://boreas.dept07/artifactory/p2-releases/orbit/R20211213173813/"/>
 </location>
-
+    <location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="slicer" includeSource="true" type="InstallableUnit">
+        <repository location="https://download.eclipse.org/eclipse/updates/4.23/"/>
+        <unit id="org.eclipse.jdt.source.feature.group" version="3.18.1100.v20220308-0310"/>
+        <unit id="eclipse-junit-tests" version="4.23.0.v20220308-0722"/>
+        <unit id="org.eclipse.core.runtime.feature.feature.group" version="1.2.1600.v20220215-2237"/>
+        <unit id="org.eclipse.e4.core.tools.feature.feature.group" version="4.23.0.v20220114-0046"/>
+        <unit id="org.eclipse.e4.core.tools.feature.source.feature.group" version="4.23.0.v20220114-0046"/>
+        <unit id="org.eclipse.e4.rcp.feature.group" version="4.23.0.v20220308-0630"/>
+        <unit id="org.eclipse.e4.rcp.source.feature.group" version="4.23.0.v20220308-0630"/>
+        <unit id="org.eclipse.e4.ui.progress" version="0.3.200.v20220221-0437"/>
+        <unit id="org.eclipse.e4.ui.progress.source" version="0.3.200.v20220221-0437"/>
+        <unit id="org.eclipse.ecf.core.feature.feature.group" version="1.6.1.v20211005-1944"/>
+        <unit id="org.eclipse.ecf.core.feature.source.feature.group" version="1.6.1.v20211005-1944"/>
+        <unit id="org.eclipse.ecf.core.ssl.feature.feature.group" version="1.1.501.v20210409-2301"/>
+        <unit id="org.eclipse.ecf.core.ssl.feature.source.feature.group" version="1.1.501.v20210409-2301"/>
+        <unit id="org.eclipse.ecf.filetransfer.feature.feature.group" version="3.14.1800.v20220215-0126"/>
+        <unit id="org.eclipse.ecf.filetransfer.feature.source.feature.group" version="3.14.1800.v20220215-0126"/>
+        <unit id="org.eclipse.ecf.filetransfer.httpclient5.feature.feature.group" version="1.1.600.v20220215-0126"/>
+        <unit id="org.eclipse.ecf.filetransfer.httpclient5.feature.source.feature.group" version="1.1.600.v20220215-0126"/>
+        <unit id="org.eclipse.ecf.filetransfer.ssl.feature.feature.group" version="1.1.401.v20210409-2301"/>
+        <unit id="org.eclipse.ecf.filetransfer.ssl.feature.source.feature.group" version="1.1.401.v20210409-2301"/>
+        <unit id="org.eclipse.emf.common.feature.group" version="2.25.0.v20220123-0838"/>
+        <unit id="org.eclipse.emf.common.source.feature.group" version="2.25.0.v20220123-0838"/>
+        <unit id="org.eclipse.emf.databinding.edit.feature.group" version="1.9.0.v20210924-1718"/>
+        <unit id="org.eclipse.emf.databinding.edit.source.feature.group" version="1.9.0.v20210924-1718"/>
+        <unit id="org.eclipse.emf.databinding.feature.group" version="1.8.0.v20210924-1718"/>
+        <unit id="org.eclipse.emf.databinding.source.feature.group" version="1.8.0.v20210924-1718"/>
+        <unit id="org.eclipse.emf.ecore.feature.group" version="2.27.0.v20220123-0838"/>
+        <unit id="org.eclipse.emf.ecore.source.feature.group" version="2.27.0.v20220123-0838"/>
+        <unit id="org.eclipse.emf.edit.feature.group" version="2.18.0.v20220201-1551"/>
+        <unit id="org.eclipse.emf.edit.source.feature.group" version="2.18.0.v20220201-1551"/>
+        <unit id="org.eclipse.equinox.compendium.sdk.feature.group" version="3.22.200.v20211021-1418"/>
+        <unit id="org.eclipse.equinox.core.feature.feature.group" version="1.13.500.v20220215-2237"/>
+        <unit id="org.eclipse.equinox.core.sdk.feature.group" version="3.23.300.v20220215-2237"/>
+        <unit id="org.eclipse.equinox.executable" version="3.8.1500.v20220210-1108"/>
+        <unit id="org.eclipse.equinox.executable.feature.group" version="3.8.1500.v20220210-1108"/>
+        <unit id="org.eclipse.equinox.p2.core.feature.feature.group" version="1.6.1300.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.core.feature.source.feature.group" version="1.6.1300.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.discovery.feature.feature.group" version="1.2.1100.v20220210-1157"/>
+        <unit id="org.eclipse.equinox.p2.discovery.feature.source.feature.group" version="1.2.1100.v20220210-1157"/>
+        <unit id="org.eclipse.equinox.p2.extras.feature.feature.group" version="1.4.1500.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.extras.feature.source.feature.group" version="1.4.1500.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.rcp.feature.feature.group" version="1.4.1500.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.rcp.feature.source.feature.group" version="1.4.1500.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.sdk.feature.group" version="3.11.1500.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.user.ui.feature.group" version="2.4.1500.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.p2.user.ui.source.feature.group" version="2.4.1500.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.sdk.feature.group" version="3.23.300.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.server.core.feature.group" version="1.14.500.v20220215-2237"/>
+        <unit id="org.eclipse.equinox.server.jetty.feature.group" version="1.10.900.v20211021-1418"/>
+        <unit id="org.eclipse.equinox.server.p2.feature.group" version="1.12.400.v20220223-1131"/>
+        <unit id="org.eclipse.equinox.serverside.sdk.feature.group" version="3.23.300.v20220223-1131"/>
+        <unit id="org.eclipse.help.feature.group" version="2.3.900.v20220308-0310"/>
+        <unit id="org.eclipse.help.source.feature.group" version="2.3.900.v20220308-0310"/>
+        <unit id="org.eclipse.jdt.core.compiler.batch" version="3.29.0.v20220214-1307"/>
+        <unit id="org.eclipse.jdt.feature.group" version="3.18.1100.v20220308-0310"/>
+        <unit id="org.eclipse.jdt.ui.unittest.junit.feature.feature.group" version="1.0.200.v20220204-2234"/>
+        <unit id="org.eclipse.jdt.ui.unittest.junit.feature.source.feature.group" version="1.0.200.v20220204-2234"/>
+        <unit id="org.eclipse.pde.api.tools.ee.feature.feature.group" version="1.0.800.v20210114-1512"/>
+        <unit id="org.eclipse.pde.feature.group" version="3.14.1100.v20220308-0310"/>
+        <unit id="org.eclipse.pde.source.feature.group" version="3.14.1100.v20220308-0310"/>
+        <unit id="org.eclipse.pde.unittest.junit.feature.group" version="1.0.100.v20211216-1010"/>
+        <unit id="org.eclipse.pde.unittest.junit.source.feature.group" version="1.0.100.v20211216-1010"/>
+        <unit id="org.eclipse.platform.feature.group" version="4.23.0.v20220308-0722"/>
+        <unit id="org.eclipse.platform.ide" version="4.23.0.I20220308-0310"/>
+        <unit id="org.eclipse.platform.sdk" version="4.23.0.I20220308-0310"/>
+        <unit id="org.eclipse.platform.source.feature.group" version="4.23.0.v20220308-0722"/>
+        <unit id="org.eclipse.rcp.configuration.feature.group" version="1.1.1600.v20220308-0310"/>
+        <unit id="org.eclipse.rcp.feature.group" version="4.23.0.v20220308-0722"/>
+        <unit id="org.eclipse.rcp.id" version="4.23.0.I20220308-0310"/>
+        <unit id="org.eclipse.rcp.sdk.id" version="4.23.0.I20220308-0310"/>
+        <unit id="org.eclipse.rcp.source.feature.group" version="4.23.0.v20220308-0722"/>
+        <unit id="org.eclipse.sdk.examples.feature.group" version="4.23.0.v20220308-0310"/>
+        <unit id="org.eclipse.sdk.examples.source.feature.group" version="4.23.0.v20220308-0310"/>
+        <unit id="org.eclipse.sdk.feature.group" version="4.23.0.v20220308-0722"/>
+        <unit id="org.eclipse.sdk.ide" version="4.23.0.I20220308-0310"/>
+        <unit id="org.eclipse.sdk.tests.feature.group" version="4.23.0.v20220308-0722"/>
+        <unit id="org.eclipse.swt.tools.feature.feature.group" version="3.108.400.v20220222-2111"/>
+        <unit id="org.eclipse.swt.tools.feature.source.feature.group" version="3.108.400.v20220222-2111"/>
+        <unit id="org.eclipse.test.feature.group" version="3.8.0.v20211210-1030"/>
+        <unit id="org.eclipse.tips.feature.feature.group" version="0.2.1700.v20220220-0850"/>
+        <unit id="org.eclipse.tips.feature.source.feature.group" version="0.2.1700.v20220220-0850"/>
+        <unit id="org.eclipse.unittest.ui" version="1.0.100.v20210429-0605"/>
+        <unit id="org.eclipse.unittest.ui.source" version="1.0.100.v20210429-0605"/>
+    </location>
 </locations>
 </target>

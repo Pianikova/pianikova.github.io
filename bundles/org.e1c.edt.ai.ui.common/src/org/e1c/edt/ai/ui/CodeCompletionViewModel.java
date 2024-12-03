@@ -42,8 +42,7 @@ import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.contentassist.IContentAssistant;
-import org.eclipse.swt.custom.CaretEvent;
-import org.eclipse.swt.custom.CaretListener;
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
@@ -55,7 +54,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 class CodeCompletionViewModel
-    implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener
+    implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener
 {
     private final Object lockObject = new Object();
     private final ILog log;
@@ -81,6 +80,7 @@ class CodeCompletionViewModel
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
     private Duration requestDuration = Duration.ZERO;
+    private int lastСaretOffset;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -136,12 +136,14 @@ class CodeCompletionViewModel
         this.isProposalMenuOpened = false;
         reset();
         dispatcher.dispatch(() -> {
-            textWidget.addPaintListener(hintPainter);
-            textWidget.addCaretListener(this);
-            textWidget.addVerifyKeyListener(this);
-            textWidget.redraw();
-            // Warm up
-            askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getTimeout(), true);
+            if (!textWidget.isDisposed())
+            {
+                textWidget.addPaintListener(hintPainter);
+                textWidget.addVerifyKeyListener(this);
+                textWidget.redraw();
+                // Warm up
+                askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getTimeout(), true);
+            }
         });
 
         return Closeables.create(() -> deactivate());
@@ -151,6 +153,11 @@ class CodeCompletionViewModel
     {
         cancel();
         history.clear();
+        hideHint();
+    }
+
+    private void hideHint()
+    {
         dispatcher.dispatch(() -> {
             hintPainter.reset();
         });
@@ -230,11 +237,10 @@ class CodeCompletionViewModel
 
         reset();
         dispatcher.dispatch(() -> {
-            textWidget.removePaintListener(hintPainter);
-            textWidget.removeCaretListener(this);
-            textWidget.removeVerifyKeyListener(this);
             if (!textWidget.isDisposed())
             {
+                textWidget.removePaintListener(hintPainter);
+                textWidget.removeVerifyKeyListener(this);
                 textWidget.redraw();
             }
         });
@@ -274,6 +280,7 @@ class CodeCompletionViewModel
                     hintPainter.reset();
                     hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(),
                         delay.isNegative() || delay == Duration.ZERO, singleWordMode);
+                    lastСaretOffset = aiCtx.getСaretOffset();
                     return ui.getSourceViewer(textWidget);
                 }).orElse(null))
                 .map(sourceViewer -> {
@@ -444,6 +451,7 @@ class CodeCompletionViewModel
             reset();
             askWithDelay(Duration.ZERO, Duration.ZERO, null, false);
             event.doit = false;
+            lastСaretOffset = session.getContext().getWidget().getCaretOffset();
             break;
 
         case UPDATE:
@@ -455,6 +463,7 @@ class CodeCompletionViewModel
                     askWithDelay(Duration.ZERO, Duration.ZERO, null, false);
                 }
 
+                lastСaretOffset = session.getContext().getWidget().getCaretOffset();
                 event.doit = false;
             }
             break;
@@ -467,10 +476,12 @@ class CodeCompletionViewModel
         case RESET:
             commit(session);
             reset();
+            lastСaretOffset = session.getContext().getWidget().getCaretOffset();
             event.doit = false;
             break;
 
         case HANDLE:
+            lastСaretOffset = session.getContext().getWidget().getCaretOffset();
             event.doit = false;
             break;
 
@@ -481,20 +492,16 @@ class CodeCompletionViewModel
         default:
             break;
         }
-    }
 
-    @Override
-    public void caretMoved(CaretEvent event)
-    {
-        synchronized (lockObject)
+        if (session != null)
         {
-            if (lastSession == null || lastSession.isAccepting())
+            var caretOffset = session.getContext().getWidget().getCaretOffset();
+            if (lastСaretOffset != caretOffset || ((event.keyCode & SWT.KEYCODE_BIT) != 0))
             {
-                return;
+                lastСaretOffset = caretOffset;
+                hideHint();
             }
         }
-
-        reset();
     }
 
     private void commit(ICodeCompletionSession<CodeCompletionContext> session)

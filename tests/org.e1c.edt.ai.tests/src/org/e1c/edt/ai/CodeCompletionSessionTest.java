@@ -5,7 +5,6 @@ package org.e1c.edt.ai;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -120,24 +119,6 @@ public class CodeCompletionSessionTest
         // Then
         Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
         verify(context).apply(TEXT, 37);
-    }
-
-    @Test
-    public void shouldSetIsAcceptingDuringAccept()
-    {
-        // Given
-        var session = createInstance(false);
-        when(hint.isEmpty()).thenReturn(false);
-        when(hint.pull(HintPart.TOKEN)).thenReturn(TEXT);
-        doAnswer(i -> {
-            Assert.assertTrue(session.isAccepting());
-            return null;
-        }).when(context).apply(TEXT, 37);
-
-        // When
-        session.accept(HintPart.TOKEN, 37);
-
-        // Then
     }
 
     @Test
@@ -380,23 +361,6 @@ public class CodeCompletionSessionTest
         // Then
         Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
         verify(context).rollback(34, 3);
-    }
-
-    @Test
-    public void shouldSetIsAcceptingDuringRollback()
-    {
-        // Given
-        var session = createInstance(false);
-        when(hint.rollback()).thenReturn(TEXT);
-        doAnswer(i -> {
-            Assert.assertTrue(session.isAccepting());
-            return null;
-        }).when(context).rollback(34, 3);
-
-        // When
-        session.rollback(37);
-
-        // Then
     }
 
     @SuppressWarnings("nls")
