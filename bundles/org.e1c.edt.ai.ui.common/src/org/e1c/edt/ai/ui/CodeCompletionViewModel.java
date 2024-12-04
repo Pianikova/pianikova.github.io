@@ -495,11 +495,15 @@ class CodeCompletionViewModel
 
         if (session != null)
         {
-            var caretOffset = session.getContext().getWidget().getCaretOffset();
-            if (lastСaretOffset != caretOffset || ((event.keyCode & SWT.KEYCODE_BIT) != 0))
+            var widget = session.getContext().getWidget();
+            if (!widget.isDisposed())
             {
-                lastСaretOffset = caretOffset;
-                hideHint();
+                var caretOffset = widget.getCaretOffset();
+                if (lastСaretOffset != caretOffset || ((event.keyCode & SWT.KEYCODE_BIT) != 0))
+                {
+                    lastСaretOffset = caretOffset;
+                    hideHint();
+                }
             }
         }
     }
