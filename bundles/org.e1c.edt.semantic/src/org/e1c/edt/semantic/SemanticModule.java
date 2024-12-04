@@ -5,6 +5,7 @@ package org.e1c.edt.semantic;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IProgramingLanguage;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Json;
 import org.e1c.edt.ai.context.IModuleProvider;
@@ -39,6 +40,7 @@ public class SemanticModule
         bind(IEndpointDialog.class).to(EndpointDialog.class).in(Singleton.class);
         bind(IModuleProvider.class).to(ModuleProvider.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
+        bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(IEndpointViewModel.class).to(EndpointViewModel.class).in(Singleton.class);
         bind(IIDE.class).to(IDE.class).in(Singleton.class);

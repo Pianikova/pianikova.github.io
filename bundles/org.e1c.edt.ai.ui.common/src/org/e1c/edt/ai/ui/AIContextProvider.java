@@ -8,9 +8,9 @@ import java.util.Optional;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextInitializer;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -48,13 +48,10 @@ class AIContextProvider
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
-        var doc = sourceViewer.getDocument();
-        var path = ""; //$NON-NLS-1$
-        if (doc instanceof IXtextDocument)
-        {
-            var xtextDoc = (IXtextDocument)doc;
-            path = xtextDoc.getResourceURI().path();
-        }
+        var path = ui.getEditor(sourceViewer)
+            .map(editor -> editor.getEditorInput().getAdapter(IFile.class))
+            .map(file -> file.getProjectRelativePath().toPortableString())
+            .orElse(""); //$NON-NLS-1$
 
         var content = contentProvider.get(textWidget);
         AIContext aiContext;

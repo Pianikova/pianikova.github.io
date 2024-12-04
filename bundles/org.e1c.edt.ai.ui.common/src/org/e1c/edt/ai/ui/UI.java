@@ -12,6 +12,8 @@ import java.util.stream.StreamSupport;
 
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ILog;
+import org.eclipse.jface.text.ITextOperationTarget;
+import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
@@ -23,6 +25,7 @@ import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
+import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -129,6 +132,33 @@ class UI
             .map(i -> getSourceViewer(((Canvas)i).getLayout()))
             .filter(i -> i != null)
             .findFirst();
+    }
+
+    @Override
+    public Optional<IEditorPart> getEditor(ISourceViewer sourceViewer)
+    {
+        for (var workbench : PlatformUI.getWorkbench().getWorkbenchWindows())
+        {
+            for (var page : workbench.getPages())
+            {
+                for (var editorRef : page.getEditorReferences())
+                {
+                    var editor = editorRef.getEditor(false);
+                    if (editor == null)
+                    {
+                        continue;
+                    }
+
+                    var curSourceViewer = editor.getAdapter(ITextOperationTarget.class);
+                    if (sourceViewer == curSourceViewer)
+                    {
+                        return Optional.of(editor);
+                    }
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Override

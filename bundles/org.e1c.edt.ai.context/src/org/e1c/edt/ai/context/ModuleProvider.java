@@ -122,6 +122,11 @@ public class ModuleProvider implements IModuleProvider
     private Optional<ModuleInfo> getModuleInfo(IProject project, String filePath, ICancellationToken cancellationToken)
     {
         var bmModel = modelManager.getModel(project);
+        if (bmModel == null)
+        {
+            return Optional.empty();
+        }
+
         for (IBmExternalUriResolver provider : bmModel.getEngine().getExternalUriResolvers())
         {
             if (provider instanceof XtextBmLinkProvider)
