@@ -16,6 +16,8 @@ public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
 
     IHint getHint();
 
+    boolean isAccepting();
+
     boolean isDone();
 
     CodeCompletionAction finish();

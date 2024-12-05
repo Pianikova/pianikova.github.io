@@ -86,20 +86,20 @@ class UI
     public synchronized void handleEvent(Event event)
     {
         Preconditions.checkNotNull(event);
-        try
-        {
-            queryToken.close();
-        }
-        catch (Exception e)
-        {
-            // ignored
-        }
-
-        if (event.type == SWT.FocusIn && event.widget instanceof StyledText)
+        if (event.type == SWT.FocusIn && event.widget != textWidget && event.widget instanceof StyledText)
         {
             var newTextWidget = (StyledText)event.widget;
             if (isValidWidget(newTextWidget))
             {
+                try
+                {
+                    queryToken.close();
+                }
+                catch (Exception e)
+                {
+                    // ignored
+                }
+
                 textWidget = newTextWidget;
                 queryToken = Closeables.create(codeCompletionViewModelProvider.get().activate(newTextWidget),
                     feedbackViewModelProvider.get().activate(newTextWidget));

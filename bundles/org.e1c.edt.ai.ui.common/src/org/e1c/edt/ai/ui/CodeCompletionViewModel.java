@@ -42,9 +42,12 @@ import org.eclipse.jface.text.contentassist.ContentAssistant;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.contentassist.IContentAssistant;
-import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CaretEvent;
+import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
+import org.eclipse.swt.events.TraverseEvent;
+import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 import org.eclipse.xtext.ui.editor.model.IXtextDocument;
@@ -54,7 +57,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 class CodeCompletionViewModel
-    implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener
+    implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener, TraverseListener
 {
     private final Object lockObject = new Object();
     private final ILog log;
@@ -74,13 +77,14 @@ class CodeCompletionViewModel
     private final IUI ui;
     private final ICodeProvider codeProvider;
     private final ILocalContextFactory localContextFactory;
+    private final IHotKeys hotKeys;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private boolean isProposalMenuOpened = false;
     private Duration requestDuration = Duration.ZERO;
-    private int lastСaretOffset;
+    private boolean isTraversed;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -91,7 +95,7 @@ class CodeCompletionViewModel
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
-        ILocalContextFactory localContextFactory)
+        ILocalContextFactory localContextFactory, IHotKeys hotKeys)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -110,6 +114,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(codeProvider);
         Preconditions.checkNotNull(localContextFactory);
+        Preconditions.checkNotNull(hotKeys);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -126,6 +131,7 @@ class CodeCompletionViewModel
         this.ui = ui;
         this.codeProvider = codeProvider;
         this.localContextFactory = localContextFactory;
+        this.hotKeys = hotKeys;
     }
 
     @Override
@@ -139,6 +145,8 @@ class CodeCompletionViewModel
             if (!textWidget.isDisposed())
             {
                 textWidget.addPaintListener(hintPainter);
+                textWidget.addTraverseListener(this);
+                textWidget.addCaretListener(this);
                 textWidget.addVerifyKeyListener(this);
                 textWidget.redraw();
                 // Warm up
@@ -239,8 +247,10 @@ class CodeCompletionViewModel
         dispatcher.dispatch(() -> {
             if (!textWidget.isDisposed())
             {
+                textWidget.removeCaretListener(this);
                 textWidget.removePaintListener(hintPainter);
                 textWidget.removeVerifyKeyListener(this);
+                textWidget.removeTraverseListener(this);
                 textWidget.redraw();
             }
         });
@@ -280,7 +290,6 @@ class CodeCompletionViewModel
                     hintPainter.reset();
                     hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(),
                         delay.isNegative() || delay == Duration.ZERO, singleWordMode);
-                    lastСaretOffset = aiCtx.getСaretOffset();
                     return ui.getSourceViewer(textWidget);
                 }).orElse(null))
                 .map(sourceViewer -> {
@@ -451,7 +460,6 @@ class CodeCompletionViewModel
             reset();
             askWithDelay(Duration.ZERO, Duration.ZERO, null, false);
             event.doit = false;
-            lastСaretOffset = session.getContext().getWidget().getCaretOffset();
             break;
 
         case UPDATE:
@@ -463,7 +471,6 @@ class CodeCompletionViewModel
                     askWithDelay(Duration.ZERO, Duration.ZERO, null, false);
                 }
 
-                lastСaretOffset = session.getContext().getWidget().getCaretOffset();
                 event.doit = false;
             }
             break;
@@ -476,12 +483,10 @@ class CodeCompletionViewModel
         case RESET:
             commit(session);
             reset();
-            lastСaretOffset = session.getContext().getWidget().getCaretOffset();
             event.doit = false;
             break;
 
         case HANDLE:
-            lastСaretOffset = session.getContext().getWidget().getCaretOffset();
             event.doit = false;
             break;
 
@@ -492,20 +497,33 @@ class CodeCompletionViewModel
         default:
             break;
         }
+    }
 
-        if (session != null)
+    @Override
+    public void keyTraversed(TraverseEvent event)
+    {
+        synchronized (lockObject)
         {
-            var widget = session.getContext().getWidget();
-            if (!widget.isDisposed())
+            isTraversed = false;
+            if (lastSession != null)
             {
-                var caretOffset = widget.getCaretOffset();
-                if (lastСaretOffset != caretOffset || ((event.keyCode & SWT.KEYCODE_BIT) != 0))
-                {
-                    lastСaretOffset = caretOffset;
-                    hideHint();
-                }
+                isTraversed = hotKeys.isTriggered(event);
             }
         }
+    }
+
+    @Override
+    public void caretMoved(CaretEvent event)
+    {
+        synchronized (lockObject)
+        {
+            if (isTraversed || lastSession == null || lastSession.isAccepting())
+            {
+                return;
+            }
+        }
+
+        reset();
     }
 
     private void commit(ICodeCompletionSession<CodeCompletionContext> session)

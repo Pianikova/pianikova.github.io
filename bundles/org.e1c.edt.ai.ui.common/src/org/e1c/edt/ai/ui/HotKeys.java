@@ -40,6 +40,27 @@ class HotKeys
 
         ensureBindingsExists();
         var binding = _keyBindigs.get(bindingId);
+        return isTriggered(bindingId, event, binding);
+    }
+
+    @Override
+    public synchronized boolean isTriggered(KeyEvent event)
+    {
+        Preconditions.checkNotNull(event);
+
+        for (var entry : _keyBindigs.entrySet())
+        {
+            if (isTriggered(entry.getKey(), event, entry.getValue()))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isTriggered(String bindingId, KeyEvent event, KeyBinding binding)
+    {
         Preconditions.checkArgument(binding != null, "Cannot find binding " + bindingId); //$NON-NLS-1$
 
         var bindingKeyStrokes = binding.getKeySequence().getKeyStrokes();
