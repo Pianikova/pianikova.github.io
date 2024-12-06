@@ -145,7 +145,7 @@ class HintPainter
 
     private void drawHint(GC gc, String nextToken, String firstLine, String otherLines)
     {
-        var caretLocation = textWidget.getCaret().getLocation();
+        var caretLocation = textWidget.getLocationAtOffset(pinnedOffset);
         var x = caretLocation.x;
         var y = caretLocation.y;
         gc.setAdvanced(true);

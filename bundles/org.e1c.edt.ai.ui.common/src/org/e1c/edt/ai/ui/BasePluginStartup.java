@@ -5,10 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.assistent.IServerAccessService;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IStartup;
-import org.eclipse.ui.PlatformUI;
 
 import com.google.inject.Inject;
 
@@ -46,16 +43,7 @@ public class BasePluginStartup
     @Override
     public void earlyStartup()
     {
-        PlatformUI.getWorkbench().getDisplay().asyncExec(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                accessHolder.startMonitoring(30000, 3000);
-                var display = Display.getCurrent();
-                display.addFilter(SWT.FocusIn, ui);
-                display.addFilter(SWT.FocusOut, ui);
-            }
-        });
+        accessHolder.startMonitoring(30000, 3000);
+        ui.initialize();
     }
 }

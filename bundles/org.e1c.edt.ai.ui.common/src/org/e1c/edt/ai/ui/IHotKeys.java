@@ -18,5 +18,7 @@ interface IHotKeys
 
     boolean isTriggered(String bindingId, KeyEvent event);
 
+    boolean isTriggered(KeyEvent event);
+
     KeyBinding getBinding(String bindingId);
 }
