@@ -203,6 +203,7 @@ class CodeCompletionViewModel
         LocalContextProvider localContextProvider)
     {
         cancel();
+        dispatcher.dispatchAsync(() -> {
         var cancellationTokenSource = new JobCancellationTokenSource();
         ensureLocalContextProviderExists(localContextProvider, maxDuration, cancellationTokenSource)
                 .ifPresent(contextProvider -> {
@@ -228,6 +229,7 @@ class CodeCompletionViewModel
                     this.lastJob = job;
                     job.schedule(delayBeforeAsk.toMillis());
             });
+        });
     }
 
     private Optional<LocalContextProvider> ensureLocalContextProviderExists(LocalContextProvider localContextProvider,
@@ -401,6 +403,7 @@ class CodeCompletionViewModel
             {
                 lastSession.getContext().getCancellationTokenSource().cancel();
                 lastSession.reset();
+                lastSession = null;
             }
         }
     }
@@ -520,7 +523,7 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            isTraversed = lastSession != null && hotKeys.isTriggered(event);
+            isTraversed = lastSession == null || hotKeys.isTriggered(event);
         }
     }
 
