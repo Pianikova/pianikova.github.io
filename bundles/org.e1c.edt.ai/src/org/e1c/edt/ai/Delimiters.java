@@ -13,7 +13,6 @@ class Delimiters
     {
         TextDelimiters = new HashSet<>();
         TextDelimiters.add(' ');
-        TextDelimiters.add('\t');
         TextDelimiters.add('|');
         TextDelimiters.add('~');
         TextDelimiters.add(':');
@@ -42,6 +41,6 @@ class Delimiters
 
     public static Boolean isTokenDelimiter(char ch)
     {
-        return isLineDelimiter(ch) || TextDelimiters.contains(ch);
+        return TextDelimiters.contains(ch);
     }
 }

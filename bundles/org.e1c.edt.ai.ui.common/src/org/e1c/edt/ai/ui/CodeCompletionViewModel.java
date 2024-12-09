@@ -150,7 +150,7 @@ class CodeCompletionViewModel
                 textWidget.addVerifyKeyListener(this);
                 textWidget.redraw();
                 // Warm up
-                askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getTimeout(), true, null);
+                askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getTimeout(), 1, true, null);
             }
         });
 
@@ -196,10 +196,12 @@ class CodeCompletionViewModel
         log.trace(
             "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
         reset();
-        askWithDelay(delay, delayBeforeShow, uiSettings.getMinRequestDelay(), false, null);
+        askWithDelay(delay, delayBeforeShow, uiSettings.getMinRequestDelay(), uiSettings.getCodeCompletionLinesCount(),
+            false, null);
     }
 
-    private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow, Duration maxDuration, boolean warmUp,
+    private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow, Duration maxDuration,
+        int codeCompletionLinesCount, boolean warmUp,
         LocalContextProvider localContextProvider)
     {
         cancel();
@@ -219,7 +221,8 @@ class CodeCompletionViewModel
                                 }
                                 else
                                 {
-                                    ask(contextProvider, delayBeforeShow, cancellationTokenSource);
+                                ask(contextProvider, delayBeforeShow, codeCompletionLinesCount,
+                                    cancellationTokenSource);
                                 }
 
                             return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
@@ -272,7 +275,7 @@ class CodeCompletionViewModel
         });
     }
 
-    private void ask(LocalContextProvider localContextProvider, Duration delayBeforeShow,
+    private void ask(LocalContextProvider localContextProvider, Duration delayBeforeShow, int codeCompletionLinesCount,
         CancellationTokenSource cancellationTokenSource)
     {
         try
@@ -282,7 +285,8 @@ class CodeCompletionViewModel
             var codeCompletionCtx =
                 new CodeCompletionContext(codeCompletionContext, aiCtx, textWidget, cancellationTokenSource);
             var singleWordMode = dispatcher.dispatch(() -> codeCompletionCtx.isSingleWordMode()).orElse(false);
-            var session = sessionProvider.get().initiaize(codeCompletionCtx, history, singleWordMode);
+            var session =
+                sessionProvider.get().initiaize(codeCompletionCtx, history, codeCompletionLinesCount, singleWordMode);
             synchronized (lockObject)
             {
                 if (lastSession != null)
@@ -404,6 +408,7 @@ class CodeCompletionViewModel
                 lastSession.getContext().getCancellationTokenSource().cancel();
                 lastSession.reset();
                 lastSession = null;
+                isTraversed = false;
             }
         }
     }
@@ -476,7 +481,8 @@ class CodeCompletionViewModel
         {
         case SUGGEST:
             reset();
-            askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(), false, null);
+            askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
+                uiSettings.getCodeCompletionLinesCount(), false, null);
             event.doit = false;
             break;
 
@@ -487,7 +493,8 @@ class CodeCompletionViewModel
                 update(session);
                 if (session.isDone() && !session.getContext().isSingleWordMode())
                 {
-                    askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(), false, null);
+                    askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
+                        uiSettings.getCodeCompletionLinesCount(), false, null);
                 }
 
                 event.doit = false;
@@ -516,6 +523,11 @@ class CodeCompletionViewModel
         default:
             break;
         }
+
+        if (!event.doit)
+        {
+            isTraversed = false;
+        }
     }
 
     @Override
@@ -523,7 +535,7 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            isTraversed = lastSession == null || hotKeys.isTriggered(event);
+            isTraversed = lastSession != null && hotKeys.isTriggered(event);
         }
     }
 
@@ -601,7 +613,7 @@ class CodeCompletionViewModel
             reset();
             getProposalText(prop).ifPresent(proposalText -> {
                 proposal = proposalText;
-                askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, false, localContext);
+                askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, false, localContext);
             });
         }
     }

@@ -9,7 +9,6 @@ import com.google.inject.Inject;
 public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     implements ICodeCompletionSession<TContext>
 {
-    private final IUISettings uiSettings;
     private final IHistoricalHint hint;
     private TContext context;
     private IHintHistory history;
@@ -19,18 +18,17 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     private CodeMethod method = Sources.UNKNOWN.getMethod();
 
     @Inject
-    public CodeCompletionSession(IUISettings uiSettings, IHistoricalHint hint, IHintHistory history)
+    public CodeCompletionSession(IHistoricalHint hint, IHintHistory history)
     {
-        Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(hint);
         Preconditions.checkNotNull(history);
-        this.uiSettings = uiSettings;
         this.hint = hint;
         this.history = history;
     }
 
     @Override
-    public ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history, boolean singleWordMode)
+    public ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history,
+        int codeCompletionLinesCount, boolean singleWordMode)
     {
         Preconditions.checkNotNull(context);
         Preconditions.checkNotNull(hint);
@@ -38,7 +36,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
         this.context = context;
         this.history = history;
         this.singleWordMode = singleWordMode;
-        hint.initiaize(history, singleWordMode ? 1 : uiSettings.getCodeCompletionLinesCount(), singleWordMode);
+        hint.initiaize(history, singleWordMode ? 1 : codeCompletionLinesCount, singleWordMode);
         return this;
     }
 

@@ -173,7 +173,7 @@ class FinalCodeFeedbackViewModel
 
     private Optional<CodeMethod> getMethod()
     {
-        var offset = dispatcher.dispatch(() -> textWidget.getCaretOffset());
+        var offset = dispatcher.dispatch(() -> textWidget.isDisposed() ? null : textWidget.getCaretOffset());
         if (offset.isEmpty())
         {
             return Optional.empty();

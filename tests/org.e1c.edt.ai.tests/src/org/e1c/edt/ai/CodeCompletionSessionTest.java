@@ -16,7 +16,6 @@ import org.junit.Test;
 
 public class CodeCompletionSessionTest
 {
-    private final IUISettings uiSettings = mock(IUISettings.class);
     private final IHistoricalHint hint = mock(IHistoricalHint.class);
     private final IHintHistory history = mock(IHintHistory.class);
     private final ICodeCompletionContext context = mock(ICodeCompletionContext.class);
@@ -433,8 +432,8 @@ public class CodeCompletionSessionTest
 
     private CodeCompletionSession<ICodeCompletionContext> createInstance(boolean isSingleWordMode)
     {
-        var session = new CodeCompletionSession<>(uiSettings, hint, history);
-        session.initiaize(context, history, isSingleWordMode);
+        var session = new CodeCompletionSession<>(hint, history);
+        session.initiaize(context, history, 3, isSingleWordMode);
         return session;
     }
 }

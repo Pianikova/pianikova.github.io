@@ -171,7 +171,7 @@ class HintPainter
             var firstLineX = x - BORDER + 1;
             var firstLineY = y;
             var firstLineW = firstLineSize.x + BORDER * 4;
-            var firstLineH = firstLineSize.y;
+            var firstLineH = firstLineSize.y + 1;
 
             var otherLinesSize = gc.textExtent(otherLines);
             var otherLinesX = BORDER + 1;
