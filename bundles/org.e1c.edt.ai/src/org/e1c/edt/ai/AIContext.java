@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.Objects;
+
 import com.google.common.base.Preconditions;
 
 public class AIContext
@@ -142,5 +144,24 @@ public class AIContext
     private static String format(String text)
     {
         return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(source, sourceOffset);
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        AIContext other = (AIContext)obj;
+        return Objects.equals(source, other.source) && sourceOffset == other.sourceOffset;
     }
 }
