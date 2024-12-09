@@ -115,8 +115,14 @@ public class CodeAssistant
         try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL_DURATUION))
         {
             var localContext = localContextProvider.get(statistics, cancellationToken);
+            if (localContext.isEmpty())
+            {
+                observer.onCompleted();
+                return;
+            }
+
             var aiRequest = new CompletionRequest();
-            aiRequest.localContext = localContext;
+            aiRequest.localContext = localContext.get();
             try (var measurement = statistics.measureDuration(StatisticsType.SERIALIZATION_DURATUION))
             {
                 requestBody = json.serialize(aiRequest);

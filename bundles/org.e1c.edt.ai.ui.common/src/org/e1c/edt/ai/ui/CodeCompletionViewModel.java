@@ -207,47 +207,31 @@ class CodeCompletionViewModel
     {
         cancel();
         dispatcher.dispatchAsync(() -> {
-        var cancellationTokenSource = new JobCancellationTokenSource();
-        ensureLocalContextProviderExists(localContextProvider, maxDuration, cancellationTokenSource)
-                .ifPresent(contextProvider -> {
-                    var job = new Job(Messages.CodeCompletionJobName)
+            var cancellationTokenSource = new JobCancellationTokenSource();
+            final var contextProvider =
+                localContextProvider != null ? localContextProvider : new LocalContextProvider(maxDuration);
+            var job = new Job(Messages.CodeCompletionJobName)
+            {
+                @Override
+                protected IStatus run(IProgressMonitor monitor)
+                {
+                    cancellationTokenSource.attachMonitor(monitor);
+                    if (warmUp)
                     {
-                        @Override
-                        protected IStatus run(IProgressMonitor monitor)
-                        {
-                                cancellationTokenSource.attachMonitor(monitor);
-                                if (warmUp)
-                                {
-                                    contextProvider.get(IStatistics.Empty, cancellationTokenSource);
-                                }
-                                else
-                                {
-                                ask(contextProvider, delayBeforeShow, codeCompletionLinesCount,
-                                    cancellationTokenSource);
-                                }
+                        contextProvider.get(IStatistics.Empty, cancellationTokenSource);
+                    }
+                    else
+                    {
+                        ask(contextProvider, delayBeforeShow, codeCompletionLinesCount, cancellationTokenSource);
+                    }
 
-                            return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
-                        }
-                    };
+                    return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
+                }
+            };
 
-                    this.lastJob = job;
-                    job.schedule(delayBeforeAsk.toMillis());
-            });
+            this.lastJob = job;
+            job.schedule(delayBeforeAsk.toMillis());
         });
-    }
-
-    private Optional<LocalContextProvider> ensureLocalContextProviderExists(LocalContextProvider localContextProvider,
-        Duration maxDuration,
-        CancellationTokenSource cancellationTokenSource)
-    {
-        if (localContextProvider != null)
-        {
-            return Optional.of(localContextProvider);
-        }
-
-        return dispatcher.dispatch(
-            () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationTokenSource).orElse(null))
-            .map(aiCtx -> new LocalContextProvider(aiCtx, maxDuration));
     }
 
     private void deactivate()
@@ -282,7 +266,13 @@ class CodeCompletionViewModel
         try
         {
             var startTime = clock.now();
-            var aiCtx = localContextProvider.geAIContext();
+            var aiCtxOptional = localContextProvider.geAIContext(cancellationTokenSource);
+            if (aiCtxOptional.isEmpty())
+            {
+                return;
+            }
+
+            var aiCtx = aiCtxOptional.get();
             var codeCompletionCtx =
                 new CodeCompletionContext(codeCompletionContext, aiCtx, textWidget, cancellationTokenSource);
             var singleWordMode = dispatcher.dispatch(() -> codeCompletionCtx.isSingleWordMode()).orElse(false);
@@ -585,13 +575,7 @@ class CodeCompletionViewModel
         public void assistSessionStarted(ContentAssistEvent event)
         {
             reset();
-            localContext =
-                dispatcher
-                    .dispatch(
-                        () -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                            .orElse(null))
-                    .map(aiCtx -> new LocalContextProvider(aiCtx, Duration.ofMillis(0)))
-                    .orElse(null);
+            localContext = new LocalContextProvider(Duration.ofMillis(0));
         }
 
         @Override
@@ -682,39 +666,46 @@ class CodeCompletionViewModel
     private class LocalContextProvider
         implements ILocalContextProvider
     {
-        private final AIContext aiContext;
         private final Duration maxDuration;
+        private AIContext lastAiContext;
         private LocalContext lastContext;
         private String originalPrefix;
 
-        public LocalContextProvider(AIContext aiContext, Duration maxDuration)
+        public LocalContextProvider(Duration maxDuration)
         {
-            Preconditions.checkNotNull(aiContext);
             Preconditions.checkNotNull(maxDuration);
-            this.aiContext = aiContext;
             this.maxDuration = maxDuration;
         }
 
         @Override
-        public synchronized LocalContext get(IStatistics statistics, ICancellationToken cancellationToken)
+        public synchronized Optional<LocalContext> get(IStatistics statistics, ICancellationToken cancellationToken)
         {
-            if (lastContext != null)
+            var optionalAiCtx = geAIContext(cancellationToken);
+            if (optionalAiCtx.isEmpty())
+            {
+                return Optional.empty();
+            }
+
+            var aiCtx = optionalAiCtx.get();
+            if (lastContext != null && lastAiContext != null && lastAiContext.equals(aiCtx))
             {
                 lastContext.prefix = originalPrefix + proposal;
-                return lastContext;
+                return Optional.of(lastContext);
             }
 
             var expirationDate = clock.now().plus(maxDuration);
             var expiringCancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
-            lastContext = localContextFactory.create(geAIContext(), statistics, expiringCancellationToken);
+            lastAiContext = aiCtx;
+            lastContext = localContextFactory.create(aiCtx, statistics, expiringCancellationToken);
             originalPrefix = lastContext.prefix;
             lastContext.prefix = originalPrefix + proposal;
-            return lastContext;
+            return Optional.of(lastContext);
         }
 
-        public AIContext geAIContext()
+        public Optional<AIContext> geAIContext(ICancellationToken cancellationToken)
         {
-            return aiContext;
+            return dispatcher.dispatch(
+                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationToken).orElse(null));
         }
     }
 }
