@@ -36,8 +36,8 @@ public class BasePluginStartup
         var platformVersion = activator.getPlatformVersion();
         activator.trace(
             platformVersion == null ? "Not 1C:EDT Platform" : "1C:EDT version: " + platformVersion.toString(), //$NON-NLS-1$//$NON-NLS-2$
-            ""); //$NON-NLS-1$
-        activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), ""); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            () -> ""); //$NON-NLS-1$
+        activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     @Override

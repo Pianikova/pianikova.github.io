@@ -3,11 +3,13 @@
  */
 package org.e1c.edt.ai;
 
+import java.util.function.Supplier;
+
 public interface ILog
 {
     void logError(Throwable error);
 
     void logError(String error);
 
-    void trace(String topic, String details);
+    void trace(String topic, Supplier<String> details);
 }

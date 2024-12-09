@@ -16,6 +16,7 @@ public interface ISettingsStore
     public final static String CODE_COMPLETION_MIN_REQUST_DELAY = "stringPreferenceCodeCompletionMinRequestDelay"; //$NON-NLS-1$
     public final static String SEND_CONTEXT = "stringPreferenceSendContext"; //$NON-NLS-1$
     public final static String TIMEOUT = "stringTimeoutMs"; //$NON-NLS-1$
+    public final static String TRACE_MODE = "stringPreferenceTraceMode"; //$NON-NLS-1$
 
     public final static int MIN_ASSISTANT_TEXT_SIZE = 16;
     public final static int DEFAULT_CODE_COMPLETION_LINES_COUNT = 5;

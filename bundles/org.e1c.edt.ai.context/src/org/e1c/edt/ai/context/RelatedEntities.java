@@ -220,13 +220,15 @@ public class RelatedEntities implements IRelatedEntities
     @SuppressWarnings("nls")
     private void traceEntity(String type, Entity entity, EObject eObject, ICompositeNode node)
     {
-        var sb = new StringBuilder();
-        sb.append("Node type:");
-        sb.append(eObject.getClass().getName());
-        sb.append(System.lineSeparator());
-        sb.append("Code:");
-        sb.append(System.lineSeparator());
-        sb.append(node.getText());
-        log.trace(type + ": " + entity, sb.toString());
+        log.trace(type + ": " + entity, () -> {
+            var sb = new StringBuilder();
+            sb.append("Node type:");
+            sb.append(eObject.getClass().getName());
+            sb.append(System.lineSeparator());
+            sb.append("Code:");
+            sb.append(System.lineSeparator());
+            sb.append(node.getText());
+            return sb.toString();
+        });
     }
 }

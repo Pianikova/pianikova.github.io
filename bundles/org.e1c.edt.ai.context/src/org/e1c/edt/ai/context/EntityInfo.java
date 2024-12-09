@@ -138,7 +138,7 @@ class EntityInfo
 
         if (!result)
         {
-            log.trace("Entity not found", request.ref); //$NON-NLS-1$
+            log.trace("Entity not found", () -> request.ref); //$NON-NLS-1$
             return Optional.empty();
         }
 

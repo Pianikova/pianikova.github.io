@@ -24,4 +24,6 @@ public interface IUISettings
     String getLanguage();
 
     String getTheme();
+
+    boolean traceMode();
 }

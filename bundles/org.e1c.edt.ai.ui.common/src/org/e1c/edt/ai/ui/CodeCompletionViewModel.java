@@ -194,7 +194,8 @@ class CodeCompletionViewModel
         }
 
         log.trace(
-            "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", ""); //$NON-NLS-1$//$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
+            () -> ""); //$NON-NLS-1$
         reset();
         askWithDelay(delay, delayBeforeShow, uiSettings.getMinRequestDelay(), uiSettings.getCodeCompletionLinesCount(),
             false, null);
@@ -298,7 +299,7 @@ class CodeCompletionViewModel
                 lastSession = session;
             }
 
-            log.trace("AI context " + cancellationTokenSource, aiCtx.toString()); //$NON-NLS-1$
+            log.trace("AI context " + cancellationTokenSource, () -> aiCtx.toString()); //$NON-NLS-1$
             var delay = calculateDelay(startTime, delayBeforeShow);
             if (cancellationTokenSource.isCanceled())
             {
@@ -368,7 +369,7 @@ class CodeCompletionViewModel
                     }
 
                     var hint = session.getHint();
-                    log.trace("AI generated text " + cancellationTokenSource, format(hint.toString())); //$NON-NLS-1$
+                    log.trace("AI generated text " + cancellationTokenSource, () -> format(hint.toString())); //$NON-NLS-1$
                     if (hint.isBlank())
                     {
                         hint.clear();

@@ -60,18 +60,6 @@ class WebHandler
         Preconditions.checkNotNull(response);
         try
         {
-            var info = new StringBuilder();
-            info.append("target: ");
-            info.append(target);
-
-            info.append(System.lineSeparator());
-            info.append("baseRequest: ");
-            info.append(baseRequest);
-
-            info.append(System.lineSeparator());
-            info.append("request: ");
-            info.append(request);
-
             var isHandled = false;
             switch (target.toLowerCase())
             {
@@ -94,14 +82,30 @@ class WebHandler
                 baseRequest.setHandled(true);
             }
 
-            info.append(System.lineSeparator());
-            info.append("isHandled: ");
-            info.append(isHandled);
+            final var handled = isHandled;
+            log.trace("request", () -> {
+                var info = new StringBuilder();
+                info.append("target: ");
+                info.append(target);
 
-            info.append(System.lineSeparator());
-            info.append("response: ");
-            info.append(response);
-            log.trace("request", info.toString());
+                info.append(System.lineSeparator());
+                info.append("baseRequest: ");
+                info.append(baseRequest);
+
+                info.append(System.lineSeparator());
+                info.append("request: ");
+                info.append(request);
+
+                info.append(System.lineSeparator());
+                info.append("isHandled: ");
+                info.append(handled);
+
+                info.append(System.lineSeparator());
+                info.append("response: ");
+                info.append(response);
+
+                return info.toString();
+            });
         }
         catch (Exception e)
         {

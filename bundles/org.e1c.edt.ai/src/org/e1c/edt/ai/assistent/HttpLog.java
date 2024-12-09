@@ -31,43 +31,47 @@ public class HttpLog implements IHttpLog
     public HttpRequest request(HttpRequest request, String ref, String body)
     {
         Preconditions.checkNotNull(request);
-        var sb = new StringBuilder();
-        sb.append(request);
-        var headers = request.headers();
-        if (headers != null)
-        {
-            var headersMap = headers.map();
-            if (headersMap.size() != 0)
-            {
-                sb.append(System.lineSeparator());
-                sb.append("headers:"); //$NON-NLS-1$
-                for (var header : headersMap.entrySet())
+
+        log.trace(createHeader("AI request", request.uri(), ref), //$NON-NLS-1$
+            () -> {
+                var sb = new StringBuilder();
+                sb.append(request);
+                var headers = request.headers();
+                if (headers != null)
+                {
+                    var headersMap = headers.map();
+                    if (headersMap.size() != 0)
+                    {
+                        sb.append(System.lineSeparator());
+                        sb.append("headers:"); //$NON-NLS-1$
+                        for (var header : headersMap.entrySet())
+                        {
+                            sb.append(System.lineSeparator());
+                            sb.append('\t');
+                            sb.append(header.getKey());
+                            sb.append('=');
+                            sb.append(String.join(", ", header.getValue()));//$NON-NLS-1$
+                        }
+                    }
+                }
+
+                if (body != null)
                 {
                     sb.append(System.lineSeparator());
-                    sb.append('\t');
-                    sb.append(header.getKey());
-                    sb.append('=');
-                    sb.append(String.join(", ", header.getValue()));//$NON-NLS-1$
+                    sb.append("size: "); //$NON-NLS-1$
+                    sb.append(body.length());
+                    sb.append(System.lineSeparator());
+                    sb.append("body:"); //$NON-NLS-1$
+                    var it = body.lines().iterator();
+                    while (it.hasNext())
+                    {
+                        sb.append(System.lineSeparator());
+                        sb.append(it.next());
+                    }
                 }
-            }
-        }
 
-        if (body != null)
-        {
-            sb.append(System.lineSeparator());
-            sb.append("size: "); //$NON-NLS-1$
-            sb.append(body.length());
-            sb.append(System.lineSeparator());
-            sb.append("body:"); //$NON-NLS-1$
-            var it = body.lines().iterator();
-            while (it.hasNext())
-            {
-                sb.append(System.lineSeparator());
-                sb.append(it.next());
-            }
-        }
-
-        log.trace(createHeader("AI request", request.uri(), ref), sb.toString()); //$NON-NLS-1$
+                return sb.toString();
+            });
         return request;
     }
 
@@ -80,6 +84,23 @@ public class HttpLog implements IHttpLog
         serverAccess.accessChanged(HttpLog.class.getName(),
             statusCode >= 400 ? ServerAccessType.ACCESS_ABSENT : ServerAccessType.ACCESS_PRESENT);
 
+        if (statusCode >= 300)
+        {
+            log.logError(createHeader("AI response", response.uri(), ref) + System.lineSeparator()
+                + createTrace(response, stopwatch, statusCode));
+        }
+        else
+        {
+            log.trace(createHeader("AI response", response.uri(), ref),
+                () -> createTrace(response, stopwatch, statusCode));
+        }
+
+        return response;
+    }
+
+    @SuppressWarnings("nls")
+    private <T> String createTrace(HttpResponse<T> response, Stopwatch stopwatch, int statusCode)
+    {
         var sb = new StringBuilder();
         sb.append("status code: ");
         sb.append(statusCode);
@@ -90,17 +111,7 @@ public class HttpLog implements IHttpLog
         sb.append(response.toString());
         sb.append(System.lineSeparator());
         sb.append(response.body());
-
-        if (statusCode >= 300)
-        {
-            log.logError(createHeader("AI response", response.uri(), ref) + System.lineSeparator() + sb.toString());
-        }
-        else
-        {
-            log.trace(createHeader("AI response", response.uri(), ref), sb.toString());
-        }
-
-        return response;
+        return sb.toString();
     }
 
     @Override
