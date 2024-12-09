@@ -5,11 +5,14 @@ package org.e1c.edt.ai.context;
 
 import java.util.function.Supplier;
 
+import org.eclipse.emf.common.util.URI;
+
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com.google.common.base.Preconditions;
 
 public class ModuleInfo
 {
+    private final static URI BasePath = URI.createURI("platform:/resource/"); //$NON-NLS-1$
     private final Module module;
     private final Supplier<String> contentSupplier;
 
@@ -37,6 +40,7 @@ public class ModuleInfo
 
     public String getFilePath()
     {
-        return module.eResource().getURI().path();
+        var uri = module.eResource().getURI();
+        return uri.deresolve(BasePath).path();
     }
 }
