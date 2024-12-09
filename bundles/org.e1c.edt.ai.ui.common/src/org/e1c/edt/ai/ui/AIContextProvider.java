@@ -48,11 +48,13 @@ class AIContextProvider
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
-        var path = ui.getEditor(sourceViewer)
-            .map(editor -> editor.getEditorInput().getAdapter(IFile.class))
-            .map(file -> file.getProjectRelativePath().toPortableString())
-            .orElse(""); //$NON-NLS-1$
+        var file = ui.getEditor(sourceViewer).map(editor -> editor.getEditorInput().getAdapter(IFile.class));
+        if (file.isEmpty())
+        {
+            return Optional.empty();
+        }
 
+        var path = file.get().getFullPath().makeRelative().toPortableString();
         var content = contentProvider.get(textWidget);
         AIContext aiContext;
         if (target.isPreferSelection() && !content.selectionText.isBlank())

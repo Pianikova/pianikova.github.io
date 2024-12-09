@@ -575,7 +575,7 @@ class CodeCompletionViewModel
         public void assistSessionStarted(ContentAssistEvent event)
         {
             reset();
-            localContext = new LocalContextProvider(Duration.ofMillis(0));
+            localContext = new LocalContextProvider(uiSettings.getMinRequestDelay());
         }
 
         @Override
