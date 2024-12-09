@@ -64,4 +64,10 @@ class UISettings
     {
         return "Default"; //$NON-NLS-1$
     }
+
+    @Override
+    public boolean traceMode()
+    {
+        return true;
+    }
 }

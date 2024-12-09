@@ -24,7 +24,7 @@ public class ThreadManager implements IThreadManager
     @Override
     public void cancel()
     {
-        log.trace(Thread.currentThread().getName(), "was canceled"); //$NON-NLS-1$
+        log.trace(Thread.currentThread().getName(), () -> "was canceled"); //$NON-NLS-1$
         throw new CancellationException();
     }
 }

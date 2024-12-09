@@ -92,4 +92,10 @@ class UISettings
 
         return "Default";
     }
+
+    @Override
+    public boolean traceMode()
+    {
+        return settingsStore.getBoolean(ISettingsStore.TRACE_MODE);
+    }
 }

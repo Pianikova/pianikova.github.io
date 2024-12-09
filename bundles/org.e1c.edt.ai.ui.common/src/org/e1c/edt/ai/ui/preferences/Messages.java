@@ -30,6 +30,7 @@ public class Messages
     public static String ClientAIPreferencePage_CodeCompletionMinRequestDelay;
     public static String ClientAIPreferencePage_SendContext;
     public static String ClientAIPreferencePage_Timeout;
+    public static String ClientAIPreferencePage_TraceMode;
 
     public static String Error_UnableToParse;
     public static String Error_Unknown;

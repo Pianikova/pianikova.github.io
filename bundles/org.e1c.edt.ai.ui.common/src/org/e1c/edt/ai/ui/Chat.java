@@ -171,9 +171,9 @@ public class Chat implements IChat, IChatDialog
             }
             script.append("`)");
             var scriptText = script.toString();
-            log.trace(AI_CHAT, "executing script: " + scriptText);
+            log.trace(AI_CHAT, () -> "executing script: " + scriptText);
             dispatcher.dispatch(() -> webView.getEngine().executeScript(scriptText));
-            log.trace(AI_CHAT, "script executed");
+            log.trace(AI_CHAT, () -> "script executed");
         });
     }
 
@@ -240,7 +240,7 @@ public class Chat implements IChat, IChatDialog
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue)
             {
-                log.trace(AI_CHAT, "is running: " + newValue);
+                log.trace(AI_CHAT, () -> "is running: " + newValue);
             }
         });
     }
@@ -318,9 +318,9 @@ public class Chat implements IChat, IChatDialog
             var winkScript =
                 String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(), settings.getClientUniqueId(),
                     uiSettings.getLanguage(), uiSettings.getTheme());
-            log.trace(AI_CHAT, "wink script: " + winkScript); //$NON-NLS-1$
+            log.trace(AI_CHAT, () -> "wink script: " + winkScript); //$NON-NLS-1$
             webView.getEngine().executeScript(winkScript);
-            log.trace(AI_CHAT, "wink script executed");
+            log.trace(AI_CHAT, () -> "wink script executed");
         }
         catch (Throwable error)
         {
@@ -333,14 +333,14 @@ public class Chat implements IChat, IChatDialog
     {
         var webEngine = webView.getEngine();
         webEngine.setJavaScriptEnabled(true);
-        log.trace(AI_CHAT, "user agent: " + webEngine.getUserAgent());
+        log.trace(AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
         var result = new CompletableFuture<Boolean>();
         var stateListener = new ChangeListener<State>()
         {
             @Override
             public void changed(ObservableValue<? extends State> observable, State oldValue, State newValue)
             {
-                log.trace(AI_CHAT, "new state: " + newValue);
+                log.trace(AI_CHAT, () -> "new state: " + newValue);
                 switch (newValue)
                 {
                 case SUCCEEDED:

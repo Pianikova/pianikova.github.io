@@ -1,5 +1,7 @@
 package org.e1c.edt.semantic;
 
+import java.util.function.Supplier;
+
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.context.ContextModuleFactory;
 import org.eclipse.core.runtime.IStatus;
@@ -68,7 +70,7 @@ public class Activator
     }
 
     @Override
-    public void trace(String topic, String details)
+    public void trace(String topic, Supplier<String> details)
     {
         if (topic == null || topic.isBlank())
         {
@@ -79,7 +81,7 @@ public class Activator
         sb.append("Semantic server "); //$NON-NLS-1$
         sb.append(topic);
         sb.append(System.lineSeparator());
-        sb.append(details);
+        sb.append(details.get());
         log(Status.info(sb.toString()));
     }
 

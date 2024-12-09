@@ -3,7 +3,10 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.util.function.Supplier;
+
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -35,6 +38,7 @@ public abstract class BaseActivator
     private static BaseActivator plugin;
     private BundleContext bundleContext;
     private Injector injector;
+    private IUISettings settings;
 
     /**
      * Получить экземпляр плагина. Через экземпляр плагина можно получать доступ к разнообразным механизмам Eclipse,
@@ -155,12 +159,17 @@ public abstract class BaseActivator
      * @param traceMessage детали
      */
     @Override
-    public void trace(String topic, String details)
+    public void trace(String topic, Supplier<String> details)
     {
+        if (settings == null || !settings.traceMode())
+        {
+            return;
+        }
+
         var sb = new StringBuilder();
         sb.append(topic);
         sb.append(System.lineSeparator());
-        sb.append(details);
+        sb.append(details.get());
         log(Status.info(sb.toString()));
     }
 
@@ -191,9 +200,9 @@ public abstract class BaseActivator
     public void start(BundleContext bundleContext) throws Exception
     {
         super.start(bundleContext);
-
         this.bundleContext = bundleContext;
         plugin = this;
+        settings = getInjector().getInstance(IUISettings.class);
     }
 
     /**

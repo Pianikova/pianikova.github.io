@@ -32,7 +32,7 @@ public class IdeApiHandler
     public void wink(String parameter)
     {
         Preconditions.checkNotNull(parameter);
-        log.trace(AI_CHAT, "winked: " + parameter); //$NON-NLS-1$
+        log.trace(AI_CHAT, () -> "winked: " + parameter); //$NON-NLS-1$
     }
 
     public void paste_code(String code)
@@ -76,6 +76,6 @@ public class IdeApiHandler
     public void trace(String message)
     {
         // Chat tracing
-        log.trace(AI_CHAT, message);
+        log.trace(AI_CHAT, () -> message);
     }
 }

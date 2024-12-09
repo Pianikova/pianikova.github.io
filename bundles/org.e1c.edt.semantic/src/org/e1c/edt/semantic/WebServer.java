@@ -41,7 +41,7 @@ class WebServer
             try
             {
                 server.start();
-                log.trace("start", settings.toString()); //$NON-NLS-1$
+                log.trace("start", () -> settings.toString()); //$NON-NLS-1$
             }
             catch (Exception e)
             {
@@ -57,7 +57,7 @@ class WebServer
         try
         {
             server.stop();
-            log.trace("stop", settings.toString()); //$NON-NLS-1$
+            log.trace("stop", () -> settings.toString()); //$NON-NLS-1$
         }
         catch (Exception e)
         {
