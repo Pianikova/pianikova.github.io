@@ -32,6 +32,4 @@ public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
     void complete();
 
     void reset();
-
-    IHistoricalHint getHistHint();
 }
