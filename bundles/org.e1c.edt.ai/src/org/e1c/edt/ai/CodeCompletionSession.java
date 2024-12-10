@@ -91,12 +91,6 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     }
 
     @Override
-    public synchronized IHistoricalHint getHistHint()
-    {
-        return hint;
-    }
-
-    @Override
     public synchronized boolean isDone()
     {
         return inDone && hint.isEmpty();

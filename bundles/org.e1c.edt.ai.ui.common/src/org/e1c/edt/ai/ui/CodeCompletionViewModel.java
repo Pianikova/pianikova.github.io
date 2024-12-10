@@ -500,7 +500,6 @@ class CodeCompletionViewModel
         case RESET:
             commit(session);
             reset();
-            event.doit = false;
             break;
 
         case HANDLE:
