@@ -3,8 +3,12 @@
  */
 package org.e1c.edt.ai.assistent;
 
+import org.e1c.edt.ai.assistent.model.Parameters;
+import org.e1c.edt.ai.assistent.model.Session;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 
 public class AssistentModule
     extends AbstractModule
@@ -14,6 +18,24 @@ public class AssistentModule
     {
         // @formatter:off
         bind(IEnvironment.class).to(Environment.class).in(Singleton.class);
+        bind(IResponseStreamProcessor.class).to(ResponseStreamProcessor.class).in(Singleton.class);
+        bind(IResponseLineProcessor.class).to(ResponseLineProcessor.class).in(Singleton.class);
+        bind(ICodeAssistant.class).to(CodeAssistant.class).in(Singleton.class);
+        bind(IHttpLog.class).to(HttpLog.class).in(Singleton.class);
+        bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
+        bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
+        bind(IParametersService.class).to(ParametersService.class).in(Singleton.class);
+        bind(ICheckStatusService.class).to(CheckStatusService.class).in(Singleton.class);
+        bind(new TypeLiteral<IResponseCache<Parameters>>() { /**/ }).to(new TypeLiteral<ResponseCache<Parameters>>() { /**/ });
+        bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
+        bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });
+        bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
+        bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
+        bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
+        bind(IServerAccessService.class).to(ServerAccessService.class).in(Singleton.class);
+        bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
+        bind(IGlobalContextService.class).to(GlobalContextService.class).in(Singleton.class);
+        bind(ICompressor.class).to(Compressor.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -9,6 +9,6 @@ import org.e1c.edt.ai.assistent.model.Completion;
 
 public interface ICodeAssistant
 {
-    public IObservable<Completion> createSource(ILocalContextProvider localContextProvider,
+    public IObservable<Completion> createSource(ICompletionRequestProvider completionRequestProvider,
         ICancellationToken cancellationToken);
 }

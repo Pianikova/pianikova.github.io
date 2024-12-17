@@ -16,7 +16,7 @@ import com.google.inject.Inject;
  * @author Bogdan Sushkov
  *
  */
-public class CheckStatusService
+class CheckStatusService
     implements ICheckStatusService
 {
     private final IHttpLog log;

@@ -3,8 +3,6 @@
  */
 package org.e1c.edt.ai.context;
 
-import java.util.function.Supplier;
-
 import org.eclipse.emf.common.util.URI;
 
 import com._1c.g5.v8.dt.bsl.model.Module;
@@ -14,13 +12,13 @@ public class ModuleInfo
 {
     private final static URI BasePath = URI.createURI("platform:/resource/"); //$NON-NLS-1$
     private final Module module;
-    private final Supplier<String> contentSupplier;
+    private final String filePath;
 
-    public ModuleInfo(Module module, Supplier<String> contentSupplier)
+    public ModuleInfo(Module module, String filePath)
     {
         Preconditions.checkNotNull(module);
         this.module = module;
-        this.contentSupplier = contentSupplier;
+        this.filePath = filePath;
     }
 
     public Module getModule()
@@ -28,17 +26,12 @@ public class ModuleInfo
         return module;
     }
 
-    public String readContent()
+    public String getFilePath()
     {
-        if (contentSupplier == null)
-        {
-            return null;
-        }
-
-        return contentSupplier.get();
+        return filePath;
     }
 
-    public String getFilePath()
+    public String getFilePath2()
     {
         var uri = module.eResource().getURI();
         return uri.deresolve(BasePath).path();

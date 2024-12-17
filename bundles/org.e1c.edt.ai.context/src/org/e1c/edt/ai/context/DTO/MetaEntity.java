@@ -3,12 +3,15 @@
  */
 package org.e1c.edt.ai.context.DTO;
 
+import java.security.MessageDigest;
 import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
 public class MetaEntity
 {
+    public transient MessageDigest hash;
+
     public List<AttributeEntity> attributes;
 
     @SerializedName("tabular_sections")

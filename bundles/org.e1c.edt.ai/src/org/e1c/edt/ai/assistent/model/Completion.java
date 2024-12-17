@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.assistent.model;
 
+import java.util.List;
+
 import com.google.gson.annotations.SerializedName;
 
 public class Completion
@@ -15,4 +17,13 @@ public class Completion
 
     @SerializedName("uuid")
     public String uuid;
+
+    @SerializedName("unk_vals")
+    public List<EntityValue> unknownValues;
+
+    @SerializedName("unk_keys")
+    public List<EntityKey> unknownKeys;
+
+    @SerializedName("used_keys")
+    public List<EntityKey> usedKeys;
 }

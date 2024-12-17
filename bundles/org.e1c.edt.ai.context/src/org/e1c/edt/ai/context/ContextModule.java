@@ -3,12 +3,16 @@
  */
 package org.e1c.edt.ai.context;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.ICodeProvider;
 import org.e1c.edt.ai.IContextEntities;
 import org.eclipse.core.runtime.Plugin;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
+import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
@@ -47,6 +51,17 @@ class ContextModule
         bind(IResourceLookup.class).toService();
         bind(IDataSourceInfoAssociationService.class).toService();
         bind(IV8ProjectManager.class).toService();
+        bind(IProjectFileSystemSupportProvider.class).toService();
+        bind(MessageDigest.class).toProvider(() -> {
+            try
+            {
+                return MessageDigest.getInstance("MD5");//$NON-NLS-1$
+            }
+            catch (NoSuchAlgorithmException e)
+            {
+                return null;
+            }
+        });
         // @formatter:on
     }
 }

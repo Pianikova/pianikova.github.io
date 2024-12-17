@@ -15,7 +15,8 @@ import org.e1c.edt.ai.IVersionProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class RequestBuilder implements IRequestBuilder
+class RequestBuilder
+    implements IRequestBuilder
 {
     private final ISettingsProvider settingsProvider;
     private final IVersionProvider versionProvider;

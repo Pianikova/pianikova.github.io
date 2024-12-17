@@ -22,73 +22,75 @@ class EntityVisitor
     implements IEntityVisitor
 {
     @Override
-    public void visitModule(ModuleInfo moduleInfo)
-    {
-        //
-    }
-
-    @Override
-    public void visitNode(EObject eObject, ICompositeNode node)
-    {
-        //
-    }
-
-    @Override
-    public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
-    {
-        //
-    }
-
-    @Override
-    public void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection)
-    {
-        //
-    }
-
-    @Override
-    public void visitOwnerResource(IBmObject owner, RegisterResource resource)
-    {
-        //
-    }
-
-    @Override
-    public void visitOwnerDimension(IBmObject owner, RegisterDimension dimension)
-    {
-        //
-    }
-
-    @Override
-    public void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord)
-    {
-        //
-    }
-
-    @Override
-    public void visitForm(Form form)
-    {
-        //
-    }
-
-    @Override
-    public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
+    public boolean visitModule(ModuleInfo moduleInfo)
     {
         return false;
     }
 
     @Override
-    public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
+    public boolean visitNode(ModuleInfo moduleInfo, EObject eObject, ICompositeNode node)
     {
         return false;
     }
 
     @Override
-    public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
+    public boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute)
     {
         return false;
     }
 
     @Override
-    public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+    public boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner,
+        DbObjectTabularSection tabularSection)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitOwnerResource(ModuleInfo moduleInfo, IBmObject owner, RegisterResource resource)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitOwnerDimension(ModuleInfo moduleInfo, IBmObject owner, RegisterDimension dimension)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitOwnerRegisterRecord(ModuleInfo moduleInfo, IBmObject owner, BasicRegister registerRecord)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitForm(ModuleInfo moduleInfo, Form form)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation, ICompositeNode node)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
+        ICompositeNode node)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
     {
         return false;
     }

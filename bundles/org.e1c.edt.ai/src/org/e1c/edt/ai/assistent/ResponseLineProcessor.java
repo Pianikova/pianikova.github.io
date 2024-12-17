@@ -11,7 +11,8 @@ import org.e1c.edt.ai.assistent.model.CompletionResponse;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ResponseLineProcessor implements IResponseLineProcessor
+public class ResponseLineProcessor
+    implements IResponseLineProcessor
 {
     private final IJson json;
     private final ITextPreprocessor textPreprocessor;

@@ -24,7 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
-public class SessionService implements ISessionService
+class SessionService
+    implements ISessionService
 {
     private final IHttpLog log;
     private final IRequestBuilder requestBuilder;
@@ -119,7 +120,7 @@ public class SessionService implements ISessionService
         environment.getTotalPhysicalMemorySize().ifPresent(val -> systemInfo.totalPhysicalMemorySize = val);
 
         var requestBody = json.serialize(sessionRequest);
-        var reset = settingsTracker.register(SessionService.class.getName(), requestBody);
+        var reset = settingsTracker.register(ISessionService.class.getName(), requestBody);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
         return responseCache.get(() -> getSessionAsync(request, requestBody), reset);
     }

@@ -12,7 +12,7 @@ import org.e1c.edt.ai.ServerAccessType;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ResponseCache<T>
+class ResponseCache<T>
     implements IResponseCache<T>, IServerAccessListener
 {
     private CompletableFuture<Optional<T>> last;

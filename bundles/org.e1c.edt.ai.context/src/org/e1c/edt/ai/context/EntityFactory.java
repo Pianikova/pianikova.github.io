@@ -481,7 +481,8 @@ class EntityFactory
             {
                 var method = (Method)methodAccessFeature;
                 var methodNode = NodeModelUtils.getNode(methodAccessFeature);
-                fillMethod(methodEntity, method, methodNode, node);
+                var code = methodNode.getText();
+                fillMethod(methodEntity, method, code, methodNode, node);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
                 hasData = true;
@@ -557,7 +558,7 @@ class EntityFactory
         signatureStructurized.preprocess = new ArrayList<>();
         signatureStructurized.parameters = new ArrayList<>();
         signatureStructurized.attributes = new ArrayList<>();
-        fillMethod(methodEntity, method, node, node);
+        fillMethod(methodEntity, method, node.getText(), node, node);
         var returnTypes = v8Model.getTypesComputer().compute(method, v8Model.getEnvironments(method));
         signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
         return Optional.of(methodEntity);
@@ -713,12 +714,12 @@ class EntityFactory
         return entity;
     }
 
-    private void fillMethod(MethodEntity methodEntity, Method method, ICompositeNode methodNode, ICompositeNode node)
+    private void fillMethod(MethodEntity methodEntity, Method method, String code, ICompositeNode methodNode,
+        ICompositeNode node)
     {
         methodEntity.name = method.getName();
         methodEntity.start = methodNode.getTotalOffset();
         methodEntity.finish = methodNode.getTotalEndOffset();
-        var code = methodNode.getText();
 
         // IDEAI-137
         var length = code.length();

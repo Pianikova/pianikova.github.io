@@ -8,7 +8,8 @@ import org.e1c.edt.ai.IUISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class TextPreprocessor implements ITextPreprocessor
+public class TextPreprocessor
+    implements ITextPreprocessor
 {
     private final IUISettings uiSettings;
 

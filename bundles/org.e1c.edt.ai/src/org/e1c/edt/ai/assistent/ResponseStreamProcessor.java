@@ -13,7 +13,8 @@ import org.e1c.edt.ai.assistent.model.Completion;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ResponseStreamProcessor implements IResponseStreamProcessor
+public class ResponseStreamProcessor
+    implements IResponseStreamProcessor
 {
     private final IThreadManager threadManager;
     private final IResponseLineProcessor lineProcessor;
