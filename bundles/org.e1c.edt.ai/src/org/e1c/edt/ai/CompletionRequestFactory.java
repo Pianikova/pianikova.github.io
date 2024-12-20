@@ -4,8 +4,10 @@
 package org.e1c.edt.ai;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.e1c.edt.ai.assistent.model.GlobalContext;
@@ -13,6 +15,8 @@ import org.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 class CompletionRequestFactory
@@ -22,6 +26,8 @@ class CompletionRequestFactory
     private final ITextNormilizer textNormilizer;
     private final IContextEntities contextEntities;
     private final IHashTools hashTools;
+    private final Cache<String, GlobalContextUpdate> enitiCache =
+        CacheBuilder.newBuilder().weakKeys().maximumSize(1024).expireAfterWrite(15, TimeUnit.MINUTES).build();
 
     @Inject
     public CompletionRequestFactory(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
@@ -74,14 +80,24 @@ class CompletionRequestFactory
         IStatistics statistics,
         ICancellationToken cancellationToken)
     {
+        var existingUpdates = new HashMap<String, GlobalContextUpdate>();
+        for (var hash : hashes)
+        {
+            var obj = enitiCache.getIfPresent(hash);
+            if (obj != null)
+            {
+                existingUpdates.put(hash, obj);
+            }
+        }
+
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
         try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
         {
             contextEntities.fill(
                 aiContext, localContext, globalContext, action -> {
-                    return action.getDataType() == DataType.HASH || fields.contains(action.getField())
-                        || hashes.contains(action.getHash());
+                    return action.getDataType() == DataType.HASH || (!existingUpdates.containsKey(action.getHash())
+                        && (fields.contains(action.getField()) || hashes.contains(action.getHash())));
                 },
                 statistics, cancellationToken);
         }
@@ -92,6 +108,11 @@ class CompletionRequestFactory
 
         var result = new ArrayList<GlobalContextUpdate>();
         var path = aiContext.getPath();
+        for (var existingUpdate : existingUpdates.values())
+        {
+            result.add(existingUpdate);
+        }
+
         if (globalContext.formEntity != null)
         {
             var request = new GlobalContextUpdate();

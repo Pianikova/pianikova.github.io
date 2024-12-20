@@ -109,7 +109,7 @@ class GlobalContextViewModel implements IGlobalContextViewModel
             globalContextRequestFactory.createGlobalContextUpdates(aiCtx, hashes, fields, statistics,
                 cancellationToken);
 
-        if (cancellationToken.isCanceled())
+        if (cancellationToken.isCanceled() || updates.isEmpty())
         {
             return;
         }
