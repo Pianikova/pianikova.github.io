@@ -26,27 +26,31 @@ class CompletionRequestFactory
     private final ITextNormilizer textNormilizer;
     private final IContextEntities contextEntities;
     private final IHashTools hashTools;
+    private final IUISettings uiSettings;
     private final Cache<String, GlobalContextUpdate> enitiCache =
         CacheBuilder.newBuilder().weakKeys().maximumSize(1024).expireAfterWrite(15, TimeUnit.MINUTES).build();
 
     @Inject
     public CompletionRequestFactory(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
-        IHashTools hashTools)
+        IHashTools hashTools, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(textNormilizer);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(hashTools);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.textNormilizer = textNormilizer;
         this.contextEntities = contextEntities;
         this.hashTools = hashTools;
+        this.uiSettings = uiSettings;
     }
 
     @Override
     public CompletionRequest createCompletion(AIContext aiContext, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
+        var sendExtendedContext = uiSettings.sendContext();
         var localContext = new LocalContext();
         localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
         localContext.suffix = textNormilizer.normalize(aiContext.getSufix());
@@ -57,8 +61,9 @@ class CompletionRequestFactory
         {
             contextEntities.fill(aiContext, localContext, globalContext,
                 action -> {
-                    return action.getDataType() == DataType.HASH || action.getField() == Fields.RELATED_FUNCTIONS
-                        || action.getField() == Fields.RELATED_OBJECTS;
+                    return action.getDataType() == DataType.HASH
+                        || (sendExtendedContext && (action.getField() == Fields.RELATED_FUNCTIONS
+                            || action.getField() == Fields.RELATED_OBJECTS));
                 },
                 statistics, cancellationToken);
         }

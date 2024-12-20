@@ -350,11 +350,6 @@ class EntityInfo
             @Override
             public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
             {
-                if (!uiSettings.sendContext())
-                {
-                    return false;
-                }
-
                 if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_OBJECTS, null)))
                 {
                     return false;
@@ -376,11 +371,6 @@ class EntityInfo
             public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
                 ICompositeNode node)
             {
-                if (!uiSettings.sendContext())
-                {
-                    return false;
-                }
-
                 if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_OBJECTS, null)))
                 {
                     return false;
@@ -397,11 +387,6 @@ class EntityInfo
             public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation,
                 ICompositeNode node)
             {
-                if (!uiSettings.sendContext())
-                {
-                    return false;
-                }
-
                 if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_FUNCTIONS, null)))
                 {
                     return false;

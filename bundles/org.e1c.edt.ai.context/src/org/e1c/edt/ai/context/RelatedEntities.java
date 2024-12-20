@@ -117,12 +117,13 @@ public class RelatedEntities implements IRelatedEntities
                     do
                     {
                         size = reader.read(charBuffer);
-                        if (size < 0)
+                        if (size <= 0)
                         {
                             break;
                         }
 
                         code.append(charBuffer.array(), 0, size);
+                        charBuffer.clear();
                     }
                     while (true);
                     response.code = code.toString();
