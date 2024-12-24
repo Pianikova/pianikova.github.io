@@ -11,4 +11,7 @@ public class GlobalContextUpdateResponse
 {
     @SerializedName("unk_vals")
     public List<EntityValue> unknownValues;
+
+    @SerializedName("unk_keys")
+    public List<EntityKey> unknownKeys;
 }

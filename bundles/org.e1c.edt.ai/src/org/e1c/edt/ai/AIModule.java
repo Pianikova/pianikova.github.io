@@ -42,9 +42,10 @@ public class AIModule
         bind(ICodeCompletionStatistics.class).to(CodeCompletionStatistics.class);
         bind(ITextNormilizer.class).to(TextNormilizer.class).in(Singleton.class);
         bind(IStatistics.class).to(Statistics.class);
-        bind(CompletionRequestFactory.class).in(Singleton.class);
-        bind(ICompletionRequestFactory.class).to(CompletionRequestFactory.class);
-        bind(IGlobalContextRequestFactory.class).to(CompletionRequestFactory.class);
+        bind(CompletionContextFactory.class).in(Singleton.class);
+        bind(ILocalContextFactory.class).to(CompletionContextFactory.class);
+        bind(IGlobalContextFactory.class).to(CompletionContextFactory.class);
+        bind(IGlobalContextRequestFactory.class).to(CompletionContextFactory.class);
         bind(IContextSettings.class).to(ContextSettings.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
         bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);

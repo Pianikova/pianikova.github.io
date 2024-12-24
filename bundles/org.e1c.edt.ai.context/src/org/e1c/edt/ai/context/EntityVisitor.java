@@ -40,6 +40,12 @@ class EntityVisitor
     }
 
     @Override
+    public boolean visitOwner(ModuleInfo moduleInfo, IBmObject owner)
+    {
+        return false;
+    }
+
+    @Override
     public boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner,
         DbObjectTabularSection tabularSection)
     {

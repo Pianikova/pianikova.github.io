@@ -195,6 +195,11 @@ class EntitiesWalker
 
     private boolean visitOwner(ModuleInfo moduleInfo, IEntityVisitor visitor, IBmObject owner)
     {
+        if (visitor.visitOwner(moduleInfo, owner))
+        {
+            return true;
+        }
+
         if (owner instanceof AccountingRegister)
         {
             var element = (AccountingRegister)owner;

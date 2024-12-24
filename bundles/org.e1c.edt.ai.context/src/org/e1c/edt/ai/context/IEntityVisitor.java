@@ -24,6 +24,8 @@ interface IEntityVisitor
 
     boolean visitNode(ModuleInfo moduleInfo, EObject eObject, ICompositeNode node);
 
+    boolean visitOwner(ModuleInfo moduleInfo, IBmObject owner);
+
     boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute);
 
     boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner, DbObjectTabularSection tabularSection);

@@ -206,6 +206,7 @@ class EntityInfo
         var registerRecords = new ArrayList<BasicRegister>();
         var actions = new ArrayList<Action>();
         var cursorObjects = new EObject[1];
+        var owners = new ArrayList<IBmObject>();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
@@ -237,6 +238,13 @@ class EntityInfo
                     cursorObjects[0] = eObject;
                 }
 
+                return false;
+            }
+
+            @Override
+            public boolean visitOwner(ModuleInfo moduleInfo, IBmObject owner)
+            {
+                owners.add(owner);
                 return false;
             }
 
@@ -443,7 +451,7 @@ class EntityInfo
             {
                 if (globalContext.meta == null)
                 {
-                    if (actionFilter.test(new FillAction(DataType.HASH, Fields.META, globalContext.meta)))
+                    if (!actionFilter.test(new FillAction(DataType.HASH, Fields.META, globalContext.meta)))
                     {
                         return true;
                     }
@@ -507,14 +515,14 @@ class EntityInfo
 
         statistics.registerInteger(StatisticsType.UNPROCESSED_ITEMS, unptocessedItems);
 
-        if (!actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
+        if (!owners.isEmpty() && !actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
         {
             try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
             {
                 entityFactory
                     .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions,
                         registerRecords, cancellationToken)
-                    .ifPresent(entity -> globalContext.formEntity = entity);
+                    .ifPresent(entity -> globalContext.metaEntity = entity);
             }
             catch (Exception error)
             {

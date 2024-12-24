@@ -9,7 +9,4 @@ public class CompletionRequest
 {
     @SerializedName("local_context")
     public LocalContext localContext;
-
-    @SerializedName("global_context")
-    public GlobalContext globalContext;
 }
