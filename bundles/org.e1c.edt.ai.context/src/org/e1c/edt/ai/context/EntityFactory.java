@@ -114,6 +114,7 @@ class EntityFactory
     public Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken)
     {
         var formEntity = new FormEntity();
+        var forms = new ArrayList<Form>();
         var groups = new HashMap<EObject, FormGroupEntity>();
         groups.put(form, formEntity);
         formWalker.walk(form, new FormVisitor()
@@ -133,6 +134,7 @@ class EntityFactory
             @Override
             public void visitForm(Optional<EObject> parent, Form form)
             {
+                forms.add(form);
                 formEntity.title = getMap(form.getTitle());
                 var attributes = form.getAttributes();
                 if (attributes != null && !attributes.isEmpty())
@@ -185,6 +187,11 @@ class EntityFactory
                 });
             }
         }, cancellationToken);
+
+        if (forms.isEmpty())
+        {
+            return Optional.empty();
+        }
 
         return Optional.of(formEntity);
     }
@@ -571,6 +578,7 @@ class EntityFactory
         ICancellationToken cancellationToken)
     {
         var meta = new MetaEntity();
+        var hasMeta = false;
         if (!attributes.isEmpty())
         {
             meta.attributes = new ArrayList<>();
@@ -581,6 +589,7 @@ class EntityFactory
                 entity.name = attribute.getName();
                 entity.toolTip = getMap(attribute.getToolTip());
                 entity.types = getTypes(attribute.getTypeDescription());
+                hasMeta = true;
             }
         }
 
@@ -594,6 +603,7 @@ class EntityFactory
                 entity.name = tabularSection.getName();
                 entity.comment = tabularSection.getComment();
                 entity.toolTip = getMap(tabularSection.getToolTip());
+                hasMeta = true;
                 var fields = tabularSection.getFields();
                 if (!fields.isEmpty())
                 {
@@ -623,6 +633,7 @@ class EntityFactory
                 entity.toolTip = getMap(registerResource.getToolTip());
                 entity.synonym = getMap(registerResource.getSynonym());
                 entity.types = getTypes(registerResource.getType());
+                hasMeta = true;
             }
         }
 
@@ -638,6 +649,7 @@ class EntityFactory
                 entity.toolTip = getMap(registerDimension.getToolTip());
                 entity.synonym = getMap(registerDimension.getSynonym());
                 entity.types = getTypes(registerDimension.getType());
+                hasMeta = true;
             }
         }
 
@@ -651,6 +663,7 @@ class EntityFactory
                 entity.name = registerRecord.getName();
                 entity.comment = registerRecord.getComment();
                 entity.synonym = getMap(registerRecord.getSynonym());
+                hasMeta = true;
                 var fields = registerRecord.getFields();
                 if (!fields.isEmpty())
                 {
@@ -661,6 +674,11 @@ class EntityFactory
                     }
                 }
             }
+        }
+
+        if (!hasMeta)
+        {
+            return Optional.empty();
         }
 
         return Optional.of(meta);

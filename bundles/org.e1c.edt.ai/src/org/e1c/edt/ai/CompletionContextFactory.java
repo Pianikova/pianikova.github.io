@@ -124,15 +124,6 @@ class CompletionContextFactory
             result.add(request);
         }
 
-        if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
-        {
-            var request = new GlobalContextUpdate();
-            request.path = path;
-            request.field = Fields.LOCAL_FUNCTIONS;
-            request.value = globalContext.localFunctions;
-            result.add(request);
-        }
-
         if (globalContext.localFunctionsEntities != null && !globalContext.localFunctionsEntities.isEmpty())
         {
             for (var localFunction : globalContext.localFunctionsEntities.values())
@@ -146,6 +137,17 @@ class CompletionContextFactory
                     request.value = localFunction.Value;
                     result.add(request);
                 }
+            }
+        }
+        else
+        {
+            if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
+            {
+                var request = new GlobalContextUpdate();
+                request.path = path;
+                request.field = Fields.LOCAL_FUNCTIONS;
+                request.value = globalContext.localFunctions;
+                result.add(request);
             }
         }
 

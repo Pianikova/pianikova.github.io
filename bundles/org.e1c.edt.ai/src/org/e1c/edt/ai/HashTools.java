@@ -3,7 +3,16 @@
  */
 package org.e1c.edt.ai;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class HashTools
     implements IHashTools
@@ -41,5 +50,46 @@ public class HashTools
         }
 
         return text.toString();
+    }
+
+    @Override
+    public void scanTextStream(CharBuffer buffer, Consumer<byte[]> consumer, InputStream inputStream, Charset charset,
+        Predicate<Character> filter)
+        throws UnsupportedEncodingException, IOException
+    {
+        try (var streamReader = new InputStreamReader(inputStream, charset);
+            var reader = new BufferedReader(streamReader))
+        {
+            buffer.clear();
+            while (true)
+            {
+                var size = reader.read(buffer);
+                if (size == -1)
+                {
+                    break;
+                }
+
+                var pos = 0;
+                for (var i = 0; i < size; i++)
+                {
+                    var ch = buffer.get(i);
+                    if (filter.test(ch))
+                    {
+                        if (i != pos)
+                        {
+                            buffer.put(pos, ch);
+                        }
+
+                        pos++;
+                    }
+                }
+
+                buffer.position(pos);
+                buffer.flip();
+                var bytes = charset.encode(buffer);
+                consumer.accept(bytes.array());
+                buffer.clear();
+            }
+        }
     }
 }

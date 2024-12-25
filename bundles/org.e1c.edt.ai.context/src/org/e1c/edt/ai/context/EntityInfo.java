@@ -3,6 +3,9 @@
  */
 package org.e1c.edt.ai.context;
 
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -18,6 +21,7 @@ import org.e1c.edt.ai.DataType;
 import org.e1c.edt.ai.Fields;
 import org.e1c.edt.ai.FillAction;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.IHashTools;
 import org.e1c.edt.ai.ILog;
@@ -26,12 +30,14 @@ import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.ChatContext;
+import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.assistent.model.GlobalContext;
 import org.e1c.edt.ai.assistent.model.HashedValue;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
@@ -57,6 +63,7 @@ class EntityInfo
     implements IEntityInfo, IContextEntities
 {
     private final static String MethodNamePrefix = "#/_method/"; //$NON-NLS-1$
+    private final static HashSet<CursorLocation> methodHashingParts = new HashSet<>();
     private final ILog log;
     private final IEntitiesWalker entitiesWalker;
     private final IIdFactory idFactory;
@@ -68,12 +75,21 @@ class EntityInfo
     private final Provider<MessageDigest> messageDigestProvider;
     private final IHashTools hashTools;
     private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
+    private final ICodePartsProvider codePartsProvider;
+
+    static
+    {
+        methodHashingParts.add(CursorLocation.Comment);
+        methodHashingParts.add(CursorLocation.FunctionName);
+        methodHashingParts.add(CursorLocation.FunctionArguments);
+    }
 
     @Inject
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
         IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager,
         IProgramingLanguage programingLanguage, Provider<MessageDigest> messageDigestProvider,
-        IHashTools hashTools, IProjectFileSystemSupportProvider projectFileSystemSupportProvider)
+        IHashTools hashTools, IProjectFileSystemSupportProvider projectFileSystemSupportProvider,
+        ICodePartsProvider codePartsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
@@ -86,6 +102,7 @@ class EntityInfo
         Preconditions.checkNotNull(messageDigestProvider);
         Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(projectFileSystemSupportProvider);
+        Preconditions.checkNotNull(codePartsProvider);
         this.log = log;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
@@ -97,6 +114,7 @@ class EntityInfo
         this.messageDigestProvider = messageDigestProvider;
         this.hashTools = hashTools;
         this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
+        this.codePartsProvider = codePartsProvider;
     }
 
     @Override
@@ -189,6 +207,7 @@ class EntityInfo
         Predicate<FillAction> actionFilter,
         ICancellationToken cancellationToken)
     {
+        var buffer = CharBuffer.allocate(1024);
         var stopwatch = Stopwatch.createStarted();
         var filePath = aiContext.getPath();
         var start = aiContext.getStart();
@@ -337,7 +356,7 @@ class EntityInfo
                 {
                     if (actionFilter.test(new FillAction(DataType.HASH, Fields.FORM, null)))
                     {
-                        getFile(moduleInfo, form).flatMap(file -> update(messageDigestProvider.get(), file))
+                        getFile(moduleInfo, form).flatMap(file -> update(buffer, messageDigestProvider.get(), file))
                             .ifPresent(hash -> globalContext.form = hashTools.format(hash));
                     }
 
@@ -410,15 +429,13 @@ class EntityInfo
             @Override
             public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
             {
-                var offset = aiContext.getСaretOffset();
-                if (offset >= node.getTotalOffset() || offset <= node.getTotalEndOffset())
-                {
-                    return false;
-                }
-
                 var hash = messageDigestProvider.get();
-                var code = node.getText();
-                hash.update(code.getBytes());
+                codePartsProvider.getParts(node)
+                    .filter(part -> methodHashingParts.contains(part.getLocation()))
+                    .flatMapToInt(i -> i.getText().codePoints())
+                    .filter(ch -> !Character.isWhitespace(ch))
+                    .forEach(ch -> hash.update((byte)ch));
+
                 var uniqueName = method.getUniqueName();
                 var prefixIndex = uniqueName.indexOf(MethodNamePrefix);
                 if (prefixIndex >= 0)
@@ -457,7 +474,7 @@ class EntityInfo
                     }
 
                     globalContext.meta =
-                        getFile(moduleInfo, metadata).flatMap(file -> update(messageDigestProvider.get(), file))
+                        getFile(moduleInfo, metadata).flatMap(file -> update(buffer, messageDigestProvider.get(), file))
                             .map(hash -> hashTools.format(hash))
                             .orElse(null);
                 }
@@ -551,11 +568,22 @@ class EntityInfo
             projectFileSystemSupportProvider.getProjectFileSystemSupport(project.getDtProject()).getFile(obj));
     }
 
-    private Optional<MessageDigest> update(MessageDigest hash, IFile file)
+    private Optional<MessageDigest> update(CharBuffer charBuffer, MessageDigest hash, IFile file)
     {
-        try (var reader = file.getContents())
+        Charset charset;
+        try
         {
-            hash.update(reader.readAllBytes());
+            charset = Charset.forName(file.getCharset());
+        }
+        catch (CoreException e)
+        {
+            charset = StandardCharsets.UTF_8;
+        }
+
+        try (var inputStream = file.getContents();)
+        {
+            hashTools.scanTextStream(charBuffer, bytes -> hash.update(bytes), inputStream, charset,
+                ch -> !Character.isWhitespace(ch));
             return Optional.of(hash);
         }
         catch (Exception error)
