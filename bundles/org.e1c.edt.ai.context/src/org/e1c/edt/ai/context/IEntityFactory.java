@@ -39,8 +39,7 @@ interface IEntityFactory
     Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node,
         ICancellationToken cancellationToken);
 
-    Optional<MethodEntity> createMethodEntity(Method method,
-        ICompositeNode node,
+    Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken);
 
     Optional<MetaEntity> createMetaEntity(List<BasicFeature> attributes, List<DbObjectTabularSection> tabularSections,

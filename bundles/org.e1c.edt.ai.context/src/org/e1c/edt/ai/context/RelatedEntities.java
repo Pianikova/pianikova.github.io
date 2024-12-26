@@ -254,7 +254,7 @@ public class RelatedEntities implements IRelatedEntities
             @Override
             public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
             {
-                entityFactory.createMethodEntity(method, node, cancellationToken)
+                entityFactory.createMethodEntity(method, node, true, cancellationToken)
                     .ifPresent(i -> response.localFunctions.add(i));
                 return false;
             }

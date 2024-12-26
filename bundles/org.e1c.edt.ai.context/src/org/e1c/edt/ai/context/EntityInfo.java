@@ -454,7 +454,7 @@ class EntityInfo
                     .test(new FillAction(DataType.DATA, Fields.LOCAL_FUNCTIONS, hashStr)))
                 {
                     var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS_DURATUION,
-                        () -> entityFactory.createMethodEntity(method, node, cancellationToken)
+                        () -> entityFactory.createMethodEntity(method, node, false, cancellationToken)
                             .ifPresent(
                                 entity -> globalContext.localFunctionsEntities.put(methodName,
                                     new HashedValue<Object>(entity, hash))));
