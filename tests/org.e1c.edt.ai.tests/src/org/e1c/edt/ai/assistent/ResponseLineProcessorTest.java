@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai;
+package org.e1c.edt.ai.assistent;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -11,8 +11,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
-import org.e1c.edt.ai.assistent.ITextPreprocessor;
-import org.e1c.edt.ai.assistent.ResponseLineProcessor;
+import org.e1c.edt.ai.IJson;
+import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.e1c.edt.ai.assistent.model.CompletionResponse;
 import org.junit.Assert;

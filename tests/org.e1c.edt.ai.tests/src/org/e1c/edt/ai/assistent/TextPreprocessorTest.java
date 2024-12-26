@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai;
+package org.e1c.edt.ai.assistent;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.e1c.edt.ai.assistent.TextPreprocessor;
+import org.e1c.edt.ai.IUISettings;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

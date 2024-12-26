@@ -3,25 +3,41 @@
  */
 package org.e1c.edt.ai.context;
 
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.DataType;
+import org.e1c.edt.ai.Fields;
+import org.e1c.edt.ai.FillAction;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.IContextEntities;
+import org.e1c.edt.ai.IHashTools;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProgramingLanguage;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.ChatContext;
+import org.e1c.edt.ai.assistent.model.CursorLocation;
+import org.e1c.edt.ai.assistent.model.GlobalContext;
+import org.e1c.edt.ai.assistent.model.HashedValue;
 import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
@@ -30,6 +46,7 @@ import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
@@ -40,10 +57,13 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 class EntityInfo
     implements IEntityInfo, IContextEntities
 {
+    private final static String MethodNamePrefix = "#/_method/"; //$NON-NLS-1$
+    private final static HashSet<CursorLocation> methodHashingParts = new HashSet<>();
     private final ILog log;
     private final IEntitiesWalker entitiesWalker;
     private final IIdFactory idFactory;
@@ -52,11 +72,24 @@ class EntityInfo
     private final IDispatcher dispatcher;
     private final IV8ProjectManager v8ProjectManager;
     private final IProgramingLanguage programingLanguage;
+    private final Provider<MessageDigest> messageDigestProvider;
+    private final IHashTools hashTools;
+    private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
+    private final ICodePartsProvider codePartsProvider;
+
+    static
+    {
+        methodHashingParts.add(CursorLocation.Comment);
+        methodHashingParts.add(CursorLocation.FunctionName);
+        methodHashingParts.add(CursorLocation.FunctionArguments);
+    }
 
     @Inject
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
         IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager,
-        IProgramingLanguage programingLanguage)
+        IProgramingLanguage programingLanguage, Provider<MessageDigest> messageDigestProvider,
+        IHashTools hashTools, IProjectFileSystemSupportProvider projectFileSystemSupportProvider,
+        ICodePartsProvider codePartsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
@@ -66,6 +99,10 @@ class EntityInfo
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(v8ProjectManager);
         Preconditions.checkNotNull(programingLanguage);
+        Preconditions.checkNotNull(messageDigestProvider);
+        Preconditions.checkNotNull(hashTools);
+        Preconditions.checkNotNull(projectFileSystemSupportProvider);
+        Preconditions.checkNotNull(codePartsProvider);
         this.log = log;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
@@ -74,6 +111,10 @@ class EntityInfo
         this.dispatcher = dispatcher;
         this.v8ProjectManager = v8ProjectManager;
         this.programingLanguage = programingLanguage;
+        this.messageDigestProvider = messageDigestProvider;
+        this.hashTools = hashTools;
+        this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
+        this.codePartsProvider = codePartsProvider;
     }
 
     @Override
@@ -97,7 +138,7 @@ class EntityInfo
         var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), new EntityVisitor()
         {
             @Override
-            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
+            public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
             {
                 if (request.ref == null || !request.ref.equals(nodeId))
                 {
@@ -110,7 +151,8 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
+            public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
+                ICompositeNode node)
             {
                 if (request.ref == null || !request.ref.equals(nodeId))
                 {
@@ -123,7 +165,8 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
+            public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation,
+                ICompositeNode node)
             {
                 if (request.ref == null || !request.ref.equals(nodeId))
                 {
@@ -146,25 +189,34 @@ class EntityInfo
     }
 
     @Override
-    public Duration fill(AIContext aiContext, LocalContext context, IStatistics statistics,
+    public Duration fill(AIContext aiContext, LocalContext localContext, GlobalContext globalContext,
+        Predicate<FillAction> actionFilter, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
         var timeout = uiSettings.getTimeout();
-        return dispatcher.dispatch(() -> fillInternal(aiContext, context, statistics, cancellationToken), timeout)
+        return dispatcher
+            .dispatch(
+                () -> fillInternal(aiContext, localContext, globalContext, statistics, actionFilter,
+                    cancellationToken),
+                timeout)
             .orElse(timeout);
     }
 
-    private Duration fillInternal(AIContext aiContext, LocalContext context, IStatistics statistics,
+    private Duration fillInternal(AIContext aiContext, LocalContext localContext, GlobalContext globalContext,
+        IStatistics statistics,
+        Predicate<FillAction> actionFilter,
         ICancellationToken cancellationToken)
     {
+        var buffer = CharBuffer.allocate(1024);
         var stopwatch = Stopwatch.createStarted();
         var filePath = aiContext.getPath();
         var start = aiContext.getStart();
         var offset = aiContext.getTextOffset();
         var finish = aiContext.getFinish();
-        context.relatedObjects = new ArrayList<>();
-        context.relatedFunctions = new ArrayList<>();
-        context.localFunctions = new ArrayList<>();
+        localContext.relatedObjects = new ArrayList<>();
+        localContext.relatedFunctions = new ArrayList<>();
+        globalContext.localFunctions = new HashMap<>();
+        globalContext.localFunctionsEntities = new HashMap<>();
         var uuids = new HashSet<String>();
         var attributes = new ArrayList<BasicFeature>();
         var tabularSections = new ArrayList<DbObjectTabularSection>();
@@ -173,22 +225,30 @@ class EntityInfo
         var registerRecords = new ArrayList<BasicRegister>();
         var actions = new ArrayList<Action>();
         var cursorObjects = new EObject[1];
-        programingLanguage.getFromPath(filePath).ifPresent(lang -> context.programingLanguage = lang);
+        var owners = new ArrayList<IBmObject>();
+        programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
             @Override
-            public void visitModule(ModuleInfo moduleInfo)
+            public boolean visitModule(ModuleInfo moduleInfo)
             {
                 var module = moduleInfo.getModule();
+                if (module == null)
+                {
+                    return false;
+                }
+
                 var project = v8ProjectManager.getProject(module);
                 if (project != null)
                 {
-                    context.scriptLanguage = project.getScriptVariant().getName();
+                    localContext.scriptLanguage = project.getScriptVariant().getName();
                 }
+
+                return false;
             }
 
             @Override
-            public void visitNode(EObject eObject, ICompositeNode node)
+            public boolean visitNode(ModuleInfo moduleInfo, EObject eObject, ICompositeNode node)
             {
                 var nodeStart = node.getTotalOffset();
                 var nodeFinish = node.getTotalEndOffset();
@@ -196,55 +256,128 @@ class EntityInfo
                 {
                     cursorObjects[0] = eObject;
                 }
+
+                return false;
             }
 
             @Override
-            public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
+            public boolean visitOwner(ModuleInfo moduleInfo, IBmObject owner)
             {
-                attributes.add(attribute);
+                owners.add(owner);
+                return false;
             }
 
             @Override
-            public void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection)
+            public boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute)
             {
-                tabularSections.add(tabularSection);
+                if (caluclateMetadataHash(moduleInfo, attribute))
+                {
+                    return true;
+                }
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                {
+                    attributes.add(attribute);
+                }
+
+                return false;
             }
 
             @Override
-            public void visitOwnerResource(IBmObject owner, RegisterResource resource)
+            public boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner,
+                DbObjectTabularSection tabularSection)
             {
-                registerResources.add(resource);
+                if (caluclateMetadataHash(moduleInfo, tabularSection))
+                {
+                    return true;
+                }
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                {
+                    tabularSections.add(tabularSection);
+                }
+
+                return false;
             }
 
             @Override
-            public void visitOwnerDimension(IBmObject owner, RegisterDimension dimension)
+            public boolean visitOwnerResource(ModuleInfo moduleInfo, IBmObject owner, RegisterResource resource)
             {
-                registerDimensions.add(dimension);
+                if (caluclateMetadataHash(moduleInfo, resource))
+                {
+                    return true;
+                }
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                {
+                    registerResources.add(resource);
+                }
+
+                return false;
             }
 
             @Override
-            public void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord)
+            public boolean visitOwnerDimension(ModuleInfo moduleInfo, IBmObject owner, RegisterDimension dimension)
             {
-                registerRecords.add(registerRecord);
+                if (caluclateMetadataHash(moduleInfo, dimension))
+                {
+                    return true;
+                }
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                {
+                    registerDimensions.add(dimension);
+                }
+
+                return false;
             }
 
             @Override
-            public void visitForm(Form form)
+            public boolean visitOwnerRegisterRecord(ModuleInfo moduleInfo, IBmObject owner,
+                BasicRegister registerRecord)
+            {
+                if (caluclateMetadataHash(moduleInfo, registerRecord))
+                {
+                    return true;
+                }
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                {
+                    registerRecords.add(registerRecord);
+                }
+
+                return false;
+            }
+
+            @Override
+            public boolean visitForm(ModuleInfo moduleInfo, Form form)
             {
                 try (var measurement = statistics.measureDuration(StatisticsType.FORM_DURATUION))
                 {
-                    context.form = entityFactory.createFormEntity(form, cancellationToken).orElse(null);
+                    if (actionFilter.test(new FillAction(DataType.HASH, Fields.FORM, null)))
+                    {
+                        getFile(moduleInfo, form).flatMap(file -> update(buffer, messageDigestProvider.get(), file))
+                            .ifPresent(hash -> globalContext.form = hashTools.format(hash));
+                    }
+
+                    if (actionFilter.test(new FillAction(DataType.DATA, Fields.FORM, globalContext.form)))
+                    {
+                        entityFactory.createFormEntity(form, cancellationToken)
+                            .ifPresent(enity -> globalContext.formEntity = enity);
+                    }
                 }
                 catch (Exception error)
                 {
                     log.logError(error);
                 }
+
+                return false;
             }
 
             @Override
-            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
+            public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
             {
-                if (!uiSettings.sendContext())
+                if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_OBJECTS, null)))
                 {
                     return false;
                 }
@@ -256,48 +389,96 @@ class EntityInfo
 
                 var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
                     () -> entityFactory.crateObjectEntity(variable, node, cancellationToken)
-                        .ifPresent(object -> context.relatedObjects.add(object)));
+                        .ifPresent(object -> localContext.relatedObjects.add(object)));
                 actions.add(action);
                 return false;
             }
 
             @Override
-            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
+            public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
+                ICompositeNode node)
             {
-                if (!uiSettings.sendContext())
+                if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_OBJECTS, null)))
                 {
                     return false;
                 }
 
                 var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
                     () -> entityFactory.crateObjectEntity(featureAccess, node, cancellationToken)
-                        .ifPresent(object -> context.relatedObjects.add(object)));
+                        .ifPresent(object -> localContext.relatedObjects.add(object)));
                 actions.add(action);
                 return false;
             }
 
             @Override
-            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
+            public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation,
+                ICompositeNode node)
             {
-                if (!uiSettings.sendContext())
+                if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_FUNCTIONS, null)))
                 {
                     return false;
                 }
 
                 var action = new Action(node, offset, statistics, StatisticsType.RELATED_FUNCTIONS_DURATUION,
                     () -> entityFactory.createMethodEntity(invocation, node, cancellationToken)
-                        .ifPresent(method -> context.relatedFunctions.add(method)));
+                        .ifPresent(method -> localContext.relatedFunctions.add(method)));
                 actions.add(action);
                 return false;
             }
 
             @Override
-            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+            public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
             {
-                var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS_DURATUION,
-                    () -> entityFactory.createMethodEntity(method, node, cancellationToken)
-                        .ifPresent(i -> context.localFunctions.add(i)));
-                actions.add(action);
+                var hash = messageDigestProvider.get();
+                codePartsProvider.getParts(node)
+                    .filter(part -> methodHashingParts.contains(part.getLocation()))
+                    .flatMapToInt(i -> i.getText().codePoints())
+                    .filter(ch -> !Character.isWhitespace(ch))
+                    .forEach(ch -> hash.update((byte)ch));
+
+                var uniqueName = method.getUniqueName();
+                var prefixIndex = uniqueName.indexOf(MethodNamePrefix);
+                if (prefixIndex >= 0)
+                {
+                    uniqueName = uniqueName.substring(prefixIndex + MethodNamePrefix.length());
+                }
+
+                var hashStr = hashTools.format(hash);
+                final var methodName = uniqueName;
+                if (actionFilter.test(new FillAction(DataType.HASH, Fields.LOCAL_FUNCTIONS, null)))
+                {
+                    globalContext.localFunctions.put(methodName, hashStr);
+                }
+
+                if (actionFilter
+                    .test(new FillAction(DataType.DATA, Fields.LOCAL_FUNCTIONS, hashStr)))
+                {
+                    var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS_DURATUION,
+                        () -> entityFactory.createMethodEntity(method, node, false, cancellationToken)
+                            .ifPresent(
+                                entity -> globalContext.localFunctionsEntities.put(methodName,
+                                    new HashedValue<Object>(entity, hash))));
+                    actions.add(action);
+                }
+
+                return false;
+            }
+
+            private boolean caluclateMetadataHash(ModuleInfo moduleInfo, EObject metadata)
+            {
+                if (globalContext.meta == null)
+                {
+                    if (!actionFilter.test(new FillAction(DataType.HASH, Fields.META, globalContext.meta)))
+                    {
+                        return true;
+                    }
+
+                    globalContext.meta =
+                        getFile(moduleInfo, metadata).flatMap(file -> update(buffer, messageDigestProvider.get(), file))
+                            .map(hash -> hashTools.format(hash))
+                            .orElse(null);
+                }
+
                 return false;
             }
         }, statistics, cancellationToken);
@@ -310,13 +491,13 @@ class EntityInfo
             {
                 if (modelInterface.getName().startsWith("com._1c.g5.v8.dt.bsl.model.")) //$NON-NLS-1$
                 {
-                    context.cursorObject = modelInterface.getSimpleName();
+                    localContext.cursorObject = modelInterface.getSimpleName();
                     break;
                 }
             }
 
-            entityFactory.getEnvironments(cursorObject).ifPresent(areas -> context.cursorEnvironments = areas);
-            entityFactory.getAreas(cursorObject).ifPresent(areas -> context.cursorAreas = areas);
+            entityFactory.getEnvironments(cursorObject).ifPresent(areas -> localContext.cursorEnvironments = areas);
+            entityFactory.getAreas(cursorObject).ifPresent(areas -> localContext.cursorAreas = areas);
         }
 
         Collections.sort(actions, new Comparator<Action>()
@@ -351,19 +532,65 @@ class EntityInfo
 
         statistics.registerInteger(StatisticsType.UNPROCESSED_ITEMS, unptocessedItems);
 
-        try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
+        if (!owners.isEmpty() && !actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
         {
-            entityFactory
-                .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,
-                    cancellationToken)
-                .ifPresent(meta -> context.meta = meta);
+            try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
+            {
+                entityFactory
+                    .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions,
+                        registerRecords, cancellationToken)
+                    .ifPresent(entity -> globalContext.metaEntity = entity);
+            }
+            catch (Exception error)
+            {
+                log.logError(error);
+            }
+        }
+
+        return stopwatch.elapsed();
+    }
+
+    private Optional<IFile> getFile(ModuleInfo moduleInfo, EObject obj)
+    {
+        var module = moduleInfo.getModule();
+        if (module == null)
+        {
+            return Optional.empty();
+        }
+
+        var project = v8ProjectManager.getProject(module);
+        if (project == null)
+        {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(
+            projectFileSystemSupportProvider.getProjectFileSystemSupport(project.getDtProject()).getFile(obj));
+    }
+
+    private Optional<MessageDigest> update(CharBuffer charBuffer, MessageDigest hash, IFile file)
+    {
+        Charset charset;
+        try
+        {
+            charset = Charset.forName(file.getCharset());
+        }
+        catch (CoreException e)
+        {
+            charset = StandardCharsets.UTF_8;
+        }
+
+        try (var inputStream = file.getContents();)
+        {
+            hashTools.scanTextStream(charBuffer, bytes -> hash.update(bytes), inputStream, charset,
+                ch -> !Character.isWhitespace(ch));
+            return Optional.of(hash);
         }
         catch (Exception error)
         {
             log.logError(error);
+            return Optional.empty();
         }
-
-        return stopwatch.elapsed();
     }
 
     @Override
@@ -384,7 +611,7 @@ class EntityInfo
         entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
         {
             @Override
-            public void visitModule(ModuleInfo moduleInfo)
+            public boolean visitModule(ModuleInfo moduleInfo)
             {
                 var module = moduleInfo.getModule();
                 var project = v8ProjectManager.getProject(module);
@@ -392,6 +619,8 @@ class EntityInfo
                 {
                     context.scriptLanguage = project.getScriptVariant().getName();
                 }
+
+                return false;
             }
         }, statistics, cancellationToken);
         return null;

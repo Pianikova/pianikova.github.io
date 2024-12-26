@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai;
+package org.e1c.edt.ai.assistent;
 
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
@@ -12,9 +12,9 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 
-import org.e1c.edt.ai.assistent.IResponseLineProcessor;
-import org.e1c.edt.ai.assistent.IThreadManager;
-import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
+import org.e1c.edt.ai.CancellationTokenSource;
+import org.e1c.edt.ai.CancellationTokens;
+import org.e1c.edt.ai.IObserver;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.junit.Test;
 import org.mockito.Mockito;

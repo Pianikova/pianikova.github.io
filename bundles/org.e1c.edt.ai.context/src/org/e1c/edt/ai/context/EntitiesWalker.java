@@ -104,12 +104,15 @@ class EntitiesWalker
 
                 if (owner instanceof Form)
                 {
-                    visitor.visitForm((Form)owner);
+                    if (visitor.visitForm(moduleInfo, (Form)owner))
+                    {
+                        return true;
+                    }
                 }
 
                 if (owner instanceof IBmObject)
                 {
-                    visitOwner(visitor, (IBmObject)owner);
+                    visitOwner(moduleInfo, visitor, (IBmObject)owner);
                 }
 
                 var newOwner = owner.eContainer();
@@ -133,7 +136,7 @@ class EntitiesWalker
 
                 var obj = contentsIterator.next();
                 var node = v8Model.getNode(obj);
-                visitor.visitNode(obj, node);
+                visitor.visitNode(moduleInfo, obj, node);
                 if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
                     || obj instanceof Method)
                 {
@@ -152,25 +155,26 @@ class EntitiesWalker
                         continue;
                     }
 
-                    if (obj instanceof Variable && visitor.visitVariable(nodeId, (Variable)obj, node))
+                    if (obj instanceof Variable && visitor.visitVariable(moduleInfo, nodeId, (Variable)obj, node))
                     {
                         traceVisit(obj, true);
                         return true;
                     }
 
-                    if (obj instanceof Invocation && visitor.visitInvocation(nodeId, (Invocation)obj, node))
+                    if (obj instanceof Invocation && visitor.visitInvocation(moduleInfo, nodeId, (Invocation)obj, node))
                     {
                         traceVisit(obj, true);
                         return true;
                     }
 
-                    if (obj instanceof FeatureAccess && visitor.visitFeatureAccess(nodeId, (FeatureAccess)obj, node))
+                    if (obj instanceof FeatureAccess
+                        && visitor.visitFeatureAccess(moduleInfo, nodeId, (FeatureAccess)obj, node))
                     {
                         traceVisit(obj, true);
                         return true;
                     }
 
-                    if (obj instanceof Method && visitor.visitMethod(nodeId, (Method)obj, node))
+                    if (obj instanceof Method && visitor.visitMethod(moduleInfo, nodeId, (Method)obj, node))
                     {
                         traceVisit(obj, true);
                         return true;
@@ -189,24 +193,38 @@ class EntitiesWalker
         return true;
     }
 
-    private void visitOwner(IEntityVisitor visitor, IBmObject owner)
+    private boolean visitOwner(ModuleInfo moduleInfo, IEntityVisitor visitor, IBmObject owner)
     {
+        if (visitor.visitOwner(moduleInfo, owner))
+        {
+            return true;
+        }
+
         if (owner instanceof AccountingRegister)
         {
             var element = (AccountingRegister)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var resource : element.getResources())
             {
-                visitor.visitOwnerResource(owner, resource);
+                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
+                {
+                    return true;
+                }
             }
 
             for (var dimension : element.getDimensions())
             {
-                visitor.visitOwnerDimension(owner, dimension);
+                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
+                {
+                    return true;
+                }
             }
         }
 
@@ -215,17 +233,26 @@ class EntitiesWalker
             var element = (AccumulationRegister)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var resource : element.getResources())
             {
-                visitor.visitOwnerResource(owner, resource);
+                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
+                {
+                    return true;
+                }
             }
 
             for (var dimension : element.getDimensions())
             {
-                visitor.visitOwnerDimension(owner, dimension);
+                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
+                {
+                    return true;
+                }
             }
         }
 
@@ -234,12 +261,18 @@ class EntitiesWalker
             var element = (BusinessProcess)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
+                {
+                    return true;
+                }
             }
         }
 
@@ -248,17 +281,26 @@ class EntitiesWalker
             var element = (CalculationRegister)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var resource : element.getResources())
             {
-                visitor.visitOwnerResource(owner, resource);
+                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
+                {
+                    return true;
+                }
             }
 
             for (var dimension : element.getDimensions())
             {
-                visitor.visitOwnerDimension(owner, dimension);
+                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
+                {
+                    return true;
+                }
             }
         }
 
@@ -267,12 +309,18 @@ class EntitiesWalker
             var element = (Catalog)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
+                {
+                    return true;
+                }
             }
         }
 
@@ -281,12 +329,18 @@ class EntitiesWalker
             var element = (ChartOfAccounts)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
+                {
+                    return true;
+                }
             }
         }
 
@@ -295,12 +349,18 @@ class EntitiesWalker
             var element = (ChartOfCalculationTypes)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
+                {
+                    return true;
+                }
             }
         }
 
@@ -309,12 +369,18 @@ class EntitiesWalker
             var element = (ChartOfCharacteristicTypes)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
+                {
+                    return true;
+                }
             }
         }
 
@@ -323,7 +389,10 @@ class EntitiesWalker
             var element = (DataProcessor)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
         }
 
@@ -332,7 +401,10 @@ class EntitiesWalker
             var element = (DataProcessorTabularSection)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
         }
 
@@ -341,7 +413,10 @@ class EntitiesWalker
             var element = (DbObjectTabularSection)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
         }
 
@@ -350,18 +425,24 @@ class EntitiesWalker
             var element = (Document)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection);
             }
 
             // There's a lot of data here (IDEAI-134):
             /*for (var registerRecord : element.getRegisterRecords())
             {
-                visitor.visitOwnerRegisterRecord(owner, registerRecord);
+                if (visitor.visitOwnerRegisterRecord(moduleInfo, owner, registerRecord))
+                {
+                    return true;
+                }
             }*/
         }
 
@@ -370,12 +451,18 @@ class EntitiesWalker
             var element = (ExchangePlan)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
+                {
+                    return true;
+                }
             }
         }
 
@@ -384,7 +471,10 @@ class EntitiesWalker
             var element = (ExternalDataProcessor)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
         }
 
@@ -393,7 +483,10 @@ class EntitiesWalker
             var element = (ExternalReport)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
         }
 
@@ -402,17 +495,26 @@ class EntitiesWalker
             var element = (InformationRegister)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var resource : element.getResources())
             {
-                visitor.visitOwnerResource(owner, resource);
+                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
+                {
+                    return true;
+                }
             }
 
             for (var dimension : element.getDimensions())
             {
-                visitor.visitOwnerDimension(owner, dimension);
+                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
+                {
+                    return true;
+                }
             }
         }
 
@@ -421,7 +523,10 @@ class EntitiesWalker
             var element = (Report)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
         }
 
@@ -430,7 +535,10 @@ class EntitiesWalker
             var element = (ReportTabularSection)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
         }
 
@@ -439,14 +547,22 @@ class EntitiesWalker
             var element = (Task)owner;
             for (var attr : element.getAttributes())
             {
-                visitor.visitOwnerAttribute(owner, attr);
+                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
+                {
+                    return true;
+                }
             }
 
             for (var tabularSection : element.getTabularSections())
             {
-                visitor.visitOwnerTabularSection(owner, tabularSection);
+                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
+                {
+                    return true;
+                }
             }
         }
+
+        return false;
     }
 
     private void traceVisit(EObject eObject, boolean visited)

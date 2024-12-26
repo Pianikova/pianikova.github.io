@@ -7,5 +7,5 @@ import org.e1c.edt.ai.assistent.model.LocalContext;
 
 public interface ILocalContextFactory
 {
-    LocalContext create(AIContext aiContext, IStatistics statistics, ICancellationToken cancellationToken);
+    LocalContext createLocalContext(AIContext aiContext, IStatistics statistics, ICancellationToken cancellationToken);
 }

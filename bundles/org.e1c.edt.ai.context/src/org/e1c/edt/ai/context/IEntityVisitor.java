@@ -20,27 +20,29 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
 interface IEntityVisitor
 {
-    void visitModule(ModuleInfo moduleInfo);
+    boolean visitModule(ModuleInfo moduleInfo);
 
-    void visitNode(EObject eObject, ICompositeNode node);
+    boolean visitNode(ModuleInfo moduleInfo, EObject eObject, ICompositeNode node);
 
-    void visitOwnerAttribute(IBmObject owner, BasicFeature attribute);
+    boolean visitOwner(ModuleInfo moduleInfo, IBmObject owner);
 
-    void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection);
+    boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute);
 
-    void visitOwnerResource(IBmObject owner, RegisterResource resource);
+    boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner, DbObjectTabularSection tabularSection);
 
-    void visitOwnerDimension(IBmObject owner, RegisterDimension dimension);
+    boolean visitOwnerResource(ModuleInfo moduleInfo, IBmObject owner, RegisterResource resource);
 
-    void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord);
+    boolean visitOwnerDimension(ModuleInfo moduleInfo, IBmObject owner, RegisterDimension dimension);
 
-    void visitForm(Form form);
+    boolean visitOwnerRegisterRecord(ModuleInfo moduleInfo, IBmObject owner, BasicRegister registerRecord);
 
-    boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node);
+    boolean visitForm(ModuleInfo moduleInfo, Form form);
 
-    boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node);
+    boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation, ICompositeNode node);
 
-    boolean visitVariable(String nodeId, Variable variable, ICompositeNode node);
+    boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess, ICompositeNode node);
 
-    boolean visitMethod(String nodeId, Method method, ICompositeNode node);
+    boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node);
+
+    boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node);
 }

@@ -22,7 +22,7 @@ import com.google.inject.Inject;
  * @author Bogdan Sushkov
  *
  */
-public class ServerAccessService
+class ServerAccessService
     implements IServerAccessService
 {
     private ServerAccessType access;

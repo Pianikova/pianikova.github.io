@@ -27,7 +27,8 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
 interface IEntityFactory
 {
-    Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken);
+    Optional<FormEntity> createFormEntity(Form form,
+        ICancellationToken cancellationToken);
 
     Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node,
         ICancellationToken cancellationToken);
@@ -38,12 +39,12 @@ interface IEntityFactory
     Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node,
         ICancellationToken cancellationToken);
 
-    Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node, ICancellationToken cancellationToken);
-
-    Optional<MetaEntity> createMetaEntity(List<BasicFeature> attributes,
-        List<DbObjectTabularSection> tabularSections, List<RegisterResource> registerResources,
-        List<RegisterDimension> registerDimensions, List<BasicRegister> registerRecords,
+    Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken);
+
+    Optional<MetaEntity> createMetaEntity(List<BasicFeature> attributes, List<DbObjectTabularSection> tabularSections,
+        List<RegisterResource> registerResources, List<RegisterDimension> registerDimensions,
+        List<BasicRegister> registerRecords, ICancellationToken cancellationToken);
 
     Optional<List<String>> getEnvironments(EObject obj);
 

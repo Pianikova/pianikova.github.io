@@ -51,7 +51,7 @@ public class CancellationTokenSource
         Preconditions.checkNotNull(runnable);
         if (!(cancellationToken instanceof CancellationTokenSource))
         {
-            throw new UnsupportedOperationException();
+            return Closeables.Empty;
         }
 
         var cancellationTokenSource = (CancellationTokenSource)cancellationToken;

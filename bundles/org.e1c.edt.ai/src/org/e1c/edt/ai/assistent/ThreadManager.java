@@ -10,7 +10,8 @@ import org.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ThreadManager implements IThreadManager
+class ThreadManager
+    implements IThreadManager
 {
     private final ILog log;
 

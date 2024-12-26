@@ -19,7 +19,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
-public class ParametersService
+class ParametersService
     implements IParametersService
 {
     private final IHttpLog log;
@@ -63,7 +63,7 @@ public class ParametersService
 
         var request = builder.get().GET().build();
         var settings = settingsProvider.getSettings().map(i -> json.serialize(i)).orElse(null);
-        var reset = settingsTracker.register(ParametersService.class.getName(), settings);
+        var reset = settingsTracker.register(IParametersService.class.getName(), settings);
         var params = settingsProvider.getSettings().map(i -> i.getLlmParameters()).orElse(new Parameters());
         return responseCache.get(() -> getParametersAsync(request, params), reset);
     }

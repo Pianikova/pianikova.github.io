@@ -14,7 +14,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
-public class HttpLog implements IHttpLog
+class HttpLog
+    implements IHttpLog
 {
     private final ILog log;
     private final IServerAccessService serverAccess;

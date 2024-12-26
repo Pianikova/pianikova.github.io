@@ -21,7 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
-public class FeedbackService
+class FeedbackService
     implements IFeedbackService
 {
     private final IHttpLog log;

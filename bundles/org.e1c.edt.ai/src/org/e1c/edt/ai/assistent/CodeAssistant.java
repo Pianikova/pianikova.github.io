@@ -3,7 +3,7 @@
  */
 package org.e1c.edt.ai.assistent;
 
-import java.io.ByteArrayOutputStream;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
@@ -12,7 +12,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
-import java.util.zip.GZIPOutputStream;
 
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
@@ -25,7 +24,6 @@ import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.Completion;
-import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.client.AIClientException;
 
@@ -34,7 +32,7 @@ import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-public class CodeAssistant
+class CodeAssistant
     implements ICodeAssistant
 {
     private final IHttpLog log;
@@ -46,6 +44,7 @@ public class CodeAssistant
     private final Provider<IStatistics> statisticsProvider;
     private final IUISettings uiSettings;
     private final IEnvironment environment;
+    private final ICompressor compressor;
 
     @Inject
     public CodeAssistant(IHttpLog log,
@@ -54,7 +53,7 @@ public class CodeAssistant
         ISessionService sessionService,
         IResponseStreamProcessor responseStreamProcessor, Provider<IStatistics> statisticsProvider,
         IUISettings uiSettings,
-        IEnvironment environment)
+        IEnvironment environment, ICompressor compressor)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -65,6 +64,7 @@ public class CodeAssistant
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(environment);
+        Preconditions.checkNotNull(compressor);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -74,13 +74,14 @@ public class CodeAssistant
         this.statisticsProvider = statisticsProvider;
         this.uiSettings = uiSettings;
         this.environment = environment;
+        this.compressor = compressor;
     }
 
     @Override
-    public IObservable<Completion> createSource(ILocalContextProvider localContextProvider,
+    public IObservable<Completion> createSource(ICompletionRequestProvider completionRequestProvider,
         ICancellationToken cancellationToken)
     {
-        Preconditions.checkNotNull(localContextProvider);
+        Preconditions.checkNotNull(completionRequestProvider);
         Preconditions.checkNotNull(cancellationToken);
         return Observables.create(observer -> {
             sessionService.getSessionAsync().whenComplete((session, error) -> {
@@ -88,7 +89,7 @@ public class CodeAssistant
                 {
                     if (session != null && session.isPresent())
                     {
-                        generateText(session.get(), localContextProvider, observer, cancellationToken);
+                        generateText(session.get(), completionRequestProvider, observer, cancellationToken);
                     }
                     else
                     {
@@ -105,32 +106,50 @@ public class CodeAssistant
         });
     }
 
-    private void generateText(Session session, ILocalContextProvider localContextProvider,
+    private void generateText(Session session, ICompletionRequestProvider сompletionRequestProvider,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
+        var optionalRequest = requestBuilder.create("./complete"); //$NON-NLS-1$
+        if (optionalRequest.isEmpty())
+        {
+            observer.onCompleted();
+            return;
+        }
+
+        var requestBuilder = optionalRequest.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
         var statistics = statisticsProvider.get();
         String requestBody;
-        byte[] compressedBody = null;
+        BodyPublisher bodyPublisher;
         try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL_DURATUION))
         {
-            var localContext = localContextProvider.get(statistics, cancellationToken);
-            if (localContext.isEmpty())
+            var requet = сompletionRequestProvider.get(statistics, cancellationToken);
+            if (requet.isEmpty())
             {
                 observer.onCompleted();
                 return;
             }
 
-            var aiRequest = new CompletionRequest();
-            aiRequest.localContext = localContext.get();
             try (var measurement = statistics.measureDuration(StatisticsType.SERIALIZATION_DURATUION))
             {
-                requestBody = json.serialize(aiRequest);
+                requestBody = json.serialize(requet.get());
             }
 
             try (var measurement = statistics.measureDuration(StatisticsType.COMPRESSION_DURATUION))
             {
-                compressedBody = compress(requestBody).toByteArray();
+                var optionalData = compressor.compress(requestBody);
+                if (optionalData.isPresent())
+                {
+                    try (var data = optionalData.get())
+                    {
+                        bodyPublisher = BodyPublishers.ofByteArray(data.toByteArray());
+                        requestBuilder = requestBuilder.header("Content-Encoding", "gzip"); //$NON-NLS-1$ //$NON-NLS-2$
+                    }
+                }
+                else
+                {
+                    bodyPublisher = BodyPublishers.ofString(requestBody);
+                }
             }
         }
         catch (Exception error)
@@ -139,17 +158,6 @@ public class CodeAssistant
             observer.onCompleted();
             return;
         }
-
-        var optionalReauest = requestBuilder.create("./complete"); //$NON-NLS-1$
-        if (optionalReauest.isEmpty())
-        {
-            observer.onCompleted();
-            return;
-        }
-
-        var requestBuilder = optionalReauest.get()
-            .header("Session-Id", session.sessionId) //$NON-NLS-1$
-            .header("Content-Encoding", "gzip"); //$NON-NLS-1$ //$NON-NLS-2$
 
         var freePhysicalMemorySize = environment.getFreePhysicalMemorySize();
         if (freePhysicalMemorySize.isPresent())
@@ -164,7 +172,7 @@ public class CodeAssistant
                 requestBuilder.header(statValue.getStatisticsType().getHeader(), statValue.getValue());
         }
 
-        var request = requestBuilder.POST(BodyPublishers.ofByteArray(compressedBody)).build();
+        var request = requestBuilder.POST(bodyPublisher).build();
         log.request(request, cancellationToken.toString(), requestBody);
 
         var clien = clientBuilder.create().build();
@@ -193,18 +201,6 @@ public class CodeAssistant
                     //
                 }
             });
-    }
-
-    public static ByteArrayOutputStream compress(String str) throws Exception
-    {
-        ByteArrayOutputStream obj = new ByteArrayOutputStream();
-        try (GZIPOutputStream gzip = new GZIPOutputStream(obj))
-        {
-            gzip.write(str.getBytes("UTF-8")); //$NON-NLS-1$
-            gzip.close();
-        }
-
-        return obj;
     }
 
     private boolean isCancellationException(Throwable error)

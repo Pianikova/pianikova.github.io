@@ -21,7 +21,6 @@ import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.IParametersService;
 import org.e1c.edt.ai.assistent.ISettingsTracker;
-import org.e1c.edt.ai.assistent.ParametersService;
 import org.e1c.edt.ai.assistent.model.ChatContext;
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.client.AISettings;
@@ -281,7 +280,7 @@ public class Chat implements IChat, IChatDialog
 
                 var settings = optionalSettings.get();
                 var chatUrl = parameters.get().chatUrl;
-                var reset = settingsTracker.register(ParametersService.class.getName(), json.serialize(settings));
+                var reset = settingsTracker.register(IParametersService.class.getName(), json.serialize(settings));
                 dispatcher.dispatch(() -> {
                     if (lastChatUrl != chatUrl || reset)
                     {

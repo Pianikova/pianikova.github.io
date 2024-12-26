@@ -1,9 +1,8 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai;
+package org.e1c.edt.ai.assistent;
 
-import org.e1c.edt.ai.assistent.SettingsTracker;
 import org.junit.Assert;
 import org.junit.Test;
 

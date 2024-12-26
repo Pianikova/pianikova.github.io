@@ -3,6 +3,9 @@
  */
 package org.e1c.edt.ai.context;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.CharBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
@@ -21,6 +24,8 @@ import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
+import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.mcore.AbstractMethod;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
@@ -38,21 +43,28 @@ public class RelatedEntities implements IRelatedEntities
     private final IEntitiesWalker entitiesWalker;
     private final IIdFactory idFactory;
     private final IEntityFactory entityFactory;
+    private final IV8ProjectManager v8ProjectManager;
+    private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
 
     @Inject
     public RelatedEntities(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker, IIdFactory idFactory,
-        IEntityFactory entityFactory)
+        IEntityFactory entityFactory, IV8ProjectManager v8ProjectManager,
+        IProjectFileSystemSupportProvider projectFileSystemSupportProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(entitiesWalker);
         Preconditions.checkNotNull(idFactory);
         Preconditions.checkNotNull(entityFactory);
+        Preconditions.checkNotNull(v8ProjectManager);
+        Preconditions.checkNotNull(projectFileSystemSupportProvider);
         this.log = log;
         this.v8Model = v8Model;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
         this.entityFactory = entityFactory;
+        this.v8ProjectManager = v8ProjectManager;
+        this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
     }
 
     @SuppressWarnings("nls")
@@ -79,49 +91,97 @@ public class RelatedEntities implements IRelatedEntities
         var result = entitiesWalker.walk(request.path, request.start, request.finish, new EntityVisitor()
         {
             @Override
-            public void visitModule(ModuleInfo moduleInfo)
+            public boolean visitModule(ModuleInfo moduleInfo)
             {
-                response.code = moduleInfo.readContent();
+                var module = moduleInfo.getModule();
+                if (module == null)
+                {
+                    return false;
+                }
+
+                var project = v8ProjectManager.getProject(module);
+                if (project == null)
+                {
+                    return false;
+                }
+
+                var fileSystemSupport =
+                    projectFileSystemSupportProvider.getProjectFileSystemSupport(project.getDtProject());
+                var moduleFile = fileSystemSupport.getFile(module);
+                try (var reader =
+                    new BufferedReader(new InputStreamReader(moduleFile.getContents(), moduleFile.getCharset())))
+                {
+                    var code = new StringBuilder();
+                    var charBuffer = CharBuffer.allocate(1024);
+                    int size;
+                    do
+                    {
+                        size = reader.read(charBuffer);
+                        if (size <= 0)
+                        {
+                            break;
+                        }
+
+                        code.append(charBuffer.array(), 0, size);
+                        charBuffer.clear();
+                    }
+                    while (true);
+                    response.code = code.toString();
+                }
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
+
+                return false;
             }
 
             @Override
-            public void visitOwnerAttribute(IBmObject owner, BasicFeature attribute)
+            public boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute)
             {
                 attributes.add(attribute);
+                return false;
             }
 
             @Override
-            public void visitOwnerTabularSection(IBmObject owner, DbObjectTabularSection tabularSection)
+            public boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner,
+                DbObjectTabularSection tabularSection)
             {
                 tabularSections.add(tabularSection);
+                return false;
             }
 
             @Override
-            public void visitOwnerResource(IBmObject owner, RegisterResource resource)
+            public boolean visitOwnerResource(ModuleInfo moduleInfo, IBmObject owner, RegisterResource resource)
             {
                 registerResources.add(resource);
+                return false;
             }
 
             @Override
-            public void visitOwnerDimension(IBmObject owner, RegisterDimension dimension)
+            public boolean visitOwnerDimension(ModuleInfo moduleInfo, IBmObject owner, RegisterDimension dimension)
             {
                 registerDimensions.add(dimension);
+                return false;
             }
 
             @Override
-            public void visitOwnerRegisterRecord(IBmObject owner, BasicRegister registerRecord)
+            public boolean visitOwnerRegisterRecord(ModuleInfo moduleInfo, IBmObject owner,
+                BasicRegister registerRecord)
             {
                 registerRecords.add(registerRecord);
+                return false;
             }
 
             @Override
-            public void visitForm(Form form)
+            public boolean visitForm(ModuleInfo moduleInfo, Form form)
             {
                 entityFactory.createFormEntity(form, cancellationToken).ifPresent(i -> response.form = i);
+                return false;
             }
 
             @Override
-            public boolean visitVariable(String nodeId, Variable variable, ICompositeNode node)
+            public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
             {
                 var entity = createEntity(request.path, nodeId, variable, node, cancellationToken);
                 if (!entities.add(entity))
@@ -135,7 +195,8 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-            public boolean visitFeatureAccess(String nodeId, FeatureAccess featureAccess, ICompositeNode node)
+            public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
+                ICompositeNode node)
             {
                 var entity = createEntity(request.path, nodeId, featureAccess, node, cancellationToken);
                 if (!entities.add(entity))
@@ -168,7 +229,8 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-            public boolean visitInvocation(String nodeId, Invocation invocation, ICompositeNode node)
+            public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation,
+                ICompositeNode node)
             {
                 var entity = createEntity(request.path, nodeId, invocation, node, cancellationToken);
                 if (!entities.add(entity))
@@ -190,9 +252,9 @@ public class RelatedEntities implements IRelatedEntities
         entitiesWalker.walk(request.path, 0, Integer.MAX_VALUE, new EntityVisitor()
         {
             @Override
-            public boolean visitMethod(String nodeId, Method method, ICompositeNode node)
+            public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
             {
-                entityFactory.createMethodEntity(method, node, cancellationToken)
+                entityFactory.createMethodEntity(method, node, true, cancellationToken)
                     .ifPresent(i -> response.localFunctions.add(i));
                 return false;
             }

@@ -114,6 +114,7 @@ class EntityFactory
     public Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken)
     {
         var formEntity = new FormEntity();
+        var forms = new ArrayList<Form>();
         var groups = new HashMap<EObject, FormGroupEntity>();
         groups.put(form, formEntity);
         formWalker.walk(form, new FormVisitor()
@@ -133,6 +134,7 @@ class EntityFactory
             @Override
             public void visitForm(Optional<EObject> parent, Form form)
             {
+                forms.add(form);
                 formEntity.title = getMap(form.getTitle());
                 var attributes = form.getAttributes();
                 if (attributes != null && !attributes.isEmpty())
@@ -185,6 +187,11 @@ class EntityFactory
                 });
             }
         }, cancellationToken);
+
+        if (forms.isEmpty())
+        {
+            return Optional.empty();
+        }
 
         return Optional.of(formEntity);
     }
@@ -481,7 +488,7 @@ class EntityFactory
             {
                 var method = (Method)methodAccessFeature;
                 var methodNode = NodeModelUtils.getNode(methodAccessFeature);
-                fillMethod(methodEntity, method, methodNode, node);
+                fillMethod(methodEntity, method, true, methodNode, node);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
                 hasData = true;
@@ -548,7 +555,7 @@ class EntityFactory
     }
 
     @Override
-    public Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node,
+    public Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken)
     {
         var methodEntity = new MethodEntity();
@@ -557,7 +564,7 @@ class EntityFactory
         signatureStructurized.preprocess = new ArrayList<>();
         signatureStructurized.parameters = new ArrayList<>();
         signatureStructurized.attributes = new ArrayList<>();
-        fillMethod(methodEntity, method, node, node);
+        fillMethod(methodEntity, method, detailed, node, node);
         var returnTypes = v8Model.getTypesComputer().compute(method, v8Model.getEnvironments(method));
         signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
         return Optional.of(methodEntity);
@@ -570,6 +577,7 @@ class EntityFactory
         ICancellationToken cancellationToken)
     {
         var meta = new MetaEntity();
+        var hasMeta = false;
         if (!attributes.isEmpty())
         {
             meta.attributes = new ArrayList<>();
@@ -580,6 +588,7 @@ class EntityFactory
                 entity.name = attribute.getName();
                 entity.toolTip = getMap(attribute.getToolTip());
                 entity.types = getTypes(attribute.getTypeDescription());
+                hasMeta = true;
             }
         }
 
@@ -593,6 +602,7 @@ class EntityFactory
                 entity.name = tabularSection.getName();
                 entity.comment = tabularSection.getComment();
                 entity.toolTip = getMap(tabularSection.getToolTip());
+                hasMeta = true;
                 var fields = tabularSection.getFields();
                 if (!fields.isEmpty())
                 {
@@ -622,6 +632,7 @@ class EntityFactory
                 entity.toolTip = getMap(registerResource.getToolTip());
                 entity.synonym = getMap(registerResource.getSynonym());
                 entity.types = getTypes(registerResource.getType());
+                hasMeta = true;
             }
         }
 
@@ -637,6 +648,7 @@ class EntityFactory
                 entity.toolTip = getMap(registerDimension.getToolTip());
                 entity.synonym = getMap(registerDimension.getSynonym());
                 entity.types = getTypes(registerDimension.getType());
+                hasMeta = true;
             }
         }
 
@@ -650,6 +662,7 @@ class EntityFactory
                 entity.name = registerRecord.getName();
                 entity.comment = registerRecord.getComment();
                 entity.synonym = getMap(registerRecord.getSynonym());
+                hasMeta = true;
                 var fields = registerRecord.getFields();
                 if (!fields.isEmpty())
                 {
@@ -660,6 +673,11 @@ class EntityFactory
                     }
                 }
             }
+        }
+
+        if (!hasMeta)
+        {
+            return Optional.empty();
         }
 
         return Optional.of(meta);
@@ -713,21 +731,25 @@ class EntityFactory
         return entity;
     }
 
-    private void fillMethod(MethodEntity methodEntity, Method method, ICompositeNode methodNode, ICompositeNode node)
+    private void fillMethod(MethodEntity methodEntity, Method method, boolean detailed, ICompositeNode methodNode,
+        ICompositeNode node)
     {
         methodEntity.name = method.getName();
-        methodEntity.start = methodNode.getTotalOffset();
-        methodEntity.finish = methodNode.getTotalEndOffset();
-        var code = methodNode.getText();
+        if (detailed)
+        {
+            methodEntity.start = methodNode.getTotalOffset();
+            methodEntity.finish = methodNode.getTotalEndOffset();
 
-        // IDEAI-137
-        var length = code.length();
-        code = code.stripLeading();
-        methodEntity.start += (length - code.length());
-        code = code.stripTrailing();
-        methodEntity.finish -= (length - code.length());
+            // IDEAI-137
+            var code = methodNode.getText();
+            var length = code.length();
+            code = code.stripLeading();
+            methodEntity.start += (length - code.length());
+            code = code.stripTrailing();
+            methodEntity.finish -= (length - code.length());
+            methodEntity.code = code;
+        }
 
-        methodEntity.code = code;
         if (method instanceof Function)
         {
             methodEntity.kind = BslUtil.isRussian(method, v8ProjectManager) ? "Функция" : "Function"; //$NON-NLS-1$ //$NON-NLS-2$

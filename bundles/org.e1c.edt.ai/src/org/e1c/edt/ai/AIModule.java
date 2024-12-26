@@ -4,38 +4,7 @@
 package org.e1c.edt.ai;
 
 import org.e1c.edt.ai.assistent.AssistentModule;
-import org.e1c.edt.ai.assistent.CheckStatusService;
-import org.e1c.edt.ai.assistent.CodeAssistant;
-import org.e1c.edt.ai.assistent.FeedbackService;
-import org.e1c.edt.ai.assistent.HttpClientBuilder;
-import org.e1c.edt.ai.assistent.HttpLog;
-import org.e1c.edt.ai.assistent.ICheckStatusService;
-import org.e1c.edt.ai.assistent.ICodeAssistant;
-import org.e1c.edt.ai.assistent.IFeedbackService;
-import org.e1c.edt.ai.assistent.IHttpClientBuilder;
-import org.e1c.edt.ai.assistent.IHttpLog;
-import org.e1c.edt.ai.assistent.IParametersService;
-import org.e1c.edt.ai.assistent.IRequestBuilder;
-import org.e1c.edt.ai.assistent.IResponseCache;
-import org.e1c.edt.ai.assistent.IResponseLineProcessor;
-import org.e1c.edt.ai.assistent.IResponseStreamProcessor;
-import org.e1c.edt.ai.assistent.IServerAccessService;
-import org.e1c.edt.ai.assistent.ISessionService;
-import org.e1c.edt.ai.assistent.ISettingsTracker;
-import org.e1c.edt.ai.assistent.ITextPreprocessor;
-import org.e1c.edt.ai.assistent.IThreadManager;
-import org.e1c.edt.ai.assistent.ParametersService;
-import org.e1c.edt.ai.assistent.RequestBuilder;
-import org.e1c.edt.ai.assistent.ResponseCache;
-import org.e1c.edt.ai.assistent.ResponseLineProcessor;
-import org.e1c.edt.ai.assistent.ResponseStreamProcessor;
-import org.e1c.edt.ai.assistent.ServerAccessService;
-import org.e1c.edt.ai.assistent.SessionService;
-import org.e1c.edt.ai.assistent.SettingsTracker;
-import org.e1c.edt.ai.assistent.TextPreprocessor;
-import org.e1c.edt.ai.assistent.ThreadManager;
 import org.e1c.edt.ai.assistent.model.Parameters;
-import org.e1c.edt.ai.assistent.model.Session;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -59,9 +28,6 @@ public class AIModule
         bind(ISettingsProvider.class).to(SettingsProvider.class).in(Singleton.class);
         bind(ICodeCompletionTokenizer.class).to(CodeCompletionTokenizer.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
-        bind(IResponseStreamProcessor.class).to(ResponseStreamProcessor.class).in(Singleton.class);
-        bind(IResponseLineProcessor.class).to(ResponseLineProcessor.class).in(Singleton.class);
-        bind(ICodeAssistant.class).to(CodeAssistant.class).in(Singleton.class);
         bind(new TypeLiteral<IValidator<String>>() { /**/ }).annotatedWith(Names.named(URL)).to(URLValidator.class).in(Singleton.class);
         bind(IContextSplitter.class).to(ContextSplitter.class).in(Singleton.class);
         bind(IHintTextBuilder.class).to(HintTextBuilder.class).in(Singleton.class);
@@ -74,25 +40,16 @@ public class AIModule
         bind(CodeCompletionStatistics.class).in(Singleton.class);
         bind(ICodeCompletionContext.class).to(CodeCompletionStatistics.class);
         bind(ICodeCompletionStatistics.class).to(CodeCompletionStatistics.class);
-        bind(IHttpLog.class).to(HttpLog.class).in(Singleton.class);
-        bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
-        bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
-        bind(IParametersService.class).to(ParametersService.class).in(Singleton.class);
-        bind(ICheckStatusService.class).to(CheckStatusService.class).in(Singleton.class);
-        bind(new TypeLiteral<IResponseCache<Parameters>>() { /**/ }).to(new TypeLiteral<ResponseCache<Parameters>>() { /**/ });
-        bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
-        bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });
-        bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
-        bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
-        bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
-        bind(IServerAccessService.class).to(ServerAccessService.class).in(Singleton.class);
         bind(ITextNormilizer.class).to(TextNormilizer.class).in(Singleton.class);
-        bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IStatistics.class).to(Statistics.class);
-        bind(ILocalContextFactory.class).to(LocalContextFactory.class).in(Singleton.class);
+        bind(CompletionContextFactory.class).in(Singleton.class);
+        bind(ILocalContextFactory.class).to(CompletionContextFactory.class);
+        bind(IGlobalContextFactory.class).to(CompletionContextFactory.class);
+        bind(IGlobalContextRequestFactory.class).to(CompletionContextFactory.class);
         bind(IContextSettings.class).to(ContextSettings.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
         bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);
+        bind(IHashTools.class).to(HashTools.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -8,7 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpClient.Version;
 
-public class HttpClientBuilder implements IHttpClientBuilder
+class HttpClientBuilder
+    implements IHttpClientBuilder
 {
     @Override
     public HttpClient.Builder create()

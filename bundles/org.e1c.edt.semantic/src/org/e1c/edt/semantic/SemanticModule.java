@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.semantic;
 
+import org.e1c.edt.ai.HashTools;
+import org.e1c.edt.ai.IHashTools;
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProgramingLanguage;
@@ -44,6 +46,7 @@ public class SemanticModule
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(IEndpointViewModel.class).to(EndpointViewModel.class).in(Singleton.class);
         bind(IIDE.class).to(IDE.class).in(Singleton.class);
+        bind(IHashTools.class).to(HashTools.class).in(Singleton.class);
         // @formatter:on
     }
 }
