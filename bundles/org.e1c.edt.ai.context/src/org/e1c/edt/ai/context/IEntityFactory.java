@@ -30,13 +30,13 @@ interface IEntityFactory
     Optional<FormEntity> createFormEntity(Form form,
         ICancellationToken cancellationToken);
 
-    Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node,
+    Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken);
 
-    Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node,
+    Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken);
 
-    Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node,
+    Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken);
 
     Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node, boolean detailed,

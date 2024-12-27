@@ -423,14 +423,18 @@ class EntityFactory
     }
 
     @Override
-    public Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node,
+    public Optional<ObjectEntity> crateObjectEntity(Variable variable, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken)
     {
         var entity = new ObjectEntity();
         entity.name = variable.getName();
-        entity.start = node.getTotalOffset();
-        entity.finish = node.getTotalEndOffset();
-        entity.code = node.getText();
+        if (detailed)
+        {
+            entity.start = node.getTotalOffset();
+            entity.finish = node.getTotalEndOffset();
+            entity.code = node.getText();
+        }
+
         var comment = v8Model.getComment(variable);
         if (comment != null && !comment.isEmpty())
         {
@@ -443,14 +447,18 @@ class EntityFactory
     }
 
     @Override
-    public Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node,
+    public Optional<ObjectEntity> crateObjectEntity(FeatureAccess featureAccess, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken)
     {
         var objectEntity = new ObjectEntity();
         objectEntity.name = featureAccess.getName();
-        objectEntity.start = node.getTotalOffset();
-        objectEntity.finish = node.getTotalEndOffset();
-        objectEntity.code = node.getText();
+        if (detailed)
+        {
+            objectEntity.start = node.getTotalOffset();
+            objectEntity.finish = node.getTotalEndOffset();
+            objectEntity.code = node.getText();
+        }
+
         var comment = v8Model.getComment(featureAccess);
         if (comment != null && !comment.isEmpty())
         {
@@ -464,7 +472,7 @@ class EntityFactory
     }
 
     @Override
-    public Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node,
+    public Optional<MethodEntity> createMethodEntity(Invocation invocation, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken)
     {
         var methodAccess = invocation.getMethodAccess();
@@ -488,7 +496,7 @@ class EntityFactory
             {
                 var method = (Method)methodAccessFeature;
                 var methodNode = NodeModelUtils.getNode(methodAccessFeature);
-                fillMethod(methodEntity, method, true, methodNode, node);
+                fillMethod(methodEntity, method, detailed, methodNode, node);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
                 hasData = true;
@@ -510,11 +518,6 @@ class EntityFactory
                         parameter.types = createDataTypesFromTypeItemsSafety(param.getType(), true);
                     }
                 }
-
-                /*for (var pragma : method.getPragmas())
-                {
-                    preprocess.add(pragma.getSymbol());
-                }*/
 
                 getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
@@ -542,6 +545,7 @@ class EntityFactory
                     var signatureStructurized = new SignatureStructurized();
                     methodEntity.signatureStructurized = signatureStructurized;
                     signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(types, true);
+                    hasData = true;
                 }
             }
         }

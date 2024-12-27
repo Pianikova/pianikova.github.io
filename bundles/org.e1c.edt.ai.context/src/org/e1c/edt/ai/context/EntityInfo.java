@@ -145,7 +145,7 @@ class EntityInfo
                     return false;
                 }
 
-                var objectEntity = entityFactory.crateObjectEntity(variable, node, cancellationToken);
+                var objectEntity = entityFactory.crateObjectEntity(variable, node, true, cancellationToken);
                 response.object = objectEntity.orElse(null);
                 return objectEntity.isPresent();
             }
@@ -159,7 +159,7 @@ class EntityInfo
                     return false;
                 }
 
-                var objectEntity = entityFactory.crateObjectEntity(featureAccess, node, cancellationToken);
+                var objectEntity = entityFactory.crateObjectEntity(featureAccess, node, true, cancellationToken);
                 response.object = objectEntity.orElse(null);
                 return objectEntity.isPresent();
             }
@@ -173,7 +173,7 @@ class EntityInfo
                     return false;
                 }
 
-                var methodEntity = entityFactory.createMethodEntity(invocation, node, cancellationToken);
+                var methodEntity = entityFactory.createMethodEntity(invocation, node, true, cancellationToken);
                 response.method = methodEntity.orElse(null);
                 return methodEntity.isPresent();
             }
@@ -388,7 +388,7 @@ class EntityInfo
                 }
 
                 var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
-                    () -> entityFactory.crateObjectEntity(variable, node, cancellationToken)
+                    () -> entityFactory.crateObjectEntity(variable, node, false, cancellationToken)
                         .ifPresent(object -> localContext.relatedObjects.add(object)));
                 actions.add(action);
                 return false;
@@ -404,7 +404,7 @@ class EntityInfo
                 }
 
                 var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
-                    () -> entityFactory.crateObjectEntity(featureAccess, node, cancellationToken)
+                    () -> entityFactory.crateObjectEntity(featureAccess, node, false, cancellationToken)
                         .ifPresent(object -> localContext.relatedObjects.add(object)));
                 actions.add(action);
                 return false;
@@ -420,7 +420,7 @@ class EntityInfo
                 }
 
                 var action = new Action(node, offset, statistics, StatisticsType.RELATED_FUNCTIONS_DURATUION,
-                    () -> entityFactory.createMethodEntity(invocation, node, cancellationToken)
+                    () -> entityFactory.createMethodEntity(invocation, node, false, cancellationToken)
                         .ifPresent(method -> localContext.relatedFunctions.add(method)));
                 actions.add(action);
                 return false;
