@@ -46,10 +46,12 @@ public class CodeCompletionTokenizerTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
+                { "a", 2, new CodeCompletionToken("a", "") },
+                { ".", 2, new CodeCompletionToken(".", "") },
                 { "1; A", 2, new CodeCompletionToken("1;", " A") },
-                { "  Hello  Abc", 2, new CodeCompletionToken("  ", "Hello  Abc") },
+                { "  Hello  Abc", 2, new CodeCompletionToken("  Hello", "  Abc") },
                 { "Hello  Abc", 2, new CodeCompletionToken("Hello", "  Abc") },
-                { "  Abc", 2, new CodeCompletionToken("  ", "Abc") },
+                { "  Abc", 2, new CodeCompletionToken("  Abc", "") },
                 { "Abc", 2, new CodeCompletionToken("Abc", "") },
                 { "  Hello  Abc", 3, new CodeCompletionToken("  Hello", "  Abc") },
                 { "Hello  Abc ", 3, new CodeCompletionToken("Hello", "  Abc ") },
