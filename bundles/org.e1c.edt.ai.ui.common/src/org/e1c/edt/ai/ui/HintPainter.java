@@ -20,6 +20,8 @@ class HintPainter
 {
     private static final char CONTINUATION_SIGN = '…';
     private static final int BORDER = 1;
+    private static final int TEXT_EXTENT_FLAGS =
+        SWT.DRAW_TRANSPARENT | SWT.DRAW_DELIMITER | SWT.DRAW_TAB | SWT.DRAW_MNEMONIC;
 
     private final IHintTextBuilder hintTextBuilder;
     private final IUISettings uiSettings;
@@ -167,13 +169,13 @@ class HintPainter
             var boundsWidth = bounds.width - BORDER * 2 - 1;
             gc.setFont(italicFont);
 
-            var firstLineSize = gc.textExtent(firstLine);
+            var firstLineSize = gc.textExtent(firstLine, TEXT_EXTENT_FLAGS);
             var firstLineX = x - BORDER + 1;
             var firstLineY = y;
             var firstLineW = firstLineSize.x + BORDER * 4;
             var firstLineH = firstLineSize.y + 1;
 
-            var otherLinesSize = gc.textExtent(otherLines);
+            var otherLinesSize = gc.textExtent(otherLines, TEXT_EXTENT_FLAGS);
             var otherLinesX = BORDER + 1;
             var otherLinesY = firstLineY + firstLineH;
             var otherLinesW = boundsWidth;
@@ -189,7 +191,7 @@ class HintPainter
             gc.setFont(smalFont);
 
             var codeCompletionLabels = userActions.getCodeCompletionLabels(' ');
-            var labelSize = gc.textExtent(codeCompletionLabels);
+            var labelSize = gc.textExtent(codeCompletionLabels, TEXT_EXTENT_FLAGS);
             var labelX = BORDER + 1;
             var labelY = firstLineY + firstLineH + otherLinesH;
             var labelW = labelSize.x + BORDER * 4;
