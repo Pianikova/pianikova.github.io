@@ -16,7 +16,6 @@ class Delimiters
         TextDelimiters.add('|');
         TextDelimiters.add('~');
         TextDelimiters.add(':');
-        TextDelimiters.add(';');
         TextDelimiters.add('(');
         TextDelimiters.add(')');
         TextDelimiters.add('[');
@@ -41,6 +40,6 @@ class Delimiters
 
     public static Boolean isTokenDelimiter(char ch)
     {
-        return TextDelimiters.contains(ch);
+        return isLineDelimiter(ch) || TextDelimiters.contains(ch);
     }
 }
