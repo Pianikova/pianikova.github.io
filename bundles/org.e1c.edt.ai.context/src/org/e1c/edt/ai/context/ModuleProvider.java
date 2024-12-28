@@ -6,17 +6,20 @@ package org.e1c.edt.ai.context;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
-import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.resource.XtextResource;
+import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.util.concurrent.IUnitOfWork;
 
 import com._1c.g5.v8.bm.core.IBmExternalUriResolver;
 import com._1c.g5.v8.dt.bm.xtext.XtextBmLinkProvider;
 import com._1c.g5.v8.dt.bsl.model.Module;
+import com._1c.g5.v8.dt.bsl.resource.BslResource;
 import com._1c.g5.v8.dt.bsl.ui.editor.BslXtextDocument;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com.google.common.base.Preconditions;
@@ -24,16 +27,16 @@ import com.google.inject.Inject;
 
 public class ModuleProvider implements IModuleProvider
 {
-    private final ILog log;
     private final IBmModelManager modelManager;
+    private final IUISettings uiSettings;
 
     @Inject
-    public ModuleProvider(ILog log, IBmModelManager modelManager)
+    public ModuleProvider(IBmModelManager modelManager, IUISettings uiSettings)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(modelManager);
-        this.log = log;
+        Preconditions.checkNotNull(uiSettings);
         this.modelManager = modelManager;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -44,6 +47,11 @@ public class ModuleProvider implements IModuleProvider
         var root = ResourcesPlugin.getWorkspace().getRoot();
         for (var project : root.getProjects())
         {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
             if (!project.isOpen())
             {
                 continue;
@@ -56,7 +64,7 @@ public class ModuleProvider implements IModuleProvider
     }
 
     @Override
-    public Optional<ModuleInfo> getModuleInfo(IDocument document)
+    public Optional<ModuleInfo> getModuleInfo(IDocument document, ICancellationToken cancellationToken)
     {
         if (document instanceof BslXtextDocument)
         {
@@ -64,17 +72,20 @@ public class ModuleProvider implements IModuleProvider
             var bslXtextDocument = ((BslXtextDocument)document).readOnlyDataModel(work);
             for (var content : bslXtextDocument.getContents())
             {
+                if (cancellationToken.isCanceled())
+                {
+                    break;
+                }
+
                 if (content instanceof Module)
                 {
-                    var module = (Module)content;
-                    return Optional.of(new ModuleInfo((Module)content, null));
+                    return Optional.of(new ModuleInfo(analyzeModule((Module)content, cancellationToken), null));
                 }
             }
         }
 
         return Optional.empty();
     }
-
 
     @SuppressWarnings("deprecation")
     private Optional<ModuleInfo> getModuleInfo(IProject project, String filePath, ICancellationToken cancellationToken)
@@ -87,17 +98,47 @@ public class ModuleProvider implements IModuleProvider
 
         for (IBmExternalUriResolver provider : bmModel.getEngine().getExternalUriResolvers())
         {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
             if (provider instanceof XtextBmLinkProvider)
             {
                 var moduleUri = URI.createPlatformResourceURI(filePath, true).appendFragment("/0"); //$NON-NLS-1$
                 var currentModule = ((XtextBmLinkProvider)provider).getObject(moduleUri);
                 if (currentModule != null && currentModule instanceof Module)
                 {
-                    return Optional.of(new ModuleInfo((Module)currentModule, filePath));
+                    return Optional
+                        .of(new ModuleInfo(analyzeModule((Module)currentModule, cancellationToken), filePath));
                 }
             }
         }
 
         return Optional.empty();
+    }
+
+    private Module analyzeModule(Module module, ICancellationToken cancellationToken)
+    {
+        if (!uiSettings.sendContext())
+        {
+            return module;
+        }
+
+        var moduleResource = module.eResource();
+        if (moduleResource instanceof BslResource)
+        {
+            ((BslResource)moduleResource).setDeepAnalysis(true);
+            EcoreUtil2.resolveLazyCrossReferences(moduleResource, new CancelIndicator()
+            {
+                @Override
+                public boolean isCanceled()
+                {
+                    return cancellationToken.isCanceled();
+                }
+            });
+        }
+
+        return module;
     }
 }

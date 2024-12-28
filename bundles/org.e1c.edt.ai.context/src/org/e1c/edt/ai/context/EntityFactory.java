@@ -483,6 +483,7 @@ class EntityFactory
         });
 
         var hasData = false;
+        var hasSignatureStructurized = false;
         if (methodAccessFeatureOptional.isPresent())
         {
             var methodAccessFeature = methodAccessFeatureOptional.get();
@@ -499,6 +500,7 @@ class EntityFactory
                 fillMethod(methodEntity, method, detailed, methodNode, node);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
+                hasSignatureStructurized = true;
                 hasData = true;
             }
 
@@ -522,6 +524,7 @@ class EntityFactory
                 getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
+                hasSignatureStructurized = true;
                 if (method instanceof BslContextDefMethod)
                 {
                     var defMethod = (BslContextDefMethod)method;
@@ -533,7 +536,7 @@ class EntityFactory
             }
         }
 
-        if (methodEntity.signatureStructurized == null)
+        if (methodEntity.signatureStructurized == null || !hasSignatureStructurized)
         {
             var simpleStatement = EcoreUtil2.getContainerOfType(invocation, SimpleStatement.class);
             if (simpleStatement != null)
@@ -541,11 +544,14 @@ class EntityFactory
                 var target = simpleStatement.getLeft();
                 if (target != null)
                 {
-                    var types = v8Model.getTypes(target);
-                    var signatureStructurized = new SignatureStructurized();
-                    methodEntity.signatureStructurized = signatureStructurized;
-                    signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(types, true);
-                    hasData = true;
+                    var types = createDataTypesFromTypeItemsSafety(v8Model.getTypes(target), true);
+                    if (types != null)
+                    {
+                        var signatureStructurized = new SignatureStructurized();
+                        methodEntity.signatureStructurized = signatureStructurized;
+                        signatureStructurized.returnTypes = types;
+                        hasData = true;
+                    }
                 }
             }
         }

@@ -39,7 +39,8 @@ class CurrentEditorModuleProvider
         var optionalModuleInfo = dispatcher.dispatch(() -> ui.getTextWidget()
             .flatMap(textWidget -> ui.getSourceViewer(textWidget)))
             .orElse(null)
-            .flatMap(sourceViewer -> baseResourceSetProvider.getModuleInfo(sourceViewer.getDocument()));
+            .flatMap(
+                sourceViewer -> baseResourceSetProvider.getModuleInfo(sourceViewer.getDocument(), cancellationToken));
 
         if (optionalModuleInfo.isEmpty())
         {
@@ -57,8 +58,8 @@ class CurrentEditorModuleProvider
     }
 
     @Override
-    public Optional<ModuleInfo> getModuleInfo(IDocument document)
+    public Optional<ModuleInfo> getModuleInfo(IDocument document, ICancellationToken cancellationToken)
     {
-        return baseResourceSetProvider.getModuleInfo(document);
+        return baseResourceSetProvider.getModuleInfo(document, cancellationToken);
     }
 }
