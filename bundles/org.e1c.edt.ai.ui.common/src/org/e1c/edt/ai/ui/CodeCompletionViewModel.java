@@ -153,6 +153,7 @@ class CodeCompletionViewModel
                 // Warm up
                 aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
                     .ifPresent(aiCtx -> globalContextManager.warmup(aiCtx, CancellationTokens.NONE));
+                warmupLocalContext();
             }
         });
 
@@ -214,6 +215,14 @@ class CodeCompletionViewModel
         }, null);
         this.lastJob = job;
         job.schedule(delayBeforeAsk.toMillis());
+    }
+
+    private void warmupLocalContext()
+    {
+        var warmupJob =
+            dispatcher.createJob(Messages.CodeCompletionJobName,
+                ct -> CreateContextProvider(null, uiSettings.getTimeout()), null);
+        warmupJob.schedule();
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
