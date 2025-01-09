@@ -56,6 +56,7 @@ public class AIUICommonModule
         bind(IJavaScript.class).to(JavaScript.class).in(Singleton.class);
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
+        bind(ISyntaxVaidator.class).to(SyntaxVaidator.class).in(Singleton.class);
         // @formatter:on
     }
 }
