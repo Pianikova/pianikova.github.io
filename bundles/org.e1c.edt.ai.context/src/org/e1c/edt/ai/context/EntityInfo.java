@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2024, 1C
+  * Copyright (C) 2024, 1C
  */
 package org.e1c.edt.ai.context;
 
@@ -213,6 +213,7 @@ class EntityInfo
         var start = aiContext.getStart();
         var offset = aiContext.getTextOffset();
         var finish = aiContext.getFinish();
+        var sourceOffset = aiContext.getSourceOffset();
         localContext.relatedObjects = new ArrayList<>();
         localContext.relatedFunctions = new ArrayList<>();
         globalContext.localFunctions = new HashMap<>();
@@ -445,6 +446,11 @@ class EntityInfo
 
                 var hashStr = hashTools.format(hash);
                 final var methodName = uniqueName;
+                if (sourceOffset >= node.getTotalOffset() && sourceOffset <= node.getTotalEndOffset())
+                {
+                    localContext.currenMethodName = methodName;
+                }
+
                 if (actionFilter.test(new FillAction(DataType.HASH, Fields.LOCAL_FUNCTIONS, null)))
                 {
                     globalContext.localFunctions.put(methodName, hashStr);

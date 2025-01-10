@@ -26,6 +26,9 @@ public class LocalContext
     @SerializedName("cursor_object")
     public String cursorObject;
 
+    @SerializedName("current_method")
+    public String currenMethodName;
+
     @SerializedName("cursor_areas")
     public List<String> cursorAreas;
 
