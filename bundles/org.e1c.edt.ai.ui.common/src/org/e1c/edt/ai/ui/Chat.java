@@ -359,7 +359,9 @@ public class Chat implements IChat, IChatDialog
         worker.stateProperty().addListener(stateListener);
         loader.run();
         return result.orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .whenComplete((r, e) -> worker.stateProperty().removeListener(stateListener))
+            .whenComplete((r, e) -> {
+                dispatcher.dispatch(() -> worker.stateProperty().removeListener(stateListener));
+            })
             .whenCompleteAsync((r, e) -> {
                 //
             }, executor);

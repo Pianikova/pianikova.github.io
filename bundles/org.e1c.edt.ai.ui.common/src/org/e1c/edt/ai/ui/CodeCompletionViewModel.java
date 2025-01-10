@@ -76,6 +76,7 @@ class CodeCompletionViewModel
     private final ILocalContextFactory localContextFactory;
     private final IHotKeys hotKeys;
     private final IGlobalContextManager globalContextManager;
+    private final ISyntaxVaidator syntaxVaidator;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private AutoCloseable feedbackToken = Closeables.Empty;
@@ -95,7 +96,7 @@ class CodeCompletionViewModel
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
-        IGlobalContextManager globalContextManager)
+        IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -116,6 +117,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(localContextFactory);
         Preconditions.checkNotNull(hotKeys);
         Preconditions.checkNotNull(globalContextManager);
+        Preconditions.checkNotNull(syntaxVaidator);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -134,6 +136,7 @@ class CodeCompletionViewModel
         this.localContextFactory = localContextFactory;
         this.hotKeys = hotKeys;
         this.globalContextManager = globalContextManager;
+        this.syntaxVaidator = syntaxVaidator;
     }
 
     @Override
@@ -424,14 +427,34 @@ class CodeCompletionViewModel
             return;
         }
 
-        var content = session.getContext();
-        var widget = content.getWidget();
+        var context = session.getContext();
+        var widget = context.getWidget();
         var hint = session.getHint();
+        var hintLines = hint.getText(HintPart.LINES).getText();
+        var aiContext = context.getAiContext();
+        var source = aiContext.getSource();
+        var sourceOffset = aiContext.getSourceOffset();
+        var prefix = source.substring(0, sourceOffset);
+        var code = prefix + hintLines;
+        var validCodeSize = syntaxVaidator.getValidCodeSize(aiContext.getPath(), code) - prefix.length();
+        if (validCodeSize <= 0)
+        {
+            validCodeSize = 0;
+        }
+
+        if (validCodeSize > hintLines.length())
+        {
+            validCodeSize = hintLines.length();
+        }
+
+        var validHintLines = hintLines.substring(0, validCodeSize);
         dispatcher.dispatch(() -> {
-            var hintLines = hint.getText(HintPart.LINES).getText();
-            hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(),
-                hintLines,
-                hint.getText(HintPart.TOKEN).getText());
+            if (validHintLines.length() > 0)
+            {
+                hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), validHintLines,
+                    hint.getText(HintPart.TOKEN).getText());
+            }
+
             widget.redraw();
         });
     }
