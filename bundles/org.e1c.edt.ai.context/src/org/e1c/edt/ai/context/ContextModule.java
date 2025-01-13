@@ -3,8 +3,17 @@
  */
 package org.e1c.edt.ai.context;
 
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
+import javax.inject.Qualifier;
 
 import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.ICodeProvider;
@@ -19,6 +28,7 @@ import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
+import com.google.inject.BindingAnnotation;
 import com.google.inject.Singleton;
 
 class ContextModule
@@ -62,6 +72,16 @@ class ContextModule
                 return null;
             }
         });
+        bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class).in(Singleton.class);
         // @formatter:on
+    }
+
+    @BindingAnnotation
+    @Qualifier
+    @Target({ FIELD, PARAMETER, METHOD })
+    @Retention(RUNTIME)
+    public @interface BaseModuleProvider
+    {
+        //
     }
 }

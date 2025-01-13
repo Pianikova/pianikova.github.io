@@ -135,7 +135,19 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     @Override
     public <T> Optional<T> getValue(String key, Class<T> classOfT)
     {
-        var value = preferenceStore.getString(key);
+        String value;
+        switch (key)
+        {
+        case GLOBAL_CONTEXT:
+            var curProps = getProps();
+            value = curProps.getProperty(key, "").trim(); //$NON-NLS-1$
+            break;
+
+        default:
+            value = preferenceStore.getString(key);
+            break;
+        }
+
         if (value == null)
         {
             return Optional.empty();
@@ -148,6 +160,17 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     public <T> void setValue(String key, T value)
     {
         var serializedValue = json.serialize(value);
-        preferenceStore.setValue(key, serializedValue);
+        switch (key)
+        {
+        case GLOBAL_CONTEXT:
+            var curProps = getProps();
+            curProps.setProperty(key, serializedValue);
+            saveProps();
+            break;
+
+        default:
+            preferenceStore.setValue(key, serializedValue);
+            break;
+        }
     }
 }

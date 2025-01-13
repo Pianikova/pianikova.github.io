@@ -57,6 +57,9 @@ public class AIUICommonModule
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         bind(ISyntaxVaidator.class).to(SyntaxVaidator.class).in(Singleton.class);
+        bind(IGlobalContextTracker.class).to(GlobalContextTracker.class).in(Singleton.class);
+        bind(IProjectTrackingWorkflow.class).to(ProjectTrackingWorkflow.class);
+        bind(IGlobalContextSync.class).to(GlobalContextSync.class).in(Singleton.class);
         // @formatter:on
     }
 }

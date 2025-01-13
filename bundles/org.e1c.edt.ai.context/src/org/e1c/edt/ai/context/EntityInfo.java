@@ -4,8 +4,6 @@
 package org.e1c.edt.ai.context;
 
 import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -17,6 +15,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.AIContextKind;
 import org.e1c.edt.ai.DataType;
 import org.e1c.edt.ai.Fields;
 import org.e1c.edt.ai.FillAction;
@@ -37,7 +36,6 @@ import org.e1c.edt.ai.assistent.model.LocalContext;
 import org.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import org.e1c.edt.ai.context.DTO.EntityInfoResponse;
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
@@ -47,6 +45,7 @@ import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
+import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
@@ -76,6 +75,8 @@ class EntityInfo
     private final IHashTools hashTools;
     private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
     private final ICodePartsProvider codePartsProvider;
+    private final IModuleProvider activeEditorResourceSetProvider;
+    private final IModuleProvider baseResourceSetProvider;
 
     static
     {
@@ -89,7 +90,8 @@ class EntityInfo
         IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager,
         IProgramingLanguage programingLanguage, Provider<MessageDigest> messageDigestProvider,
         IHashTools hashTools, IProjectFileSystemSupportProvider projectFileSystemSupportProvider,
-        ICodePartsProvider codePartsProvider)
+        ICodePartsProvider codePartsProvider, IModuleProvider activeEditorResourceSetProvider,
+        @ContextModule.BaseModuleProvider IModuleProvider baseResourceSetProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
@@ -103,6 +105,8 @@ class EntityInfo
         Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(projectFileSystemSupportProvider);
         Preconditions.checkNotNull(codePartsProvider);
+        Preconditions.checkNotNull(activeEditorResourceSetProvider);
+        Preconditions.checkNotNull(baseResourceSetProvider);
         this.log = log;
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
@@ -115,6 +119,8 @@ class EntityInfo
         this.hashTools = hashTools;
         this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
         this.codePartsProvider = codePartsProvider;
+        this.activeEditorResourceSetProvider = activeEditorResourceSetProvider;
+        this.baseResourceSetProvider = baseResourceSetProvider;
     }
 
     @Override
@@ -135,7 +141,8 @@ class EntityInfo
         var nodeId = nodeIdOptional.get();
         var response = new EntityInfoResponse();
         response.ref = request.ref;
-        var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), new EntityVisitor()
+        var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), activeEditorResourceSetProvider,
+            new EntityVisitor()
         {
             @Override
             public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
@@ -193,16 +200,20 @@ class EntityInfo
         Predicate<FillAction> actionFilter, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
+        var curResourceSetProvider =
+            aiContext.getKind() == AIContextKind.ActiveEditor ? activeEditorResourceSetProvider : baseResourceSetProvider;
         var timeout = uiSettings.getTimeout();
         return dispatcher
             .dispatch(
-                () -> fillInternal(aiContext, localContext, globalContext, statistics, actionFilter,
+                () -> fillInternal(aiContext, localContext, globalContext, curResourceSetProvider, statistics,
+                    actionFilter,
                     cancellationToken),
                 timeout)
             .orElse(timeout);
     }
 
     private Duration fillInternal(AIContext aiContext, LocalContext localContext, GlobalContext globalContext,
+        IModuleProvider resourceSetProvider,
         IStatistics statistics,
         Predicate<FillAction> actionFilter,
         ICancellationToken cancellationToken)
@@ -214,6 +225,7 @@ class EntityInfo
         var offset = aiContext.getTextOffset();
         var finish = aiContext.getFinish();
         var sourceOffset = aiContext.getSourceOffset();
+        var aiContextKind = aiContext.getKind();
         localContext.relatedObjects = new ArrayList<>();
         localContext.relatedFunctions = new ArrayList<>();
         globalContext.localFunctions = new HashMap<>();
@@ -228,7 +240,7 @@ class EntityInfo
         var cursorObjects = new EObject[1];
         var owners = new ArrayList<IBmObject>();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
-        entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
+        entitiesWalker.walk(filePath, start, finish, resourceSetProvider, new EntityVisitor()
         {
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)
@@ -243,19 +255,13 @@ class EntityInfo
                 if (project != null)
                 {
                     localContext.scriptLanguage = project.getScriptVariant().getName();
-                    if (actionFilter.test(new FillAction(DataType.DATA, Fields.CONFIGURATION_NAME, "")))
+                    if (actionFilter.test(new FillAction(DataType.DATA, Fields.CONFIGURATION_NAME, ""))) //$NON-NLS-1$
                     {
-                        try
+                        if (project instanceof IExtensionProject)
                         {
-                            var config = project.getProject().getActiveBuildConfig();
-                            if (config != null)
-                            {
-                                globalContext.configurationName = config.getName();
-                            }
-                        }
-                        catch (Exception error)
-                        {
-                            //
+                            var extensionProject = (IExtensionProject)project;
+                            var parentProject = extensionProject.getParentProject();
+                            globalContext.configurationName = parentProject.getName();
                         }
                     }
                 }
@@ -372,8 +378,17 @@ class EntityInfo
                 {
                     if (actionFilter.test(new FillAction(DataType.HASH, Fields.FORM, null)))
                     {
-                        getFile(moduleInfo, form).flatMap(file -> update(buffer, messageDigestProvider.get(), file))
-                            .ifPresent(hash -> globalContext.form = hashTools.format(hash));
+                        getFile(moduleInfo, form).map(file -> {
+                            try
+                            {
+                                return hashTools.compute(file, buffer);
+                            }
+                            catch (Exception error)
+                            {
+                                log.logError(error);
+                                return null;
+                            }
+                        }).ifPresent(hash -> globalContext.form = hashTools.format(hash));
                     }
 
                     if (actionFilter.test(new FillAction(DataType.DATA, Fields.FORM, globalContext.form)))
@@ -445,6 +460,11 @@ class EntityInfo
             @Override
             public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
             {
+                if (aiContextKind != AIContextKind.ActiveEditor && !method.isExport())
+                {
+                    return false;
+                }
+
                 var hash = messageDigestProvider.get();
                 codePartsProvider.getParts(node)
                     .filter(part -> methodHashingParts.contains(part.getLocation()))
@@ -461,7 +481,8 @@ class EntityInfo
 
                 var hashStr = hashTools.format(hash);
                 final var methodName = uniqueName;
-                if (sourceOffset >= node.getTotalOffset() && sourceOffset <= node.getTotalEndOffset())
+                if (aiContextKind == AIContextKind.ActiveEditor && sourceOffset >= node.getTotalOffset()
+                    && sourceOffset <= node.getTotalEndOffset())
                 {
                     localContext.currenMethodName = methodName;
                 }
@@ -495,9 +516,17 @@ class EntityInfo
                     }
 
                     globalContext.meta =
-                        getFile(moduleInfo, metadata).flatMap(file -> update(buffer, messageDigestProvider.get(), file))
-                            .map(hash -> hashTools.format(hash))
-                            .orElse(null);
+                        getFile(moduleInfo, metadata).map(file -> {
+                            try
+                            {
+                                return hashTools.compute(file, buffer);
+                            }
+                            catch (Exception error)
+                            {
+                                log.logError(error);
+                                return null;
+                            }
+                        }).map(hash -> hashTools.format(hash)).orElse(null);
                 }
 
                 return false;
@@ -589,31 +618,6 @@ class EntityInfo
             projectFileSystemSupportProvider.getProjectFileSystemSupport(project.getDtProject()).getFile(obj));
     }
 
-    private Optional<MessageDigest> update(CharBuffer charBuffer, MessageDigest hash, IFile file)
-    {
-        Charset charset;
-        try
-        {
-            charset = Charset.forName(file.getCharset());
-        }
-        catch (CoreException e)
-        {
-            charset = StandardCharsets.UTF_8;
-        }
-
-        try (var inputStream = file.getContents();)
-        {
-            hashTools.scanTextStream(charBuffer, bytes -> hash.update(bytes), inputStream, charset,
-                ch -> !Character.isWhitespace(ch));
-            return Optional.of(hash);
-        }
-        catch (Exception error)
-        {
-            log.logError(error);
-            return Optional.empty();
-        }
-    }
-
     @Override
     public void fill(AIContext aiContext, ChatContext context, IStatistics statistics,
         ICancellationToken cancellationToken)
@@ -629,7 +633,7 @@ class EntityInfo
         var start = aiContext.getStart();
         var finish = aiContext.getFinish();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> context.programingLanguage = lang);
-        entitiesWalker.walk(filePath, start, finish, new EntityVisitor()
+        entitiesWalker.walk(filePath, start, finish, activeEditorResourceSetProvider, new EntityVisitor()
         {
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)

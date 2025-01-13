@@ -12,6 +12,9 @@ import java.security.MessageDigest;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
+
 public interface IHashTools
 {
     MessageDigest clone(MessageDigest hash);
@@ -21,4 +24,7 @@ public interface IHashTools
     void scanTextStream(CharBuffer buffer, Consumer<byte[]> consumer, InputStream inputStream, Charset charset,
         Predicate<Character> filter)
         throws UnsupportedEncodingException, IOException;
+
+    MessageDigest compute(IFile file, CharBuffer buffer)
+        throws UnsupportedEncodingException, IOException, CoreException;
 }

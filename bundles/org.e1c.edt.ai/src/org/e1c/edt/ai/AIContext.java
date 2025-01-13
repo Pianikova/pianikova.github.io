@@ -12,6 +12,7 @@ import com.google.common.base.Preconditions;
 public class AIContext
 {
     private final ProjectId projectId;
+    private final AIContextKind kind;
     private final int editorOffset;
     private final String source;
     private final int sourceOffset;
@@ -23,12 +24,14 @@ public class AIContext
     private final int start;
     private final int finish;
 
-    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset, String path, String text,
+    public AIContext(ProjectId projectId, AIContextKind kind, int caretOffset, String source, int sourceOffset,
+        String path, String text,
         int textOffset,
         String prefix,
         String sufix, int start, int finish)
     {
         Preconditions.checkNotNull(projectId);
+        Preconditions.checkNotNull(kind);
         Preconditions.checkNotNull(source);
         Preconditions.checkArgument(sourceOffset >= 0);
         Preconditions.checkNotNull(path);
@@ -37,6 +40,7 @@ public class AIContext
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
         this.projectId = projectId;
+        this.kind = kind;
         this.editorOffset = caretOffset;
         this.source = source;
         this.sourceOffset = sourceOffset;
@@ -49,15 +53,21 @@ public class AIContext
         this.finish = finish;
     }
 
-    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset, String path, String text,
+    public AIContext(ProjectId projectId, AIContextKind kind, int caretOffset, String source, int sourceOffset,
+        String path, String text,
         int textOffset)
     {
-        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
+        this(projectId, kind, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
     }
 
     public ProjectId getProjectId()
     {
         return projectId;
+    }
+
+    public AIContextKind getKind()
+    {
+        return kind;
     }
 
     public int getСaretOffset()
@@ -117,6 +127,10 @@ public class AIContext
 
         str.append("project:"); //$NON-NLS-1$
         str.append(projectId);
+        str.append(System.lineSeparator());
+
+        str.append("kind:"); //$NON-NLS-1$
+        str.append(kind);
         str.append(System.lineSeparator());
 
         str.append("path:"); //$NON-NLS-1$

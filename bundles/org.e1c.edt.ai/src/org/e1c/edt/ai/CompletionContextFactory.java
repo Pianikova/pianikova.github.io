@@ -82,7 +82,8 @@ class CompletionContextFactory
         try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext,
-                action -> action.getDataType() == DataType.HASH, statistics, cancellationToken);
+                action -> action.getDataType() == DataType.HASH || action.getField() == Fields.CONFIGURATION_NAME,
+                statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -104,6 +105,14 @@ class CompletionContextFactory
         var path = aiContext.getPath();
 
         var result = new ArrayList<GlobalContextUpdate>();
+        if (globalContext.configurationName != null)
+        {
+            var request = new GlobalContextUpdate();
+            request.field = Fields.CONFIGURATION_NAME;
+            request.value = globalContext.configurationName;
+            result.add(request);
+        }
+
         if (globalContext.form != null || globalContext.formEntity != null)
         {
             var request = new GlobalContextUpdate();

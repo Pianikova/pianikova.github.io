@@ -106,28 +106,44 @@ class SyntaxVaidator
         throw new IllegalStateException();
     }
 
-    private Resource createResource(InputStream in, URI uriToUse, Map<?, ?> options, ResourceSet resourceSet)
+    private Optional<Resource> createResource(InputStream in, URI uriToUse, Map<?, ?> options, ResourceSet resourceSet)
         throws IOException
     {
         var resourceServiceProvider =
             IResourceServiceProvider.Registry.INSTANCE.getResourceServiceProvider(uriToUse);
+        if (resourceServiceProvider == null)
+        {
+            return Optional.empty();
+        }
+
         var resourceFactory = resourceServiceProvider.get(IResourceFactory.class);
+        if (resourceFactory == null)
+        {
+            return Optional.empty();
+        }
+
         var resource = resourceFactory.createResource(uriToUse);
+        if (resource == null)
+        {
+            return Optional.empty();
+        }
+
         resourceSet.getResources().add(resource);
         resource.load(in, options);
-        return resource;
+        return Optional.of(resource);
     }
 
     private Optional<IParseResult> parse(InputStream in, URI uriToUse, Map<?, ?> options, ResourceSet resourceSet)
         throws IOException
     {
-        var resource = createResource(in, uriToUse, options, resourceSet);
-        if (resource instanceof XtextResource)
-        {
-            return Optional.ofNullable(((XtextResource)resource).getParseResult());
-        }
+        return createResource(in, uriToUse, options, resourceSet).map(resource -> {
+            if (resource instanceof XtextResource)
+            {
+                return ((XtextResource)resource).getParseResult();
+            }
 
-        return Optional.empty();
+            return null;
+        });
     }
 
     private InputStream getAsStream(CharSequence text)

@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IProjectIdProvider;
+import org.e1c.edt.ai.IProjectProvider;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.eclipse.core.resources.IProject;
@@ -28,7 +29,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class ModuleProvider
-    implements IModuleProvider, IProjectIdProvider
+    implements IModuleProvider, IProjectIdProvider, IProjectProvider
 {
     private final IBmModelManager modelManager;
     private final IUISettings uiSettings;
@@ -46,9 +47,15 @@ public class ModuleProvider
     }
 
     @Override
+    public ProjectId getProjectId(IProject project)
+    {
+        return new ProjectId(project.getLocationURI().getPath());
+    }
+
+    @Override
     public Optional<ProjectId> getProjectId(String filePath, ICancellationToken cancellationToken)
     {
-        return getProject(filePath).map(project -> new ProjectId(project.getLocationURI().getPath()));
+        return getProject(filePath).map(project -> getProjectId(project));
     }
 
     @Override
@@ -101,7 +108,7 @@ public class ModuleProvider
 
             if (provider instanceof XtextBmLinkProvider)
             {
-                var moduleUri = URI.createPlatformResourceURI(filePath, true).appendFragment("/0"); //$NON-NLS-1$
+                var moduleUri = getModuleURI(filePath);
                 var currentModule = ((XtextBmLinkProvider)provider).getObject(moduleUri);
                 if (currentModule != null && currentModule instanceof Module)
                 {
@@ -138,10 +145,17 @@ public class ModuleProvider
         return module;
     }
 
-    private Optional<IProject> getProject(String filePath)
+    @Override
+    public Optional<IProject> getProject(String filePath)
     {
         Preconditions.checkNotNull(filePath);
-        var moduleUri = URI.createPlatformResourceURI(filePath, true).appendFragment("/0"); //$NON-NLS-1$
+        var moduleUri = getModuleURI(filePath);
         return Optional.ofNullable(resourceLookup.getProject(moduleUri));
+    }
+
+    private URI getModuleURI(String filePath)
+    {
+        Preconditions.checkNotNull(filePath);
+        return URI.createPlatformResourceURI(filePath, true).appendFragment("/0"); //$NON-NLS-1$
     }
 }

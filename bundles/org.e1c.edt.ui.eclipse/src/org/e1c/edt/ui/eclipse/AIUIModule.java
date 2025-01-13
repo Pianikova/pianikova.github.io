@@ -10,6 +10,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import javax.inject.Qualifier;
 
@@ -18,6 +20,8 @@ import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.ICodeProvider;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IProjectIdProvider;
+import org.e1c.edt.ai.IProjectProvider;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.ui.BaseActivator;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -52,6 +56,18 @@ public class AIUIModule
         bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IContextEntities.class).to(ContextEntities.class).in(Singleton.class);
+        bind(IProjectProvider.class).to(ProjectProvider.class).in(Singleton.class);
+        bind(MessageDigest.class).toProvider(() -> {
+            try
+            {
+                return MessageDigest.getInstance("MD5");//$NON-NLS-1$
+            }
+            catch (NoSuchAlgorithmException e)
+            {
+                return null;
+            }
+        });
+        bind(IProjectIdProvider.class).to(ProjectIdProvider.class).in(Singleton.class);
         // @formatter:on
     }
 

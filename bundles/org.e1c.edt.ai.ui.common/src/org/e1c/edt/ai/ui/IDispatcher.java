@@ -6,7 +6,6 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.core.runtime.jobs.Job;
 
@@ -20,5 +19,5 @@ public interface IDispatcher
 
     void dispatchAsync(Runnable runnable);
 
-    Job createJob(String jobName, Consumer<CancellationTokenSource> сonsumer, ICancellationToken cancellationToken);
+    Job createJob(String jobName, Consumer<JobContext> сonsumer, ICancellationToken cancellationToken);
 }

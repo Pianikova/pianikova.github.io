@@ -46,30 +46,27 @@ class EntitiesWalker
     private final ILog log;
     private final IV8Model v8Model;
     private final IIdFactory idFactory;
-    private final IModuleProvider resourceSetProvider;
     private final IBmModelManager modelManager;
     private final IResourceLookup resourceLookup;
 
     @Inject
-    public EntitiesWalker(ILog log, IV8Model v8Model, IIdFactory idFactory, IModuleProvider resourceSetProvider,
+    public EntitiesWalker(ILog log, IV8Model v8Model, IIdFactory idFactory,
         IBmModelManager modelManager, IResourceLookup resourceLookup)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
-        Preconditions.checkNotNull(resourceSetProvider);
         Preconditions.checkNotNull(resourceLookup);
         this.log = log;
         this.v8Model = v8Model;
         this.idFactory = idFactory;
-        this.resourceSetProvider = resourceSetProvider;
         this.modelManager = modelManager;
         this.resourceLookup = resourceLookup;
     }
 
     @Override
-    public boolean walk(String path, int start, int finish, IEntityVisitor visitor, IStatistics statistics,
-        ICancellationToken cancellationToken)
+    public boolean walk(String path, int start, int finish, IModuleProvider resourceSetProvider, IEntityVisitor visitor,
+        IStatistics statistics, ICancellationToken cancellationToken)
     {
         try
         {

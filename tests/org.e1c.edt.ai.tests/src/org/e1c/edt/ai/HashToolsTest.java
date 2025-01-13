@@ -3,9 +3,12 @@
  */
 package org.e1c.edt.ai;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.ByteArrayInputStream;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -17,9 +20,14 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.google.inject.Provider;
+
 @RunWith(Parameterized.class)
 public class HashToolsTest
 {
+    @SuppressWarnings("unchecked")
+    private static final Provider<MessageDigest> MessageDigestProvider = mock(Provider.class);
+
     @Parameter(0)
     public String text;
 
@@ -37,7 +45,7 @@ public class HashToolsTest
         var allBytes = new ArrayList<Byte>();
         var stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
         var buffer = CharBuffer.allocate(size);
-        var hashTools = new HashTools();
+        var hashTools = new HashTools(MessageDigestProvider);
         // When
         try
         {

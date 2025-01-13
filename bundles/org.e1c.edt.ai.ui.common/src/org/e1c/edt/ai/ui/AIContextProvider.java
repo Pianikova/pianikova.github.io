@@ -6,6 +6,7 @@ package org.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.AIContextKind;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextInitializer;
 import org.e1c.edt.ai.IProjectIdProvider;
@@ -72,12 +73,14 @@ class AIContextProvider
         if (target.isPreferSelection() && !content.selectionText.isBlank())
         {
             aiContext =
-                new AIContext(optionalProjectId.get(), textWidget.getCaretOffset(), content.text, content.offset, path,
+                new AIContext(optionalProjectId.get(), AIContextKind.ActiveEditor, textWidget.getCaretOffset(), content.text,
+                    content.offset, path,
                 content.selectionText, content.selectionOffset);
         }
         else
         {
-            aiContext = new AIContext(optionalProjectId.get(), textWidget.getCaretOffset(), content.text,
+            aiContext = new AIContext(optionalProjectId.get(), AIContextKind.ActiveEditor, textWidget.getCaretOffset(),
+                content.text,
                 content.offset, path,
                 content.text,
                 content.offset);

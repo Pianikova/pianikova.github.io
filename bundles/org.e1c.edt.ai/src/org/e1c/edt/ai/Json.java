@@ -31,6 +31,13 @@ public class Json
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(classOfT);
-        return Optional.ofNullable(gson.fromJson(json, classOfT));
+        try
+        {
+            return Optional.ofNullable(gson.fromJson(json, classOfT));
+        }
+        catch (Exception error)
+        {
+            return Optional.empty();
+        }
     }
 }
