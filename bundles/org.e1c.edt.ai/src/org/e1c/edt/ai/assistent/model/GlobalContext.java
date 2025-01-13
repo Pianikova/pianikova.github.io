@@ -9,6 +9,8 @@ import com.google.gson.annotations.SerializedName;
 
 public class GlobalContext
 {
+    public transient String configurationName;
+
     // hash
     public String form;
 

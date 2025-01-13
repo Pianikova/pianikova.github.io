@@ -11,9 +11,11 @@ import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import org.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
+import org.e1c.edt.ai.assistent.model.ProjectId;
 
 public interface IGlobalContextService
 {
-    CompletableFuture<Optional<GlobalContextUpdateResponse>> update(Collection<GlobalContextUpdate> updates,
+    CompletableFuture<Optional<GlobalContextUpdateResponse>> update(ProjectId projectId,
+        Collection<GlobalContextUpdate> updates,
         IStatistics statistics, ICancellationToken cancellationToken);
 }

@@ -16,6 +16,7 @@ import javax.inject.Qualifier;
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IProjectIdProvider;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.context.IModuleProvider;
 import org.e1c.edt.ai.context.ModuleProvider;
@@ -49,8 +50,9 @@ public class AIUIModule
         bind(IVersionProvider.class).toInstance(activator);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
-        bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class);
+        bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class).in(Singleton.class);
         bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
+        bind(IProjectIdProvider.class).to(ModuleProvider.class);
         // @formatter:on
     }
 

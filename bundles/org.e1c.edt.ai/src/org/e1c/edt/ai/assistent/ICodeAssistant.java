@@ -6,9 +6,11 @@ package org.e1c.edt.ai.assistent;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IObservable;
 import org.e1c.edt.ai.assistent.model.Completion;
+import org.e1c.edt.ai.assistent.model.ProjectId;
 
 public interface ICodeAssistant
 {
-    public IObservable<Completion> createSource(ICompletionRequestProvider completionRequestProvider,
+    public IObservable<Completion> createSource(ProjectId projectId,
+        ICompletionRequestProvider completionRequestProvider,
         ICancellationToken cancellationToken);
 }

@@ -5,10 +5,13 @@ package org.e1c.edt.ai;
 
 import java.util.Objects;
 
+import org.e1c.edt.ai.assistent.model.ProjectId;
+
 import com.google.common.base.Preconditions;
 
 public class AIContext
 {
+    private final ProjectId projectId;
     private final int editorOffset;
     private final String source;
     private final int sourceOffset;
@@ -20,10 +23,12 @@ public class AIContext
     private final int start;
     private final int finish;
 
-    public AIContext(int caretOffset, String source, int sourceOffset, String path, String text, int textOffset,
+    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset, String path, String text,
+        int textOffset,
         String prefix,
         String sufix, int start, int finish)
     {
+        Preconditions.checkNotNull(projectId);
         Preconditions.checkNotNull(source);
         Preconditions.checkArgument(sourceOffset >= 0);
         Preconditions.checkNotNull(path);
@@ -31,6 +36,7 @@ public class AIContext
         Preconditions.checkArgument(textOffset >= 0);
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
+        this.projectId = projectId;
         this.editorOffset = caretOffset;
         this.source = source;
         this.sourceOffset = sourceOffset;
@@ -43,9 +49,15 @@ public class AIContext
         this.finish = finish;
     }
 
-    public AIContext(int caretOffset, String source, int sourceOffset, String path, String text, int textOffset)
+    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset, String path, String text,
+        int textOffset)
     {
-        this(caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
+        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
+    }
+
+    public ProjectId getProjectId()
+    {
+        return projectId;
     }
 
     public int getСaretOffset()
@@ -102,6 +114,10 @@ public class AIContext
     public String toString()
     {
         var str = new StringBuilder();
+
+        str.append("project:"); //$NON-NLS-1$
+        str.append(projectId);
+        str.append(System.lineSeparator());
 
         str.append("path:"); //$NON-NLS-1$
         str.append(path);

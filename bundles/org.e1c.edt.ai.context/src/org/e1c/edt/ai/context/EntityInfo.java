@@ -243,6 +243,21 @@ class EntityInfo
                 if (project != null)
                 {
                     localContext.scriptLanguage = project.getScriptVariant().getName();
+                    if (actionFilter.test(new FillAction(DataType.DATA, Fields.CONFIGURATION_NAME, "")))
+                    {
+                        try
+                        {
+                            var config = project.getProject().getActiveBuildConfig();
+                            if (config != null)
+                            {
+                                globalContext.configurationName = config.getName();
+                            }
+                        }
+                        catch (Exception error)
+                        {
+                            //
+                        }
+                    }
                 }
 
                 return false;

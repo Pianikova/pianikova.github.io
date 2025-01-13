@@ -28,7 +28,8 @@ public class ContextInitializer
         if (text.isEmpty())
         {
             return Optional
-                .of(new AIContext(ctx.getСaretOffset(), ctx.getSource(), ctx.getSourceOffset(), ctx.getPath(), text,
+                .of(new AIContext(ctx.getProjectId(), ctx.getСaretOffset(), ctx.getSource(), ctx.getSourceOffset(),
+                    ctx.getPath(), text,
                     ctx.getTextOffset()));
         }
 
@@ -49,7 +50,8 @@ public class ContextInitializer
         var prefix = parts.getPrefix().apply(text);
         var sufix = parts.getSufix().apply(text);
         return Optional
-            .of(new AIContext(ctx.getСaretOffset(), source, sourceOffset, ctx.getPath(), text, offset, prefix, sufix,
+            .of(new AIContext(ctx.getProjectId(), ctx.getСaretOffset(), source, sourceOffset, ctx.getPath(), text,
+                offset, prefix, sufix,
                 sourceOffset - parts.getPrefix().getLength(), sourceOffset + parts.getSufix().getLength()));
     }
 }
