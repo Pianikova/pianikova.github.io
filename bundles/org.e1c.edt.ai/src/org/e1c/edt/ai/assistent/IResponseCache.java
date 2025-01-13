@@ -9,5 +9,6 @@ import java.util.function.Supplier;
 
 public interface IResponseCache<T>
 {
-    CompletableFuture<Optional<T>> get(Supplier<CompletableFuture<Optional<T>>> responseSupplier, boolean reset);
+    CompletableFuture<Optional<T>> get(String key, Supplier<CompletableFuture<Optional<T>>> responseSupplier,
+        boolean reset);
 }

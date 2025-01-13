@@ -5,6 +5,7 @@ package org.e1c.edt.ai.assistent;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import org.e1c.edt.ai.ServerAccessType;
@@ -15,7 +16,7 @@ import com.google.inject.Inject;
 class ResponseCache<T>
     implements IResponseCache<T>, IServerAccessListener
 {
-    private CompletableFuture<Optional<T>> last;
+    private final ConcurrentHashMap<String, CompletableFuture<Optional<T>>> last = new ConcurrentHashMap<>();
 
     @Inject
     public ResponseCache(IServerAccessService serverAccessService)
@@ -25,27 +26,30 @@ class ResponseCache<T>
     }
 
     @Override
-    public synchronized CompletableFuture<Optional<T>> get(Supplier<CompletableFuture<Optional<T>>> responseSupplier,
+    public synchronized CompletableFuture<Optional<T>> get(String key,
+        Supplier<CompletableFuture<Optional<T>>> responseSupplier,
         boolean reset)
     {
-        if (!reset && last != null)
-        {
-            return last;
-        }
-
-        last = responseSupplier.get().whenComplete((r, e) -> {
-            if (e != null || r.isEmpty())
+        Preconditions.checkNotNull(key);
+        Preconditions.checkNotNull(responseSupplier);
+        return last.compute(key, (k, val) -> {
+            if (!reset && val != null)
             {
-                reset();
+                return val;
             }
-        });
 
-        return last;
+            return responseSupplier.get().whenComplete((r, e) -> {
+                if (e != null || r.isEmpty())
+                {
+                    reset(key);
+                }
+            });
+        });
     }
 
-    private void reset()
+    private void reset(String key)
     {
-        last = null;
+        last.remove(key);
     }
 
     @Override
@@ -53,7 +57,7 @@ class ResponseCache<T>
     {
         if (currentStatus == ServerAccessType.ACCESS_ABSENT)
         {
-            reset();
+            last.clear();
         }
     }
 }

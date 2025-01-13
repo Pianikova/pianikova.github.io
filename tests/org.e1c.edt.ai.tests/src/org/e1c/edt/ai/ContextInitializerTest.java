@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,7 +50,9 @@ public class ContextInitializerTest
 
         // When
         var actualContext =
-            factory.initialize(new AIContext(textOffset + 3, "full_" + text, textOffset + 3, "", text, textOffset));
+            factory.initialize(
+                new AIContext(new ProjectId("path"), textOffset + 3, "full_" + text, textOffset + 3, "", text,
+                    textOffset));
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());

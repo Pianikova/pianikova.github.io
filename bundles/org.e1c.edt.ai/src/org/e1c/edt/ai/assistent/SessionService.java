@@ -14,6 +14,7 @@ import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.assistent.model.Parameters;
+import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.assistent.model.SessionRequest;
 import org.e1c.edt.ai.assistent.model.SystemInfo;
@@ -67,12 +68,13 @@ class SessionService
     }
 
     @Override
-    public CompletableFuture<Optional<Session>> getSessionAsync()
+    public CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId)
     {
-        return parametersService.getParametersAsync().thenApplyAsync(parameters -> getSession(parameters).join());
+        return parametersService.getParametersAsync()
+            .thenApplyAsync(parameters -> getSession(projectId, parameters).join());
     }
 
-    private CompletableFuture<Optional<Session>> getSession(Optional<Parameters> parameters)
+    private CompletableFuture<Optional<Session>> getSession(ProjectId projectId, Optional<Parameters> parameters)
     {
         if (parameters.isEmpty())
         {
@@ -122,7 +124,7 @@ class SessionService
         var requestBody = json.serialize(sessionRequest);
         var reset = settingsTracker.register(ISessionService.class.getName(), requestBody);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
-        return responseCache.get(() -> getSessionAsync(request, requestBody), reset);
+        return responseCache.get(projectId.path, () -> getSessionAsync(request, requestBody), reset);
     }
 
     private CompletableFuture<Optional<Session>> getSessionAsync(HttpRequest request, String body)

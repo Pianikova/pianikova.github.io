@@ -24,6 +24,7 @@ import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.Completion;
+import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.client.AIClientException;
 
@@ -78,13 +79,14 @@ class CodeAssistant
     }
 
     @Override
-    public IObservable<Completion> createSource(ICompletionRequestProvider completionRequestProvider,
+    public IObservable<Completion> createSource(ProjectId projectId,
+        ICompletionRequestProvider completionRequestProvider,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(completionRequestProvider);
         Preconditions.checkNotNull(cancellationToken);
         return Observables.create(observer -> {
-            sessionService.getSessionAsync().whenComplete((session, error) -> {
+            sessionService.getSessionAsync(projectId).whenComplete((session, error) -> {
                 if (error == null)
                 {
                     if (session != null && session.isPresent())

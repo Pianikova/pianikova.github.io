@@ -309,7 +309,8 @@ class CodeCompletionViewModel
                 .flatMap(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()))
                 .ifPresent(method -> session.setMethod(method));
 
-            var completionSource = codeAssistant.createSource(localContextProvider, cancellationTokenSource);
+            var completionSource =
+                codeAssistant.createSource(aiCtx.getProjectId(), localContextProvider, cancellationTokenSource);
             requestDuration = Duration.between(startTime, clock.now());
 
             // @formatter:off

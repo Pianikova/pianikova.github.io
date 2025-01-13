@@ -17,6 +17,7 @@ import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import org.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
+import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.e1c.edt.ai.assistent.model.Session;
 
 import com.google.common.base.Preconditions;
@@ -52,10 +53,11 @@ class GlobalContextService
     }
 
     @Override
-    public CompletableFuture<Optional<GlobalContextUpdateResponse>> update(Collection<GlobalContextUpdate> updates,
+    public CompletableFuture<Optional<GlobalContextUpdateResponse>> update(ProjectId projectId,
+        Collection<GlobalContextUpdate> updates,
         IStatistics statistics, ICancellationToken cancellationToken)
     {
-        return sessionService.getSessionAsync()
+        return sessionService.getSessionAsync(projectId)
             .<Optional<GlobalContextUpdateResponse>> thenApply(session -> {
                 if (session.isEmpty())
                 {

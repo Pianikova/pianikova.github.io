@@ -95,7 +95,7 @@ class GlobalContextManager implements IGlobalContextManager
 
         try
         {
-            globalContextService.update(updates, statistics, cancellationToken)
+            globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken)
                 .get()
                 .ifPresent(result -> updateInternal(aiCtx, result.unknownValues, result.unknownKeys, cancellationToken));
         }
@@ -138,7 +138,7 @@ class GlobalContextManager implements IGlobalContextManager
 
                 trace.append("Unknown keys:"); //$NON-NLS-1$
                 trace.append(System.lineSeparator());
-                trace.append(json.serialize(hasUnknownKeys));
+                trace.append(json.serialize(unknownKeys));
             }
 
             return trace.toString();
@@ -187,7 +187,7 @@ class GlobalContextManager implements IGlobalContextManager
 
         try
         {
-            globalContextService.update(updates, statistics, cancellationToken)
+            globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken)
                 .get()
                 .ifPresent(
                     result -> updateInternal(aiCtx, result.unknownValues, result.unknownKeys, cancellationToken));

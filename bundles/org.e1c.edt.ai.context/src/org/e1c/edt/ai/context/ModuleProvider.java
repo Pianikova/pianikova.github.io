@@ -6,9 +6,10 @@ package org.e1c.edt.ai.context;
 import java.util.Optional;
 
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IProjectIdProvider;
 import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.xtext.EcoreUtil2;
@@ -22,21 +23,32 @@ import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.resource.BslResource;
 import com._1c.g5.v8.dt.bsl.ui.editor.BslXtextDocument;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ModuleProvider implements IModuleProvider
+public class ModuleProvider
+    implements IModuleProvider, IProjectIdProvider
 {
     private final IBmModelManager modelManager;
     private final IUISettings uiSettings;
+    private final IResourceLookup resourceLookup;
 
     @Inject
-    public ModuleProvider(IBmModelManager modelManager, IUISettings uiSettings)
+    public ModuleProvider(IBmModelManager modelManager, IUISettings uiSettings, IResourceLookup resourceLookup)
     {
         Preconditions.checkNotNull(modelManager);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(resourceLookup);
         this.modelManager = modelManager;
         this.uiSettings = uiSettings;
+        this.resourceLookup = resourceLookup;
+    }
+
+    @Override
+    public Optional<ProjectId> getProjectId(String filePath, ICancellationToken cancellationToken)
+    {
+        return getProject(filePath).map(project -> new ProjectId(project.getLocationURI().getPath()));
     }
 
     @Override
@@ -44,23 +56,7 @@ public class ModuleProvider implements IModuleProvider
     {
         Preconditions.checkNotNull(filePath);
         Preconditions.checkNotNull(cancellationToken);
-        var root = ResourcesPlugin.getWorkspace().getRoot();
-        for (var project : root.getProjects())
-        {
-            if (cancellationToken.isCanceled())
-            {
-                break;
-            }
-
-            if (!project.isOpen())
-            {
-                continue;
-            }
-
-            return getModuleInfo(project, filePath, cancellationToken);
-        }
-
-        return Optional.empty();
+        return getProject(filePath).flatMap(project -> getModuleInfo(project, filePath, cancellationToken));
     }
 
     @Override
@@ -140,5 +136,12 @@ public class ModuleProvider implements IModuleProvider
         }
 
         return module;
+    }
+
+    private Optional<IProject> getProject(String filePath)
+    {
+        Preconditions.checkNotNull(filePath);
+        var moduleUri = URI.createPlatformResourceURI(filePath, true).appendFragment("/0"); //$NON-NLS-1$
+        return Optional.ofNullable(resourceLookup.getProject(moduleUri));
     }
 }
