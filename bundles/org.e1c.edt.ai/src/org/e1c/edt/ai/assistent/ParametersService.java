@@ -65,7 +65,7 @@ class ParametersService
         var settings = settingsProvider.getSettings().map(i -> json.serialize(i)).orElse(null);
         var reset = settingsTracker.register(IParametersService.class.getName(), settings);
         var params = settingsProvider.getSettings().map(i -> i.getLlmParameters()).orElse(new Parameters());
-        return responseCache.get("", () -> getParametersAsync(request, params), reset);
+        return responseCache.get("", () -> getParametersAsync(request, params), reset); //$NON-NLS-1$
     }
 
     private CompletableFuture<Optional<Parameters>> getParametersAsync(HttpRequest request, Parameters userParams)

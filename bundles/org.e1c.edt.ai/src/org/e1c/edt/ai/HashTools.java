@@ -18,7 +18,6 @@ import java.util.function.Predicate;
 import javax.inject.Inject;
 
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 
 import com.google.common.base.Preconditions;
@@ -39,7 +38,6 @@ public class HashTools
     @Override
     public MessageDigest clone(MessageDigest hash)
     {
-        IProject p;
         try
         {
             return (MessageDigest)hash.clone();

@@ -79,6 +79,12 @@ public class Parameters
     @SerializedName("chat_url")
     public String chatUrl;
 
+    @SerializedName("local_functions_length")
+    public Integer localFunctionsLength;
+
+    @SerializedName("external_functions_length")
+    public Integer externalFunctionsLength;
+
     public Parameters merge(Parameters params)
     {
         if (params.prefixLength != null)
@@ -211,6 +217,16 @@ public class Parameters
             chatUrl = params.chatUrl;
         }
 
+        if (params.localFunctionsLength != null)
+        {
+            localFunctionsLength = params.localFunctionsLength;
+        }
+
+        if (params.externalFunctionsLength != null)
+        {
+            externalFunctionsLength = params.externalFunctionsLength;
+        }
+
         return this;
     }
 
@@ -219,7 +235,8 @@ public class Parameters
     {
         return Objects.hash(bestOf, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
-            suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark);
+            suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
+            localFunctionsLength, externalFunctionsLength);
     }
 
     @Override
@@ -245,6 +262,8 @@ public class Parameters
             && tokenHealing == other.tokenHealing && Objects.equals(topK, other.topK)
             && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
             && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
-            && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark);
+            && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
+            && Objects.equals(localFunctionsLength, other.localFunctionsLength)
+            && Objects.equals(externalFunctionsLength, other.externalFunctionsLength);
     }
 }

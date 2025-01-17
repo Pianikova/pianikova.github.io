@@ -128,6 +128,12 @@ public class ParametersParser
 
         names.remove(parse(properties, "chat_url", validationResult, val -> parameters.chatUrl = val));
 
+        names.remove(parse(properties, "local_functions_length", validationResult,
+            val -> parameters.localFunctionsLength = Integer.parseInt(val)));
+
+        names.remove(parse(properties, "external_functions_length", validationResult,
+            val -> parameters.externalFunctionsLength = Integer.parseInt(val)));
+
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
         for (var unknowName : unknowNames)
