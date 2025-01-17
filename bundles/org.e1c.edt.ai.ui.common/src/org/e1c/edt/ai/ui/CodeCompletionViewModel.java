@@ -142,25 +142,33 @@ class CodeCompletionViewModel
     @Override
     public AutoCloseable activate(StyledText textWidget)
     {
-        this.textWidget = textWidget;
-        reset();
-        dispatcher.dispatchAsync(() -> {
+        synchronized (lockObject)
+        {
+            this.textWidget = textWidget;
+            reset();
             if (!textWidget.isDisposed())
             {
-                getContentAssistant().ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
                 textWidget.addPaintListener(hintPainter);
                 textWidget.addTraverseListener(this);
                 textWidget.addCaretListener(this);
                 textWidget.addVerifyKeyListener(this);
-                textWidget.redraw();
-                // Warm up
-                aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                    .ifPresent(aiCtx -> globalContextManager.warmup(aiCtx, CancellationTokens.NONE));
-                warmupLocalContext();
             }
-        });
 
-        return Closeables.create(() -> deactivate());
+            dispatcher.dispatchAsync(() -> {
+                if (!textWidget.isDisposed())
+                {
+                    getContentAssistant().ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
+                    textWidget.redraw();
+
+                    // Warm up
+                    aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
+                        .ifPresent(aiCtx -> globalContextManager.warmup(aiCtx, CancellationTokens.NONE));
+                    warmupLocalContext();
+                }
+            });
+
+            return Closeables.create(() -> deactivate());
+        }
     }
 
     private void reset()
@@ -238,32 +246,40 @@ class CodeCompletionViewModel
 
     private void deactivate()
     {
-        codeCompletionContext.commit("", -1); //$NON-NLS-1$
-        try
+        synchronized (lockObject)
         {
-            feedbackToken.close();
-        }
-        catch (Exception e)
-        {
-            // ignored
-        }
+            codeCompletionContext.commit("", -1); //$NON-NLS-1$
+            try
+            {
+                feedbackToken.close();
+            }
+            catch (Exception e)
+            {
+                // ignored
+            }
 
-        reset();
-        dispatcher.dispatch(() -> {
+            reset();
             if (!textWidget.isDisposed())
             {
-                getAiContext(CancellationTokens.NONE).ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
-                getContentAssistant().ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
-                textWidget.removeCaretListener(this);
                 textWidget.removePaintListener(hintPainter);
+                textWidget.removeCaretListener(this);
                 textWidget.removeVerifyKeyListener(this);
                 textWidget.removeTraverseListener(this);
-                textWidget.redraw();
             }
-        });
+
+            dispatcher.dispatch(() -> {
+                if (!textWidget.isDisposed())
+                {
+                    getAiContext(CancellationTokens.NONE).ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
+                    getContentAssistant().ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
+                    textWidget.redraw();
+                }
+            });
+        }
     }
 
-    private void ask(AIContext aiCtx, CompletionRequestProvider localContextProvider, Duration delayBeforeShow,
+    private void ask(AIContext aiCtx, CompletionRequestProvider localContextProvider,
+        Duration delayBeforeShow,
         int codeCompletionLinesCount,
         CancellationTokenSource cancellationTokenSource)
     {
