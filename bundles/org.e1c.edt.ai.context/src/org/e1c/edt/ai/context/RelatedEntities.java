@@ -45,11 +45,12 @@ public class RelatedEntities implements IRelatedEntities
     private final IEntityFactory entityFactory;
     private final IV8ProjectManager v8ProjectManager;
     private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
+    private final IModuleProvider resourceSetProvider;
 
     @Inject
     public RelatedEntities(ILog log, IV8Model v8Model, IEntitiesWalker entitiesWalker, IIdFactory idFactory,
         IEntityFactory entityFactory, IV8ProjectManager v8ProjectManager,
-        IProjectFileSystemSupportProvider projectFileSystemSupportProvider)
+        IProjectFileSystemSupportProvider projectFileSystemSupportProvider, IModuleProvider resourceSetProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
@@ -58,6 +59,7 @@ public class RelatedEntities implements IRelatedEntities
         Preconditions.checkNotNull(entityFactory);
         Preconditions.checkNotNull(v8ProjectManager);
         Preconditions.checkNotNull(projectFileSystemSupportProvider);
+        Preconditions.checkNotNull(resourceSetProvider);
         this.log = log;
         this.v8Model = v8Model;
         this.entitiesWalker = entitiesWalker;
@@ -65,6 +67,7 @@ public class RelatedEntities implements IRelatedEntities
         this.entityFactory = entityFactory;
         this.v8ProjectManager = v8ProjectManager;
         this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
+        this.resourceSetProvider = resourceSetProvider;
     }
 
     @SuppressWarnings("nls")
@@ -88,7 +91,8 @@ public class RelatedEntities implements IRelatedEntities
         var registerResources = new ArrayList<RegisterResource>();
         var registerDimensions = new ArrayList<RegisterDimension>();
         var registerRecords = new ArrayList<BasicRegister>();
-        var result = entitiesWalker.walk(request.path, request.start, request.finish, new EntityVisitor()
+        var result =
+            entitiesWalker.walk(request.path, request.start, request.finish, resourceSetProvider, new EntityVisitor()
         {
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)
@@ -249,7 +253,7 @@ public class RelatedEntities implements IRelatedEntities
                 cancellationToken)
             .ifPresent(meta -> response.meta = meta);
 
-        entitiesWalker.walk(request.path, 0, Integer.MAX_VALUE, new EntityVisitor()
+        entitiesWalker.walk(request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()
         {
             @Override
             public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)

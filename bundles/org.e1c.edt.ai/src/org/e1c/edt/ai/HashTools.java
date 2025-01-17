@@ -10,16 +10,36 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import javax.inject.Inject;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.CoreException;
+
+import com.google.common.base.Preconditions;
+import com.google.inject.Provider;
+
 public class HashTools
     implements IHashTools
 {
+    private final Provider<MessageDigest> messageDigestProvider;
+
+    @Inject
+    public HashTools(Provider<MessageDigest> messageDigestProvider)
+    {
+        Preconditions.checkNotNull(messageDigestProvider);
+        this.messageDigestProvider = messageDigestProvider;
+    }
+
     @Override
     public MessageDigest clone(MessageDigest hash)
     {
+        IProject p;
         try
         {
             return (MessageDigest)hash.clone();
@@ -57,6 +77,15 @@ public class HashTools
         Predicate<Character> filter)
         throws UnsupportedEncodingException, IOException
     {
+        Preconditions.checkNotNull(buffer);
+        Preconditions.checkNotNull(consumer);
+        Preconditions.checkNotNull(inputStream);
+        Preconditions.checkNotNull(charset);
+        if (filter == null)
+        {
+            filter = (ch) -> !Character.isWhitespace(ch);
+        }
+
         try (var streamReader = new InputStreamReader(inputStream, charset);
             var reader = new BufferedReader(streamReader))
         {
@@ -91,5 +120,28 @@ public class HashTools
                 buffer.clear();
             }
         }
+    }
+
+    @Override
+    public MessageDigest compute(IFile file, CharBuffer buffer)
+        throws UnsupportedEncodingException, IOException, CoreException
+    {
+        Charset charset;
+        try
+        {
+            charset = Charset.forName(file.getCharset());
+        }
+        catch (CoreException e)
+        {
+            charset = StandardCharsets.UTF_8;
+        }
+
+        var hash = messageDigestProvider.get();
+        try (var inputStream = file.getContents();)
+        {
+            scanTextStream(buffer, bytes -> hash.update(bytes), inputStream, charset, null);
+        }
+
+        return hash;
     }
 }

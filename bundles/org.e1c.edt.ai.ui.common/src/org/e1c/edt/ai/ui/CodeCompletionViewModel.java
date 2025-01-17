@@ -211,11 +211,13 @@ class CodeCompletionViewModel
         int codeCompletionLinesCount, CompletionRequestProvider localContextProvider)
     {
         cancel();
-        var job = dispatcher.createJob(Messages.CodeCompletionJobName, ct -> {
+        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
             final var contextProvider = CreateContextProvider(localContextProvider, maxDuration);
-            contextProvider.getAiContext(ct)
-                .ifPresent(aiCtx -> ask(aiCtx, contextProvider, delayBeforeShow, codeCompletionLinesCount, ct));
+            getAiContext(jobCtx.CancellationTokenSource)
+                .ifPresent(aiCtx -> ask(aiCtx, contextProvider, delayBeforeShow, codeCompletionLinesCount,
+                    jobCtx.CancellationTokenSource));
         }, null);
+        job.setPriority(Job.SHORT);
         this.lastJob = job;
         job.schedule(delayBeforeAsk.toMillis());
     }
@@ -250,6 +252,7 @@ class CodeCompletionViewModel
         dispatcher.dispatch(() -> {
             if (!textWidget.isDisposed())
             {
+                getAiContext(CancellationTokens.NONE).ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
                 getContentAssistant().ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
                 textWidget.removeCaretListener(this);
                 textWidget.removePaintListener(hintPainter);
@@ -677,6 +680,12 @@ class CodeCompletionViewModel
         return Optional.of(result);
     }
 
+    public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
+    {
+        return dispatcher.dispatch(
+            () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationToken).orElse(null));
+    }
+
     private class CompletionRequestProvider
         implements ICompletionRequestProvider
     {
@@ -717,12 +726,6 @@ class CodeCompletionViewModel
             originalPrefix = lastRequest.localContext.prefix;
             lastRequest.localContext.prefix = originalPrefix + proposal;
             return Optional.of(lastRequest);
-        }
-
-        public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
-        {
-            return dispatcher.dispatch(
-                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationToken).orElse(null));
         }
     }
 }

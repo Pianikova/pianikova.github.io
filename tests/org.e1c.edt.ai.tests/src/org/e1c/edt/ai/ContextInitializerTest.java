@@ -51,7 +51,8 @@ public class ContextInitializerTest
         // When
         var actualContext =
             factory.initialize(
-                new AIContext(new ProjectId("path"), textOffset + 3, "full_" + text, textOffset + 3, "", text,
+                new AIContext(new ProjectId("path"), AIContextKind.ActiveEditor, textOffset + 3, "full_" + text,
+                    textOffset + 3, "", text,
                     textOffset));
 
         // Then

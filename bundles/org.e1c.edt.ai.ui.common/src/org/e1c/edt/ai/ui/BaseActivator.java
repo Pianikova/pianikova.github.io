@@ -214,6 +214,12 @@ public abstract class BaseActivator
     @Override
     public void stop(BundleContext bundleContext) throws Exception
     {
+        var globalContextTracker = getInjector().getInstance(IGlobalContextTracker.class);
+        if (globalContextTracker instanceof AutoCloseable)
+        {
+            ((AutoCloseable)globalContextTracker).close();
+        }
+
         plugin = null;
         super.stop(bundleContext);
     }

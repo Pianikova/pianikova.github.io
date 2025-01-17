@@ -17,6 +17,7 @@ import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProjectIdProvider;
+import org.e1c.edt.ai.IProjectProvider;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.context.IModuleProvider;
 import org.e1c.edt.ai.context.ModuleProvider;
@@ -53,6 +54,7 @@ public class AIUIModule
         bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class).in(Singleton.class);
         bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
         bind(IProjectIdProvider.class).to(ModuleProvider.class);
+        bind(IProjectProvider.class).to(ModuleProvider.class);
         // @formatter:on
     }
 

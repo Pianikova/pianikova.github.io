@@ -8,6 +8,7 @@ import org.e1c.edt.ai.IStatistics;
 
 interface IEntitiesWalker
 {
-    boolean walk(String path, int start, int finish, IEntityVisitor visitor, IStatistics statistics,
+    boolean walk(String path, int start, int finish, IModuleProvider resourceSetProvider, IEntityVisitor visitor,
+        IStatistics statistics,
         ICancellationToken cancellationToken);
 }

@@ -32,23 +32,26 @@ class GlobalContextService
     private final IHttpClientBuilder clienBuilder;
     private final IJson json;
     private final ISessionService sessionService;
+    private final IEnvironment environment;
     private final ICompressor compressor;
 
     @Inject
     public GlobalContextService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder,
-        IJson json, ISessionService sessionService, ICompressor compressor)
+        IJson json, ISessionService sessionService, IEnvironment environment, ICompressor compressor)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(sessionService);
+        Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(compressor);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
         this.json = json;
         this.sessionService = sessionService;
+        this.environment = environment;
         this.compressor = compressor;
     }
 
@@ -117,6 +120,18 @@ class GlobalContextService
         {
             log.error(error, cancellationToken.toString());
             return CompletableFuture.completedFuture(Optional.empty());
+        }
+
+        var freePhysicalMemorySize = environment.getFreePhysicalMemorySize();
+        if (freePhysicalMemorySize.isPresent())
+        {
+            requestBuilder =
+                requestBuilder.header("X-Free-Physical-Memory-Size", Long.toString(freePhysicalMemorySize.get())); //$NON-NLS-1$
+        }
+
+        for (var statValue : statistics.getValues())
+        {
+            requestBuilder = requestBuilder.header(statValue.getStatisticsType().getHeader(), statValue.getValue());
         }
 
         var request = requestBuilder.POST(bodyPublisher).build();
