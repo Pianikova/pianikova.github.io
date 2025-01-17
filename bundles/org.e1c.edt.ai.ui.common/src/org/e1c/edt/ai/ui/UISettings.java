@@ -15,6 +15,7 @@ import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
 import com.google.inject.Inject;
 
+@SuppressWarnings("restriction")
 class UISettings
     implements IUISettings
 {
