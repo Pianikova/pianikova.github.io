@@ -7,9 +7,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
-
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.CancellationTokens;
@@ -21,6 +18,8 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.jobs.Job;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 class GlobalContextTracker
     implements IGlobalContextTracker, AutoCloseable

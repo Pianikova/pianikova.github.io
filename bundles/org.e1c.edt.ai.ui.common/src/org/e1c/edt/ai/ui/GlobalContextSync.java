@@ -7,8 +7,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
-import javax.inject.Inject;
-
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IGlobalContextFactory;
@@ -22,6 +20,7 @@ import org.e1c.edt.ai.assistent.model.EntityValue;
 import org.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 class GlobalContextSync implements IGlobalContextSync

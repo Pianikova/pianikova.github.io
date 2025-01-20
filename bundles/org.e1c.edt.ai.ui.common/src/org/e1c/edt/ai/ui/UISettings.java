@@ -75,7 +75,6 @@ class UISettings
         return Platform.getNL().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
-    @SuppressWarnings({ "restriction", "nls" })
     @Override
     public String getTheme()
     {
@@ -84,14 +83,14 @@ class UISettings
             var activeTheme = engine.getActiveTheme();
             if (activeTheme != null)
             {
-                if (activeTheme.getId().toLowerCase().contains("dark"))
+                if (activeTheme.getId().toLowerCase().contains("dark")) //$NON-NLS-1$
                 {
-                    return "Dark";
+                    return "Dark"; //$NON-NLS-1$
                 }
             }
         }
 
-        return "Default";
+        return "Default"; //$NON-NLS-1$
     }
 
     @Override
