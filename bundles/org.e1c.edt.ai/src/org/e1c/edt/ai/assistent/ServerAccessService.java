@@ -29,17 +29,17 @@ class ServerAccessService
     private static final ListenerList<IServerAccessListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
     private final ICheckStatusService checker;
     private final ILog log;
-    private final IUISettings uiSettings;
+    private final IUISettings settings;
 
     @Inject
-    public ServerAccessService(ICheckStatusService checker, ILog log, IUISettings uiSettings)
+    public ServerAccessService(ICheckStatusService checker, ILog log, IUISettings settings)
     {
         Preconditions.checkNotNull(checker);
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         this.checker = checker;
         this.log = log;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
     }
 
     @Override
@@ -66,8 +66,7 @@ class ServerAccessService
     @Override
     public void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs)
     {
-        var jobName = "Updating server status..."; //$NON-NLS-1$
-        var job = new Job(jobName)
+        var job = new Job(Messages.UpdatingServerStatus)
         {
             @Override
             protected IStatus run(IProgressMonitor monitor) {
@@ -76,7 +75,7 @@ class ServerAccessService
                 {
                     status =
                         Optional.ofNullable(checker.getStatusAsync()
-                            .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+                            .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
                             .get());
                 }
                 catch (Throwable e)
@@ -103,6 +102,7 @@ class ServerAccessService
                 return Status.OK_STATUS;
             }
         };
+        job.setSystem(!settings.traceMode());
         job.setPriority(Job.DECORATE);
         job.schedule();
     };
