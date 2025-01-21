@@ -455,36 +455,40 @@ class CodeCompletionViewModel
         var source = aiContext.getSource();
         var sourceOffset = aiContext.getSourceOffset();
         var prefix = source.substring(0, sourceOffset);
-        dispatcher.dispatch(() -> {
-            String postfix;
+        var postfix = dispatcher.dispatch(() -> {
+            String result;
             if (session.getContext().isSingleWordMode())
             {
-                postfix = source.substring(sourceOffset);
-                var lineFinish = postfix.indexOf(widget.getLineDelimiter());
+                result = source.substring(sourceOffset);
+                var lineFinish = result.indexOf(widget.getLineDelimiter());
                 if (lineFinish > 0)
                 {
-                    postfix = postfix.substring(0, lineFinish);
+                    result = result.substring(0, lineFinish);
                 }
             }
             else
             {
-                postfix = widget.getLineDelimiter();
+                result = widget.getLineDelimiter();
             }
 
-            var code = prefix + hintLines + postfix;
-            var validCodeSize =
-                syntaxVaidator.getValidCodeSize(aiContext.getPath(), code) - prefix.length();
-            if (validCodeSize <= 0)
-            {
-                validCodeSize = 0;
-            }
+            return result;
+        }).orElse(""); //$NON-NLS-1$
 
-            if (validCodeSize > hintLines.length())
-            {
-                validCodeSize = hintLines.length();
-            }
+        var code = prefix + hintLines + postfix;
+        var validCodeSize = syntaxVaidator.getValidCodeSize(aiContext.getPath(), code) - prefix.length();
+        if (validCodeSize <= 0)
+        {
+            validCodeSize = 0;
+        }
 
-            var validHintLines = hintLines.substring(0, validCodeSize);
+        if (validCodeSize > hintLines.length())
+        {
+            validCodeSize = hintLines.length();
+        }
+
+        var validHintLines = hintLines.substring(0, validCodeSize);
+
+        dispatcher.dispatch(() -> {
             if (validHintLines.length() > 0)
             {
                 hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), validHintLines,
@@ -550,6 +554,8 @@ class CodeCompletionViewModel
         case RESET:
             commit(session);
             reset();
+            var isSingleWordMode = dispatcher.dispatch(() -> session.getContext().isSingleWordMode()).orElse(false);
+            event.doit = !isSingleWordMode;
             break;
 
         case HANDLE:
