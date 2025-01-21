@@ -455,20 +455,36 @@ class CodeCompletionViewModel
         var source = aiContext.getSource();
         var sourceOffset = aiContext.getSourceOffset();
         var prefix = source.substring(0, sourceOffset);
-        var code = prefix + hintLines;
-        var validCodeSize = syntaxVaidator.getValidCodeSize(aiContext.getPath(), code) - prefix.length();
-        if (validCodeSize <= 0)
-        {
-            validCodeSize = 0;
-        }
-
-        if (validCodeSize > hintLines.length())
-        {
-            validCodeSize = hintLines.length();
-        }
-
-        var validHintLines = hintLines.substring(0, validCodeSize);
         dispatcher.dispatch(() -> {
+            String postfix;
+            if (session.getContext().isSingleWordMode())
+            {
+                postfix = source.substring(sourceOffset);
+                var lineFinish = postfix.indexOf(widget.getLineDelimiter());
+                if (lineFinish > 0)
+                {
+                    postfix = postfix.substring(0, lineFinish);
+                }
+            }
+            else
+            {
+                postfix = widget.getLineDelimiter();
+            }
+
+            var code = prefix + hintLines + postfix;
+            var validCodeSize =
+                syntaxVaidator.getValidCodeSize(aiContext.getPath(), code) - prefix.length();
+            if (validCodeSize <= 0)
+            {
+                validCodeSize = 0;
+            }
+
+            if (validCodeSize > hintLines.length())
+            {
+                validCodeSize = hintLines.length();
+            }
+
+            var validHintLines = hintLines.substring(0, validCodeSize);
             if (validHintLines.length() > 0)
             {
                 hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), validHintLines,
