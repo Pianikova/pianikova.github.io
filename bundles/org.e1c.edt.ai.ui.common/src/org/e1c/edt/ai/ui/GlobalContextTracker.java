@@ -34,6 +34,7 @@ class GlobalContextTracker
     private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
     private final State state;
     private Job job;
+    private IProjectTrackingWorkflow activeWorkflow;
 
     @Inject
     public GlobalContextTracker(IDispatcher dispatcher, IProjectProvider projectProvider,
@@ -69,6 +70,7 @@ class GlobalContextTracker
                     projectWorkflows.computeIfAbsent(project,
                         k -> projectTrackingWorkflowProvider.get().initialize(project, state.hashes));
 
+                activeWorkflow = workflow;
                 if (forcible)
                 {
                     workflow.markAsDirty(aiCtx.getPath());
@@ -83,7 +85,7 @@ class GlobalContextTracker
                     clock.now().plus(Duration.ofMillis(15000)));
 
                 job = dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
-                    jobCtx -> track(jobCtx, workflow),
+                    jobCtx -> track(jobCtx, activeWorkflow),
                     cancellationToken);
 
                 job.setSystem(!settings.traceMode());
