@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import javax.inject.Inject;
-
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.AIContextKind;
 import org.e1c.edt.ai.ICancellationToken;
@@ -31,6 +29,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
 class ProjectTrackingWorkflow
     implements IProjectTrackingWorkflow

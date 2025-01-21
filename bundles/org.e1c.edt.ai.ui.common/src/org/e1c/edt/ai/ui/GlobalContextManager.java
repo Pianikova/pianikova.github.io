@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.eclipse.core.runtime.jobs.Job;
 
@@ -16,19 +17,22 @@ class GlobalContextManager implements IGlobalContextManager
     private final IDispatcher dispatcher;
     private final IGlobalContextSync globalContextSync;
     private final IGlobalContextTracker globalContextTracker;
+    private final IUISettings settings;
     private Job currentJob;
 
     @Inject
     public GlobalContextManager(IDispatcher dispatcher, IGlobalContextSync globalContextSync,
-        IGlobalContextTracker globalContextTracker)
+        IGlobalContextTracker globalContextTracker, IUISettings settings)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(globalContextSync);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(globalContextTracker);
+        Preconditions.checkNotNull(settings);
         this.dispatcher = dispatcher;
         this.globalContextSync = globalContextSync;
         this.globalContextTracker = globalContextTracker;
+        this.settings = settings;
     }
 
     @Override
@@ -64,7 +68,8 @@ class GlobalContextManager implements IGlobalContextManager
         }
 
         currentJob = job;
-        job.setPriority(Job.LONG);
+        currentJob.setSystem(!settings.traceMode());
+        currentJob.setPriority(Job.DECORATE);
         job.schedule();
     }
 }

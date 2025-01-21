@@ -15,12 +15,11 @@ import java.security.MessageDigest;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import javax.inject.Inject;
-
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 public class HashTools
