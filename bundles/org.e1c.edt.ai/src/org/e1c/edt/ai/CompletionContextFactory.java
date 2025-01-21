@@ -135,17 +135,14 @@ class CompletionContextFactory
 
         if (globalContext.localFunctionsEntities != null && !globalContext.localFunctionsEntities.isEmpty())
         {
-            for (var localFunction : globalContext.localFunctionsEntities.values())
+            for (var localFunction : globalContext.localFunctionsEntities.entrySet())
             {
-                if(localFunction != null)
-                {
-                    var request = new GlobalContextUpdate();
-                    request.path = path;
-                    request.hash = hashTools.format(localFunction.Hash);
-                    request.field = Fields.LOCAL_FUNCTIONS + '.' + request.hash;
-                    request.value = localFunction.Value;
-                    result.add(request);
-                }
+                var request = new GlobalContextUpdate();
+                request.path = path;
+                request.hash = hashTools.format(localFunction.getValue().Hash);
+                request.field = Fields.LOCAL_FUNCTIONS + '.' + localFunction.getKey();
+                request.value = localFunction.getValue().Value;
+                result.add(request);
             }
         }
         else
