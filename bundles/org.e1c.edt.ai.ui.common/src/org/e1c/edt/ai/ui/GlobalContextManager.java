@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.model.Completion;
 import org.eclipse.core.runtime.jobs.Job;
@@ -14,6 +15,7 @@ import com.google.inject.Inject;
 
 class GlobalContextManager implements IGlobalContextManager
 {
+    private final ILog log;
     private final IDispatcher dispatcher;
     private final IGlobalContextSync globalContextSync;
     private final IGlobalContextTracker globalContextTracker;
@@ -21,14 +23,16 @@ class GlobalContextManager implements IGlobalContextManager
     private Job currentJob;
 
     @Inject
-    public GlobalContextManager(IDispatcher dispatcher, IGlobalContextSync globalContextSync,
+    public GlobalContextManager(ILog log, IDispatcher dispatcher, IGlobalContextSync globalContextSync,
         IGlobalContextTracker globalContextTracker, IUISettings settings)
     {
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(globalContextSync);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(globalContextTracker);
         Preconditions.checkNotNull(settings);
+        this.log = log;
         this.dispatcher = dispatcher;
         this.globalContextSync = globalContextSync;
         this.globalContextTracker = globalContextTracker;
@@ -41,7 +45,16 @@ class GlobalContextManager implements IGlobalContextManager
         globalContextTracker.track(aiCtx, false);
         var job =
             dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
-                jobCtx -> globalContextSync.sync(aiCtx, 3, jobCtx.CancellationTokenSource), cancellationToken);
+                jobCtx -> {
+                    try
+                    {
+                        globalContextSync.sync(aiCtx, 3, jobCtx.CancellationTokenSource).get();
+                    }
+                    catch (Exception error)
+                    {
+                        log.logError(error);
+                    }
+                }, cancellationToken);
         runJob(job);
     }
 

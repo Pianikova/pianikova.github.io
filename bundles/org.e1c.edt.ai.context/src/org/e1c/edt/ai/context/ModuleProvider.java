@@ -82,7 +82,14 @@ public class ModuleProvider
 
                 if (content instanceof Module)
                 {
-                    return Optional.of(new ModuleInfo(analyzeModule((Module)content, cancellationToken), null));
+                    String path = null;
+                    var moduleFile = resourceLookup.getPlatformResource(content);
+                    if (moduleFile != null)
+                    {
+                        path = moduleFile.getFullPath().makeRelative().toPortableString();
+                    }
+
+                    return Optional.of(new ModuleInfo(analyzeModule((Module)content, cancellationToken), path));
                 }
             }
         }
