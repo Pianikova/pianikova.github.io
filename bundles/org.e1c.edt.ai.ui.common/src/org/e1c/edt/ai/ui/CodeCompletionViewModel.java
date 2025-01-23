@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -36,6 +37,7 @@ import org.e1c.edt.ai.assistent.ICodeAssistant;
 import org.e1c.edt.ai.assistent.ICompletionRequestProvider;
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.contentassist.ContentAssistEvent;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
@@ -52,6 +54,7 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
+import org.eclipse.xtext.ui.editor.XtextEditor;
 import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
@@ -771,6 +774,38 @@ class CodeCompletionViewModel
         return Optional.of(result);
     }
 
+    private Optional<ArrayList<String>> getProposalList()
+    {
+        var sourceViewer = ui.getSourceViewer(textWidget).get();
+        if (sourceViewer != null)
+        {
+            var editor = ui.getEditor(sourceViewer).get().getAdapter(XtextEditor.class);
+            var assistant = editor.getXtextSourceViewerConfiguration().getContentAssistant(sourceViewer);
+            var cursorOffset = textWidget.getCaretOffset();
+            String partitionType;
+            try
+            {
+                partitionType = sourceViewer.getDocument().getPartition(cursorOffset).getType();
+                var proposals = assistant.getContentAssistProcessor(partitionType)
+                    .computeCompletionProposals(sourceViewer, cursorOffset);
+                // skip second page of context helper
+                var procedures = assistant.getContentAssistProcessor(partitionType)
+                    .computeCompletionProposals(sourceViewer, cursorOffset);
+                ArrayList<String> props = new ArrayList<>();
+                for (var proposal : proposals)
+                {
+                    getProposalText(proposal).ifPresent(prop -> props.add(prop));
+                }
+                return Optional.of(props);
+            }
+            catch (BadLocationException e1)
+            {
+                log.logError(e1);
+            }
+        }
+        return Optional.empty();
+    }
+
     public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
     {
         return dispatcher.dispatch(
@@ -823,6 +858,7 @@ class CodeCompletionViewModel
             lastRequest = new CompletionRequest();
             lastRequest.localContext =
                 localContextFactory.createLocalContext(aiCtx, statistics, expiringCancellationToken);
+            dispatcher.dispatch(() -> lastRequest.localContext.proposalList = getProposalList().get());
             originalPrefix = lastRequest.localContext.prefix;
             lastRequest.localContext.prefix = originalPrefix + proposal;
             return Optional.of(lastRequest);
