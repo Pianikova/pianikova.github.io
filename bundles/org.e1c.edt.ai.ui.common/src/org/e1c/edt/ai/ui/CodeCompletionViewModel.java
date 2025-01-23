@@ -14,6 +14,7 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.Closeables;
+import org.e1c.edt.ai.CodeMethod;
 import org.e1c.edt.ai.HintPart;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IClock;
@@ -40,10 +41,13 @@ import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionListenerExtension2;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.source.ContentAssistantFacade;
+import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
@@ -54,7 +58,8 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 class CodeCompletionViewModel
-    implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener, TraverseListener
+    implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener, TraverseListener,
+    ModifyListener
 {
     private final Object lockObject = new Object();
     private final ILog log;
@@ -85,6 +90,8 @@ class CodeCompletionViewModel
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
     private AssistantListener assistantListener = new AssistantListener();
+    private CodeMethod lastCurrentMethod;
+    private boolean isModifed;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -145,6 +152,10 @@ class CodeCompletionViewModel
         synchronized (lockObject)
         {
             this.textWidget = textWidget;
+            lastSession = null;
+            isModifed = false;
+            lastCurrentMethod = null;
+
             reset();
             if (!textWidget.isDisposed())
             {
@@ -152,6 +163,7 @@ class CodeCompletionViewModel
                 textWidget.addTraverseListener(this);
                 textWidget.addCaretListener(this);
                 textWidget.addVerifyKeyListener(this);
+                textWidget.addModifyListener(this);
             }
 
             dispatcher.dispatchAsync(() -> {
@@ -265,16 +277,21 @@ class CodeCompletionViewModel
                 textWidget.removeCaretListener(this);
                 textWidget.removeVerifyKeyListener(this);
                 textWidget.removeTraverseListener(this);
+                textWidget.removeModifyListener(this);
             }
 
+            getAiContext(CancellationTokens.NONE).ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
             dispatcher.dispatch(() -> {
                 if (!textWidget.isDisposed())
                 {
-                    getAiContext(CancellationTokens.NONE).ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
                     getContentAssistant().ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
                     textWidget.redraw();
                 }
             });
+
+            lastSession = null;
+            isModifed = false;
+            lastCurrentMethod = null;
         }
     }
 
@@ -316,16 +333,7 @@ class CodeCompletionViewModel
                         delay.isNegative() || delay == Duration.ZERO, singleWordMode);
                     return ui.getSourceViewer(textWidget);
                 }).orElse(null))
-                .map(sourceViewer -> {
-                    var doc = sourceViewer.getDocument();
-                    if (!(doc instanceof IXtextDocument))
-                    {
-                        return null;
-                    }
-
-                    return ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
-                })
-                .flatMap(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()))
+                .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, aiCtx.getTextOffset()))
                 .ifPresent(method -> session.setMethod(method));
 
             var completionSource =
@@ -395,6 +403,19 @@ class CodeCompletionViewModel
             log.logError(e);
             deactivate();
         }
+    }
+
+    private Optional<CodeMethod> getCurrentMethod(SourceViewer sourceViewer, int offset)
+    {
+        return dispatcher.dispatch(() -> {
+            var doc = sourceViewer.getDocument();
+            if (!(doc instanceof IXtextDocument))
+            {
+                return null;
+            }
+
+            return ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
+        }).flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
     }
 
     private void cancel()
@@ -588,6 +609,21 @@ class CodeCompletionViewModel
     @Override
     public void caretMoved(CaretEvent event)
     {
+        // sync
+        dispatcher.dispatchAsync(() -> ui.getSourceViewer(textWidget)
+                .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, textWidget.getCaretOffset()))
+                .ifPresent(currentMethod -> {
+                if (!currentMethod.equals(lastCurrentMethod))
+                    {
+                    if (isModifed)
+                    {
+                        lastCurrentMethod = currentMethod;
+                        isModifed = false;
+                        methodChanged(currentMethod);
+                    }
+                    }
+            }));
+
         synchronized (lockObject)
         {
             if (isTraversed || lastSession == null || lastSession.isAccepting())
@@ -597,6 +633,23 @@ class CodeCompletionViewModel
         }
 
         reset();
+    }
+
+    @Override
+    public void modifyText(ModifyEvent e)
+    {
+        isModifed = true;
+    }
+
+    private void methodChanged(CodeMethod method)
+    {
+        if (textWidget == null)
+        {
+            return;
+        }
+
+        aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
+            .ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
     }
 
     private void commit(ICodeCompletionSession<CodeCompletionContext> session)

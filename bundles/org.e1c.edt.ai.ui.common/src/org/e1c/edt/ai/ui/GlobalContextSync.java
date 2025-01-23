@@ -6,6 +6,7 @@ package org.e1c.edt.ai.ui;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
@@ -17,6 +18,7 @@ import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.assistent.IGlobalContextService;
 import org.e1c.edt.ai.assistent.model.EntityKey;
 import org.e1c.edt.ai.assistent.model.EntityValue;
+import org.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import org.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
 
 import com.google.common.base.Preconditions;
@@ -52,39 +54,62 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public boolean sync(AIContext aiCtx, int maxDept, ICancellationToken cancellationToken)
+    public CompletableFuture<Boolean> sync(AIContext aiCtx, int maxDept, ICancellationToken cancellationToken)
     {
         try
         {
             var statistics = statisticsProvider.get();
-            var globalContext = globalContextFactory.createGlobalContext(aiCtx, statistics, cancellationToken);
-            var updates = globalContextRequestFactory.createGlobalContextUpdates(aiCtx, globalContext, statistics,
-                cancellationToken);
-
-            if (updates.isEmpty())
-            {
-                return true;
-            }
-
-            if (cancellationToken.isCanceled())
-            {
-                return false;
-            }
-
-            var oprionalResult =
-                globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken).get();
-            if (oprionalResult.isEmpty())
-            {
-                return false;
-            }
-
-            var result = oprionalResult.get();
-            return sync(aiCtx, result.unknownValues, result.unknownKeys, maxDept, cancellationToken);
+            var updates = getSyncData(aiCtx, statistics, cancellationToken);
+            return sync(aiCtx, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
             log.logError(error);
-            return false;
+            return CompletableFuture.completedFuture(false);
+        }
+    }
+
+    @Override
+    public List<GlobalContextUpdate> getSyncData(AIContext aiCtx, IStatistics statistics,
+        ICancellationToken cancellationToken)
+    {
+        var globalContext = globalContextFactory.createGlobalContext(aiCtx, statistics, cancellationToken);
+        return globalContextRequestFactory.createGlobalContextUpdates(aiCtx, globalContext, statistics,
+            cancellationToken);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> sync(AIContext aiCtx, List<GlobalContextUpdate> updates, int maxDept,
+        IStatistics statistics,
+        ICancellationToken cancellationToken)
+    {
+        try
+        {
+            if (updates.isEmpty())
+            {
+                return CompletableFuture.completedFuture(true);
+            }
+
+            if (cancellationToken.isCanceled())
+            {
+                return CompletableFuture.completedFuture(false);
+            }
+
+            return globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken)
+                .thenApplyAsync(optionalResult -> {
+                    if (optionalResult.isEmpty())
+                    {
+                        return false;
+                    }
+
+                    var result = optionalResult.get();
+                    return sync(aiCtx, result.unknownValues, result.unknownKeys, maxDept, cancellationToken);
+                });
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+            return CompletableFuture.completedFuture(false);
         }
     }
 
@@ -103,11 +128,12 @@ class GlobalContextSync implements IGlobalContextSync
             var response = new GlobalContextUpdateResponse();
             response.unknownValues = unknownValues;
             response.unknownKeys = unknownKeys;
-            var oprionalResult = Optional.ofNullable(response);
-            while (maxDept-- > 0 && oprionalResult.isPresent())
+            var optionalResult = Optional.ofNullable(response);
+            while (maxDept-- > 0 && optionalResult.isPresent())
             {
-                var vals = response.unknownValues;
-                var keys = response.unknownKeys;
+                var result = optionalResult.get();
+                var vals = result.unknownValues;
+                var keys = result.unknownKeys;
                 var hasUnknownValues = vals != null && !vals.isEmpty();
                 var hasUnknownKeys = keys != null && !keys.isEmpty();
                 if (!hasUnknownValues && !hasUnknownKeys)
@@ -175,7 +201,7 @@ class GlobalContextSync implements IGlobalContextSync
                     return true;
                 }
 
-                oprionalResult =
+                optionalResult =
                     globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken).get();
             }
         }

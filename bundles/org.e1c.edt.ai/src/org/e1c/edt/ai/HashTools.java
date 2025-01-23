@@ -133,12 +133,18 @@ public class HashTools
             charset = StandardCharsets.UTF_8;
         }
 
-        var hash = messageDigestProvider.get();
-        try (var inputStream = file.getContents();)
+        try (var inputStream = file.getContents(true);)
         {
-            scanTextStream(buffer, bytes -> hash.update(bytes), inputStream, charset, null);
+            return compute(inputStream, charset, buffer);
         }
+    }
 
+    @Override
+    public MessageDigest compute(InputStream inputStream, Charset charset, CharBuffer buffer)
+        throws UnsupportedEncodingException, IOException
+    {
+        var hash = messageDigestProvider.get();
+        scanTextStream(buffer, bytes -> hash.update(bytes), inputStream, charset, null);
         return hash;
     }
 }

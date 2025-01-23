@@ -25,6 +25,9 @@ public interface IHashTools
         Predicate<Character> filter)
         throws UnsupportedEncodingException, IOException;
 
+    MessageDigest compute(InputStream inputStream, Charset charset, CharBuffer buffer)
+        throws UnsupportedEncodingException, IOException;
+
     MessageDigest compute(IFile file, CharBuffer buffer)
         throws UnsupportedEncodingException, IOException, CoreException;
 }

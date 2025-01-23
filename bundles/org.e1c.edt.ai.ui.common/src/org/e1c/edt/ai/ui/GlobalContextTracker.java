@@ -73,7 +73,7 @@ class GlobalContextTracker
                 activeWorkflow = workflow;
                 if (forcible)
                 {
-                    workflow.markAsDirty(aiCtx.getPath());
+                    workflow.markAsDirty(aiCtx);
                 }
 
                 if (job != null && job.getState() != Job.NONE)

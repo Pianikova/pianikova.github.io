@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 
+import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -19,5 +20,5 @@ interface IProjectTrackingWorkflow
 
     List<String> getHashes();
 
-    void markAsDirty(String path);
+    void markAsDirty(AIContext aiCtx);
 }

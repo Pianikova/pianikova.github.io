@@ -3,7 +3,10 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.io.ByteArrayInputStream;
 import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -12,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.e1c.edt.ai.AIContext;
@@ -21,6 +25,7 @@ import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.IHashTools;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProjectIdProvider;
+import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -30,22 +35,25 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 class ProjectTrackingWorkflow
     implements IProjectTrackingWorkflow
 {
+    private final static int MaxConcurrentSyncs = 1;
     private final static Duration ExtraLongDelay = Duration.ofSeconds(15);
     private final static Duration LongDelay = Duration.ofSeconds(1);
     private final static Duration ShortDelay = Duration.ofMillis(10);
     private final static ProjectFileComparator ProjectFileComparator = new ProjectFileComparator();
     private final ILog log;
+    private final Provider<IStatistics> statisticsProvider;
     private final IHashTools hashTools;
     private final IClock clock;
     private final IProjectIdProvider projectIdProvider;
     private final IGlobalContextSync globalContextSync;
     private final HashMap<String, ProjectFile> filesToHash = new HashMap<>();
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
-    private final HashSet<String> dirtyfiles = new HashSet<>();
+    private final HashMap<String, DirtyFile> dirtyfiles = new HashMap<>();
     private final CharBuffer buffer = CharBuffer.allocate(1024);
     private IProject project;
     private ProjectId projectId;
@@ -53,15 +61,18 @@ class ProjectTrackingWorkflow
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
 
     @Inject
-    public ProjectTrackingWorkflow(ILog log, IHashTools hashTools, IClock clock, IProjectIdProvider projectIdProvider,
+    public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
+        IClock clock, IProjectIdProvider projectIdProvider,
         IGlobalContextSync globalContextSync)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(projectIdProvider);
         Preconditions.checkNotNull(globalContextSync);
         this.log = log;
+        this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
         this.clock = clock;
         this.projectIdProvider = projectIdProvider;
@@ -98,7 +109,7 @@ class ProjectTrackingWorkflow
                 break;
 
             case SYNC:
-                result = sync(10, progressMonitor, cancellationToken);
+                result = sync(20, progressMonitor, cancellationToken);
                 break;
             }
         }
@@ -133,11 +144,12 @@ class ProjectTrackingWorkflow
     }
 
     @Override
-    public void markAsDirty(String path)
+    public void markAsDirty(AIContext aiCtx)
     {
         synchronized(dirtyfiles)
         {
-            dirtyfiles.add(path);
+            log.trace("Mark as dirty", () -> aiCtx.toString()); //$NON-NLS-1$
+            dirtyfiles.compute(aiCtx.getPath(), (key, prev) -> new DirtyFile(aiCtx));
         }
     }
 
@@ -225,23 +237,22 @@ class ProjectTrackingWorkflow
         synchronized (dirtyfiles)
         {
             var processedFiles = new ArrayList<String>();
-            for (var dirtyfile : dirtyfiles)
+            for (var dirtyfile : dirtyfiles.entrySet())
             {
-                var file = filesToHash.get(dirtyfile);
+                var path = dirtyfile.getKey();
+                var file = filesToHash.get(path);
                 if (file != null)
                 {
                     if (!file.file.isAccessible())
                     {
-                        filesToHash.remove(dirtyfile);
-                        processedFiles.add(dirtyfile);
+                        filesToHash.remove(path);
+                        processedFiles.add(path);
                         continue;
                     }
 
-                    if (file.file.isSynchronized(Integer.MAX_VALUE))
-                    {
-                        file.updateTime = LocalDateTime.MIN;
-                        processedFiles.add(dirtyfile);
-                    }
+                    file.updateTime = LocalDateTime.MIN;
+                    file.aiCtx = dirtyfile.getValue().aiCtx;
+                    processedFiles.add(path);
                 }
             }
 
@@ -278,20 +289,44 @@ class ProjectTrackingWorkflow
 
             try
             {
-                if (!file.file.isAccessible() || !file.file.isSynchronized(Integer.MAX_VALUE))
-                {
-                    continue;
-                }
-
+                file.sync = false;
                 file.updateTime = clock.now();
-                var hash = hashTools.format(hashTools.compute(file.file, buffer));
-                if (hash.equals(file.hash))
+                MessageDigest hash;
+                if (file.aiCtx.getKind() == AIContextKind.Common)
                 {
+                    if (!file.file.isAccessible())
+                    {
+                        continue;
+                    }
+
+                    var modificationStamp = file.file.getModificationStamp();
+                    if (file.modificationStamp == modificationStamp)
+                    {
+                        continue;
+                    }
+
+                    file.modificationStamp = modificationStamp;
+                    hash = hashTools.compute(file.file, buffer);
+                }
+                else
+                {
+                    try (var inputStream =
+                        new ByteArrayInputStream(file.aiCtx.getSource().getBytes(StandardCharsets.UTF_8));)
+                    {
+                        hash = hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer);
+                    }
+                }
+
+
+                var hashStr = hashTools.format(hash);
+                if (hashStr.equals(file.hash))
+                {
+                    file.sync = true;
                     continue;
                 }
 
-                file.hash = hash;
-                if (hashes.contains(hash))
+                file.hash = hashStr;
+                if (hashes.contains(hashStr))
                 {
                     file.sync = true;
                     continue;
@@ -322,6 +357,7 @@ class ProjectTrackingWorkflow
         var filesToProcess =
             filesToSync.stream().sorted(ProjectFileComparator).limit(maxFiles).collect(Collectors.toList());
         progressMonitor.beginTask(Messages.CodeCompletionBackgroundSyncSubtaskName, filesToProcess.size());
+        var futures = new ArrayList<CompletableFuture<Boolean>>();
         for (var file : filesToProcess)
         {
             if (cancellationToken.isCanceled())
@@ -329,18 +365,49 @@ class ProjectTrackingWorkflow
                 break;
             }
 
-            try
+            var statistics = statisticsProvider.get();
+            var updates = globalContextSync.getSyncData(file.aiCtx, statistics, cancellationToken);
+
+            if (futures.size() >= MaxConcurrentSyncs)
             {
-                if (globalContextSync.sync(file.aiCtx, 3, cancellationToken))
+                try
                 {
-                    file.sync = true;
-                    filesToSync.remove(file);
+                    futures.forEach(CompletableFuture::join);
+                }
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
+                finally
+                {
+                    futures.clear();
                 }
             }
-            finally
-            {
-                progressMonitor.worked(1);
-            }
+
+            var feature = globalContextSync.sync(file.aiCtx, updates, 2, statistics, cancellationToken)
+                .whenComplete((result, error) -> {
+                    if (result != null && result)
+                    {
+                        file.sync = true;
+                        synchronized (filesToSync)
+                        {
+                            filesToSync.remove(file);
+                        }
+                    }
+
+                    progressMonitor.worked(1);
+                });
+
+            futures.add(feature);
+        }
+
+        try
+        {
+            futures.forEach(CompletableFuture::join);
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
         }
 
         if (!filesToSync.isEmpty())
@@ -353,12 +420,13 @@ class ProjectTrackingWorkflow
 
     private static class ProjectFile
     {
-        public final AIContext aiCtx;
+        public AIContext aiCtx;
         private final String path;
         public final IFile file;
         public LocalDateTime updateTime;
         public String hash;
         public boolean sync = false;
+        public long modificationStamp = -1;
 
         public ProjectFile(AIContext aiCtx, String path, IFile file, LocalDateTime updateTime)
         {
@@ -389,6 +457,16 @@ class ProjectTrackingWorkflow
                 return false;
             ProjectFile other = (ProjectFile)obj;
             return Objects.equals(path, other.path);
+        }
+    }
+
+    private static class DirtyFile
+    {
+        public final AIContext aiCtx;
+
+        public DirtyFile(AIContext aiCtx)
+        {
+            this.aiCtx = aiCtx;
         }
     }
 
