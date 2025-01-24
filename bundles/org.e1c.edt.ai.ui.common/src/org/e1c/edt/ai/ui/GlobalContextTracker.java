@@ -61,7 +61,7 @@ class GlobalContextTracker
     }
 
     @Override
-    public void track(AIContext aiCtx, boolean forcible)
+    public void track(AIContext aiCtx)
     {
         synchronized (lockObject)
         {
@@ -71,11 +71,7 @@ class GlobalContextTracker
                         k -> projectTrackingWorkflowProvider.get().initialize(project, state.hashes));
 
                 activeWorkflow = workflow;
-                if (forcible)
-                {
-                    workflow.markAsDirty(aiCtx);
-                }
-
+                workflow.track(aiCtx);
                 if (job != null && job.getState() != Job.NONE)
                 {
                     return;

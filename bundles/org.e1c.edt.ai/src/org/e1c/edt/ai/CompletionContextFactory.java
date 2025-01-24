@@ -103,41 +103,46 @@ class CompletionContextFactory
         ICancellationToken cancellationToken)
     {
         var path = aiContext.getPath();
-
         var result = new ArrayList<GlobalContextUpdate>();
-        if (globalContext.configurationName != null)
-        {
-            var request = new GlobalContextUpdate();
-            request.field = Fields.CONFIGURATION_NAME;
-            request.value = globalContext.configurationName;
-            result.add(request);
-        }
 
+        var request = new GlobalContextUpdate();
+        request.field = Fields.CONFIGURATION_NAME;
+        request.value = globalContext.configurationName != null ? globalContext.configurationName : ""; //$NON-NLS-1$
+        result.add(request);
+
+        request = new GlobalContextUpdate();
+        request.path = path;
+        request.field = Fields.FORM;
         if (globalContext.form != null || globalContext.formEntity != null)
         {
-            var request = new GlobalContextUpdate();
-            request.path = path;
-            request.field = Fields.FORM;
             request.hash = globalContext.form;
             request.value = globalContext.formEntity;
-            result.add(request);
         }
+        else
+        {
+            request.value = new Object();
+        }
+        result.add(request);
 
+        request = new GlobalContextUpdate();
+        request.path = path;
+        request.field = Fields.META;
         if (globalContext.meta != null || globalContext.metaEntity != null)
         {
-            var request = new GlobalContextUpdate();
-            request.path = path;
-            request.field = Fields.META;
             request.hash = globalContext.meta;
             request.value = globalContext.metaEntity;
-            result.add(request);
         }
+        else
+        {
+            request.value = new Object();
+        }
+        result.add(request);
 
         if (globalContext.localFunctionsEntities != null && !globalContext.localFunctionsEntities.isEmpty())
         {
             for (var localFunction : globalContext.localFunctionsEntities.entrySet())
             {
-                var request = new GlobalContextUpdate();
+                request = new GlobalContextUpdate();
                 request.path = path;
                 request.hash = hashTools.format(localFunction.getValue().Hash);
                 request.field = Fields.LOCAL_FUNCTIONS + '.' + localFunction.getKey();
@@ -149,7 +154,7 @@ class CompletionContextFactory
         {
             if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
             {
-                var request = new GlobalContextUpdate();
+                request = new GlobalContextUpdate();
                 request.path = path;
                 request.field = Fields.LOCAL_FUNCTIONS;
                 request.value = globalContext.localFunctions;

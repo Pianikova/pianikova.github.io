@@ -174,7 +174,7 @@ class CodeCompletionViewModel
 
                     // Warm up
                     aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                        .ifPresent(aiCtx -> globalContextManager.warmup(aiCtx, CancellationTokens.NONE));
+                        .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
                     warmupLocalContext();
                 }
             });
@@ -280,7 +280,6 @@ class CodeCompletionViewModel
                 textWidget.removeModifyListener(this);
             }
 
-            getAiContext(CancellationTokens.NONE).ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
             dispatcher.dispatch(() -> {
                 if (!textWidget.isDisposed())
                 {
@@ -649,7 +648,7 @@ class CodeCompletionViewModel
         }
 
         aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-            .ifPresent(aiCtx -> globalContextManager.sync(aiCtx));
+            .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
     }
 
     private void commit(ICodeCompletionSession<CodeCompletionContext> session)

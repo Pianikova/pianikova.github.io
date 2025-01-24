@@ -53,7 +53,7 @@ class ProjectTrackingWorkflow
     private final IGlobalContextSync globalContextSync;
     private final HashMap<String, ProjectFile> filesToHash = new HashMap<>();
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
-    private final HashMap<String, DirtyFile> dirtyfiles = new HashMap<>();
+    private final HashMap<String, FileToTrack> filesToTrack = new HashMap<>();
     private final CharBuffer buffer = CharBuffer.allocate(1024);
     private IProject project;
     private ProjectId projectId;
@@ -144,12 +144,12 @@ class ProjectTrackingWorkflow
     }
 
     @Override
-    public void markAsDirty(AIContext aiCtx)
+    public void track(AIContext aiCtx)
     {
-        synchronized(dirtyfiles)
+        synchronized(filesToTrack)
         {
-            log.trace("Mark as dirty", () -> aiCtx.toString()); //$NON-NLS-1$
-            dirtyfiles.compute(aiCtx.getPath(), (key, prev) -> new DirtyFile(aiCtx));
+            log.trace("Track", () -> aiCtx.toString()); //$NON-NLS-1$
+            filesToTrack.compute(aiCtx.getPath(), (key, prev) -> new FileToTrack(aiCtx));
         }
     }
 
@@ -234,12 +234,13 @@ class ProjectTrackingWorkflow
             return new Result(ProjectTrackingWorkflowState.SYNC, Duration.ofMillis(100));
         }
 
-        synchronized (dirtyfiles)
+        var now = clock.now();
+        synchronized (filesToTrack)
         {
             var processedFiles = new ArrayList<String>();
-            for (var dirtyfile : dirtyfiles.entrySet())
+            for (var fileToTrack : filesToTrack.entrySet())
             {
-                var path = dirtyfile.getKey();
+                var path = fileToTrack.getKey();
                 var file = filesToHash.get(path);
                 if (file != null)
                 {
@@ -250,21 +251,20 @@ class ProjectTrackingWorkflow
                         continue;
                     }
 
-                    file.updateTime = LocalDateTime.MIN;
-                    file.aiCtx = dirtyfile.getValue().aiCtx;
+                    file.updateTime = now;
+                    file.aiCtx = fileToTrack.getValue().aiCtx;
                     processedFiles.add(path);
                 }
             }
 
             for (var processedFile : processedFiles)
             {
-                dirtyfiles.remove(processedFile);
+                filesToTrack.remove(processedFile);
             }
         }
 
         final var hasFileToSync = new Boolean[1];
         hasFileToSync[0] = false;
-        var now = clock.now();
         var delay = Duration.ofSeconds(15);
         var filesToProcess =
             filesToHash.values()
@@ -290,7 +290,7 @@ class ProjectTrackingWorkflow
             try
             {
                 file.sync = false;
-                file.updateTime = clock.now();
+                file.updateTime = now;
                 MessageDigest hash;
                 if (file.aiCtx.getKind() == AIContextKind.Common)
                 {
@@ -460,11 +460,11 @@ class ProjectTrackingWorkflow
         }
     }
 
-    private static class DirtyFile
+    private static class FileToTrack
     {
         public final AIContext aiCtx;
 
-        public DirtyFile(AIContext aiCtx)
+        public FileToTrack(AIContext aiCtx)
         {
             this.aiCtx = aiCtx;
         }

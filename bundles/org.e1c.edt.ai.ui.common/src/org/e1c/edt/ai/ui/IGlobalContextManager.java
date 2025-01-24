@@ -9,9 +9,7 @@ import org.e1c.edt.ai.assistent.model.Completion;
 
 interface IGlobalContextManager
 {
-    void warmup(AIContext aiCtx, ICancellationToken cancellationToken);
+    void update(AIContext aiCtx, ICancellationToken cancellationToken);
 
     void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken);
-
-    void sync(AIContext aiCtx);
 }

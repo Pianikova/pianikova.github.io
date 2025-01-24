@@ -40,15 +40,15 @@ class GlobalContextManager implements IGlobalContextManager
     }
 
     @Override
-    public void warmup(AIContext aiCtx, ICancellationToken cancellationToken)
+    public void update(AIContext aiCtx, ICancellationToken cancellationToken)
     {
-        globalContextTracker.track(aiCtx, false);
         var job =
             dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
                 jobCtx -> {
                     try
                     {
                         globalContextSync.sync(aiCtx, 3, jobCtx.CancellationTokenSource).get();
+                        globalContextTracker.track(aiCtx);
                     }
                     catch (Exception error)
                     {
@@ -64,12 +64,6 @@ class GlobalContextManager implements IGlobalContextManager
         var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.sync(aiCtx,
             completion.unknownValues, completion.unknownKeys, 3, jobCtx.CancellationTokenSource), cancellationToken);
         runJob(job);
-    }
-
-    @Override
-    public void sync(AIContext aiCtx)
-    {
-        globalContextTracker.track(aiCtx, true);
     }
 
     private synchronized void runJob(Job job)
