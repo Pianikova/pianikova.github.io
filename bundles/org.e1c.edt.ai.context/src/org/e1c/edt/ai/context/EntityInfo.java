@@ -388,7 +388,7 @@ class EntityInfo
                                 log.logError(error);
                                 return null;
                             }
-                        }).ifPresent(hash -> globalContext.form = hashTools.format(hash));
+                        }).ifPresent(hash -> globalContext.form = hashTools.format(hash, true));
                     }
 
                     if (actionFilter.test(new FillAction(DataType.DATA, Fields.FORM, globalContext.form)))
@@ -479,7 +479,7 @@ class EntityInfo
                     uniqueName = uniqueName.substring(prefixIndex + MethodNamePrefix.length());
                 }
 
-                var hashStr = hashTools.format(hash);
+                var hashStr = hashTools.format(hash, true);
                 final var methodName = uniqueName;
                 if (aiContextKind == AIContextKind.ActiveEditor && sourceOffset >= node.getTotalOffset()
                     && sourceOffset <= node.getTotalEndOffset())
@@ -526,7 +526,7 @@ class EntityInfo
                                 log.logError(error);
                                 return null;
                             }
-                        }).map(hash -> hashTools.format(hash)).orElse(null);
+                        }).map(hash -> hashTools.format(hash, true)).orElse(null);
                 }
 
                 return false;

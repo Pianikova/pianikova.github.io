@@ -50,6 +50,7 @@ public class AIModule
         bind(IJson.class).to(Json.class).in(Singleton.class);
         bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);
         bind(IHashTools.class).to(HashTools.class).in(Singleton.class);
+        bind(IIdProvider.class).to(HardwareIdProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -19,16 +19,20 @@ public class SettingsProvider
     private final ILog log;
     private final ISettingsStore settingsStore;
     private final IParser<String, Parameters> parametersParser;
+    private final IIdProvider idProvider;
 
     @Inject
-    public SettingsProvider(ILog log, ISettingsStore settingsStore, IParser<String, Parameters> parametersParser)
+    public SettingsProvider(ILog log, ISettingsStore settingsStore, IParser<String, Parameters> parametersParser,
+        IIdProvider idProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
         Preconditions.checkNotNull(parametersParser);
+        Preconditions.checkNotNull(idProvider);
         this.log = log;
         this.settingsStore = settingsStore;
         this.parametersParser = parametersParser;
+        this.idProvider = idProvider;
     }
 
     @Override
@@ -38,12 +42,6 @@ public class SettingsProvider
         if (clientToken != null)
         {
             clientToken = clientToken.trim();
-        }
-
-        var clientUID = settingsStore.getString(ISettingsStore.CLIENT_UID);
-        if (clientUID != null)
-        {
-            clientUID = clientUID.trim();
         }
 
         URL apiURL = null;
@@ -59,7 +57,7 @@ public class SettingsProvider
 
         var llmParameters = settingsStore.getString(ISettingsStore.LLM_PARAMETERS);
         var parameters = parametersParser.parse(llmParameters).orElseGet(() -> new Parameters());
-        var settings = new AISettings(apiURL, clientToken, clientUID, parameters);
+        var settings = new AISettings(apiURL, clientToken, idProvider.getId(), parameters);
         return Optional.of(settings);
     }
 

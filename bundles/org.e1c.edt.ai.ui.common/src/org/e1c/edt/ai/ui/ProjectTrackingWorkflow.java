@@ -318,7 +318,7 @@ class ProjectTrackingWorkflow
                 }
 
 
-                var hashStr = hashTools.format(hash);
+                var hashStr = hashTools.format(hash, true);
                 if (hashStr.equals(file.hash))
                 {
                     file.sync = true;
