@@ -7,5 +7,5 @@ import org.e1c.edt.ai.AIContext;
 
 interface IGlobalContextTracker
 {
-    void track(AIContext aiCtx, boolean forcible);
+    void track(AIContext aiCtx);
 }

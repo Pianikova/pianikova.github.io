@@ -20,5 +20,5 @@ interface IProjectTrackingWorkflow
 
     List<String> getHashes();
 
-    void markAsDirty(AIContext aiCtx);
+    void track(AIContext aiCtx);
 }
