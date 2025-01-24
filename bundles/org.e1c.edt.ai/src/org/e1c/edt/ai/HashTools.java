@@ -48,12 +48,15 @@ public class HashTools
     }
 
     @Override
-    public String format(MessageDigest hash)
+    public String format(MessageDigest hash, boolean includePrefix)
     {
         var bytes = clone(hash).digest();
-        var text = new StringBuilder(hash.getAlgorithm().length() + 1 + bytes.length * 2);
-        text.append(hash.getAlgorithm());
-        text.append(':');
+        var text = new StringBuilder((includePrefix ? (hash.getAlgorithm().length() + 1) : 0) + bytes.length * 2);
+        if (includePrefix)
+        {
+            text.append(hash.getAlgorithm());
+            text.append(':');
+        }
 
         for (var i = 0; i < bytes.length; i++)
         {

@@ -19,6 +19,7 @@ public class SettingsProviderTest
 {
     private final ILog log = Mockito.mock(ILog.class);
     private final ISettingsStore settingsStore = Mockito.mock(ISettingsStore.class);
+    private final IIdProvider idProvider = Mockito.mock(IIdProvider.class);
     @SuppressWarnings("unchecked")
     private final IParser<String, Parameters> parametersParser = Mockito.mock(IParser.class);
 
@@ -58,7 +59,7 @@ public class SettingsProviderTest
 
         // When
         when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
-        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
+        when(idProvider.getId()).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/");
         var settings = provider.getSettings();
 
@@ -82,7 +83,7 @@ public class SettingsProviderTest
 
         // When
         when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
-        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
+        when(idProvider.getId()).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com");
         var settings = provider.getSettings();
 
@@ -105,7 +106,7 @@ public class SettingsProviderTest
 
         // When
         when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
-        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
+        when(idProvider.getId()).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/generate/");
         var settings = provider.getSettings();
 
@@ -129,7 +130,7 @@ public class SettingsProviderTest
 
         // When
         when(settingsStore.getString(ISettingsStore.CLIENT_TOKEN)).thenReturn("Abc");
-        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("345");
+        when(idProvider.getId()).thenReturn("345");
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com/generate");
         var settings = provider.getSettings();
 
@@ -179,10 +180,10 @@ public class SettingsProviderTest
     private SettingsProvider createInstance()
     {
         when(settingsStore.getString(Mockito.anyString())).thenReturn("");
-        when(settingsStore.getString(ISettingsStore.CLIENT_UID)).thenReturn("");
+        when(idProvider.getId()).thenReturn("");
         when(settingsStore.getInt(Mockito.anyString())).thenReturn(0);
         when(settingsStore.getString(ISettingsStore.APIURL)).thenReturn("http://api.com");
         when(parametersParser.parse(Mockito.anyString())).thenReturn(Optional.of(new Parameters()));
-        return new SettingsProvider(log, settingsStore, parametersParser);
+        return new SettingsProvider(log, settingsStore, parametersParser, idProvider);
     }
 }

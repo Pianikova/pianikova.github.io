@@ -23,7 +23,6 @@ import com.google.inject.Inject;
 public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
 {
     private static final String AI_PROPS_FILE_NAME = "ai.props"; //$NON-NLS-1$
-    private static final int AI_UID_SIZE = 8;
     private final Object lock = new Object();
     private final ILog log;
     private final IPreferenceStore preferenceStore;
@@ -44,23 +43,7 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     @Override
     public String getString(String key)
     {
-        switch(key)
-        {
-            case ISettingsStore.CLIENT_UID:
-                var curProps = getProps();
-                var val = curProps.getProperty(key, "").trim(); //$NON-NLS-1$
-                if (val.length() != AI_UID_SIZE)
-                {
-                    val = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, AI_UID_SIZE); //$NON-NLS-1$ //$NON-NLS-2$
-                    curProps.setProperty(key, val);
-                    saveProps();
-                }
-
-                return val;
-
-            default:
-                return preferenceStore.getString(key);
-        }
+        return preferenceStore.getString(key);
     }
 
     @Override

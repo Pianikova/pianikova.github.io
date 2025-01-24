@@ -19,7 +19,7 @@ public interface IHashTools
 {
     MessageDigest clone(MessageDigest hash);
 
-    String format(MessageDigest hash);
+    String format(MessageDigest hash, boolean includePrefix);
 
     void scanTextStream(CharBuffer buffer, Consumer<byte[]> consumer, InputStream inputStream, Charset charset,
         Predicate<Character> filter)

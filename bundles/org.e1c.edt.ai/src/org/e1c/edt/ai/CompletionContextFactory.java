@@ -144,7 +144,7 @@ class CompletionContextFactory
             {
                 request = new GlobalContextUpdate();
                 request.path = path;
-                request.hash = hashTools.format(localFunction.getValue().Hash);
+                request.hash = hashTools.format(localFunction.getValue().Hash, true);
                 request.field = Fields.LOCAL_FUNCTIONS + '.' + localFunction.getKey();
                 request.value = localFunction.getValue().Value;
                 result.add(request);

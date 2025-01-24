@@ -58,7 +58,8 @@ class RequestBuilder
             .timeout(uiSettings.getTimeout())
             .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
             .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
-            .header("Authorization", settings.getClientToken()); //$NON-NLS-1$
+            .header("Authorization", settings.getClientToken()) //$NON-NLS-1$
+            .header("Unique-Id", settings.getClientUniqueId()); //$NON-NLS-1$
 
         var pluginVersion = versionProvider.getPluginVersion();
         var edtVersion = versionProvider.getPlatformVersion();
