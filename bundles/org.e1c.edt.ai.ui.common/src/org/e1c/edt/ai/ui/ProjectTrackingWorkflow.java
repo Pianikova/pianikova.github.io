@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -57,7 +58,7 @@ class ProjectTrackingWorkflow
     private final CharBuffer buffer = CharBuffer.allocate(1024);
     private IProject project;
     private ProjectId projectId;
-    private HashSet<String> hashes = new HashSet<>();
+    private Set<String> hashes = new HashSet<>();
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
 
     @Inject
@@ -80,7 +81,7 @@ class ProjectTrackingWorkflow
     }
 
     @Override
-    public synchronized ProjectTrackingWorkflow initialize(IProject project, HashSet<String> hashes)
+    public synchronized ProjectTrackingWorkflow initialize(IProject project, Set<String> hashes)
     {
         this.project = project;
         projectId = projectIdProvider.getProjectId(project);
@@ -302,6 +303,7 @@ class ProjectTrackingWorkflow
                     var modificationStamp = file.file.getModificationStamp();
                     if (file.modificationStamp == modificationStamp)
                     {
+                        file.sync = true;
                         continue;
                     }
 

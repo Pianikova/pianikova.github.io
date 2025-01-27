@@ -5,14 +5,12 @@ package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.HashSet;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.IProjectProvider;
-import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.jobs.Job;
@@ -28,36 +26,31 @@ class GlobalContextTracker
     private final IProjectProvider projectProvider;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
     private final IClock clock;
-    private final ISettingsStore settingsStore;
+    private final IGlobalContextStateStore globalContextStateStore;
     private final IUISettings settings;
     private final Object lockObject = new Object();
     private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
-    private final State state;
+    private final GlobalContextState state;
     private Job job;
     private IProjectTrackingWorkflow activeWorkflow;
 
     @Inject
     public GlobalContextTracker(IDispatcher dispatcher, IProjectProvider projectProvider,
-        Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock, ISettingsStore settingsStore,
-        IUISettings settings)
+        Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock,
+        IGlobalContextStateStore globalContextStateStore, IUISettings settings)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(projectProvider);
         Preconditions.checkNotNull(projectTrackingWorkflowProvider);
         Preconditions.checkNotNull(clock);
-        Preconditions.checkNotNull(settingsStore);
         Preconditions.checkNotNull(settings);
         this.dispatcher = dispatcher;
         this.projectProvider = projectProvider;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
         this.clock = clock;
-        this.settingsStore = settingsStore;
+        this.globalContextStateStore = globalContextStateStore;
         this.settings = settings;
-        state = settingsStore.getValue(ISettingsStore.GLOBAL_CONTEXT, State.class).orElseGet(() -> {
-            var result = new State();
-            result.hashes = new HashSet<>();
-            return result;
-        });
+        state = globalContextStateStore.load();
     }
 
     @Override
@@ -103,7 +96,7 @@ class GlobalContextTracker
             }
         }
 
-        settingsStore.setValue(ISettingsStore.GLOBAL_CONTEXT, state);
+        globalContextStateStore.save(state);
     }
 
     private void track(JobContext jobCtx, IProjectTrackingWorkflow workflow)    {
@@ -125,10 +118,5 @@ class GlobalContextTracker
 
             job.schedule(delay.toMillis());
         }
-    }
-
-    private static class State
-    {
-        public HashSet<String> hashes = new HashSet<>();
     }
 }

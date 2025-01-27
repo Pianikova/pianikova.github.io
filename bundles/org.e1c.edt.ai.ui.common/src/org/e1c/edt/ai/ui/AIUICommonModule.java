@@ -60,6 +60,7 @@ public class AIUICommonModule
         bind(IGlobalContextTracker.class).to(GlobalContextTracker.class).in(Singleton.class);
         bind(IProjectTrackingWorkflow.class).to(ProjectTrackingWorkflow.class);
         bind(IGlobalContextSync.class).to(GlobalContextSync.class).in(Singleton.class);
+        bind(IGlobalContextStateStore.class).to(GlobalContextStateStore.class).in(Singleton.class);
         // @formatter:on
     }
 }
