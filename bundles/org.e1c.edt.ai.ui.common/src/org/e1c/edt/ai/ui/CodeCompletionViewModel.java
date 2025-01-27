@@ -6,6 +6,7 @@ package org.e1c.edt.ai.ui;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -774,36 +775,53 @@ class CodeCompletionViewModel
         return Optional.of(result);
     }
 
-    private Optional<ArrayList<String>> getProposalList()
+    private Optional<List<String>> getProposals(AIContext aiCtx)
     {
-        var sourceViewer = ui.getSourceViewer(textWidget).get();
-        if (sourceViewer != null)
+        return ui.getSourceViewer(textWidget).flatMap(sourceViewer -> {
+            return ui.getEditor(sourceViewer)
+                .map(editor -> editor.getAdapter(XtextEditor.class))
+                .map(editor -> editor.getXtextSourceViewerConfiguration())
+                .map(config -> config.getContentAssistant(sourceViewer))
+                .flatMap(assistant -> getPartitionType(aiCtx, sourceViewer)
+                    .map(partitionType -> assistant.getContentAssistProcessor(partitionType)))
+                .map(assistProcessor -> {
+                    var offset = aiCtx.getSourceOffset();
+                    var proposals = assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                    // skip second page of context helper
+                    assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                    return proposals;
+                })
+                .flatMap(proposals -> getProposals(proposals));
+        });
+    }
+
+    private Optional<String> getPartitionType(AIContext aiCtx, SourceViewer sourceViewer)
+    {
+        try
         {
-            var editor = ui.getEditor(sourceViewer).get().getAdapter(XtextEditor.class);
-            var assistant = editor.getXtextSourceViewerConfiguration().getContentAssistant(sourceViewer);
-            var cursorOffset = textWidget.getCaretOffset();
-            String partitionType;
-            try
+            var document = sourceViewer.getDocument();
+            if (document != null)
             {
-                partitionType = sourceViewer.getDocument().getPartition(cursorOffset).getType();
-                var proposals = assistant.getContentAssistProcessor(partitionType)
-                    .computeCompletionProposals(sourceViewer, cursorOffset);
-                // skip second page of context helper
-                var procedures = assistant.getContentAssistProcessor(partitionType)
-                    .computeCompletionProposals(sourceViewer, cursorOffset);
-                ArrayList<String> props = new ArrayList<>();
-                for (var proposal : proposals)
-                {
-                    getProposalText(proposal).ifPresent(prop -> props.add(prop));
-                }
-                return Optional.of(props);
-            }
-            catch (BadLocationException e1)
-            {
-                log.logError(e1);
+                return Optional.ofNullable(document.getPartition(aiCtx.getSourceOffset()).getType());
             }
         }
+        catch (BadLocationException error)
+        {
+            log.logError(error);
+        }
+
         return Optional.empty();
+    }
+
+    private Optional<List<String>> getProposals(ICompletionProposal[] proposals)
+    {
+        var result = new ArrayList<String>();
+        for (var proposal : proposals)
+        {
+            getProposalText(proposal).ifPresent(prop -> result.add(prop));
+        }
+
+        return Optional.of(result);
     }
 
     public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
@@ -858,7 +876,10 @@ class CodeCompletionViewModel
             lastRequest = new CompletionRequest();
             lastRequest.localContext =
                 localContextFactory.createLocalContext(aiCtx, statistics, expiringCancellationToken);
-            dispatcher.dispatch(() -> lastRequest.localContext.proposalList = getProposalList().get());
+            dispatcher.dispatch(() -> getProposals(aiCtx)).flatMap(i -> i).ifPresent(proposals -> {
+                lastRequest.localContext.proposals = proposals;
+            });
+
             originalPrefix = lastRequest.localContext.prefix;
             lastRequest.localContext.prefix = originalPrefix + proposal;
             return Optional.of(lastRequest);
