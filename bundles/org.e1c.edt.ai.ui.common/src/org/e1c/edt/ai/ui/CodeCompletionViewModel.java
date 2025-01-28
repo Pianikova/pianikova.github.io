@@ -5,8 +5,6 @@ package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -38,8 +36,6 @@ import org.e1c.edt.ai.assistent.ICodeAssistant;
 import org.e1c.edt.ai.assistent.ICompletionRequestProvider;
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.contentassist.ContentAssistEvent;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionListenerExtension2;
@@ -55,7 +51,6 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
-import org.eclipse.xtext.ui.editor.XtextEditor;
 import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
@@ -87,6 +82,7 @@ class CodeCompletionViewModel
     private final IHotKeys hotKeys;
     private final IGlobalContextManager globalContextManager;
     private final ISyntaxVaidator syntaxVaidator;
+    private final IProposalsProvider proposalsProvider;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private AutoCloseable feedbackToken = Closeables.Empty;
@@ -108,7 +104,8 @@ class CodeCompletionViewModel
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
-        IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator)
+        IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
+        IProposalsProvider proposalsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -130,6 +127,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(hotKeys);
         Preconditions.checkNotNull(globalContextManager);
         Preconditions.checkNotNull(syntaxVaidator);
+        Preconditions.checkNotNull(proposalsProvider);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -149,6 +147,7 @@ class CodeCompletionViewModel
         this.hotKeys = hotKeys;
         this.globalContextManager = globalContextManager;
         this.syntaxVaidator = syntaxVaidator;
+        this.proposalsProvider = proposalsProvider;
     }
 
     @Override
@@ -708,120 +707,11 @@ class CodeCompletionViewModel
 
             lastProp = prop;
             reset();
-            getProposalText(prop).ifPresent(proposalText -> {
+            proposalsProvider.getProposal(textWidget.getText(), prop).ifPresent(proposalText -> {
                 proposal = proposalText;
                 askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, localContext);
             });
         }
-    }
-
-    private Optional<String> getProposalText(ICompletionProposal proposal)
-    {
-        var content = textWidget.getText();
-        var proposalDoc = new Document(content);
-        proposal.apply(proposalDoc);
-        var newContent = proposalDoc.get();
-        var min = Integer.min(content.length(), newContent.length());
-        int start;
-        for (start = 0; start < min; start++)
-        {
-            if (content.charAt(start) != newContent.charAt(start))
-            {
-                break;
-            }
-        }
-
-        if (start == min)
-        {
-            return Optional.empty();
-        }
-
-        int finish;
-        var max = Integer.max(content.length(), newContent.length());
-        for (finish = max - 1; finish > start; finish--)
-        {
-            if (content.charAt(finish - (max - content.length())) != newContent
-                .charAt(finish - (max - newContent.length())))
-            {
-                break;
-            }
-        }
-
-        var result = newContent.substring(start, finish + 1);
-        if (!result.isBlank() && !proposal.getDisplayString().startsWith(result))
-        {
-            for (finish = 0; finish < result.length(); finish++)
-            {
-                if (!Character.isLetterOrDigit(result.charAt(finish)))
-                {
-                    finish++;
-                    break;
-                }
-            }
-
-            if (finish > result.length())
-            {
-                finish = result.length();
-            }
-
-            result = result.substring(0, finish);
-        }
-
-        if (result.isBlank())
-        {
-            return Optional.empty();
-        }
-
-        return Optional.of(result);
-    }
-
-    private Optional<List<String>> getProposals(AIContext aiCtx)
-    {
-        return ui.getSourceViewer(textWidget).flatMap(sourceViewer -> {
-            return ui.getEditor(sourceViewer)
-                .map(editor -> editor.getAdapter(XtextEditor.class))
-                .map(editor -> editor.getXtextSourceViewerConfiguration())
-                .map(config -> config.getContentAssistant(sourceViewer))
-                .flatMap(assistant -> getPartitionType(aiCtx, sourceViewer)
-                    .map(partitionType -> assistant.getContentAssistProcessor(partitionType)))
-                .map(assistProcessor -> {
-                    var offset = aiCtx.getSourceOffset();
-                    var proposals = assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                    // skip second page of context helper
-                    assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                    return proposals;
-                })
-                .flatMap(proposals -> getProposals(proposals));
-        });
-    }
-
-    private Optional<String> getPartitionType(AIContext aiCtx, SourceViewer sourceViewer)
-    {
-        try
-        {
-            var document = sourceViewer.getDocument();
-            if (document != null)
-            {
-                return Optional.ofNullable(document.getPartition(aiCtx.getSourceOffset()).getType());
-            }
-        }
-        catch (BadLocationException error)
-        {
-            log.logError(error);
-        }
-
-        return Optional.empty();
-    }
-
-    private Optional<List<String>> getProposals(ICompletionProposal[] proposals)
-    {
-        var result = new ArrayList<String>();
-        for (var proposal : proposals)
-        {
-            getProposalText(proposal).ifPresent(prop -> result.add(prop));
-        }
-
-        return Optional.of(result);
     }
 
     public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
@@ -876,7 +766,9 @@ class CodeCompletionViewModel
             lastRequest = new CompletionRequest();
             lastRequest.localContext =
                 localContextFactory.createLocalContext(aiCtx, statistics, expiringCancellationToken);
-            dispatcher.dispatch(() -> getProposals(aiCtx)).flatMap(i -> i).ifPresent(proposals -> {
+            dispatcher.dispatch(() -> proposalsProvider.getProposals(aiCtx, textWidget))
+                .flatMap(i -> i)
+                .ifPresent(proposals -> {
                 lastRequest.localContext.proposals = proposals;
             });
 
