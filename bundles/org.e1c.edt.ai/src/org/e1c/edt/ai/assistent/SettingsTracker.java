@@ -21,19 +21,12 @@ public class SettingsTracker
     public synchronized boolean register(String owner, Object settings)
     {
         Preconditions.checkNotNull(owner);
+        Preconditions.checkNotNull(settings);
         var currentSettnigs = currentSettings.get(owner);
         if (currentSettnigs == null || currentSettnigs.hashCode() != settings.hashCode()
             || !currentSettnigs.equals(settings))
         {
-            if (settings != null)
-            {
-                currentSettings.put(owner, settings);
-            }
-            else
-            {
-                currentSettings.remove(owner);
-            }
-
+            currentSettings.put(owner, settings);
             return true;
         }
 
