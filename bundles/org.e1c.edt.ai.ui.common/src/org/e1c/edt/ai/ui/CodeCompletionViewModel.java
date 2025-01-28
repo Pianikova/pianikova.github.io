@@ -30,6 +30,7 @@ import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observers;
+import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.Text;
 import org.e1c.edt.ai.assistent.ICodeAssistant;
 import org.e1c.edt.ai.assistent.ICompletionRequestProvider;
@@ -794,17 +795,26 @@ class CodeCompletionViewModel
         public synchronized Optional<CompletionRequest> get(IStatistics statistics,
             ICancellationToken cancellationToken)
         {
-            var optionalAiCtx = getAiContext(cancellationToken);
-            if (optionalAiCtx.isEmpty())
+            AIContext aiCtx;
+            try (var measurement = statistics.measureDuration(StatisticsType.AI_CONTEXT_DURATUION))
             {
-                return Optional.empty();
-            }
+                var optionalAiCtx = getAiContext(cancellationToken);
+                if (optionalAiCtx.isEmpty())
+                {
+                    return Optional.empty();
+                }
 
-            var aiCtx = optionalAiCtx.get();
-            if (lastRequest != null && lastAiContext != null && lastAiContext.equals(aiCtx))
+                aiCtx = optionalAiCtx.get();
+                if (lastRequest != null && lastAiContext != null && lastAiContext.equals(aiCtx))
+                {
+                    lastRequest.localContext.prefix = originalPrefix + proposal;
+                    return Optional.of(lastRequest);
+                }
+            }
+            catch (Exception error)
             {
-                lastRequest.localContext.prefix = originalPrefix + proposal;
-                return Optional.of(lastRequest);
+                log.logError(error);
+                return Optional.empty();
             }
 
             var expirationDate = clock.now().plus(maxDuration);

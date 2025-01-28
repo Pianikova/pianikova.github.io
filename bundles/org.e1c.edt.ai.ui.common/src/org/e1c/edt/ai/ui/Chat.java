@@ -14,7 +14,6 @@ import java.util.concurrent.TimeUnit;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.IContextEntities;
-import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.IStatistics;
@@ -62,7 +61,6 @@ public class Chat implements IChat, IChatDialog
     private final IParametersService parametersService;
     private final ISettingsTracker settingsTracker;
     private final IUISettings uiSettings;
-    private final IJson json;
     private final IContextEntities contextEntities;
     private final IJavaScript javaScript;
     private WebView webView;
@@ -73,7 +71,7 @@ public class Chat implements IChat, IChatDialog
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
-        IUISettings uiSettings, IJson json, IContextEntities contextEntities, IJavaScript javaScript)
+        IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -82,7 +80,6 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(uiSettings);
-        Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(javaScript);
         this.log = log;
@@ -93,7 +90,6 @@ public class Chat implements IChat, IChatDialog
         this.parametersService = parametersService;
         this.settingsTracker = settingsTracker;
         this.uiSettings = uiSettings;
-        this.json = json;
         this.contextEntities = contextEntities;
         this.javaScript = javaScript;
     }
@@ -280,7 +276,7 @@ public class Chat implements IChat, IChatDialog
 
                 var settings = optionalSettings.get();
                 var chatUrl = parameters.get().chatUrl;
-                var reset = settingsTracker.register(IParametersService.class.getName(), json.serialize(settings));
+                var reset = settingsTracker.register(IParametersService.class.getName(), settings);
                 dispatcher.dispatch(() -> {
                     if (lastChatUrl != chatUrl || reset)
                     {

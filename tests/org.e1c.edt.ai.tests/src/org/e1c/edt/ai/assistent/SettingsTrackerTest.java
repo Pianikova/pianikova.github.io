@@ -74,37 +74,6 @@ public class SettingsTrackerTest
         Assert.assertEquals(1, tracker.size());
     }
 
-    @SuppressWarnings("nls")
-    @Test
-    public void shouldRegisterWhenEmpty()
-    {
-        // Given
-        var tracker = createInstance();
-
-        // When
-        var actualRegistered = tracker.register("abc", null);
-
-        // Then
-        Assert.assertTrue(actualRegistered);
-        Assert.assertEquals(0, tracker.size());
-    }
-
-    @SuppressWarnings("nls")
-    @Test
-    public void shouldRegisterNewSettingsWhenEmpty()
-    {
-        // Given
-        var tracker = createInstance();
-        tracker.register("abc", Settings);
-
-        // When
-        var actualRegistered = tracker.register("abc", null);
-
-        // Then
-        Assert.assertTrue(actualRegistered);
-        Assert.assertEquals(0, tracker.size());
-    }
-
     private SettingsTracker createInstance()
     {
         return new SettingsTracker();
