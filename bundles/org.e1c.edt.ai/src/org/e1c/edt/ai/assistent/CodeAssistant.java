@@ -7,6 +7,7 @@ import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -24,6 +25,7 @@ import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Observables;
 import org.e1c.edt.ai.StatisticsType;
 import org.e1c.edt.ai.assistent.model.Completion;
+import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.e1c.edt.ai.assistent.model.Session;
 import org.e1c.edt.ai.client.AIClientException;
@@ -125,8 +127,13 @@ class CodeAssistant
         BodyPublisher bodyPublisher;
         try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL_DURATUION))
         {
-            var requet = сompletionRequestProvider.get(statistics, cancellationToken);
-            if (requet.isEmpty())
+            Optional<CompletionRequest> request;
+            try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
+            {
+                request = сompletionRequestProvider.get(statistics, cancellationToken);
+            }
+
+            if (request.isEmpty())
             {
                 observer.onCompleted();
                 return;
@@ -134,7 +141,7 @@ class CodeAssistant
 
             try (var measurement = statistics.measureDuration(StatisticsType.SERIALIZATION_DURATUION))
             {
-                requestBody = json.serialize(requet.get());
+                requestBody = json.serialize(request.get());
             }
 
             try (var measurement = statistics.measureDuration(StatisticsType.COMPRESSION_DURATUION))

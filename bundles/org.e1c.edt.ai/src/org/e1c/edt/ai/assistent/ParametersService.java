@@ -55,17 +55,24 @@ class ParametersService
     @Override
     public synchronized CompletableFuture<Optional<Parameters>> getParametersAsync()
     {
-        var builder = requestBuilder.create("./params"); //$NON-NLS-1$
-        if (builder.isEmpty())
+        var optionalSettings = settingsProvider.getSettings();
+        if (optionalSettings.isPresent())
         {
-            return CompletableFuture.completedFuture(Optional.empty());
+            var settings = optionalSettings.get();
+            var reset = settingsTracker.register(IParametersService.class.getName(), settings);
+            return responseCache.get("", () -> { //$NON-NLS-1$
+                var builder = requestBuilder.create("./params"); //$NON-NLS-1$
+                if (builder.isEmpty())
+                {
+                    return CompletableFuture.completedFuture(Optional.empty());
+                }
+
+                var request = builder.get().GET().build();
+                return getParametersAsync(request, settings.getLlmParameters());
+            }, reset);
         }
 
-        var request = builder.get().GET().build();
-        var settings = settingsProvider.getSettings().map(i -> json.serialize(i)).orElse(null);
-        var reset = settingsTracker.register(IParametersService.class.getName(), settings);
-        var params = settingsProvider.getSettings().map(i -> i.getLlmParameters()).orElse(new Parameters());
-        return responseCache.get("", () -> getParametersAsync(request, params), reset); //$NON-NLS-1$
+        return CompletableFuture.completedFuture(Optional.empty());
     }
 
     private CompletableFuture<Optional<Parameters>> getParametersAsync(HttpRequest request, Parameters userParams)

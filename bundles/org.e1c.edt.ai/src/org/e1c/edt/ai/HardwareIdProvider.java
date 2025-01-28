@@ -81,7 +81,7 @@ public class HardwareIdProvider implements IIdProvider
         catch (SocketException error)        {            log.logError(error);
         }
 
-        var id = hashTools.format(hash, false);
+        id = hashTools.format(hash, false);
         return id;
     }
 }

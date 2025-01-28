@@ -10,7 +10,7 @@ import com.google.common.base.Preconditions;
 public class SettingsTracker
     implements ISettingsTracker
 {
-    private final HashMap<String, String> currentSettings = new HashMap<>();
+    private final HashMap<String, Object> currentSettings = new HashMap<>();
 
     public synchronized int size()
     {
@@ -18,11 +18,12 @@ public class SettingsTracker
     }
 
     @Override
-    public synchronized boolean register(String owner, String settings)
+    public synchronized boolean register(String owner, Object settings)
     {
         Preconditions.checkNotNull(owner);
         var currentSettnigs = currentSettings.get(owner);
-        if (currentSettnigs == null || !currentSettnigs.equals(settings))
+        if (currentSettnigs == null || currentSettnigs.hashCode() != settings.hashCode()
+            || !currentSettnigs.equals(settings))
         {
             if (settings != null)
             {

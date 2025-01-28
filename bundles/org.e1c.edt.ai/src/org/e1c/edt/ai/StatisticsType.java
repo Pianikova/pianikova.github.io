@@ -9,6 +9,10 @@ public enum StatisticsType
     SERIALIZATION_DURATUION("X-Serialization-Duration"), //$NON-NLS-1$
     COMPRESSION_DURATUION("X-Compression-Duration"), //$NON-NLS-1$
     CONTEXT_DURATUION("X-Context-Duration"), //$NON-NLS-1$
+    AI_CONTEXT_DURATUION("X-AI-Context-Duration"), //$NON-NLS-1$
+    LOCAL_CONTEXT_DURATUION("X-Local-Context-Duration"), //$NON-NLS-1$
+    GLOBAL_CONTEXT_HASHING_DURATUION("X-Global-Context-Hashing-Duration"), //$NON-NLS-1$
+    GLOBAL_CONTEXT_DURATUION("X-Global-Context-Duration"), //$NON-NLS-1$
     LOAD_MODULE_DURATUION("X-Load-Module-Duration"), //$NON-NLS-1$
     FORM_DURATUION("X-Form-Duration"), //$NON-NLS-1$
     META_DURATUION("X-Meta-Duration"), //$NON-NLS-1$

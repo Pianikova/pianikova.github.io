@@ -56,7 +56,7 @@ class CompletionContextFactory
         localContext.path = aiContext.getPath();
         localContext.offset = aiContext.getSourceOffset();
         var globalContext = new GlobalContext();
-        try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
+        try (var measurement = statistics.measureDuration(StatisticsType.LOCAL_CONTEXT_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext,
                 action -> {
@@ -79,7 +79,7 @@ class CompletionContextFactory
     {
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
-        try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
+        try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext,
                 action -> action.getDataType() == DataType.HASH || action.getField() == Fields.CONFIGURATION_NAME,
@@ -181,7 +181,7 @@ class CompletionContextFactory
 
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
-        try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
+        try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_HASHING_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext, action -> {
                 return action.getDataType() == DataType.HASH || (!existingUpdates.containsKey(action.getHash())
