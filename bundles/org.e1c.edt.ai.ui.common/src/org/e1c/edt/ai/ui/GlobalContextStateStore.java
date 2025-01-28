@@ -38,14 +38,18 @@ class GlobalContextStateStore implements IGlobalContextStateStore
         String stateContents;
         try
         {
-            stateContents = Files.readString(getFilePath(), StandardCharsets.UTF_8);
-            var optionalState = json.deserialize(stateContents, GlobalContextState.class);
-            if (optionalState.isPresent())
+            var file = getFilePath();
+            if (Files.exists(getFilePath()))
             {
-                var state = optionalState.get();
-                if (state.hashes != null)
+                stateContents = Files.readString(file, StandardCharsets.UTF_8);
+                var optionalState = json.deserialize(stateContents, GlobalContextState.class);
+                if (optionalState.isPresent())
                 {
-                    return state;
+                    var state = optionalState.get();
+                    if (state.hashes != null)
+                    {
+                        return state;
+                    }
                 }
             }
         }
