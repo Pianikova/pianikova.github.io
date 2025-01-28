@@ -80,6 +80,19 @@ class GlobalContextStateStore implements IGlobalContextStateStore
 
     private Path getFilePath()
     {
+        try
+        {
+            var path = System.getProperties().getProperty(AI_PROPS_FILE_NAME);
+            if (path != null && !path.isBlank())
+            {
+                return Path.of(path);
+            }
+        }
+        catch (Exception ex)
+        {
+            //
+        }
+
         return Path.of(ConfigurationScope.INSTANCE.getLocation()
             .addTrailingSeparator()
             .append(AI_PROPS_FILE_NAME)
