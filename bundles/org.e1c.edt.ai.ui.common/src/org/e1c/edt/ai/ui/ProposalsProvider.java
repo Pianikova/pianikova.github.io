@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -13,9 +14,9 @@ import org.e1c.edt.ai.ILog;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
+import org.eclipse.jface.text.contentassist.IContentAssistant;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.xtext.ui.editor.XtextEditor;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -23,9 +24,31 @@ import com.google.inject.Inject;
 public class ProposalsProvider
     implements IProposalsProvider
 {
+    private static Field contentAssistantField;
     private final ILog log;
     private final IUI ui;
     private final IDispatcher dispatcher;
+
+    static
+    {
+        var fields = SourceViewer.class.getDeclaredFields();
+        for (var field : fields)
+        {
+            if ("fContentAssistant".equals(field.getName())) //$NON-NLS-1$
+            {
+                field.setAccessible(true);
+                try
+                {
+                    contentAssistantField = field;
+                    break;
+                }
+                catch (Exception e)
+                {
+                    //
+                }
+            }
+        }
+    }
 
     @Inject
     public ProposalsProvider(ILog log, IUI ui, IDispatcher dispatcher)
@@ -104,10 +127,7 @@ public class ProposalsProvider
         ICancellationToken cancellationToken)
     {
         return dispatcher.dispatch(() -> ui.getSourceViewer(textWidget).flatMap(sourceViewer -> {
-            return ui.getEditor(sourceViewer)
-                .map(editor -> editor.getAdapter(XtextEditor.class))
-                .map(editor -> editor.getXtextSourceViewerConfiguration())
-                .map(config -> config.getContentAssistant(sourceViewer))
+            return getContentAssistant(sourceViewer)
                 .flatMap(assistant -> getPartitionType(aiCtx, sourceViewer)
                     .map(partitionType -> assistant.getContentAssistProcessor(partitionType)))
                 .map(assistProcessor -> {
@@ -119,6 +139,27 @@ public class ProposalsProvider
                 })
                 .flatMap(proposals -> getProposals(aiCtx, proposals));
         })).flatMap(i -> i);
+    }
+
+    private Optional<IContentAssistant> getContentAssistant(SourceViewer sourceViewer)
+    {
+        try
+        {
+            if (contentAssistantField != null)
+            {
+                var contentAssistant = contentAssistantField.get(sourceViewer);
+                if (contentAssistant instanceof IContentAssistant)
+                {
+                    return Optional.ofNullable((IContentAssistant)contentAssistant);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            //
+        }
+
+        return Optional.empty();
     }
 
     private Optional<String> getPartitionType(AIContext aiCtx, SourceViewer sourceViewer)

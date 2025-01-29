@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.Spliterator;
@@ -42,6 +44,7 @@ class UI
     private final Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider;
     private final Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider;
     private final IDispatcher dispatcher;
+    private final HashMap<Class<?>, Optional<Field>> sourceViewerFields = new HashMap<>();
     private StyledText textWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
@@ -189,28 +192,36 @@ class UI
     private SourceViewer getSourceViewer(Layout layout)
     {
         Preconditions.checkNotNull(layout);
-        var fields = layout.getClass().getDeclaredFields();
-        for (var field : fields)
-        {
-            if ("this$0".equals(field.getName())) //$NON-NLS-1$
+        var sourceViewerField = sourceViewerFields.computeIfAbsent(layout.getClass(), key -> {
+            var fields = layout.getClass().getDeclaredFields();
+            for (var field : fields)
             {
-                field.setAccessible(true);
-                try
+                if ("this$0".equals(field.getName())) //$NON-NLS-1$
                 {
-                    var outer = field.get(layout);
-                    if (outer != null && outer instanceof SourceViewer)
-                    {
-                        return (SourceViewer)outer;
-                    }
-                }
-                catch (Exception e)
-                {
-                    //
+                    field.setAccessible(true);
+                    return Optional.of(field);
                 }
             }
-        }
 
-        return null;
+            return Optional.empty();
+        });
+
+        return sourceViewerField.map(field -> {
+            try
+            {
+                var outer = field.get(layout);
+                if (outer != null && outer instanceof SourceViewer)
+                {
+                    return (SourceViewer)outer;
+                }
+            }
+            catch (Exception e)
+            {
+                //
+            }
+
+            return null;
+        }).orElse(null);
     }
 
     private Stream<Composite> getAncestors(Composite current)
