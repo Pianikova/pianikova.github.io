@@ -5,6 +5,8 @@ package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -36,7 +38,6 @@ import org.e1c.edt.ai.assistent.ICodeAssistant;
 import org.e1c.edt.ai.assistent.ICompletionRequestProvider;
 import org.e1c.edt.ai.assistent.model.CompletionRequest;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.contentassist.ContentAssistEvent;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionListenerExtension2;
@@ -83,6 +84,7 @@ class CodeCompletionViewModel
     private final IHotKeys hotKeys;
     private final IGlobalContextManager globalContextManager;
     private final ISyntaxVaidator syntaxVaidator;
+    private final IProposalsProvider proposalsProvider;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private AutoCloseable feedbackToken = Closeables.Empty;
@@ -104,7 +106,8 @@ class CodeCompletionViewModel
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
-        IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator)
+        IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
+        IProposalsProvider proposalsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -126,6 +129,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(hotKeys);
         Preconditions.checkNotNull(globalContextManager);
         Preconditions.checkNotNull(syntaxVaidator);
+        Preconditions.checkNotNull(proposalsProvider);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -145,6 +149,7 @@ class CodeCompletionViewModel
         this.hotKeys = hotKeys;
         this.globalContextManager = globalContextManager;
         this.syntaxVaidator = syntaxVaidator;
+        this.proposalsProvider = proposalsProvider;
     }
 
     @Override
@@ -233,10 +238,16 @@ class CodeCompletionViewModel
     {
         cancel();
         var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
-            final var contextProvider = CreateContextProvider(localContextProvider, maxDuration);
             getAiContext(jobCtx.CancellationTokenSource)
-                .ifPresent(aiCtx -> ask(aiCtx, contextProvider, delayBeforeShow, codeCompletionLinesCount,
-                    jobCtx.CancellationTokenSource));
+                .ifPresent(aiCtx -> {
+                    var startTime = clock.now();
+                    var proposals = proposalsProvider.getProposals(aiCtx, textWidget, jobCtx.CancellationTokenSource)
+                        .orElseGet(() -> new ArrayList<>());
+                    final var contextProvider = CreateContextProvider(localContextProvider, maxDuration, proposals);
+                    var newDelayBeforeShow = calculateDelay(startTime, delayBeforeShow);
+                    ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
+                        jobCtx.CancellationTokenSource);
+                });
         }, null);
         job.setPriority(Job.SHORT);
         this.lastJob = job;
@@ -247,14 +258,15 @@ class CodeCompletionViewModel
     {
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, uiSettings.getTimeout()), null);
+                ct -> CreateContextProvider(null, uiSettings.getTimeout(), new ArrayList<>()), null);
         warmupJob.schedule();
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
-        Duration maxDuration)
+        Duration maxDuration, List<String> proposals)
     {
-        return localContextProvider != null ? localContextProvider : new CompletionRequestProvider(maxDuration);
+        return localContextProvider != null ? localContextProvider
+            : new CompletionRequestProvider(maxDuration, proposals);
     }
 
     private void deactivate()
@@ -683,7 +695,7 @@ class CodeCompletionViewModel
         public void assistSessionStarted(ContentAssistEvent event)
         {
             reset();
-            localContext = new CompletionRequestProvider(uiSettings.getMinRequestDelay());
+            localContext = new CompletionRequestProvider(uiSettings.getMinRequestDelay(), new ArrayList<>());
         }
 
         @Override
@@ -704,71 +716,11 @@ class CodeCompletionViewModel
 
             lastProp = prop;
             reset();
-            getProposalText(prop).ifPresent(proposalText -> {
+            proposalsProvider.getProposal(textWidget.getText(), prop).ifPresent(proposalText -> {
                 proposal = proposalText;
                 askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, localContext);
             });
         }
-    }
-
-    private Optional<String> getProposalText(ICompletionProposal proposal)
-    {
-        var content = textWidget.getText();
-        var proposalDoc = new Document(content);
-        proposal.apply(proposalDoc);
-        var newContent = proposalDoc.get();
-        var min = Integer.min(content.length(), newContent.length());
-        int start;
-        for (start = 0; start < min; start++)
-        {
-            if (content.charAt(start) != newContent.charAt(start))
-            {
-                break;
-            }
-        }
-
-        if (start == min)
-        {
-            return Optional.empty();
-        }
-
-        int finish;
-        var max = Integer.max(content.length(), newContent.length());
-        for (finish = max - 1; finish > start; finish--)
-        {
-            if (content.charAt(finish - (max - content.length())) != newContent
-                .charAt(finish - (max - newContent.length())))
-            {
-                break;
-            }
-        }
-
-        var result = newContent.substring(start, finish + 1);
-        if (!result.isBlank() && !proposal.getDisplayString().startsWith(result))
-        {
-            for (finish = 0; finish < result.length(); finish++)
-            {
-                if (!Character.isLetterOrDigit(result.charAt(finish)))
-                {
-                    finish++;
-                    break;
-                }
-            }
-
-            if (finish > result.length())
-            {
-                finish = result.length();
-            }
-
-            result = result.substring(0, finish);
-        }
-
-        if (result.isBlank())
-        {
-            return Optional.empty();
-        }
-
-        return Optional.of(result);
     }
 
     public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
@@ -781,14 +733,17 @@ class CodeCompletionViewModel
         implements ICompletionRequestProvider
     {
         private final Duration maxDuration;
+        private final List<String> proposals;
         private AIContext lastAiContext;
         private CompletionRequest lastRequest;
         private String originalPrefix;
 
-        public CompletionRequestProvider(Duration maxDuration)
+        public CompletionRequestProvider(Duration maxDuration, List<String> proposals)
         {
             Preconditions.checkNotNull(maxDuration);
+            Preconditions.checkNotNull(proposals);
             this.maxDuration = maxDuration;
+            this.proposals = proposals;
         }
 
         @Override
@@ -825,6 +780,7 @@ class CodeCompletionViewModel
                 localContextFactory.createLocalContext(aiCtx, statistics, expiringCancellationToken);
             originalPrefix = lastRequest.localContext.prefix;
             lastRequest.localContext.prefix = originalPrefix + proposal;
+            lastRequest.localContext.proposals = proposals;
             return Optional.of(lastRequest);
         }
     }

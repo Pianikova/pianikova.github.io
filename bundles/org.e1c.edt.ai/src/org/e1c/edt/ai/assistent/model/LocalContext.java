@@ -40,4 +40,7 @@ public class LocalContext
 
     @SerializedName("related_functions")
     public List<Object> relatedFunctions;
+
+    @SerializedName("proposals")
+    public List<String> proposals;
 }
