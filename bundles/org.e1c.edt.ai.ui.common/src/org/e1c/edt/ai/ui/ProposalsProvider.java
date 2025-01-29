@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
@@ -24,14 +25,17 @@ public class ProposalsProvider
 {
     private final ILog log;
     private final IUI ui;
+    private final IDispatcher dispatcher;
 
     @Inject
-    public ProposalsProvider(ILog log, IUI ui)
+    public ProposalsProvider(ILog log, IUI ui, IDispatcher dispatcher)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
+        Preconditions.checkNotNull(dispatcher);
         this.log = log;
         this.ui = ui;
+        this.dispatcher = dispatcher;
     }
 
     @Override
@@ -96,9 +100,10 @@ public class ProposalsProvider
 
 
     @Override
-    public Optional<List<String>> getProposals(AIContext aiCtx, StyledText textWidget)
+    public Optional<List<String>> getProposals(AIContext aiCtx, StyledText textWidget,
+        ICancellationToken cancellationToken)
     {
-        return ui.getSourceViewer(textWidget).flatMap(sourceViewer -> {
+        return dispatcher.dispatch(() -> ui.getSourceViewer(textWidget).flatMap(sourceViewer -> {
             return ui.getEditor(sourceViewer)
                 .map(editor -> editor.getAdapter(XtextEditor.class))
                 .map(editor -> editor.getXtextSourceViewerConfiguration())
@@ -113,7 +118,7 @@ public class ProposalsProvider
                     return proposals;
                 })
                 .flatMap(proposals -> getProposals(aiCtx, proposals));
-        });
+        })).flatMap(i -> i);
     }
 
     private Optional<String> getPartitionType(AIContext aiCtx, SourceViewer sourceViewer)
