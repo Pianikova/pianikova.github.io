@@ -508,7 +508,8 @@ class CodeCompletionViewModel
         }).orElse(""); //$NON-NLS-1$
 
         var code = prefix + hintLines + postfix;
-        var validCodeSize = syntaxVaidator.getValidCodeSize(aiContext.getPath(), code) - prefix.length();
+        var validCodeSize =
+            syntaxVaidator.getValidCodeSize(aiContext.getPath(), code, prefix.length()) - prefix.length();
         if (validCodeSize <= 0)
         {
             validCodeSize = 0;

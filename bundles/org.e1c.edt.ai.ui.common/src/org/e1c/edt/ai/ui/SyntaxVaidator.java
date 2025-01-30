@@ -49,7 +49,7 @@ class SyntaxVaidator
     }
 
     @Override
-    public int getValidCodeSize(String filePath, CharSequence code)
+    public int getValidCodeSize(String filePath, CharSequence code, int startOffset)
     {
         var fileExtension = Files.getFileExtension(filePath);
         if (fileExtension != null && !fileExtension.isBlank())
@@ -64,6 +64,14 @@ class SyntaxVaidator
                 {
                     var result = optionalResult.get();
                     var errors = result.getSyntaxErrors();
+                    for (var error : errors)
+                    {
+                        if (error.getOffset() < startOffset)
+                        {
+                            return code.length();
+                        }
+                    }
+
                     var errorOffset = code.length();
                     for (var error : errors)
                     {
