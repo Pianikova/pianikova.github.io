@@ -21,6 +21,8 @@ public interface IUISettings
 
     boolean sendContext();
 
+    boolean sendGlobalContext();
+
     String getLanguage();
 
     String getTheme();

@@ -70,6 +70,12 @@ class UISettings
     }
 
     @Override
+    public boolean sendGlobalContext()
+    {
+        return settingsStore.getBoolean(ISettingsStore.SEND_GLOBAL_CONTEXT);
+    }
+
+    @Override
     public String getLanguage()
     {
         return Platform.getNL().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$

@@ -27,6 +27,7 @@ import org.e1c.edt.ai.IHashTools;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProjectIdProvider;
 import org.e1c.edt.ai.IStatistics;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -52,6 +53,7 @@ class ProjectTrackingWorkflow
     private final IClock clock;
     private final IProjectIdProvider projectIdProvider;
     private final IGlobalContextSync globalContextSync;
+    private final IUISettings settings;
     private final HashMap<String, ProjectFile> filesToHash = new HashMap<>();
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final HashMap<String, FileToTrack> filesToTrack = new HashMap<>();
@@ -64,7 +66,7 @@ class ProjectTrackingWorkflow
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
         IClock clock, IProjectIdProvider projectIdProvider,
-        IGlobalContextSync globalContextSync)
+        IGlobalContextSync globalContextSync, IUISettings settings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
@@ -72,12 +74,14 @@ class ProjectTrackingWorkflow
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(projectIdProvider);
         Preconditions.checkNotNull(globalContextSync);
+        Preconditions.checkNotNull(settings);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
         this.clock = clock;
         this.projectIdProvider = projectIdProvider;
         this.globalContextSync = globalContextSync;
+        this.settings = settings;
     }
 
     @Override
@@ -165,10 +169,12 @@ class ProjectTrackingWorkflow
         progressMonitor.subTask(Messages.CodeCompletionBackgroundScanSubtaskName);
         final var hasFileToHash = new Boolean[1];
         hasFileToHash[0] = false;
+
+        var sendGlobalContext = settings.sendGlobalContext();
         var filesToRemove = new ArrayList<ProjectFile>();
         for (var file : filesToHash.values())
         {
-            if (!file.file.exists())
+            if (!file.file.exists() || (!sendGlobalContext && file.aiCtx.getKind() == AIContextKind.Common))
             {
                 filesToRemove.add(file);
             }
@@ -179,49 +185,60 @@ class ProjectTrackingWorkflow
             filesToHash.remove(file.path);
         }
 
-        var now = clock.now();
-        project.accept(resource -> {
-            if (resource instanceof IFile)
+        if (sendGlobalContext)
+        {
+            var now = clock.now();
+            project.accept(resource -> {
+                if (resource instanceof IFile)
             {
-                var file = (IFile)resource;
-                if ("bsl".equalsIgnoreCase(file.getFileExtension())) //$NON-NLS-1$)
+                    var file = (IFile)resource;
+                    if ("bsl".equalsIgnoreCase(file.getFileExtension())) //$NON-NLS-1$)
                 {
-                    var path = file.getFullPath().makeRelative().toPortableString();
-                    var aiCtx = new AIContext(projectId, AIContextKind.Common, 0, "", 0, path, "", 0); //$NON-NLS-1$//$NON-NLS-2$
-                    if (!filesToHash.containsKey(path))
+                        var path = file.getFullPath().makeRelative().toPortableString();
+                        var aiCtx = new AIContext(projectId, AIContextKind.Common, 0, "", 0, path, "", 0); //$NON-NLS-1$//$NON-NLS-2$
+                        if (!filesToHash.containsKey(path))
                     {
-                        hasFileToHash[0] = true;
-                        filesToHash.put(path, new ProjectFile(aiCtx, path, file, now));
+                            hasFileToHash[0] = true;
+                            filesToHash.put(path, new ProjectFile(aiCtx, path, file, now));
                     }
+                    }
+
+                    return false;
+                }
+
+                if (resource instanceof IFolder)
+                {
+                    var folder = (IFolder)resource;
+                    var pathSegments = folder.getProjectRelativePath().segments();
+                    if (pathSegments.length == 1)
+                {
+                        return "src".equalsIgnoreCase(pathSegments[0]); //$NON-NLS-1$
+                }
+
+                    if (pathSegments.length == 2)
+                {
+                        return "CommonModules".equalsIgnoreCase(pathSegments[1]); //$NON-NLS-1$
+                }
+
+                    return pathSegments.length > 2;
+                }
+
+                if (resource instanceof IProject)
+                {
+                    return true;
                 }
 
                 return false;
-            }
+            });
+        }
 
-            if (resource instanceof IFolder)
+        synchronized (filesToTrack)
+        {
+            if (filesToTrack.size() > 0)
             {
-                var folder = (IFolder)resource;
-                var pathSegments = folder.getProjectRelativePath().segments();
-                if (pathSegments.length == 1)
-                {
-                    return "src".equalsIgnoreCase(pathSegments[0]); //$NON-NLS-1$
-                }
-
-                if (pathSegments.length == 2)
-                {
-                    return "CommonModules".equalsIgnoreCase(pathSegments[1]); //$NON-NLS-1$
-                }
-
-                return pathSegments.length > 2;
+                hasFileToHash[0] = true;
             }
-
-            if (resource instanceof IProject)
-            {
-                return true;
-            }
-
-            return false;
-        });
+        }
 
         return new Result(ProjectTrackingWorkflowState.HASH, hasFileToHash[0] ? ShortDelay : ExtraLongDelay);
     }
@@ -242,20 +259,20 @@ class ProjectTrackingWorkflow
             for (var fileToTrack : filesToTrack.entrySet())
             {
                 var path = fileToTrack.getKey();
-                var file = filesToHash.get(path);
-                if (file != null)
-                {
-                    if (!file.file.isAccessible())
-                    {
-                        filesToHash.remove(path);
-                        processedFiles.add(path);
-                        continue;
-                    }
+                var fileToHash = filesToHash.computeIfAbsent(path,
+                    key -> new ProjectFile(fileToTrack.getValue().aiCtx, path,
+                        project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1)), now));
 
-                    file.updateTime = now;
-                    file.aiCtx = fileToTrack.getValue().aiCtx;
+                if (!fileToHash.file.isAccessible())
+                {
+                    filesToHash.remove(path);
                     processedFiles.add(path);
+                    continue;
                 }
+
+                fileToHash.updateTime = now;
+                fileToHash.aiCtx = fileToTrack.getValue().aiCtx;
+                processedFiles.add(path);
             }
 
             for (var processedFile : processedFiles)

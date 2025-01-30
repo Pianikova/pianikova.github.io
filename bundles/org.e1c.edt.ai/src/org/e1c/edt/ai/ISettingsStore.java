@@ -14,6 +14,7 @@ public interface ISettingsStore
     public final static String CONTINUOUS_CODE_COMPLETION = "stringPreferenceContinuousCodeCompletion"; //$NON-NLS-1$
     public final static String CODE_COMPLETION_MIN_REQUST_DELAY = "stringPreferenceCodeCompletionMinRequestDelay"; //$NON-NLS-1$
     public final static String SEND_CONTEXT = "stringPreferenceSendContext"; //$NON-NLS-1$
+    public final static String SEND_GLOBAL_CONTEXT = "stringPreferenceSendGlobalContext"; //$NON-NLS-1$
     public final static String TIMEOUT = "stringTimeoutMs"; //$NON-NLS-1$
     public final static String TRACE_MODE = "stringPreferenceTraceMode"; //$NON-NLS-1$
 

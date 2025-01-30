@@ -87,6 +87,10 @@ public class ClientAIPreferencePage
         addField(
             new BooleanFieldEditor(ISettingsStore.SEND_CONTEXT, Messages.ClientAIPreferencePage_SendContext, parent));
 
+        addField(new BooleanFieldEditor(ISettingsStore.SEND_GLOBAL_CONTEXT,
+            Messages.ClientAIPreferencePage_SendGlobalContext,
+            parent));
+
         addField(
             new BooleanFieldEditor(ISettingsStore.TRACE_MODE, Messages.ClientAIPreferencePage_TraceMode, parent));
     }
