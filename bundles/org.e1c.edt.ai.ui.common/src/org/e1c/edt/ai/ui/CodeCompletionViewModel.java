@@ -520,15 +520,21 @@ class CodeCompletionViewModel
         }
 
         var validHintLines = hintLines.substring(0, validCodeSize);
-
         dispatcher.dispatch(() -> {
             if (validHintLines.length() > 0)
             {
                 hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), validHintLines,
                     hint.getText(HintPart.TOKEN).getText());
-            }
 
-            widget.redraw();
+                widget.redraw();
+            }
+            else
+            {
+                if (session.isСompleted())
+                {
+                    reset();
+                }
+            }
         });
     }
 

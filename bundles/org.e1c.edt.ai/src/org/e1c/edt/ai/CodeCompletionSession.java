@@ -13,7 +13,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     private TContext context;
     private IHintHistory history;
     private boolean singleWordMode;
-    private boolean isAccepting, inDone;
+    private boolean isAccepting, inCompleted;
     private String uuid = Sources.UNKNOWN.getId();
     private CodeMethod method = Sources.UNKNOWN.getMethod();
 
@@ -93,13 +93,19 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     @Override
     public synchronized boolean isDone()
     {
-        return inDone && hint.isEmpty();
+        return isСompleted() && hint.isEmpty();
+    }
+
+    @Override
+    public synchronized boolean isСompleted()
+    {
+        return inCompleted;
     }
 
     @Override
     public synchronized void complete()
     {
-        inDone = true;
+        inCompleted = true;
     }
 
     @Override
@@ -170,7 +176,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     @Override
     public synchronized void reset()
     {
-        inDone = false;
+        inCompleted = false;
         hint.clear();
     }
 
