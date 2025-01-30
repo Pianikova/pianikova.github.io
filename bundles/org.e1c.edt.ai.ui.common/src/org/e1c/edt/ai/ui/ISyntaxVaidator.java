@@ -3,7 +3,9 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.ICancellationToken;
+
 interface ISyntaxVaidator
 {
-    int getValidCodeSize(String filePath, String code, int startOffset);
+    int getValidHintSize(String filePath, String code, String hint, int offset, ICancellationToken cancellationToken);
 }

@@ -487,41 +487,19 @@ class CodeCompletionViewModel
         var aiContext = context.getAiContext();
         var source = aiContext.getSource();
         var sourceOffset = aiContext.getSourceOffset();
-        var prefixStart = dispatcher.dispatch(
+        var optionalMethod = dispatcher.dispatch(
             () -> ui.getSourceViewer(textWidget).flatMap(sourceViewer -> getCurrentMethod(sourceViewer, sourceOffset)))
-            .flatMap(i -> i)
-            .map(i -> i.getStartOffest())
-            .orElse(0);
+            .flatMap(i -> i);
 
-        if (prefixStart > sourceOffset)
+        int validCodeSize;
+        if (optionalMethod.isPresent())
         {
-            prefixStart = sourceOffset;
+            var method = optionalMethod.get();
+            var code = source.substring(method.getStartOffest(), method.getEndOffest());
+            validCodeSize = syntaxVaidator.getValidHintSize(aiContext.getPath(), code, hintLines,
+                sourceOffset - method.getStartOffest(), context.getCancellationTokenSource());
         }
-
-        var prefix = source.substring(prefixStart, sourceOffset);
-        var postfix = dispatcher.dispatch(() -> {
-            if (session.getContext().isSingleWordMode())
-            {
-                var result = source.substring(sourceOffset);
-                var lineFinish = result.indexOf(widget.getLineDelimiter());
-                if (lineFinish > 0)
-                {
-                    return result.substring(0, lineFinish);
-                }
-            }
-
-            return widget.getLineDelimiter();
-        }).orElse(""); //$NON-NLS-1$
-
-        var code = prefix + hintLines + postfix;
-        var validCodeSize =
-            syntaxVaidator.getValidCodeSize(aiContext.getPath(), code, prefix.length()) - prefix.length();
-        if (validCodeSize <= 0)
-        {
-            validCodeSize = 0;
-        }
-
-        if (validCodeSize > hintLines.length())
+        else
         {
             validCodeSize = hintLines.length();
         }
@@ -548,16 +526,13 @@ class CodeCompletionViewModel
                     }
                     else
                     {
-                        message.append("Hint is valid: ["); //$NON-NLS-1$
-                        message.append(validHintLines);
-                        message.append(']');
+                        message.append("Hint is valid"); //$NON-NLS-1$
                         message.append(System.lineSeparator());
                         message.append(System.lineSeparator());
                     }
 
-                    message.append("Code to check: ["); //$NON-NLS-1$
-                    message.append(code);
-                    message.append(']');
+                    message.append("Method: "); //$NON-NLS-1$
+                    message.append(optionalMethod.map(i -> i.getUniqueName()).orElse("undefined")); //$NON-NLS-1$
 
                     return message.toString();
                 });
