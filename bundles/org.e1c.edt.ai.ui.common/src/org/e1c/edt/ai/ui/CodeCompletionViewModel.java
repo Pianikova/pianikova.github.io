@@ -487,24 +487,30 @@ class CodeCompletionViewModel
         var aiContext = context.getAiContext();
         var source = aiContext.getSource();
         var sourceOffset = aiContext.getSourceOffset();
-        var prefix = source.substring(0, sourceOffset);
+        var prefixStart = dispatcher.dispatch(
+            () -> ui.getSourceViewer(textWidget).flatMap(sourceViewer -> getCurrentMethod(sourceViewer, sourceOffset)))
+            .flatMap(i -> i)
+            .map(i -> i.getStartOffest())
+            .orElse(0);
+
+        if (prefixStart > sourceOffset)
+        {
+            prefixStart = sourceOffset;
+        }
+
+        var prefix = source.substring(prefixStart, sourceOffset);
         var postfix = dispatcher.dispatch(() -> {
-            String result;
             if (session.getContext().isSingleWordMode())
             {
-                result = source.substring(sourceOffset);
+                var result = source.substring(sourceOffset);
                 var lineFinish = result.indexOf(widget.getLineDelimiter());
                 if (lineFinish > 0)
                 {
-                    result = result.substring(0, lineFinish);
+                    return result.substring(0, lineFinish);
                 }
             }
-            else
-            {
-                result = widget.getLineDelimiter();
-            }
 
-            return result;
+            return widget.getLineDelimiter();
         }).orElse(""); //$NON-NLS-1$
 
         var code = prefix + hintLines + postfix;
@@ -522,6 +528,41 @@ class CodeCompletionViewModel
 
         var validHintLines = hintLines.substring(0, validCodeSize);
         dispatcher.dispatch(() -> {
+            if (uiSettings.traceMode())
+            {
+                log.trace("Syntax check " + context.getCancellationTokenSource(), () -> { //$NON-NLS-1$
+                    var message = new StringBuilder();
+                    if (hintLines.length() != validHintLines.length())
+                    {
+                        message.append("Original hint: ["); //$NON-NLS-1$
+                        message.append(hintLines);
+                        message.append(']');
+                        message.append(System.lineSeparator());
+                        message.append(System.lineSeparator());
+
+                        message.append("Valid hint:    ["); //$NON-NLS-1$
+                        message.append(validHintLines);
+                        message.append(']');
+                        message.append(System.lineSeparator());
+                        message.append(System.lineSeparator());
+                    }
+                    else
+                    {
+                        message.append("Hint is valid: ["); //$NON-NLS-1$
+                        message.append(validHintLines);
+                        message.append(']');
+                        message.append(System.lineSeparator());
+                        message.append(System.lineSeparator());
+                    }
+
+                    message.append("Code to check: ["); //$NON-NLS-1$
+                    message.append(code);
+                    message.append(']');
+
+                    return message.toString();
+                });
+            }
+
             if (validHintLines.length() > 0)
             {
                 hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), validHintLines,

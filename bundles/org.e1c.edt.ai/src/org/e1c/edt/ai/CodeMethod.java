@@ -10,9 +10,13 @@ import com.google.common.base.Preconditions;
 public class CodeMethod
 {
     private final String uniqueName;
+    private final int startOffest;
+    private final int endOffest;
 
-    public CodeMethod(String uniqueName)
+    public CodeMethod(String uniqueName, int startOffest, int endOffest)
     {
+        this.startOffest = startOffest;
+        this.endOffest = endOffest;
         Preconditions.checkNotNull(uniqueName);
         this.uniqueName = uniqueName;
     }
@@ -20,6 +24,16 @@ public class CodeMethod
     public String getUniqueName()
     {
         return uniqueName;
+    }
+
+    public int getStartOffest()
+    {
+        return startOffest;
+    }
+
+    public int getEndOffest()
+    {
+        return endOffest;
     }
 
     @Override

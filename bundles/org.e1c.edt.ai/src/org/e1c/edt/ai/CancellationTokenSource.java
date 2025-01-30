@@ -80,13 +80,6 @@ public class CancellationTokenSource
     {
         var sb = new StringBuilder();
         sb.append(id);
-
-        if (!name.isBlank())
-        {
-            sb.append(' ');
-            sb.append(name);
-        }
-
         if (isCanceled())
         {
             sb.append(" (cancelled)"); //$NON-NLS-1$

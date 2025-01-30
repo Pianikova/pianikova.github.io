@@ -5,5 +5,5 @@ package org.e1c.edt.ai.ui;
 
 interface ISyntaxVaidator
 {
-    int getValidCodeSize(String filePath, CharSequence code, int startOffset);
+    int getValidCodeSize(String filePath, String code, int startOffset);
 }
