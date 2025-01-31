@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 
+import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -49,39 +50,58 @@ class SyntaxVaidator
     }
 
     @Override
-    public int getValidCodeSize(String filePath, CharSequence code)
+    public int getValidHintSize(String filePath, String code, String hint, int offset,
+        ICancellationToken cancellationToken)
     {
+        var paseResult = parse(filePath, code, hint, offset);
+        if (paseResult.isEmpty())
+        {
+            return hint.length();
+        }
+
+        var errorOffset = getMinErrorOffset(paseResult.get(), cancellationToken) - offset;
+        if (errorOffset < 0 || errorOffset > hint.length())
+        {
+            return hint.length();
+        }
+
+        return errorOffset;
+    }
+
+    private int getMinErrorOffset(IParseResult parseResult, ICancellationToken cancellationToken)
+    {
+        var errors = parseResult.getSyntaxErrors();
+        var minErrorOffset = -1;
+        for (var error : errors)
+        {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
+            var offset = error.getOffset();
+            if (minErrorOffset == -1 || offset < minErrorOffset)
+            {
+                minErrorOffset = offset;
+            }
+        }
+
+        return minErrorOffset;
+    }
+
+    private Optional<IParseResult> parse(String filePath, String code, String hint, int offset)
+    {
+        var fullCode = new StringBuilder(code);
+        fullCode.insert(offset, hint);
         var fileExtension = Files.getFileExtension(filePath);
         if (fileExtension != null && !fileExtension.isBlank())
         {
-            var codeStream = getAsStream(code);
+            var codeStream = getAsStream(fullCode.toString());
             var resourceSet = resourceSetProvider.get();
             var uriToUse = computeUnusedUri(resourceSet, fileExtension);
             try
             {
-                var optionalResult = parse(codeStream, uriToUse, PARSE_OPTIONS, resourceSet);
-                if (optionalResult.isPresent())
-                {
-                    var result = optionalResult.get();
-                    var errors = result.getSyntaxErrors();
-                    var errorOffset = code.length();
-                    for (var error : errors)
-                    {
-                        var offset = error.getOffset();
-                        if (offset < errorOffset)
-                        {
-                            errorOffset = offset;
-                        }
-                    }
-
-                    var validCodeSize = errorOffset + 1;
-                    if (validCodeSize < code.length())
-                    {
-                        return validCodeSize;
-                    }
-
-                    return code.length();
-                }
+                return parse(codeStream, uriToUse, PARSE_OPTIONS, resourceSet);
             }
             catch (Exception error)
             {
@@ -89,7 +109,7 @@ class SyntaxVaidator
             }
         }
 
-        return code.length();
+        return Optional.empty();
     }
 
     private static URI computeUnusedUri(ResourceSet resourceSet, String fileExtension)

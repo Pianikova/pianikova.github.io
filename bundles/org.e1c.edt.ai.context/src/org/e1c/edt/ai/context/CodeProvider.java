@@ -48,7 +48,10 @@ class CodeProvider
             return Optional.empty();
         }
 
-        return Optional.of(new CodeMethod(method.getUniqueName()));
+        var methodNode = NodeModelUtils.getNode(method);
+        var startOffest = methodNode.getTotalOffset();
+        var endOffest = methodNode.getTotalEndOffset();
+        return Optional.of(new CodeMethod(method.getUniqueName(), startOffest, endOffest));
     }
 
     @Override

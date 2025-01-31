@@ -487,48 +487,71 @@ class CodeCompletionViewModel
         var aiContext = context.getAiContext();
         var source = aiContext.getSource();
         var sourceOffset = aiContext.getSourceOffset();
-        var prefix = source.substring(0, sourceOffset);
-        var postfix = dispatcher.dispatch(() -> {
-            String result;
-            if (session.getContext().isSingleWordMode())
-            {
-                result = source.substring(sourceOffset);
-                var lineFinish = result.indexOf(widget.getLineDelimiter());
-                if (lineFinish > 0)
-                {
-                    result = result.substring(0, lineFinish);
-                }
-            }
-            else
-            {
-                result = widget.getLineDelimiter();
-            }
+        var optionalMethod = dispatcher.dispatch(
+            () -> ui.getSourceViewer(textWidget).flatMap(sourceViewer -> getCurrentMethod(sourceViewer, sourceOffset)))
+            .flatMap(i -> i);
 
-            return result;
-        }).orElse(""); //$NON-NLS-1$
-
-        var code = prefix + hintLines + postfix;
-        var validCodeSize = syntaxVaidator.getValidCodeSize(aiContext.getPath(), code) - prefix.length();
-        if (validCodeSize <= 0)
+        int validCodeSize;
+        if (optionalMethod.isPresent())
         {
-            validCodeSize = 0;
+            var method = optionalMethod.get();
+            var code = source.substring(method.getStartOffest(), method.getEndOffest());
+            validCodeSize = syntaxVaidator.getValidHintSize(aiContext.getPath(), code, hintLines,
+                sourceOffset - method.getStartOffest(), context.getCancellationTokenSource());
         }
-
-        if (validCodeSize > hintLines.length())
+        else
         {
             validCodeSize = hintLines.length();
         }
 
         var validHintLines = hintLines.substring(0, validCodeSize);
-
         dispatcher.dispatch(() -> {
+            if (uiSettings.traceMode())
+            {
+                log.trace("Syntax check " + context.getCancellationTokenSource(), () -> { //$NON-NLS-1$
+                    var message = new StringBuilder();
+                    if (hintLines.length() != validHintLines.length())
+                    {
+                        message.append("Original hint: ["); //$NON-NLS-1$
+                        message.append(hintLines);
+                        message.append(']');
+                        message.append(System.lineSeparator());
+                        message.append(System.lineSeparator());
+
+                        message.append("Valid hint:    ["); //$NON-NLS-1$
+                        message.append(validHintLines);
+                        message.append(']');
+                        message.append(System.lineSeparator());
+                        message.append(System.lineSeparator());
+                    }
+                    else
+                    {
+                        message.append("Hint is valid"); //$NON-NLS-1$
+                        message.append(System.lineSeparator());
+                        message.append(System.lineSeparator());
+                    }
+
+                    message.append("Method: "); //$NON-NLS-1$
+                    message.append(optionalMethod.map(i -> i.getUniqueName()).orElse("undefined")); //$NON-NLS-1$
+
+                    return message.toString();
+                });
+            }
+
             if (validHintLines.length() > 0)
             {
                 hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), validHintLines,
                     hint.getText(HintPart.TOKEN).getText());
-            }
 
-            widget.redraw();
+                widget.redraw();
+            }
+            else
+            {
+                if (session.isСompleted())
+                {
+                    reset();
+                }
+            }
         });
     }
 

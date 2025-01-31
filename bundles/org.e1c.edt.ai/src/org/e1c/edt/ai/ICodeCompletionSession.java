@@ -21,6 +21,8 @@ public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
 
     boolean isDone();
 
+    boolean isСompleted();
+
     CodeCompletionAction finish();
 
     CodeCompletionAction accept(HintPart part, int offset);
