@@ -82,7 +82,7 @@ class ParametersService
         return clienBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
             .thenApplyAsync(response -> {
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)

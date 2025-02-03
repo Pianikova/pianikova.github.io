@@ -190,7 +190,7 @@ class CodeAssistant
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> asyncRequest.cancel(true));
         asyncRequest
             .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch))
+            .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
             .thenApplyAsync(response -> checkResponse(response, observer, cancellationToken))
             .thenApplyAsync(HttpResponse::body)
             .thenAcceptAsync(stream -> processStream(asyncRequest, stream, observer, cancellationToken))

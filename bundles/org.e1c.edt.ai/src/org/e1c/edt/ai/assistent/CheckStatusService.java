@@ -54,7 +54,7 @@ class CheckStatusService
         return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch, false))
             .thenApplyAsync(response -> {
                 return response.statusCode();
             });

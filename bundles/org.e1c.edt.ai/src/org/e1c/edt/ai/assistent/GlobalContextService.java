@@ -140,7 +140,7 @@ class GlobalContextService
         return clienBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
             .thenApplyAsync(HttpResponse::body)
             .thenApplyAsync(content -> json.deserialize(content, GlobalContextUpdateResponse.class));
     }
