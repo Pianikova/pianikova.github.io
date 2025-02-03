@@ -6,16 +6,13 @@ package org.e1c.edt.ai.ui;
 import java.io.ByteArrayInputStream;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -43,7 +40,7 @@ class ProjectTrackingWorkflow
     implements IProjectTrackingWorkflow
 {
     private final static int MaxConcurrentSyncs = 1;
-    private final static Duration ExtraLongDelay = Duration.ofSeconds(15);
+    private final static Duration ExtraLongDelay = Duration.ofSeconds(3);
     private final static Duration LongDelay = Duration.ofSeconds(1);
     private final static Duration ShortDelay = Duration.ofMillis(10);
     private final static ProjectFileComparator ProjectFileComparator = new ProjectFileComparator();
@@ -58,9 +55,9 @@ class ProjectTrackingWorkflow
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final HashMap<String, FileToTrack> filesToTrack = new HashMap<>();
     private final CharBuffer buffer = CharBuffer.allocate(1024);
+    private GlobalContextState state;
     private IProject project;
     private ProjectId projectId;
-    private Set<String> hashes = new HashSet<>();
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
 
     @Inject
@@ -85,12 +82,20 @@ class ProjectTrackingWorkflow
     }
 
     @Override
-    public synchronized ProjectTrackingWorkflow initialize(IProject project, Set<String> hashes)
+    public synchronized ProjectTrackingWorkflow initialize(IProject project, GlobalContextState state)
     {
+        Preconditions.checkNotNull(project);
+        Preconditions.checkNotNull(state);
         this.project = project;
+        this.state = state;
         projectId = projectIdProvider.getProjectId(project);
-        this.hashes = hashes;
         return this;
+    }
+
+    @Override
+    public String getId()
+    {
+        return projectId.path;
     }
 
     @Override
@@ -134,27 +139,31 @@ class ProjectTrackingWorkflow
     }
 
     @Override
-    public List<String> getHashes()
-    {
-        var result = new ArrayList<String>();
-        for (var file : filesToHash.values())
-        {
-            if (file.sync)
-            {
-                result.add(file.hash);
-            }
-        }
-
-        return result;
-    }
-
-    @Override
     public void track(AIContext aiCtx)
     {
         synchronized(filesToTrack)
         {
             log.trace("Track", () -> aiCtx.toString()); //$NON-NLS-1$
             filesToTrack.compute(aiCtx.getPath(), (key, prev) -> new FileToTrack(aiCtx));
+        }
+    }
+
+    @Override
+    public void saveState(GlobalContextState state)
+    {
+        synchronized (filesToHash)
+        {
+            for (var filesToHash : filesToHash.values())
+            {
+                if (filesToHash.path != null && !filesToHash.path.isBlank() && filesToHash.modificationStamp > 0
+                    && filesToHash.hash != null)
+                {
+                    var file = new GlobalContextFile();
+                    file.time = filesToHash.modificationStamp;
+                    file.hash = filesToHash.hash;
+                    state.files.put(filesToHash.path, file);
+                }
+            }
         }
     }
 
@@ -199,7 +208,7 @@ class ProjectTrackingWorkflow
                         if (!filesToHash.containsKey(path))
                     {
                             hasFileToHash[0] = true;
-                            filesToHash.put(path, new ProjectFile(aiCtx, path, file, now));
+                            filesToHash.put(path, initProjectFile(new ProjectFile(aiCtx, path, file, now)));
                     }
                     }
 
@@ -260,8 +269,8 @@ class ProjectTrackingWorkflow
             {
                 var path = fileToTrack.getKey();
                 var fileToHash = filesToHash.computeIfAbsent(path,
-                    key -> new ProjectFile(fileToTrack.getValue().aiCtx, path,
-                        project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1)), now));
+                    key -> initProjectFile(new ProjectFile(fileToTrack.getValue().aiCtx, path,
+                        project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1)), now)));
 
                 if (!fileToHash.file.isAccessible())
                 {
@@ -307,9 +316,8 @@ class ProjectTrackingWorkflow
 
             try
             {
-                file.sync = false;
                 file.updateTime = now;
-                MessageDigest hash;
+                String hash;
                 if (file.aiCtx.getKind() == AIContextKind.Common)
                 {
                     if (!file.file.isAccessible())
@@ -320,37 +328,36 @@ class ProjectTrackingWorkflow
                     var modificationStamp = file.file.getModificationStamp();
                     if (file.modificationStamp == modificationStamp)
                     {
-                        file.sync = true;
+                        if (file.reset)
+                        {
+                            if (filesToSync.add(file))
+                            {
+                                hasFileToSync[0] = true;
+                            }
+                        }
+
                         continue;
                     }
 
                     file.modificationStamp = modificationStamp;
-                    hash = hashTools.compute(file.file, buffer);
+                    hash = hashTools.format(hashTools.compute(file.file, buffer), true);
                 }
                 else
                 {
                     try (var inputStream =
                         new ByteArrayInputStream(file.aiCtx.getSource().getBytes(StandardCharsets.UTF_8));)
                     {
-                        hash = hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer);
+                        hash = hashTools.format(hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer), true);
                     }
                 }
 
 
-                var hashStr = hashTools.format(hash, true);
-                if (hashStr.equals(file.hash))
+                if (file.reset || hash.equals(file.hash))
                 {
-                    file.sync = true;
                     continue;
                 }
 
-                file.hash = hashStr;
-                if (hashes.contains(hashStr))
-                {
-                    file.sync = true;
-                    continue;
-                }
-
+                file.hash = hash;
                 if (filesToSync.add(file))
                 {
                     hasFileToSync[0] = true;
@@ -405,9 +412,9 @@ class ProjectTrackingWorkflow
 
             var feature = globalContextSync.sync(file.aiCtx, updates, 2, statistics, cancellationToken)
                 .whenComplete((result, error) -> {
+                    file.reset = false;
                     if (result != null && result)
                     {
-                        file.sync = true;
                         synchronized (filesToSync)
                         {
                             filesToSync.remove(file);
@@ -437,6 +444,28 @@ class ProjectTrackingWorkflow
         return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
     }
 
+    @Override
+    public void reset()
+    {
+        for (var filesToHash : filesToHash.values())
+        {
+            filesToHash.reset = true;
+        }
+    }
+
+    private ProjectFile initProjectFile(ProjectFile projectFile)
+    {
+        var fileState = state.files.get(projectFile.path);
+        if (fileState != null)
+        {
+            projectFile.modificationStamp = fileState.time;
+            projectFile.hash = fileState.hash;
+        }
+
+        projectFile.reset = true;
+        return projectFile;
+    }
+
     private static class ProjectFile
     {
         public AIContext aiCtx;
@@ -444,8 +473,8 @@ class ProjectTrackingWorkflow
         public final IFile file;
         public LocalDateTime updateTime;
         public String hash;
-        public boolean sync = false;
         public long modificationStamp = -1;
+        public boolean reset;
 
         public ProjectFile(AIContext aiCtx, String path, IFile file, LocalDateTime updateTime)
         {

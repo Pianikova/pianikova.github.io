@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.HashSet;
+import java.util.HashMap;
 
 import org.e1c.edt.ai.IJson;
 import org.e1c.edt.ai.ILog;
@@ -46,7 +46,7 @@ class GlobalContextStateStore implements IGlobalContextStateStore
                 if (optionalState.isPresent())
                 {
                     var state = optionalState.get();
-                    if (state.hashes != null)
+                    if (state.files != null)
                     {
                         return state;
                     }
@@ -59,7 +59,7 @@ class GlobalContextStateStore implements IGlobalContextStateStore
         }
 
         var newState = new GlobalContextState();
-        newState.hashes = new HashSet<>();
+        newState.files = new HashMap<>();
         return newState;
     }
 

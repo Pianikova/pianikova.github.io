@@ -122,7 +122,7 @@ class SessionService
         environment.getTotalPhysicalMemorySize().ifPresent(val -> systemInfo.totalPhysicalMemorySize = val);
 
         var requestBody = json.serialize(sessionRequest);
-        var reset = settingsTracker.register(ISessionService.class.getName(), requestBody);
+        var reset = settingsTracker.register(SessionService.class.getName(), requestBody);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
         return responseCache.get(projectId.path, () -> getSessionAsync(request, requestBody), reset);
     }

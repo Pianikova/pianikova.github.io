@@ -3,10 +3,10 @@
  */
 package org.e1c.edt.ai.ui;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 class GlobalContextState
 {
-    public Set<String> hashes = new HashSet<>();
+    public Map<String, GlobalContextFile> files = new HashMap<>();
 }

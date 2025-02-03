@@ -4,8 +4,6 @@
 package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Set;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
@@ -14,11 +12,15 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 interface IProjectTrackingWorkflow
 {
-    IProjectTrackingWorkflow initialize(IProject project, Set<String> hashes);
+    IProjectTrackingWorkflow initialize(IProject project, GlobalContextState state);
+
+    String getId();
 
     Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken);
 
-    List<String> getHashes();
-
     void track(AIContext aiCtx);
+
+    void reset();
+
+    void saveState(GlobalContextState state);
 }
