@@ -13,6 +13,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 @SuppressWarnings("restriction")
@@ -24,6 +25,7 @@ class UISettings
     @Inject
     public UISettings(ISettingsStore settingsStore)
     {
+        Preconditions.checkNotNull(settingsStore);
         this.settingsStore = settingsStore;
     }
 
@@ -78,7 +80,7 @@ class UISettings
     @Override
     public String getLanguage()
     {
-        return Platform.getNL().equalsIgnoreCase("ru_RU") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        return Platform.getNL().startsWith("ru_") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 
     @Override
