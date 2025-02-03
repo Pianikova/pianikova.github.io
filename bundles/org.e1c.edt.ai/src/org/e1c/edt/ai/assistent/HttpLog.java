@@ -78,7 +78,7 @@ class HttpLog
 
     @SuppressWarnings("nls")
     @Override
-    public <T> HttpResponse<T> response(HttpResponse<T> response, String ref, Stopwatch stopwatch)
+    public <T> HttpResponse<T> response(HttpResponse<T> response, String ref, Stopwatch stopwatch, boolean detailed)
     {
         Preconditions.checkNotNull(response);
         var statusCode = response.statusCode();
@@ -92,8 +92,11 @@ class HttpLog
         }
         else
         {
-            log.trace(createHeader("AI response", response.uri(), ref),
-                () -> createTrace(response, stopwatch, statusCode));
+            if (detailed)
+            {
+                log.trace(createHeader("AI response", response.uri(), ref),
+                    () -> createTrace(response, stopwatch, statusCode));
+            }
         }
 
         return response;
