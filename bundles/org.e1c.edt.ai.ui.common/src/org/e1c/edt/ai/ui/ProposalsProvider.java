@@ -65,7 +65,15 @@ public class ProposalsProvider
     public Optional<String> getProposal(String content, ICompletionProposal proposal)
     {
         var proposalDoc = new Document(content);
-        proposal.apply(proposalDoc);
+        try
+        {
+            proposal.apply(proposalDoc);
+        }
+        catch (Exception error)
+        {
+            return Optional.empty();
+        }
+
         var newContent = proposalDoc.get();
         var min = Integer.min(content.length(), newContent.length());
         int start;
@@ -130,12 +138,19 @@ public class ProposalsProvider
             return getContentAssistant(sourceViewer)
                 .flatMap(assistant -> getPartitionType(aiCtx, sourceViewer)
                     .map(partitionType -> assistant.getContentAssistProcessor(partitionType)))
-                .map(assistProcessor -> {
+                .flatMap(assistProcessor -> {
                     var offset = aiCtx.getSourceOffset();
-                    var proposals = assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                    // skip second page of context helper
-                    assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                    return proposals;
+                    try
+                    {
+                        var proposals = assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                        // skip second page of context helper
+                        assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                        return Optional.ofNullable(proposals);
+                    }
+                    catch (Exception error)
+                    {
+                        return Optional.empty();
+                    }
                 })
                 .flatMap(proposals -> getProposals(aiCtx, proposals));
         })).flatMap(i -> i);
