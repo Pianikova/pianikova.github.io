@@ -11,7 +11,9 @@ import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.IProjectProvider;
+import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.assistent.ISettingsTracker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.jobs.Job;
 
@@ -28,28 +30,35 @@ class GlobalContextTracker
     private final IClock clock;
     private final IGlobalContextStateStore globalContextStateStore;
     private final IUISettings settings;
+    private final ISettingsProvider settingsProvider;
+    private final ISettingsTracker settingsTracker;
     private final Object lockObject = new Object();
     private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
-    private final GlobalContextState state;
     private Job job;
-    private IProjectTrackingWorkflow activeWorkflow;
+    private GlobalContextState state;
 
     @Inject
     public GlobalContextTracker(IDispatcher dispatcher, IProjectProvider projectProvider,
         Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock,
-        IGlobalContextStateStore globalContextStateStore, IUISettings settings)
+        IGlobalContextStateStore globalContextStateStore, IUISettings settings, ISettingsProvider settingsProvider,
+        ISettingsTracker settingsTracker)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(projectProvider);
         Preconditions.checkNotNull(projectTrackingWorkflowProvider);
         Preconditions.checkNotNull(clock);
+        Preconditions.checkNotNull(globalContextStateStore);
         Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(settingsProvider);
+        Preconditions.checkNotNull(settingsTracker);
         this.dispatcher = dispatcher;
         this.projectProvider = projectProvider;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
         this.clock = clock;
         this.globalContextStateStore = globalContextStateStore;
         this.settings = settings;
+        this.settingsProvider = settingsProvider;
+        this.settingsTracker = settingsTracker;
         state = globalContextStateStore.load();
     }
 
@@ -58,48 +67,57 @@ class GlobalContextTracker
     {
         synchronized (lockObject)
         {
-            projectProvider.getProject(aiCtx.getPath()).ifPresent(project -> {
-                var workflow =
-                    projectWorkflows.computeIfAbsent(project,
-                        k -> projectTrackingWorkflowProvider.get().initialize(project, state.hashes));
+            projectProvider.getProject(aiCtx.getPath())
+                .map(project -> projectWorkflows.computeIfAbsent(project,
+                    k -> projectTrackingWorkflowProvider.get().initialize(project, state)))
+                .ifPresent(workflow -> {
+                    workflow.track(aiCtx);
+                    if (job != null && job.getState() != Job.NONE)
+                    {
+                        return;
+                    }
 
-                activeWorkflow = workflow;
-                workflow.track(aiCtx);
-                if (job != null && job.getState() != Job.NONE)
-                {
-                    return;
-                }
+                    var cancellationToken = CancellationTokens.expiresAt(new CancellationTokenSource(), clock,
+                        clock.now().plus(Duration.ofMillis(15000)));
 
-                var cancellationToken = CancellationTokens.expiresAt(new CancellationTokenSource(), clock,
-                    clock.now().plus(Duration.ofMillis(15000)));
+                    job = dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
+                        jobCtx -> track(jobCtx, aiCtx, workflow),
+                        cancellationToken);
 
-                job = dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
-                    jobCtx -> track(jobCtx, activeWorkflow),
-                    cancellationToken);
-
-                job.setSystem(!settings.traceMode());
-                job.setPriority(Job.DECORATE);
-                job.schedule();
-            });
+                    job.setSystem(!settings.traceMode());
+                    job.setPriority(Job.DECORATE);
+                    job.schedule();
+                });
         }
     }
 
     @Override
     public void close() throws Exception
     {
+        var stateToSave = new GlobalContextState();
         synchronized (lockObject)
         {
-            state.hashes.clear();
             for (var workflow : projectWorkflows.values())
             {
-                state.hashes.addAll(workflow.getHashes());
+                workflow.saveState(stateToSave);
             }
         }
 
-        globalContextStateStore.save(state);
+        globalContextStateStore.save(stateToSave);
     }
 
-    private void track(JobContext jobCtx, IProjectTrackingWorkflow workflow)    {
+    private void track(JobContext jobCtx, AIContext aiCtx, IProjectTrackingWorkflow workflow)
+    {
+        var reset = settingsProvider.getSettings()
+            .map(settings -> settingsTracker.register(GlobalContextTracker.class.getName() + ':' + workflow.getId(),
+                settings))
+            .orElse(false);
+
+        if (reset)
+        {
+            workflow.reset();
+        }
+
         Duration delay = Duration.ofSeconds(5);
         try
         {

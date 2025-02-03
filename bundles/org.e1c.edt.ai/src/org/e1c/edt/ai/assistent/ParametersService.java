@@ -59,7 +59,7 @@ class ParametersService
         if (optionalSettings.isPresent())
         {
             var settings = optionalSettings.get();
-            var reset = settingsTracker.register(IParametersService.class.getName(), settings);
+            var reset = settingsTracker.register(ParametersService.class.getName(), settings);
             return responseCache.get("", () -> { //$NON-NLS-1$
                 var builder = requestBuilder.create("./params"); //$NON-NLS-1$
                 if (builder.isEmpty())
