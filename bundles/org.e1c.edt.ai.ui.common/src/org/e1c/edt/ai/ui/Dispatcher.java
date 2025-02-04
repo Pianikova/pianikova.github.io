@@ -3,8 +3,13 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import org.e1c.edt.ai.CancellationTokenSource;
@@ -149,5 +154,27 @@ class Dispatcher
         }
 
         return job;
+    }
+
+    @Override
+    public <T> Optional<T> dispatch(Supplier<? extends T> supplier, Duration timeout)
+    {
+        Preconditions.checkNotNull(supplier);
+        Preconditions.checkNotNull(timeout);
+        var executor = Executors.newSingleThreadExecutor();
+        try
+        {
+            var result = executor.submit(() -> supplier.get()).get(timeout.toNanos(), TimeUnit.NANOSECONDS);
+            return Optional.ofNullable(result);
+        }
+        catch (InterruptedException | ExecutionException | TimeoutException error)
+        {
+            log.logError(error);
+            return Optional.empty();
+        }
+        finally
+        {
+            executor.shutdown();
+        }
     }
 }
