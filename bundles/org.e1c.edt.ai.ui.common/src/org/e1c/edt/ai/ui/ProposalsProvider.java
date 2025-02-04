@@ -11,6 +11,7 @@ import java.util.Optional;
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
@@ -28,6 +29,7 @@ public class ProposalsProvider
     private final ILog log;
     private final IUI ui;
     private final IDispatcher dispatcher;
+    private IUISettings uiSettings;
 
     static
     {
@@ -51,14 +53,16 @@ public class ProposalsProvider
     }
 
     @Inject
-    public ProposalsProvider(ILog log, IUI ui, IDispatcher dispatcher)
+    public ProposalsProvider(ILog log, IUI ui, IDispatcher dispatcher, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.ui = ui;
         this.dispatcher = dispatcher;
+        this.uiSettings = uiSettings;
     }
 
     @Override
@@ -134,7 +138,24 @@ public class ProposalsProvider
     public Optional<List<String>> getProposals(AIContext aiCtx, StyledText textWidget,
         ICancellationToken cancellationToken)
     {
-        return dispatcher.dispatch(() -> ui.getSourceViewer(textWidget).flatMap(sourceViewer -> {
+        return Optional.empty();
+        /*var optionalSourceViewer = dispatcher.dispatch(() -> ui.getSourceViewer(textWidget)).flatMap(i -> i);
+        if (optionalSourceViewer.isEmpty())
+        {
+            return Optional.empty();
+        }
+
+        var timeout = uiSettings.getTimeout();
+        return dispatcher
+            .dispatch(() -> getProposals(aiCtx, optionalSourceViewer.get(), cancellationToken), timeout)
+            .flatMap(i -> i);*/
+    }
+
+    private Optional<List<String>> getProposals(AIContext aiCtx, SourceViewer sourceViewer,
+        ICancellationToken cancellationToken)
+    {
+        try
+        {
             return getContentAssistant(sourceViewer)
                 .flatMap(assistant -> getPartitionType(aiCtx, sourceViewer)
                     .map(partitionType -> assistant.getContentAssistProcessor(partitionType)))
@@ -153,7 +174,11 @@ public class ProposalsProvider
                     }
                 })
                 .flatMap(proposals -> getProposals(aiCtx, proposals));
-        })).flatMap(i -> i);
+        }
+        catch (Exception e)
+        {
+            return Optional.empty();
+        }
     }
 
     private Optional<IContentAssistant> getContentAssistant(SourceViewer sourceViewer)

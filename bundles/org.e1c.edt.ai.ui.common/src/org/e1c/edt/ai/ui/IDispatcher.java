@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -20,4 +21,6 @@ public interface IDispatcher
     void dispatchAsync(Runnable runnable);
 
     Job createJob(String jobName, Consumer<JobContext> сonsumer, ICancellationToken cancellationToken);
+
+    <T> Optional<T> dispatch(Supplier<? extends T> supplier, Duration timeout);
 }
