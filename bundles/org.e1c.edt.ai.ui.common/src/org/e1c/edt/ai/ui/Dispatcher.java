@@ -169,7 +169,7 @@ class Dispatcher
         }
         catch (InterruptedException | ExecutionException | TimeoutException error)
         {
-            log.logError(error);
+            log.trace("Dispatch", () -> error.toString()); //$NON-NLS-1$
             return Optional.empty();
         }
         finally

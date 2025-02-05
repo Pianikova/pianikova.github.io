@@ -419,15 +419,16 @@ class CodeCompletionViewModel
 
     private Optional<CodeMethod> getCurrentMethod(SourceViewer sourceViewer, int offset)
     {
-        return dispatcher.dispatch(() -> {
-            var doc = sourceViewer.getDocument();
-            if (!(doc instanceof IXtextDocument))
-            {
-                return null;
-            }
+        var doc = sourceViewer.getDocument();
+        if (!(doc instanceof IXtextDocument))
+        {
+            return Optional.empty();
+        }
 
-            return ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
-        }).flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
+        return dispatcher.dispatch(() -> {
+            var parseResult = ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
+            return codeProvider.getMethod(parseResult, offset);
+        }, uiSettings.getMinRequestDelay()).flatMap(i -> i);
     }
 
     private void cancel()
@@ -488,8 +489,9 @@ class CodeCompletionViewModel
         var source = aiContext.getSource();
         var sourceOffset = aiContext.getSourceOffset();
         var optionalMethod = dispatcher.dispatch(
-            () -> ui.getSourceViewer(textWidget).flatMap(sourceViewer -> getCurrentMethod(sourceViewer, sourceOffset)))
-            .flatMap(i -> i);
+            () -> ui.getSourceViewer(textWidget))
+            .flatMap(i -> i)
+            .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, sourceOffset));
 
         int validCodeSize;
         if (optionalMethod.isPresent())
@@ -645,19 +647,19 @@ class CodeCompletionViewModel
     public void caretMoved(CaretEvent event)
     {
         // sync
-        dispatcher.dispatchAsync(() -> ui.getSourceViewer(textWidget)
-                .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, textWidget.getCaretOffset()))
-                .ifPresent(currentMethod -> {
+        ui.getSourceViewer(textWidget)
+            .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, textWidget.getCaretOffset()))
+            .ifPresent(currentMethod -> {
                 if (!currentMethod.equals(lastCurrentMethod))
-                    {
+                {
                     if (isModifed)
                     {
                         lastCurrentMethod = currentMethod;
                         isModifed = false;
                         methodChanged(currentMethod);
                     }
-                    }
-            }));
+                }
+            });
 
         synchronized (lockObject)
         {
