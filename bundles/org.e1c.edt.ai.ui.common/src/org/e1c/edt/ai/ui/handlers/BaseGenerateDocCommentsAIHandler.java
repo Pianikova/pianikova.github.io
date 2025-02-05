@@ -18,6 +18,7 @@ import org.e1c.edt.ai.ui.BaseActivator;
 import org.e1c.edt.ai.ui.Content;
 import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
+import org.e1c.edt.ai.ui.ICodeParser;
 import org.e1c.edt.ai.ui.IContentProvider;
 import org.e1c.edt.ai.ui.IUI;
 import org.eclipse.core.commands.AbstractHandler;
@@ -25,7 +26,6 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
-import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 
 import com.google.inject.Inject;
 
@@ -49,6 +49,8 @@ public class BaseGenerateDocCommentsAIHandler
     IContentProvider contentProvider;
     @Inject
     ICodePartsProvider codePartsProvider;
+    @Inject
+    ICodeParser codeParser;
 
     public BaseGenerateDocCommentsAIHandler()
     {
@@ -82,31 +84,14 @@ public class BaseGenerateDocCommentsAIHandler
 
     private Optional<CommentingMethod> getCommentingMethod(Content content, SourceViewer sourceViewer)
     {
-        if (!(sourceViewer instanceof XtextSourceViewer))
+        var optionalRootNode = codeParser.parse(sourceViewer).map(parseResult -> parseResult.getRootNode());
+        if (optionalRootNode.isEmpty())
         {
             return Optional.empty();
         }
 
-        var xtextSourceViewer = (XtextSourceViewer)sourceViewer;
-        var document = xtextSourceViewer.getXtextDocument();
-        if (document == null)
-        {
-            return Optional.empty();
-        }
-
-        var parseResult = document.readOnly(s -> s.getParseResult());
-        if (parseResult == null)
-        {
-            return Optional.empty();
-        }
-
-        var rootNoode = parseResult.getRootNode();
-        if (rootNoode == null)
-        {
-            return Optional.empty();
-        }
-
-        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNoode, content.offset);
+        var rootNode = optionalRootNode.get();
+        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNode, content.offset);
         if (cursorNode == null)
         {
             return Optional.empty();
@@ -117,7 +102,7 @@ public class BaseGenerateDocCommentsAIHandler
         Range range = Range.EMPTY;
         var methods = new HashSet<Integer>();
         CodePart lastMethodPart = null;
-        var partsIterator = codePartsProvider.getParts(rootNoode).iterator();
+        var partsIterator = codePartsProvider.getParts(rootNode).iterator();
         while (partsIterator.hasNext())
         {
             var part = partsIterator.next();

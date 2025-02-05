@@ -24,6 +24,7 @@ import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionContext;
 import org.e1c.edt.ai.ICodeCompletionSession;
 import org.e1c.edt.ai.ICodeProvider;
+import org.e1c.edt.ai.IGlobalContextManager;
 import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILocalContextFactory;
@@ -43,7 +44,6 @@ import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionListenerExtension2;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.eclipse.jface.text.source.ContentAssistantFacade;
-import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyledText;
@@ -53,7 +53,6 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
-import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -85,6 +84,7 @@ class CodeCompletionViewModel
     private final IGlobalContextManager globalContextManager;
     private final ISyntaxVaidator syntaxVaidator;
     private final IProposalsProvider proposalsProvider;
+    private final ICodeParser codeParser;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private AutoCloseable feedbackToken = Closeables.Empty;
@@ -107,7 +107,7 @@ class CodeCompletionViewModel
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
-        IProposalsProvider proposalsProvider)
+        IProposalsProvider proposalsProvider, ICodeParser codeParser)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -150,6 +150,7 @@ class CodeCompletionViewModel
         this.globalContextManager = globalContextManager;
         this.syntaxVaidator = syntaxVaidator;
         this.proposalsProvider = proposalsProvider;
+        this.codeParser = codeParser;
     }
 
     @Override
@@ -335,18 +336,28 @@ class CodeCompletionViewModel
             var delay = calculateDelay(startTime, delayBeforeShow);
             if (cancellationTokenSource.isCanceled())
             {
+                reset();
                 return;
             }
 
-            dispatcher
+            var optionalCurrentMethod = dispatcher
                 .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> {
                     hintPainter.reset();
                     hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(),
                         delay.isNegative() || delay == Duration.ZERO, singleWordMode);
                     return ui.getSourceViewer(textWidget);
                 }).orElse(null))
-                .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, aiCtx.getTextOffset()))
-                .ifPresent(method -> session.setMethod(method));
+                .flatMap(sourceViewer -> codeParser.parse(sourceViewer))
+                .flatMap(parseResult -> codeProvider.getMethod(parseResult, aiCtx.getTextOffset()));
+
+            if (optionalCurrentMethod.isEmpty())
+            {
+                reset();
+                return;
+            }
+
+            var currentMethod = optionalCurrentMethod.get();
+            session.setMethod(currentMethod);
 
             var completionSource =
                 codeAssistant.createSource(aiCtx.getProjectId(), localContextProvider, cancellationTokenSource);
@@ -417,20 +428,6 @@ class CodeCompletionViewModel
         }
     }
 
-    private Optional<CodeMethod> getCurrentMethod(SourceViewer sourceViewer, int offset)
-    {
-        var doc = sourceViewer.getDocument();
-        if (!(doc instanceof IXtextDocument))
-        {
-            return Optional.empty();
-        }
-
-        return dispatcher.dispatch(() -> {
-            var parseResult = ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
-            return codeProvider.getMethod(parseResult, offset);
-        }, uiSettings.getMinRequestDelay()).flatMap(i -> i);
-    }
-
     private void cancel()
     {
         showTimer.purge();
@@ -491,7 +488,8 @@ class CodeCompletionViewModel
         var optionalMethod = dispatcher.dispatch(
             () -> ui.getSourceViewer(textWidget))
             .flatMap(i -> i)
-            .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, sourceOffset));
+            .flatMap(sourceViewer -> codeParser.parse(sourceViewer, uiSettings.getTimeout()))
+            .flatMap(parseResult -> codeProvider.getMethod(parseResult, sourceOffset));
 
         int validCodeSize;
         if (optionalMethod.isPresent())
@@ -648,7 +646,8 @@ class CodeCompletionViewModel
     {
         // sync
         ui.getSourceViewer(textWidget)
-            .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, textWidget.getCaretOffset()))
+            .flatMap(sourceViewer -> codeParser.parse(sourceViewer))
+            .flatMap(parseResult -> codeProvider.getMethod(parseResult, textWidget.getCaretOffset()))
             .ifPresent(currentMethod -> {
                 if (!currentMethod.equals(lastCurrentMethod))
                 {

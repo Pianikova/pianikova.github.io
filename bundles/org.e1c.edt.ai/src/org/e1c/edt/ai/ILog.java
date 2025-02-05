@@ -11,5 +11,7 @@ public interface ILog
 
     void logError(String error);
 
+    void warning(String topic, Supplier<String> details);
+
     void trace(String topic, Supplier<String> details);
 }

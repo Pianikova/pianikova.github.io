@@ -12,7 +12,6 @@ import org.e1c.edt.ai.assistent.model.CursorInfo;
 import org.e1c.edt.ai.assistent.model.RelativeLocation;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
-import org.eclipse.xtext.ui.editor.XtextSourceViewer;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -22,14 +21,17 @@ public class CursorInfoProvider
 {
     private final IUI ui;
     private final ICodePartsProvider codePartsProvider;
+    private final ICodeParser codeParser;
 
     @Inject
-    public CursorInfoProvider(IUI ui, ICodePartsProvider codePartsProvider)
+    public CursorInfoProvider(IUI ui, ICodePartsProvider codePartsProvider, ICodeParser codeParser)
     {
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(codePartsProvider);
+        Preconditions.checkNotNull(codeParser);
         this.ui = ui;
         this.codePartsProvider = codePartsProvider;
+        this.codeParser = codeParser;
     }
 
     @Override
@@ -37,39 +39,22 @@ public class CursorInfoProvider
     {
         return ui.getTextWidget()
             .flatMap(textWidget -> ui.getSourceViewer(textWidget))
-            .map(sourceViewer -> getCursorInfo(cursorOffset, sourceViewer));
+            .flatMap(sourceViewer -> getCursorInfo(cursorOffset, sourceViewer));
     }
 
-    private CursorInfo getCursorInfo(int cursorOffset, SourceViewer sourceViewer)
+    private Optional<CursorInfo> getCursorInfo(int cursorOffset, SourceViewer sourceViewer)
     {
-        if (!(sourceViewer instanceof XtextSourceViewer))
+        var rootNoodeOptional = codeParser.parse(sourceViewer).map(parseResult -> parseResult.getRootNode());
+        if (rootNoodeOptional.isEmpty())
         {
-            return null;
+            return Optional.empty();
         }
 
-        var xtextSourceViewer = (XtextSourceViewer)sourceViewer;
-        var document = xtextSourceViewer.getXtextDocument();
-        if (document == null)
-        {
-            return null;
-        }
-
-        var parseResult = document.readOnly(s -> s.getParseResult());
-        if (parseResult == null)
-        {
-            return null;
-        }
-
-        var rootNoode = parseResult.getRootNode();
-        if (rootNoode == null)
-        {
-            return null;
-        }
-
+        var rootNoode = rootNoodeOptional.get();
         var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNoode, cursorOffset);
         if (cursorNode == null)
         {
-            return null;
+            return Optional.empty();
         }
 
         var cursorInfo = new CursorInfo();
@@ -103,7 +88,7 @@ public class CursorInfoProvider
 
         if (!found)
         {
-            return null;
+            return Optional.empty();
         }
 
         var relativeCursorOffset = cursorOffset - range.getStart();
@@ -121,6 +106,6 @@ public class CursorInfoProvider
             }
         }
 
-        return cursorInfo;
+        return Optional.of(cursorInfo);
     }
 }

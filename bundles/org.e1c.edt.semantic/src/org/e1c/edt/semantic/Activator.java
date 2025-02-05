@@ -70,6 +70,22 @@ public class Activator
     }
 
     @Override
+    public void warning(String topic, Supplier<String> details)
+    {
+        if (topic == null || topic.isBlank())
+        {
+            topic = ""; //$NON-NLS-1$
+        }
+
+        var sb = new StringBuilder();
+        sb.append("Semantic server "); //$NON-NLS-1$
+        sb.append(topic);
+        sb.append(System.lineSeparator());
+        sb.append(details.get());
+        log(Status.warning(sb.toString()));
+    }
+
+    @Override
     public void trace(String topic, Supplier<String> details)
     {
         if (topic == null || topic.isBlank())

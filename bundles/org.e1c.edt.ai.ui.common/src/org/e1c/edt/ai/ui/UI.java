@@ -68,7 +68,7 @@ class UI
 
     public void initialize()
     {
-        dispatcher.dispatch(() -> {
+        dispatcher.dispatchAsync(() -> {
             var display = Display.getDefault();
             display.addFilter(SWT.FocusIn, this);
             display.addFilter(SWT.FocusOut, this);

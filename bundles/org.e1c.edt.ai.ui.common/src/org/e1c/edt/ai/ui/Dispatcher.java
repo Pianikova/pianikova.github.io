@@ -4,6 +4,7 @@
 package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -14,7 +15,9 @@ import java.util.function.Consumer;
 
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IClock;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -28,13 +31,20 @@ import com.google.inject.Inject;
 class Dispatcher
     implements IDispatcher
 {
-    private ILog log;
+    private static final StackTraceElement[] EmptyStackTrace = new StackTraceElement[0];
+    private final ILog log;
+    private final IUISettings settings;
+    private final IClock clock;
 
     @Inject
-    public Dispatcher(ILog log)
+    public Dispatcher(ILog log, IUISettings settings, IClock clock)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(clock);
+        this.settings = settings;
         this.log = log;
+        this.clock = clock;
     }
 
     @Override
@@ -67,13 +77,17 @@ class Dispatcher
     private <T> Optional<T> dispatch(Supplier<? extends T> supplier, boolean async)
     {
         Preconditions.checkNotNull(supplier);
+        var startTime = clock.now();
         var vals = new ArrayList<T>();
         if(async)
         {
+            StackTraceElement[] stackTrace =
+                settings.traceMode() ? Thread.currentThread().getStackTrace() : EmptyStackTrace;
             Display.getDefault().asyncExec(() -> {
                 try
                 {
                     vals.add(supplier.get());
+                    checkMicrofreeze("Async call", startTime, () -> stackTrace); //$NON-NLS-1$
                 }
                 catch (Exception ex)
                 {
@@ -93,6 +107,8 @@ class Dispatcher
                     log.logError(ex);
                 }
             });
+
+            checkMicrofreeze("Sync call", startTime, () -> Thread.currentThread().getStackTrace()); //$NON-NLS-1$
         }
 
         if (vals.isEmpty())
@@ -101,6 +117,50 @@ class Dispatcher
         }
 
         return Optional.ofNullable(vals.get(0));
+    }
+
+    @SuppressWarnings("nls")
+    private void checkMicrofreeze(String description, LocalDateTime startTime,
+        Supplier<StackTraceElement[]> stackTraceSupplier)
+    {
+        if (!settings.traceMode())
+        {
+            return;
+        }
+
+        var duration = Duration.between(startTime, clock.now());
+        if (duration.toMillis() > settings.getMinRequestDelay().toMillis())
+        {
+            log.warning("Microfreeze UI", () -> {
+                var sb = new StringBuilder();
+                sb.append("Description: ");
+                sb.append(description);
+
+                sb.append(System.lineSeparator());
+                sb.append("Duration: ");
+                sb.append(duration.toMillis());
+                sb.append(" ms");
+
+                sb.append(System.lineSeparator());
+                sb.append("Stack:");
+                var stackTrace = stackTraceSupplier.get();
+                if (stackTrace.length > 0)
+                {
+                    sb.append(System.lineSeparator());
+                    for (StackTraceElement ste : stackTrace)
+                    {
+                        sb.append(System.lineSeparator());
+                        sb.append(ste);
+                    }
+                }
+                else
+                {
+                    sb.append(" empty");
+                }
+
+                return sb.toString();
+            });
+        }
     }
 
     @Override

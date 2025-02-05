@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ICancellationToken;
+import org.e1c.edt.ai.IGlobalContextManager;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.model.Completion;
