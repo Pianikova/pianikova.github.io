@@ -316,8 +316,8 @@ class ProjectTrackingWorkflow
 
             try
             {
+                var prevHash = file.hash;
                 file.updateTime = now;
-                String hash;
                 if (file.aiCtx.getKind() == AIContextKind.Common)
                 {
                     if (!file.file.isAccessible())
@@ -340,24 +340,24 @@ class ProjectTrackingWorkflow
                     }
 
                     file.modificationStamp = modificationStamp;
-                    hash = hashTools.format(hashTools.compute(file.file, buffer), true);
+                    file.hash = hashTools.format(hashTools.compute(file.file, buffer), true);
                 }
                 else
                 {
                     try (var inputStream =
                         new ByteArrayInputStream(file.aiCtx.getSource().getBytes(StandardCharsets.UTF_8));)
                     {
-                        hash = hashTools.format(hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer), true);
+                        file.hash =
+                            hashTools.format(hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer), true);
                     }
                 }
 
 
-                if (file.reset || hash.equals(file.hash))
+                if (file.reset || file.hash.equals(prevHash))
                 {
                     continue;
                 }
 
-                file.hash = hash;
                 if (filesToSync.add(file))
                 {
                     hasFileToSync[0] = true;

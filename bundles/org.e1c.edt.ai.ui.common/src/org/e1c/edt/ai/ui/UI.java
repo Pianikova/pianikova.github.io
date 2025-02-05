@@ -14,6 +14,7 @@ import java.util.stream.StreamSupport;
 
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.IUISettings;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewer;
@@ -44,22 +45,25 @@ class UI
     private final Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider;
     private final Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider;
     private final IDispatcher dispatcher;
+    private final IUISettings uiSettings;
     private final HashMap<Class<?>, Optional<Field>> sourceViewerFields = new HashMap<>();
     private StyledText textWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
     public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider,
-        Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider, IDispatcher dispatcher)
+        Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider, IDispatcher dispatcher, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(codeCompletionViewModelProvider);
         Preconditions.checkNotNull(feedbackViewModelProvider);
         Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(uiSettings);
         this.log = log;
         this.codeCompletionViewModelProvider = codeCompletionViewModelProvider;
         this.feedbackViewModelProvider = feedbackViewModelProvider;
         this.dispatcher = dispatcher;
+        this.uiSettings = uiSettings;
     }
 
     public void initialize()
@@ -89,6 +93,20 @@ class UI
     public synchronized void handleEvent(Event event)
     {
         Preconditions.checkNotNull(event);
+        if (!uiSettings.isCodeCompletion())
+        {
+            try
+            {
+                queryToken.close();
+            }
+            catch (Exception e)
+            {
+                // ignored
+            }
+            queryToken = Closeables.Empty;
+            return;
+        }
+
         if (event.type == SWT.FocusIn && event.widget != textWidget && event.widget instanceof StyledText)
         {
             var newTextWidget = (StyledText)event.widget;

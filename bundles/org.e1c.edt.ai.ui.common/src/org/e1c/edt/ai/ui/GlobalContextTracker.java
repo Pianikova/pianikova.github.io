@@ -29,7 +29,7 @@ class GlobalContextTracker
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
     private final IClock clock;
     private final IGlobalContextStateStore globalContextStateStore;
-    private final IUISettings settings;
+    private final IUISettings uiSettings;
     private final ISettingsProvider settingsProvider;
     private final ISettingsTracker settingsTracker;
     private final Object lockObject = new Object();
@@ -56,7 +56,7 @@ class GlobalContextTracker
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
         this.clock = clock;
         this.globalContextStateStore = globalContextStateStore;
-        this.settings = settings;
+        this.uiSettings = settings;
         this.settingsProvider = settingsProvider;
         this.settingsTracker = settingsTracker;
         state = globalContextStateStore.load();
@@ -65,6 +65,11 @@ class GlobalContextTracker
     @Override
     public void track(AIContext aiCtx)
     {
+        if (!uiSettings.isCodeCompletion())
+        {
+            return;
+        }
+
         synchronized (lockObject)
         {
             projectProvider.getProject(aiCtx.getPath())
@@ -84,7 +89,7 @@ class GlobalContextTracker
                         jobCtx -> track(jobCtx, aiCtx, workflow),
                         cancellationToken);
 
-                    job.setSystem(!settings.traceMode());
+                    job.setSystem(!uiSettings.traceMode());
                     job.setPriority(Job.DECORATE);
                     job.schedule();
                 });
@@ -108,6 +113,11 @@ class GlobalContextTracker
 
     private void track(JobContext jobCtx, AIContext aiCtx, IProjectTrackingWorkflow workflow)
     {
+        if (!uiSettings.isCodeCompletion())
+        {
+            return;
+        }
+
         var reset = settingsProvider.getSettings()
             .map(settings -> settingsTracker.register(GlobalContextTracker.class.getName() + ':' + workflow.getId(),
                 settings))
