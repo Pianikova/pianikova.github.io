@@ -56,6 +56,11 @@ public class ClientAIPreferencePage
     public void createFieldEditors()
     {
         var parent = getFieldEditorParent();
+        addField(
+            new BooleanFieldEditor(ISettingsStore.CODE_COMPLETION,
+                Messages.ClientAIPreferencePage_CodeCompletitionEnabled,
+                parent));
+
         addField(new ValidatingStringFieldEditor(ISettingsStore.APIURL, Messages.ClientAIPreferencePage_Api_URL,
             parent, urlValidator));
 

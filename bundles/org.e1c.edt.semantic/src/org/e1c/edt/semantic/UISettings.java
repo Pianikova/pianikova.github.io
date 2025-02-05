@@ -12,6 +12,12 @@ class UISettings
     implements IUISettings
 {
     @Override
+    public boolean isCodeCompletion()
+    {
+        return true;
+    }
+
+    @Override
     public int getTabWidth()
     {
         return 0;

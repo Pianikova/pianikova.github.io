@@ -7,6 +7,8 @@ import java.time.Duration;
 
 public interface IUISettings
 {
+    boolean isCodeCompletion();
+
     int getTabWidth();
 
     int getCodeCompletionLinesCount();

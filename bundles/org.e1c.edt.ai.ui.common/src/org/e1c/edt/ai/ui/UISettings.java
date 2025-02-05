@@ -30,6 +30,12 @@ class UISettings
     }
 
     @Override
+    public boolean isCodeCompletion()
+    {
+        return settingsStore.getBoolean(ISettingsStore.CODE_COMPLETION);
+    }
+
+    @Override
     public int getTabWidth()
     {
         return EditorsUI.getPreferenceStore().getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);

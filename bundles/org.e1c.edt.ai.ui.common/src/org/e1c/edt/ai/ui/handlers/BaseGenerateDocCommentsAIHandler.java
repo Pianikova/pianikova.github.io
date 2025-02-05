@@ -10,15 +10,16 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.CodePart;
 import org.e1c.edt.ai.ICodePartsProvider;
+import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Range;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.ui.AITarget;
+import org.e1c.edt.ai.ui.BaseActivator;
 import org.e1c.edt.ai.ui.Content;
 import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
 import org.e1c.edt.ai.ui.IContentProvider;
 import org.e1c.edt.ai.ui.IUI;
-import org.e1c.edt.ai.ui.BaseActivator;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
@@ -36,6 +37,8 @@ import com.google.inject.Inject;
 public class BaseGenerateDocCommentsAIHandler
     extends AbstractHandler
 {
+    @Inject
+    IUISettings uiSettings;
     @Inject
     IAIContextProvider aiContextProvider;
     @Inject
@@ -55,7 +58,7 @@ public class BaseGenerateDocCommentsAIHandler
     @Override
     public boolean isEnabled()
     {
-        return getCommentingMethod().isPresent();
+        return uiSettings.isCodeCompletion() && getCommentingMethod().isPresent();
     }
 
     @Override
