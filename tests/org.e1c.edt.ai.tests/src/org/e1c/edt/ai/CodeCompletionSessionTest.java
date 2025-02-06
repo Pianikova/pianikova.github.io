@@ -172,13 +172,13 @@ public class CodeCompletionSessionTest
     }
 
     @Test
-    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsBlank()
+    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsEmpty()
     {
         // Given
         var session = createInstance(true);
 
         // When
-        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isEmpty()).thenReturn(false).thenReturn(true);
         when(hint.isBlank()).thenReturn(true);
         when(hint.pull(HintPart.TOKEN)).thenReturn(TEXT);
         var actualAction = session.accept(HintPart.TOKEN, 37);
@@ -189,14 +189,14 @@ public class CodeCompletionSessionTest
     }
 
     @Test
-    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsEmptyAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
         when(hint.pull(HintPart.TOKEN)).thenReturn(TEXT);
 
         // When
-        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isEmpty()).thenReturn(false).thenReturn(true);
         when(hint.isBlank()).thenReturn(true);
         when(hint.startsWith('\n')).thenReturn(true);
         var actualAction = session.accept(HintPart.TOKEN, 37);
@@ -207,14 +207,14 @@ public class CodeCompletionSessionTest
     }
 
     @Test
-    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptWhenSingleWordModeAndHintIsNotEmptyAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
         when(hint.pull(HintPart.TOKEN)).thenReturn(TEXT);
 
         // When
-        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isEmpty()).thenReturn(false).thenReturn(true);
         when(hint.isBlank()).thenReturn(true);
         when(hint.startsWith('\n')).thenReturn(false);
         var actualAction = session.accept(HintPart.TOKEN, 37);
@@ -293,15 +293,15 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsBlank()
+    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsEmpty()
     {
         // Given
         var session = createInstance(true);
         when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
-        when(hint.isEmpty()).thenReturn(false);
-        when(hint.isBlank()).thenReturn(true);
+        when(hint.isEmpty()).thenReturn(true);
+        when(hint.isBlank()).thenReturn(false);
         var actualAction = session.acceptChar(37, 'A');
 
         // Then
@@ -311,14 +311,14 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsEmptyAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
         when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
-        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isEmpty()).thenReturn(true);
         when(hint.isBlank()).thenReturn(true);
         when(hint.startsWith('\n')).thenReturn(true);
         var actualAction = session.acceptChar(37, 'A');
@@ -330,14 +330,14 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
-    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsNotBlankAndHintStartsWithNewLine()
+    public void shouldReturnRESETForAcceptCharWhenSingleWordModeAndHintIsNotEmptyAndHintStartsWithNewLine()
     {
         // Given
         var session = createInstance(true);
         when(hint.pullChar('A')).thenReturn(new Text("A", source));
 
         // When
-        when(hint.isEmpty()).thenReturn(false);
+        when(hint.isEmpty()).thenReturn(true);
         when(hint.isBlank()).thenReturn(true);
         when(hint.startsWith('\n')).thenReturn(false);
         var actualAction = session.acceptChar(37, 'A');
