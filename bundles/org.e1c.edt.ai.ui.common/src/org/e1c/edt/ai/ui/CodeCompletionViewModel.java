@@ -608,8 +608,11 @@ class CodeCompletionViewModel
             break;
 
         case ASK_NEW:
-            commit(session);
-            askNew();
+            if (session != null && !session.getContext().getWidget().isTextSelected())
+            {
+                commit(session);
+                askNew();
+            }
             break;
 
         case RESET:
