@@ -165,8 +165,8 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            reset();
             this.textWidget = textWidget;
+            reset();
             lastSession = null;
             isModifed = false;
             isSimpleMode = false;
@@ -608,9 +608,9 @@ class CodeCompletionViewModel
             break;
 
         case ASK_NEW:
-            if (session != null && !session.getContext().getWidget().isTextSelected())
+            commit(session);
+            if (!textWidget.isTextSelected())
             {
-                commit(session);
                 askNew();
             }
             break;
@@ -709,11 +709,6 @@ class CodeCompletionViewModel
 
     private void methodChanged(CodeMethod method)
     {
-        if (textWidget == null)
-        {
-            return;
-        }
-
         aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
             .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
     }
