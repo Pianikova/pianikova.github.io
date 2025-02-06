@@ -92,6 +92,11 @@ class SyntaxVaidator
     private Optional<IParseResult> parse(String filePath, String code, String hint, int offset)
     {
         var fullCode = new StringBuilder(code);
+        if (fullCode.length() < offset)
+        {
+            return Optional.empty();
+        }
+
         fullCode.insert(offset, hint);
         var fileExtension = Files.getFileExtension(filePath);
         if (fileExtension != null && !fileExtension.isBlank())

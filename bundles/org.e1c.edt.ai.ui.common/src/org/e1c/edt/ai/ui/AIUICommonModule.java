@@ -9,6 +9,7 @@ import org.e1c.edt.ai.CodeCompletionSession;
 import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionSession;
 import org.e1c.edt.ai.ICursorInfoProvider;
+import org.e1c.edt.ai.IGlobalContextManager;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.ui.handlers.FixDialog;
@@ -62,6 +63,7 @@ public class AIUICommonModule
         bind(IGlobalContextSync.class).to(GlobalContextSync.class).in(Singleton.class);
         bind(IGlobalContextStateStore.class).to(GlobalContextStateStore.class).in(Singleton.class);
         bind(IProposalsProvider.class).to(ProposalsProvider.class).in(Singleton.class);
+        bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);        
         // @formatter:on
     }
 }

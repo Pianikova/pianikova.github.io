@@ -91,7 +91,7 @@ class ServerAccessService
                         schedule(checkPeriodMs);
                     },
                     () -> {
-                        log.logError(this.getName() + ": Server dose not return status"); //$NON-NLS-1$
+                        log.logError(this.getName() + ": The server does not return a status"); //$NON-NLS-1$
                         if (access == ServerAccessType.ACCESS_PRESENT)
                         {
                             accessChanged(this.getName(), ServerAccessType.ACCESS_ABSENT);

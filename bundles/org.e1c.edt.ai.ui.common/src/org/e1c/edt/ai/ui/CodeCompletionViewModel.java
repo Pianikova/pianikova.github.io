@@ -24,6 +24,7 @@ import org.e1c.edt.ai.ICodeCompletionActionHandler;
 import org.e1c.edt.ai.ICodeCompletionContext;
 import org.e1c.edt.ai.ICodeCompletionSession;
 import org.e1c.edt.ai.ICodeProvider;
+import org.e1c.edt.ai.IGlobalContextManager;
 import org.e1c.edt.ai.IHintHistory;
 import org.e1c.edt.ai.IInputDelayStatistics;
 import org.e1c.edt.ai.ILocalContextFactory;
@@ -42,7 +43,6 @@ import org.eclipse.jface.text.contentassist.ContentAssistEvent;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionListenerExtension2;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
-import org.eclipse.jface.text.source.ContentAssistantFacade;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
@@ -53,7 +53,6 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
-import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -85,8 +84,10 @@ class CodeCompletionViewModel
     private final IGlobalContextManager globalContextManager;
     private final ISyntaxVaidator syntaxVaidator;
     private final IProposalsProvider proposalsProvider;
+    private final ICodeParser codeParser;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
+    private SourceViewer sourceViewer;
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private String proposal = ""; //$NON-NLS-1$
@@ -95,6 +96,7 @@ class CodeCompletionViewModel
     private AssistantListener assistantListener = new AssistantListener();
     private CodeMethod lastCurrentMethod;
     private boolean isModifed;
+    private boolean isSimpleMode;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -107,7 +109,7 @@ class CodeCompletionViewModel
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
-        IProposalsProvider proposalsProvider)
+        IProposalsProvider proposalsProvider, ICodeParser codeParser)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -130,6 +132,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(globalContextManager);
         Preconditions.checkNotNull(syntaxVaidator);
         Preconditions.checkNotNull(proposalsProvider);
+        Preconditions.checkNotNull(codeParser);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -150,6 +153,7 @@ class CodeCompletionViewModel
         this.globalContextManager = globalContextManager;
         this.syntaxVaidator = syntaxVaidator;
         this.proposalsProvider = proposalsProvider;
+        this.codeParser = codeParser;
     }
 
     @Override
@@ -157,33 +161,27 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
+            reset();
             this.textWidget = textWidget;
             lastSession = null;
             isModifed = false;
+            isSimpleMode = false;
             lastCurrentMethod = null;
-
-            reset();
-            if (!textWidget.isDisposed())
+            sourceViewer = ui.getSourceViewer(textWidget).orElse(null);
+            if (sourceViewer != null && !textWidget.isDisposed())
             {
                 textWidget.addPaintListener(hintPainter);
                 textWidget.addTraverseListener(this);
                 textWidget.addCaretListener(this);
                 textWidget.addVerifyKeyListener(this);
                 textWidget.addModifyListener(this);
+                sourceViewer.getContentAssistantFacade().addCompletionListener(assistantListener);
+                textWidget.redraw();
+                // Warm up
+                aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
+                    .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+                warmupLocalContext();
             }
-
-            dispatcher.dispatchAsync(() -> {
-                if (!textWidget.isDisposed())
-                {
-                    getContentAssistant().ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
-                    textWidget.redraw();
-
-                    // Warm up
-                    aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                        .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
-                    warmupLocalContext();
-                }
-            });
 
             return Closeables.create(() -> deactivate());
         }
@@ -291,15 +289,9 @@ class CodeCompletionViewModel
                 textWidget.removeVerifyKeyListener(this);
                 textWidget.removeTraverseListener(this);
                 textWidget.removeModifyListener(this);
+                sourceViewer.getContentAssistantFacade().removeCompletionListener(assistantListener);
+                textWidget.redraw();
             }
-
-            dispatcher.dispatch(() -> {
-                if (!textWidget.isDisposed())
-                {
-                    getContentAssistant().ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
-                    textWidget.redraw();
-                }
-            });
 
             lastSession = null;
             isModifed = false;
@@ -335,18 +327,17 @@ class CodeCompletionViewModel
             var delay = calculateDelay(startTime, delayBeforeShow);
             if (cancellationTokenSource.isCanceled())
             {
+                reset();
                 return;
             }
 
-            dispatcher
-                .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> {
-                    hintPainter.reset();
-                    hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(),
-                        delay.isNegative() || delay == Duration.ZERO, singleWordMode);
-                    return ui.getSourceViewer(textWidget);
-                }).orElse(null))
-                .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, aiCtx.getTextOffset()))
-                .ifPresent(method -> session.setMethod(method));
+            dispatcher.dispatch(() -> {
+                hintPainter.reset();
+                hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(), delay.isNegative() || delay == Duration.ZERO,
+                    singleWordMode);
+            });
+
+            getCurrentMethod(aiCtx.getTextOffset()).ifPresent(currentMethod -> session.setMethod(currentMethod));
 
             var completionSource =
                 codeAssistant.createSource(aiCtx.getProjectId(), localContextProvider, cancellationTokenSource);
@@ -417,18 +408,21 @@ class CodeCompletionViewModel
         }
     }
 
-    private Optional<CodeMethod> getCurrentMethod(SourceViewer sourceViewer, int offset)
+    private Optional<CodeMethod> getCurrentMethod(int offset)
     {
-        var doc = sourceViewer.getDocument();
-        if (!(doc instanceof IXtextDocument))
+        if (isSimpleMode)
         {
             return Optional.empty();
         }
 
-        return dispatcher.dispatch(() -> {
-            var parseResult = ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
-            return codeProvider.getMethod(parseResult, offset);
-        }, uiSettings.getMinRequestDelay()).flatMap(i -> i);
+        var ast = codeParser.parse(sourceViewer);
+        isSimpleMode = ast.isEmpty();
+        if (isSimpleMode)
+        {
+            log.warning("Microfreeze UI", () -> "Switching to simplified mode"); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+
+        return ast.flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
     }
 
     private void cancel()
@@ -485,13 +479,11 @@ class CodeCompletionViewModel
         var widget = context.getWidget();
         var hint = session.getHint();
         var hintLines = hint.getText(HintPart.LINES).getText();
-        var aiContext = context.getAiContext();
-        var source = aiContext.getSource();
-        var sourceOffset = aiContext.getSourceOffset();
-        var optionalMethod = dispatcher.dispatch(
-            () -> ui.getSourceViewer(textWidget))
-            .flatMap(i -> i)
-            .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, sourceOffset));
+        // var aiContext = context.getAiContext();
+        // var source = aiContext.getSource();
+        // var sourceOffset = aiContext.getSourceOffset();
+        /*var optionalMethod = codeParser.parse(sourceViewer, uiSettings.getTimeout())
+            .flatMap(parseResult -> codeProvider.getMethod(parseResult, sourceOffset));
 
         int validCodeSize;
         if (optionalMethod.isPresent())
@@ -506,9 +498,9 @@ class CodeCompletionViewModel
             validCodeSize = hintLines.length();
         }
 
-        var validHintLines = hintLines.substring(0, validCodeSize);
+        var validHintLines = hintLines.substring(0, validCodeSize);*/
         dispatcher.dispatch(() -> {
-            if (uiSettings.traceMode())
+            /*if (uiSettings.traceMode())
             {
                 log.trace("Syntax check " + context.getCancellationTokenSource(), () -> { //$NON-NLS-1$
                     var message = new StringBuilder();
@@ -538,13 +530,12 @@ class CodeCompletionViewModel
 
                     return message.toString();
                 });
-            }
+            }*/
 
-            if (validHintLines.length() > 0)
+            if (hintLines.length() > 0)
             {
-                hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), validHintLines,
-                    hint.getText(HintPart.TOKEN).getText());
-
+                var nextToken = hint.getText(HintPart.TOKEN).getText();
+                hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), hintLines, nextToken);
                 widget.redraw();
             }
             else
@@ -647,8 +638,7 @@ class CodeCompletionViewModel
     public void caretMoved(CaretEvent event)
     {
         // sync
-        ui.getSourceViewer(textWidget)
-            .flatMap(sourceViewer -> getCurrentMethod(sourceViewer, textWidget.getCaretOffset()))
+        getCurrentMethod(textWidget.getCaretOffset())
             .ifPresent(currentMethod -> {
                 if (!currentMethod.equals(lastCurrentMethod))
                 {
@@ -697,11 +687,6 @@ class CodeCompletionViewModel
         }
 
         session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset());
-    }
-
-    private Optional<ContentAssistantFacade> getContentAssistant()
-    {
-        return ui.getSourceViewer(textWidget).map(sourceViewer -> sourceViewer.getContentAssistantFacade());
     }
 
     private class AssistantListener

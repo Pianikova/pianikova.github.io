@@ -19,7 +19,6 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.xtext.parser.IParseResult;
-import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -31,6 +30,7 @@ class FinalCodeFeedbackViewModel
     private final IUI ui;
     private final IFeedbackPainter feedbackPainter;
     private final ICodeProvider codeProvider;
+    private final ICodeParser codeParser;
     private final ICodeCompletionStatistics statistics;
     private final Object lock = new Object();
     private StyledText textWidget;
@@ -39,17 +39,19 @@ class FinalCodeFeedbackViewModel
 
     @Inject
     public FinalCodeFeedbackViewModel(IDispatcher dispatcher, IUI ui, IFeedbackPainter feedbackPainter,
-        ICodeProvider codeProvider, ICodeCompletionStatistics statistics)
+        ICodeProvider codeProvider, ICodeParser codeParser, ICodeCompletionStatistics statistics)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(feedbackPainter);
         Preconditions.checkNotNull(codeProvider);
+        Preconditions.checkNotNull(codeParser);
         Preconditions.checkNotNull(statistics);
         this.dispatcher = dispatcher;
         this.ui = ui;
         this.feedbackPainter = feedbackPainter;
         this.codeProvider = codeProvider;
+        this.codeParser = codeParser;
         this.statistics = statistics;
     }
 
@@ -146,29 +148,9 @@ class FinalCodeFeedbackViewModel
 
     private Optional<IParseResult> getParseResult()
     {
-        var parserResultOptional = dispatcher
+        return dispatcher
             .dispatch(() -> ui.getTextWidget().flatMap(textWidget -> ui.getSourceViewer(textWidget)).orElse(null))
-            .map(sourceViewer -> {
-                var doc = sourceViewer.getDocument();
-                if (!(doc instanceof IXtextDocument))
-                {
-                    return null;
-                }
-
-                return ((IXtextDocument)doc).readOnly(s -> s.getParseResult());
-            });
-        if (parserResultOptional.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        var parseResult = parserResultOptional.get();
-        if (parseResult.hasSyntaxErrors())
-        {
-            return Optional.empty();
-        }
-
-        return Optional.of(parseResult);
+            .flatMap(sourceViewer -> codeParser.parse(sourceViewer));
     }
 
     private Optional<CodeMethod> getMethod()

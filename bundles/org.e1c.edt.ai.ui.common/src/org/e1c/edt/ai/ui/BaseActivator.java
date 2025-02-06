@@ -152,6 +152,26 @@ public abstract class BaseActivator
         }
     }
 
+    @Override
+    public void warning(String topic, Supplier<String> details)
+    {
+        if (settings == null || !settings.traceMode())
+        {
+            return;
+        }
+
+        var sb = new StringBuilder();
+        sb.append(topic);
+        sb.append(System.lineSeparator());
+        sb.append(details.get());
+        if (sb.length() > 10000)
+        {
+            sb.setLength(10000);
+        }
+
+        log(Status.warning(sb.toString()));
+    }
+
     /**
      * Запись сообщения трасировки в лог журнал плагина
      *

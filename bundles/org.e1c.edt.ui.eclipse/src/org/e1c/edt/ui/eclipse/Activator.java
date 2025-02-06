@@ -16,7 +16,7 @@ public class Activator
     @Override
     protected Injector createInjector()
     {
-        var mergedModule = Modules.override(new AIUIModule(this)).with(new AIUICommonModule());
+        var mergedModule = Modules.override(new AIUICommonModule()).with(new AIUIModule(this));
         return Guice.createInjector(mergedModule);
     }
 

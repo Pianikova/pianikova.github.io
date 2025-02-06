@@ -240,6 +240,6 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
         }
 
         var hint = getHint();
-        return hint.isBlank();
+        return hint.isEmpty();
     }
 }

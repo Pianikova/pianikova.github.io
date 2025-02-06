@@ -19,11 +19,13 @@ import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.ICodeProvider;
 import org.e1c.edt.ai.IContextEntities;
+import org.e1c.edt.ai.IGlobalContextManager;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProjectIdProvider;
 import org.e1c.edt.ai.IProjectProvider;
 import org.e1c.edt.ai.IVersionProvider;
 import org.e1c.edt.ai.ui.BaseActivator;
+import org.e1c.edt.ai.ui.ICodeParser;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.google.common.base.Preconditions;
@@ -54,6 +56,7 @@ public class AIUIModule
         bind(IVersionProvider.class).toInstance(activator);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);
+        bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IContextEntities.class).to(ContextEntities.class).in(Singleton.class);
         bind(IProjectProvider.class).to(ProjectProvider.class).in(Singleton.class);
@@ -68,6 +71,7 @@ public class AIUIModule
             }
         });
         bind(IProjectIdProvider.class).to(ProjectIdProvider.class).in(Singleton.class);
+        bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         // @formatter:on
     }
 

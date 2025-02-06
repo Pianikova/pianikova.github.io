@@ -1,13 +1,11 @@
 /**
  * Copyright (C) 2024, 1C
  */
-package org.e1c.edt.ai.ui;
+package org.e1c.edt.ai;
 
-import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.assistent.model.Completion;
 
-interface IGlobalContextManager
+public interface IGlobalContextManager
 {
     void update(AIContext aiCtx, ICancellationToken cancellationToken);
 
