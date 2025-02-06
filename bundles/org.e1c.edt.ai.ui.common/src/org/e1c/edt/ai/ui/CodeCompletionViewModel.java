@@ -48,8 +48,12 @@ import org.eclipse.swt.custom.CaretEvent;
 import org.eclipse.swt.custom.CaretListener;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.custom.VerifyKeyListener;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
@@ -60,7 +64,7 @@ import com.google.inject.Provider;
 
 class CodeCompletionViewModel
     implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener, TraverseListener,
-    ModifyListener
+    ModifyListener, SelectionListener, ControlListener
 {
     private final Object lockObject = new Object();
     private final ILog log;
@@ -175,6 +179,10 @@ class CodeCompletionViewModel
                 textWidget.addCaretListener(this);
                 textWidget.addVerifyKeyListener(this);
                 textWidget.addModifyListener(this);
+                textWidget.addControlListener(this);
+                Optional.ofNullable(textWidget.getHorizontalBar())
+                    .ifPresent(scroll -> scroll.addSelectionListener(this));
+                Optional.ofNullable(textWidget.getVerticalBar()).ifPresent(scroll -> scroll.addSelectionListener(this));
                 sourceViewer.getContentAssistantFacade().addCompletionListener(assistantListener);
                 textWidget.redraw();
                 // Warm up
@@ -284,6 +292,10 @@ class CodeCompletionViewModel
             reset();
             if (!textWidget.isDisposed())
             {
+                Optional.ofNullable(textWidget.getHorizontalBar())
+                    .ifPresent(scroll -> scroll.removeSelectionListener(this));
+                Optional.ofNullable(textWidget.getVerticalBar())
+                    .ifPresent(scroll -> scroll.removeSelectionListener(this));
                 textWidget.removePaintListener(hintPainter);
                 textWidget.removeCaretListener(this);
                 textWidget.removeVerifyKeyListener(this);
@@ -666,6 +678,30 @@ class CodeCompletionViewModel
     public void modifyText(ModifyEvent e)
     {
         isModifed = true;
+    }
+
+    @Override
+    public void widgetSelected(SelectionEvent e)
+    {
+        reset();
+    }
+
+    @Override
+    public void widgetDefaultSelected(SelectionEvent e)
+    {
+        reset();
+    }
+
+    @Override
+    public void controlMoved(ControlEvent e)
+    {
+        reset();
+    }
+
+    @Override
+    public void controlResized(ControlEvent e)
+    {
+        reset();
     }
 
     private void methodChanged(CodeMethod method)

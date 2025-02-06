@@ -147,6 +147,7 @@ class HintPainter
 
     private void drawHint(GC gc, String nextToken, String firstLine, String otherLines)
     {
+        var zeroLocation = textWidget.getLocationAtOffset(0);
         var caretLocation = textWidget.getLocationAtOffset(pinnedOffset);
         var x = caretLocation.x;
         var y = caretLocation.y;
@@ -220,7 +221,8 @@ class HintPainter
                 gc.setFont(italicFont);
                 gc.setAlpha(160);
                 var nextTokenSize = gc.stringExtent(nextToken);
-                gc.drawText(firstLine.substring(nextToken.length()), firstLineX + BORDER * 2 + nextTokenSize.x,
+                gc.drawText(firstLine.substring(nextToken.length()),
+                    firstLineX + BORDER * 2 + nextTokenSize.x,
                     firstLineY, true);
             }
             else
@@ -232,7 +234,7 @@ class HintPainter
 
             gc.setAlpha(120);
             gc.setFont(italicFont);
-            gc.drawText(otherLines, otherLinesX + BORDER * 2, otherLinesY, true);
+            gc.drawText(otherLines, otherLinesX + BORDER * 2 + zeroLocation.x, otherLinesY, true);
 
             gc.setLineStyle(SWT.LINE_DOT);
 
@@ -257,6 +259,10 @@ class HintPainter
                 gc.drawText(codeCompletionLabels, labelX + BORDER * 2, labelY, true);
 
                 gc.drawPolyline(new int[] {
+                    otherLinesX, otherLinesY,
+
+                    firstLineX, otherLinesY,
+
                     firstLineX, firstLineY,
 
                     firstLineX + firstLineW, firstLineY,
@@ -271,13 +277,7 @@ class HintPainter
 
                     labelX, labelY,
 
-                    otherLinesX, labelY,
-
-                    otherLinesX, otherLinesY,
-
-                    firstLineX, otherLinesY,
-
-                    firstLineX, firstLineY
+                    otherLinesX, labelY
                 });
             }
             // @formatter:on
