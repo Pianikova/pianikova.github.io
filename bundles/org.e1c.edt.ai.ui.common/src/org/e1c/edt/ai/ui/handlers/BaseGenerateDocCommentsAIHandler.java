@@ -10,7 +10,6 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.CodePart;
 import org.e1c.edt.ai.ICodePartsProvider;
-import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.Range;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.ui.AITarget;
@@ -38,8 +37,6 @@ public class BaseGenerateDocCommentsAIHandler
     extends AbstractHandler
 {
     @Inject
-    IUISettings uiSettings;
-    @Inject
     IAIContextProvider aiContextProvider;
     @Inject
     IChat chat;
@@ -60,7 +57,7 @@ public class BaseGenerateDocCommentsAIHandler
     @Override
     public boolean isEnabled()
     {
-        return uiSettings.isCodeCompletion() && getCommentingMethod().isPresent();
+        return getCommentingMethod().isPresent();
     }
 
     @Override
