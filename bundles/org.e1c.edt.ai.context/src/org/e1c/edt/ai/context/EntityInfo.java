@@ -57,6 +57,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.google.inject.name.Named;
 
 class EntityInfo
     implements IEntityInfo, IContextEntities
@@ -91,7 +92,7 @@ class EntityInfo
         IProgramingLanguage programingLanguage, Provider<MessageDigest> messageDigestProvider,
         IHashTools hashTools, IProjectFileSystemSupportProvider projectFileSystemSupportProvider,
         ICodePartsProvider codePartsProvider, IModuleProvider activeEditorResourceSetProvider,
-        @ContextModule.BaseModuleProvider IModuleProvider baseResourceSetProvider)
+        @Named("BaseModuleProvider") IModuleProvider baseResourceSetProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(entitiesWalker);
@@ -499,7 +500,7 @@ class EntityInfo
                         () -> entityFactory.createMethodEntity(method, node, false, cancellationToken)
                             .ifPresent(
                                 entity -> globalContext.localFunctionsEntities.put(methodName,
-                                    new HashedValue<Object>(entity, hash))));
+                                    new HashedValue<>(entity, hash))));
                     actions.add(action);
                 }
 

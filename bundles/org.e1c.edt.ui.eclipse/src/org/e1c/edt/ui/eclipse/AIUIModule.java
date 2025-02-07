@@ -3,17 +3,8 @@
  */
 package org.e1c.edt.ui.eclipse;
 
-import static java.lang.annotation.ElementType.FIELD;
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.PARAMETER;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-import javax.inject.Qualifier;
 
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ICodePartsProvider;
@@ -30,7 +21,6 @@ import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
-import com.google.inject.BindingAnnotation;
 import com.google.inject.Singleton;
 
 public class AIUIModule
@@ -73,15 +63,5 @@ public class AIUIModule
         bind(IProjectIdProvider.class).to(ProjectIdProvider.class).in(Singleton.class);
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         // @formatter:on
-    }
-
-
-    @BindingAnnotation
-    @Qualifier
-    @Target({ FIELD, PARAMETER, METHOD })
-    @Retention(RUNTIME)
-    public @interface BaseModuleProvider
-    {
-        //
     }
 }

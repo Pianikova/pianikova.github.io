@@ -8,11 +8,11 @@ import java.util.Optional;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.context.IModuleProvider;
 import org.e1c.edt.ai.context.ModuleInfo;
-import org.e1c.edt.ai.ui.AIUIModule.BaseModuleProvider;
 import org.eclipse.jface.text.IDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 
 class CurrentEditorModuleProvider
     implements IModuleProvider
@@ -23,7 +23,7 @@ class CurrentEditorModuleProvider
 
     @Inject
     public CurrentEditorModuleProvider(IUI ui, IDispatcher dispatcher,
-        @BaseModuleProvider IModuleProvider baseResourceSetProvider)
+        @Named("BaseModuleProvider") IModuleProvider baseResourceSetProvider)
     {
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(dispatcher);
