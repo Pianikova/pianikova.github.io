@@ -64,7 +64,7 @@ public class CodeCompletionActionHandlerTest
         when(DefaultSesssion.accept(HintPart.LINE, DEFAULT_OFFSET)).thenReturn(CodeCompletionAction.TEST);
         when(DefaultSesssion.accept(HintPart.LINES, DEFAULT_OFFSET)).thenReturn(CodeCompletionAction.TEST);
         when(DefaultSesssion.acceptChar(DEFAULT_OFFSET, 'a')).thenReturn(CodeCompletionAction.TEST);
-        var<ICodeCompletionContext> handler = createInstance();
+        var handler = createInstance();
 
         // When
         var actualAction = handler.handle(sesssion, action, character, offset, isContinuousCodeCompletion);

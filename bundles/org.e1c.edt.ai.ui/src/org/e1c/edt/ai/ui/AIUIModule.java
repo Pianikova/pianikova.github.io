@@ -3,16 +3,6 @@
  */
 package org.e1c.edt.ai.ui;
 
-import static java.lang.annotation.ElementType.FIELD;
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.PARAMETER;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
-
-import javax.inject.Qualifier;
-
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.ILog;
@@ -25,8 +15,8 @@ import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
-import com.google.inject.BindingAnnotation;
 import com.google.inject.Singleton;
+import com.google.inject.name.Names;
 
 public class AIUIModule
     extends AbstractModule
@@ -51,20 +41,10 @@ public class AIUIModule
         bind(IVersionProvider.class).toInstance(activator);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
-        bind(IModuleProvider.class).annotatedWith(BaseModuleProvider.class).to(ModuleProvider.class).in(Singleton.class);
+        bind(IModuleProvider.class).annotatedWith(Names.named("BaseModuleProvider")).to(ModuleProvider.class).in(Singleton.class); //$NON-NLS-1$
         bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
         bind(IProjectIdProvider.class).to(ModuleProvider.class);
         bind(IProjectProvider.class).to(ModuleProvider.class);
         // @formatter:on
-    }
-
-
-    @BindingAnnotation
-    @Qualifier
-    @Target({ FIELD, PARAMETER, METHOD })
-    @Retention(RUNTIME)
-    public @interface BaseModuleProvider
-    {
-        //
     }
 }
