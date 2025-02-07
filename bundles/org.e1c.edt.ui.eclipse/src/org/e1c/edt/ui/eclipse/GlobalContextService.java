@@ -1,3 +1,4 @@
+package org.e1c.edt.ui.eclipse;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
