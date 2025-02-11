@@ -10,25 +10,5 @@
   </parent>
   <artifactId>org.e1c.edt.ai.ui</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <packaging>eclipse-plugin</packaging>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.eclipse.tycho</groupId>
-        <artifactId>tycho-compiler-plugin</artifactId>
-        <configuration>
-          <extraClasspathElements>
-            <extraClasspathElement>
-              <groupId>com.oracle</groupId>
-              <artifactId>javafx</artifactId>
-              <version>11.0.0-SNAPSHOT</version>
-              <systemPath>${java.home}/lib/javafx-swt.jar</systemPath>
-              <scope>system</scope>
-            </extraClasspathElement>
-          </extraClasspathElements>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
+  <packaging>eclipse-plugin</packaging>  
 </project>
