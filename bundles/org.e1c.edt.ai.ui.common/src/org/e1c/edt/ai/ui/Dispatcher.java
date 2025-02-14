@@ -213,6 +213,7 @@ class Dispatcher
             }
         }
 
+        job.setSystem(!settings.traceMode());
         return job;
     }
 

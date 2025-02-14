@@ -255,7 +255,6 @@ class CodeCompletionViewModel
                         jobCtx.CancellationTokenSource);
                 });
         }, null);
-        job.setPriority(Job.SHORT);
         this.lastJob = job;
         job.schedule(delayBeforeAsk.toMillis());
     }

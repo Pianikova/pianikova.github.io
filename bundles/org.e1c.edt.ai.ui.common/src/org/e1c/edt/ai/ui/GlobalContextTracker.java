@@ -29,7 +29,7 @@ class GlobalContextTracker
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
     private final IClock clock;
     private final IGlobalContextStateStore globalContextStateStore;
-    private final IUISettings uiSettings;
+    private final IUISettings settings;
     private final ISettingsProvider settingsProvider;
     private final ISettingsTracker settingsTracker;
     private final Object lockObject = new Object();
@@ -56,7 +56,7 @@ class GlobalContextTracker
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
         this.clock = clock;
         this.globalContextStateStore = globalContextStateStore;
-        this.uiSettings = settings;
+        this.settings = settings;
         this.settingsProvider = settingsProvider;
         this.settingsTracker = settingsTracker;
         state = globalContextStateStore.load();
@@ -65,7 +65,7 @@ class GlobalContextTracker
     @Override
     public void track(AIContext aiCtx)
     {
-        if (!uiSettings.isCodeCompletion())
+        if (!settings.isCodeCompletion())
         {
             return;
         }
@@ -89,7 +89,6 @@ class GlobalContextTracker
                         jobCtx -> track(jobCtx, aiCtx, workflow),
                         cancellationToken);
 
-                    job.setSystem(!uiSettings.traceMode());
                     job.setPriority(Job.DECORATE);
                     job.schedule();
                 });
@@ -113,7 +112,7 @@ class GlobalContextTracker
 
     private void track(JobContext jobCtx, AIContext aiCtx, IProjectTrackingWorkflow workflow)
     {
-        if (!uiSettings.isCodeCompletion())
+        if (!settings.isCodeCompletion())
         {
             return;
         }
