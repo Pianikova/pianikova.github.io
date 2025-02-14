@@ -16,6 +16,7 @@ import org.junit.Test;
 
 public class CodeCompletionSessionTest
 {
+    private final IUISettings settings = mock(IUISettings.class);
     private final IHistoricalHint hint = mock(IHistoricalHint.class);
     private final IHintHistory history = mock(IHintHistory.class);
     private final ICodeCompletionContext context = mock(ICodeCompletionContext.class);
@@ -261,6 +262,43 @@ public class CodeCompletionSessionTest
 
     @SuppressWarnings("nls")
     @Test
+    public void shouldAcceptLineSeparatorWhenCariageReturnWhenWindows()
+    {
+        // Given
+        var session = createInstance(false);
+        when(settings.getLineSeparator()).thenReturn("\r\n");
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.pullChar('\r')).thenReturn(new Text("\r", source));
+        when(hint.pullChar('\n')).thenReturn(new Text("\n", source));
+
+        // When
+        var actualAction = session.acceptChar(37, '\r');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).apply(new Text("\r\n", source), 37);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldAcceptLineSeparatorWhenCariageReturnWhenMac()
+    {
+        // Given
+        var session = createInstance(false);
+        when(settings.getLineSeparator()).thenReturn("\r");
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.pullChar('\r')).thenReturn(new Text("\r", source));
+
+        // When
+        var actualAction = session.acceptChar(37, '\r');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).apply(new Text("\r", source), 37);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
     public void shouldReturnRESETWhenAcceptCharAndDoesNotPullChar()
     {
         // Given
@@ -432,7 +470,7 @@ public class CodeCompletionSessionTest
 
     private CodeCompletionSession<ICodeCompletionContext> createInstance(boolean isSingleWordMode)
     {
-        var session = new CodeCompletionSession<>(hint, history);
+        var session = new CodeCompletionSession<>(settings, hint, history);
         session.initiaize(context, history, 3, isSingleWordMode);
         return session;
     }
