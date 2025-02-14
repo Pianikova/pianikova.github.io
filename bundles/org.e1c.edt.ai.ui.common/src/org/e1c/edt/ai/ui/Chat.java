@@ -4,11 +4,10 @@
 package org.e1c.edt.ai.ui;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import org.e1c.edt.ai.AIContext;
@@ -37,6 +36,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker.State;
 import javafx.event.EventHandler;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebErrorEvent;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
@@ -66,7 +66,6 @@ public class Chat implements IChat, IChatDialog
     private WebView webView;
     private String lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
-    private final ExecutorService executor = Executors.newFixedThreadPool(1);
 
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
@@ -166,8 +165,10 @@ public class Chat implements IChat, IChatDialog
             }
             script.append("`)");
             var scriptText = script.toString();
-            log.trace(AI_CHAT, () -> "executing script: " + scriptText);
-            dispatcher.dispatch(() -> webView.getEngine().executeScript(scriptText));
+            dispatcher.dispatch(() -> {
+                log.trace(AI_CHAT, () -> "executing script: " + scriptText);
+                return getEgine().executeScript(scriptText);
+            });
             log.trace(AI_CHAT, () -> "script executed");
         });
     }
@@ -216,7 +217,7 @@ public class Chat implements IChat, IChatDialog
         view.setLayoutX(-1);
         view.setLayoutY(-1);
 
-        var webEngine = view.getEngine();
+        var webEngine = getEgine();
         webEngine.setUserDataDirectory(getUserDataDirectory().toFile());
         webEngine.setOnError(new EventHandler<WebErrorEvent>()
         {
@@ -271,26 +272,34 @@ public class Chat implements IChat, IChatDialog
                 var optionalSettings = settingsProvider.getSettings();
                 if (parameters.isEmpty() || optionalSettings.isEmpty())
                 {
-                    return Status.warning(AI_CHAT + ": Failed to get the parameters.");
+                    log.warning(AI_CHAT, () -> "failed to get the settings");
+                    return Status.warning(AI_CHAT);
                 }
 
                 var settings = optionalSettings.get();
                 var chatUrl = parameters.get().chatUrl;
                 var reset = settingsTracker.register(IParametersService.class.getName(), settings);
-                dispatcher.dispatch(() -> {
-                    if (lastChatUrl != chatUrl || reset)
-                    {
-                        lastChatUrl = chatUrl;
+                if (lastChatUrl != chatUrl || reset)
+                {
+                    lastChatUrl = chatUrl;
+                    dispatcher.dispatch(() -> {
+                        var webEngine = getEgine();
                         initializing =
-                            initialize(() -> webView.getEngine().load(lastChatUrl), () -> wink(settings));
-                    }
-                });
+                            initialize(webEngine, settings, () -> webEngine.load(lastChatUrl));
+
+                    });
+                }
 
                 try
                 {
                     initializing.whenComplete((r, e) -> {
                         if (e == null)
                         {
+                            dispatcher.dispatch(() -> {
+                                var webEngine = getEgine();
+                                wink(webEngine, settings);
+                            });
+
                             chatAction.run();
                         }
                     }).join();
@@ -306,16 +315,18 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private void wink(AISettings settings)
+    private void wink(WebEngine webEngine, AISettings settings)
     {
         try
         {
+            setCallback(webEngine);
             var winkScript =
                 String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(), settings.getClientUniqueId(),
                     uiSettings.getLanguage(), uiSettings.getTheme());
             log.trace(AI_CHAT, () -> "wink script: " + winkScript); //$NON-NLS-1$
-            webView.getEngine().executeScript(winkScript);
-            log.trace(AI_CHAT, () -> "wink script executed");
+            webEngine.executeScript(winkScript);
+            log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
+
         }
         catch (Throwable error)
         {
@@ -324,12 +335,12 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private CompletableFuture<Boolean> initialize(Runnable loader, Runnable initializer)
+    private CompletableFuture<Boolean> initialize(WebEngine webEngine, AISettings settings, Runnable loader)
     {
-        var webEngine = webView.getEngine();
-        webEngine.setJavaScriptEnabled(true);
+        var worker = webEngine.getLoadWorker();
         log.trace(AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
         var result = new CompletableFuture<Boolean>();
+        var listeners = new ArrayList<ChangeListener<State>>();
         var stateListener = new ChangeListener<State>()
         {
             @Override
@@ -339,9 +350,12 @@ public class Chat implements IChat, IChatDialog
                 switch (newValue)
                 {
                 case SUCCEEDED:
-                    var window = (JSObject)webEngine.executeScript("window"); //$NON-NLS-1$
-                    window.setMember(IDE_API, handler);
-                    initializer.run();
+                    for (var listener : listeners)
+                    {
+                        worker.stateProperty().removeListener(listener);
+                    }
+
+                    listeners.clear();
                     result.complete(true);
                     break;
 
@@ -351,15 +365,43 @@ public class Chat implements IChat, IChatDialog
             }
         };
 
-        var worker = webEngine.getLoadWorker();
+
+        listeners.add(stateListener);
         worker.stateProperty().addListener(stateListener);
         loader.run();
-        return result.orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .whenComplete((r, e) -> {
-                dispatcher.dispatch(() -> worker.stateProperty().removeListener(stateListener));
-            })
-            .whenCompleteAsync((r, e) -> {
-                //
-            }, executor);
+        return result.orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS).exceptionally(error -> {
+            log.logError(error);
+            return false;
+        });
+    }
+
+    @SuppressWarnings("nls")
+    private void setCallback(WebEngine webEngine)
+    {
+        try
+        {
+            var window = (JSObject)webEngine.executeScript("window");
+            if (window != null)
+            {
+                window.setMember(IDE_API, handler);
+                var handler = window.getMember(IDE_API);
+                log.trace(AI_CHAT, () -> "set callback handler " + handler);
+            }
+            else
+            {
+                log.warning(AI_CHAT, () -> "cannot find a chat window");
+            }
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+        }
+    }
+
+    private WebEngine getEgine()
+    {
+        var webEngine = webView.getEngine();
+        webEngine.setJavaScriptEnabled(true);
+        return webEngine;
     }
 }

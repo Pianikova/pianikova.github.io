@@ -17,6 +17,7 @@ public class IdeApiHandler
     private final ILog log;
     private final IUI ui;
     private final ITextPreprocessor textPreprocessor;
+    private boolean isReady;
 
     @Inject
     public IdeApiHandler(ILog log, IUI ui, ITextPreprocessor textPreprocessor)
@@ -32,6 +33,7 @@ public class IdeApiHandler
     public void wink(String parameter)
     {
         Preconditions.checkNotNull(parameter);
+        isReady = true;
         log.trace(AI_CHAT, () -> "winked: " + parameter); //$NON-NLS-1$
     }
 
@@ -77,5 +79,10 @@ public class IdeApiHandler
     {
         // Chat tracing
         log.trace(AI_CHAT, () -> message);
+    }
+
+    public boolean isReady()
+    {
+        return this.isReady;
     }
 }
