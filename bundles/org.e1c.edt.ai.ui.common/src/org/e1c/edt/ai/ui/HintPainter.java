@@ -269,8 +269,13 @@ class HintPainter
 
                     firstLineX + firstLineW, otherLinesY,
 
-                    otherLinesX + otherLinesW, otherLinesY,
+                    otherLinesX + otherLinesW, otherLinesY
+                });
 
+                gc.drawPolyline(new int[] {
+                    labelX, otherLinesY + otherLinesH,
+
+                    otherLinesX + otherLinesW, otherLinesY + otherLinesH,
                     otherLinesX + otherLinesW, otherLinesY + otherLinesH + labelH,
 
                     labelX, otherLinesY + otherLinesH + labelH,
