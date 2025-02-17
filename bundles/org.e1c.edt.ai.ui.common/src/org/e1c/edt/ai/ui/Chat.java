@@ -167,9 +167,9 @@ public class Chat implements IChat, IChatDialog
             var scriptText = script.toString();
             dispatcher.dispatch(() -> {
                 log.trace(AI_CHAT, () -> "executing script: " + scriptText);
-                return getEgine().executeScript(scriptText);
+                getEgine().executeScript(scriptText);
+                log.trace(AI_CHAT, () -> "script executed");
             });
-            log.trace(AI_CHAT, () -> "script executed");
         });
     }
 
@@ -250,7 +250,6 @@ public class Chat implements IChat, IChatDialog
             .getAbsolutePath());
     }
 
-    @SuppressWarnings("nls")
     private void chatInJob(Runnable chatAction)
     {
         ensureWebViewExists();
@@ -259,79 +258,55 @@ public class Chat implements IChat, IChatDialog
             @Override
             protected IStatus run(IProgressMonitor monitor)
             {
-                Optional<Parameters> parameters;
-                try
-                {
-                    parameters = parametersService.getParametersAsync().get();
-                }
-                catch (InterruptedException | ExecutionException e)
-                {
-                    return Status.warning(AI_CHAT + ": " + e.getMessage());
-                }
-
-                var optionalSettings = settingsProvider.getSettings();
-                if (parameters.isEmpty() || optionalSettings.isEmpty())
-                {
-                    log.warning(AI_CHAT, () -> "failed to get the settings");
-                    return Status.warning(AI_CHAT);
-                }
-
-                var settings = optionalSettings.get();
-                var chatUrl = parameters.get().chatUrl;
-                var reset = settingsTracker.register(IParametersService.class.getName(), settings);
-                if (lastChatUrl != chatUrl || reset)
-                {
-                    lastChatUrl = chatUrl;
-                    dispatcher.dispatch(() -> {
-                        var webEngine = getEgine();
-                        initializing =
-                            initialize(webEngine, settings, () -> webEngine.load(lastChatUrl));
-
-                    });
-                }
-
-                try
-                {
-                    initializing.whenComplete((r, e) -> {
-                        if (e == null)
-                        {
-                            dispatcher.dispatch(() -> {
-                                var webEngine = getEgine();
-                                wink(webEngine, settings);
-                            });
-
-                            chatAction.run();
-                        }
-                    }).join();
-                }
-                catch (Throwable error)
-                {
-                    return Status.warning(AI_CHAT + ": " + error.getMessage(), error);
-                }
-
-                return Status.OK_STATUS;
+                return chat(chatAction);
             }
         }.schedule();
     }
 
     @SuppressWarnings("nls")
-    private void wink(WebEngine webEngine, AISettings settings)
+    private synchronized IStatus chat(Runnable chatAction)
     {
+        Optional<Parameters> parameters;
         try
         {
-            setCallback(webEngine);
-            var winkScript =
-                String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(), settings.getClientUniqueId(),
-                    uiSettings.getLanguage(), uiSettings.getTheme());
-            log.trace(AI_CHAT, () -> "wink script: " + winkScript); //$NON-NLS-1$
-            webEngine.executeScript(winkScript);
-            log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
+            parameters = parametersService.getParametersAsync().get();
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
+            return Status.warning(AI_CHAT + ": " + e.getMessage());
+        }
 
+        var optionalSettings = settingsProvider.getSettings();
+        if (parameters.isEmpty() || optionalSettings.isEmpty())
+        {
+            log.warning(AI_CHAT, () -> "failed to get the settings");
+            return Status.warning(AI_CHAT);
+        }
+
+        var settings = optionalSettings.get();
+        var chatUrl = parameters.get().chatUrl;
+        var reset = settingsTracker.register(IParametersService.class.getName(), settings);
+        if (lastChatUrl != chatUrl || reset)
+        {
+            lastChatUrl = chatUrl;
+            initializing = dispatcher.dispatch(() -> {
+                var webEngine = getEgine();
+                return initialize(webEngine, settings, () -> webEngine.load(lastChatUrl));
+            }).get();
+        }
+
+        try
+        {
+            initializing.get();
+            wink(settings, 8);
+            chatAction.run();
         }
         catch (Throwable error)
         {
-            log.logError(error);
+            return Status.warning(AI_CHAT + ": " + error.getMessage(), error);
         }
+
+        return Status.OK_STATUS;
     }
 
     @SuppressWarnings("nls")
@@ -376,26 +351,37 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private void setCallback(WebEngine webEngine)
+    private void wink(AISettings settings, int attempts)
     {
-        try
+        do
         {
-            var window = (JSObject)webEngine.executeScript("window");
-            if (window != null)
-            {
-                window.setMember(IDE_API, handler);
-                var handler = window.getMember(IDE_API);
-                log.trace(AI_CHAT, () -> "set callback handler " + handler);
-            }
-            else
-            {
-                log.warning(AI_CHAT, () -> "cannot find a chat window");
-            }
+            dispatcher.dispatch(() -> {
+                var webEngine = getEgine();
+                try
+                {
+                    var window = (JSObject)webEngine.executeScript("window");
+                    if (window != null)
+                    {
+                        window.setMember(IDE_API, handler);
+                        log.trace(AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
+                        var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
+                            settings.getClientUniqueId(), uiSettings.getLanguage(), uiSettings.getTheme());
+                        log.trace(AI_CHAT, () -> "wink script: " + winkScript);
+                        webEngine.executeScript(winkScript);
+                        log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
+                    }
+                    else
+                    {
+                        log.warning(AI_CHAT, () -> "cannot find a chat window");
+                    }
+                }
+                catch (Throwable error)
+                {
+                    log.logError(error);
+                }
+            });
         }
-        catch (Exception error)
-        {
-            log.logError(error);
-        }
+        while (!handler.isReady() && attempts-- >= 0);
     }
 
     private WebEngine getEgine()
