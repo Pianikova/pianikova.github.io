@@ -20,6 +20,8 @@ import org.osgi.framework.Version;
 
 import com.google.inject.Injector;
 
+import javafx.application.Platform;
+
 /**
  * Данный класс представляет собой начальную точку в работе плагина.
  * В нем следует реализовывать логику создания плагина,
@@ -227,6 +229,7 @@ public abstract class BaseActivator
         super.start(bundleContext);
         this.bundleContext = bundleContext;
         plugin = this;
+        Platform.setImplicitExit(false);
         settings = getInjector().getInstance(IUISettings.class);
     }
 

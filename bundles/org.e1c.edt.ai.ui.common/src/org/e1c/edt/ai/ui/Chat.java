@@ -131,7 +131,7 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
-        dispatcher.dispatch(() -> ui.showView(BaseChatView.ID));
+        ui.showView(BaseChatView.ID);
         chatInJob(() -> {
             String scriptLanguage = null;
             String programingLanguage = null;
@@ -165,7 +165,7 @@ public class Chat implements IChat, IChatDialog
             }
             script.append("`)");
             var scriptText = script.toString();
-            dispatcher.dispatch(() -> {
+            dispatcher.dispatchAsync(() -> {
                 log.trace(AI_CHAT, () -> "executing script: " + scriptText);
                 getEgine().executeScript(scriptText);
                 log.trace(AI_CHAT, () -> "script executed");
@@ -209,6 +209,11 @@ public class Chat implements IChat, IChatDialog
     {
         if (webView != null)
         {
+            if (webView.isVisible())
+            {
+                webView.setVisible(true);
+            }
+
             return;
         }
 
@@ -298,7 +303,7 @@ public class Chat implements IChat, IChatDialog
         try
         {
             initializing.get();
-            wink(settings, 8);
+            wink(settings, 32);
             chatAction.run();
         }
         catch (Throwable error)
@@ -353,7 +358,7 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void wink(AISettings settings, int attempts)
     {
-        do
+        while (!handler.isReady() && attempts-- >= 0)
         {
             dispatcher.dispatch(() -> {
                 var webEngine = getEgine();
@@ -369,6 +374,7 @@ public class Chat implements IChat, IChatDialog
                         log.trace(AI_CHAT, () -> "wink script: " + winkScript);
                         webEngine.executeScript(winkScript);
                         log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
+                        Thread.sleep(uiSettings.getMinRequestDelay().toMillis());
                     }
                     else
                     {
@@ -380,8 +386,8 @@ public class Chat implements IChat, IChatDialog
                     log.logError(error);
                 }
             });
+
         }
-        while (!handler.isReady() && attempts-- >= 0);
     }
 
     private WebEngine getEgine()
