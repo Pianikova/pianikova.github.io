@@ -9,19 +9,22 @@ import com.google.inject.Inject;
 public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     implements ICodeCompletionSession<TContext>
 {
+    private final IUISettings settings;
     private final IHistoricalHint hint;
-    private TContext context;
     private IHintHistory history;
+    private TContext context;
     private boolean singleWordMode;
     private boolean isAccepting, inCompleted;
     private String uuid = Sources.UNKNOWN.getId();
     private CodeMethod method = Sources.UNKNOWN.getMethod();
 
     @Inject
-    public CodeCompletionSession(IHistoricalHint hint, IHintHistory history)
+    public CodeCompletionSession(IUISettings settings, IHistoricalHint hint, IHintHistory history)
     {
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(hint);
         Preconditions.checkNotNull(history);
+        this.settings = settings;
         this.hint = hint;
         this.history = history;
     }
@@ -135,23 +138,40 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     @Override
     public synchronized CodeCompletionAction acceptChar(int offset, char ch)
     {
-        if (ch == 0)
+        switch (ch)
         {
+        case 0:
             return CodeCompletionAction.SKIP;
-        }
 
-        if (ch == '\b')
-        {
+        case '\b':
             return CodeCompletionAction.RESET;
-        }
 
-        var charText = hint.pullChar(ch);
-        if (charText.isEmpty())
-        {
-            return CodeCompletionAction.ASK_NEW;
-        }
+        case '\r':
+        case '\n':
+            var lineSeparator = settings.getLineSeparator();
+            var charText = Text.EMPTY;
+            for (var i = 0; i < lineSeparator.length(); i++)
+            {
+                charText = hint.pullChar(lineSeparator.charAt(i));
+                if (charText.isEmpty())
+                {
+                    return CodeCompletionAction.ASK_NEW;
+                }
+            }
 
-        apply(charText, offset);
+            apply(new Text(lineSeparator, charText.getSource()), offset);
+            break;
+
+        default:
+            charText = hint.pullChar(ch);
+            if (charText.isEmpty())
+            {
+                return CodeCompletionAction.ASK_NEW;
+            }
+
+            apply(charText, offset);
+            break;        }
+
         if (isFinishingChar())
         {
             return CodeCompletionAction.RESET;

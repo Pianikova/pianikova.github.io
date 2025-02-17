@@ -255,7 +255,6 @@ class CodeCompletionViewModel
                         jobCtx.CancellationTokenSource);
                 });
         }, null);
-        job.setPriority(Job.SHORT);
         this.lastJob = job;
         job.schedule(delayBeforeAsk.toMillis());
     }
@@ -580,9 +579,10 @@ class CodeCompletionViewModel
             session = lastSession;
         }
 
-        var action = userActions.getAction(event);
+        var actionToProcess = userActions.getAction(event);
         var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
-        action = handler.handle(session, action, event.character, hintPainter.getOffset(), isContinuousCodeCompletion);
+        var action = handler.handle(session, actionToProcess, event.character, hintPainter.getOffset(),
+            isContinuousCodeCompletion);
         switch (action)
         {
         case SUGGEST:
