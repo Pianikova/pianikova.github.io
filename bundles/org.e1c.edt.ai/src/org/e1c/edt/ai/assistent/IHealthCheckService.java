@@ -5,11 +5,13 @@ package org.e1c.edt.ai.assistent;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.e1c.edt.ai.ServiceState;
+
 /**
  * @author Bogdan Sushkov
  *
  */
-public interface ICheckStatusService
+public interface IHealthCheckService
 {
-    CompletableFuture<Integer> getStatusAsync();
+    CompletableFuture<ServiceState> checkAsync();
 }

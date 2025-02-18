@@ -4,7 +4,7 @@
 package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.ILog;
-import org.e1c.edt.ai.assistent.IServerAccessService;
+import org.e1c.edt.ai.assistent.IStateService;
 import org.eclipse.ui.IStartup;
 
 import com.google.inject.Inject;
@@ -24,7 +24,7 @@ public class BasePluginStartup
     @Inject
     UI ui;
     @Inject
-    IServerAccessService accessHolder;
+    IStateService accessHolder;
     @Inject
     ILog log;
 

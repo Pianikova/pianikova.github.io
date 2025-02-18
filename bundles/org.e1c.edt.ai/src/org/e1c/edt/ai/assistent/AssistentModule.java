@@ -25,14 +25,14 @@ public class AssistentModule
         bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
         bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
         bind(IParametersService.class).to(ParametersService.class).in(Singleton.class);
-        bind(ICheckStatusService.class).to(CheckStatusService.class).in(Singleton.class);
+        bind(IHealthCheckService.class).to(HealthCheckService.class).in(Singleton.class);
         bind(new TypeLiteral<IResponseCache<Parameters>>() { /**/ }).to(new TypeLiteral<ResponseCache<Parameters>>() { /**/ });
         bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
         bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
         bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
-        bind(IServerAccessService.class).to(ServerAccessService.class).in(Singleton.class);
+        bind(IStateService.class).to(StateService.class).in(Singleton.class);
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IGlobalContextService.class).to(GlobalContextService.class).in(Singleton.class);
         bind(ICompressor.class).to(Compressor.class).in(Singleton.class);

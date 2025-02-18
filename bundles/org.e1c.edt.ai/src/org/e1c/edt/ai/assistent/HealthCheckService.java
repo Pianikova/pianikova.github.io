@@ -8,6 +8,8 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import org.e1c.edt.ai.ServiceState;
+
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -16,15 +18,15 @@ import com.google.inject.Inject;
  * @author Bogdan Sushkov
  *
  */
-class CheckStatusService
-    implements ICheckStatusService
+class HealthCheckService
+    implements IHealthCheckService
 {
     private final IHttpLog log;
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
 
     @Inject
-    public CheckStatusService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder)
+    public HealthCheckService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -35,18 +37,19 @@ class CheckStatusService
     }
 
     @Override
-    public synchronized CompletableFuture<Integer> getStatusAsync()
+    public synchronized CompletableFuture<ServiceState> checkAsync()
     {
         Optional<HttpRequest.Builder> builder = Optional.empty();
         try {
             builder = requestBuilder.create("./health"); //$NON-NLS-1$
         } catch (IllegalArgumentException e) {
             log.error(e, "Illegal http request"); //$NON-NLS-1$
-            return CompletableFuture.completedFuture(0);
+            return CompletableFuture.completedFuture(ServiceState.OFFLINE);
         }
+
         if (builder.isEmpty())
         {
-            return CompletableFuture.completedFuture(0);
+            return CompletableFuture.completedFuture(ServiceState.OFFLINE);
         }
 
         var request = builder.get().GET().build();
@@ -56,7 +59,7 @@ class CheckStatusService
             .sendAsync(request, BodyHandlers.ofString())
             .thenApplyAsync(response -> log.response(response, null, stopwatch, false))
             .thenApplyAsync(response -> {
-                return response.statusCode();
+                return response.statusCode() >= 400 ? ServiceState.OFFLINE : ServiceState.ONLINE;
             });
     }
 }
