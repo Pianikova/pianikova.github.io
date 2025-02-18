@@ -3,7 +3,6 @@
  */
 package org.e1c.edt.ai.client;
 
-import java.net.URL;
 import java.util.Objects;
 
 import org.e1c.edt.ai.assistent.model.Parameters;
@@ -15,22 +14,15 @@ import org.e1c.edt.ai.assistent.model.Parameters;
  */
 public class AISettings
 {
-    private final URL apiURL;
     private final String clientToken;
     private final String clientUniqueId;
     private final Parameters llmParameters;
 
-    public AISettings(URL apiURL, String clientToken, String clientUniqueId, Parameters llmParameters)
+    public AISettings(String clientToken, String clientUniqueId, Parameters llmParameters)
     {
-        this.apiURL = apiURL;
         this.clientToken = clientToken;
         this.clientUniqueId = clientUniqueId;
         this.llmParameters = llmParameters;
-    }
-
-    public URL getApiURL()
-    {
-        return apiURL;
     }
 
     public String getClientToken()
@@ -51,7 +43,7 @@ public class AISettings
     @Override
     public int hashCode()
     {
-        return Objects.hash(apiURL, clientToken, clientUniqueId, llmParameters);
+        return Objects.hash(clientToken, clientUniqueId, llmParameters);
     }
 
     @Override
@@ -64,7 +56,7 @@ public class AISettings
         if (getClass() != obj.getClass())
             return false;
         AISettings other = (AISettings)obj;
-        return Objects.equals(apiURL, other.apiURL) && Objects.equals(clientToken, other.clientToken)
+        return Objects.equals(clientToken, other.clientToken)
             && Objects.equals(clientUniqueId, other.clientUniqueId)
             && Objects.equals(llmParameters, other.llmParameters);
     }

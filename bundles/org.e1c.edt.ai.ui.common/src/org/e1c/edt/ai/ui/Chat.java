@@ -3,6 +3,7 @@
  */
 package org.e1c.edt.ai.ui;
 
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
@@ -64,7 +65,7 @@ public class Chat implements IChat, IChatDialog
     private final IJavaScript javaScript;
     private final IStateService stateService;
     private WebView webView;
-    private String lastChatUrl;
+    private URL lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
 
     @Inject
@@ -283,14 +284,7 @@ public class Chat implements IChat, IChatDialog
         try
         {
             var parameters = parametersService.getParametersAsync().get();
-            var optionalSettings = settingsProvider.getSettings();
-            if (parameters.isEmpty() || optionalSettings.isEmpty())
-            {
-                log.warning(AI_CHAT, () -> "failed to get the settings");
-                return Status.warning(AI_CHAT);
-            }
-
-            var settings = optionalSettings.get();
+            var settings = settingsProvider.getSettings();
             var chatUrl = parameters.get().chatUrl;
             var reset = settingsTracker.register(IParametersService.class.getName(), settings);
             if (lastChatUrl != chatUrl || reset)
@@ -298,7 +292,7 @@ public class Chat implements IChat, IChatDialog
                 lastChatUrl = chatUrl;
                 initializing = dispatcher.dispatch(() -> {
                     var webEngine = getEgine();
-                    return initialize(webEngine, settings, () -> webEngine.load(lastChatUrl));
+                    return initialize(webEngine, settings, () -> webEngine.load(lastChatUrl.toString()));
                 }).get();
             }
 

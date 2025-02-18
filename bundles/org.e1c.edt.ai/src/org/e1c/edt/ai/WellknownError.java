@@ -6,5 +6,6 @@ package org.e1c.edt.ai;
 public enum WellknownError
 {
     UnableToParse,
+    OutOfRange,
     Unknown
 }

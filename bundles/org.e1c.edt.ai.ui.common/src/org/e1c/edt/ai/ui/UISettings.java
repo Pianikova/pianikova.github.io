@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import java.time.Duration;
 
+import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
 import org.eclipse.core.runtime.Platform;
@@ -21,12 +22,15 @@ class UISettings
     implements IUISettings
 {
     private final ISettingsStore settingsStore;
+    private final ISettingsProvider settingsProvider;
 
     @Inject
-    public UISettings(ISettingsStore settingsStore)
+    public UISettings(ISettingsStore settingsStore, ISettingsProvider settingsProvider)
     {
         Preconditions.checkNotNull(settingsStore);
+        Preconditions.checkNotNull(settingsProvider);
         this.settingsStore = settingsStore;
+        this.settingsProvider = settingsProvider;
     }
 
     @Override
@@ -56,13 +60,13 @@ class UISettings
     @Override
     public Duration getMinRequestDelay()
     {
-        return Duration.ofMillis(settingsStore.getInt(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY));
+        return Duration.ofMillis(settingsProvider.getSettings().getLlmParameters().minDelay);
     }
 
     @Override
     public Duration getTimeout()
     {
-        return Duration.ofMillis(settingsStore.getInt(ISettingsStore.TIMEOUT));
+        return Duration.ofMillis(settingsProvider.getSettings().getLlmParameters().timeout);
     }
 
     @Override
@@ -74,13 +78,13 @@ class UISettings
     @Override
     public boolean sendContext()
     {
-        return settingsStore.getBoolean(ISettingsStore.SEND_CONTEXT);
+        return settingsProvider.getSettings().getLlmParameters().extendedСontext;
     }
 
     @Override
     public boolean sendGlobalContext()
     {
-        return settingsStore.getBoolean(ISettingsStore.SEND_GLOBAL_CONTEXT);
+        return settingsProvider.getSettings().getLlmParameters().globalСontext;
     }
 
     @Override
@@ -110,6 +114,6 @@ class UISettings
     @Override
     public boolean traceMode()
     {
-        return settingsStore.getBoolean(ISettingsStore.TRACE_MODE);
+        return settingsProvider.getSettings().getLlmParameters().trace;
     }
 }

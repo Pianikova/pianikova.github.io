@@ -5,6 +5,8 @@ package org.e1c.edt.ai;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -16,11 +18,20 @@ import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.TokenHealing;
 
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
 public class ParametersParser
     implements IValidator<String>, IParser<String, Parameters>
 {
     private final static String keyValueSeparator = ";"; //$NON-NLS-1$
+    private final IDefaultSettings defaultSettings;
+
+    @Inject
+    public ParametersParser(IDefaultSettings defaultSettings)
+    {
+        Preconditions.checkNotNull(defaultSettings);
+        this.defaultSettings = defaultSettings;
+    }
 
     @Override
     public ValidationResult validate(String target)
@@ -43,7 +54,7 @@ public class ParametersParser
     {
         Preconditions.checkNotNull(parametersText);
         Preconditions.checkNotNull(validationResult);
-        var parameters = new Parameters();
+        var parameters = new Parameters(defaultSettings);
         if (parametersText.isBlank())
         {
             return Optional.of(parameters);
@@ -126,13 +137,55 @@ public class ParametersParser
 
         names.remove(parse(properties, "trim_stop", validationResult, val -> parameters.trimStop = parseBoolean(val)));
 
-        names.remove(parse(properties, "chat_url", validationResult, val -> parameters.chatUrl = val));
+        names.remove(parse(properties, "url", validationResult, val -> parameters.url = parseUrl(val)));
+
+        names.remove(parse(properties, "chat_url", validationResult, val -> parameters.chatUrl = parseUrl(val)));
 
         names.remove(parse(properties, "local_functions_length", validationResult,
             val -> parameters.localFunctionsLength = Integer.parseInt(val)));
 
         names.remove(parse(properties, "external_functions_length", validationResult,
             val -> parameters.externalFunctionsLength = Integer.parseInt(val)));
+
+        names.remove(
+            parse(properties, "min_delay", validationResult,
+                val -> {
+                    parameters.minDelay = Integer.parseInt(val);
+                    if (parameters.minDelay < 50)
+                    {
+                        validationResult.addError(new ValidationError(WellknownError.OutOfRange, "min_delay"));
+                        parameters.minDelay = 50;
+                    }
+
+                    if (parameters.minDelay > 1000)
+                    {
+                        validationResult.addError(new ValidationError(WellknownError.OutOfRange, "min_delay"));
+                        parameters.minDelay = 1000;
+                    }
+                }));
+
+        names.remove(parse(properties, "timeout", validationResult, val -> {
+            parameters.timeout = Integer.parseInt(val);
+            if (parameters.timeout < 50)
+            {
+                validationResult.addError(new ValidationError(WellknownError.OutOfRange, "timeout"));
+                parameters.timeout = 50;
+            }
+
+            if (parameters.timeout > 60000)
+            {
+                validationResult.addError(new ValidationError(WellknownError.OutOfRange, "timeout"));
+                parameters.timeout = 60000;
+            }
+        }));
+
+        names.remove(parse(properties, "global_context", validationResult,
+            val -> parameters.globalСontext = parseBoolean(val)));
+
+        names.remove(parse(properties, "extended_context", validationResult,
+            val -> parameters.extendedСontext = parseBoolean(val)));
+
+        names.remove(parse(properties, "trace", validationResult, val -> parameters.trace = parseBoolean(val)));
 
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
@@ -205,5 +258,38 @@ public class ParametersParser
         }
 
         throw new IllegalArgumentException(text);
+    }
+
+    private URL parseUrl(String text)
+    {
+        if (text == null)
+        {
+            throw new IllegalArgumentException(text);
+        }
+
+        try
+        {
+            return new URL(normalizeUrl(text.trim()));
+        }
+        catch (MalformedURLException e)
+        {
+            throw new IllegalArgumentException(text);
+        }
+    }
+
+    private String normalizeUrl(String text)
+    {
+        if (text.isEmpty())
+        {
+            return text;
+        }
+
+        text = text.trim();
+        if (!text.endsWith("/")) //$NON-NLS-1$
+        {
+            text = text + "/"; //$NON-NLS-1$
+        }
+
+        return text;
     }
 }

@@ -22,15 +22,9 @@ public class BaseClientAIPreferencePageInitializer
     {
         IPreferenceStore store = BaseActivator.getDefault().getPreferenceStore();
         store.setDefault(ISettingsStore.CODE_COMPLETION, true);
-        store.setDefault(ISettingsStore.APIURL, "https://llms.1c.ai/code/api/v1/"); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CLIENT_TOKEN, ""); //$NON-NLS-1$
-        store.setDefault(ISettingsStore.LLM_PARAMETERS, ""); //$NON-NLS-1$
-        store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
         store.setDefault(ISettingsStore.CONTINUOUS_CODE_COMPLETION, true);
-        store.setDefault(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY, 300);
-        store.setDefault(ISettingsStore.SEND_CONTEXT, false);
-        store.setDefault(ISettingsStore.SEND_GLOBAL_CONTEXT, false);
-        store.setDefault(ISettingsStore.TIMEOUT, 15000);
-        store.setDefault(ISettingsStore.TRACE_MODE, false);
+        store.setDefault(ISettingsStore.PARAMETERS, ""); //$NON-NLS-1$
+        store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
     }
 }

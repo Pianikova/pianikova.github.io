@@ -3,13 +3,29 @@
  */
 package org.e1c.edt.ai.assistent.model;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 import java.util.Objects;
+
+import org.e1c.edt.ai.IDefaultSettings;
 
 import com.google.gson.annotations.SerializedName;
 
 public class Parameters
 {
+    public Parameters(IDefaultSettings defaultSettings)
+    {
+        try
+        {
+            url = new URL(defaultSettings.getUrl());
+        }
+        catch (MalformedURLException e)
+        {
+            throw new IllegalArgumentException("Invalid default url."); //$NON-NLS-1$
+        }
+    }
+
     @SerializedName("prefix_length")
     public Integer prefixLength;
 
@@ -76,14 +92,32 @@ public class Parameters
     @SerializedName("trim_stop")
     public Boolean trimStop;
 
+    @SerializedName("url")
+    public URL url;
+
     @SerializedName("chat_url")
-    public String chatUrl;
+    public URL chatUrl;
 
     @SerializedName("local_functions_length")
     public Integer localFunctionsLength;
 
     @SerializedName("external_functions_length")
     public Integer externalFunctionsLength;
+
+    @SerializedName("min_delay")
+    public Integer minDelay = 300;
+
+    @SerializedName("timeout")
+    public Integer timeout = 15000;
+
+    @SerializedName("global_context")
+    public Boolean globalСontext = false;
+
+    @SerializedName("extended_context")
+    public Boolean extendedСontext = false;
+
+    @SerializedName("trace")
+    public Boolean trace = false;
 
     public Parameters merge(Parameters params)
     {
@@ -212,6 +246,11 @@ public class Parameters
             trimStop = params.trimStop;
         }
 
+        if (params.url != null)
+        {
+            url = params.url;
+        }
+
         if (params.chatUrl != null)
         {
             chatUrl = params.chatUrl;
@@ -227,16 +266,41 @@ public class Parameters
             externalFunctionsLength = params.externalFunctionsLength;
         }
 
+        if (params.minDelay != null)
+        {
+            minDelay = params.minDelay;
+        }
+
+        if (params.timeout != null)
+        {
+            timeout = params.timeout;
+        }
+
+        if (params.globalСontext != null)
+        {
+            globalСontext = params.globalСontext;
+        }
+
+        if (params.extendedСontext != null)
+        {
+            extendedСontext = params.extendedСontext;
+        }
+
+        if (params.trace != null)
+        {
+            trace = params.trace;
+        }
+
         return this;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(bestOf, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
+        return Objects.hash(bestOf, url, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
-            localFunctionsLength, externalFunctionsLength);
+            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext, trace);
     }
 
     @Override
@@ -249,7 +313,8 @@ public class Parameters
         if (getClass() != obj.getClass())
             return false;
         Parameters other = (Parameters)obj;
-        return Objects.equals(bestOf, other.bestOf) && Objects.equals(chatUrl, other.chatUrl)
+        return Objects.equals(bestOf, other.bestOf) && Objects.equals(url, other.url)
+            && Objects.equals(chatUrl, other.chatUrl)
             && Objects.equals(decoderInputDetails, other.decoderInputDetails) && Objects.equals(details, other.details)
             && Objects.equals(doSample, other.doSample) && Objects.equals(formLength, other.formLength)
             && Objects.equals(frequencyPenalty, other.frequencyPenalty)
@@ -264,6 +329,9 @@ public class Parameters
             && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
             && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
             && Objects.equals(localFunctionsLength, other.localFunctionsLength)
-            && Objects.equals(externalFunctionsLength, other.externalFunctionsLength);
+            && Objects.equals(externalFunctionsLength, other.externalFunctionsLength)
+            && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
+            && Objects.equals(globalСontext, other.globalСontext)
+            && Objects.equals(extendedСontext, other.extendedСontext) && Objects.equals(trace, other.trace);
     }
 }
