@@ -30,6 +30,8 @@ public class Messages
     public static String ReplaceCode;
     public static String FixCodeRequestDetails;
     public static String FixCodeDefaultDetails;
+    public static String StatusOffline;
+    public static String StatusOnline;
 
     static
     {

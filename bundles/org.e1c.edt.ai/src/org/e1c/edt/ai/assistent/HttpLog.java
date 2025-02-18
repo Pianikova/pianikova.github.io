@@ -8,7 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
 import org.e1c.edt.ai.ILog;
-import org.e1c.edt.ai.ServerAccessType;
+import org.e1c.edt.ai.ServiceState;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -18,10 +18,10 @@ class HttpLog
     implements IHttpLog
 {
     private final ILog log;
-    private final IServerAccessService serverAccess;
+    private final IStateService serverAccess;
 
     @Inject
-    public HttpLog(ILog log, IServerAccessService serverAccess)
+    public HttpLog(ILog log, IStateService serverAccess)
     {
         Preconditions.checkNotNull(log);
         this.log = log;
@@ -82,8 +82,8 @@ class HttpLog
     {
         Preconditions.checkNotNull(response);
         var statusCode = response.statusCode();
-        serverAccess.accessChanged(HttpLog.class.getName(),
-            statusCode >= 400 ? ServerAccessType.ACCESS_ABSENT : ServerAccessType.ACCESS_PRESENT);
+        serverAccess.setState(HttpLog.class.getName(),
+            statusCode >= 400 ? ServiceState.OFFLINE : ServiceState.ONLINE);
 
         if (statusCode >= 300)
         {

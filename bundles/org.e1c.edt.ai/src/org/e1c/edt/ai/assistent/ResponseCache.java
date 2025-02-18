@@ -8,21 +8,22 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-import org.e1c.edt.ai.ServerAccessType;
+import org.e1c.edt.ai.AIState;
+import org.e1c.edt.ai.ServiceState;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 class ResponseCache<T>
-    implements IResponseCache<T>, IServerAccessListener
+    implements IResponseCache<T>, IAIStateListener
 {
     private final ConcurrentHashMap<String, CompletableFuture<Optional<T>>> last = new ConcurrentHashMap<>();
 
     @Inject
-    public ResponseCache(IServerAccessService serverAccessService)
+    public ResponseCache(IStateService stateService)
     {
-        Preconditions.checkNotNull(serverAccessService);
-        serverAccessService.addServerAccessListener(this);
+        Preconditions.checkNotNull(stateService);
+        stateService.addListener(this);
     }
 
     @Override
@@ -53,9 +54,9 @@ class ResponseCache<T>
     }
 
     @Override
-    public void onServerAccessChange(ServerAccessType currentStatus)
+    public void onStateChange(AIState state)
     {
-        if (currentStatus == ServerAccessType.ACCESS_ABSENT)
+        if (state.getServiceState() == ServiceState.OFFLINE)
         {
             last.clear();
         }

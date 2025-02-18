@@ -14,6 +14,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+import org.e1c.edt.ai.ActionState;
 import org.e1c.edt.ai.CancellationTokenSource;
 import org.e1c.edt.ai.Closeables;
 import org.e1c.edt.ai.ICancellationToken;
@@ -48,15 +49,13 @@ class CodeAssistant
     private final IUISettings uiSettings;
     private final IEnvironment environment;
     private final ICompressor compressor;
+    private final IStateService stateService;
 
     @Inject
-    public CodeAssistant(IHttpLog log,
-        IRequestBuilder requestBuilder,
-        IHttpClientBuilder clientBuilder, IJson json,
-        ISessionService sessionService,
-        IResponseStreamProcessor responseStreamProcessor, Provider<IStatistics> statisticsProvider,
-        IUISettings uiSettings,
-        IEnvironment environment, ICompressor compressor)
+    public CodeAssistant(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
+        ISessionService sessionService, IResponseStreamProcessor responseStreamProcessor,
+        Provider<IStatistics> statisticsProvider, IUISettings uiSettings, IEnvironment environment,
+        ICompressor compressor, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -68,6 +67,7 @@ class CodeAssistant
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(compressor);
+        Preconditions.checkNotNull(stateService);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -78,6 +78,7 @@ class CodeAssistant
         this.uiSettings = uiSettings;
         this.environment = environment;
         this.compressor = compressor;
+        this.stateService = stateService;
     }
 
     @Override
@@ -102,6 +103,7 @@ class CodeAssistant
                 }
                 else
                 {
+                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
                     observer.onError(error);
                 }
             });
@@ -188,6 +190,7 @@ class CodeAssistant
         var asyncRequest = clien.sendAsync(request, BodyHandlers.ofLines());
         var stopwatch = Stopwatch.createStarted();
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> asyncRequest.cancel(true));
+        stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
         asyncRequest
             .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
@@ -243,5 +246,7 @@ class CodeAssistant
         {
             observer.onError(e);
         }
+
+        stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
     }
 }

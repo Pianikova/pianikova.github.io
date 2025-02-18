@@ -5,12 +5,11 @@ package org.e1c.edt.ai.ui;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.ActionState;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.IContextEntities;
 import org.e1c.edt.ai.ILog;
@@ -19,8 +18,8 @@ import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.IParametersService;
 import org.e1c.edt.ai.assistent.ISettingsTracker;
+import org.e1c.edt.ai.assistent.IStateService;
 import org.e1c.edt.ai.assistent.model.ChatContext;
-import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.client.AISettings;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -63,6 +62,7 @@ public class Chat implements IChat, IChatDialog
     private final IUISettings uiSettings;
     private final IContextEntities contextEntities;
     private final IJavaScript javaScript;
+    private final IStateService stateService;
     private WebView webView;
     private String lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
@@ -70,7 +70,7 @@ public class Chat implements IChat, IChatDialog
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
-        IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript)
+        IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -81,6 +81,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(javaScript);
+        Preconditions.checkNotNull(stateService);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -91,6 +92,7 @@ public class Chat implements IChat, IChatDialog
         this.uiSettings = uiSettings;
         this.contextEntities = contextEntities;
         this.javaScript = javaScript;
+        this.stateService = stateService;
     }
 
     @Override
@@ -133,43 +135,50 @@ public class Chat implements IChat, IChatDialog
     {
         ui.showView(BaseChatView.ID);
         chatInJob(() -> {
-            String scriptLanguage = null;
-            String programingLanguage = null;
-            if (ctx != null)
-            {
-                var chatContext = new ChatContext();
-                contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
-                scriptLanguage = chatContext.scriptLanguage;
-                programingLanguage = chatContext.programingLanguage;
-            }
+            stateService.setState(Chat.class.getName(), ActionState.BUSY);
+            try {
+                String scriptLanguage = null;
+                String programingLanguage = null;
+                if (ctx != null)
+                {
+                    var chatContext = new ChatContext();
+                    contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
+                    scriptLanguage = chatContext.scriptLanguage;
+                    programingLanguage = chatContext.programingLanguage;
+                }
 
-            var script = new StringBuilder();
-            script.append("window.chatApi.");
-            script.append(topic);
-            script.append("(`");
-            script.append(javaScript.escape(subject));
-            script.append("`, `");
-            if (scriptLanguage != null)
-            {
-                script.append(scriptLanguage);
-            }
-            script.append("`, `");
-            if (programingLanguage != null)
-            {
-                script.append(programingLanguage);
-            }
-            if (details != null)
-            {
+                var script = new StringBuilder();
+                script.append("window.chatApi.");
+                script.append(topic);
+                script.append("(`");
+                script.append(javaScript.escape(subject));
                 script.append("`, `");
-                script.append(javaScript.escape(details));
+                if (scriptLanguage != null)
+                {
+                    script.append(scriptLanguage);
+                }
+                script.append("`, `");
+                if (programingLanguage != null)
+                {
+                    script.append(programingLanguage);
+                }
+                if (details != null)
+                {
+                    script.append("`, `");
+                    script.append(javaScript.escape(details));
+                }
+                script.append("`)");
+                var scriptText = script.toString();
+                dispatcher.dispatchAsync(() -> {
+                    log.trace(AI_CHAT, () -> "executing script: " + scriptText);
+                    getEgine().executeScript(scriptText);
+                    log.trace(AI_CHAT, () -> "script executed");
+                });
             }
-            script.append("`)");
-            var scriptText = script.toString();
-            dispatcher.dispatchAsync(() -> {
-                log.trace(AI_CHAT, () -> "executing script: " + scriptText);
-                getEgine().executeScript(scriptText);
-                log.trace(AI_CHAT, () -> "script executed");
-            });
+            finally
+            {
+                stateService.setState(Chat.class.getName(), ActionState.INACTIVE);
+            }
         });
     }
 
@@ -271,37 +280,28 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private synchronized IStatus chat(Runnable chatAction)
     {
-        Optional<Parameters> parameters;
         try
         {
-            parameters = parametersService.getParametersAsync().get();
-        }
-        catch (InterruptedException | ExecutionException e)
-        {
-            return Status.warning(AI_CHAT + ": " + e.getMessage());
-        }
+            var parameters = parametersService.getParametersAsync().get();
+            var optionalSettings = settingsProvider.getSettings();
+            if (parameters.isEmpty() || optionalSettings.isEmpty())
+            {
+                log.warning(AI_CHAT, () -> "failed to get the settings");
+                return Status.warning(AI_CHAT);
+            }
 
-        var optionalSettings = settingsProvider.getSettings();
-        if (parameters.isEmpty() || optionalSettings.isEmpty())
-        {
-            log.warning(AI_CHAT, () -> "failed to get the settings");
-            return Status.warning(AI_CHAT);
-        }
+            var settings = optionalSettings.get();
+            var chatUrl = parameters.get().chatUrl;
+            var reset = settingsTracker.register(IParametersService.class.getName(), settings);
+            if (lastChatUrl != chatUrl || reset)
+            {
+                lastChatUrl = chatUrl;
+                initializing = dispatcher.dispatch(() -> {
+                    var webEngine = getEgine();
+                    return initialize(webEngine, settings, () -> webEngine.load(lastChatUrl));
+                }).get();
+            }
 
-        var settings = optionalSettings.get();
-        var chatUrl = parameters.get().chatUrl;
-        var reset = settingsTracker.register(IParametersService.class.getName(), settings);
-        if (lastChatUrl != chatUrl || reset)
-        {
-            lastChatUrl = chatUrl;
-            initializing = dispatcher.dispatch(() -> {
-                var webEngine = getEgine();
-                return initialize(webEngine, settings, () -> webEngine.load(lastChatUrl));
-            }).get();
-        }
-
-        try
-        {
             initializing.get();
             wink(settings, 32);
             chatAction.run();

@@ -7,8 +7,8 @@ package org.e1c.edt.ai;
  * @author Bogdan Sushkov
  *
  */
-public enum ServerAccessType
+public enum ServiceState
 {
-    ACCESS_PRESENT,
-    ACCESS_ABSENT
+    OFFLINE,
+    ONLINE
 }

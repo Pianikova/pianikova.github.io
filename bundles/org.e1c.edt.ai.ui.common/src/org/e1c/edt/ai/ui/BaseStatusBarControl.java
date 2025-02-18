@@ -3,10 +3,10 @@
  */
 package org.e1c.edt.ai.ui;
 
+import org.e1c.edt.ai.AIState;
 import org.e1c.edt.ai.IVersionProvider;
-import org.e1c.edt.ai.ServerAccessType;
-import org.e1c.edt.ai.assistent.IServerAccessService;
-import org.e1c.edt.ai.assistent.ServerAccessListener;
+import org.e1c.edt.ai.assistent.IAIStateListener;
+import org.e1c.edt.ai.assistent.IStateService;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -31,61 +31,47 @@ import com.google.inject.Inject;
  */
 public class BaseStatusBarControl
     extends WorkbenchWindowControlContribution
+    implements IAIStateListener, DisposeListener
 {
-    private Image image;
-    private Font font;
-    private ImageDescriptor imageDesc;
-    private Label iconLabel;
     @Inject
-    private IServerAccessService serverAccess;
+    private IStateService stateService;
     @Inject
     private IDispatcher dispatcher;
     @Inject
     private IVersionProvider versionProvider;
 
+    private final Image OFFLINE = createImage("icons/obj16/status_offline.png"); //$NON-NLS-1$
+    private final Image ONLINE = createImage("icons/obj16/status_online.png"); //$NON-NLS-1$
+    private final Image BUSY = createImage("icons/obj16/status_busy.png"); //$NON-NLS-1$
+    private final String onlineText;
+    private final String offlineText;
+    private Font font;
+    private Label iconLabel;
+
+    public BaseStatusBarControl()
+    {
+        BaseActivator.injectMembers(this);
+        var version = versionProvider.getPluginVersion().toString();
+        onlineText = Messages.StatusOnline + System.lineSeparator() + version;
+        offlineText = Messages.StatusOffline + System.lineSeparator() + version;
+    }
+
     @Override
     protected Control createControl(Composite parent)
     {
-        BaseActivator.injectMembers(this);
-        Composite composite = new Composite(parent, SWT.NONE);
-        var version = versionProvider.getPluginVersion().toString();
-        GridLayout gridLayout = new GridLayout(2, false);
+        var composite = new Composite(parent, SWT.NONE);
+        var gridLayout = new GridLayout(2, false);
         gridLayout.marginWidth = 2;
         gridLayout.marginHeight = -5;
         gridLayout.marginBottom = -5;
         composite.setLayout(gridLayout);
 
         // Icon
-        imageDesc = ImageDescriptor.createFromURL(
-            FileLocator.find(BaseActivator.getDefault().getBundle(), new Path("icons/obj16/status_not_ok.png"), null)); //$NON-NLS-1$
         iconLabel = new Label(composite, SWT.NONE);
-        image = imageDesc.createImage();
-
-        iconLabel.setImage(image);
-        iconLabel.setToolTipText(version);
-
-        composite.addDisposeListener(new DisposeListener()
-        {
-            @Override
-            public void widgetDisposed(DisposeEvent e)
-            {
-                image.dispose();
-                font.dispose();
-            }
-        });
-
-        serverAccess.addServerAccessListener(new ServerAccessListener()
-        {
-            @Override
-            public void onServerAccessChange(ServerAccessType currentStatus)
-            {
-                dispatcher.dispatchAsync(() -> changeStatus(currentStatus));
-            }
-        });
+        iconLabel.setImage(OFFLINE);
 
         // Status
-        Label status = new Label(composite, SWT.NONE);
-        status.setToolTipText(version);
+        var status = new Label(composite, SWT.NONE);
         status.setText(Messages.AIName);
         var font = status.getFont();
         var fontData = font.getFontData()[0];
@@ -97,6 +83,8 @@ public class BaseStatusBarControl
         status.setLayoutData(statusGridData);
 
         parent.getParent().setRedraw(true);
+        composite.addDisposeListener(this);
+        stateService.addListener(this);
         return composite;
     }
 
@@ -106,18 +94,54 @@ public class BaseStatusBarControl
         return true;
     }
 
-    private void changeStatus(ServerAccessType status)
+    private static Image createImage(String path)
     {
-        String path =
-            status == ServerAccessType.ACCESS_PRESENT ? "icons/obj16/status_ok.png" : "icons/obj16/status_not_ok.png"; //$NON-NLS-1$ //$NON-NLS-2$
-        imageDesc =
-            ImageDescriptor
-                .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
-        if (!iconLabel.isDisposed())
+        var descriptor = ImageDescriptor
+            .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
+        return descriptor.createImage();
+    }
+
+    @Override
+    public void widgetDisposed(DisposeEvent e)
+    {
+        stateService.removeListener(this);
+        font.dispose();
+        OFFLINE.dispose();
+        ONLINE.dispose();
+        BUSY.dispose();
+    }
+
+    @Override
+    public void onStateChange(AIState state)
+    {
+        dispatcher.dispatch(() -> changeState(state));
+    }
+
+    private void changeState(AIState state)
+    {
+        switch (state.getServiceState())
         {
-            image.dispose();
-            image = imageDesc.createImage();
-            iconLabel.setImage(image);
+        case ONLINE:
+            iconLabel.setToolTipText(onlineText);
+            switch (state.getActionState())
+            {
+            case BUSY:
+                iconLabel.setImage(BUSY);
+                break;
+
+            default:
+                iconLabel.setImage(ONLINE);
+                break;
+            }
+
+            break;
+
+        default:
+            iconLabel.setToolTipText(offlineText);
+            iconLabel.setImage(OFFLINE);
+            break;
         }
+
+        iconLabel.setRedraw(true);
     }
 }
