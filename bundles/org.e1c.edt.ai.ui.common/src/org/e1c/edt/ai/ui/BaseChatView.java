@@ -47,7 +47,6 @@ public class BaseChatView
     public void createPartControl(Composite parent)
     {
         Preconditions.checkNotNull(parent);
-
         parent.setLayout(new GridLayout());
         GridLayoutFactory.fillDefaults().spacing(0, 0).applyTo(parent);
         GridDataFactory.fillDefaults().grab(true, true).applyTo(parent);
@@ -56,35 +55,27 @@ public class BaseChatView
         GridLayoutFactory.fillDefaults().spacing(0, 0).applyTo(canvas);
         GridDataFactory.fillDefaults().grab(true, true).applyTo(canvas);
 
-        AnchorPane pane = new AnchorPane();
-        ScrollPane sp = new ScrollPane();
+        var scrollPane = new ScrollPane();
+        scrollPane.setHbarPolicy(ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollBarPolicy.NEVER);
+        scrollPane.setBorder(Border.EMPTY);
+        scrollPane.setBackground(Background.EMPTY);
+        scrollPane.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        scrollPane.setPadding(Insets.EMPTY);
 
-        sp.setHbarPolicy(ScrollBarPolicy.NEVER);
-        sp.setVbarPolicy(ScrollBarPolicy.NEVER);
-        sp.setBorder(Border.EMPTY);
+        AnchorPane anchorPane = new AnchorPane();
+        anchorPane.setBackground(Background.EMPTY);
+        anchorPane.setBorder(Border.EMPTY);
+        anchorPane.setPadding(Insets.EMPTY);
+        anchorPane.getChildren().add(scrollPane);
+        AnchorPane.setTopAnchor(scrollPane, 0.0);
+        AnchorPane.setBottomAnchor(scrollPane, 0.0);
+        AnchorPane.setLeftAnchor(scrollPane, 0.0);
+        AnchorPane.setRightAnchor(scrollPane, 0.0);
 
-        // Workaroud to avoid pane's border / background decoration
-//        sp.setLayoutX(-1);
-//        sp.setLayoutY(-1);
-
-        sp.setBackground(Background.EMPTY);
-
-        pane.setBackground(Background.EMPTY);
-        pane.setBorder(Border.EMPTY);
-        pane.setPadding(Insets.EMPTY);
-        pane.getChildren().add(sp);
-        AnchorPane.setTopAnchor(sp, 0.0);
-        AnchorPane.setBottomAnchor(sp, 0.0);
-        AnchorPane.setLeftAnchor(sp, 0.0);
-        AnchorPane.setRightAnchor(sp, 0.0);
-        sp.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-
-        sp.setPadding(Insets.EMPTY);
-
-        Scene scene = new Scene(pane);
+        Scene scene = new Scene(anchorPane);
         canvas.setScene(scene);
-
-        chatDialog.show(sp);
+        chatDialog.show(scrollPane);
     }
 
     @Override
@@ -92,5 +83,4 @@ public class BaseChatView
     {
         canvas.setFocus();
     }
-
 }
