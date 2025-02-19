@@ -90,6 +90,12 @@ class UISettings
     @Override
     public String getLanguage()
     {
+        var language = settingsStore.getString(ISettingsStore.LANGUAGE);
+        if (language != null && !language.isBlank())
+        {
+            return language;
+        }
+
         return Platform.getNL().startsWith("ru_") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     }
 

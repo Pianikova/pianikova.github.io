@@ -352,7 +352,7 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void wink(AISettings settings, int attempts)
     {
-        while (!handler.isReady() && attempts-- >= 0)
+        do
         {
             dispatcher.dispatch(() -> {
                 var webEngine = getEgine();
@@ -380,8 +380,8 @@ public class Chat implements IChat, IChatDialog
                     log.logError(error);
                 }
             });
-
         }
+        while (!handler.isReady() && attempts-- >= 0);
     }
 
     private WebEngine getEgine()

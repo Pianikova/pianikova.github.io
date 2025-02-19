@@ -8,6 +8,7 @@ import org.e1c.edt.ai.IValidator;
 import org.e1c.edt.ai.ui.AIUICommonModule;
 import org.e1c.edt.ai.ui.BaseActivator;
 import org.eclipse.jface.preference.BooleanFieldEditor;
+import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
@@ -71,6 +72,15 @@ public class ClientAIPreferencePage
             Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
         codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
         addField(codeCompletionLinesCount);
+
+        @SuppressWarnings("nls")
+        String[][] languages = {
+            { Messages.ClientAIPreferencePage_Language_Default, "" },
+            { Messages.ClientAIPreferencePage_Language_English, "english" },
+            { Messages.ClientAIPreferencePage_Language_Russian, "russian" } };
+
+        addField(
+            new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, languages, parent));
 
         addField(new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
             Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator));

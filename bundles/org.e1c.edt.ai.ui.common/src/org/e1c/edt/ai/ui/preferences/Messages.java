@@ -17,9 +17,13 @@ public class Messages
     public static String ClientAIPreferencePage_CodeCompletitionEnabled;
     public static String ClientAIPreferencePage_Api_URL;
     public static String ClientAIPreferencePage_Client_Token;
-    public static String ClientAIPreferencePage_Parameters;
     public static String ClientAIPreferencePage_CodeCompletionLinesCount;
     public static String ClientAIPreferencePage_ContinuousCodeCompletition;
+    public static String ClientAIPreferencePage_Language;
+    public static String ClientAIPreferencePage_Parameters;
+    public static String ClientAIPreferencePage_Language_Default;
+    public static String ClientAIPreferencePage_Language_English;
+    public static String ClientAIPreferencePage_Language_Russian;
 
     public static String Error_UnableToParse;
     public static String Error_OutOfRange;
