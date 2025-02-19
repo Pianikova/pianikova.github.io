@@ -10,6 +10,7 @@ import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.CodePart;
 import org.e1c.edt.ai.ICodePartsProvider;
+import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.Range;
 import org.e1c.edt.ai.assistent.model.CursorLocation;
 import org.e1c.edt.ai.ui.AITarget;
@@ -36,6 +37,8 @@ import com.google.inject.Inject;
 public class BaseGenerateDocCommentsAIHandler
     extends AbstractHandler
 {
+    @Inject
+    ILog log;
     @Inject
     IAIContextProvider aiContextProvider;
     @Inject
@@ -64,11 +67,47 @@ public class BaseGenerateDocCommentsAIHandler
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         getCommentingMethod().ifPresent(commentingMethod -> {
-            commentingMethod.sourceViewer.setSelectedRange(commentingMethod.commentRange.getStart(),
-                commentingMethod.commentRange.getLength());
+            selectComment(commentingMethod);
             chat.generateDocComments(commentingMethod.ctx, commentingMethod.methodText);
         });
         return null;
+    }
+
+    private void selectComment(CommentingMethod commentingMethod)
+    {
+        try
+        {
+            var start = commentingMethod.commentRange.getStart();
+            var length = commentingMethod.commentRange.getLength();
+            var widget = commentingMethod.sourceViewer.getTextWidget();
+            var fullText = widget.getText();
+            int dif = 0, newLength = 0;
+            if (length == 0)
+            {
+                if (start > 0)
+                {
+                    var text = fullText.substring(start);
+                    dif = text.length() - text.stripLeading().length();
+                }
+            }
+            else
+            {
+                var text = fullText.substring(start, start + length).stripLeading();
+                newLength = text.length();
+                dif = length - newLength;
+            }
+
+            if (dif < 0)
+            {
+                dif = 0;
+            }
+
+            commentingMethod.sourceViewer.setSelectedRange(start + dif, newLength);
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+        }
     }
 
     private Optional<CommentingMethod> getCommentingMethod()
