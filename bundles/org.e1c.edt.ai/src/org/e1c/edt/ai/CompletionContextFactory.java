@@ -26,23 +26,26 @@ class CompletionContextFactory
     private final IContextEntities contextEntities;
     private final IHashTools hashTools;
     private final IUISettings uiSettings;
+    private final ISettingsProvider settingsProvider;
     private final Cache<String, GlobalContextUpdate> enitiCache =
         CacheBuilder.newBuilder().weakKeys().maximumSize(1024).expireAfterWrite(15, TimeUnit.MINUTES).build();
 
     @Inject
     public CompletionContextFactory(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
-        IHashTools hashTools, IUISettings uiSettings)
+        IHashTools hashTools, IUISettings uiSettings, ISettingsProvider settingsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(textNormilizer);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settingsProvider);
         this.log = log;
         this.textNormilizer = textNormilizer;
         this.contextEntities = contextEntities;
         this.hashTools = hashTools;
         this.uiSettings = uiSettings;
+        this.settingsProvider = settingsProvider;
     }
 
     @Override
@@ -102,12 +105,22 @@ class CompletionContextFactory
         IStatistics statistics,
         ICancellationToken cancellationToken)
     {
+        var settings = settingsProvider.getSettings();
         var path = aiContext.getPath();
         var result = new ArrayList<GlobalContextUpdate>();
 
         var request = new GlobalContextUpdate();
         request.field = Fields.CONFIGURATION_NAME;
-        request.value = globalContext.configurationName != null ? globalContext.configurationName : ""; //$NON-NLS-1$
+        var settingsConfigurationName = settings.getLlmParameters().configurationName;
+        if (settingsConfigurationName != null && !settingsConfigurationName.isBlank())
+        {
+            request.value = settingsConfigurationName;
+        }
+        else
+        {
+            request.value = globalContext.configurationName != null ? globalContext.configurationName : ""; //$NON-NLS-1$
+        }
+
         result.add(request);
 
         request = new GlobalContextUpdate();

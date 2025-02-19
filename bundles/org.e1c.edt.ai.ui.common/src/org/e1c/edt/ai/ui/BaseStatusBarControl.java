@@ -43,17 +43,12 @@ public class BaseStatusBarControl
     private final Image OFFLINE = createImage("icons/obj16/status_offline.png"); //$NON-NLS-1$
     private final Image ONLINE = createImage("icons/obj16/status_online.png"); //$NON-NLS-1$
     private final Image BUSY = createImage("icons/obj16/status_busy.png"); //$NON-NLS-1$
-    private final String onlineText;
-    private final String offlineText;
     private Font font;
     private Label iconLabel;
 
     public BaseStatusBarControl()
     {
         BaseActivator.injectMembers(this);
-        var version = versionProvider.getPluginVersion().toString();
-        onlineText = Messages.StatusOnline + System.lineSeparator() + version;
-        offlineText = Messages.StatusOffline + System.lineSeparator() + version;
     }
 
     @Override
@@ -119,10 +114,11 @@ public class BaseStatusBarControl
 
     private void changeState(AIState state)
     {
+        var version = versionProvider.getPluginVersion().toString();
         switch (state.getServiceState())
         {
         case ONLINE:
-            iconLabel.setToolTipText(onlineText);
+            iconLabel.setToolTipText(Messages.StatusOnline + System.lineSeparator() + version);
             switch (state.getActionState())
             {
             case BUSY:
@@ -137,7 +133,7 @@ public class BaseStatusBarControl
             break;
 
         default:
-            iconLabel.setToolTipText(offlineText);
+            iconLabel.setToolTipText(Messages.StatusOffline + System.lineSeparator() + version);
             iconLabel.setImage(OFFLINE);
             break;
         }

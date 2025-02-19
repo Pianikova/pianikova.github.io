@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 
 import org.e1c.edt.ai.assistent.model.Parameters;
 import org.e1c.edt.ai.assistent.model.TokenHealing;
+import org.osgi.framework.Version;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -202,6 +203,13 @@ public class ParametersParser
                 break;
             }
         }));
+
+        names.remove(parse(properties, "configuration_name", validationResult,
+            val -> parameters.configurationName = val.trim().toLowerCase()));
+        names.remove(
+            parse(properties, "version", validationResult, val -> parameters.version = Version.parseVersion(val.trim())));
+        names
+            .remove(parse(properties, "vendor", validationResult, val -> parameters.vendor = val.trim().toLowerCase()));
 
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);

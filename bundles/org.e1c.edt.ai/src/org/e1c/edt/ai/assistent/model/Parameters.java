@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Objects;
 
 import org.e1c.edt.ai.IDefaultSettings;
+import org.osgi.framework.Version;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -121,6 +122,15 @@ public class Parameters
 
     @SerializedName("script_language")
     public String scriptLanguage = ""; //$NON-NLS-1$
+
+    @SerializedName("configuration_name")
+    public String configurationName = ""; //$NON-NLS-1$
+
+    @SerializedName("version")
+    public Version version = Version.emptyVersion;
+
+    @SerializedName("vendor")
+    public String vendor = ""; //$NON-NLS-1$
 
     public Parameters merge(Parameters params)
     {
@@ -299,6 +309,21 @@ public class Parameters
             scriptLanguage = params.scriptLanguage;
         }
 
+        if (params.configurationName != null)
+        {
+            configurationName = params.configurationName;
+        }
+
+        if (params.version != null)
+        {
+            version = params.version;
+        }
+
+        if (params.vendor != null)
+        {
+            vendor = params.vendor;
+        }
+
         return this;
     }
 
@@ -309,7 +334,7 @@ public class Parameters
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
             localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext, trace,
-            scriptLanguage);
+            scriptLanguage, configurationName, version, vendor);
     }
 
     @Override
@@ -342,6 +367,8 @@ public class Parameters
             && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
             && Objects.equals(globalСontext, other.globalСontext)
             && Objects.equals(extendedСontext, other.extendedСontext) && Objects.equals(trace, other.trace)
-            && Objects.equals(scriptLanguage, other.scriptLanguage);
+            && Objects.equals(scriptLanguage, other.scriptLanguage)
+            && Objects.equals(configurationName, other.configurationName) && Objects.equals(version, other.version)
+            && Objects.equals(vendor, other.vendor);
     }
 }
