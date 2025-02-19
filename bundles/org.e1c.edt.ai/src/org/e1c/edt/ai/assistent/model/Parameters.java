@@ -119,6 +119,9 @@ public class Parameters
     @SerializedName("trace")
     public Boolean trace = false;
 
+    @SerializedName("script_language")
+    public String scriptLanguage = ""; //$NON-NLS-1$
+
     public Parameters merge(Parameters params)
     {
         if (params.prefixLength != null)
@@ -291,6 +294,11 @@ public class Parameters
             trace = params.trace;
         }
 
+        if (params.scriptLanguage != null)
+        {
+            scriptLanguage = params.scriptLanguage;
+        }
+
         return this;
     }
 
@@ -300,7 +308,8 @@ public class Parameters
         return Objects.hash(bestOf, url, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
-            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext, trace);
+            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext, trace,
+            scriptLanguage);
     }
 
     @Override
@@ -332,6 +341,7 @@ public class Parameters
             && Objects.equals(externalFunctionsLength, other.externalFunctionsLength)
             && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
             && Objects.equals(globalСontext, other.globalСontext)
-            && Objects.equals(extendedСontext, other.extendedСontext) && Objects.equals(trace, other.trace);
+            && Objects.equals(extendedСontext, other.extendedСontext) && Objects.equals(trace, other.trace)
+            && Objects.equals(scriptLanguage, other.scriptLanguage);
     }
 }

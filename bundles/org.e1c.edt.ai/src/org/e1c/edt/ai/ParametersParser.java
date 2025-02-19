@@ -187,6 +187,22 @@ public class ParametersParser
 
         names.remove(parse(properties, "trace", validationResult, val -> parameters.trace = parseBoolean(val)));
 
+        names.remove(parse(properties, "script_language", validationResult, val -> {
+            val = val.trim().toLowerCase();
+            switch (val)
+            {
+            case "":
+            case "english":
+            case "russian":
+                parameters.scriptLanguage = val;
+                break;
+
+                default:
+                validationResult.addError(new ValidationError(WellknownError.OutOfRange, "script_language"));
+                break;
+            }
+        }));
+
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
         for (var unknowName : unknowNames)

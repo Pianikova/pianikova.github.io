@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ActionState;
@@ -135,7 +136,7 @@ public class Chat implements IChat, IChatDialog
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
-        chatInJob(() -> {
+        chatInJob(settings -> {
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try {
                 String scriptLanguage = null;
@@ -146,6 +147,12 @@ public class Chat implements IChat, IChatDialog
                     contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
                     scriptLanguage = chatContext.scriptLanguage;
                     programingLanguage = chatContext.programingLanguage;
+                }
+
+                var settingsScriptLanuage = settings.getLlmParameters().scriptLanguage;
+                if (settingsScriptLanuage != null && !settingsScriptLanuage.isBlank())
+                {
+                    scriptLanguage = settingsScriptLanuage;
                 }
 
                 var script = new StringBuilder();
@@ -211,7 +218,7 @@ public class Chat implements IChat, IChatDialog
             }
         });
 
-        chatInJob(() -> {
+        chatInJob(settings -> {
             /**/ });
     }
 
@@ -265,7 +272,7 @@ public class Chat implements IChat, IChatDialog
             .getAbsolutePath());
     }
 
-    private void chatInJob(Runnable chatAction)
+    private void chatInJob(Consumer<AISettings> chatAction)
     {
         ensureWebViewExists();
         new Job(Messages.ChatInteractionJobName)
@@ -279,7 +286,7 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private synchronized IStatus chat(Runnable chatAction)
+    private synchronized IStatus chat(Consumer<AISettings> chatAction)
     {
         try
         {
@@ -298,7 +305,7 @@ public class Chat implements IChat, IChatDialog
 
             initializing.get();
             wink(settings, 32);
-            chatAction.run();
+            chatAction.accept(settings);
         }
         catch (Throwable error)
         {
