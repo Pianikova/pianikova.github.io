@@ -205,11 +205,11 @@ public class ParametersParser
         }));
 
         names.remove(parse(properties, "configuration_name", validationResult,
-            val -> parameters.configurationName = val.trim().toLowerCase()));
+            val -> parameters.configurationName = val.trim()));
         names.remove(
             parse(properties, "version", validationResult, val -> parameters.version = Version.parseVersion(val.trim())));
         names
-            .remove(parse(properties, "vendor", validationResult, val -> parameters.vendor = val.trim().toLowerCase()));
+            .remove(parse(properties, "vendor", validationResult, val -> parameters.vendor = val.trim()));
 
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
@@ -293,7 +293,7 @@ public class ParametersParser
 
         try
         {
-            return new URL(normalizeUrl(text.trim()));
+            return new URL(normalizeUrl(text));
         }
         catch (MalformedURLException e)
         {

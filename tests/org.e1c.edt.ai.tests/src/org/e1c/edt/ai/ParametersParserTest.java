@@ -3,6 +3,8 @@
  */
 package org.e1c.edt.ai;
 
+import static org.mockito.Mockito.when;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
@@ -18,6 +20,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
+import org.osgi.framework.Version;
 
 @RunWith(Parameterized.class)
 public class ParametersParserTest
@@ -33,6 +36,11 @@ public class ParametersParserTest
     @Parameter(2)
     public Optional<org.e1c.edt.ai.assistent.model.Parameters> expectedParameters;
 
+    static
+    {
+        when(defaultSettings.getUrl()).thenReturn("http://abc.ru"); //$NON-NLS-1$
+    }
+
     @Test
     @Parameters()
     public void shouldParseParameterFromText()
@@ -46,6 +54,7 @@ public class ParametersParserTest
 
         // Then
         Assert.assertEquals(expectedValidationResult, actualValidationResult);
+        Assert.assertEquals(expectedParameters.hashCode(), actualParameters.hashCode());
         Assert.assertEquals(expectedParameters, actualParameters);
     }
 
@@ -92,13 +101,53 @@ public class ParametersParserTest
                 { "chat_url=http://chat.com/Abc", ValidationResult.SUCCESS, createParams(p -> {
                     try
                     {
-                        p.chatUrl = new URL("http://chat.com/Abc");
+                        p.chatUrl = new URL("http://chat.com/Abc/");
                     }
                     catch (MalformedURLException e)
                     {
                         //
                     } } )
                 },
+                { "chat_url=http://chat.com/Abc/", ValidationResult.SUCCESS, createParams(p -> {
+                    try
+                    {
+                        p.chatUrl = new URL("http://chat.com/Abc/");
+                    }
+                    catch (MalformedURLException e)
+                    {
+                        //
+                    } } )
+                },
+                { "url=http://Xyz.com/Abc", ValidationResult.SUCCESS, createParams(p -> {
+                    try
+                    {
+                        p.url = new URL("http://Xyz.com/Abc/");
+                    }
+                    catch (MalformedURLException e)
+                    {
+                        //
+                    } } )
+                },
+                { "url=http://Xyz.com/Abc/", ValidationResult.SUCCESS, createParams(p -> {
+                    try
+                    {
+                        p.url = new URL("http://Xyz.com/Abc/");
+                    }
+                    catch (MalformedURLException e)
+                    {
+                        //
+                    } } )
+                },
+                { "min_delay=300", ValidationResult.SUCCESS, createParams(p -> { p.minDelay = 300; } ) },
+                { "timeout=15000", ValidationResult.SUCCESS, createParams(p -> { p.timeout = 15000; } ) },
+                { "global_context=true", ValidationResult.SUCCESS, createParams(p -> { p.globalСontext = true; } ) },
+                { "extended_context=true", ValidationResult.SUCCESS, createParams(p -> { p.extendedСontext = true; } ) },
+                { "trace=true", ValidationResult.SUCCESS, createParams(p -> { p.trace = true; } ) },
+                { "script_language=Russian", ValidationResult.SUCCESS, createParams(p -> { p.scriptLanguage = "russian"; } ) },
+                { "script_language=enGlish", ValidationResult.SUCCESS, createParams(p -> { p.scriptLanguage = "english"; } ) },
+                { "configuration_name=Abc", ValidationResult.SUCCESS, createParams(p -> { p.configurationName = "Abc"; } ) },
+                { "version=1.2.3", ValidationResult.SUCCESS, createParams(p -> { p.version = Version.parseVersion("1.2.3"); } ) },
+                { "vendor=Abc", ValidationResult.SUCCESS, createParams(p -> { p.vendor = "Abc"; } ) },
             });
         // @formatter:on
     }

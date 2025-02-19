@@ -21,6 +21,11 @@ public class SettingsProviderTest
     @SuppressWarnings("unchecked")
     private final IParser<String, Parameters> parametersParser = Mockito.mock(IParser.class);
 
+    public SettingsProviderTest()
+    {
+        when(defaultSettings.getUrl()).thenReturn("http://abc.ru");
+    }
+
     @Test
     public void shouldProvideClientToken()
     {
@@ -70,7 +75,8 @@ public class SettingsProviderTest
         when(settingsStore.getString(Mockito.anyString())).thenReturn("");
         when(idProvider.getId()).thenReturn("");
         when(settingsStore.getInt(Mockito.anyString())).thenReturn(0);
-        when(parametersParser.parse(Mockito.anyString())).thenReturn(Optional.of(new Parameters(defaultSettings)));
+        var params = Optional.of(new Parameters(defaultSettings));
+        when(parametersParser.parse(Mockito.anyString())).thenReturn(params);
         return new SettingsProvider(settingsStore, parametersParser, idProvider, defaultSettings);
     }
 }
