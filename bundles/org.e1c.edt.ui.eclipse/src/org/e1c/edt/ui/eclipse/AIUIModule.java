@@ -10,6 +10,7 @@ import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ICodePartsProvider;
 import org.e1c.edt.ai.ICodeProvider;
 import org.e1c.edt.ai.IContextEntities;
+import org.e1c.edt.ai.IDefaultSettings;
 import org.e1c.edt.ai.IGlobalContextManager;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProjectIdProvider;
@@ -43,6 +44,7 @@ public class AIUIModule
         // @formatter:off
         install(new AIModule());
         bind(ILog.class).toInstance(activator);
+        bind(IDefaultSettings.class).to(DefaultSettings.class).in(Singleton.class);
         bind(IVersionProvider.class).toInstance(activator);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ICodePartsProvider.class).to(CodePartsProvider.class).in(Singleton.class);

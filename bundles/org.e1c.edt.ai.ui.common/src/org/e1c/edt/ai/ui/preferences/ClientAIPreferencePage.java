@@ -8,6 +8,7 @@ import org.e1c.edt.ai.IValidator;
 import org.e1c.edt.ai.ui.AIUICommonModule;
 import org.e1c.edt.ai.ui.BaseActivator;
 import org.eclipse.jface.preference.BooleanFieldEditor;
+import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
@@ -43,7 +44,6 @@ public class ClientAIPreferencePage
         super(GRID);
         BaseActivator.injectMembers(this);
         setPreferenceStore(preferenceStore);
-        setDescription(Messages.ClientAIPreferencePage_Service_parameters);
     }
 
     /**
@@ -56,48 +56,34 @@ public class ClientAIPreferencePage
     public void createFieldEditors()
     {
         var parent = getFieldEditorParent();
+
+        addField(
+            new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_Token, parent));
+
         addField(
             new BooleanFieldEditor(ISettingsStore.CODE_COMPLETION,
                 Messages.ClientAIPreferencePage_CodeCompletitionEnabled,
                 parent));
 
-        addField(new ValidatingStringFieldEditor(ISettingsStore.APIURL, Messages.ClientAIPreferencePage_Api_URL,
-            parent, urlValidator));
-
-        addField(
-            new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_token,
-                parent));
-
-        addField(new ValidatingStringFieldEditor(ISettingsStore.LLM_PARAMETERS,
-            Messages.ClientAIPreferencePage_LLL_parameters,
-            parent, parametersValidator));
+        addField(new BooleanFieldEditor(ISettingsStore.CONTINUOUS_CODE_COMPLETION,
+            Messages.ClientAIPreferencePage_ContinuousCodeCompletition, parent));
 
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
             Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
         codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
         addField(codeCompletionLinesCount);
 
-        addField(new BooleanFieldEditor(ISettingsStore.CONTINUOUS_CODE_COMPLETION,
-            Messages.ClientAIPreferencePage_ContinuousCodeCompletition, parent));
-
-        var codeCompletionMinRequestDelay = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_MIN_REQUST_DELAY,
-            Messages.ClientAIPreferencePage_CodeCompletionMinRequestDelay, parent);
-        addField(codeCompletionMinRequestDelay);
-
-        var timeout = new IntegerFieldEditor(ISettingsStore.TIMEOUT,
-            Messages.ClientAIPreferencePage_Timeout, parent);
-        codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_TIMEOUT);
-        addField(timeout);
+        @SuppressWarnings("nls")
+        String[][] languages = {
+            { Messages.ClientAIPreferencePage_Language_Default, "" },
+            { Messages.ClientAIPreferencePage_Language_English, "english" },
+            { Messages.ClientAIPreferencePage_Language_Russian, "russian" } };
 
         addField(
-            new BooleanFieldEditor(ISettingsStore.SEND_CONTEXT, Messages.ClientAIPreferencePage_SendContext, parent));
+            new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, languages, parent));
 
-        addField(new BooleanFieldEditor(ISettingsStore.SEND_GLOBAL_CONTEXT,
-            Messages.ClientAIPreferencePage_SendGlobalContext,
-            parent));
-
-        addField(
-            new BooleanFieldEditor(ISettingsStore.TRACE_MODE, Messages.ClientAIPreferencePage_TraceMode, parent));
+        addField(new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
+            Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator));
     }
 
     @Override

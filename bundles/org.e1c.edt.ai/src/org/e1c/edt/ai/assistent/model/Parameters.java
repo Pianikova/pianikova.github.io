@@ -3,13 +3,30 @@
  */
 package org.e1c.edt.ai.assistent.model;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 import java.util.Objects;
+
+import org.e1c.edt.ai.IDefaultSettings;
+import org.osgi.framework.Version;
 
 import com.google.gson.annotations.SerializedName;
 
 public class Parameters
 {
+    public Parameters(IDefaultSettings defaultSettings)
+    {
+        try
+        {
+            url = new URL(defaultSettings.getUrl());
+        }
+        catch (MalformedURLException e)
+        {
+            throw new IllegalArgumentException("Invalid default url."); //$NON-NLS-1$
+        }
+    }
+
     @SerializedName("prefix_length")
     public Integer prefixLength;
 
@@ -76,14 +93,44 @@ public class Parameters
     @SerializedName("trim_stop")
     public Boolean trimStop;
 
+    @SerializedName("url")
+    public URL url;
+
     @SerializedName("chat_url")
-    public String chatUrl;
+    public URL chatUrl;
 
     @SerializedName("local_functions_length")
     public Integer localFunctionsLength;
 
     @SerializedName("external_functions_length")
     public Integer externalFunctionsLength;
+
+    @SerializedName("min_delay")
+    public Integer minDelay = 300;
+
+    @SerializedName("timeout")
+    public Integer timeout = 15000;
+
+    @SerializedName("global_context")
+    public Boolean globalСontext = false;
+
+    @SerializedName("extended_context")
+    public Boolean extendedСontext = false;
+
+    @SerializedName("trace")
+    public Boolean trace = false;
+
+    @SerializedName("script_language")
+    public String scriptLanguage = ""; //$NON-NLS-1$
+
+    @SerializedName("configuration_name")
+    public String configurationName = ""; //$NON-NLS-1$
+
+    @SerializedName("version")
+    public Version version = Version.emptyVersion;
+
+    @SerializedName("vendor")
+    public String vendor = ""; //$NON-NLS-1$
 
     public Parameters merge(Parameters params)
     {
@@ -212,6 +259,11 @@ public class Parameters
             trimStop = params.trimStop;
         }
 
+        if (params.url != null)
+        {
+            url = params.url;
+        }
+
         if (params.chatUrl != null)
         {
             chatUrl = params.chatUrl;
@@ -227,16 +279,62 @@ public class Parameters
             externalFunctionsLength = params.externalFunctionsLength;
         }
 
+        if (params.minDelay != null)
+        {
+            minDelay = params.minDelay;
+        }
+
+        if (params.timeout != null)
+        {
+            timeout = params.timeout;
+        }
+
+        if (params.globalСontext != null)
+        {
+            globalСontext = params.globalСontext;
+        }
+
+        if (params.extendedСontext != null)
+        {
+            extendedСontext = params.extendedСontext;
+        }
+
+        if (params.trace != null)
+        {
+            trace = params.trace;
+        }
+
+        if (params.scriptLanguage != null)
+        {
+            scriptLanguage = params.scriptLanguage;
+        }
+
+        if (params.configurationName != null)
+        {
+            configurationName = params.configurationName;
+        }
+
+        if (params.version != null)
+        {
+            version = params.version;
+        }
+
+        if (params.vendor != null)
+        {
+            vendor = params.vendor;
+        }
+
         return this;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(bestOf, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
+        return Objects.hash(bestOf, url, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
-            localFunctionsLength, externalFunctionsLength);
+            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext, trace,
+            scriptLanguage, configurationName, version, vendor);
     }
 
     @Override
@@ -249,7 +347,8 @@ public class Parameters
         if (getClass() != obj.getClass())
             return false;
         Parameters other = (Parameters)obj;
-        return Objects.equals(bestOf, other.bestOf) && Objects.equals(chatUrl, other.chatUrl)
+        return Objects.equals(bestOf, other.bestOf) && Objects.equals(url, other.url)
+            && Objects.equals(chatUrl, other.chatUrl)
             && Objects.equals(decoderInputDetails, other.decoderInputDetails) && Objects.equals(details, other.details)
             && Objects.equals(doSample, other.doSample) && Objects.equals(formLength, other.formLength)
             && Objects.equals(frequencyPenalty, other.frequencyPenalty)
@@ -264,6 +363,12 @@ public class Parameters
             && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
             && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
             && Objects.equals(localFunctionsLength, other.localFunctionsLength)
-            && Objects.equals(externalFunctionsLength, other.externalFunctionsLength);
+            && Objects.equals(externalFunctionsLength, other.externalFunctionsLength)
+            && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
+            && Objects.equals(globalСontext, other.globalСontext)
+            && Objects.equals(extendedСontext, other.extendedСontext) && Objects.equals(trace, other.trace)
+            && Objects.equals(scriptLanguage, other.scriptLanguage)
+            && Objects.equals(configurationName, other.configurationName) && Objects.equals(version, other.version)
+            && Objects.equals(vendor, other.vendor);
     }
 }

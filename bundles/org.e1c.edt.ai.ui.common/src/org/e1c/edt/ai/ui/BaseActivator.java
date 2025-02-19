@@ -6,6 +6,7 @@ package org.e1c.edt.ai.ui;
 import java.util.function.Supplier;
 
 import org.e1c.edt.ai.ILog;
+import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.IVersionProvider;
 import org.eclipse.core.runtime.IStatus;
@@ -299,6 +300,13 @@ public abstract class BaseActivator
     @Override
     public Version getPluginVersion()
     {
+        var settingsProvider = getInjector().getInstance(ISettingsProvider.class);
+        var settingsVersion = settingsProvider.getSettings().getLlmParameters().version;
+        if (settingsVersion != null && settingsVersion != Version.emptyVersion)
+        {
+            return settingsVersion;
+        }
+
         Bundle bundle = getDefault().getBundle();
         return bundle.getVersion();
     }

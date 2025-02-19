@@ -19,6 +19,7 @@ class ValidatingStringFieldEditor
     static
     {
         Errors.put(WellknownError.UnableToParse, Messages.Error_UnableToParse);
+        Errors.put(WellknownError.OutOfRange, Messages.Error_OutOfRange);
         Errors.put(WellknownError.Unknown, Messages.Error_Unknown);
     }
 

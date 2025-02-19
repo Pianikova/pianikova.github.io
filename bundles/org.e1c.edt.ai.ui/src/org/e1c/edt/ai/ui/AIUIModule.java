@@ -5,6 +5,7 @@ package org.e1c.edt.ai.ui;
 
 import org.e1c.edt.ai.AIModule;
 import org.e1c.edt.ai.ICursorInfoProvider;
+import org.e1c.edt.ai.IDefaultSettings;
 import org.e1c.edt.ai.ILog;
 import org.e1c.edt.ai.IProjectIdProvider;
 import org.e1c.edt.ai.IProjectProvider;
@@ -38,6 +39,7 @@ public class AIUIModule
         // @formatter:off
         install(new AIModule());
         bind(ILog.class).toInstance(activator);
+        bind(IDefaultSettings.class).to(DefaultSettings.class).in(Singleton.class);
         bind(IVersionProvider.class).toInstance(activator);
         bind(IPreferenceStore.class).toInstance(activator.getPreferenceStore());
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);

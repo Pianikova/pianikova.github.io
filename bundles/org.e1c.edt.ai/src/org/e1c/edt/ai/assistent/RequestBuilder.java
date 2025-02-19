@@ -36,17 +36,11 @@ class RequestBuilder
     @Override
     public Optional<HttpRequest.Builder> create(String relativePath)
     {
-        var otionalSettings = settingsProvider.getSettings();
-        if (otionalSettings.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        var settings = otionalSettings.get();
+        var settings = settingsProvider.getSettings();
         URI uri;
         try
         {
-            uri = settings.getApiURL().toURI().resolve(relativePath);
+            uri = settings.getLlmParameters().url.toURI().resolve(relativePath);
         }
         catch (URISyntaxException e)
         {

@@ -117,11 +117,8 @@ class GlobalContextTracker
             return;
         }
 
-        var reset = settingsProvider.getSettings()
-            .map(settings -> settingsTracker.register(GlobalContextTracker.class.getName() + ':' + workflow.getId(),
-                settings))
-            .orElse(false);
-
+        var reset = settingsTracker.register(GlobalContextTracker.class.getName() + ':' + workflow.getId(),
+            settingsProvider.getSettings());
         if (reset)
         {
             workflow.reset();
