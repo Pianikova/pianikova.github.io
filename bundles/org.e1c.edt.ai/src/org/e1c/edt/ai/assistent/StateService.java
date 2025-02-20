@@ -57,7 +57,7 @@ class StateService
     }
 
     @Override
-    public synchronized void setState(String className, ServiceState serviceState)
+    public void setState(String className, ServiceState serviceState)
     {
         if (this.serviceState != serviceState)
         {
@@ -67,7 +67,7 @@ class StateService
     }
 
     @Override
-    public synchronized void setState(String className, ActionState actionState)
+    public void setState(String className, ActionState actionState)
     {
         if (this.actionState != actionState)
         {
@@ -119,7 +119,7 @@ class StateService
         job.schedule();
     };
 
-    private synchronized void notifyListeners()
+    private void notifyListeners()
     {
         if (serviceState == null)
         {

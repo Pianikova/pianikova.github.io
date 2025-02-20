@@ -55,6 +55,11 @@ public class ModuleProvider
     @Override
     public Optional<ProjectId> getProjectId(String filePath, ICancellationToken cancellationToken)
     {
+        if (filePath.isBlank())
+        {
+            return Optional.empty();
+        }
+
         return getProject(filePath).map(project -> getProjectId(project));
     }
 
@@ -63,6 +68,11 @@ public class ModuleProvider
     {
         Preconditions.checkNotNull(filePath);
         Preconditions.checkNotNull(cancellationToken);
+        if (filePath.isBlank())
+        {
+            return Optional.empty();
+        }
+
         return getProject(filePath).flatMap(project -> getModuleInfo(project, filePath, cancellationToken));
     }
 
