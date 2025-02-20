@@ -52,11 +52,14 @@ import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.TraverseEvent;
 import org.eclipse.swt.events.TraverseListener;
 import org.eclipse.swt.events.VerifyEvent;
+import org.eclipse.swt.graphics.Point;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -64,7 +67,7 @@ import com.google.inject.Provider;
 
 class CodeCompletionViewModel
     implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener, TraverseListener,
-    ModifyListener, SelectionListener, ControlListener
+    ModifyListener, SelectionListener, ControlListener, MouseListener
 {
     private final Object lockObject = new Object();
     private final ILog log;
@@ -89,6 +92,7 @@ class CodeCompletionViewModel
     private final ISyntaxVaidator syntaxVaidator;
     private final IProposalsProvider proposalsProvider;
     private final ICodeParser codeParser;
+    private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private SourceViewer sourceViewer;
@@ -113,7 +117,7 @@ class CodeCompletionViewModel
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
-        IProposalsProvider proposalsProvider, ICodeParser codeParser)
+        IProposalsProvider proposalsProvider, ICodeParser codeParser, ITextWidgetInfoUpdater textWidgetInfoUpdater)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -137,6 +141,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(syntaxVaidator);
         Preconditions.checkNotNull(proposalsProvider);
         Preconditions.checkNotNull(codeParser);
+        Preconditions.checkNotNull(textWidgetInfoUpdater);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -158,6 +163,7 @@ class CodeCompletionViewModel
         this.syntaxVaidator = syntaxVaidator;
         this.proposalsProvider = proposalsProvider;
         this.codeParser = codeParser;
+        this.textWidgetInfoUpdater = textWidgetInfoUpdater;
     }
 
     @Override
@@ -180,6 +186,7 @@ class CodeCompletionViewModel
                 textWidget.addVerifyKeyListener(this);
                 textWidget.addModifyListener(this);
                 textWidget.addControlListener(this);
+                textWidget.addMouseListener(this);
                 Optional.ofNullable(textWidget.getHorizontalBar())
                     .ifPresent(scroll -> scroll.addSelectionListener(this));
                 Optional.ofNullable(textWidget.getVerticalBar()).ifPresent(scroll -> scroll.addSelectionListener(this));
@@ -300,6 +307,7 @@ class CodeCompletionViewModel
                 textWidget.removeVerifyKeyListener(this);
                 textWidget.removeTraverseListener(this);
                 textWidget.removeModifyListener(this);
+                textWidget.removeMouseListener(this);
                 sourceViewer.getContentAssistantFacade().removeCompletionListener(assistantListener);
                 textWidget.redraw();
             }
@@ -827,5 +835,24 @@ class CodeCompletionViewModel
             lastRequest.localContext.proposals = proposals;
             return Optional.of(lastRequest);
         }
+    }
+
+    @Override
+    public void mouseDoubleClick(MouseEvent e)
+    {
+        //
+    }
+
+    @Override
+    public void mouseDown(MouseEvent e)
+    {
+        var offset = textWidget.getOffsetAtPoint(new Point(e.x, e.y));
+        textWidgetInfoUpdater.setLastMouseOffset(textWidget, offset);
+    }
+
+    @Override
+    public void mouseUp(MouseEvent e)
+    {
+        //
     }
 }

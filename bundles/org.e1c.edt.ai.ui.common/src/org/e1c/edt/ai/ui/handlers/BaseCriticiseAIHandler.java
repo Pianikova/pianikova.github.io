@@ -3,12 +3,8 @@
  */
 package org.e1c.edt.ai.ui.handlers;
 
-import org.e1c.edt.ai.CancellationTokens;
-import org.e1c.edt.ai.ui.AITarget;
-import org.e1c.edt.ai.ui.IAIContextProvider;
-import org.e1c.edt.ai.ui.IChat;
-import org.e1c.edt.ai.ui.IUI;
 import org.e1c.edt.ai.ui.BaseActivator;
+import org.e1c.edt.ai.ui.IChat;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
@@ -24,11 +20,9 @@ public class BaseCriticiseAIHandler
     extends AbstractHandler
 {
     @Inject
-    IAIContextProvider aiContextProvider;
-    @Inject
     IChat chat;
     @Inject
-    IUI ui;
+    ICodeTools codeTools;
 
     public BaseCriticiseAIHandler()
     {
@@ -38,16 +32,13 @@ public class BaseCriticiseAIHandler
     @Override
     public boolean isEnabled()
     {
-        return ui.getTextWidget().map(textWidget -> !textWidget.getSelectionText().isBlank()).orElse(false);
+        return codeTools.hasTarget();
     }
 
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        ui.getTextWidget()
-            .flatMap(textWidget -> aiContextProvider.create(
-                new AITarget(textWidget, Integer.MAX_VALUE, true), CancellationTokens.NONE))
-            .ifPresent(ctx -> chat.reviewCode(ctx, ctx.getText()));
+        codeTools.createContextForTarget().ifPresent(ctx -> chat.reviewCode(ctx, ctx.getText()));
         return null;
     }
 }

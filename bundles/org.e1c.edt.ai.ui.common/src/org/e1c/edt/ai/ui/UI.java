@@ -46,24 +46,28 @@ class UI
     private final Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider;
     private final IDispatcher dispatcher;
     private final IUISettings uiSettings;
+    private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private final HashMap<Class<?>, Optional<Field>> sourceViewerFields = new HashMap<>();
     private StyledText textWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
     public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider,
-        Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider, IDispatcher dispatcher, IUISettings uiSettings)
+        Provider<IFinalCodeFeedbackViewModel> feedbackViewModelProvider, IDispatcher dispatcher, IUISettings uiSettings,
+        ITextWidgetInfoUpdater textWidgetInfoUpdater)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(codeCompletionViewModelProvider);
         Preconditions.checkNotNull(feedbackViewModelProvider);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(textWidgetInfoUpdater);
         this.log = log;
         this.codeCompletionViewModelProvider = codeCompletionViewModelProvider;
         this.feedbackViewModelProvider = feedbackViewModelProvider;
         this.dispatcher = dispatcher;
         this.uiSettings = uiSettings;
+        this.textWidgetInfoUpdater = textWidgetInfoUpdater;
     }
 
     public void initialize()
@@ -121,6 +125,7 @@ class UI
                     // ignored
                 }
 
+                textWidgetInfoUpdater.reset();
                 textWidget = newTextWidget;
                 queryToken = Closeables.create(codeCompletionViewModelProvider.get().activate(newTextWidget),
                     feedbackViewModelProvider.get().activate(newTextWidget));

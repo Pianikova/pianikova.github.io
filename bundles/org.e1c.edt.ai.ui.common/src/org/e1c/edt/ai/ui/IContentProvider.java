@@ -7,5 +7,5 @@ import org.eclipse.swt.custom.StyledText;
 
 public interface IContentProvider
 {
-    Content get(StyledText textWidget);
+    Content get(StyledText textWidget, int offset);
 }

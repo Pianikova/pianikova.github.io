@@ -62,7 +62,7 @@ class AIContextProvider
         }
 
         var path = file.get().getFullPath().makeRelative().toPortableString();
-        var content = contentProvider.get(textWidget);
+        var content = contentProvider.get(textWidget, textWidget.getCaretOffset());
         AIContext aiContext;
         var optionalProjectId = projectIdProvider.getProjectId(path, cancellationToken);
         if (optionalProjectId.isEmpty())
