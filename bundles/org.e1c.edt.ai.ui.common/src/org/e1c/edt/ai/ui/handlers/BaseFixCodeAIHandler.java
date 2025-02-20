@@ -3,13 +3,8 @@
  */
 package org.e1c.edt.ai.ui.handlers;
 
-import org.e1c.edt.ai.CancellationTokens;
-import org.e1c.edt.ai.ui.AITarget;
-import org.e1c.edt.ai.ui.BaseChatView;
-import org.e1c.edt.ai.ui.IAIContextProvider;
-import org.e1c.edt.ai.ui.IChat;
-import org.e1c.edt.ai.ui.IUI;
 import org.e1c.edt.ai.ui.BaseActivator;
+import org.e1c.edt.ai.ui.IChat;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
@@ -26,11 +21,9 @@ public class BaseFixCodeAIHandler
     extends AbstractHandler
 {
     @Inject
-    IAIContextProvider aiContextProvider;
-    @Inject
     IChat chat;
     @Inject
-    IUI ui;
+    ICodeTools codeTools;
     @Inject
     IFixDialog fixDialog;
 
@@ -42,22 +35,19 @@ public class BaseFixCodeAIHandler
     @Override
     public boolean isEnabled()
     {
-        return ui.getTextWidget().map(textWidget -> !textWidget.getSelectionText().isBlank()).orElse(false);
+        return codeTools.hasTarget();
     }
 
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        ui.getTextWidget()
-            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true),
-                CancellationTokens.NONE))
-            .ifPresent(ctx -> {
-                if (fixDialog.show() == Window.OK)
-                {
-                    chat.fixCode(ctx, ctx.getText(), fixDialog.getDetails());
-                }
-            });
-        ui.showView(BaseChatView.ID);
+        codeTools.createContextForTarget().ifPresent(ctx -> {
+            if (fixDialog.show() == Window.OK)
+            {
+                chat.fixCode(ctx, ctx.getText(), fixDialog.getDetails());
+            }
+        });
+
         return null;
     }
 }

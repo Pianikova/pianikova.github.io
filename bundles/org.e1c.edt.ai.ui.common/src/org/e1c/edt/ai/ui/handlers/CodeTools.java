@@ -6,6 +6,7 @@ package org.e1c.edt.ai.ui.handlers;
 import java.util.HashSet;
 import java.util.Optional;
 
+import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.CodePart;
 import org.e1c.edt.ai.ICodePartsProvider;
@@ -54,6 +55,34 @@ public class CodeTools
         this.codeParser = codeParser;
         this.codePartsProvider = codePartsProvider;
         this.aiContextProvider = aiContextProvider;
+    }
+
+    @Override
+    public boolean hasTarget()
+    {
+        return ui.getTextWidget()
+            .map(textWidget -> !textWidget.getSelectionText().isBlank() || getTargetMethod().isPresent())
+            .orElse(false);
+    }
+
+    public Optional<AIContext> createContextForTarget()
+    {
+        return ui.getTextWidget()
+            .flatMap(textWidget -> {
+                if (!textWidget.getSelectionText().isBlank())
+                {
+                    return aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true),
+                        CancellationTokens.NONE);
+                }
+
+                var targetMethod = getTargetMethod();
+                if (targetMethod.isPresent())
+                {
+                    return Optional.of(targetMethod.get().ctx);
+                }
+
+                return Optional.empty();
+            });
     }
 
     @Override
