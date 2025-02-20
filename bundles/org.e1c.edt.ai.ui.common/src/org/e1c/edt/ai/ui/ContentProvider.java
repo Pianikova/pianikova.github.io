@@ -23,27 +23,27 @@ class ContentProvider
     }
 
     @Override
-    public Content get(StyledText textWidget)
+    public Content get(StyledText textWidget, int offset)
     {
         return ui.getSourceViewer(textWidget)
-            .map(sourceViewer -> get(textWidget, sourceViewer))
-            .orElseGet(() -> new Content(textWidget.getText(), textWidget.getCaretOffset(), "", 0)); //$NON-NLS-1$
+            .map(sourceViewer -> get(textWidget, sourceViewer, offset))
+            .orElseGet(() -> new Content(textWidget.getText(), offset, "", 0)); //$NON-NLS-1$
     }
 
-    private Content get(StyledText textWidget, SourceViewer sourceViewer)
+    private Content get(StyledText textWidget, SourceViewer sourceViewer, int offset)
     {
         var text = sourceViewer.getDocument().get();
-        var offset = sourceViewer.widgetOffset2ModelOffset(textWidget.getCaretOffset());
+        var widgetOffset = sourceViewer.widgetOffset2ModelOffset(offset);
         var selection = sourceViewer.getSelection();
         if (selection.isEmpty() || !(selection instanceof ITextSelection))
         {
-            return new Content(text, offset, "", 0); //$NON-NLS-1$
+            return new Content(text, widgetOffset, "", 0); //$NON-NLS-1$
         }
 
         var textSelection = (ITextSelection)selection;
         var selectionStart = textSelection.getOffset();
         var selectionFinish = textSelection.getOffset() + textSelection.getLength();
         var selectionText = text.substring(selectionStart, selectionFinish);
-        return new Content(text, offset, selectionText, offset - selectionStart);
+        return new Content(text, widgetOffset, selectionText, widgetOffset - selectionStart);
     }
 }

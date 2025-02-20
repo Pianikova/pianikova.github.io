@@ -12,7 +12,9 @@ import org.e1c.edt.ai.ICursorInfoProvider;
 import org.e1c.edt.ai.IGlobalContextManager;
 import org.e1c.edt.ai.ISettingsStore;
 import org.e1c.edt.ai.IUISettings;
+import org.e1c.edt.ai.ui.handlers.CodeTools;
 import org.e1c.edt.ai.ui.handlers.FixDialog;
+import org.e1c.edt.ai.ui.handlers.ICodeTools;
 import org.e1c.edt.ai.ui.handlers.IFixDialog;
 import org.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 
@@ -63,7 +65,11 @@ public class AIUICommonModule
         bind(IGlobalContextSync.class).to(GlobalContextSync.class).in(Singleton.class);
         bind(IGlobalContextStateStore.class).to(GlobalContextStateStore.class).in(Singleton.class);
         bind(IProposalsProvider.class).to(ProposalsProvider.class).in(Singleton.class);
-        bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);        
+        bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);
+        bind(TextWidgetInfo.class).in(Singleton.class);
+        bind(ITextWidgetInfoUpdater.class).to(TextWidgetInfo.class);
+        bind(ITextWidgetInfoProvider.class).to(TextWidgetInfo.class);
+        bind(ICodeTools.class).to(CodeTools.class).in(Singleton.class);
         // @formatter:on
     }
 }

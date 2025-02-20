@@ -23,6 +23,7 @@ import org.eclipse.xtext.Keyword;
 import org.eclipse.xtext.TerminalRule;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.ILeafNode;
+import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.nodemodel.impl.CompositeNodeWithSemanticElement;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
@@ -33,6 +34,18 @@ import com.google.common.base.Preconditions;
 class CodePartsProvider
     implements ICodePartsProvider
 {
+    @Override
+    public boolean isMethod(INode node)
+    {
+        var semantic = NodeModelUtils.findActualSemanticObjectFor(node);
+        if (semantic == null)
+        {
+            return false;
+        }
+
+        return EcoreUtil2.getContainerOfType(semantic, Method.class) != null;
+    }
+
     @Override
     public Stream<CodePart> getParts(ICompositeNode rootNode)
     {

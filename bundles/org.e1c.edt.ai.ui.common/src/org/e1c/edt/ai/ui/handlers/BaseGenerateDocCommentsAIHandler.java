@@ -3,29 +3,11 @@
  */
 package org.e1c.edt.ai.ui.handlers;
 
-import java.util.HashSet;
-import java.util.Optional;
-
-import org.e1c.edt.ai.AIContext;
-import org.e1c.edt.ai.CancellationTokens;
-import org.e1c.edt.ai.CodePart;
-import org.e1c.edt.ai.ICodePartsProvider;
-import org.e1c.edt.ai.ILog;
-import org.e1c.edt.ai.Range;
-import org.e1c.edt.ai.assistent.model.CursorLocation;
-import org.e1c.edt.ai.ui.AITarget;
 import org.e1c.edt.ai.ui.BaseActivator;
-import org.e1c.edt.ai.ui.Content;
-import org.e1c.edt.ai.ui.IAIContextProvider;
 import org.e1c.edt.ai.ui.IChat;
-import org.e1c.edt.ai.ui.ICodeParser;
-import org.e1c.edt.ai.ui.IContentProvider;
-import org.e1c.edt.ai.ui.IUI;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
-import org.eclipse.jface.text.source.SourceViewer;
-import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com.google.inject.Inject;
 
@@ -38,19 +20,9 @@ public class BaseGenerateDocCommentsAIHandler
     extends AbstractHandler
 {
     @Inject
-    ILog log;
-    @Inject
-    IAIContextProvider aiContextProvider;
-    @Inject
     IChat chat;
     @Inject
-    IUI ui;
-    @Inject
-    IContentProvider contentProvider;
-    @Inject
-    ICodePartsProvider codePartsProvider;
-    @Inject
-    ICodeParser codeParser;
+    ICodeTools codeTools;
 
     public BaseGenerateDocCommentsAIHandler()
     {
@@ -60,160 +32,16 @@ public class BaseGenerateDocCommentsAIHandler
     @Override
     public boolean isEnabled()
     {
-        return getCommentingMethod().isPresent();
+        return codeTools.getTargetMethod().isPresent();
     }
 
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        getCommentingMethod().ifPresent(commentingMethod -> {
-            selectComment(commentingMethod);
-            chat.generateDocComments(commentingMethod.ctx, commentingMethod.methodText);
+        codeTools.getTargetMethod().ifPresent(targetMethod -> {
+            codeTools.selectMethodComment(targetMethod);
+            chat.generateDocComments(targetMethod.ctx, targetMethod.methodText);
         });
         return null;
-    }
-
-    private void selectComment(CommentingMethod commentingMethod)
-    {
-        try
-        {
-            var start = commentingMethod.commentRange.getStart();
-            var length = commentingMethod.commentRange.getLength();
-            var widget = commentingMethod.sourceViewer.getTextWidget();
-            var fullText = widget.getText();
-            int dif = 0, newLength = 0;
-            if (length == 0)
-            {
-                if (start > 0)
-                {
-                    var text = fullText.substring(start);
-                    dif = text.length() - text.stripLeading().length();
-                }
-            }
-            else
-            {
-                var text = fullText.substring(start, start + length).stripLeading();
-                newLength = text.length();
-                dif = length - newLength;
-            }
-
-            if (dif < 0)
-            {
-                dif = 0;
-            }
-
-            commentingMethod.sourceViewer.setSelectedRange(start + dif, newLength);
-        }
-        catch (Exception error)
-        {
-            log.logError(error);
-        }
-    }
-
-    private Optional<CommentingMethod> getCommentingMethod()
-    {
-        return ui.getTextWidget()
-            .flatMap(textWidget -> ui.getSourceViewer(textWidget))
-            .flatMap(
-                sourceViewer -> getCommentingMethod(contentProvider.get(sourceViewer.getTextWidget()), sourceViewer));
-    }
-
-    private Optional<CommentingMethod> getCommentingMethod(Content content, SourceViewer sourceViewer)
-    {
-        var optionalRootNode = codeParser.parse(sourceViewer).map(parseResult -> parseResult.getRootNode());
-        if (optionalRootNode.isEmpty())
-        {
-            return Optional.empty();
-        }
-
-        var rootNode = optionalRootNode.get();
-        var cursorNode = NodeModelUtils.findLeafNodeAtOffset(rootNode, content.offset);
-        if (cursorNode == null)
-        {
-            return Optional.empty();
-        }
-
-        var commentingMethod = new CommentingMethod();
-        Integer methodId = null;
-        Range range = Range.EMPTY;
-        var methods = new HashSet<Integer>();
-        CodePart lastMethodPart = null;
-        var partsIterator = codePartsProvider.getParts(rootNode).iterator();
-        while (partsIterator.hasNext())
-        {
-            var part = partsIterator.next();
-            var curMethodId = part.getMethodId();
-            if (curMethodId == null)
-            {
-                continue;
-            }
-
-            lastMethodPart = part;
-
-            if (methods.add(curMethodId))
-            {
-                if (methodId != null)
-                {
-                    break;
-                }
-
-                range = part.getRange();
-                if (part.getLocation() == CursorLocation.Comment)
-                {
-                    commentingMethod.commentRange = range;
-                }
-                else
-                {
-                    commentingMethod.commentRange = new Range(range.getStart(), 0);
-                }
-            }
-            else
-            {
-                range = range.merge(part.getRange());
-            }
-
-            if (part.getLocation() == CursorLocation.Comment)
-            {
-                commentingMethod.commentRange = range;
-            }
-
-            if (range.contains(content.offset))
-            {
-                methodId = curMethodId;
-            }
-        }
-
-        if (methodId == null && lastMethodPart != null)
-        {
-            methodId = lastMethodPart.getMethodId();
-        }
-
-        if (methodId == null || commentingMethod.commentRange == null)
-        {
-            return Optional.empty();
-        }
-
-        commentingMethod.methodText =
-            content.text.substring(range.getStart(), range.getStart() + range.getLength() - 1);
-        if (commentingMethod.methodText.isBlank())
-        {
-            return Optional.empty();
-        }
-
-        commentingMethod.sourceViewer = sourceViewer;
-        var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
-        aiContextProvider.create(target, CancellationTokens.NONE).ifPresent(ctx -> commentingMethod.ctx = ctx);
-        return Optional.of(commentingMethod);
-    }
-
-    private class CommentingMethod
-    {
-        public AIContext ctx;
-
-        public SourceViewer sourceViewer;
-
-        public String methodText;
-
-        public Range commentRange;
     }
 }
