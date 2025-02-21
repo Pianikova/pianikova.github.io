@@ -497,7 +497,13 @@ class CodeCompletionViewModel
         var context = session.getContext();
         var widget = context.getWidget();
         var hint = session.getHint();
+        if (hint.isBlank())
+        {
+            return;
+        }
+
         var hintLines = hint.getText(HintPart.LINES).getText();
+
         // var aiContext = context.getAiContext();
         // var source = aiContext.getSource();
         // var sourceOffset = aiContext.getSourceOffset();
