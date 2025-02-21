@@ -170,7 +170,8 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
             }
 
             apply(charText, offset);
-            break;        }
+            break;
+        }
 
         if (isFinishingChar())
         {
@@ -203,6 +204,16 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     private void rollback(Text text, int offset)
     {
         var hintText = text.getText();
+        if (hintText.length() == 1)
+        {
+            var lineSeparator = settings.getLineSeparator();
+            if (lineSeparator.length() > 1 && hintText.charAt(0) == lineSeparator.charAt(lineSeparator.length() - 1))
+            {
+                hintText = lineSeparator;
+                hint.rollback();
+            }
+        }
+
         var length = hintText.length();
         if (length == 0)
         {

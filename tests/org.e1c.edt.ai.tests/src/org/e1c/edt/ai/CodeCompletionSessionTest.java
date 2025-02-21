@@ -420,6 +420,40 @@ public class CodeCompletionSessionTest
     }
 
     @Test
+    public void shouldRollbackNewLineWhenWindows()
+    {
+        // Given
+        var session = createInstance(false);
+        var newLine = new Text("\n", source); //$NON-NLS-1$
+        when(settings.getLineSeparator()).thenReturn("\r\n"); //$NON-NLS-1$
+        when(hint.rollback()).thenReturn(newLine);
+
+        // When
+        var actualAction = session.rollback(37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).rollback(35, 2);
+    }
+
+    @Test
+    public void shouldRollbackNewLineWhenLinux()
+    {
+        // Given
+        var session = createInstance(false);
+        var newLine = new Text("\n", source); //$NON-NLS-1$
+        when(settings.getLineSeparator()).thenReturn("\n"); //$NON-NLS-1$
+        when(hint.rollback()).thenReturn(newLine);
+
+        // When
+        var actualAction = session.rollback(37);
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).rollback(36, 1);
+    }
+
+    @Test
     public void shouldSetIsAcceptingDuringRollback()
     {
         // Given
