@@ -10,6 +10,7 @@ import org.e1c.edt.ai.AIContextKind;
 import org.e1c.edt.ai.ICancellationToken;
 import org.e1c.edt.ai.IContextInitializer;
 import org.e1c.edt.ai.IProjectIdProvider;
+import org.e1c.edt.ai.assistent.model.ProjectId;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.custom.StyledText;
@@ -20,6 +21,7 @@ import com.google.inject.Inject;
 class AIContextProvider
     implements IAIContextProvider
 {
+    private static final ProjectId DefaultProjectId = new ProjectId(""); //$NON-NLS-1$
     private final IUI ui;
     private final IContentProvider contentProvider;
     private final IContextInitializer contextInitializer;
@@ -56,30 +58,26 @@ class AIContextProvider
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
         var file = ui.getEditor(sourceViewer).map(editor -> editor.getEditorInput().getAdapter(IFile.class));
-        if (file.isEmpty())
+        String path = ""; //$NON-NLS-1$
+        ProjectId projectId = DefaultProjectId;
+        if (!file.isEmpty())
         {
-            return Optional.empty();
+            path = file.get().getFullPath().makeRelative().toPortableString();
+            projectId = projectIdProvider.getProjectId(path, cancellationToken).orElse(DefaultProjectId);
         }
 
-        var path = file.get().getFullPath().makeRelative().toPortableString();
         var content = contentProvider.get(textWidget, textWidget.getCaretOffset());
         AIContext aiContext;
-        var optionalProjectId = projectIdProvider.getProjectId(path, cancellationToken);
-        if (optionalProjectId.isEmpty())
-        {
-            return Optional.empty();
-        }
-
         if (target.isPreferSelection() && !content.selectionText.isBlank())
         {
             aiContext =
-                new AIContext(optionalProjectId.get(), AIContextKind.ActiveEditor, textWidget.getCaretOffset(), content.text,
+                new AIContext(projectId, AIContextKind.ActiveEditor, textWidget.getCaretOffset(), content.text,
                     content.offset, path,
                 content.selectionText, content.selectionOffset);
         }
         else
         {
-            aiContext = new AIContext(optionalProjectId.get(), AIContextKind.ActiveEditor, textWidget.getCaretOffset(),
+            aiContext = new AIContext(projectId, AIContextKind.ActiveEditor, textWidget.getCaretOffset(),
                 content.text,
                 content.offset, path,
                 content.text,

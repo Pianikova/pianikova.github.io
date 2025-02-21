@@ -189,7 +189,11 @@ class CodeAssistant
         var clien = clientBuilder.create().build();
         var asyncRequest = clien.sendAsync(request, BodyHandlers.ofLines());
         var stopwatch = Stopwatch.createStarted();
-        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> asyncRequest.cancel(true));
+        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> {
+            stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+            asyncRequest.cancel(true);
+        });
+
         stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
         asyncRequest
             .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
@@ -205,6 +209,7 @@ class CodeAssistant
                         log.error(error, cancellationToken.toString());
                     }
 
+                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
                     attachToken.close();
                     observer.onCompleted();
                 }
@@ -237,7 +242,11 @@ class CodeAssistant
     private void processStream(CompletableFuture<HttpResponse<Stream<String>>> asyncRequest, Stream<String> stream,
         IObserver<Completion> observer, ICancellationToken cancellationToken)
     {
-        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> asyncRequest.cancel(true));
+        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> {
+            stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+            asyncRequest.cancel(true);
+        });
+
         try (attachToken)
         {
             responseStreamProcessor.process(stream, observer, cancellationToken);
