@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Optional;
 
 import org.e1c.edt.ai.AIContext;
+import org.e1c.edt.ai.AIContextKind;
 import org.e1c.edt.ai.CancellationTokens;
 import org.e1c.edt.ai.CodePart;
 import org.e1c.edt.ai.ICodePartsProvider;
@@ -65,6 +66,7 @@ public class CodeTools
             .orElse(false);
     }
 
+    @Override
     public Optional<AIContext> createContextForTarget()
     {
         return ui.getTextWidget()
@@ -75,10 +77,10 @@ public class CodeTools
                         CancellationTokens.NONE);
                 }
 
-                var targetMethod = getTargetMethod();
-                if (targetMethod.isPresent())
+                var optionalTargetMethod = getTargetMethod();
+                if (optionalTargetMethod.isPresent())
                 {
-                    return Optional.of(targetMethod.get().ctx);
+                    return Optional.of(optionalTargetMethod.get().ctx);
                 }
 
                 return Optional.empty();
@@ -195,7 +197,13 @@ public class CodeTools
 
         commentingMethod.sourceViewer = sourceViewer;
         var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
-        aiContextProvider.create(target, CancellationTokens.NONE).ifPresent(ctx -> commentingMethod.ctx = ctx);
+        var lastRange = range;
+        aiContextProvider.create(target, CancellationTokens.NONE).ifPresent(ctx -> {
+            var methodCtx = new AIContext(ctx.getProjectId(), AIContextKind.ActiveEditor, lastRange.getStart(),
+                ctx.getSource(), lastRange.getStart(), ctx.getPath(), commentingMethod.methodText, 0, "", //$NON-NLS-1$
+                commentingMethod.methodText, lastRange.getStart(), lastRange.getStart() + lastRange.getLength());
+            commentingMethod.ctx = methodCtx;
+        });
         return Optional.of(commentingMethod);
     }
 
