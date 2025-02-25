@@ -32,7 +32,7 @@ public class BaseGenerateDocCommentsAIHandler
     @Override
     public boolean isEnabled()
     {
-        return codeTools.getTargetMethod().isPresent();
+        return codeTools.hasTarget();
     }
 
     @Override
