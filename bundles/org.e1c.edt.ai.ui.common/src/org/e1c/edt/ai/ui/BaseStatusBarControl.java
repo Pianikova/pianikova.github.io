@@ -109,7 +109,7 @@ public class BaseStatusBarControl
     @Override
     public void onStateChange(AIState state)
     {
-        dispatcher.dispatch(() -> changeState(state));
+        dispatcher.dispatchAsync(() -> changeState(state));
     }
 
     private void changeState(AIState state)

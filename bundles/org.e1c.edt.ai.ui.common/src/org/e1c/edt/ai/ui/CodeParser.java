@@ -42,7 +42,7 @@ class CodeParser
     }
 
     @Override
-    public synchronized Optional<IParseResult> parse(SourceViewer sourceViewer, Duration timeout)
+    public Optional<IParseResult> parse(SourceViewer sourceViewer, Duration timeout)
     {
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(timeout);
