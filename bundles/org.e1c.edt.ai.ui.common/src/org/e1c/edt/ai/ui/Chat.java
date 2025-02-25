@@ -359,10 +359,10 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void wink(AISettings settings, int attempts)
     {
-        do
+        var webEngine = getEgine();
+        while (true)
         {
             dispatcher.dispatch(() -> {
-                var webEngine = getEgine();
                 try
                 {
                     var window = (JSObject)webEngine.executeScript("window");
@@ -375,7 +375,6 @@ public class Chat implements IChat, IChatDialog
                         log.trace(AI_CHAT, () -> "wink script: " + winkScript);
                         webEngine.executeScript(winkScript);
                         log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
-                        Thread.sleep(uiSettings.getMinRequestDelay().toMillis());
                     }
                     else
                     {
@@ -387,8 +386,21 @@ public class Chat implements IChat, IChatDialog
                     log.logError(error);
                 }
             });
+
+            if (handler.isReady() || attempts-- == 0)
+            {
+                break;
+            }
+
+            try
+            {
+                Thread.sleep(uiSettings.getMinRequestDelay().toMillis());
+            }
+            catch (Throwable error)
+            {
+                //
+            }
         }
-        while (!handler.isReady() && attempts-- >= 0);
     }
 
     private WebEngine getEgine()

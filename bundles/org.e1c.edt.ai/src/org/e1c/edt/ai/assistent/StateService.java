@@ -106,9 +106,9 @@ class StateService
                         })
                         .join();
                 }
-                catch (Throwable e)
+                catch (Throwable error)
                 {
-                    return Status.error(e.getMessage());
+                    log.logError(error);
                 }
 
                 return Status.OK_STATUS;

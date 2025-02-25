@@ -203,14 +203,8 @@ class EntityInfo
     {
         var curResourceSetProvider =
             aiContext.getKind() == AIContextKind.ActiveEditor ? activeEditorResourceSetProvider : baseResourceSetProvider;
-        var timeout = uiSettings.getTimeout();
-        return dispatcher
-            .dispatch(
-                () -> fillInternal(aiContext, localContext, globalContext, curResourceSetProvider, statistics,
-                    actionFilter,
-                    cancellationToken),
-                timeout)
-            .orElse(timeout);
+        return fillInternal(aiContext, localContext, globalContext, curResourceSetProvider, statistics, actionFilter,
+            cancellationToken);
     }
 
     private Duration fillInternal(AIContext aiContext, LocalContext localContext, GlobalContext globalContext,

@@ -22,6 +22,7 @@ import org.e1c.edt.ai.ui.IContentProvider;
 import org.e1c.edt.ai.ui.ITextWidgetInfoProvider;
 import org.e1c.edt.ai.ui.IUI;
 import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com.google.common.base.Preconditions;
@@ -208,13 +209,18 @@ public class CodeTools
     }
 
     @Override
-    public void selectMethodComment(TargetMethod commentingMethod)
+    public void selectMethodComment(TargetMethod targetMethod)
+    {
+        getRange(targetMethod.sourceViewer.getTextWidget(), targetMethod.commentRange)
+            .ifPresent(range -> targetMethod.sourceViewer.setSelectedRange(range.getStart(), range.getLength()));
+    }
+
+    private Optional<Range> getRange(StyledText widget, Range range)
     {
         try
         {
-            var start = commentingMethod.commentRange.getStart();
-            var length = commentingMethod.commentRange.getLength();
-            var widget = commentingMethod.sourceViewer.getTextWidget();
+            var start = range.getStart();
+            var length = range.getLength();
             var fullText = widget.getText();
             int dif = 0, newLength = 0;
             if (length == 0)
@@ -237,11 +243,13 @@ public class CodeTools
                 dif = 0;
             }
 
-            commentingMethod.sourceViewer.setSelectedRange(start + dif, newLength);
+            return Optional.of(new Range(start + dif, newLength));
         }
         catch (Exception error)
         {
             log.logError(error);
         }
+
+        return Optional.empty();
     }
 }
