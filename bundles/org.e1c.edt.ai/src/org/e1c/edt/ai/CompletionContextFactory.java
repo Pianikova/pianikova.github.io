@@ -28,7 +28,7 @@ class CompletionContextFactory
     private final IUISettings uiSettings;
     private final ISettingsProvider settingsProvider;
     private final Cache<String, GlobalContextUpdate> enitiCache =
-        CacheBuilder.newBuilder().weakKeys().maximumSize(1024).expireAfterWrite(15, TimeUnit.MINUTES).build();
+        CacheBuilder.newBuilder().maximumSize(1024).expireAfterWrite(15, TimeUnit.MINUTES).build();
 
     @Inject
     public CompletionContextFactory(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
