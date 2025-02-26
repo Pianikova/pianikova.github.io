@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2024, 1C
+ * Copyright (C) 2025, 1C
  */
 package org.e1c.edt.ai;
 
@@ -45,7 +45,8 @@ public class HashToolsTest
         var allBytes = new ArrayList<Byte>();
         var stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
         var buffer = CharBuffer.allocate(size);
-        var hashTools = new HashTools(MessageDigestProvider);
+        var hashTools = new HashTools(MessageDigestProvider);
+
         // When
         try
         {

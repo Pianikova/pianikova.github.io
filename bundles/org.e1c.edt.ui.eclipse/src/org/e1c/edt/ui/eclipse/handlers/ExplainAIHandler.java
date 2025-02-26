@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, 1C
+ * Copyright (C) 2025, 1C
  */
 package org.e1c.edt.ui.eclipse.handlers;
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2024, 1C
+ * Copyright (C) 2025, 1C
  */
 package org.e1c.edt.ai.ui;
 
@@ -275,7 +275,8 @@ class HintPainter
                 gc.drawPolyline(new int[] {
                     labelX, otherLinesY + otherLinesH,
 
-                    otherLinesX + otherLinesW, otherLinesY + otherLinesH,
+                    otherLinesX + otherLinesW, otherLinesY + otherLinesH,
+
                     otherLinesX + otherLinesW, otherLinesY + otherLinesH + labelH,
 
                     labelX, otherLinesY + otherLinesH + labelH,
