@@ -6,9 +6,9 @@ package org.e1c.edt.ai.ui;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import org.e1c.edt.ai.AIContext;
 import org.e1c.edt.ai.ActionState;
@@ -19,6 +19,7 @@ import org.e1c.edt.ai.ISettingsProvider;
 import org.e1c.edt.ai.IStatistics;
 import org.e1c.edt.ai.IUISettings;
 import org.e1c.edt.ai.assistent.IParametersService;
+import org.e1c.edt.ai.assistent.ISessionService;
 import org.e1c.edt.ai.assistent.ISettingsTracker;
 import org.e1c.edt.ai.assistent.IStateService;
 import org.e1c.edt.ai.assistent.model.ChatContext;
@@ -65,6 +66,7 @@ public class Chat implements IChat, IChatDialog
     private final IContextEntities contextEntities;
     private final IJavaScript javaScript;
     private final IStateService stateService;
+    private final ISessionService sessionService;
     private WebView webView;
     private URL lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
@@ -72,7 +74,8 @@ public class Chat implements IChat, IChatDialog
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
-        IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService)
+        IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
+        ISessionService sessionService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -84,6 +87,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(javaScript);
         Preconditions.checkNotNull(stateService);
+        Preconditions.checkNotNull(sessionService);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -95,6 +99,7 @@ public class Chat implements IChat, IChatDialog
         this.contextEntities = contextEntities;
         this.javaScript = javaScript;
         this.stateService = stateService;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -136,7 +141,7 @@ public class Chat implements IChat, IChatDialog
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
-        chatInJob(settings -> {
+        chatInJob(ctx, (settings, optionalSessionId) -> {
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try {
                 String scriptLanguage = null;
@@ -161,20 +166,26 @@ public class Chat implements IChat, IChatDialog
                 script.append("(`");
                 script.append(javaScript.escape(subject));
                 script.append("`, `");
+
                 if (scriptLanguage != null)
                 {
                     script.append(scriptLanguage);
                 }
+
                 script.append("`, `");
                 if (programingLanguage != null)
                 {
                     script.append(programingLanguage);
                 }
+
                 if (details != null)
                 {
                     script.append("`, `");
                     script.append(javaScript.escape(details));
                 }
+
+                // TODO: use optionalSessionId
+
                 script.append("`)");
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
@@ -218,7 +229,7 @@ public class Chat implements IChat, IChatDialog
             }
         });
 
-        chatInJob(settings -> {
+        chatInJob(null, (settings, optionalSessionId) -> {
             /**/ });
     }
 
@@ -272,7 +283,7 @@ public class Chat implements IChat, IChatDialog
             .getAbsolutePath());
     }
 
-    private void chatInJob(Consumer<AISettings> chatAction)
+    private void chatInJob(AIContext ctx, IChatAction chatAction)
     {
         ensureWebViewExists();
         new Job(Messages.ChatInteractionJobName)
@@ -280,19 +291,24 @@ public class Chat implements IChat, IChatDialog
             @Override
             protected IStatus run(IProgressMonitor monitor)
             {
-                return chat(chatAction);
+                return chat(ctx, chatAction);
             }
         }.schedule();
     }
 
     @SuppressWarnings("nls")
-    private synchronized IStatus chat(Consumer<AISettings> chatAction)
+    private synchronized IStatus chat(AIContext ctx, IChatAction chatAction)
     {
         try
         {
             var parameters = parametersService.getParametersAsync().get();
-            var settings = settingsProvider.getSettings();
+            if (parameters.isEmpty())
+            {
+                return Status.OK_STATUS;
+            }
+
             var chatUrl = parameters.get().chatUrl;
+            var settings = settingsProvider.getSettings();
             var reset = settingsTracker.register(IParametersService.class.getName(), settings);
             if (lastChatUrl != chatUrl || reset)
             {
@@ -305,7 +321,9 @@ public class Chat implements IChat, IChatDialog
 
             initializing.get();
             wink(settings, 32);
-            chatAction.accept(settings);
+            var sessionId =
+                sessionService.getSessionAsync(ctx.getProjectId()).get().map(session -> session.sessionId);
+            chatAction.run(settings, sessionId);
         }
         catch (Throwable error)
         {
@@ -408,5 +426,10 @@ public class Chat implements IChat, IChatDialog
         var webEngine = webView.getEngine();
         webEngine.setJavaScriptEnabled(true);
         return webEngine;
+    }
+
+    private interface IChatAction
+    {
+        void run(AISettings settings, Optional<String> sessionId);
     }
 }
