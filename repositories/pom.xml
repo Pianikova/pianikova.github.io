@@ -29,16 +29,4 @@
     <sonar.skip>true</sonar.skip>
   </properties>
 
-  <profiles>
-    <profile>
-      <id>SDK</id>
-
-      <modules>
-        <module>org.e1c.edt.ai.repository.sdk</module>
-      </modules>
-
-    </profile>
-
-  </profiles>
-
 </project>
