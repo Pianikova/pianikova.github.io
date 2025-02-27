@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <feature
       id="org.e1c.edt.semantic.feature"
-      label="Semantic Endpoint"
+      label="1C:Workmate Semantic"
       version="1.0.0.qualifier"
-      provider-name="Semantic Endpoint"
+      provider-name="1C-Soft LLC"
       license-feature="com._1c.g5.edt.license"
       license-feature-version="2.0.0.v1">
-
-   <description>
-      %description
-   </description>
 
    <copyright>
       %copyright

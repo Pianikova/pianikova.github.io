@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2023, 1C-Soft LLC
+ * Copyright (C) 2025, 1C-Soft LLC
  */
 package org.e1c.edt.ai.ui;
 

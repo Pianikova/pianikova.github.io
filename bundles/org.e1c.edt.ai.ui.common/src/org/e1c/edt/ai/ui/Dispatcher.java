@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2024, 1C
+ * Copyright (C) 2025, 1C
  */
 package org.e1c.edt.ai.ui;
 
@@ -179,7 +179,8 @@ class Dispatcher
                 try
                 {
                     сonsumer.accept(new JobContext(monitor, cancellationTokenSource));
-                    return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;                }
+                    return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
+                }
                 catch (Throwable error)
                 {
                     return Status.error(jobName, error);

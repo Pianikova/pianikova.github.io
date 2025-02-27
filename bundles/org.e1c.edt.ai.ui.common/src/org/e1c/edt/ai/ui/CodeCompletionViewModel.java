@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2024, 1C
+ * Copyright (C) 2025, 1C
  */
 package org.e1c.edt.ai.ui;
 
@@ -261,7 +261,8 @@ class CodeCompletionViewModel
                     ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
                         jobCtx.CancellationTokenSource);
                 });
-        }, null);
+        }, null);
+
         this.lastJob = job;
         job.schedule(delayBeforeAsk.toMillis());
     }
