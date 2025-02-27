@@ -4,15 +4,11 @@
  -->
 <feature
       id="org.e1c.edt.ai.feature"
-      label="%featureName"
+      label="1C:Workmate"
       version="1.0.0.qualifier"
-      provider-name="%providerName"
+      provider-name="1C-Soft LLC"
       license-feature="com._1c.g5.edt.license"
       license-feature-version="2.0.0.v1">
-
-   <description>
-      %description
-   </description>
 
    <copyright>
       %copyright
