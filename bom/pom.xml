@@ -7,7 +7,7 @@
   xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.e1c.edt.ai</groupId>
+  <groupId>com.e1c.edt.ai</groupId>
   <artifactId>bom</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
@@ -55,7 +55,7 @@
             <includePackedArtifacts>false</includePackedArtifacts>
             <target>
               <artifact>
-                <groupId>org.e1c.edt.ai</groupId>
+                <groupId>com.e1c.edt.ai</groupId>
                 <artifactId>default</artifactId>
                 <version>1.0.0-SNAPSHOT</version>
               </artifact>

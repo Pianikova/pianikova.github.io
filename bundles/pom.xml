@@ -6,7 +6,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.e1c.edt.ai</groupId>
+    <groupId>com.e1c.edt.ai</groupId>
     <artifactId>parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
@@ -16,12 +16,12 @@
   <name>Bundles</name>
   
   <modules>   
-    <module>org.e1c.edt.ai</module>
-    <module>org.e1c.edt.ai.ui.common</module>
-    <module>org.e1c.edt.ai.context</module>
-    <module>org.e1c.edt.ai.ui</module>
-    <module>org.e1c.edt.semantic</module>
-    <module>org.e1c.edt.ui.eclipse</module>
+    <module>com.e1c.edt.ai</module>
+    <module>com.e1c.edt.ai.ui.common</module>
+    <module>com.e1c.edt.ai.context</module>
+    <module>com.e1c.edt.ai.ui</module>
+    <module>com.e1c.edt.semantic</module>
+    <module>com.e1c.edt.ui.eclipse</module>
   </modules>
   
   <build>

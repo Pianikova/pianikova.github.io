@@ -8,7 +8,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.e1c.edt.ai</groupId>
+    <groupId>com.e1c.edt.ai</groupId>
     <artifactId>parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>

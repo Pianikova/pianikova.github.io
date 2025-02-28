@@ -1,0 +1,22 @@
+/**
+ * Copyright (C) 2025, 1C
+ */
+package com.e1c.edt.ai.context.DTO;
+
+import java.util.List;
+
+import com.google.gson.annotations.SerializedName;
+
+public class CommentType
+{
+    public List<CommentDescriptionPart> description;
+
+    @SerializedName("source_description")
+    public List<CommentDescriptionPart> sourceDescription;
+
+    @SerializedName("source_extension_description")
+    public List<CommentDescriptionPart> sourceExtensionDescription;
+
+    @SerializedName("type_definitions")
+    public List<CommentTypeDefinition> typeDefinitions;
+}

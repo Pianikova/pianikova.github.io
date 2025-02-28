@@ -1,0 +1,37 @@
+/**
+ * Copyright (C) 2025, 1C
+ */
+package com.e1c.edt.ai;
+
+public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
+    extends ISource
+{
+    ICodeCompletionSession<TContext> initiaize(TContext context, IHintHistory history, int codeCompletionLinesCount,
+        boolean singleWordMode);
+
+    void setId(String uuid);
+
+    void setMethod(CodeMethod method);
+
+    TContext getContext();
+
+    IHint getHint();
+
+    boolean isAccepting();
+
+    boolean isDone();
+
+    boolean isСompleted();
+
+    CodeCompletionAction finish();
+
+    CodeCompletionAction accept(HintPart part, int offset);
+
+    CodeCompletionAction acceptChar(int offset, char ch);
+
+    CodeCompletionAction rollback(int offset);
+
+    void complete();
+
+    void reset();
+}

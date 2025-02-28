@@ -13,5 +13,5 @@ target/
 .DS_Store
 .idea
 #Misc
-bundles/org.e1c.edt.ai.ui/.settings
-bundles/org.e1c.edt.ai/.settings
+bundles/com.e1c.edt.ai.ui/.settings
+bundles/com.e1c.edt.ai/.settings
