@@ -8,7 +8,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.e1c.edt.ai</groupId>
+    <groupId>com.e1c.edt.ai</groupId>
     <artifactId>parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
@@ -23,10 +23,10 @@
   </properties>
 
   <modules>    
-    <module>org.e1c.edt.ai.feature</module>
-    <module>org.e1c.edt.ai.common.feature</module>
-    <module>org.e1c.edt.semantic.feature</module>
-    <module>org.e1c.edt.ui.eclipse.feature</module>
+    <module>com.e1c.edt.ai.feature</module>
+    <module>com.e1c.edt.ai.common.feature</module>
+    <module>com.e1c.edt.semantic.feature</module>
+    <module>com.e1c.edt.ui.eclipse.feature</module>
   </modules>
 
 </project>

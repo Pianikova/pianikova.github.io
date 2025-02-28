@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+    <extension
+            point="org.eclipse.ui.views">
+        <category
+                id="com.e1c.edt.ai.ui"
+                name="%category.name"
+                parentCategory="org.eclipse.ui">
+        </category>
+        <view
+                category="com.e1c.edt.ai.ui"
+                class="com.e1c.edt.ui.eclipse.ChatView"
+                icon="icons/obj16/chatbot.png"
+                id="com.e1c.edt.ai.ui.views.ChatView"
+                inject="true"
+                name="%view.name">
+        </view>
+    </extension>
+
+    <extension
+            point="org.eclipse.ui.perspectiveExtensions">
+        <perspectiveExtension
+                targetID="*">
+            <view
+                    id="com.e1c.edt.ai.ui.views.ChatView"
+                    relationship="stack"
+                    relative="org.eclipse.ui.views.PropertySheet">
+            </view>
+        </perspectiveExtension>
+    </extension>
+
+    <extension
+            point="org.eclipse.ui.quickAccess">
+        <computer
+                class="com.e1c.edt.ui.eclipse.quickaccess.AskAIQuickAccessComputer"
+                name="%computer.name">
+        </computer>
+    </extension>
+
+    <extension
+            point="org.eclipse.ui.commands">
+        <category
+                id="com.e1c.edt.ai.ui.commands.category.ai"
+                name="%category.name">
+        </category>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.suggest.ai"
+                name="%command.name.suggest">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.accept.ai"
+                name="%command.name.accept">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.acceptpart.ai"
+                name="%command.name.acceptpart">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.acceptline.ai"
+                name="%command.name.acceptline">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.rollbackpart.ai"
+                name="%command.name.rollbackpart">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.stop.ai"
+                name="%command.name.stop">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.explain.ai"
+                name="%command.name.explain">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.criticise.ai"
+                name="%command.name.critic">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.fixcode.ai"
+                name="%command.name.fixcode">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.generatedoccomments.ai"
+                name="%command.name.generatedoccomments">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.feedback.ai"
+                name="%command.name.feedback">
+        </command>
+        <command
+                id="com.e1c.edt.ai.ui.inlinedAnnotations.ai"
+                name="Аннотации">
+        </command>
+    </extension>
+
+    <extension point="org.eclipse.ui.bindings">
+        <key sequence="Ctrl+Alt+Space"
+             commandId="com.e1c.edt.ai.ui.commands.suggest.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I E"
+             commandId="com.e1c.edt.ai.ui.commands.explain.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I R"
+             commandId="com.e1c.edt.ai.ui.commands.criticise.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I C"
+             commandId="com.e1c.edt.ai.ui.commands.fixcode.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I G"
+             commandId="com.e1c.edt.ai.ui.commands.generatedoccomments.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+            <key sequence="Alt+I F"
+             commandId="com.e1c.edt.ai.ui.commands.feedback.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Ctrl+Enter"
+             commandId="com.e1c.edt.ai.ui.commands.accept.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Tab"
+             commandId="com.e1c.edt.ai.ui.commands.acceptpart.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Backspace"
+             commandId="com.e1c.edt.ai.ui.commands.rollbackpart.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Ctrl+Alt+Enter"
+             commandId="com.e1c.edt.ai.ui.commands.acceptline.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="ESC"
+             commandId="com.e1c.edt.ai.ui.commands.stop.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+    </extension>
+
+    <extension
+            point="org.eclipse.ui.handlers">
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.ExplainAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.explain.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.CriticiseAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.criticise.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.FixCodeAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.fixcode.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.GenerateDocCommentsAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.generatedoccomments.ai">
+        </handler>     
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.FeedbackAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.feedback.ai">
+        </handler>
+
+    </extension>
+
+    <extension
+            point="org.eclipse.ui.menus">
+        <menuContribution
+                allPopups="false"
+                locationURI="popup:com.e1c.edt.ai.ui.groupMenu?after=additions">
+            <command
+                    commandId="com.e1c.edt.ai.ui.commands.explain.ai"
+                    icon="icons/obj16/explain.png"
+                    id="com.e1c.edt.ai.ui.commands.explain.ai.id"
+                    label="%command.label.explain"
+                    style="push">
+            </command>
+            <command
+                    commandId="com.e1c.edt.ai.ui.commands.criticise.ai"
+                    icon="icons/obj16/criticise.png"
+                    id="com.e1c.edt.ai.ui.commands.criticise.ai.id"
+                    label="%command.label.critic"
+                    style="push">
+            </command>
+            <command
+                    commandId="com.e1c.edt.ai.ui.commands.fixcode.ai"
+                    icon="icons/obj16/fixcode.png"
+                    id="com.e1c.edt.ai.ui.commands.fixcode.ai.id"
+                    label="%command.label.fixcode"
+                    style="push">
+            </command>
+            <command
+                    commandId="com.e1c.edt.ai.ui.commands.generatedoccomments.ai"
+                    icon="icons/obj16/generatedoccomments.png"
+                    id="com.e1c.edt.ai.ui.commands.generatedoccomments.ai.id"
+                    label="%command.label.generatedoccomments"
+                    style="push">
+            </command>
+            <command
+                    commandId="com.e1c.edt.ai.ui.commands.feedback.ai"
+                    icon="icons/obj16/feedback.png"
+                    id="com.e1c.edt.ai.ui.commands.feedback.ai.id"
+                    label="%command.label.feedback"
+                    style="push">
+            </command>
+        </menuContribution>
+        <menuContribution
+                allPopups="false"
+                locationURI="popup:#BslEditorContext?endof=group.open">
+            <menu
+                    icon="icons/obj16/ai.png"
+                    id="com.e1c.edt.ai.ui.groupMenu"
+                    label="%menu.label">
+                <separator
+                        name="groupMenuSeparator">
+                </separator>
+            </menu>
+        </menuContribution>
+        <menuContribution
+                allPopups="false"
+                locationURI="popup:org.eclipse.ui.popup.any">
+            <menu
+                  icon="icons/obj16/ai.png"
+                  id="com.e1c.edt.ai.ui.groupMenu"
+                  label="%menu.label">
+                <separator
+                        name="groupMenuSeparator">
+                </separator>
+            </menu>
+        </menuContribution>
+        <menuContribution
+            locationURI="toolbar:org.eclipse.ui.trim.status">
+         <toolbar
+               id="com.e1c.edt.ai.ui.statusBar">
+            <control
+                  class="com.e1c.edt.ui.eclipse.StatusBarControl"
+                  id="com.e1c.edt.ai.ui.status">
+            </control>
+         </toolbar>
+      </menuContribution>
+        
+    </extension>
+    
+    <extension
+            point="org.eclipse.ui.startup">
+        <startup
+                class="com.e1c.edt.ui.eclipse.PluginStartup">
+        </startup>
+    </extension>
+    
+    <extension
+            point="org.eclipse.ui.preferencePages">
+        <page
+                class="com.e1c.edt.ai.ui.preferences.ClientAIPreferencePage"
+                id="com.e1c.edt.ai.ui.clientPrefs"
+                name="%page.name">
+        </page>
+    </extension>
+
+    <extension
+            point="org.eclipse.core.runtime.preferences">
+        <initializer
+                class="com.e1c.edt.ui.eclipse.preferences.ClientAIPreferencePageInitializer">
+        </initializer>
+    </extension>
+    
+    <extension
+         point="org.eclipse.e4.ui.css.swt.theme">
+      <stylesheet
+            uri="css/dark/edt-dark_preferencestyle.css">
+         <themeid
+               refid="org.eclipse.e4.ui.css.theme.e4_dark"></themeid>
+      </stylesheet>
+   </extension>
+
+</plugin>

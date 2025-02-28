@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="com.e1c.edt.ai.feature">
+      <category name="com.e1c.edt.ai.category"/>
+   </feature>
+   <category-def name="com.e1c.edt.ai.category" label="AI"/>
+</site>

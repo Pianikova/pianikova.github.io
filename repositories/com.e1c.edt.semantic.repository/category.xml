@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="com.e1c.edt.semantic.feature">
+      <category name="com.e1c.edt.semantic.category"/>
+   </feature>
+   <category-def name="com.e1c.edt.semantic.category" label="Semantic Endpoint"/>
+</site>

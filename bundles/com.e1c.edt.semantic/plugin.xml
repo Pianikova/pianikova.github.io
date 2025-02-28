@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.commands">
+      <category
+            id="com.e1c.edt.semantic.commands.category"
+            name="Semantic Endpoint">
+      </category>
+      <command
+            categoryId="com.e1c.edt.semantic.commands.category"
+            name="Activate/Deactivate"
+            id="com.e1c.edt.semantic.commands.activateCommand">
+      </command>
+   </extension>
+   <extension
+         point="org.eclipse.ui.handlers">
+      <handler
+            class="com.e1c.edt.semantic.ActivateHandler"
+            commandId="com.e1c.edt.semantic.commands.activateCommand">
+      </handler>
+   </extension>
+   <extension
+         point="org.eclipse.ui.bindings">
+      <key
+            commandId="com.e1c.edt.semantic.commands.activateCommand"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            contextId="org.eclipse.ui.contexts.window"
+            sequence="M1+6">
+      </key>
+   </extension>
+   <extension
+         point="org.eclipse.ui.menus">
+      <menuContribution
+            locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+         <menu
+               id="com.e1c.edt.semantic.menus.semanticEndpointMenu"
+               label="Semantic Endpoint"
+               mnemonic="S">
+            <command
+                  commandId="com.e1c.edt.semantic.commands.activateCommand"
+                  id="com.e1c.edt.semantic.menus.activateCommand"
+                  mnemonic="A">
+            </command>
+         </menu>
+      </menuContribution>
+   </extension>
+   <extension
+         point="org.eclipse.ui.startup">
+      <startup
+            class="com.e1c.edt.semantic.Startup">
+      </startup>
+   </extension>
+
+</plugin>

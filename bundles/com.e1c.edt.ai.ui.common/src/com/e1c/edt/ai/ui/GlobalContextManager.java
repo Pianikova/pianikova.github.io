@@ -1,0 +1,78 @@
+/**
+ * Copyright (C) 2025, 1C
+ */
+package com.e1c.edt.ai.ui;
+
+import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IGlobalContextManager;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.assistent.model.Completion;
+import org.eclipse.core.runtime.jobs.Job;
+
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
+class GlobalContextManager implements IGlobalContextManager
+{
+    private final ILog log;
+    private final IDispatcher dispatcher;
+    private final IGlobalContextSync globalContextSync;
+    private final IGlobalContextTracker globalContextTracker;
+    private Job currentJob;
+
+    @Inject
+    public GlobalContextManager(ILog log, IDispatcher dispatcher, IGlobalContextSync globalContextSync,
+        IGlobalContextTracker globalContextTracker)
+    {
+        Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(globalContextSync);
+        Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(globalContextTracker);
+        this.log = log;
+        this.dispatcher = dispatcher;
+        this.globalContextSync = globalContextSync;
+        this.globalContextTracker = globalContextTracker;
+    }
+
+    @Override
+    public void update(AIContext aiCtx, ICancellationToken cancellationToken)
+    {
+        var job =
+            dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
+                jobCtx -> {
+                    try
+                    {
+                        globalContextSync.sync(aiCtx, 3, jobCtx.CancellationTokenSource).get();
+                        globalContextTracker.track(aiCtx);
+                    }
+                    catch (Exception error)
+                    {
+                        log.logError(error);
+                    }
+                }, cancellationToken);
+        runJob(job);
+    }
+
+    @Override
+    public void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken)
+    {
+        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.sync(aiCtx,
+            completion.unknownValues, completion.unknownKeys, 3, jobCtx.CancellationTokenSource), cancellationToken);
+        runJob(job);
+    }
+
+    private synchronized void runJob(Job job)
+    {
+        if (currentJob != null)
+        {
+            currentJob.cancel();
+            currentJob = null;
+        }
+
+        currentJob = job;
+        currentJob.setPriority(Job.DECORATE);
+        job.schedule();
+    }
+}

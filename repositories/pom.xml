@@ -8,7 +8,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.e1c.edt.ai</groupId>
+    <groupId>com.e1c.edt.ai</groupId>
     <artifactId>parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
   </parent>
@@ -19,9 +19,9 @@
   <name>Update Sites</name>
 
   <modules>
-    <module>org.e1c.edt.ai.repository</module>
-    <module>org.e1c.edt.semantic.repository</module>
-    <module>org.e1c.edt.ui.eclipse.repository</module>
+    <module>com.e1c.edt.ai.repository</module>
+    <module>com.e1c.edt.semantic.repository</module>
+    <module>com.e1c.edt.ui.eclipse.repository</module>
   </modules>
 
   <properties>
