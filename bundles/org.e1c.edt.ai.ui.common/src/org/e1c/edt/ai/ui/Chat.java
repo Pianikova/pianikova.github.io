@@ -141,7 +141,7 @@ public class Chat implements IChat, IChatDialog
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
-        chatInJob(ctx, (settings, optionalSessionId) -> {
+        chatInJob(Optional.ofNullable(ctx), (settings, optionalSessionId) -> {
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try {
                 String scriptLanguage = null;
@@ -229,7 +229,7 @@ public class Chat implements IChat, IChatDialog
             }
         });
 
-        chatInJob(null, (settings, optionalSessionId) -> {
+        chatInJob(Optional.empty(), (settings, optionalSessionId) -> {
             /**/ });
     }
 
@@ -283,7 +283,7 @@ public class Chat implements IChat, IChatDialog
             .getAbsolutePath());
     }
 
-    private void chatInJob(AIContext ctx, IChatAction chatAction)
+    private void chatInJob(Optional<AIContext> ctx, IChatAction chatAction)
     {
         ensureWebViewExists();
         new Job(Messages.ChatInteractionJobName)
@@ -297,7 +297,7 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private synchronized IStatus chat(AIContext ctx, IChatAction chatAction)
+    private synchronized IStatus chat(Optional<AIContext> ctx, IChatAction chatAction)
     {
         try
         {
@@ -321,8 +321,12 @@ public class Chat implements IChat, IChatDialog
 
             initializing.get();
             wink(settings, 32);
-            var sessionId =
-                sessionService.getSessionAsync(ctx.getProjectId()).get().map(session -> session.sessionId);
+            Optional<String> sessionId = Optional.empty();
+            if (ctx.isPresent())
+            {
+                sessionId = sessionService.getSessionAsync(ctx.get().getProjectId()).get().map(i -> i.sessionId);
+            }
+
             chatAction.run(settings, sessionId);
         }
         catch (Throwable error)
