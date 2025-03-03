@@ -7,8 +7,8 @@
       label="1C:Workmate UI"
       version="1.0.0.qualifier"
       provider-name="1C-Soft LLC"
-      license-feature="com._1c.g5.edt.license"
-      license-feature-version="2.1.0.v1">
+      license-feature="com.e1c.edt.ai.license"
+      license-feature-version="1.0.0.v1">
 
    <copyright>
       %copyright

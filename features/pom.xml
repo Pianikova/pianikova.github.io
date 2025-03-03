@@ -23,6 +23,7 @@
   </properties>
 
   <modules>    
+    <module>com.e1c.edt.ai.license</module>
     <module>com.e1c.edt.ai.feature</module>
     <module>com.e1c.edt.ai.common.feature</module>
     <module>com.e1c.edt.semantic.feature</module>
