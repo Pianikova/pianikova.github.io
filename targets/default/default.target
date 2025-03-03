@@ -4,12 +4,6 @@
 -->
 <?pde version="3.8"?><target name="1C:EDT Ruby Platform" sequenceNumber="1">
 <locations>
-<!-- EDT -->
-<!-- 1C Licenses -->
-<location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="slicer" includeSource="true" type="InstallableUnit">
-<unit id="com._1c.g5.edt.license.feature.group" version="2.1.0.v1"/>
-<repository id="artifactory" location="http://boreas.dept07/artifactory/p2-release-public/g5/nightly/license/edt/2.1.0.v1/"/>
-</location>
 <location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="slicer" includeSource="true" type="InstallableUnit">
 <unit id="com._1c.g5.aef.feature.feature.group" version="0.0.0"/>
 <unit id="com._1c.g5.commons.feature.group" version="0.0.0"/>
