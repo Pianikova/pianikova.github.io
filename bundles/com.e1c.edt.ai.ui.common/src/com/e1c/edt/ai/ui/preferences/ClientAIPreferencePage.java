@@ -3,19 +3,35 @@
  */
 package com.e1c.edt.ai.ui.preferences;
 
-import com.e1c.edt.ai.ISettingsStore;
-import com.e1c.edt.ai.IValidator;
-import com.e1c.edt.ai.ui.AIUICommonModule;
-import com.e1c.edt.ai.ui.BaseActivator;
+import java.awt.Desktop;
+import java.net.URI;
+
+import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.StringFieldEditor;
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Link;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
+import com.e1c.edt.ai.IDefaultSettings;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettingsStore;
+import com.e1c.edt.ai.IValidator;
+import com.e1c.edt.ai.ui.AIUICommonModule;
+import com.e1c.edt.ai.ui.BaseActivator;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
@@ -30,6 +46,10 @@ public class ClientAIPreferencePage
     extends FieldEditorPreferencePage
     implements IWorkbenchPreferencePage
 {
+    private final Image SPLASH = createImage("icons/obj16/splash.png"); //$NON-NLS-1$
+
+    @Inject
+    ILog log;
     @Inject
     @Named(AIUICommonModule.URL)
     IValidator<String> urlValidator;
@@ -38,6 +58,8 @@ public class ClientAIPreferencePage
     IValidator<String> parametersValidator;
     @Inject
     IPreferenceStore preferenceStore;
+    @Inject
+    IDefaultSettings defaultSettings;
 
     public ClientAIPreferencePage()
     {
@@ -90,5 +112,51 @@ public class ClientAIPreferencePage
     public void init(IWorkbench workbench)
     {
         // Empty stub
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    protected Control createContents(Composite parent)
+    {
+        var control = super.createContents(parent);
+
+        var pluginLink = new Link(parent, SWT.NONE);
+        pluginLink
+            .setText("<a href=\"" + defaultSettings.getHomePage() + "\">" + defaultSettings.getHomePage() + "</a>");
+        pluginLink.addSelectionListener(new SelectionAdapter()
+        {
+            @Override
+            public void widgetSelected(SelectionEvent e)
+            {
+                try
+                {
+                    var url = defaultSettings.getHomePage(); //
+                    if (Desktop.isDesktopSupported())
+                    {
+                        var desktop = Desktop.getDesktop();
+                        if (desktop.isSupported(Desktop.Action.BROWSE))
+                        {
+                            desktop.browse(new URI(url));
+                        }
+                    }
+                }
+                catch (Exception error)
+                {
+                    log.logError(error);
+                }
+            }
+        });
+
+        var iconLabel = new Label(parent, SWT.NONE);
+        iconLabel.setImage(SPLASH);
+
+        return control;
+    }
+
+    private static Image createImage(String path)
+    {
+        var descriptor = ImageDescriptor
+            .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
+        return descriptor.createImage();
     }
 }
