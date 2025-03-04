@@ -6,4 +6,6 @@ package com.e1c.edt.ai;
 public interface IDefaultSettings
 {
     String getUrl();
+
+    String getHomePage();
 }

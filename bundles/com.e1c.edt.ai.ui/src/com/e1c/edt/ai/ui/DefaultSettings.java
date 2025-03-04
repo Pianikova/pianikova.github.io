@@ -13,4 +13,10 @@ class DefaultSettings
     {
         return "https://code.1c.ai/api/v1/"; //$NON-NLS-1$
     }
+
+    @Override
+    public String getHomePage()
+    {
+        return "https://code.1c.ai/"; //$NON-NLS-1$
+    }
 }
