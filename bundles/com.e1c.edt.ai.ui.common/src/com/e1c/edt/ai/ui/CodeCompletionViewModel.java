@@ -190,7 +190,8 @@ class CodeCompletionViewModel
                 Optional.ofNullable(textWidget.getHorizontalBar())
                     .ifPresent(scroll -> scroll.addSelectionListener(this));
                 Optional.ofNullable(textWidget.getVerticalBar()).ifPresent(scroll -> scroll.addSelectionListener(this));
-                sourceViewer.getContentAssistantFacade().addCompletionListener(assistantListener);
+                Optional.ofNullable(sourceViewer.getContentAssistantFacade())
+                    .ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
                 textWidget.redraw();
                 // Warm up
                 aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
@@ -303,13 +304,14 @@ class CodeCompletionViewModel
                     .ifPresent(scroll -> scroll.removeSelectionListener(this));
                 Optional.ofNullable(textWidget.getVerticalBar())
                     .ifPresent(scroll -> scroll.removeSelectionListener(this));
+                Optional.ofNullable(sourceViewer.getContentAssistantFacade())
+                    .ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
                 textWidget.removePaintListener(hintPainter);
                 textWidget.removeCaretListener(this);
                 textWidget.removeVerifyKeyListener(this);
                 textWidget.removeTraverseListener(this);
                 textWidget.removeModifyListener(this);
                 textWidget.removeMouseListener(this);
-                sourceViewer.getContentAssistantFacade().removeCompletionListener(assistantListener);
                 textWidget.redraw();
             }
 
