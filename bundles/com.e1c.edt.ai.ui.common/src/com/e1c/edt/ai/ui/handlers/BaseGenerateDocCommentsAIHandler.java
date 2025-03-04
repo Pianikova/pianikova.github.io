@@ -3,12 +3,12 @@
  */
 package com.e1c.edt.ai.ui.handlers;
 
-import com.e1c.edt.ai.ui.BaseActivator;
-import com.e1c.edt.ai.ui.IChat;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
+import com.e1c.edt.ai.ui.BaseActivator;
+import com.e1c.edt.ai.ui.IChat;
 import com.google.inject.Inject;
 
 /**
@@ -38,10 +38,18 @@ public class BaseGenerateDocCommentsAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        codeTools.getTargetMethod().ifPresent(targetMethod -> {
+        var optionalTargetMethod = codeTools.getTargetMethod();
+        if (optionalTargetMethod.isPresent())
+        {
+            var targetMethod = optionalTargetMethod.get();
             codeTools.selectMethodComment(targetMethod);
             chat.generateDocComments(targetMethod.ctx, targetMethod.methodText);
-        });
+        }
+        else
+        {
+            codeTools.createContextForTarget().ifPresent(ctx -> chat.generateDocComments(ctx, ctx.getText()));
+        }
+
         return null;
     }
 }

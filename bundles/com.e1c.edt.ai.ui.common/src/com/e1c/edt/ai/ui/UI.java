@@ -5,26 +5,15 @@ package com.e1c.edt.ai.ui;
 
 import java.lang.reflect.Field;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Optional;
-import java.util.Spliterator;
-import java.util.Spliterators;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
-import com.e1c.edt.ai.Closeables;
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
-import org.eclipse.swt.widgets.Canvas;
-import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.Layout;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
@@ -34,6 +23,9 @@ import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
+import com.e1c.edt.ai.Closeables;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IUISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -154,10 +146,32 @@ class UI
             return Optional.empty();
         }
 
-        return getAncestors(textWidget).filter(i -> i instanceof Canvas)
-            .map(i -> getSourceViewer(((Canvas)i).getLayout()))
-            .filter(i -> i != null)
-            .findFirst();
+        for (var workbench : PlatformUI.getWorkbench().getWorkbenchWindows())
+        {
+            for (var page : workbench.getPages())
+            {
+                for (var editorRef : page.getEditorReferences())
+                {
+                    var editor = editorRef.getEditor(false);
+                    if (editor == null)
+                    {
+                        continue;
+                    }
+
+                    var curSourceViewer = editor.getAdapter(ITextOperationTarget.class);
+                    if (curSourceViewer instanceof SourceViewer)
+                    {
+                        var surceViewer = (SourceViewer)curSourceViewer;
+                        if (surceViewer.getTextWidget() == textWidget)
+                        {
+                            return Optional.of(surceViewer);
+                        }
+                    }
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Override
@@ -176,7 +190,7 @@ class UI
                     }
 
                     var curSourceViewer = editor.getAdapter(ITextOperationTarget.class);
-                    if (sourceViewer == curSourceViewer)
+                    if (curSourceViewer != null && sourceViewer == curSourceViewer)
                     {
                         return Optional.of(editor);
                     }
@@ -212,75 +226,8 @@ class UI
             && widget.getVisible() && getSourceViewer(widget).isPresent();
     }
 
-    private SourceViewer getSourceViewer(Layout layout)
-    {
-        Preconditions.checkNotNull(layout);
-        var sourceViewerField = sourceViewerFields.computeIfAbsent(layout.getClass(), key -> {
-            var fields = layout.getClass().getDeclaredFields();
-            for (var field : fields)
-            {
-                if ("this$0".equals(field.getName())) //$NON-NLS-1$
-                {
-                    field.setAccessible(true);
-                    return Optional.of(field);
-                }
-            }
-
-            return Optional.empty();
-        });
-
-        return sourceViewerField.map(field -> {
-            try
-            {
-                var outer = field.get(layout);
-                if (outer != null && outer instanceof SourceViewer)
-                {
-                    return (SourceViewer)outer;
-                }
-            }
-            catch (Exception e)
-            {
-                //
-            }
-
-            return null;
-        }).orElse(null);
-    }
-
-    private Stream<Composite> getAncestors(Composite current)
-    {
-        Preconditions.checkNotNull(current);
-        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(new AncestorsIterator(current),
-            Spliterator.IMMUTABLE & Spliterator.DISTINCT & Spliterator.NONNULL), false);
-    }
-
     private Optional<IWorkbenchPage> getActivePage()
     {
         return Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage());
-    }
-
-    private class AncestorsIterator
-        implements Iterator<Composite>
-    {
-        private Composite current;
-
-        public AncestorsIterator(Composite current)
-        {
-            Preconditions.checkNotNull(current);
-            this.current = current;
-        }
-
-        @Override
-        public boolean hasNext()
-        {
-            return current.getParent() != null;
-        }
-
-        @Override
-        public Composite next()
-        {
-            current = current.getParent();
-            return current;
-        }
     }
 }

@@ -3,10 +3,10 @@
  */
 package com.e1c.edt.ai.ui;
 
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.assistent.IStateService;
 import org.eclipse.ui.IStartup;
 
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.assistent.IStateService;
 import com.google.inject.Inject;
 
 /**
