@@ -153,6 +153,13 @@ public class ClientAIPreferencePage
         return control;
     }
 
+    @Override
+    public void dispose()
+    {
+        SPLASH.dispose();
+        super.dispose();
+    }
+
     private static Image createImage(String path)
     {
         var descriptor = ImageDescriptor
