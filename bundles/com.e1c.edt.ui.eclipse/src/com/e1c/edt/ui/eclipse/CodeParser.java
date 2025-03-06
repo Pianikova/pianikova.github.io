@@ -3,15 +3,15 @@
  */
 package com.e1c.edt.ui.eclipse;
 
-import java.time.Duration;
 import java.util.Optional;
 
-import com.e1c.edt.ai.ui.ICodeParser;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.INode;
 import org.eclipse.xtext.parser.IParseResult;
+
+import com.e1c.edt.ai.ui.ICodeParser;
 
 class CodeParser
     implements ICodeParser
@@ -20,12 +20,6 @@ class CodeParser
 
     @Override
     public Optional<IParseResult> parse(SourceViewer sourceViewer)
-    {
-        return Optional.of(EmptyParseResult);
-    }
-
-    @Override
-    public Optional<IParseResult> parse(SourceViewer sourceViewer, Duration timeout)
     {
         return Optional.of(EmptyParseResult);
     }

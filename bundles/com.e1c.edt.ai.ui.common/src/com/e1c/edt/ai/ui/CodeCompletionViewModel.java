@@ -104,9 +104,8 @@ class CodeCompletionViewModel
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
     private AssistantListener assistantListener = new AssistantListener();
-    private CodeMethod lastCurrentMethod;
+    private Optional<CodeMethod> prevMethod = Optional.empty();
     private boolean isTextModifed;
-    private boolean isSimpleMode;
 
     @Inject
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
@@ -180,8 +179,7 @@ class CodeCompletionViewModel
             reset();
             lastSession = null;
             isTextModifed = false;
-            isSimpleMode = false;
-            lastCurrentMethod = null;
+            prevMethod = Optional.empty();
             sourceViewer = ui.getSourceViewer(textWidget).orElse(null);
             if (sourceViewer != null && !textWidget.isDisposed())
             {
@@ -302,7 +300,7 @@ class CodeCompletionViewModel
                 // ignored
             }
 
-            methodChanged(lastCurrentMethod, null);
+            methodChanged(prevMethod.orElse(null), null);
             reset();
             if (!textWidget.isDisposed())
             {
@@ -323,7 +321,7 @@ class CodeCompletionViewModel
 
             lastSession = null;
             isTextModifed = false;
-            lastCurrentMethod = null;
+            prevMethod = null;
         }
     }
 
@@ -438,19 +436,7 @@ class CodeCompletionViewModel
 
     private Optional<CodeMethod> getCurrentMethod(int offset)
     {
-        if (isSimpleMode)
-        {
-            return Optional.empty();
-        }
-
-        var ast = codeParser.parse(sourceViewer);
-        isSimpleMode = ast.isEmpty();
-        if (isSimpleMode)
-        {
-            log.warning("Microfreeze UI", () -> "Switching to simplified mode"); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-
-        return ast.flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
+        return codeParser.parse(sourceViewer).flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
     }
 
     private void cancel()
@@ -622,6 +608,7 @@ class CodeCompletionViewModel
                 update(session);
                 if (session.isDone() && !session.getContext().isSingleWordMode())
                 {
+                    commit(session);
                     askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
                         uiSettings.getCodeCompletionLinesCount(), null);
                 }
@@ -639,7 +626,6 @@ class CodeCompletionViewModel
             break;
 
         case RESET:
-            commit(session);
             reset();
             var isSingleWordMode = dispatcher.dispatch(() -> session.getContext().isSingleWordMode()).orElse(false);
             event.doit = !isSingleWordMode;
@@ -672,25 +658,25 @@ class CodeCompletionViewModel
         }
     }
 
+    @SuppressWarnings("nls")
     @Override
     public void caretMoved(CaretEvent event)
     {
         // sync
-        getCurrentMethod(textWidget.getCaretOffset())
-            .ifPresent(newMethod -> {
-                if (lastCurrentMethod == null || newMethod.hashCode() != lastCurrentMethod.hashCode()
-                    || !newMethod.equals(lastCurrentMethod))
-                {
-                    try
-                    {
-                        methodChanged(lastCurrentMethod, newMethod);
-                    }
-                    finally
-                    {
-                        lastCurrentMethod = newMethod;
-                    }
-                }
-            });
+        var newMethod = getCurrentMethod(textWidget.getCaretOffset());
+        var newMethodName = newMethod.map(i -> i.getUniqueName()).orElse("");
+        var prevMethodName = prevMethod.map(i -> i.getUniqueName()).orElse("");
+        try
+        {
+            if (!newMethodName.equals(prevMethodName))
+            {
+                methodChanged(prevMethod.orElse(null), newMethod.orElse(null));
+            }
+        }
+        finally
+        {
+            prevMethod = newMethod;
+        }
 
         synchronized (lockObject)
         {
