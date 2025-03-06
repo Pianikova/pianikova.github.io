@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai;
 
+import java.util.Optional;
+
 class Sources
 {
     public static final ISource UNKNOWN = new UnknownSource();
@@ -10,7 +12,7 @@ class Sources
     private static class UnknownSource
         implements ISource
     {
-        private CodeMethod method = new CodeMethod("", 0, 0); //$NON-NLS-1$
+        private CodeMethod method = new CodeMethod("", 0, 0, Optional.empty()); //$NON-NLS-1$
 
         @Override
         public String getId()

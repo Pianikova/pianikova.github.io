@@ -46,6 +46,7 @@ import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.ICodeCompletionActionHandler;
 import com.e1c.edt.ai.ICodeCompletionContext;
 import com.e1c.edt.ai.ICodeCompletionSession;
+import com.e1c.edt.ai.ICodeCompletionStatistics;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.IHintHistory;
@@ -93,6 +94,7 @@ class CodeCompletionViewModel
     private final IProposalsProvider proposalsProvider;
     private final ICodeParser codeParser;
     private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
+    private final ICodeCompletionStatistics statistics;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private SourceViewer sourceViewer;
@@ -103,7 +105,7 @@ class CodeCompletionViewModel
     private boolean isTraversed;
     private AssistantListener assistantListener = new AssistantListener();
     private CodeMethod lastCurrentMethod;
-    private boolean isModifed;
+    private boolean isTextModifed;
     private boolean isSimpleMode;
 
     @Inject
@@ -117,7 +119,8 @@ class CodeCompletionViewModel
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
-        IProposalsProvider proposalsProvider, ICodeParser codeParser, ITextWidgetInfoUpdater textWidgetInfoUpdater)
+        IProposalsProvider proposalsProvider, ICodeParser codeParser, ITextWidgetInfoUpdater textWidgetInfoUpdater,
+        ICodeCompletionStatistics statistics)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -142,6 +145,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(proposalsProvider);
         Preconditions.checkNotNull(codeParser);
         Preconditions.checkNotNull(textWidgetInfoUpdater);
+        Preconditions.checkNotNull(statistics);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -164,6 +168,7 @@ class CodeCompletionViewModel
         this.proposalsProvider = proposalsProvider;
         this.codeParser = codeParser;
         this.textWidgetInfoUpdater = textWidgetInfoUpdater;
+        this.statistics = statistics;
     }
 
     @Override
@@ -174,7 +179,7 @@ class CodeCompletionViewModel
             this.textWidget = textWidget;
             reset();
             lastSession = null;
-            isModifed = false;
+            isTextModifed = false;
             isSimpleMode = false;
             lastCurrentMethod = null;
             sourceViewer = ui.getSourceViewer(textWidget).orElse(null);
@@ -297,6 +302,7 @@ class CodeCompletionViewModel
                 // ignored
             }
 
+            methodChanged(lastCurrentMethod, null);
             reset();
             if (!textWidget.isDisposed())
             {
@@ -316,7 +322,7 @@ class CodeCompletionViewModel
             }
 
             lastSession = null;
-            isModifed = false;
+            isTextModifed = false;
             lastCurrentMethod = null;
         }
     }
@@ -671,14 +677,17 @@ class CodeCompletionViewModel
     {
         // sync
         getCurrentMethod(textWidget.getCaretOffset())
-            .ifPresent(currentMethod -> {
-                if (!currentMethod.equals(lastCurrentMethod))
+            .ifPresent(newMethod -> {
+                if (lastCurrentMethod == null || newMethod.hashCode() != lastCurrentMethod.hashCode()
+                    || !newMethod.equals(lastCurrentMethod))
                 {
-                    if (isModifed)
+                    try
                     {
-                        lastCurrentMethod = currentMethod;
-                        isModifed = false;
-                        methodChanged(currentMethod);
+                        methodChanged(lastCurrentMethod, newMethod);
+                    }
+                    finally
+                    {
+                        lastCurrentMethod = newMethod;
                     }
                 }
             });
@@ -697,7 +706,7 @@ class CodeCompletionViewModel
     @Override
     public void modifyText(ModifyEvent e)
     {
-        isModifed = true;
+        isTextModifed = true;
     }
 
     @Override
@@ -724,10 +733,34 @@ class CodeCompletionViewModel
         reset();
     }
 
-    private void methodChanged(CodeMethod method)
+    @SuppressWarnings("nls")
+    private void methodChanged(CodeMethod prevMethod, CodeMethod newMethod)
     {
-        aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-            .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+        log.trace("Method was changed",
+            () -> {
+                var message = new StringBuilder();
+                message.append("from: ");
+                message.append(prevMethod != null ? prevMethod.getUniqueName() : "null");
+                message.append(System.lineSeparator());
+                message.append("to: "); //$NON-NLS-1$
+                message.append(newMethod != null ? newMethod.getUniqueName() : "null");
+                return message.toString();
+            });
+
+        if (isTextModifed && newMethod != null)
+        {
+            isTextModifed = false;
+            aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
+                .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+        }
+
+        if (prevMethod != null)
+        {
+            statistics.addMethod(prevMethod, null,
+                i -> prevMethod.getParseResult()
+                    .flatMap(parseResult -> codeProvider.getMethodBody(parseResult, prevMethod))
+                    .orElse(""));
+        }
     }
 
     private void commit(ICodeCompletionSession<CodeCompletionContext> session)

@@ -17,7 +17,6 @@ import com.e1c.edt.ai.ui.handlers.FixDialog;
 import com.e1c.edt.ai.ui.handlers.ICodeTools;
 import com.e1c.edt.ai.ui.handlers.IFixDialog;
 import com.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
@@ -50,8 +49,6 @@ public class AIUICommonModule
         bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });
         bind(new TypeLiteral<ICodeCompletionActionHandler<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionActionHandler<CodeCompletionContext>>() { /**/ });
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
-        bind(IFinalCodeFeedbackViewModel.class).to(FinalCodeFeedbackViewModel.class).in(Singleton.class);
-        bind(IFeedbackPainter.class).to(FeedbackPainter.class);
         bind(IFeedbackDialog.class).to(FeedbackDialog.class);
         bind(IIssueFeedbackViewModel.class).to(IssueFeedbackViewModel.class);
         bind(IFixDialog.class).to(FixDialog.class).in(Singleton.class);
