@@ -93,7 +93,7 @@ public class CodeTools
     {
         return ui.getTextWidget()
             .flatMap(textWidget -> ui.getSourceViewer(textWidget))
-            .flatMap(sourceViewer -> getCommentingMethod(sourceViewer));
+            .flatMap(sourceViewer -> getTargetMethod(sourceViewer));
     }
 
     private Optional<Content> getContent(SourceViewer sourceViewer)
@@ -102,7 +102,7 @@ public class CodeTools
             .map(offset -> contentProvider.get(sourceViewer.getTextWidget(), offset));
     }
 
-    private Optional<TargetMethod> getCommentingMethod(SourceViewer sourceViewer)
+    private Optional<TargetMethod> getTargetMethod(SourceViewer sourceViewer)
     {
         var optionalContent = getContent(sourceViewer);
         if (optionalContent.isEmpty())

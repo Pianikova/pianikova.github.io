@@ -10,13 +10,13 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.e1c.edt.ai.assistent.IFeedbackService;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class CodeCompletionStatistics
     implements ICodeCompletionContext, ICodeCompletionStatistics
 {
+    private final ILog log;
     private final IFeedbackService feedbackService;
     private final ICursorInfoProvider cursorInfoProvider;
     private final ArrayList<Text> code = new ArrayList<>();
@@ -25,10 +25,12 @@ public class CodeCompletionStatistics
     private Integer startOffset;
 
     @Inject
-    public CodeCompletionStatistics(IFeedbackService feedbackService, ICursorInfoProvider cursorInfoProvider)
+    public CodeCompletionStatistics(ILog log, IFeedbackService feedbackService, ICursorInfoProvider cursorInfoProvider)
     {
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(feedbackService);
         Preconditions.checkNotNull(cursorInfoProvider);
+        this.log = log;
         this.feedbackService = feedbackService;
         this.cursorInfoProvider = cursorInfoProvider;
     }
@@ -108,7 +110,7 @@ public class CodeCompletionStatistics
             {
                 var source = text.getSource();
                 var sourceId = source.getId();
-                attchSourceIdToMethod(sourceId, source.getMethod());
+                attachSourceIdToMethod(sourceId, source.getMethod());
                 if (!sourceId.equals(lastSourceId))
                 {
                     if (sb.length() > 0)
@@ -148,12 +150,14 @@ public class CodeCompletionStatistics
         var sourceIds = methods.remove(method);
         if (sourceIds == null || sourceIds.isEmpty())
         {
+            log.trace("Statistics", () -> "Source ids are empty."); //$NON-NLS-1$ //$NON-NLS-2$
             return;
         }
 
         var body = methodBodyProvider.apply(state);
         if (body == null || body.isBlank())
         {
+            log.trace("Statistics", () -> "Method body is empty."); //$NON-NLS-1$ //$NON-NLS-2$
             return;
         }
 
@@ -169,8 +173,11 @@ public class CodeCompletionStatistics
         return Optional.ofNullable(lastAcceptedSourceId);
     }
 
-    private void attchSourceIdToMethod(String sourceId, CodeMethod method)
+    private void attachSourceIdToMethod(String sourceId, CodeMethod method)
     {
-        methods.computeIfAbsent(method, k -> new HashSet<>()).add(sourceId);
+        if (methods.computeIfAbsent(method, k -> new HashSet<>()).add(sourceId))
+        {
+            log.trace("Statistics", () -> "Add " + sourceId + " for " + method.getUniqueName()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        }
     }
 }

@@ -11,12 +11,14 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
+import org.junit.Test;
+
 import com.e1c.edt.ai.assistent.IFeedbackService;
 import com.e1c.edt.ai.assistent.model.CursorInfo;
-import org.junit.Test;
 
 public class CodeCompletionStatisticsTest
 {
+    private final ILog log = mock(ILog.class);
     private final IFeedbackService feedbackService = mock(IFeedbackService.class);
     private final ICursorInfoProvider cursorInfoProvider = mock(ICursorInfoProvider.class);
     private final ISource source0 = mock(ISource.class);
@@ -321,6 +323,6 @@ public class CodeCompletionStatisticsTest
 
     private CodeCompletionStatistics createInstance()
     {
-        return new CodeCompletionStatistics(feedbackService, cursorInfoProvider);
+        return new CodeCompletionStatistics(log, feedbackService, cursorInfoProvider);
     }
 }

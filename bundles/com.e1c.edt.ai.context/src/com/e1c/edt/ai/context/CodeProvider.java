@@ -5,13 +5,13 @@ package com.e1c.edt.ai.context;
 
 import java.util.Optional;
 
-import com.e1c.edt.ai.CodeMethod;
-import com.e1c.edt.ai.ICodeProvider;
 import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 import org.eclipse.xtext.parser.IParseResult;
 
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com.e1c.edt.ai.CodeMethod;
+import com.e1c.edt.ai.ICodeProvider;
 
 class CodeProvider
     implements ICodeProvider
@@ -51,7 +51,7 @@ class CodeProvider
         var methodNode = NodeModelUtils.getNode(method);
         var startOffest = methodNode.getTotalOffset();
         var endOffest = methodNode.getTotalEndOffset();
-        return Optional.of(new CodeMethod(method.getUniqueName(), startOffest, endOffest));
+        return Optional.of(new CodeMethod(method.getUniqueName(), startOffest, endOffest, Optional.of(parseResult)));
     }
 
     @Override
