@@ -699,25 +699,37 @@ class CodeCompletionViewModel
     @Override
     public void widgetSelected(SelectionEvent e)
     {
-        reset();
+        if (hintPainter.getOffset() != -1)
+        {
+            textWidget.redraw();
+        }
     }
 
     @Override
     public void widgetDefaultSelected(SelectionEvent e)
     {
-        reset();
+        if (hintPainter.getOffset() != -1)
+        {
+            textWidget.redraw();
+        }
     }
 
     @Override
     public void controlMoved(ControlEvent e)
     {
-        reset();
+        if (hintPainter.getOffset() != -1)
+        {
+            textWidget.redraw();
+        }
     }
 
     @Override
     public void controlResized(ControlEvent e)
     {
-        reset();
+        if (hintPainter.getOffset() != -1)
+        {
+            textWidget.redraw();
+        }
     }
 
     @SuppressWarnings("nls")
