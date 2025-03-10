@@ -247,11 +247,11 @@ class CodeCompletionViewModel
             () -> ""); //$NON-NLS-1$
         reset();
         askWithDelay(delay, delayBeforeShow, uiSettings.getMinRequestDelay(), uiSettings.getCodeCompletionLinesCount(),
-            null, true);
+            null, false);
     }
 
     private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow, Duration maxDuration,
-        int codeCompletionLinesCount, CompletionRequestProvider localContextProvider, boolean optionalResoponse)
+        int codeCompletionLinesCount, CompletionRequestProvider localContextProvider, boolean forced)
     {
         cancel();
         var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
@@ -261,7 +261,7 @@ class CodeCompletionViewModel
                     var proposals = proposalsProvider.getProposals(aiCtx, textWidget, jobCtx.CancellationTokenSource)
                         .orElseGet(() -> new ArrayList<>());
                     final var contextProvider =
-                        CreateContextProvider(localContextProvider, maxDuration, proposals, optionalResoponse);
+                        CreateContextProvider(localContextProvider, maxDuration, proposals, forced);
                     var newDelayBeforeShow = calculateDelay(startTime, delayBeforeShow);
                     ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
                         jobCtx.CancellationTokenSource);
@@ -276,15 +276,15 @@ class CodeCompletionViewModel
     {
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, uiSettings.getTimeout(), new ArrayList<>(), true), null);
+                ct -> CreateContextProvider(null, uiSettings.getTimeout(), new ArrayList<>(), false), null);
         warmupJob.schedule();
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
-        Duration maxDuration, List<String> proposals, boolean optionalResoponse)
+        Duration maxDuration, List<String> proposals, boolean forced)
     {
         return localContextProvider != null ? localContextProvider
-            : new CompletionRequestProvider(maxDuration, proposals, optionalResoponse);
+            : new CompletionRequestProvider(maxDuration, proposals, forced);
     }
 
     private void deactivate()
@@ -598,7 +598,7 @@ class CodeCompletionViewModel
         case SUGGEST:
             reset();
             askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
-                uiSettings.getCodeCompletionLinesCount(), null, false);
+                uiSettings.getCodeCompletionLinesCount(), null, true);
             event.doit = false;
             break;
 
@@ -611,7 +611,7 @@ class CodeCompletionViewModel
                 {
                     commit(session);
                     askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
-                        uiSettings.getCodeCompletionLinesCount(), null, true);
+                        uiSettings.getCodeCompletionLinesCount(), null, false);
                 }
 
                 event.doit = false;
@@ -811,7 +811,7 @@ class CodeCompletionViewModel
             reset();
             proposalsProvider.getProposal(textWidget.getText(), prop).ifPresent(proposalText -> {
                 proposal = proposalText;
-                askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, localContext, true);
+                askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, localContext, false);
             });
         }
     }
@@ -827,19 +827,19 @@ class CodeCompletionViewModel
     {
         private final Duration maxDuration;
         private final List<String> proposals;
-        private final boolean optionalResoponse;
+        private final boolean forced;
         private AIContext lastAiContext;
         private CompletionRequest lastRequest;
         private String originalPrefix;
 
-        public CompletionRequestProvider(Duration maxDuration, List<String> proposals, boolean optionalResoponse)
+        public CompletionRequestProvider(Duration maxDuration, List<String> proposals, boolean forced)
         {
             Preconditions.checkNotNull(maxDuration);
             Preconditions.checkNotNull(proposals);
-            Preconditions.checkNotNull(optionalResoponse);
+            Preconditions.checkNotNull(forced);
             this.maxDuration = maxDuration;
             this.proposals = proposals;
-            this.optionalResoponse = optionalResoponse;
+            this.forced = forced;
         }
 
         @Override
@@ -877,7 +877,7 @@ class CodeCompletionViewModel
             originalPrefix = lastRequest.localContext.prefix;
             lastRequest.localContext.prefix = originalPrefix + proposal;
             lastRequest.localContext.proposals = proposals;
-            lastRequest.localContext.optionalResponse = optionalResoponse;
+            lastRequest.localContext.forced = forced;
             return Optional.of(lastRequest);
         }
     }
