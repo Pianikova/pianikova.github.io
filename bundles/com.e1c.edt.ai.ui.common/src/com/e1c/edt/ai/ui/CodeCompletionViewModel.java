@@ -291,7 +291,8 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            codeCompletionContext.commit("", -1); //$NON-NLS-1$
+            commit(lastSession);
+
             try
             {
                 feedbackToken.close();
@@ -687,6 +688,7 @@ class CodeCompletionViewModel
             }
         }
 
+        commit(lastSession);
         reset();
     }
 
