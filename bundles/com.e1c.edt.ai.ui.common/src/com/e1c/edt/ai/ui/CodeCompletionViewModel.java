@@ -247,11 +247,11 @@ class CodeCompletionViewModel
             () -> ""); //$NON-NLS-1$
         reset();
         askWithDelay(delay, delayBeforeShow, uiSettings.getMinRequestDelay(), uiSettings.getCodeCompletionLinesCount(),
-            null);
+            null, true);
     }
 
     private void askWithDelay(Duration delayBeforeAsk, Duration delayBeforeShow, Duration maxDuration,
-        int codeCompletionLinesCount, CompletionRequestProvider localContextProvider)
+        int codeCompletionLinesCount, CompletionRequestProvider localContextProvider, boolean optionalResoponse)
     {
         cancel();
         var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
@@ -260,7 +260,8 @@ class CodeCompletionViewModel
                     var startTime = clock.now();
                     var proposals = proposalsProvider.getProposals(aiCtx, textWidget, jobCtx.CancellationTokenSource)
                         .orElseGet(() -> new ArrayList<>());
-                    final var contextProvider = CreateContextProvider(localContextProvider, maxDuration, proposals);
+                    final var contextProvider =
+                        CreateContextProvider(localContextProvider, maxDuration, proposals, optionalResoponse);
                     var newDelayBeforeShow = calculateDelay(startTime, delayBeforeShow);
                     ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
                         jobCtx.CancellationTokenSource);
@@ -275,15 +276,15 @@ class CodeCompletionViewModel
     {
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, uiSettings.getTimeout(), new ArrayList<>()), null);
+                ct -> CreateContextProvider(null, uiSettings.getTimeout(), new ArrayList<>(), true), null);
         warmupJob.schedule();
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
-        Duration maxDuration, List<String> proposals)
+        Duration maxDuration, List<String> proposals, boolean optionalResoponse)
     {
         return localContextProvider != null ? localContextProvider
-            : new CompletionRequestProvider(maxDuration, proposals);
+            : new CompletionRequestProvider(maxDuration, proposals, optionalResoponse);
     }
 
     private void deactivate()
@@ -597,7 +598,7 @@ class CodeCompletionViewModel
         case SUGGEST:
             reset();
             askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
-                uiSettings.getCodeCompletionLinesCount(), null);
+                uiSettings.getCodeCompletionLinesCount(), null, false);
             event.doit = false;
             break;
 
@@ -610,7 +611,7 @@ class CodeCompletionViewModel
                 {
                     commit(session);
                     askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
-                        uiSettings.getCodeCompletionLinesCount(), null);
+                        uiSettings.getCodeCompletionLinesCount(), null, true);
                 }
 
                 event.doit = false;
@@ -775,7 +776,7 @@ class CodeCompletionViewModel
         public void assistSessionStarted(ContentAssistEvent event)
         {
             reset();
-            localContext = new CompletionRequestProvider(uiSettings.getMinRequestDelay(), new ArrayList<>());
+            localContext = new CompletionRequestProvider(uiSettings.getMinRequestDelay(), new ArrayList<>(), false);
         }
 
         @Override
@@ -798,7 +799,7 @@ class CodeCompletionViewModel
             reset();
             proposalsProvider.getProposal(textWidget.getText(), prop).ifPresent(proposalText -> {
                 proposal = proposalText;
-                askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, localContext);
+                askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, localContext, true);
             });
         }
     }
@@ -814,16 +815,19 @@ class CodeCompletionViewModel
     {
         private final Duration maxDuration;
         private final List<String> proposals;
+        private final boolean optionalResoponse;
         private AIContext lastAiContext;
         private CompletionRequest lastRequest;
         private String originalPrefix;
 
-        public CompletionRequestProvider(Duration maxDuration, List<String> proposals)
+        public CompletionRequestProvider(Duration maxDuration, List<String> proposals, boolean optionalResoponse)
         {
             Preconditions.checkNotNull(maxDuration);
             Preconditions.checkNotNull(proposals);
+            Preconditions.checkNotNull(optionalResoponse);
             this.maxDuration = maxDuration;
             this.proposals = proposals;
+            this.optionalResoponse = optionalResoponse;
         }
 
         @Override
@@ -861,6 +865,7 @@ class CodeCompletionViewModel
             originalPrefix = lastRequest.localContext.prefix;
             lastRequest.localContext.prefix = originalPrefix + proposal;
             lastRequest.localContext.proposals = proposals;
+            lastRequest.localContext.optionalResponse = optionalResoponse;
             return Optional.of(lastRequest);
         }
     }
