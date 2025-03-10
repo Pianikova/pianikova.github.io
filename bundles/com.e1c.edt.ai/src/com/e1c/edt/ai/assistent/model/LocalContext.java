@@ -17,8 +17,7 @@ public class LocalContext
 
     public Integer offset;
 
-    @SerializedName("optional_response")
-    public boolean optionalResponse;
+    public boolean forced;
 
     @SerializedName("script_language")
     public String scriptLanguage;
