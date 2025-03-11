@@ -9,12 +9,20 @@ public class HintTextBuilder
     implements IHintTextBuilder
 {
     @Override
-    public String build(String text, int tabWidth, char lineFeedSing)
+    public String build(String linePrefix, String text, int tabWidth)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(tabWidth > 0);
         StringBuilder visibleChar = new StringBuilder(text.length());
-        var hasLine = false;
+        int tabCharCounter = 0;
+        for (var ch : linePrefix.toCharArray())
+        {
+            if (ch != '\t')
+            {
+                tabCharCounter++;
+            }
+        }
+
         for (var ch : text.toCharArray())
         {
             switch (ch)
@@ -22,33 +30,34 @@ public class HintTextBuilder
             case ' ':
             case '\u3000': // ideographic whitespace
                 visibleChar.append(' ');
+                tabCharCounter++;
                 break;
 
             case '\t':
-                for (int tab = 0; tab < tabWidth; tab++)
+                var cnt = tabWidth - tabCharCounter % tabWidth;
+                for (int tab = 0; tab < cnt; tab++)
                 {
                     visibleChar.append(' ');
                 }
 
+                tabCharCounter = 0;
                 break;
 
             case '\r':
+                tabCharCounter = 0;
                 break;
 
             case '\n':
-                hasLine = true;
                 visibleChar.append(ch);
+                tabCharCounter = 0;
                 break;
 
             default:
                 visibleChar.append(ch);
+                tabCharCounter++;
                 break;
             }
-        }
 
-        if (text.isEmpty() || hasLine)
-        {
-            visibleChar.append(lineFeedSing);
         }
 
         return visibleChar.toString();

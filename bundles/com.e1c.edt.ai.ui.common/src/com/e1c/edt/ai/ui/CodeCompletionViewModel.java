@@ -594,6 +594,7 @@ class CodeCompletionViewModel
         var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
         var action = handler.handle(session, actionToProcess, event.character, hintPainter.getOffset(),
             isContinuousCodeCompletion);
+        log.trace("AI action", () -> actionToProcess.toString() + '/' + action); //$NON-NLS-1$
         switch (action)
         {
         case SUGGEST:
@@ -639,6 +640,7 @@ class CodeCompletionViewModel
 
         case SKIP:
             commit(session);
+            reset();
             break;
 
         default:

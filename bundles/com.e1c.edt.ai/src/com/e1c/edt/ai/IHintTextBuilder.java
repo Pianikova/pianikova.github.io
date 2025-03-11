@@ -5,5 +5,5 @@ package com.e1c.edt.ai;
 
 public interface IHintTextBuilder
 {
-    String build(String text, int tabWidth, char lineFeedSing);
+    String build(String prefix, String text, int tabWidth);
 }
