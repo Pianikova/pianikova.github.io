@@ -9,8 +9,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.ILog;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
@@ -21,6 +19,11 @@ import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.resource.XtextResourceSet;
 import org.eclipse.xtext.util.LazyStringInputStream;
 
+import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.CodeMethod;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.ICodeProvider;
+import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -33,6 +36,8 @@ class SyntaxVaidator
     private final ILog log;
     private static final Map<String, String> PARSE_OPTIONS;
     private final Provider<XtextResourceSet> resourceSetProvider;
+    private final ICodeProvider codeProvider;
+    private final ICodeParser codeParser;
 
     static
     {
@@ -41,16 +46,62 @@ class SyntaxVaidator
     }
 
     @Inject
-    public SyntaxVaidator(ILog log, Provider<XtextResourceSet> resourceSetProvider)
+    public SyntaxVaidator(ILog log, Provider<XtextResourceSet> resourceSetProvider, ICodeProvider codeProvider,
+        ICodeParser codeParser)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(resourceSetProvider);
+        Preconditions.checkNotNull(codeParser);
+        Preconditions.checkNotNull(codeProvider);
         this.log = log;
         this.resourceSetProvider = resourceSetProvider;
+        this.codeProvider = codeProvider;
+        this.codeParser = codeParser;
     }
 
     @Override
-    public int getValidHintSize(String filePath, String code, String hint, int offset,
+    public String getValidHint(CodeMethod method, AIContext aiContext, String hintText,
+        ICancellationToken cancellationToken)
+    {
+        var code = aiContext.getSource().substring(method.getStartOffest(), method.getEndOffest());
+        var validCodeSize = getValidHintSize(aiContext.getPath(), code, hintText,
+            aiContext.getSourceOffset() - method.getStartOffest(),
+            cancellationToken);
+
+        var validHintLines = hintText.substring(0, validCodeSize);
+        log.trace("Syntax check " + cancellationToken, () -> { //$NON-NLS-1$
+            var message = new StringBuilder();
+            if (hintText.length() != validHintLines.length())
+            {
+                message.append("Original hint: ["); //$NON-NLS-1$
+                message.append(hintText);
+                message.append(']');
+                message.append(System.lineSeparator());
+                message.append(System.lineSeparator());
+
+                message.append("Valid hint:    ["); //$NON-NLS-1$
+                message.append(validHintLines);
+                message.append(']');
+                message.append(System.lineSeparator());
+                message.append(System.lineSeparator());
+            }
+            else
+            {
+                message.append("Hint is valid"); //$NON-NLS-1$
+                message.append(System.lineSeparator());
+                message.append(System.lineSeparator());
+            }
+
+            message.append("Method: "); //$NON-NLS-1$
+            message.append(method.getUniqueName());
+
+            return message.toString();
+        });
+
+        return validHintLines;
+    }
+
+    private int getValidHintSize(String filePath, String code, String hint, int offset,
         ICancellationToken cancellationToken)
     {
         var paseResult = parse(filePath, code, hint, offset);

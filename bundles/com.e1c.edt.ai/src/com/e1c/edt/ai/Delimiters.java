@@ -5,7 +5,7 @@ package com.e1c.edt.ai;
 
 import java.util.HashSet;
 
-class Delimiters
+public class Delimiters
 {
     private static final HashSet<Character> TextDelimiters;
 
