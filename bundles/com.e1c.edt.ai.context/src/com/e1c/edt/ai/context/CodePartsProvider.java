@@ -11,10 +11,6 @@ import java.util.Stack;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.e1c.edt.ai.CodePart;
-import com.e1c.edt.ai.ICodePartsProvider;
-import com.e1c.edt.ai.Range;
-import com.e1c.edt.ai.assistent.model.CursorLocation;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.AbstractElement;
 import org.eclipse.xtext.Alternatives;
@@ -29,6 +25,10 @@ import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com._1c.g5.v8.dt.bsl.model.Function;
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com.e1c.edt.ai.CodePart;
+import com.e1c.edt.ai.ICodePartsProvider;
+import com.e1c.edt.ai.Range;
+import com.e1c.edt.ai.assistent.model.CursorLocation;
 import com.google.common.base.Preconditions;
 
 class CodePartsProvider
@@ -37,6 +37,7 @@ class CodePartsProvider
     @Override
     public boolean isMethod(INode node)
     {
+        Preconditions.checkNotNull(node);
         var semantic = NodeModelUtils.findActualSemanticObjectFor(node);
         if (semantic == null)
         {

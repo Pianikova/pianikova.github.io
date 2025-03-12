@@ -3,10 +3,6 @@
  */
 package com.e1c.edt.ai.context;
 
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.StatisticsType;
 import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.bm.core.IBmObject;
@@ -37,6 +33,10 @@ import com._1c.g5.v8.dt.metadata.mdclass.InformationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.Report;
 import com._1c.g5.v8.dt.metadata.mdclass.ReportTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.Task;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IStatistics;
+import com.e1c.edt.ai.StatisticsType;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -133,7 +133,11 @@ class EntitiesWalker
 
                 var obj = contentsIterator.next();
                 var node = v8Model.getNode(obj);
-                visitor.visitNode(moduleInfo, obj, node);
+                if (node == null)
+                {
+                    continue;
+                }
+
                 if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
                     || obj instanceof Method)
                 {
