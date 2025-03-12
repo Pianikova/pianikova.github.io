@@ -9,7 +9,6 @@ import java.net.http.HttpResponse;
 
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ServiceState;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -94,8 +93,16 @@ class HttpLog
         {
             if (detailed)
             {
-                log.trace(createHeader("AI response", response.uri(), ref),
-                    () -> createTrace(response, stopwatch, statusCode));
+                if (stopwatch.elapsed().toMillis() < 1000)
+                {
+                    log.trace(createHeader("AI response", response.uri(), ref),
+                        () -> createTrace(response, stopwatch, statusCode));
+                }
+                else
+                {
+                    log.warning(createHeader("AI response", response.uri(), ref),
+                        () -> createTrace(response, stopwatch, statusCode));
+                }
             }
         }
 
