@@ -3,8 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import com.e1c.edt.ai.IHintTextBuilder;
-import com.e1c.edt.ai.IUISettings;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
@@ -12,6 +10,8 @@ import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 
+import com.e1c.edt.ai.IHintTextBuilder;
+import com.e1c.edt.ai.IUISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -123,9 +123,16 @@ class HintPainter
         }
 
         var text = getHintText();
+        var line = textWidget.getLineAtOffset(pinnedOffset);
+        var lineOffset = textWidget.getOffsetAtLine(line);
+        var prefix = lineOffset < pinnedOffset ? textWidget.getText(lineOffset, pinnedOffset - 1) : ""; //$NON-NLS-1$
         if (!isSingleWordMode || text.length() == 0)
         {
-            text = hintTextBuilder.build(text, uiSettings.getTabWidth(), CONTINUATION_SIGN);
+            text = hintTextBuilder.build(prefix, text, uiSettings.getTabWidth());
+            if (!isSingleWordMode)
+            {
+                text = text + CONTINUATION_SIGN;
+            }
         }
 
         var firstLineFinish = text.indexOf('\n');
@@ -141,7 +148,8 @@ class HintPainter
             firstLine = text;
         }
 
-        drawHint(event.gc, firstLine.startsWith(this.nextToken) ? this.nextToken : "", //$NON-NLS-1$
+        var token = hintTextBuilder.build(prefix, this.nextToken, uiSettings.getTabWidth());
+        drawHint(event.gc, firstLine.startsWith(token) ? token : "", //$NON-NLS-1$
             firstLine, otherLines);
     }
 
@@ -158,17 +166,17 @@ class HintPainter
         var font = textWidget.getFont();
         var fontData = font.getFontData()[0];
         fontData.setStyle(SWT.ITALIC);
-        var italicFont = new Font(font.getDevice(), fontData);
+        var hintFont = new Font(font.getDevice(), fontData);
         fontData.setStyle(SWT.ITALIC | SWT.BOLD);
-        var boldFont = new Font(font.getDevice(), fontData);
+        var firstTokenFont = new Font(font.getDevice(), fontData);
         fontData.setStyle(SWT.NORMAL);
         fontData.setHeight((int)(fontData.getHeight() * .75));
-        var smalFont = new Font(font.getDevice(), fontData);
+        var labelFont = new Font(font.getDevice(), fontData);
         try
         {
             var bounds = gc.getClipping();
             var boundsWidth = bounds.width - BORDER * 2 - 1;
-            gc.setFont(italicFont);
+            gc.setFont(hintFont);
 
             var firstLineSize = gc.textExtent(firstLine, TEXT_EXTENT_FLAGS);
             var firstLineX = x - BORDER + 1;
@@ -189,7 +197,7 @@ class HintPainter
                 otherLinesH = 0;
             }
 
-            gc.setFont(smalFont);
+            gc.setFont(labelFont);
 
             var codeCompletionLabels = userActions.getCodeCompletionLabels(' ');
             var labelSize = gc.textExtent(codeCompletionLabels, TEXT_EXTENT_FLAGS);
@@ -203,38 +211,57 @@ class HintPainter
             labelW = l - labelX;
             labelX = labelW - labelSize.x - BORDER;
 
-            gc.copyArea(firstLineX, firstLineY, firstLineX + firstLineW, firstLineH, firstLineX + firstLineW,
-                firstLineY, true);
-            gc.copyArea(bounds.x, otherLinesY, bounds.width, bounds.height, bounds.x, otherLinesY + otherLinesH, true);
+            if (firstLine.length() > 0 && firstLine.charAt(0) != CONTINUATION_SIGN)
+            {
+                gc.copyArea(firstLineX, firstLineY, firstLineX + firstLineW, firstLineH, firstLineX + firstLineW,
+                    firstLineY, true);
+            }
+
+            if (otherLines.length() > 0)
+            {
+                gc.copyArea(bounds.x, otherLinesY, bounds.width, bounds.height, bounds.x, otherLinesY + otherLinesH,
+                    true);
+            }
 
             gc.fillRectangle(firstLineX, firstLineY, firstLineW, firstLineH);
-            gc.fillRectangle(otherLinesX, otherLinesY, otherLinesW, otherLinesH);
-            gc.fillRectangle(labelX, labelY, labelW, labelH);
+            if (otherLines.length() > 0)
+            {
+                gc.fillRectangle(otherLinesX, otherLinesY, otherLinesW, otherLinesH);
+                gc.fillRectangle(labelX, labelY, labelW, labelH);
+            }
 
             if (!nextToken.isEmpty())
             {
                 gc.setAlpha(180);
                 fontData.setStyle(SWT.BOLD);
-                gc.setFont(boldFont);
+                gc.setFont(firstTokenFont);
                 gc.drawText(nextToken, firstLineX + BORDER * 2, firstLineY, true);
 
-                gc.setFont(italicFont);
-                gc.setAlpha(160);
+                gc.setFont(hintFont);
+                gc.setAlpha(150);
                 var nextTokenSize = gc.stringExtent(nextToken);
                 gc.drawText(firstLine.substring(nextToken.length()),
-                    firstLineX + BORDER * 2 + nextTokenSize.x,
+                    firstLineX + nextTokenSize.x,
                     firstLineY, true);
+
+                // underline
+                if (nextToken.length() > 0 && nextToken.charAt(0) != CONTINUATION_SIGN)
+                {
+                    gc.setAlpha(150);
+                    gc.drawLine(firstLineX + BORDER * 3, firstLineY + firstLineSize.y - 1,
+                        firstLineX + nextTokenSize.x, firstLineY + firstLineSize.y - 1);
+                }
             }
             else
             {
-                gc.setAlpha(160);
-                gc.setFont(italicFont);
+                gc.setAlpha(150);
+                gc.setFont(firstTokenFont);
                 gc.drawText(firstLine, firstLineX + BORDER * 2, firstLineY, true);
             }
 
             gc.setAlpha(120);
-            gc.setFont(italicFont);
-            gc.drawText(otherLines, otherLinesX + BORDER * 2 + zeroLocation.x, otherLinesY, true);
+            gc.setFont(hintFont);
+            gc.drawText(otherLines, otherLinesX + zeroLocation.x, otherLinesY, true);
 
             gc.setLineStyle(SWT.LINE_DOT);
 
@@ -255,7 +282,7 @@ class HintPainter
             }
             else
             {
-                gc.setFont(smalFont);
+                gc.setFont(labelFont);
                 gc.drawText(codeCompletionLabels, labelX + BORDER * 2, labelY, true);
 
                 gc.drawPolyline(new int[] {
@@ -290,9 +317,9 @@ class HintPainter
         }
         finally
         {
-            italicFont.dispose();
-            boldFont.dispose();
-            smalFont.dispose();
+            hintFont.dispose();
+            firstTokenFont.dispose();
+            labelFont.dispose();
             gc.setFont(font);
         }
     }

@@ -17,12 +17,15 @@ import org.junit.runners.Parameterized.Parameters;
 public class HintTextBuilderTest
 {
     @Parameter(0)
-    public String text;
+    public String linePrefix;
 
     @Parameter(1)
-    public int tabWidth;
+    public String text;
 
     @Parameter(2)
+    public int tabWidth;
+
+    @Parameter(3)
     public String expectedHint;
 
     @Test
@@ -33,7 +36,7 @@ public class HintTextBuilderTest
         var builder = new HintTextBuilder();
 
         // When
-        var actualHint = builder.build(text, tabWidth, '!');
+        var actualHint = builder.build(linePrefix, text, tabWidth);
 
         // Then
         Assert.assertEquals(expectedHint, actualHint);
@@ -46,12 +49,19 @@ public class HintTextBuilderTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "", 2, "!" },
-                { "Abc", 2, "Abc" },
-                { "Abc\nXyz", 2, "Abc\nXyz!" },
-                { "\tAbc", 2, "  Abc" },
-                { "\t Abc\n\tXyz", 2, "   Abc\n  Xyz!" },
-                { "A\t\tbc", 2, "A    bc" },
+                { "", "", 2, "" },
+                { "", "Abc", 2, "Abc" },
+                { "", "Abc\nXyz", 2, "Abc\nXyz" },
+                { "", "\tAbc", 2, "  Abc" },
+                { "", "\t Abc\n\tXyz", 2, "   Abc\n  Xyz" },
+                { "", "A\t\tbc", 2, "A   bc" },
+                { " ", "A\t\tbc", 2, "A    bc" },
+                { "\t", "A\t\tbc", 2, "A   bc" },
+                { " ", "A\t\tbc", 4, "A      bc" },
+                { "  ", "A\t\tbc", 4, "A     bc" },
+                { "   ", "A\t\tbc", 4, "A        bc" },
+                { "  ", "A\t\tbc \n \ta", 4, "A     bc \n    a" },
+                { "  ", "A\t\tbc \n \t\ta", 4, "A     bc \n        a" },
             });
         // @formatter:on
     }
