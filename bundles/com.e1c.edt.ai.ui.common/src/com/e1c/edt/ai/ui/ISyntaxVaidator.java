@@ -3,9 +3,12 @@
  */
 package com.e1c.edt.ai.ui;
 
+import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.CodeMethod;
 import com.e1c.edt.ai.ICancellationToken;
 
 interface ISyntaxVaidator
 {
-    int getValidHintSize(String filePath, String code, String hint, int offset, ICancellationToken cancellationToken);
+    String getValidHint(CodeMethod method, AIContext aiContext, String hintText,
+        ICancellationToken cancellationToken);
 }

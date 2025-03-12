@@ -40,6 +40,7 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.CodeMethod;
+import com.e1c.edt.ai.Delimiters;
 import com.e1c.edt.ai.HintPart;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
@@ -47,6 +48,7 @@ import com.e1c.edt.ai.ICodeCompletionActionHandler;
 import com.e1c.edt.ai.ICodeCompletionContext;
 import com.e1c.edt.ai.ICodeCompletionSession;
 import com.e1c.edt.ai.ICodeCompletionStatistics;
+import com.e1c.edt.ai.ICodeCompletionTokenizer;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.IHintHistory;
@@ -95,6 +97,7 @@ class CodeCompletionViewModel
     private final ICodeParser codeParser;
     private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private final ICodeCompletionStatistics statistics;
+    private final ICodeCompletionTokenizer tokenizer;
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private SourceViewer sourceViewer;
@@ -119,7 +122,7 @@ class CodeCompletionViewModel
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
         IProposalsProvider proposalsProvider, ICodeParser codeParser, ITextWidgetInfoUpdater textWidgetInfoUpdater,
-        ICodeCompletionStatistics statistics)
+        ICodeCompletionStatistics statistics, ICodeCompletionTokenizer tokenizer)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -145,6 +148,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(codeParser);
         Preconditions.checkNotNull(textWidgetInfoUpdater);
         Preconditions.checkNotNull(statistics);
+        Preconditions.checkNotNull(tokenizer);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -168,6 +172,7 @@ class CodeCompletionViewModel
         this.codeParser = codeParser;
         this.textWidgetInfoUpdater = textWidgetInfoUpdater;
         this.statistics = statistics;
+        this.tokenizer = tokenizer;
     }
 
     @Override
@@ -499,65 +504,17 @@ class CodeCompletionViewModel
             return;
         }
 
-        var hintLines = hint.getText(HintPart.LINES).getText();
+        var hintText = hint.getText(HintPart.LINES).getText();
+        var aiCtx = context.getAiContext();
+        var validHint = getCurrentMethod(aiCtx.getSourceOffset()).map(
+            method -> syntaxVaidator.getValidHint(method, aiCtx, hintText, context.getCancellationTokenSource()))
+            .orElse(hintText);
 
-        // var aiContext = context.getAiContext();
-        // var source = aiContext.getSource();
-        // var sourceOffset = aiContext.getSourceOffset();
-        /*var optionalMethod = codeParser.parse(sourceViewer, uiSettings.getTimeout())
-            .flatMap(parseResult -> codeProvider.getMethod(parseResult, sourceOffset));
-
-        int validCodeSize;
-        if (optionalMethod.isPresent())
-        {
-            var method = optionalMethod.get();
-            var code = source.substring(method.getStartOffest(), method.getEndOffest());
-            validCodeSize = syntaxVaidator.getValidHintSize(aiContext.getPath(), code, hintLines,
-                sourceOffset - method.getStartOffest(), context.getCancellationTokenSource());
-        }
-        else
-        {
-            validCodeSize = hintLines.length();
-        }
-
-        var validHintLines = hintLines.substring(0, validCodeSize);*/
         dispatcher.dispatch(() -> {
-            /*if (uiSettings.traceMode())
+            if (validHint.length() > 0)
             {
-                log.trace("Syntax check " + context.getCancellationTokenSource(), () -> { //$NON-NLS-1$
-                    var message = new StringBuilder();
-                    if (hintLines.length() != validHintLines.length())
-                    {
-                        message.append("Original hint: ["); //$NON-NLS-1$
-                        message.append(hintLines);
-                        message.append(']');
-                        message.append(System.lineSeparator());
-                        message.append(System.lineSeparator());
-
-                        message.append("Valid hint:    ["); //$NON-NLS-1$
-                        message.append(validHintLines);
-                        message.append(']');
-                        message.append(System.lineSeparator());
-                        message.append(System.lineSeparator());
-                    }
-                    else
-                    {
-                        message.append("Hint is valid"); //$NON-NLS-1$
-                        message.append(System.lineSeparator());
-                        message.append(System.lineSeparator());
-                    }
-
-                    message.append("Method: "); //$NON-NLS-1$
-                    message.append(optionalMethod.map(i -> i.getUniqueName()).orElse("undefined")); //$NON-NLS-1$
-
-                    return message.toString();
-                });
-            }*/
-
-            if (hintLines.length() > 0)
-            {
-                var nextToken = hint.getText(HintPart.TOKEN).getText();
-                hintPainter.setHintAt(session.getContext().getAiContext().getСaretOffset(), hintLines, nextToken);
+                var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
+                hintPainter.setHintAt(aiCtx.getСaretOffset(), validHint, nextToken.getValue());
                 widget.redraw();
             }
             else

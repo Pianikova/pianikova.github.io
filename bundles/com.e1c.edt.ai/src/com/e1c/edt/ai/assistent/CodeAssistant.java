@@ -30,7 +30,6 @@ import com.e1c.edt.ai.assistent.model.CompletionRequest;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.client.AIClientException;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -187,14 +186,14 @@ class CodeAssistant
         log.request(request, cancellationToken.toString(), requestBody);
 
         var clien = clientBuilder.create().build();
-        var asyncRequest = clien.sendAsync(request, BodyHandlers.ofLines());
+        stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
         var stopwatch = Stopwatch.createStarted();
+        var asyncRequest = clien.sendAsync(request, BodyHandlers.ofLines());
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> {
             stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
             asyncRequest.cancel(true);
         });
 
-        stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
         asyncRequest
             .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
