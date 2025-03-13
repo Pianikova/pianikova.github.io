@@ -5,7 +5,7 @@ package com.e1c.edt.ai;
 
 import java.util.Optional;
 
-class Sources
+public class Sources
 {
     public static final ISource UNKNOWN = new UnknownSource();
 

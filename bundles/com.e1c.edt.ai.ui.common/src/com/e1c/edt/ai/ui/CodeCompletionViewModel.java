@@ -59,6 +59,7 @@ import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observers;
+import com.e1c.edt.ai.Sources;
 import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.Text;
 import com.e1c.edt.ai.assistent.ICodeAssistant;
@@ -419,6 +420,12 @@ class CodeCompletionViewModel
 
                     var hint = session.getHint();
                     log.trace("AI generated text " + cancellationTokenSource, () -> format(hint.toString())); //$NON-NLS-1$
+
+                    if (!proposal.isBlank()) {
+                        hint.append(new Text(proposal, Sources.UNKNOWN));
+                        proposal = "";  //$NON-NLS-1$
+                    }
+
                     if (hint.isBlank())
                     {
                         hint.clear();
@@ -597,7 +604,11 @@ class CodeCompletionViewModel
 
         case SKIP:
             commit(session);
-            reset();
+            if (!assistantListener.isActive())
+            {
+                reset();
+            }
+
             break;
 
         default:
@@ -739,6 +750,11 @@ class CodeCompletionViewModel
         private CompletionRequestProvider localContext;
         private ICompletionProposal lastProp;
 
+        public boolean isActive()
+        {
+            return localContext != null;
+        }
+
         @Override
         public void applied(ICompletionProposal pro)
         {
@@ -772,7 +788,7 @@ class CodeCompletionViewModel
             reset();
             proposalsProvider.getProposal(textWidget.getText(), prop).ifPresent(proposalText -> {
                 proposal = proposalText;
-                askWithDelay(Duration.ZERO, Duration.ZERO, Duration.ZERO, 1, localContext, false);
+                askWithDelay(Duration.ZERO, uiSettings.getMinRequestDelay(), Duration.ZERO, 1, localContext, false);
             });
         }
     }
@@ -829,12 +845,16 @@ class CodeCompletionViewModel
                 return Optional.empty();
             }
 
-            var expirationDate = clock.now().plus(maxDuration);
-            var expiringCancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
+            if (maxDuration != Duration.ZERO)
+            {
+                var expirationDate = clock.now().plus(maxDuration);
+                cancellationToken = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
+            }
+
             lastAiContext = aiCtx;
             lastRequest = new CompletionRequest();
             lastRequest.localContext =
-                localContextFactory.createLocalContext(aiCtx, statistics, expiringCancellationToken);
+                localContextFactory.createLocalContext(aiCtx, statistics, cancellationToken);
             originalPrefix = lastRequest.localContext.prefix;
             lastRequest.localContext.prefix = originalPrefix + proposal;
             lastRequest.localContext.proposals = proposals;
