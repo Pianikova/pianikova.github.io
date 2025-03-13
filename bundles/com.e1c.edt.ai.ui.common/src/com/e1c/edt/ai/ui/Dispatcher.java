@@ -13,17 +13,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
-import com.e1c.edt.ai.CancellationTokenSource;
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IClock;
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.swt.widgets.Display;
 
+import com.e1c.edt.ai.CancellationTokenSource;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IClock;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IUISettings;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
@@ -167,8 +167,9 @@ class Dispatcher
     public Job createJob(String jobName, Consumer<JobContext> сonsumer,
         ICancellationToken cancellationToken)
     {
+        Preconditions.checkNotNull(jobName);
+        Preconditions.checkNotNull(сonsumer);
         var resources = new ArrayList<AutoCloseable>();
-
         var job = new Job(jobName)
         {
             @Override
