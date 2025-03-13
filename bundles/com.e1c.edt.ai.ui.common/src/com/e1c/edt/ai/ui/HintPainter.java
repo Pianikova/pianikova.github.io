@@ -125,14 +125,14 @@ class HintPainter
         var text = getHintText();
         var line = textWidget.getLineAtOffset(pinnedOffset);
         var lineOffset = textWidget.getOffsetAtLine(line);
+        var lineText = textWidget.getLine(line);
         var prefix = lineOffset < pinnedOffset ? textWidget.getText(lineOffset, pinnedOffset - 1) : ""; //$NON-NLS-1$
+        var suffix =
+            lineOffset < pinnedOffset ? textWidget.getText(pinnedOffset, lineOffset + lineText.length()) : lineText;
+
         if (!isSingleWordMode || text.length() == 0)
         {
-            text = hintTextBuilder.build(prefix, text, uiSettings.getTabWidth());
-            if (!isSingleWordMode)
-            {
-                text = text + CONTINUATION_SIGN;
-            }
+            text = hintTextBuilder.build(prefix, text, uiSettings.getTabWidth()) + CONTINUATION_SIGN;
         }
 
         var firstLineFinish = text.indexOf('\n');
@@ -149,11 +149,11 @@ class HintPainter
         }
 
         var token = hintTextBuilder.build(prefix, this.nextToken, uiSettings.getTabWidth());
-        drawHint(event.gc, firstLine.startsWith(token) ? token : "", //$NON-NLS-1$
-            firstLine, otherLines);
+        token = firstLine.startsWith(token) ? token : ""; //$NON-NLS-1$
+        drawHint(event.gc, token, firstLine, otherLines, suffix);
     }
 
-    private void drawHint(GC gc, String nextToken, String firstLine, String otherLines)
+    private void drawHint(GC gc, String nextToken, String firstLine, String otherLines, String suffix)
     {
         var zeroLocation = textWidget.getLocationAtOffset(0);
         var caretLocation = textWidget.getLocationAtOffset(pinnedOffset);
@@ -211,9 +211,9 @@ class HintPainter
             labelW = l - labelX;
             labelX = labelW - labelSize.x - BORDER;
 
-            if (firstLine.length() > 0 && firstLine.charAt(0) != CONTINUATION_SIGN)
+            if (firstLine.length() > 0 && !suffix.isBlank())
             {
-                gc.copyArea(firstLineX, firstLineY, firstLineX + firstLineW, firstLineH, firstLineX + firstLineW,
+                gc.copyArea(firstLineX, firstLineY, bounds.width - firstLineX, firstLineH, firstLineX + firstLineW,
                     firstLineY, true);
             }
 
