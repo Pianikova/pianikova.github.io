@@ -235,7 +235,7 @@ class CodeCompletionViewModel
         dispatcher.dispatch(() -> {
             hintPainter.pinOffset(widget, offset, true, session.getContext().isSingleWordMode());
             hintPainter.setHintAt(offset, hint.getText(HintPart.LINES).getText(),
-                hint.getText(HintPart.TOKEN).getText());
+                hint.getText(HintPart.TOKEN).getText(), hint.getAcceptedTokens());
         });
     }
 
@@ -521,7 +521,8 @@ class CodeCompletionViewModel
             if (validHint.length() > 0)
             {
                 var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
-                hintPainter.setHintAt(aiCtx.getСaretOffset(), validHint, nextToken.getValue());
+                hintPainter.setHintAt(aiCtx.getСaretOffset(), validHint, nextToken.getValue(),
+                    hint.getAcceptedTokens());
                 widget.redraw();
             }
             else
@@ -604,11 +605,6 @@ class CodeCompletionViewModel
 
         case SKIP:
             commit(session);
-            if (!assistantListener.isActive())
-            {
-                reset();
-            }
-
             break;
 
         default:
@@ -749,11 +745,6 @@ class CodeCompletionViewModel
     {
         private CompletionRequestProvider localContext;
         private ICompletionProposal lastProp;
-
-        public boolean isActive()
-        {
-            return localContext != null;
-        }
 
         @Override
         public void applied(ICompletionProposal pro)

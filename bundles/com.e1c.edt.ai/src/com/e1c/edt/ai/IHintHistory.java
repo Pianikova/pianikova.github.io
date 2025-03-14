@@ -5,6 +5,8 @@ package com.e1c.edt.ai;
 
 public interface IHintHistory
 {
+    int getCount();
+
     boolean isEmpty();
 
     void clear();

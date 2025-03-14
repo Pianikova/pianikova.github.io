@@ -29,6 +29,7 @@ class HintPainter
     private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
     private String nextToken = ""; //$NON-NLS-1$
+    private int acceptedTokens;
     private int pinnedOffset = -1;
     private boolean showEmpty;
     private boolean isSingleWordMode;
@@ -75,11 +76,11 @@ class HintPainter
     @Override
     public void reset()
     {
-        setHintAt(-1, "", ""); //$NON-NLS-1$ //$NON-NLS-2$
+        setHintAt(-1, "", "", 0); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Override
-    public void setHintAt(int offset, String hintText, String nextToken)
+    public void setHintAt(int offset, String hintText, String nextToken, int acceptedTokens)
     {
         var changed = false;
         if (hintText == null || offset == -1)
@@ -89,7 +90,8 @@ class HintPainter
         }
         else
         {
-            changed = !hintText.equals(this.hintText) || !nextToken.equals(this.nextToken);
+            changed = !hintText.equals(this.hintText) || !nextToken.equals(this.nextToken)
+                || acceptedTokens != this.acceptedTokens;
         }
 
         if (textWidget == null)
@@ -101,6 +103,7 @@ class HintPainter
         {
             this.hintText = hintText;
             this.nextToken = nextToken;
+            this.acceptedTokens = acceptedTokens;
             if (!textWidget.isDisposed())
             {
                 textWidget.redraw();
@@ -127,8 +130,15 @@ class HintPainter
         var lineOffset = textWidget.getOffsetAtLine(line);
         var lineText = textWidget.getLine(line);
         var prefix = lineOffset < pinnedOffset ? textWidget.getText(lineOffset, pinnedOffset - 1) : ""; //$NON-NLS-1$
+        var suffixEnd = lineOffset + lineText.length();
+        var totalLength = textWidget.getText().length();
+        if (suffixEnd >= totalLength)
+        {
+            suffixEnd = totalLength - 1;
+        }
         var suffix =
-            lineOffset < pinnedOffset ? textWidget.getText(pinnedOffset, lineOffset + lineText.length()) : lineText;
+            lineOffset < pinnedOffset && suffixEnd > 0 && pinnedOffset < suffixEnd
+                ? textWidget.getText(pinnedOffset, suffixEnd) : lineText;
 
         if (!isSingleWordMode || text.length() == 0)
         {
@@ -199,7 +209,8 @@ class HintPainter
 
             gc.setFont(labelFont);
 
-            var codeCompletionLabels = userActions.getCodeCompletionLabels(' ');
+            var codeCompletionLabels =
+                Integer.toString(acceptedTokens) + '┆' + userActions.getCodeCompletionLabels('┆');
             var labelSize = gc.textExtent(codeCompletionLabels, TEXT_EXTENT_FLAGS);
             var labelX = BORDER + 1;
             var labelY = firstLineY + firstLineH + otherLinesH;
@@ -283,7 +294,7 @@ class HintPainter
             else
             {
                 gc.setFont(labelFont);
-                gc.drawText(codeCompletionLabels, labelX + BORDER * 2, labelY, true);
+                gc.drawText(codeCompletionLabels, labelX + BORDER * 2, labelY + BORDER, true);
 
                 gc.drawPolyline(new int[] {
                     otherLinesX, otherLinesY,

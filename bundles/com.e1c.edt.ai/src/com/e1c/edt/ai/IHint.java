@@ -16,4 +16,6 @@ public interface IHint
     Text getText(HintPart part);
 
     void clear();
+
+    int getAcceptedTokens();
 }
