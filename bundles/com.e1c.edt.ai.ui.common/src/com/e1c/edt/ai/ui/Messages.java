@@ -32,6 +32,11 @@ public class Messages
     public static String FixCodeDefaultDetails;
     public static String StatusOffline;
     public static String StatusOnline;
+    public static String HintHotKey_AcceptBlock;
+    public static String HintHotKey_AcceptLine;
+    public static String HintHotKey_AcceptAll;
+    public static String HintHotKey_AcceptBack;
+    public static String HintHotKey_AcceptStop;
 
     static
     {

@@ -11,6 +11,12 @@ public class HintHistory
     private final Stack<Text> history = new Stack<>();
 
     @Override
+    public int getCount()
+    {
+        return history.size();
+    }
+
+    @Override
     public synchronized boolean isEmpty()
     {
         return history.isEmpty();

@@ -203,6 +203,12 @@ public class Hint
     }
 
     @Override
+    public int getAcceptedTokens()
+    {
+        return history.getCount();
+    }
+
+    @Override
     public synchronized String toString()
     {
         var sb = new StringBuilder();
