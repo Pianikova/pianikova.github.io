@@ -126,7 +126,16 @@ class HintPainter
         }
 
         var text = getHintText();
-        var line = textWidget.getLineAtOffset(pinnedOffset);
+        int line;
+        if (pinnedOffset < text.length())
+        {
+            line = textWidget.getLineAtOffset(pinnedOffset);
+        }
+        else
+        {
+            line = textWidget.getLineCount() - 1;
+        }
+
         var lineOffset = textWidget.getOffsetAtLine(line);
         var lineText = textWidget.getLine(line);
         var prefix = lineOffset < pinnedOffset ? textWidget.getText(lineOffset, pinnedOffset - 1) : ""; //$NON-NLS-1$
