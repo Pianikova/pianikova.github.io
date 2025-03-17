@@ -278,6 +278,12 @@ class CodeCompletionViewModel
         job.schedule(delayBeforeAsk.toMillis());
     }
 
+    private void askWithoutDelay(boolean forced)
+    {
+        askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
+            uiSettings.getCodeCompletionLinesCount(), null, forced);
+    }
+
     private void warmupLocalContext()
     {
         var warmupJob =
@@ -546,6 +552,7 @@ class CodeCompletionViewModel
         return "[" + text.replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t") + "]";
     }
 
+    @SuppressWarnings("nls")
     @Override
     public void verifyKey(VerifyEvent event)
     {
@@ -559,13 +566,11 @@ class CodeCompletionViewModel
         var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
         var action = handler.handle(session, actionToProcess, event.character, hintPainter.getOffset(),
             isContinuousCodeCompletion);
-        log.trace("AI action", () -> actionToProcess.toString() + '/' + action); //$NON-NLS-1$
         switch (action)
         {
         case SUGGEST:
             reset();
-            askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
-                uiSettings.getCodeCompletionLinesCount(), null, true);
+            askWithoutDelay(true);
             event.doit = false;
             break;
 
@@ -577,8 +582,7 @@ class CodeCompletionViewModel
                 if (session.isDone() && !session.getContext().isSingleWordMode())
                 {
                     commit(session);
-                    askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
-                        uiSettings.getCodeCompletionLinesCount(), null, false);
+                    askWithoutDelay(false);
                 }
 
                 event.doit = false;
@@ -615,6 +619,25 @@ class CodeCompletionViewModel
         {
             isTraversed = false;
         }
+
+        log.trace("AI action", () -> {
+            var message = new StringBuilder();
+            message.append(actionToProcess.toString());
+            message.append(" -> ");
+            message.append(action);
+            message.append(System.lineSeparator());
+            message.append("handle: ");
+            message.append(event.doit);
+            if (session != null)
+            {
+                message.append(System.lineSeparator());
+                var aiCtx = session.getContext().getAiContext();
+                message.append("offset: ");
+                message.append(aiCtx.getСaretOffset());
+            }
+
+            return message.toString();
+        });
     }
 
     @Override
@@ -648,7 +671,9 @@ class CodeCompletionViewModel
 
         synchronized (lockObject)
         {
-            if (isTraversed || lastSession == null || lastSession.isAccepting())
+            if (lastSession == null
+                || (isTraversed || lastSession.isAccepting())
+                && !hintPainter.getHintText().isEmpty())
             {
                 return;
             }
