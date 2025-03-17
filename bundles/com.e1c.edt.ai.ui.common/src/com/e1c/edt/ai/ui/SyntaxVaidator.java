@@ -63,7 +63,14 @@ class SyntaxVaidator
     public String getValidHint(CodeMethod method, AIContext aiContext, String hintText,
         ICancellationToken cancellationToken)
     {
-        var code = aiContext.getSource().substring(method.getStartOffest(), method.getEndOffest());
+        var source = aiContext.getSource();
+        var end = method.getEndOffest();
+        if (end >= source.length())
+        {
+            end = source.length() - 1;
+        }
+
+        var code = source.substring(method.getStartOffest(), end);
         var validCodeSize = getValidHintSize(aiContext.getPath(), code, hintText,
             aiContext.getSourceOffset() - method.getStartOffest(),
             cancellationToken);
