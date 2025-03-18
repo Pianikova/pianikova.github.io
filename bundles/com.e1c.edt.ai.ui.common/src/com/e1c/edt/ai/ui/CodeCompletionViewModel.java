@@ -202,10 +202,7 @@ class CodeCompletionViewModel
                 Optional.ofNullable(sourceViewer.getContentAssistantFacade())
                     .ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
                 textWidget.redraw();
-                // Warm up
-                aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                    .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
-                warmupLocalContext();
+                warmup();
             }
 
             return Closeables.create(() -> deactivate());
@@ -273,7 +270,7 @@ class CodeCompletionViewModel
                         jobCtx.CancellationTokenSource);
                 });
         }, null);
-
+        job.setPriority(Job.INTERACTIVE);
         this.lastJob = job;
         job.schedule(delayBeforeAsk.toMillis());
     }
@@ -284,11 +281,15 @@ class CodeCompletionViewModel
             uiSettings.getCodeCompletionLinesCount(), null, forced);
     }
 
-    private void warmupLocalContext()
+    private void warmup()
     {
+        aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
+            .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
                 ct -> CreateContextProvider(null, uiSettings.getTimeout(), new ArrayList<>(), false), null);
+        warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
     }
 

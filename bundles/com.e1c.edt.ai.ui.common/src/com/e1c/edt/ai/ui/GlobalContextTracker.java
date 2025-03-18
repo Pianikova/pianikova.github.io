@@ -6,17 +6,15 @@ package com.e1c.edt.ai.ui;
 import java.time.Duration;
 import java.util.HashMap;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.jobs.Job;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IProjectProvider;
-import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.IUISettings;
-import com.e1c.edt.ai.assistent.ISettingsTracker;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.jobs.Job;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -30,8 +28,6 @@ class GlobalContextTracker
     private final IClock clock;
     private final IGlobalContextStateStore globalContextStateStore;
     private final IUISettings settings;
-    private final ISettingsProvider settingsProvider;
-    private final ISettingsTracker settingsTracker;
     private final Object lockObject = new Object();
     private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
     private Job job;
@@ -40,8 +36,7 @@ class GlobalContextTracker
     @Inject
     public GlobalContextTracker(IDispatcher dispatcher, IProjectProvider projectProvider,
         Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock,
-        IGlobalContextStateStore globalContextStateStore, IUISettings settings, ISettingsProvider settingsProvider,
-        ISettingsTracker settingsTracker)
+        IGlobalContextStateStore globalContextStateStore, IUISettings settings)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(projectProvider);
@@ -49,16 +44,12 @@ class GlobalContextTracker
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(globalContextStateStore);
         Preconditions.checkNotNull(settings);
-        Preconditions.checkNotNull(settingsProvider);
-        Preconditions.checkNotNull(settingsTracker);
         this.dispatcher = dispatcher;
         this.projectProvider = projectProvider;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
         this.clock = clock;
         this.globalContextStateStore = globalContextStateStore;
         this.settings = settings;
-        this.settingsProvider = settingsProvider;
-        this.settingsTracker = settingsTracker;
         state = globalContextStateStore.load();
     }
 
@@ -112,18 +103,6 @@ class GlobalContextTracker
 
     private void track(JobContext jobCtx, AIContext aiCtx, IProjectTrackingWorkflow workflow)
     {
-        if (!settings.isCodeCompletion())
-        {
-            return;
-        }
-
-        var reset = settingsTracker.register(GlobalContextTracker.class.getName() + ':' + workflow.getId(),
-            settingsProvider.getSettings());
-        if (reset)
-        {
-            workflow.reset();
-        }
-
         Duration delay = Duration.ofSeconds(5);
         try
         {

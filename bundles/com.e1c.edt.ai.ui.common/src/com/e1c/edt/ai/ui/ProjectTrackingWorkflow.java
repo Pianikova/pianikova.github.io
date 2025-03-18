@@ -16,6 +16,12 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.ICancellationToken;
@@ -26,12 +32,6 @@ import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IFolder;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -115,11 +115,11 @@ class ProjectTrackingWorkflow
                 break;
 
             case HASH:
-                result = hash(10, progressMonitor, cancellationToken);
+                result = hash(1000, progressMonitor, cancellationToken);
                 break;
 
             case SYNC:
-                result = sync(20, progressMonitor, cancellationToken);
+                result = sync(2000, progressMonitor, cancellationToken);
                 break;
             }
         }
@@ -328,14 +328,6 @@ class ProjectTrackingWorkflow
                     var modificationStamp = file.file.getModificationStamp();
                     if (file.modificationStamp == modificationStamp)
                     {
-                        if (file.reset)
-                        {
-                            if (filesToSync.add(file))
-                            {
-                                hasFileToSync[0] = true;
-                            }
-                        }
-
                         continue;
                     }
 
@@ -353,7 +345,7 @@ class ProjectTrackingWorkflow
                 }
 
 
-                if (file.reset || file.hash.equals(prevHash))
+                if (file.hash.equals(prevHash))
                 {
                     continue;
                 }
@@ -412,7 +404,6 @@ class ProjectTrackingWorkflow
 
             var feature = globalContextSync.sync(file.aiCtx, updates, 2, statistics, cancellationToken)
                 .whenComplete((result, error) -> {
-                    file.reset = false;
                     if (result != null && result)
                     {
                         synchronized (filesToSync)
@@ -444,15 +435,6 @@ class ProjectTrackingWorkflow
         return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
     }
 
-    @Override
-    public void reset()
-    {
-        for (var filesToHash : filesToHash.values())
-        {
-            filesToHash.reset = true;
-        }
-    }
-
     private ProjectFile initProjectFile(ProjectFile projectFile)
     {
         var fileState = state.files.get(projectFile.path);
@@ -462,7 +444,6 @@ class ProjectTrackingWorkflow
             projectFile.hash = fileState.hash;
         }
 
-        projectFile.reset = true;
         return projectFile;
     }
 
@@ -474,7 +455,6 @@ class ProjectTrackingWorkflow
         public LocalDateTime updateTime;
         public String hash;
         public long modificationStamp = -1;
-        public boolean reset;
 
         public ProjectFile(AIContext aiCtx, String path, IFile file, LocalDateTime updateTime)
         {
