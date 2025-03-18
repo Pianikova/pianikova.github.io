@@ -125,8 +125,9 @@ class HintPainter
             return;
         }
 
-        var text = getHintText();
+        var hint = getHintText();
         int line;
+        var text = textWidget.getText();
         if (pinnedOffset < text.length())
         {
             line = textWidget.getLineAtOffset(pinnedOffset);
@@ -149,22 +150,22 @@ class HintPainter
             lineOffset < pinnedOffset && suffixEnd > 0 && pinnedOffset < suffixEnd
                 ? textWidget.getText(pinnedOffset, suffixEnd) : lineText;
 
-        if (!isSingleWordMode || text.length() == 0)
+        if (!isSingleWordMode || hint.length() == 0)
         {
-            text = hintTextBuilder.build(prefix, text, uiSettings.getTabWidth()) + CONTINUATION_SIGN;
+            hint = hintTextBuilder.build(prefix, hint, uiSettings.getTabWidth()) + CONTINUATION_SIGN;
         }
 
-        var firstLineFinish = text.indexOf('\n');
+        var firstLineFinish = hint.indexOf('\n');
         String firstLine = ""; //$NON-NLS-1$
         String otherLines = ""; //$NON-NLS-1$
         if (firstLineFinish >= 0)
         {
-            firstLine = text.substring(0, firstLineFinish);
-            otherLines = text.substring(firstLineFinish + 1);
+            firstLine = hint.substring(0, firstLineFinish);
+            otherLines = hint.substring(firstLineFinish + 1);
         }
         else
         {
-            firstLine = text;
+            firstLine = hint;
         }
 
         var token = hintTextBuilder.build(prefix, this.nextToken, uiSettings.getTabWidth());
