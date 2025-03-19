@@ -376,12 +376,13 @@ class EntityInfo
             {
                 try (var measurement = statistics.measureDuration(StatisticsType.FORM_DURATUION))
                 {
-                    if (actionFilter.test(new FillAction(DataType.HASH, Fields.FORM, null)))
+                    if (!actionFilter.test(new FillAction(DataType.HASH, Fields.FORM, null)))
                     {
                         return false;
                     }
 
                     getFile(moduleInfo, form).map(file -> {
+                        globalContext.formFile = file.getFullPath().makeRelative().toPortableString();
                         try
                         {
                             return hashTools.compute(file, buffer);
@@ -522,6 +523,7 @@ class EntityInfo
 
                     globalContext.meta =
                         getFile(moduleInfo, metadata).map(file -> {
+                            globalContext.metaFile = file.getFullPath().makeRelative().toPortableString();
                             try
                             {
                                 return hashTools.compute(file, buffer);

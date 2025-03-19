@@ -124,7 +124,7 @@ class CompletionContextFactory
         result.add(request);
 
         request = new GlobalContextUpdate();
-        request.path = path;
+        request.path = globalContext.formFile;
         request.field = Fields.FORM;
         if (globalContext.form != null || globalContext.formEntity != null)
         {
@@ -138,7 +138,7 @@ class CompletionContextFactory
         result.add(request);
 
         request = new GlobalContextUpdate();
-        request.path = path;
+        request.path = globalContext.metaFile;
         request.field = Fields.META;
         if (globalContext.meta != null || globalContext.metaEntity != null)
         {
@@ -151,6 +151,15 @@ class CompletionContextFactory
         }
         result.add(request);
 
+        if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
+        {
+            request = new GlobalContextUpdate();
+            request.path = path;
+            request.field = Fields.LOCAL_FUNCTIONS;
+            request.value = globalContext.localFunctions;
+            result.add(request);
+        }
+
         if (globalContext.localFunctionsEntities != null && !globalContext.localFunctionsEntities.isEmpty())
         {
             for (var localFunction : globalContext.localFunctionsEntities.entrySet())
@@ -160,17 +169,6 @@ class CompletionContextFactory
                 request.hash = hashTools.format(localFunction.getValue().Hash, true);
                 request.field = FIELD_PREFIX + localFunction.getKey();
                 request.value = localFunction.getValue().Value;
-                result.add(request);
-            }
-        }
-        else
-        {
-            if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
-            {
-                request = new GlobalContextUpdate();
-                request.path = path;
-                request.field = Fields.LOCAL_FUNCTIONS;
-                request.value = globalContext.localFunctions;
                 result.add(request);
             }
         }

@@ -5,11 +5,11 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
+import org.eclipse.jface.text.IDocument;
+
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.context.IModuleProvider;
 import com.e1c.edt.ai.context.ModuleInfo;
-import org.eclipse.jface.text.IDocument;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -51,7 +51,7 @@ class CurrentEditorModuleProvider
         var moduleFilePath = moduleInfo.getFilePath();
         if (!filePath.equals(moduleFilePath))
         {
-            return baseResourceSetProvider.getModule(filePath, cancellationToken);
+            return baseResourceSetProvider.getModule(moduleFilePath, cancellationToken);
         }
 
         return Optional.of(moduleInfo);

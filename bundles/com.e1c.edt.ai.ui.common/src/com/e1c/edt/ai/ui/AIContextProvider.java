@@ -5,16 +5,14 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
+import org.eclipse.jface.text.source.SourceViewer;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IContextInitializer;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.jface.text.source.SourceViewer;
-import org.eclipse.swt.custom.StyledText;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -48,24 +46,25 @@ class AIContextProvider
         Preconditions.checkNotNull(cancellationToken);
         var textWidget = target.getTextWidget();
         return ui.getSourceViewer(textWidget)
-            .flatMap(sourceViewer -> create(textWidget, sourceViewer, target, cancellationToken));
+            .flatMap(sourceViewer -> create(sourceViewer, target, cancellationToken));
     }
 
-    private Optional<AIContext> create(StyledText textWidget, SourceViewer sourceViewer, AITarget target,
+    private Optional<AIContext> create(SourceViewer sourceViewer, AITarget target,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(target);
         Preconditions.checkNotNull(cancellationToken);
-        var file = ui.getEditor(sourceViewer).map(editor -> editor.getEditorInput().getAdapter(IFile.class));
+        var file = ui.getFile(sourceViewer);
         String path = ""; //$NON-NLS-1$
         ProjectId projectId = DefaultProjectId;
-        if (!file.isEmpty())
+        if (file.isPresent())
         {
             path = file.get().getFullPath().makeRelative().toPortableString();
             projectId = projectIdProvider.getProjectId(path, cancellationToken).orElse(DefaultProjectId);
         }
 
+        var textWidget = sourceViewer.getTextWidget();
         var content = contentProvider.get(textWidget, textWidget.getCaretOffset());
         AIContext aiContext;
         if (target.isPreferSelection() && !content.selectionText.isBlank())
