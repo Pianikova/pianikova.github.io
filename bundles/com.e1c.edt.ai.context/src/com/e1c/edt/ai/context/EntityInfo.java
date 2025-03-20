@@ -382,7 +382,7 @@ class EntityInfo
                     }
 
                     getFile(moduleInfo, form).map(file -> {
-                        globalContext.formFile = file.getFullPath().makeRelative().toPortableString();
+                        globalContext.formPath = file.getFullPath().makeRelative().toPortableString();
                         try
                         {
                             return hashTools.compute(file, buffer);
@@ -523,7 +523,7 @@ class EntityInfo
 
                     globalContext.meta =
                         getFile(moduleInfo, metadata).map(file -> {
-                            globalContext.metaFile = file.getFullPath().makeRelative().toPortableString();
+                            globalContext.metaPath = file.getFullPath().makeRelative().toPortableString();
                             try
                             {
                                 return hashTools.compute(file, buffer);

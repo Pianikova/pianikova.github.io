@@ -123,33 +123,25 @@ class CompletionContextFactory
 
         result.add(request);
 
-        request = new GlobalContextUpdate();
-        request.path = globalContext.formFile;
-        request.field = Fields.FORM;
         if (globalContext.form != null || globalContext.formEntity != null)
         {
+            request = new GlobalContextUpdate();
+            request.path = path;
+            request.field = Fields.FORM;
             request.hash = globalContext.form;
             request.value = globalContext.formEntity;
+            result.add(request);
         }
-        else
-        {
-            request.value = new Object();
-        }
-        result.add(request);
 
-        request = new GlobalContextUpdate();
-        request.path = globalContext.metaFile;
-        request.field = Fields.META;
         if (globalContext.meta != null || globalContext.metaEntity != null)
         {
+            request = new GlobalContextUpdate();
+            request.path = path;
+            request.field = Fields.META;
             request.hash = globalContext.meta;
             request.value = globalContext.metaEntity;
+            result.add(request);
         }
-        else
-        {
-            request.value = new Object();
-        }
-        result.add(request);
 
         if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
         {
