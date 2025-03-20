@@ -252,6 +252,7 @@ class ProjectTrackingWorkflow
         return new Result(ProjectTrackingWorkflowState.HASH, hasFileToHash[0] ? ShortDelay : ExtraLongDelay);
     }
 
+    @SuppressWarnings("nls")
     private Result hash(int maxFiles, IProgressMonitor progressMonitor,
         ICancellationToken cancellationToken)
     {
@@ -331,6 +332,21 @@ class ProjectTrackingWorkflow
                         continue;
                     }
 
+                    log.trace("Sync required", () -> {
+                        var message = new StringBuilder();
+                        message.append("File: ");
+                        message.append(file.path);
+
+                        message.append(System.lineSeparator());
+                        message.append("Prev timestamp: ");
+                        message.append(file.modificationStamp);
+
+                        message.append(System.lineSeparator());
+                        message.append("Cur timestamp: ");
+                        message.append(modificationStamp);
+                        return message.toString();
+                    });
+
                     file.modificationStamp = modificationStamp;
                     file.hash = hashTools.format(hashTools.compute(file.file, buffer), true);
                 }
@@ -348,6 +364,24 @@ class ProjectTrackingWorkflow
                 if (file.hash.equals(prevHash))
                 {
                     continue;
+                }
+
+                if (prevHash != null)
+                {
+                    log.trace("Sync required", () -> {
+                        var message = new StringBuilder();
+                        message.append("File: ");
+                        message.append(file.path);
+
+                        message.append(System.lineSeparator());
+                        message.append("Prev hash: ");
+                        message.append(prevHash);
+
+                        message.append(System.lineSeparator());
+                        message.append("Cur hash: ");
+                        message.append(file.hash);
+                        return message.toString();
+                    });
                 }
 
                 if (filesToSync.add(file))
