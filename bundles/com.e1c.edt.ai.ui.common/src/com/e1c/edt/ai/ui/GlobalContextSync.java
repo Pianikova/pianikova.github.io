@@ -20,7 +20,6 @@ import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -166,15 +165,16 @@ class GlobalContextSync implements IGlobalContextSync
                 });
 
                 var hashes = new HashSet<String>();
+                var fields = new HashSet<String>();
                 if (vals != null)
                 {
                     for (var val : vals)
                     {
                         hashes.add(val.hash);
+                        fields.add(val.field);
                     }
                 }
 
-                var fields = new HashSet<String>();
                 if (keys != null)
                 {
                     for (var key : keys)

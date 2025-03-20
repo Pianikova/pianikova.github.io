@@ -181,31 +181,36 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            this.textWidget = textWidget;
             reset();
             lastSession = null;
             isTextModifed = false;
             prevMethod = Optional.empty();
-            sourceViewer = ui.getSourceViewer(textWidget).orElse(null);
-            if (sourceViewer != null && !textWidget.isDisposed())
+            this.textWidget = textWidget;
+            if (!textWidget.isDisposed())
             {
-                textWidget.addPaintListener(hintPainter);
-                textWidget.addTraverseListener(this);
-                textWidget.addCaretListener(this);
-                textWidget.addVerifyKeyListener(this);
-                textWidget.addModifyListener(this);
-                textWidget.addControlListener(this);
-                textWidget.addMouseListener(this);
-                Optional.ofNullable(textWidget.getHorizontalBar())
-                    .ifPresent(scroll -> scroll.addSelectionListener(this));
-                Optional.ofNullable(textWidget.getVerticalBar()).ifPresent(scroll -> scroll.addSelectionListener(this));
-                Optional.ofNullable(sourceViewer.getContentAssistantFacade())
-                    .ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
-                textWidget.redraw();
-                warmup();
+                sourceViewer = ui.getSourceViewer(textWidget).orElse(null);
+                if (sourceViewer != null)
+                {
+                    textWidget.addPaintListener(hintPainter);
+                    textWidget.addTraverseListener(this);
+                    textWidget.addCaretListener(this);
+                    textWidget.addVerifyKeyListener(this);
+                    textWidget.addModifyListener(this);
+                    textWidget.addControlListener(this);
+                    textWidget.addMouseListener(this);
+                    Optional.ofNullable(textWidget.getHorizontalBar())
+                        .ifPresent(scroll -> scroll.addSelectionListener(this));
+                    Optional.ofNullable(textWidget.getVerticalBar())
+                        .ifPresent(scroll -> scroll.addSelectionListener(this));
+                    Optional.ofNullable(sourceViewer.getContentAssistantFacade())
+                        .ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
+                    textWidget.redraw();
+                    warmup();
+                    return Closeables.create(() -> deactivate());
+                }
             }
 
-            return Closeables.create(() -> deactivate());
+            return Closeables.Empty;
         }
     }
 

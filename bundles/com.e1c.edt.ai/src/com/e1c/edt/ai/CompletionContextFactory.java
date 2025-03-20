@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 import com.e1c.edt.ai.assistent.model.GlobalContext;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.LocalContext;
-
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -21,6 +20,7 @@ import com.google.inject.Inject;
 class CompletionContextFactory
     implements ILocalContextFactory, IGlobalContextFactory, IGlobalContextRequestFactory
 {
+    private static final String FIELD_PREFIX = Fields.LOCAL_FUNCTIONS + '.';
     private final ILog log;
     private final ITextNormilizer textNormilizer;
     private final IContextEntities contextEntities;
@@ -63,8 +63,8 @@ class CompletionContextFactory
         {
             contextEntities.fill(aiContext, localContext, globalContext,
                 action -> {
-                    return sendExtendedContext && (action.getField() == Fields.RELATED_FUNCTIONS
-                        || action.getField() == Fields.RELATED_OBJECTS);
+                    return sendExtendedContext && (Fields.RELATED_FUNCTIONS.equals(action.getField())
+                        || Fields.RELATED_OBJECTS.equals(action.getField()));
                 },
                 statistics, cancellationToken);
         }
@@ -85,7 +85,7 @@ class CompletionContextFactory
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext,
-                action -> action.getDataType() == DataType.HASH || action.getField() == Fields.CONFIGURATION_NAME,
+                action -> action.getDataType() == DataType.HASH || Fields.CONFIGURATION_NAME.equals(action.getField()),
                 statistics, cancellationToken);
         }
         catch (Exception error)
@@ -123,33 +123,34 @@ class CompletionContextFactory
 
         result.add(request);
 
-        request = new GlobalContextUpdate();
-        request.path = path;
-        request.field = Fields.FORM;
         if (globalContext.form != null || globalContext.formEntity != null)
         {
+            request = new GlobalContextUpdate();
+            request.path = path;
+            request.field = Fields.FORM;
             request.hash = globalContext.form;
             request.value = globalContext.formEntity;
+            result.add(request);
         }
-        else
-        {
-            request.value = new Object();
-        }
-        result.add(request);
 
-        request = new GlobalContextUpdate();
-        request.path = path;
-        request.field = Fields.META;
         if (globalContext.meta != null || globalContext.metaEntity != null)
         {
+            request = new GlobalContextUpdate();
+            request.path = path;
+            request.field = Fields.META;
             request.hash = globalContext.meta;
             request.value = globalContext.metaEntity;
+            result.add(request);
         }
-        else
+
+        if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
         {
-            request.value = new Object();
+            request = new GlobalContextUpdate();
+            request.path = path;
+            request.field = Fields.LOCAL_FUNCTIONS;
+            request.value = globalContext.localFunctions;
+            result.add(request);
         }
-        result.add(request);
 
         if (globalContext.localFunctionsEntities != null && !globalContext.localFunctionsEntities.isEmpty())
         {
@@ -158,19 +159,8 @@ class CompletionContextFactory
                 request = new GlobalContextUpdate();
                 request.path = path;
                 request.hash = hashTools.format(localFunction.getValue().Hash, true);
-                request.field = Fields.LOCAL_FUNCTIONS + '.' + localFunction.getKey();
+                request.field = FIELD_PREFIX + localFunction.getKey();
                 request.value = localFunction.getValue().Value;
-                result.add(request);
-            }
-        }
-        else
-        {
-            if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
-            {
-                request = new GlobalContextUpdate();
-                request.path = path;
-                request.field = Fields.LOCAL_FUNCTIONS;
-                request.value = globalContext.localFunctions;
                 result.add(request);
             }
         }
@@ -197,8 +187,19 @@ class CompletionContextFactory
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_HASHING_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext, action -> {
-                return action.getDataType() == DataType.HASH || (!existingUpdates.containsKey(action.getHash())
-                    && (fields.contains(action.getField()) || hashes.contains(action.getHash())));
+                switch (action.getDataType())
+                {
+                case HASH:
+                    return fields.contains(action.getField());
+
+                case DATA:
+                    var hash = action.getHash();
+                    return hash == null || !existingUpdates.containsKey(hash) || hashes.contains(hash);
+
+                default:
+                    return false;
+                }
+
             }, statistics, cancellationToken);
         }
         catch (Exception error)

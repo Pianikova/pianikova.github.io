@@ -14,8 +14,12 @@ public class GlobalContext
     // hash
     public String form;
 
+    public transient String formPath;
+
     // hash
     public String meta;
+
+    public transient String metaPath;
 
     // hashes
     @SerializedName("local_functions")

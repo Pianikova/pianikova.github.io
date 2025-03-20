@@ -14,6 +14,24 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.function.Predicate;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.emf.ecore.EObject;
+import org.eclipse.xtext.nodemodel.ICompositeNode;
+
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
+import com._1c.g5.v8.dt.bsl.model.Invocation;
+import com._1c.g5.v8.dt.bsl.model.Method;
+import com._1c.g5.v8.dt.bsl.model.Variable;
+import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
+import com._1c.g5.v8.dt.core.platform.IExtensionProject;
+import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.form.model.Form;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.DataType;
@@ -35,24 +53,6 @@ import com.e1c.edt.ai.assistent.model.HashedValue;
 import com.e1c.edt.ai.assistent.model.LocalContext;
 import com.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import com.e1c.edt.ai.context.DTO.EntityInfoResponse;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.emf.ecore.EObject;
-import org.eclipse.xtext.nodemodel.ICompositeNode;
-
-import com._1c.g5.v8.bm.core.IBmObject;
-import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
-import com._1c.g5.v8.dt.bsl.model.Invocation;
-import com._1c.g5.v8.dt.bsl.model.Method;
-import com._1c.g5.v8.dt.bsl.model.Variable;
-import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
-import com._1c.g5.v8.dt.core.platform.IExtensionProject;
-import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
-import com._1c.g5.v8.dt.form.model.Form;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
-import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
-import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
-import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -240,6 +240,11 @@ class EntityInfo
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)
             {
+                if (!actionFilter.test(new FillAction(DataType.HASH, Fields.CONFIGURATION_NAME, null)))
+                {
+                    return false;
+                }
+
                 var module = moduleInfo.getModule();
                 if (module == null)
                 {
@@ -371,20 +376,23 @@ class EntityInfo
             {
                 try (var measurement = statistics.measureDuration(StatisticsType.FORM_DURATUION))
                 {
-                    if (actionFilter.test(new FillAction(DataType.HASH, Fields.FORM, null)))
+                    if (!actionFilter.test(new FillAction(DataType.HASH, Fields.FORM, null)))
                     {
-                        getFile(moduleInfo, form).map(file -> {
-                            try
-                            {
-                                return hashTools.compute(file, buffer);
-                            }
-                            catch (Exception error)
-                            {
-                                log.logError(error);
-                                return null;
-                            }
-                        }).ifPresent(hash -> globalContext.form = hashTools.format(hash, true));
+                        return false;
                     }
+
+                    getFile(moduleInfo, form).map(file -> {
+                        globalContext.formPath = file.getFullPath().makeRelative().toPortableString();
+                        try
+                        {
+                            return hashTools.compute(file, buffer);
+                        }
+                        catch (Exception error)
+                        {
+                            log.logError(error);
+                            return null;
+                        }
+                    }).ifPresent(hash -> globalContext.form = hashTools.format(hash, true));
 
                     if (actionFilter.test(new FillAction(DataType.DATA, Fields.FORM, globalContext.form)))
                     {
@@ -460,13 +468,6 @@ class EntityInfo
                     return false;
                 }
 
-                var hash = messageDigestProvider.get();
-                codePartsProvider.getParts(node)
-                    .filter(part -> methodHashingParts.contains(part.getLocation()))
-                    .flatMapToInt(i -> i.getText().codePoints())
-                    .filter(ch -> !Character.isWhitespace(ch))
-                    .forEach(ch -> hash.update((byte)ch));
-
                 var uniqueName = method.getUniqueName();
                 var prefixIndex = uniqueName.indexOf(MethodNamePrefix);
                 if (prefixIndex >= 0)
@@ -474,21 +475,31 @@ class EntityInfo
                     uniqueName = uniqueName.substring(prefixIndex + MethodNamePrefix.length());
                 }
 
-                var hashStr = hashTools.format(hash, true);
                 final var methodName = uniqueName;
+                var field = Fields.LOCAL_FUNCTIONS + '.' + methodName;
+                if (!actionFilter.test(new FillAction(DataType.HASH, Fields.LOCAL_FUNCTIONS, null))
+                    && !actionFilter.test(new FillAction(DataType.HASH, field, null)))
+                {
+                    return false;
+                }
+
                 if (aiContextKind == AIContextKind.ActiveEditor && sourceOffset >= node.getTotalOffset()
                     && sourceOffset <= node.getTotalEndOffset())
                 {
                     localContext.currenMethodName = methodName;
                 }
 
-                if (actionFilter.test(new FillAction(DataType.HASH, Fields.LOCAL_FUNCTIONS, null)))
-                {
-                    globalContext.localFunctions.put(methodName, hashStr);
-                }
+                var hash = messageDigestProvider.get();
+                codePartsProvider.getParts(node)
+                    .filter(part -> methodHashingParts.contains(part.getLocation()))
+                    .flatMapToInt(i -> i.getText().codePoints())
+                    .filter(ch -> !Character.isWhitespace(ch))
+                    .forEach(ch -> hash.update((byte)ch));
 
-                if (actionFilter
-                    .test(new FillAction(DataType.DATA, Fields.LOCAL_FUNCTIONS, hashStr)))
+                var hashStr = hashTools.format(hash, true);
+                globalContext.localFunctions.put(methodName, hashStr);
+
+                if (actionFilter.test(new FillAction(DataType.DATA, field, hashStr)))
                 {
                     var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS_DURATUION,
                         () -> entityFactory.createMethodEntity(method, node, false, cancellationToken)
@@ -505,13 +516,14 @@ class EntityInfo
             {
                 if (globalContext.meta == null)
                 {
-                    if (!actionFilter.test(new FillAction(DataType.HASH, Fields.META, globalContext.meta)))
+                    if (!actionFilter.test(new FillAction(DataType.HASH, Fields.META, null)))
                     {
                         return true;
                     }
 
                     globalContext.meta =
                         getFile(moduleInfo, metadata).map(file -> {
+                            globalContext.metaPath = file.getFullPath().makeRelative().toPortableString();
                             try
                             {
                                 return hashTools.compute(file, buffer);
@@ -577,7 +589,7 @@ class EntityInfo
 
         statistics.registerInteger(StatisticsType.UNPROCESSED_ITEMS, unptocessedItems);
 
-        if (!owners.isEmpty() && !actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
+        if (!owners.isEmpty() && actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
         {
             try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
             {

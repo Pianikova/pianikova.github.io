@@ -5,8 +5,8 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.jface.text.ITextOperationTarget;
-import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
@@ -15,7 +15,6 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
-import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IViewPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
@@ -79,6 +78,7 @@ class UI
         return Optional.ofNullable(Display.getCurrent().getActiveShell());
     }
 
+    @SuppressWarnings("nls")
     @Override
     public synchronized void handleEvent(Event event)
     {
@@ -111,9 +111,12 @@ class UI
                     // ignored
                 }
 
-                textWidgetInfoUpdater.reset();
                 textWidget = newTextWidget;
-                queryToken = codeCompletionViewModelProvider.get().activate(newTextWidget);
+                textWidgetInfoUpdater.reset();
+                queryToken = Closeables.Empty;
+                dispatcher.dispatchAsync(() -> {
+                    queryToken = codeCompletionViewModelProvider.get().activate(newTextWidget);
+                });
             }
         }
     }
@@ -168,7 +171,7 @@ class UI
     }
 
     @Override
-    public Optional<IEditorPart> getEditor(ISourceViewer sourceViewer)
+    public Optional<IFile> getFile(SourceViewer sourceViewer)
     {
         for (var workbench : PlatformUI.getWorkbench().getWorkbenchWindows())
         {
@@ -183,9 +186,14 @@ class UI
                     }
 
                     var curSourceViewer = editor.getAdapter(ITextOperationTarget.class);
-                    if (curSourceViewer != null && sourceViewer == curSourceViewer)
+                    if (sourceViewer == curSourceViewer)
                     {
-                        return Optional.of(editor);
+                        var file =
+                            Optional.ofNullable(editor.getEditorInput()).map(input -> input.getAdapter(IFile.class));
+                        if (file.isPresent())
+                        {
+                            return file;
+                        }
                     }
                 }
             }
