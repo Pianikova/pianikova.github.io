@@ -19,6 +19,9 @@ public class LocalContext
 
     public boolean forced;
 
+    @SerializedName("content_assist")
+    public boolean contentAssist;
+
     @SerializedName("script_language")
     public String scriptLanguage;
 
