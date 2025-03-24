@@ -55,7 +55,7 @@ class CodeParser
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(timeout);
         var document = sourceViewer.getDocument();
-        if (document.getLength() > 1024 * 1024)
+        if (document.getLength() > Consts.NORMAL_CODE_SIZE)
         {
             log.trace("Code parser", () -> "The document is too large");
             return Optional.empty();

@@ -65,6 +65,7 @@ import com.e1c.edt.ai.Text;
 import com.e1c.edt.ai.assistent.ICodeAssistant;
 import com.e1c.edt.ai.assistent.ICompletionRequestProvider;
 import com.e1c.edt.ai.assistent.model.CompletionRequest;
+import com.e1c.edt.ai.assistent.model.Proposal;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -267,7 +268,8 @@ class CodeCompletionViewModel
             getAiContext(jobCtx.CancellationTokenSource)
                 .ifPresent(aiCtx -> {
                     var startTime = clock.now();
-                    var proposals = proposalsProvider.getProposals(aiCtx, textWidget, jobCtx.CancellationTokenSource)
+                    var proposals =
+                        proposalsProvider.getProposals(aiCtx, sourceViewer, 600, jobCtx.CancellationTokenSource)
                         .orElseGet(() -> new ArrayList<>());
                     final var contextProvider =
                         CreateContextProvider(localContextProvider, maxDuration, proposals, forced, contentAssist);
@@ -300,7 +302,7 @@ class CodeCompletionViewModel
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
-        Duration maxDuration, List<String> proposals, boolean forced, boolean contentAssist)
+        Duration maxDuration, List<Proposal> proposals, boolean forced, boolean contentAssist)
     {
         return localContextProvider != null && localContextProvider.isForced() == forced
             && localContextProvider.isContentAssist() == contentAssist ? localContextProvider
@@ -811,11 +813,18 @@ class CodeCompletionViewModel
 
             lastProp = prop;
             reset();
-            proposalsProvider.getProposal(textWidget.getText(), prop).ifPresent(proposalText -> {
-                proposal = proposalText;
+            var optionalProposal = proposalsProvider.getProposal(prop, 0).map(i -> i.prefix);
+            if (optionalProposal.isPresent())
+            {
+                proposal = optionalProposal.get();
                 askWithDelay(Duration.ZERO, uiSettings.getMinRequestDelay(), Duration.ZERO, 1, localContext, false,
                     true);
-            });
+            }
+            else
+            {
+                proposal = ""; //$NON-NLS-1$
+                reset();
+            }
         }
     }
 
@@ -829,14 +838,14 @@ class CodeCompletionViewModel
         implements ICompletionRequestProvider
     {
         private final Duration maxDuration;
-        private final List<String> proposals;
+        private final List<Proposal> proposals;
         private final boolean forced;
         private final boolean contentAssist;
         private AIContext lastAiContext;
         private CompletionRequest lastRequest;
         private String originalPrefix;
 
-        public CompletionRequestProvider(Duration maxDuration, List<String> proposals, boolean forced,
+        public CompletionRequestProvider(Duration maxDuration, List<Proposal> proposals, boolean forced,
             boolean contentAssist)
         {
             Preconditions.checkNotNull(maxDuration);

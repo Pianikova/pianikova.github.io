@@ -6,14 +6,17 @@ package com.e1c.edt.ai.ui;
 import java.util.List;
 import java.util.Optional;
 
+import org.eclipse.jface.text.contentassist.ICompletionProposal;
+import org.eclipse.jface.text.source.SourceViewer;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ICancellationToken;
-import org.eclipse.jface.text.contentassist.ICompletionProposal;
-import org.eclipse.swt.custom.StyledText;
+import com.e1c.edt.ai.assistent.model.Proposal;
 
 public interface IProposalsProvider
 {
-    Optional<String> getProposal(String content, ICompletionProposal proposal);
+    Optional<Proposal> getProposal(ICompletionProposal proposal, int minPriority);
 
-    Optional<List<String>> getProposals(AIContext aiCtx, StyledText textWidget, ICancellationToken cancellationToken);
+    Optional<List<Proposal>> getProposals(AIContext aiCtx, SourceViewer sourceViewer, int minPriority,
+        ICancellationToken cancellationToken);
 }

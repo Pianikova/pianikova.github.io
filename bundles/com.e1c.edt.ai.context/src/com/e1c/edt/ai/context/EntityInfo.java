@@ -477,16 +477,16 @@ class EntityInfo
 
                 final var methodName = uniqueName;
                 var field = Fields.LOCAL_FUNCTIONS + '.' + methodName;
-                if (!actionFilter.test(new FillAction(DataType.HASH, Fields.LOCAL_FUNCTIONS, null))
-                    && !actionFilter.test(new FillAction(DataType.HASH, field, null)))
-                {
-                    return false;
-                }
-
                 if (aiContextKind == AIContextKind.ActiveEditor && sourceOffset >= node.getTotalOffset()
                     && sourceOffset <= node.getTotalEndOffset())
                 {
                     localContext.currenMethodName = methodName;
+                }
+
+                if (!actionFilter.test(new FillAction(DataType.HASH, Fields.LOCAL_FUNCTIONS, null))
+                    && !actionFilter.test(new FillAction(DataType.HASH, field, null)))
+                {
+                    return false;
                 }
 
                 var hash = messageDigestProvider.get();
