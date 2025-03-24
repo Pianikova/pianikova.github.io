@@ -8,4 +8,5 @@ import com.e1c.edt.ai.ui.preferences.BaseClientAIPreferencePageInitializer;
 public class ClientAIPreferencePageInitializer
     extends BaseClientAIPreferencePageInitializer
 {
+    //
 }

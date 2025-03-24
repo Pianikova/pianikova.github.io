@@ -78,7 +78,6 @@ class UI
         return Optional.ofNullable(Display.getCurrent().getActiveShell());
     }
 
-    @SuppressWarnings("nls")
     @Override
     public synchronized void handleEvent(Event event)
     {

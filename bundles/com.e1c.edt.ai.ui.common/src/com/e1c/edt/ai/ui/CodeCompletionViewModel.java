@@ -406,7 +406,6 @@ class CodeCompletionViewModel
                     if (uuid != null && !uuid.isBlank())
                     {
                         session.setId(uuid);
-                        cancellationTokenSource.setName(uuid);
                     }
 
                     var hint = session.getHint();

@@ -22,7 +22,6 @@ import org.eclipse.xtext.util.LazyStringInputStream;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CodeMethod;
 import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
@@ -36,8 +35,6 @@ class SyntaxVaidator
     private final ILog log;
     private static final Map<String, String> PARSE_OPTIONS;
     private final Provider<XtextResourceSet> resourceSetProvider;
-    private final ICodeProvider codeProvider;
-    private final ICodeParser codeParser;
 
     static
     {
@@ -46,17 +43,12 @@ class SyntaxVaidator
     }
 
     @Inject
-    public SyntaxVaidator(ILog log, Provider<XtextResourceSet> resourceSetProvider, ICodeProvider codeProvider,
-        ICodeParser codeParser)
+    public SyntaxVaidator(ILog log, Provider<XtextResourceSet> resourceSetProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(resourceSetProvider);
-        Preconditions.checkNotNull(codeParser);
-        Preconditions.checkNotNull(codeProvider);
         this.log = log;
         this.resourceSetProvider = resourceSetProvider;
-        this.codeProvider = codeProvider;
-        this.codeParser = codeParser;
     }
 
     @Override
