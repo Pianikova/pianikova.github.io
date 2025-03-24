@@ -8,17 +8,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
+import org.eclipse.jface.text.contentassist.ICompletionProposalExtension3;
 import org.eclipse.jface.text.contentassist.IContentAssistant;
 import org.eclipse.jface.text.source.SourceViewer;
-import org.eclipse.swt.custom.StyledText;
+import org.eclipse.xtext.ui.editor.contentassist.ConfigurableCompletionProposal;
 
+import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IClock;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.Proposal;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -27,9 +31,9 @@ public class ProposalsProvider
 {
     private static Field contentAssistantField;
     private final ILog log;
-    private final IUI ui;
     private final IDispatcher dispatcher;
-    private IUISettings uiSettings;
+    private final IUISettings uiSettings;
+    private final IClock clock;
 
     static
     {
@@ -53,107 +57,72 @@ public class ProposalsProvider
     }
 
     @Inject
-    public ProposalsProvider(ILog log, IUI ui, IDispatcher dispatcher, IUISettings uiSettings)
+    public ProposalsProvider(ILog log, IDispatcher dispatcher, IUISettings uiSettings, IClock clock)
     {
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(clock);
         this.log = log;
-        this.ui = ui;
         this.dispatcher = dispatcher;
         this.uiSettings = uiSettings;
+        this.clock = clock;
     }
 
     @Override
-    public Optional<String> getProposal(String content, ICompletionProposal proposal)
+    public Optional<Proposal> getProposal(ICompletionProposal proposal, int minPriority)
     {
-        var proposalDoc = new Document(content);
-        try
-        {
-            proposal.apply(proposalDoc);
-        }
-        catch (Exception error)
+        if (!(proposal instanceof ICompletionProposalExtension3))
         {
             return Optional.empty();
         }
 
-        var newContent = proposalDoc.get();
-        var min = Integer.min(content.length(), newContent.length());
-        int start;
-        for (start = 0; start < min; start++)
+        var prop = new Proposal();
+        if (proposal instanceof ConfigurableCompletionProposal)
         {
-            if (content.charAt(start) != newContent.charAt(start))
+            var completionProposal = ((ConfigurableCompletionProposal)proposal);
+            prop.priority = completionProposal.getPriority();
+            if (prop.priority < minPriority)
+            {
+                return Optional.empty();
+            }
+
+            prop.description = completionProposal.getAdditionalProposalInfo(new NullProgressMonitor()).toString();
+        }
+
+        var text = ((ICompletionProposalExtension3)proposal).getPrefixCompletionText(null, 0);
+        if (text == null || text.length() == 0)
+        {
+            return Optional.empty();
+        }
+
+        int i;
+        for (i = 0; i < text.length() - 1; i++)
+        {
+            if (!Character.isLetterOrDigit(text.charAt(i)))
             {
                 break;
             }
         }
 
-        if (start == min)
-        {
-            return Optional.empty();
-        }
-
-        int finish;
-        var max = Integer.max(content.length(), newContent.length());
-        for (finish = max - 1; finish > start; finish--)
-        {
-            if (content.charAt(finish - (max - content.length())) != newContent
-                .charAt(finish - (max - newContent.length())))
-            {
-                break;
-            }
-        }
-
-        var result = newContent.substring(start, finish + 1);
-        if (!result.isBlank() && !proposal.getDisplayString().startsWith(result))
-        {
-            for (finish = 0; finish < result.length(); finish++)
-            {
-                if (!Character.isLetterOrDigit(result.charAt(finish)))
-                {
-                    finish++;
-                    break;
-                }
-            }
-
-            if (finish > result.length())
-            {
-                finish = result.length();
-            }
-
-            result = result.substring(0, finish);
-        }
-
-        if (result.isBlank())
-        {
-            return Optional.empty();
-        }
-
-        return Optional.of(result);
+        prop.displayString = proposal.getDisplayString();
+        prop.text = text.toString();
+        prop.prefix = text.subSequence(0, i).toString();
+        return Optional.of(prop);
     }
 
 
     @Override
-    public Optional<List<String>> getProposals(AIContext aiCtx, StyledText textWidget,
+    public Optional<List<Proposal>> getProposals(AIContext aiCtx, SourceViewer sourceViewer, int minPriority,
         ICancellationToken cancellationToken)
     {
-        return Optional.empty();
-        /*var optionalSourceViewer = dispatcher.dispatch(() -> ui.getSourceViewer(textWidget)).flatMap(i -> i);
-        if (optionalSourceViewer.isEmpty())
+        if (sourceViewer.getDocument().getLength() > Consts.NORMAL_CODE_SIZE)
         {
             return Optional.empty();
         }
 
-        var timeout = uiSettings.getTimeout();
-        return dispatcher
-            .dispatch(() -> getProposals(aiCtx, optionalSourceViewer.get(), cancellationToken), timeout)
-            .flatMap(i -> i);*/
-    }
-
-    private Optional<List<String>> getProposals(AIContext aiCtx, SourceViewer sourceViewer,
-        ICancellationToken cancellationToken)
-    {
+        var expirationDate = clock.now().plus(uiSettings.getMinRequestDelay());
+        var ct = CancellationTokens.expiresAt(cancellationToken, clock, expirationDate);
         try
         {
             return getContentAssistant(sourceViewer)
@@ -163,17 +132,19 @@ public class ProposalsProvider
                     var offset = aiCtx.getSourceOffset();
                     try
                     {
-                        var proposals = assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                        // skip second page of context helper
-                        assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                        return Optional.ofNullable(proposals);
+                        return dispatcher.dispatch(() -> {
+                            var result = assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                            // skip second page of context helper
+                            assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                            return result;
+                        });
                     }
                     catch (Exception error)
                     {
                         return Optional.empty();
                     }
                 })
-                .flatMap(proposals -> getProposals(aiCtx, proposals));
+                .flatMap(proposals -> getProposals(proposals, minPriority, ct));
         }
         catch (Exception e)
         {
@@ -220,12 +191,18 @@ public class ProposalsProvider
         return Optional.empty();
     }
 
-    private Optional<List<String>> getProposals(AIContext aiCtx, ICompletionProposal[] proposals)
+    private Optional<List<Proposal>> getProposals(ICompletionProposal[] proposals, int minPriority,
+        ICancellationToken cancellationToken)
     {
-        var result = new ArrayList<String>();
+        var result = new ArrayList<Proposal>();
         for (var proposal : proposals)
         {
-            getProposal(aiCtx.getSource(), proposal).ifPresent(prop -> result.add(prop));
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
+            getProposal(proposal, minPriority).ifPresent(prop -> result.add(prop));
         }
 
         return Optional.of(result);

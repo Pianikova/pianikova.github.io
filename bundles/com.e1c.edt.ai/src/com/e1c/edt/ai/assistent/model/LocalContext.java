@@ -47,5 +47,5 @@ public class LocalContext
     public List<Object> relatedFunctions;
 
     @SerializedName("proposals")
-    public List<String> proposals;
+    public List<Proposal> proposals;
 }
