@@ -16,7 +16,6 @@ public class CancellationTokenSource
     private final Object lock = new Object();
     private final ArrayList<Runnable> attached = new ArrayList<>();
     private boolean cancelled;
-    private String name = ""; //$NON-NLS-1$
 
     @Override
     public Boolean isCanceled()
@@ -67,12 +66,6 @@ public class CancellationTokenSource
                 cancellationTokenSource.attached.remove(runnable);
             }
         });
-    }
-
-    public void setName(String name)
-    {
-        Preconditions.checkNotNull(name);
-        this.name = name;
     }
 
     @Override
