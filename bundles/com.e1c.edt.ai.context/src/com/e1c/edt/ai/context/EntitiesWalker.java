@@ -138,6 +138,7 @@ class EntitiesWalker
                     continue;
                 }
 
+                visitor.visitNode(moduleInfo, obj, node);
                 if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
                     || obj instanceof Method)
                 {
