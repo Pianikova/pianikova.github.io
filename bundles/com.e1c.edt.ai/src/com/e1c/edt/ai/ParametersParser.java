@@ -14,10 +14,11 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Consumer;
 
-import com.e1c.edt.ai.assistent.model.Parameters;
-import com.e1c.edt.ai.assistent.model.TokenHealing;
 import org.osgi.framework.Version;
 
+import com.e1c.edt.ai.assistent.model.Parameters;
+import com.e1c.edt.ai.assistent.model.TokenHealing;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -187,6 +188,9 @@ public class ParametersParser
             val -> parameters.extendedСontext = parseBoolean(val)));
 
         names.remove(parse(properties, "trace", validationResult, val -> parameters.trace = parseBoolean(val)));
+
+        names.remove(parse(properties, "verbosity", validationResult,
+            val -> parameters.verbosity = parseEnum(val, Verbosity.class)));
 
         names.remove(parse(properties, "script_language", validationResult, val -> {
             val = val.trim().toLowerCase();

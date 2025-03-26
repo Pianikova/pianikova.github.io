@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -71,7 +72,7 @@ class HttpLog
                 }
 
                 return sb.toString();
-            });
+            }, Verbosity.DEFAULT);
         return request;
     }
 
@@ -96,7 +97,7 @@ class HttpLog
                 if (stopwatch.elapsed().toMillis() < 1000)
                 {
                     log.trace(createHeader("AI response", response.uri(), ref),
-                        () -> createTrace(response, stopwatch, statusCode));
+                        () -> createTrace(response, stopwatch, statusCode), Verbosity.DEFAULT);
                 }
                 else
                 {

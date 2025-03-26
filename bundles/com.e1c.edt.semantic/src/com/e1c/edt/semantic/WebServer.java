@@ -3,13 +3,14 @@
  */
 package com.e1c.edt.semantic;
 
-import com.e1c.edt.ai.Closeables;
-import com.e1c.edt.ai.ILog;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 
+import com.e1c.edt.ai.Closeables;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -41,7 +42,7 @@ class WebServer
             try
             {
                 server.start();
-                log.trace("start", () -> settings.toString()); //$NON-NLS-1$
+                log.trace("start", () -> settings.toString(), Verbosity.DEFAULT); //$NON-NLS-1$
             }
             catch (Exception e)
             {
@@ -57,7 +58,7 @@ class WebServer
         try
         {
             server.stop();
-            log.trace("stop", () -> settings.toString()); //$NON-NLS-1$
+            log.trace("stop", () -> settings.toString(), Verbosity.DEFAULT); //$NON-NLS-1$
         }
         catch (Exception e)
         {

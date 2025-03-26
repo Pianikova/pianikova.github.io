@@ -5,10 +5,6 @@ package com.e1c.edt.ai.ui;
 
 import java.util.function.Supplier;
 
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.ISettingsProvider;
-import com.e1c.edt.ai.IUISettings;
-import com.e1c.edt.ai.IVersionProvider;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -19,6 +15,11 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettingsProvider;
+import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.inject.Injector;
 
 import javafx.application.Platform;
@@ -182,9 +183,9 @@ public abstract class BaseActivator
      * @param traceMessage детали
      */
     @Override
-    public void trace(String topic, Supplier<String> details)
+    public void trace(String topic, Supplier<String> details, Verbosity verbosity)
     {
-        if (settings == null || !settings.traceMode())
+        if (settings == null || !settings.traceMode() || verbosity.getLevel() >= settings.getVerbosiry().getLevel())
         {
             return;
         }

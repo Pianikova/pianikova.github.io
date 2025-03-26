@@ -2,13 +2,14 @@ package com.e1c.edt.semantic;
 
 import java.util.function.Supplier;
 
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.context.ContextModuleFactory;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.assistent.model.Verbosity;
+import com.e1c.edt.ai.context.ContextModuleFactory;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 
@@ -86,7 +87,7 @@ public class Activator
     }
 
     @Override
-    public void trace(String topic, Supplier<String> details)
+    public void trace(String topic, Supplier<String> details, Verbosity verbosity)
     {
         if (topic == null || topic.isBlank())
         {

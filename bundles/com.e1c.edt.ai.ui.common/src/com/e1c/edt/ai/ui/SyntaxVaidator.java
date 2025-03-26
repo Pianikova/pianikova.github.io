@@ -23,6 +23,7 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CodeMethod;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -95,7 +96,7 @@ class SyntaxVaidator
             message.append(method.getUniqueName());
 
             return message.toString();
-        });
+        }, Verbosity.DETAILED);
 
         return validHintLines;
     }

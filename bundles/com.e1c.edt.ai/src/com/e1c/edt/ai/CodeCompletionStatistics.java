@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import com.e1c.edt.ai.assistent.IFeedbackService;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -150,14 +151,14 @@ public class CodeCompletionStatistics
         var sourceIds = methods.remove(method);
         if (sourceIds == null || sourceIds.isEmpty())
         {
-            log.trace("Statistics", () -> "Source ids are empty."); //$NON-NLS-1$ //$NON-NLS-2$
+            log.trace("Statistics", () -> "Source ids are empty.", Verbosity.DETAILED); //$NON-NLS-1$ //$NON-NLS-2$
             return;
         }
 
         var body = methodBodyProvider.apply(state);
         if (body == null || body.isBlank())
         {
-            log.trace("Statistics", () -> "Method body is empty."); //$NON-NLS-1$ //$NON-NLS-2$
+            log.trace("Statistics", () -> "Method body is empty.", Verbosity.DETAILED); //$NON-NLS-1$ //$NON-NLS-2$
             return;
         }
 
@@ -177,7 +178,7 @@ public class CodeCompletionStatistics
     {
         if (methods.computeIfAbsent(method, k -> new HashSet<>()).add(sourceId))
         {
-            log.trace("Statistics", () -> "Add " + sourceId + " for " + method.getUniqueName()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            log.trace("Statistics", () -> "Add " + sourceId + " for " + method.getUniqueName(), Verbosity.DETAILED); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         }
     }
 }

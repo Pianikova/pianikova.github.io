@@ -5,6 +5,8 @@ package com.e1c.edt.ai;
 
 import java.time.Duration;
 
+import com.e1c.edt.ai.assistent.model.Verbosity;
+
 public interface IUISettings
 {
     boolean isCodeCompletion();
@@ -30,4 +32,6 @@ public interface IUISettings
     String getTheme();
 
     boolean traceMode();
+
+    Verbosity getVerbosiry();
 }

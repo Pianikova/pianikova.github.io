@@ -8,9 +8,9 @@ import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 
-import com.e1c.edt.ai.IDefaultSettings;
 import org.osgi.framework.Version;
 
+import com.e1c.edt.ai.IDefaultSettings;
 import com.google.gson.annotations.SerializedName;
 
 public class Parameters
@@ -119,6 +119,8 @@ public class Parameters
 
     @SerializedName("trace")
     public Boolean trace = false;
+
+    public Verbosity verbosity = Verbosity.DEFAULT;
 
     @SerializedName("script_language")
     public String scriptLanguage = ""; //$NON-NLS-1$
@@ -304,6 +306,11 @@ public class Parameters
             trace = params.trace;
         }
 
+        if (params.verbosity != null)
+        {
+            verbosity = params.verbosity;
+        }
+
         if (params.scriptLanguage != null)
         {
             scriptLanguage = params.scriptLanguage;
@@ -334,7 +341,7 @@ public class Parameters
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
             localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext, trace,
-            scriptLanguage, configurationName, version, vendor);
+            verbosity, scriptLanguage, configurationName, version, vendor);
     }
 
     @Override
@@ -358,7 +365,7 @@ public class Parameters
             && Objects.equals(returnFullText, other.returnFullText) && Objects.equals(returnLine, other.returnLine)
             && Objects.equals(seed, other.seed) && Objects.equals(stop, other.stop)
             && Objects.equals(suffixLength, other.suffixLength) && Objects.equals(temperature, other.temperature)
-            && tokenHealing == other.tokenHealing && Objects.equals(topK, other.topK)
+            && Objects.equals(tokenHealing, other.tokenHealing) && Objects.equals(topK, other.topK)
             && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
             && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
             && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
@@ -367,7 +374,7 @@ public class Parameters
             && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
             && Objects.equals(globalСontext, other.globalСontext)
             && Objects.equals(extendedСontext, other.extendedСontext) && Objects.equals(trace, other.trace)
-            && Objects.equals(scriptLanguage, other.scriptLanguage)
+            && Objects.equals(verbosity, other.verbosity) && Objects.equals(scriptLanguage, other.scriptLanguage)
             && Objects.equals(configurationName, other.configurationName) && Objects.equals(version, other.version)
             && Objects.equals(vendor, other.vendor);
     }

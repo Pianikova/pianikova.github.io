@@ -14,6 +14,7 @@ import org.eclipse.xtext.ui.editor.model.IXtextDocument;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -57,7 +58,7 @@ class CodeParser
         var document = sourceViewer.getDocument();
         if (document.getLength() > Consts.NORMAL_CODE_SIZE)
         {
-            log.trace("Code parser", () -> "The document is too large");
+            log.trace("Code parser", () -> "The document is too large", Verbosity.DEFAULT);
             return Optional.empty();
         }
 
@@ -76,12 +77,12 @@ class CodeParser
         if (simpleMode)
         {
             simpleModesCache.put(sourceViewer, simpleMode);
-            log.trace("Code parser", () -> "Unable to parse during " + timeout);
+            log.trace("Code parser", () -> "Unable to parse during " + timeout, Verbosity.DEFAULT);
         }
         else
         {
             var duration = Duration.between(startTime, clock.now());
-            log.trace("Code parser", () -> "The duration of the parsing is " + duration);
+            log.trace("Code parser", () -> "The duration of the parsing is " + duration, Verbosity.DETAILED);
         }
 
         return result;

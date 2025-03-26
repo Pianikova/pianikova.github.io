@@ -5,8 +5,10 @@ package com.e1c.edt.semantic;
 
 import java.time.Duration;
 
-import com.e1c.edt.ai.IUISettings;
 import org.eclipse.core.runtime.Platform;
+
+import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 
 class UISettings
     implements IUISettings
@@ -81,5 +83,11 @@ class UISettings
     public boolean traceMode()
     {
         return true;
+    }
+
+    @Override
+    public Verbosity getVerbosiry()
+    {
+        return Verbosity.DETAILED;
     }
 }
