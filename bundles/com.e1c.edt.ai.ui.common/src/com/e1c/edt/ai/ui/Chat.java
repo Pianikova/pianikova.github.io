@@ -10,6 +10,12 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.preferences.ConfigurationScope;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
@@ -24,12 +30,6 @@ import com.e1c.edt.ai.assistent.ISettingsTracker;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.client.AISettings;
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
-import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.core.runtime.preferences.ConfigurationScope;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -189,7 +189,7 @@ public class Chat implements IChat, IChatDialog
                 script.append("`)");
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
-                    log.trace(AI_CHAT, () -> "executing script: " + scriptText);
+                    log.debug(AI_CHAT, () -> "executing script: " + scriptText);
                     getEgine().executeScript(scriptText);
                     log.trace(AI_CHAT, () -> "script executed");
                 });
@@ -269,7 +269,7 @@ public class Chat implements IChat, IChatDialog
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue)
             {
-                log.trace(AI_CHAT, () -> "is running: " + newValue);
+                log.debug(AI_CHAT, () -> "is running: " + newValue);
             }
         });
     }
@@ -349,7 +349,7 @@ public class Chat implements IChat, IChatDialog
             @Override
             public void changed(ObservableValue<? extends State> observable, State oldValue, State newValue)
             {
-                log.trace(AI_CHAT, () -> "new state: " + newValue);
+                log.debug(AI_CHAT, () -> "new state: " + newValue);
                 switch (newValue)
                 {
                 case SUCCEEDED:
@@ -391,10 +391,10 @@ public class Chat implements IChat, IChatDialog
                     if (window != null)
                     {
                         window.setMember(IDE_API, handler);
-                        log.trace(AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
+                        log.debug(AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
                         var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
                             settings.getClientUniqueId(), uiSettings.getLanguage(), uiSettings.getTheme());
-                        log.trace(AI_CHAT, () -> "wink script: " + winkScript);
+                        log.debug(AI_CHAT, () -> "wink script: " + winkScript);
                         webEngine.executeScript(winkScript);
                         log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
                     }

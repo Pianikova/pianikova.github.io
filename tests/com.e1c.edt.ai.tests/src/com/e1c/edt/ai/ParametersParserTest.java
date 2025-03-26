@@ -12,7 +12,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import com.e1c.edt.ai.assistent.model.TokenHealing;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -21,6 +20,9 @@ import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
 import org.osgi.framework.Version;
+
+import com.e1c.edt.ai.assistent.model.TokenHealing;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 
 @RunWith(Parameterized.class)
 public class ParametersParserTest
@@ -142,7 +144,11 @@ public class ParametersParserTest
                 { "timeout=15000", ValidationResult.SUCCESS, createParams(p -> { p.timeout = 15000; } ) },
                 { "global_context=true", ValidationResult.SUCCESS, createParams(p -> { p.globalСontext = true; } ) },
                 { "extended_context=true", ValidationResult.SUCCESS, createParams(p -> { p.extendedСontext = true; } ) },
-                { "trace=true", ValidationResult.SUCCESS, createParams(p -> { p.trace = true; } ) },
+                { "verbosity=error", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.ERROR; } ) },
+                { "verbosity=warning", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.WARNING; } ) },
+                { "verbosity=info", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.INFO; } ) },
+                { "verbosity=trace", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.TRACE; } ) },
+                { "verbosity=debug", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.DEBUG; } ) },
                 { "script_language=Russian", ValidationResult.SUCCESS, createParams(p -> { p.scriptLanguage = "russian"; } ) },
                 { "script_language=enGlish", ValidationResult.SUCCESS, createParams(p -> { p.scriptLanguage = "english"; } ) },
                 { "configuration_name=Abc", ValidationResult.SUCCESS, createParams(p -> { p.configurationName = "Abc"; } ) },

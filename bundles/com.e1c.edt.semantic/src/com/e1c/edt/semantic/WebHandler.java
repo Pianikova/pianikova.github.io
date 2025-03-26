@@ -11,6 +11,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.handler.AbstractHandler;
+
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -19,9 +22,6 @@ import com.e1c.edt.ai.context.IEntityInfo;
 import com.e1c.edt.ai.context.IRelatedEntities;
 import com.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import com.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
-import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.handler.AbstractHandler;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 

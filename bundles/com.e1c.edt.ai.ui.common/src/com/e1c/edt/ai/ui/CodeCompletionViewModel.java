@@ -629,7 +629,7 @@ class CodeCompletionViewModel
             isTraversed = false;
         }
 
-        log.trace("AI action", () -> {
+        log.debug("AI action", () -> {
             var message = new StringBuilder();
             message.append(actionToProcess.toString());
             message.append(" -> ");
@@ -737,7 +737,7 @@ class CodeCompletionViewModel
     @SuppressWarnings("nls")
     private void methodChanged(CodeMethod prevMethod, CodeMethod newMethod)
     {
-        log.trace("Method was changed",
+        log.debug("Method was changed",
             () -> {
                 var message = new StringBuilder();
                 message.append("from: ");

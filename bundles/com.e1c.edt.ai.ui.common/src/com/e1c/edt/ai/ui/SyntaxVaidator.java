@@ -68,7 +68,7 @@ class SyntaxVaidator
             cancellationToken);
 
         var validHintLines = hintText.substring(0, validCodeSize);
-        log.trace("Syntax check " + cancellationToken, () -> { //$NON-NLS-1$
+        log.debug("Syntax check " + cancellationToken, () -> { //$NON-NLS-1$
             var message = new StringBuilder();
             if (hintText.length() != validHintLines.length())
             {

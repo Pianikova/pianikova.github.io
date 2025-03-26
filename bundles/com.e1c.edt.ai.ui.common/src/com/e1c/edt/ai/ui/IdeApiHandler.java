@@ -3,11 +3,11 @@
  */
 package com.e1c.edt.ai.ui;
 
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.assistent.ITextPreprocessor;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
 
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.assistent.ITextPreprocessor;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 

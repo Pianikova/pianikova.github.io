@@ -5,15 +5,16 @@ package com.e1c.edt.ai.ui;
 
 import java.time.Duration;
 
-import com.e1c.edt.ai.ISettingsProvider;
-import com.e1c.edt.ai.ISettingsStore;
-import com.e1c.edt.ai.IUISettings;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.e4.ui.css.swt.theme.IThemeEngine;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
+import com.e1c.edt.ai.ISettingsProvider;
+import com.e1c.edt.ai.ISettingsStore;
+import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -118,8 +119,8 @@ class UISettings
     }
 
     @Override
-    public boolean traceMode()
+    public Verbosity getVerbosiry()
     {
-        return settingsProvider.getSettings().getLlmParameters().trace;
+        return settingsProvider.getSettings().getLlmParameters().verbosity;
     }
 }

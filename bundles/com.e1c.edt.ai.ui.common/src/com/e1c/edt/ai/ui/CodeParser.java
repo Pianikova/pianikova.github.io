@@ -57,7 +57,7 @@ class CodeParser
         var document = sourceViewer.getDocument();
         if (document.getLength() > Consts.NORMAL_CODE_SIZE)
         {
-            log.trace("Code parser", () -> "The document is too large");
+            log.warning("Code parser", () -> "The document is too large");
             return Optional.empty();
         }
 
@@ -76,12 +76,12 @@ class CodeParser
         if (simpleMode)
         {
             simpleModesCache.put(sourceViewer, simpleMode);
-            log.trace("Code parser", () -> "Unable to parse during " + timeout);
+            log.warning("Code parser", () -> "Unable to parse during " + timeout);
         }
         else
         {
             var duration = Duration.between(startTime, clock.now());
-            log.trace("Code parser", () -> "The duration of the parsing is " + duration);
+            log.debug("Code parser", () -> "The duration of the parsing is " + duration);
         }
 
         return result;

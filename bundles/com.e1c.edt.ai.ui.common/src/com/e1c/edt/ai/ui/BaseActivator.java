@@ -5,10 +5,6 @@ package com.e1c.edt.ai.ui;
 
 import java.util.function.Supplier;
 
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.ISettingsProvider;
-import com.e1c.edt.ai.IUISettings;
-import com.e1c.edt.ai.IVersionProvider;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -19,6 +15,11 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettingsProvider;
+import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.inject.Injector;
 
 import javafx.application.Platform;
@@ -149,44 +150,49 @@ public abstract class BaseActivator
     @Override
     public void logError(String error)
     {
-        if (error != null && !error.isBlank())
+        if (error == null || error.isBlank())
         {
-            log(createErrorStatus(error));
+            return;
         }
+
+        log(createErrorStatus(error));
     }
 
     @Override
     public void warning(String topic, Supplier<String> details)
     {
-        if (settings == null || !settings.traceMode())
+        var sb = log(topic, details, Verbosity.WARNING);
+        if (sb != null)
         {
-            return;
+            log(Status.warning(sb.toString()));
         }
-
-        var sb = new StringBuilder();
-        sb.append(topic);
-        sb.append(System.lineSeparator());
-        sb.append(details.get());
-        if (sb.length() > 10000)
-        {
-            sb.setLength(10000);
-        }
-
-        log(Status.warning(sb.toString()));
     }
 
-    /**
-     * Запись сообщения трасировки в лог журнал плагина
-     *
-     * @param topic тема трасировки
-     * @param traceMessage детали
-     */
     @Override
     public void trace(String topic, Supplier<String> details)
     {
-        if (settings == null || !settings.traceMode())
+        var sb = log(topic, details, Verbosity.TRACE);
+        if (sb != null)
         {
-            return;
+            log(Status.info(sb.toString()));
+        }
+    }
+
+    @Override
+    public void debug(String topic, Supplier<String> details)
+    {
+        var sb = log(topic, details, Verbosity.DEBUG);
+        if (sb != null)
+        {
+            log(Status.info(sb.toString()));
+        }
+    }
+
+    private StringBuilder log(String topic, Supplier<String> details, Verbosity verbosity)
+    {
+        if (settings == null || settings.getVerbosiry().getLevel() < verbosity.getLevel())
+        {
+            return null;
         }
 
         var sb = new StringBuilder();
@@ -198,7 +204,7 @@ public abstract class BaseActivator
             sb.setLength(10000);
         }
 
-        log(Status.info(sb.toString()));
+        return sb;
     }
 
     /**

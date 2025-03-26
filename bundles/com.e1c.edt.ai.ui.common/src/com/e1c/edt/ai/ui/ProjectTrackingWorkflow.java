@@ -143,7 +143,7 @@ class ProjectTrackingWorkflow
     {
         synchronized(filesToTrack)
         {
-            log.trace("Track", () -> aiCtx.toString()); //$NON-NLS-1$
+            log.debug("Track", () -> aiCtx.toString()); //$NON-NLS-1$
             filesToTrack.compute(aiCtx.getPath(), (key, prev) -> new FileToTrack(aiCtx));
         }
     }
@@ -332,7 +332,7 @@ class ProjectTrackingWorkflow
                         continue;
                     }
 
-                    log.trace("Sync required", () -> {
+                    log.debug("Sync required", () -> {
                         var message = new StringBuilder();
                         message.append("File: ");
                         message.append(file.path);
@@ -368,7 +368,7 @@ class ProjectTrackingWorkflow
 
                 if (prevHash != null)
                 {
-                    log.trace("Sync required", () -> {
+                    log.debug("Sync required", () -> {
                         var message = new StringBuilder();
                         message.append("File: ");
                         message.append(file.path);

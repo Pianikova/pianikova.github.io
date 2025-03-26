@@ -14,4 +14,6 @@ public interface ILog
     void warning(String topic, Supplier<String> details);
 
     void trace(String topic, Supplier<String> details);
+
+    void debug(String topic, Supplier<String> details);
 }

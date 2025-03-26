@@ -3,13 +3,13 @@
  */
 package com.e1c.edt.semantic;
 
-import com.e1c.edt.ai.Closeables;
-import com.e1c.edt.ai.ILog;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 
+import com.e1c.edt.ai.Closeables;
+import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;

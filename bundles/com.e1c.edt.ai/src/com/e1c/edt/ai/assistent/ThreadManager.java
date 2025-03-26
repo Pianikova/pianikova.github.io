@@ -6,7 +6,6 @@ package com.e1c.edt.ai.assistent;
 import java.util.concurrent.CancellationException;
 
 import com.e1c.edt.ai.ILog;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 

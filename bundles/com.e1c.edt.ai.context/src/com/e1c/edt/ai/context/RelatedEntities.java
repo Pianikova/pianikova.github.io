@@ -10,12 +10,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.context.DTO.Entity;
-import com.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
-import com.e1c.edt.ai.context.DTO.RelatedEntitiesResponse;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
@@ -33,6 +27,12 @@ import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IStatistics;
+import com.e1c.edt.ai.context.DTO.Entity;
+import com.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
+import com.e1c.edt.ai.context.DTO.RelatedEntitiesResponse;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 

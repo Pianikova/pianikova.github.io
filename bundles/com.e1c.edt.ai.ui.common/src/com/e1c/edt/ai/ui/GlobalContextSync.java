@@ -140,7 +140,7 @@ class GlobalContextSync implements IGlobalContextSync
                     return true;
                 }
 
-                log.trace("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
+                log.debug("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
                     var trace = new StringBuilder();
                     if (hasUnknownValues)
                     {
