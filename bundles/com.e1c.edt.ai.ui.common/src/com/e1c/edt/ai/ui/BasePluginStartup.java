@@ -7,7 +7,6 @@ import org.eclipse.ui.IStartup;
 
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.assistent.IStateService;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.inject.Inject;
 
 /**
@@ -37,9 +36,8 @@ public class BasePluginStartup
         var platformVersion = activator.getPlatformVersion();
         activator.trace(
             platformVersion == null ? "Not 1C:EDT Platform" : "1C:EDT version: " + platformVersion.toString(), //$NON-NLS-1$//$NON-NLS-2$
-            () -> "", Verbosity.DEFAULT); //$NON-NLS-1$
-        activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> "", //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
-            Verbosity.DEFAULT);
+            () -> ""); //$NON-NLS-1$
+        activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
     }
 
     @Override

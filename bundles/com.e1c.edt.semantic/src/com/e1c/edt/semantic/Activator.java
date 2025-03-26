@@ -8,7 +8,6 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.e1c.edt.ai.context.ContextModuleFactory;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -87,7 +86,18 @@ public class Activator
     }
 
     @Override
-    public void trace(String topic, Supplier<String> details, Verbosity verbosity)
+    public void trace(String topic, Supplier<String> details)
+    {
+        traceInternal(topic, details);
+    }
+
+    @Override
+    public void debug(String topic, Supplier<String> details)
+    {
+        traceInternal(topic, details);
+    }
+
+    private void traceInternal(String topic, Supplier<String> details)
     {
         if (topic == null || topic.isBlank())
         {

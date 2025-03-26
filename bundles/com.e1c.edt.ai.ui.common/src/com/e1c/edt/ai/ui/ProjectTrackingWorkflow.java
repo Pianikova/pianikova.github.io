@@ -32,7 +32,6 @@ import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -144,7 +143,7 @@ class ProjectTrackingWorkflow
     {
         synchronized(filesToTrack)
         {
-            log.trace("Track", () -> aiCtx.toString(), Verbosity.DETAILED); //$NON-NLS-1$
+            log.debug("Track", () -> aiCtx.toString()); //$NON-NLS-1$
             filesToTrack.compute(aiCtx.getPath(), (key, prev) -> new FileToTrack(aiCtx));
         }
     }
@@ -333,7 +332,7 @@ class ProjectTrackingWorkflow
                         continue;
                     }
 
-                    log.trace("Sync required", () -> {
+                    log.debug("Sync required", () -> {
                         var message = new StringBuilder();
                         message.append("File: ");
                         message.append(file.path);
@@ -346,7 +345,7 @@ class ProjectTrackingWorkflow
                         message.append("Cur timestamp: ");
                         message.append(modificationStamp);
                         return message.toString();
-                    }, Verbosity.DETAILED);
+                    });
 
                     file.modificationStamp = modificationStamp;
                     file.hash = hashTools.format(hashTools.compute(file.file, buffer), true);
@@ -369,7 +368,7 @@ class ProjectTrackingWorkflow
 
                 if (prevHash != null)
                 {
-                    log.trace("Sync required", () -> {
+                    log.debug("Sync required", () -> {
                         var message = new StringBuilder();
                         message.append("File: ");
                         message.append(file.path);
@@ -382,7 +381,7 @@ class ProjectTrackingWorkflow
                         message.append("Cur hash: ");
                         message.append(file.hash);
                         return message.toString();
-                    }, Verbosity.DETAILED);
+                    });
                 }
 
                 if (filesToSync.add(file))

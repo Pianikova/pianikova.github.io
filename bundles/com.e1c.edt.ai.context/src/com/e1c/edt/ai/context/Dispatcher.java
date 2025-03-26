@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
@@ -41,7 +40,7 @@ class Dispatcher
         }
         catch (InterruptedException | ExecutionException | TimeoutException error)
         {
-            log.trace("Dispatch", () -> error.toString(), Verbosity.DEFAULT); //$NON-NLS-1$
+            log.warning("Dispatch", () -> error.toString()); //$NON-NLS-1$
             return Optional.empty();
         }
         finally

@@ -51,7 +51,6 @@ import com.e1c.edt.ai.assistent.model.CursorLocation;
 import com.e1c.edt.ai.assistent.model.GlobalContext;
 import com.e1c.edt.ai.assistent.model.HashedValue;
 import com.e1c.edt.ai.assistent.model.LocalContext;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.e1c.edt.ai.context.DTO.EntityInfoRequest;
 import com.e1c.edt.ai.context.DTO.EntityInfoResponse;
 import com.google.common.base.Preconditions;
@@ -190,7 +189,7 @@ class EntityInfo
 
         if (!result)
         {
-            log.trace("Entity not found", () -> request.ref, Verbosity.DEFAULT); //$NON-NLS-1$
+            log.warning("Entity not found", () -> request.ref); //$NON-NLS-1$
             return Optional.empty();
         }
 

@@ -5,8 +5,6 @@ package com.e1c.edt.ai;
 
 import java.util.function.Supplier;
 
-import com.e1c.edt.ai.assistent.model.Verbosity;
-
 public interface ILog
 {
     void logError(Throwable error);
@@ -15,5 +13,7 @@ public interface ILog
 
     void warning(String topic, Supplier<String> details);
 
-    void trace(String topic, Supplier<String> details, Verbosity verbosity);
+    void trace(String topic, Supplier<String> details);
+
+    void debug(String topic, Supplier<String> details);
 }

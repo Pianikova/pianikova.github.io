@@ -83,7 +83,8 @@ class Dispatcher
         if(async)
         {
             StackTraceElement[] stackTrace =
-                settings.traceMode() ? Thread.currentThread().getStackTrace() : EmptyStackTrace;
+                settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel()
+                    ? Thread.currentThread().getStackTrace() : EmptyStackTrace;
             Display.getDefault().asyncExec(() -> {
                 try
                 {
@@ -124,7 +125,7 @@ class Dispatcher
     private void checkMicrofreeze(String description, LocalDateTime startTime,
         Supplier<StackTraceElement[]> stackTraceSupplier)
     {
-        if (!settings.traceMode())
+        if (settings.getVerbosiry().getLevel() < Verbosity.TRACE.getLevel())
         {
             return;
         }
@@ -216,7 +217,7 @@ class Dispatcher
             }
         }
 
-        job.setSystem(!settings.traceMode());
+        job.setSystem(settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel());
         return job;
     }
 
@@ -233,7 +234,7 @@ class Dispatcher
         }
         catch (InterruptedException | ExecutionException | TimeoutException error)
         {
-            log.trace("Dispatch", () -> error.toString(), Verbosity.DEFAULT); //$NON-NLS-1$
+            log.warning("Dispatch", () -> error.toString()); //$NON-NLS-1$
             return Optional.empty();
         }
         finally

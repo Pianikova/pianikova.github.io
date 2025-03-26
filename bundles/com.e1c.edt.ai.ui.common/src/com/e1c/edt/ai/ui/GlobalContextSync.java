@@ -20,7 +20,6 @@ import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -141,7 +140,7 @@ class GlobalContextSync implements IGlobalContextSync
                     return true;
                 }
 
-                log.trace("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
+                log.debug("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
                     var trace = new StringBuilder();
                     if (hasUnknownValues)
                     {
@@ -163,7 +162,7 @@ class GlobalContextSync implements IGlobalContextSync
                     }
 
                     return trace.toString();
-                }, Verbosity.DETAILED);
+                });
 
                 var hashes = new HashSet<String>();
                 var fields = new HashSet<String>();

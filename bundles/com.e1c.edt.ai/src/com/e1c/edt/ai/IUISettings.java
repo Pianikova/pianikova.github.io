@@ -31,7 +31,5 @@ public interface IUISettings
 
     String getTheme();
 
-    boolean traceMode();
-
     Verbosity getVerbosiry();
 }

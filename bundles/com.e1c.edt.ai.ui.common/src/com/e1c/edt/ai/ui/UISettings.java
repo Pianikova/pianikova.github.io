@@ -119,12 +119,6 @@ class UISettings
     }
 
     @Override
-    public boolean traceMode()
-    {
-        return settingsProvider.getSettings().getLlmParameters().trace;
-    }
-
-    @Override
     public Verbosity getVerbosiry()
     {
         return settingsProvider.getSettings().getLlmParameters().verbosity;

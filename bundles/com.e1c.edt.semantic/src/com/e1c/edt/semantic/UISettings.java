@@ -80,14 +80,8 @@ class UISettings
     }
 
     @Override
-    public boolean traceMode()
-    {
-        return true;
-    }
-
-    @Override
     public Verbosity getVerbosiry()
     {
-        return Verbosity.DETAILED;
+        return Verbosity.DEBUG;
     }
 }

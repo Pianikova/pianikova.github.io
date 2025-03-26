@@ -187,8 +187,6 @@ public class ParametersParser
         names.remove(parse(properties, "extended_context", validationResult,
             val -> parameters.extendedСontext = parseBoolean(val)));
 
-        names.remove(parse(properties, "trace", validationResult, val -> parameters.trace = parseBoolean(val)));
-
         names.remove(parse(properties, "verbosity", validationResult,
             val -> parameters.verbosity = parseEnum(val, Verbosity.class)));
 

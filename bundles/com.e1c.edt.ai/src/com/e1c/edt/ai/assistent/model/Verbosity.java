@@ -7,11 +7,20 @@ import com.google.gson.annotations.SerializedName;
 
 public enum Verbosity
 {
-    @SerializedName("default")
-    DEFAULT(0),
-    
-    @SerializedName("detailed")
-    DETAILED(1);
+    @SerializedName("error")
+    ERROR(0),
+
+    @SerializedName("warning")
+    WARNING(1),
+
+    @SerializedName("info")
+    INFO(2),
+
+    @SerializedName("trace")
+    TRACE(3),
+
+    @SerializedName("debug")
+    DEBUG(4);
 
     private final int level;
 

@@ -30,7 +30,6 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.e1c.edt.ai.context.DTO.Entity;
 import com.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
 import com.e1c.edt.ai.context.DTO.RelatedEntitiesResponse;
@@ -296,6 +295,6 @@ public class RelatedEntities implements IRelatedEntities
             sb.append(System.lineSeparator());
             sb.append(node.getText());
             return sb.toString();
-        }, Verbosity.DEFAULT);
+        });
     }
 }

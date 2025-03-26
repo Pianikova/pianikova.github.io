@@ -5,17 +5,18 @@ package com.e1c.edt.ai.assistent;
 
 import java.util.concurrent.TimeUnit;
 
-import com.e1c.edt.ai.AIState;
-import com.e1c.edt.ai.ActionState;
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
-import com.e1c.edt.ai.ServiceState;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 
+import com.e1c.edt.ai.AIState;
+import com.e1c.edt.ai.ActionState;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -114,7 +115,7 @@ class StateService
                 return Status.OK_STATUS;
             }
         };
-        job.setSystem(!settings.traceMode());
+        job.setSystem(settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel());
         job.setPriority(Job.DECORATE);
         job.schedule();
     };

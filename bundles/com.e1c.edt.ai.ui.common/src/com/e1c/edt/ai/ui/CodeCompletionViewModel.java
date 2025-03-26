@@ -66,7 +66,6 @@ import com.e1c.edt.ai.assistent.ICodeAssistant;
 import com.e1c.edt.ai.assistent.ICompletionRequestProvider;
 import com.e1c.edt.ai.assistent.model.CompletionRequest;
 import com.e1c.edt.ai.assistent.model.Proposal;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -254,7 +253,7 @@ class CodeCompletionViewModel
 
         log.trace(
             "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
-            () -> "", Verbosity.DETAILED); //$NON-NLS-1$
+            () -> ""); //$NON-NLS-1$
         reset();
         askWithDelay(delay, delayBeforeShow, uiSettings.getMinRequestDelay(), uiSettings.getCodeCompletionLinesCount(),
             null, false, false);
@@ -374,7 +373,7 @@ class CodeCompletionViewModel
                 lastSession = session;
             }
 
-            log.trace("AI context " + cancellationTokenSource, () -> aiCtx.toString(), Verbosity.DEFAULT); //$NON-NLS-1$
+            log.trace("AI context " + cancellationTokenSource, () -> aiCtx.toString()); //$NON-NLS-1$
             var delay = calculateDelay(startTime, delayBeforeShow);
             if (cancellationTokenSource.isCanceled())
             {
@@ -435,7 +434,7 @@ class CodeCompletionViewModel
                     }
 
                     var hint = session.getHint();
-                    log.trace("AI generated text " + cancellationTokenSource, () -> format(hint.toString()), Verbosity.DEFAULT); //$NON-NLS-1$
+                    log.trace("AI generated text " + cancellationTokenSource, () -> format(hint.toString())); //$NON-NLS-1$
 
                     if (!proposal.isBlank()) {
                         hint.append(new Text(proposal, Sources.UNKNOWN));
@@ -630,7 +629,7 @@ class CodeCompletionViewModel
             isTraversed = false;
         }
 
-        log.trace("AI action", () -> {
+        log.debug("AI action", () -> {
             var message = new StringBuilder();
             message.append(actionToProcess.toString());
             message.append(" -> ");
@@ -647,7 +646,7 @@ class CodeCompletionViewModel
             }
 
             return message.toString();
-        }, Verbosity.DETAILED);
+        });
     }
 
     @Override
@@ -738,7 +737,7 @@ class CodeCompletionViewModel
     @SuppressWarnings("nls")
     private void methodChanged(CodeMethod prevMethod, CodeMethod newMethod)
     {
-        log.trace("Method was changed",
+        log.debug("Method was changed",
             () -> {
                 var message = new StringBuilder();
                 message.append("from: ");
@@ -747,7 +746,7 @@ class CodeCompletionViewModel
                 message.append("to: "); //$NON-NLS-1$
                 message.append(newMethod != null ? newMethod.getUniqueName() : "null");
                 return message.toString();
-            }, Verbosity.DETAILED);
+            });
 
         if (isTextModifed && newMethod != null)
         {

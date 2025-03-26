@@ -117,10 +117,7 @@ public class Parameters
     @SerializedName("extended_context")
     public Boolean extendedСontext = false;
 
-    @SerializedName("trace")
-    public Boolean trace = false;
-
-    public Verbosity verbosity = Verbosity.DEFAULT;
+    public Verbosity verbosity = Verbosity.WARNING;
 
     @SerializedName("script_language")
     public String scriptLanguage = ""; //$NON-NLS-1$
@@ -301,11 +298,6 @@ public class Parameters
             extendedСontext = params.extendedСontext;
         }
 
-        if (params.trace != null)
-        {
-            trace = params.trace;
-        }
-
         if (params.verbosity != null)
         {
             verbosity = params.verbosity;
@@ -340,7 +332,7 @@ public class Parameters
         return Objects.hash(bestOf, url, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
-            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext, trace,
+            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext,
             verbosity, scriptLanguage, configurationName, version, vendor);
     }
 
@@ -373,7 +365,7 @@ public class Parameters
             && Objects.equals(externalFunctionsLength, other.externalFunctionsLength)
             && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
             && Objects.equals(globalСontext, other.globalСontext)
-            && Objects.equals(extendedСontext, other.extendedСontext) && Objects.equals(trace, other.trace)
+            && Objects.equals(extendedСontext, other.extendedСontext)
             && Objects.equals(verbosity, other.verbosity) && Objects.equals(scriptLanguage, other.scriptLanguage)
             && Objects.equals(configurationName, other.configurationName) && Objects.equals(version, other.version)
             && Objects.equals(vendor, other.vendor);

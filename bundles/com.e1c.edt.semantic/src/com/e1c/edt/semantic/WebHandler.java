@@ -18,7 +18,6 @@ import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.e1c.edt.ai.context.IEntityInfo;
 import com.e1c.edt.ai.context.IRelatedEntities;
 import com.e1c.edt.ai.context.DTO.EntityInfoRequest;
@@ -106,7 +105,7 @@ class WebHandler
                 info.append(response);
 
                 return info.toString();
-            }, Verbosity.DEFAULT);
+            });
         }
         catch (Exception e)
         {
