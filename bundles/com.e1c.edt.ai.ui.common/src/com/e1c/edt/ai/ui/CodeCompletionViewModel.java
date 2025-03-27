@@ -105,6 +105,7 @@ class CodeCompletionViewModel
     private SourceViewer sourceViewer;
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
+    private Job lastUpdateMethodJob;
     private List<Proposal> lastProposals = new ArrayList<>();
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
@@ -225,6 +226,11 @@ class CodeCompletionViewModel
 
     private void hideHint()
     {
+        if (hintPainter.getOffset() == -1)
+        {
+            return;
+        }
+
         dispatcher.dispatch(() -> {
             hintPainter.reset();
         });
@@ -471,6 +477,12 @@ class CodeCompletionViewModel
         showTimer.purge();
         synchronized (lockObject)
         {
+            if (lastUpdateMethodJob != null)
+            {
+                lastUpdateMethodJob.cancel();
+                lastUpdateMethodJob = null;
+            }
+
             if (lastJob != null)
             {
                 lastJob.cancel();
@@ -656,12 +668,57 @@ class CodeCompletionViewModel
         }
     }
 
-    @SuppressWarnings("nls")
     @Override
     public void caretMoved(CaretEvent event)
     {
+        synchronized (lockObject)
+        {
+            updateMethodAsync();
+            if (lastSession == null
+                || (isTraversed || lastSession.isAccepting()) && !hintPainter.getHintText().isEmpty())
+            {
+                return;
+            }
+        }
+
+        commit(lastSession);
+        reset();
+    }
+
+    private void updateMethodAsync()
+    {
+        synchronized (lockObject)
+        {
+            var job = lastUpdateMethodJob;
+            if (job != null)
+            {
+                job.cancel();
+            }
+
+            job = dispatcher.createJob(Messages.CodeCompletionJobName,
+                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), null);
+            job.setPriority(Job.DECORATE);
+            this.lastUpdateMethodJob = job;
+            job.schedule(1000);
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private void updateMethod(ICancellationToken cancellationToken)
+    {
         // sync
-        var newMethod = getCurrentMethod(textWidget.getCaretOffset());
+        var offset = dispatcher.dispatch(() -> textWidget.getCaretOffset());
+        if (offset.isEmpty() || cancellationToken.isCanceled())
+        {
+            return;
+        }
+
+        var newMethod = getCurrentMethod(offset.get());
+        if (cancellationToken.isCanceled())
+        {
+            return;
+        }
+
         var newMethodName = newMethod.map(i -> i.getUniqueName()).orElse("");
         var prevMethodName = prevMethod.map(i -> i.getUniqueName()).orElse("");
         try
@@ -675,19 +732,6 @@ class CodeCompletionViewModel
         {
             prevMethod = newMethod;
         }
-
-        synchronized (lockObject)
-        {
-            if (lastSession == null
-                || (isTraversed || lastSession.isAccepting())
-                && !hintPainter.getHintText().isEmpty())
-            {
-                return;
-            }
-        }
-
-        commit(lastSession);
-        reset();
     }
 
     @Override
@@ -749,8 +793,9 @@ class CodeCompletionViewModel
         if (isTextModifed && newMethod != null)
         {
             isTextModifed = false;
-            aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+            dispatcher.dispatchAsync(
+                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
+                    .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE)));
         }
 
         if (prevMethod != null)
