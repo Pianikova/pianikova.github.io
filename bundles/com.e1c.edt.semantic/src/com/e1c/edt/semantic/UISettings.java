@@ -56,7 +56,7 @@ class UISettings
     }
 
     @Override
-    public boolean sendContext()
+    public boolean sendExtendedContext()
     {
         return true;
     }

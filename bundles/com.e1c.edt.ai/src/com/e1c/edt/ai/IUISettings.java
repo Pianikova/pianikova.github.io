@@ -23,7 +23,7 @@ public interface IUISettings
 
     String getLineSeparator();
 
-    boolean sendContext();
+    boolean sendExtendedContext();
 
     boolean sendGlobalContext();
 

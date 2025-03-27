@@ -5,7 +5,6 @@ package com.e1c.edt.ai;
 
 import com.e1c.edt.ai.assistent.AssistentModule;
 import com.e1c.edt.ai.assistent.model.Parameters;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
@@ -51,6 +50,7 @@ public class AIModule
         bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);
         bind(IHashTools.class).to(HashTools.class).in(Singleton.class);
         bind(IIdProvider.class).to(HardwareIdProvider.class).in(Singleton.class);
+        bind(IProposalExtractor.class).to(ProposalExtractor.class).in(Singleton.class);
         // @formatter:on
     }
 }
