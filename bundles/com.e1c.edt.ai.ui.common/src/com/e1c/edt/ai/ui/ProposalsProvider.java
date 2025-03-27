@@ -87,7 +87,11 @@ public class ProposalsProvider
                 return Optional.empty();
             }
 
-            prop.description = completionProposal.getAdditionalProposalInfo(new NullProgressMonitor()).toString();
+            var info = completionProposal.getAdditionalProposalInfo(new NullProgressMonitor());
+            if (info != null)
+            {
+                prop.description = info.toString();
+            }
         }
 
         var text = ((ICompletionProposalExtension3)proposal).getPrefixCompletionText(null, 0);
@@ -202,7 +206,13 @@ public class ProposalsProvider
                 break;
             }
 
-            getProposal(proposal, minPriority).ifPresent(prop -> result.add(prop));
+            var optionalProposal = getProposal(proposal, minPriority);
+            if (optionalProposal.isEmpty())
+            {
+                break;
+            }
+
+            result.add(optionalProposal.get());
         }
 
         return Optional.of(result);
