@@ -105,7 +105,7 @@ class CodeCompletionViewModel
     private SourceViewer sourceViewer;
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
-    private String proposal = ""; //$NON-NLS-1$
+    private List<Proposal> lastProposals = new ArrayList<>();
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
     private AssistantListener assistantListener = new AssistantListener();
@@ -218,6 +218,7 @@ class CodeCompletionViewModel
     private void reset()
     {
         cancel();
+        lastProposals.clear();
         history.clear();
         hideHint();
     }
@@ -268,11 +269,8 @@ class CodeCompletionViewModel
             getAiContext(jobCtx.CancellationTokenSource)
                 .ifPresent(aiCtx -> {
                     var startTime = clock.now();
-                    var proposals =
-                        proposalsProvider.getProposals(aiCtx, sourceViewer, 600, jobCtx.CancellationTokenSource)
-                        .orElseGet(() -> new ArrayList<>());
                     final var contextProvider =
-                        CreateContextProvider(localContextProvider, maxDuration, proposals, forced, contentAssist);
+                        CreateContextProvider(localContextProvider, maxDuration, forced, contentAssist);
                     var newDelayBeforeShow = calculateDelay(startTime, delayBeforeShow);
                     ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
                         jobCtx.CancellationTokenSource);
@@ -296,17 +294,17 @@ class CodeCompletionViewModel
 
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, uiSettings.getTimeout(), new ArrayList<>(), false, false), null);
+                ct -> CreateContextProvider(null, uiSettings.getTimeout(), false, false), null);
         warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
-        Duration maxDuration, List<Proposal> proposals, boolean forced, boolean contentAssist)
+        Duration maxDuration, boolean forced, boolean contentAssist)
     {
         return localContextProvider != null && localContextProvider.isForced() == forced
             && localContextProvider.isContentAssist() == contentAssist ? localContextProvider
-            : new CompletionRequestProvider(maxDuration, proposals, forced, contentAssist);
+                : new CompletionRequestProvider(maxDuration, forced, contentAssist);
     }
 
     private void deactivate()
@@ -410,9 +408,9 @@ class CodeCompletionViewModel
 
                     var hint = session.getHint();
                     var text = data.text;
-                    if (!proposal.isBlank()) {
-                        hint.append(new Text(proposal, session));
-                        proposal = "";  //$NON-NLS-1$
+                    if (lastProposals.size() > 0) {
+                        hint.append(new Text(lastProposals.get(0).prefix, session));
+                        lastProposals.clear();
                     }
 
                     hint.append(new Text(text, session));
@@ -436,9 +434,9 @@ class CodeCompletionViewModel
                     var hint = session.getHint();
                     log.trace("AI generated text " + cancellationTokenSource, () -> format(hint.toString())); //$NON-NLS-1$
 
-                    if (!proposal.isBlank()) {
-                        hint.append(new Text(proposal, Sources.UNKNOWN));
-                        proposal = "";  //$NON-NLS-1$
+                    if (lastProposals.size() > 0) {
+                        hint.append(new Text(lastProposals.get(0).prefix, Sources.UNKNOWN));
+                        lastProposals.clear();
                     }
 
                     if (hint.isBlank())
@@ -791,13 +789,13 @@ class CodeCompletionViewModel
         {
             reset();
             localContext =
-                new CompletionRequestProvider(uiSettings.getMinRequestDelay(), new ArrayList<>(), false, true);
+                new CompletionRequestProvider(uiSettings.getMinRequestDelay(), false, true);
         }
 
         @Override
         public void assistSessionEnded(ContentAssistEvent event)
         {
-            proposal = ""; //$NON-NLS-1$
+            lastProposals.clear();
             localContext = null;
             lastProp = null;
         }
@@ -812,18 +810,16 @@ class CodeCompletionViewModel
 
             lastProp = prop;
             reset();
-            var optionalProposal = proposalsProvider.getProposal(prop, 0).map(i -> i.prefix);
-            if (optionalProposal.isPresent())
+            var optionalProposal = getAiContext(CancellationTokens.NONE)
+                .flatMap(ctx -> proposalsProvider.getProposal(prop, 0, ctx.getPrefix()));
+
+            if (optionalProposal.isEmpty())
             {
-                proposal = optionalProposal.get();
-                askWithDelay(Duration.ZERO, uiSettings.getMinRequestDelay(), Duration.ZERO, 1, localContext, false,
-                    true);
+                return;
             }
-            else
-            {
-                proposal = ""; //$NON-NLS-1$
-                reset();
-            }
+
+            lastProposals.add(optionalProposal.get());
+            askWithDelay(Duration.ZERO, uiSettings.getMinRequestDelay(), Duration.ZERO, 1, localContext, false, true);
         }
     }
 
@@ -837,22 +833,19 @@ class CodeCompletionViewModel
         implements ICompletionRequestProvider
     {
         private final Duration maxDuration;
-        private final List<Proposal> proposals;
         private final boolean forced;
         private final boolean contentAssist;
         private AIContext lastAiContext;
         private CompletionRequest lastRequest;
         private String originalPrefix;
 
-        public CompletionRequestProvider(Duration maxDuration, List<Proposal> proposals, boolean forced,
+        public CompletionRequestProvider(Duration maxDuration, boolean forced,
             boolean contentAssist)
         {
             Preconditions.checkNotNull(maxDuration);
-            Preconditions.checkNotNull(proposals);
             Preconditions.checkNotNull(forced);
             Preconditions.checkNotNull(contentAssist);
             this.maxDuration = maxDuration;
-            this.proposals = proposals;
             this.forced = forced;
             this.contentAssist = contentAssist;
         }
@@ -871,9 +864,10 @@ class CodeCompletionViewModel
                 }
 
                 aiCtx = optionalAiCtx.get();
-                if (lastRequest != null && lastAiContext != null && lastAiContext.equals(aiCtx))
+                if (lastRequest != null && lastAiContext != null && lastProposals.size() > 0
+                    && lastAiContext.equals(aiCtx))
                 {
-                    lastRequest.localContext.prefix = originalPrefix + proposal;
+                    lastRequest.localContext.prefix = originalPrefix + lastProposals.get(0).prefix;
                     return Optional.of(lastRequest);
                 }
             }
@@ -894,8 +888,18 @@ class CodeCompletionViewModel
             lastRequest.localContext =
                 localContextFactory.createLocalContext(aiCtx, statistics, cancellationToken);
             originalPrefix = lastRequest.localContext.prefix;
-            lastRequest.localContext.prefix = originalPrefix + proposal;
-            lastRequest.localContext.proposals = proposals;
+            if (lastProposals.size() > 0)
+            {
+                lastRequest.localContext.prefix = originalPrefix + lastProposals.get(0).prefix;
+                lastRequest.localContext.proposals = lastProposals;
+            }
+            else
+            {
+                lastRequest.localContext.proposals =
+                    proposalsProvider.getProposals(aiCtx, sourceViewer, 600, cancellationToken)
+                    .orElseGet(() -> new ArrayList<>());
+            }
+
             lastRequest.localContext.forced = isForced();
             lastRequest.localContext.contentAssist = isContentAssist();
             return Optional.of(lastRequest);

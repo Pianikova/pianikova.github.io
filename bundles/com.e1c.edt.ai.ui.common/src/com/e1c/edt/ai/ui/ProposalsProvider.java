@@ -21,6 +21,7 @@ import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IProposalExtractor;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.assistent.model.Proposal;
 import com.google.common.base.Preconditions;
@@ -34,6 +35,7 @@ public class ProposalsProvider
     private final IDispatcher dispatcher;
     private final IUISettings uiSettings;
     private final IClock clock;
+    private final IProposalExtractor proposalExtractor;
 
     static
     {
@@ -57,20 +59,23 @@ public class ProposalsProvider
     }
 
     @Inject
-    public ProposalsProvider(ILog log, IDispatcher dispatcher, IUISettings uiSettings, IClock clock)
+    public ProposalsProvider(ILog log, IDispatcher dispatcher, IUISettings uiSettings, IClock clock,
+        IProposalExtractor proposalExtractor)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(clock);
+        Preconditions.checkNotNull(proposalExtractor);
         this.log = log;
         this.dispatcher = dispatcher;
         this.uiSettings = uiSettings;
         this.clock = clock;
+        this.proposalExtractor = proposalExtractor;
     }
 
     @Override
-    public Optional<Proposal> getProposal(ICompletionProposal proposal, int minPriority)
+    public Optional<Proposal> getProposal(ICompletionProposal proposal, int minPriority, String prefix)
     {
         if (!(proposal instanceof ICompletionProposalExtension3))
         {
@@ -95,23 +100,9 @@ public class ProposalsProvider
         }
 
         var text = ((ICompletionProposalExtension3)proposal).getPrefixCompletionText(null, 0);
-        if (text == null || text.length() == 0)
-        {
-            return Optional.empty();
-        }
-
-        int i;
-        for (i = 0; i < text.length() - 1; i++)
-        {
-            if (!Character.isLetterOrDigit(text.charAt(i)))
-            {
-                break;
-            }
-        }
-
         prop.displayString = proposal.getDisplayString();
         prop.text = text.toString();
-        prop.prefix = text.subSequence(0, i).toString();
+        prop.prefix = proposalExtractor.extract(prefix, text.toString()).orElse(""); //$NON-NLS-1$
         return Optional.of(prop);
     }
 
@@ -148,7 +139,7 @@ public class ProposalsProvider
                         return Optional.empty();
                     }
                 })
-                .flatMap(proposals -> getProposals(proposals, minPriority, ct));
+                .flatMap(proposals -> getProposals(proposals, minPriority, aiCtx.getPrefix(), ct));
         }
         catch (Exception e)
         {
@@ -195,7 +186,7 @@ public class ProposalsProvider
         return Optional.empty();
     }
 
-    private Optional<List<Proposal>> getProposals(ICompletionProposal[] proposals, int minPriority,
+    private Optional<List<Proposal>> getProposals(ICompletionProposal[] proposals, int minPriority, String prefix,
         ICancellationToken cancellationToken)
     {
         var result = new ArrayList<Proposal>();
@@ -206,7 +197,7 @@ public class ProposalsProvider
                 break;
             }
 
-            var optionalProposal = getProposal(proposal, minPriority);
+            var optionalProposal = getProposal(proposal, minPriority, prefix);
             if (optionalProposal.isEmpty())
             {
                 break;

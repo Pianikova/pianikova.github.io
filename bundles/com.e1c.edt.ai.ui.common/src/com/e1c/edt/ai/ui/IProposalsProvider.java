@@ -15,7 +15,7 @@ import com.e1c.edt.ai.assistent.model.Proposal;
 
 public interface IProposalsProvider
 {
-    Optional<Proposal> getProposal(ICompletionProposal proposal, int minPriority);
+    Optional<Proposal> getProposal(ICompletionProposal proposal, int minPriority, String prefix);
 
     Optional<List<Proposal>> getProposals(AIContext aiCtx, SourceViewer sourceViewer, int minPriority,
         ICancellationToken cancellationToken);
