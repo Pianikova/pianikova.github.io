@@ -111,6 +111,11 @@ public class ProposalsProvider
     public Optional<List<Proposal>> getProposals(AIContext aiCtx, SourceViewer sourceViewer, int minPriority,
         ICancellationToken cancellationToken)
     {
+        if (!uiSettings.sendExtendedContext())
+        {
+            return Optional.empty();
+        }
+
         if (sourceViewer.getDocument().getLength() > Consts.NORMAL_CODE_SIZE)
         {
             return Optional.empty();

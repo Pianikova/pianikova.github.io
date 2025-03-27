@@ -109,7 +109,7 @@ class SessionService
         userParameters.minRequestDelayMs = uiSettings.getMinRequestDelay().toMillis();
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();
-        userParameters.sendContext = uiSettings.sendContext();
+        userParameters.sendContext = uiSettings.sendExtendedContext();
         userParameters.language = uiSettings.getLanguage();
 
         var systemInfo = new SystemInfo();

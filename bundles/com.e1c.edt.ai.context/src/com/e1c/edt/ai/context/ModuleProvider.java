@@ -140,7 +140,7 @@ public class ModuleProvider
 
     private Module analyzeModule(Module module, ICancellationToken cancellationToken)
     {
-        if (!uiSettings.sendContext())
+        if (!uiSettings.sendExtendedContext())
         {
             return module;
         }

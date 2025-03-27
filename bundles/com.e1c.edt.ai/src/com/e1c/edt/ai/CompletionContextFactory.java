@@ -52,7 +52,7 @@ class CompletionContextFactory
     public LocalContext createLocalContext(AIContext aiContext, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        var sendExtendedContext = uiSettings.sendContext();
+        var sendExtendedContext = uiSettings.sendExtendedContext();
         var localContext = new LocalContext();
         localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
         localContext.suffix = textNormilizer.normalize(aiContext.getSufix());
