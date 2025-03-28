@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
@@ -26,4 +27,6 @@ public class Completion
 
     @SerializedName("used_keys")
     public List<EntityKey> usedKeys;
+
+    public transient LocalDateTime startTime;
 }
