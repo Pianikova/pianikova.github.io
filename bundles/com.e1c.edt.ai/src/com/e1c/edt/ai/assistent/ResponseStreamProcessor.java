@@ -9,7 +9,6 @@ import java.util.stream.Stream;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.assistent.model.Completion;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -36,10 +35,10 @@ public class ResponseStreamProcessor
         Preconditions.checkNotNull(stream);
         Preconditions.checkNotNull(observer);
         Preconditions.checkNotNull(cancellationToken);
-        stream.takeWhile(line -> process(observer, cancellationToken, line)).collect(Collectors.toList());
+        stream.takeWhile(line -> process(observer, line, cancellationToken)).collect(Collectors.toList());
     }
 
-    private boolean process(IObserver<Completion> observer, ICancellationToken cancellationToken, String line)
+    private boolean process(IObserver<Completion> observer, String line, ICancellationToken cancellationToken)
     {
         if (cancellationToken.isCanceled())
         {
@@ -48,7 +47,7 @@ public class ResponseStreamProcessor
 
         try
         {
-            return lineProcessor.process(observer, line);
+            return lineProcessor.process(observer, line, cancellationToken);
         }
         catch (Throwable error)
         {

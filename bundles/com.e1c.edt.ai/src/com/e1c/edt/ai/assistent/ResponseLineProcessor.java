@@ -3,11 +3,12 @@
  */
 package com.e1c.edt.ai.assistent;
 
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.assistent.model.Completion;
 import com.e1c.edt.ai.assistent.model.CompletionResponse;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -16,18 +17,21 @@ public class ResponseLineProcessor
 {
     private final IJson json;
     private final ITextPreprocessor textPreprocessor;
+    private final IClock clock;
 
     @Inject
-    public ResponseLineProcessor(IJson json, ITextPreprocessor textPreprocessor)
+    public ResponseLineProcessor(IJson json, ITextPreprocessor textPreprocessor, IClock clock)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(textPreprocessor);
+        Preconditions.checkNotNull(clock);
         this.json = json;
         this.textPreprocessor = textPreprocessor;
+        this.clock = clock;
     }
 
     @Override
-    public boolean process(IObserver<Completion> observer, String line)
+    public boolean process(IObserver<Completion> observer, String line, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(observer);
         try
@@ -37,12 +41,16 @@ public class ResponseLineProcessor
                 return true;
             }
 
+            var startTime = clock.now();
             var sb = new StringBuilder(line.length() + 2);
             sb.append('{');
             sb.append(line);
             sb.append('}');
             return json.deserialize(sb.toString(), CompletionResponse.class)
-                .map(aiResponse -> process(observer, aiResponse.data))
+                .map(aiResponse -> {
+                    aiResponse.data.startTime = startTime;
+                    return process(observer, aiResponse.data);
+                })
                 .orElse(true);
         }
         catch (Exception e)

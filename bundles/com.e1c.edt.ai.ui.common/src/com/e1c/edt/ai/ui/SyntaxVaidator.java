@@ -68,10 +68,10 @@ class SyntaxVaidator
             cancellationToken);
 
         var validHintLines = hintText.substring(0, validCodeSize);
-        log.debug("Syntax check " + cancellationToken, () -> { //$NON-NLS-1$
-            var message = new StringBuilder();
-            if (hintText.length() != validHintLines.length())
-            {
+        if (hintText.length() != validHintLines.length())
+        {
+            log.warning("Syntax check " + cancellationToken, () -> { //$NON-NLS-1$
+                var message = new StringBuilder();
                 message.append("Original hint: ["); //$NON-NLS-1$
                 message.append(hintText);
                 message.append(']');
@@ -83,19 +83,13 @@ class SyntaxVaidator
                 message.append(']');
                 message.append(System.lineSeparator());
                 message.append(System.lineSeparator());
-            }
-            else
-            {
-                message.append("Hint is valid"); //$NON-NLS-1$
-                message.append(System.lineSeparator());
-                message.append(System.lineSeparator());
-            }
 
-            message.append("Method: "); //$NON-NLS-1$
-            message.append(method.getUniqueName());
+                message.append("Method: "); //$NON-NLS-1$
+                message.append(method.getUniqueName());
 
-            return message.toString();
-        });
+                return message.toString();
+            });
+        }
 
         return validHintLines;
     }

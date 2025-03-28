@@ -12,14 +12,15 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 
-import com.e1c.edt.ai.CancellationTokenSource;
-import com.e1c.edt.ai.CancellationTokens;
-import com.e1c.edt.ai.IObserver;
-import com.e1c.edt.ai.assistent.model.Completion;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import com.e1c.edt.ai.CancellationTokenSource;
+import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.IObserver;
+import com.e1c.edt.ai.assistent.model.Completion;
 
 public class ResponseStreamProcessorTest
 {
@@ -33,20 +34,20 @@ public class ResponseStreamProcessorTest
     public void shouldProcessWhileNotAborted()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
         var data = List.of("Abc", "Xy", "Asd", "Rty");
 
         // When
-        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(observer, "Xy")).thenReturn(true);
-        when(lineProcessor.process(observer, "Asd")).thenReturn(false);
-        provcessor.process(data.stream(), observer, CancellationTokens.NONE);
+        when(lineProcessor.process(observer, "Abc", CancellationTokens.NONE)).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy", CancellationTokens.NONE)).thenReturn(true);
+        when(lineProcessor.process(observer, "Asd", CancellationTokens.NONE)).thenReturn(false);
+        processor.process(data.stream(), observer, CancellationTokens.NONE);
 
         // Then
-        verify(lineProcessor).process(observer, "Abc");
-        verify(lineProcessor).process(observer, "Xy");
-        verify(lineProcessor).process(observer, "Asd");
-        verify(lineProcessor, times(0)).process(observer, "Rty");
+        verify(lineProcessor).process(observer, "Abc", CancellationTokens.NONE);
+        verify(lineProcessor).process(observer, "Xy", CancellationTokens.NONE);
+        verify(lineProcessor).process(observer, "Asd", CancellationTokens.NONE);
+        verify(lineProcessor, times(0)).process(observer, "Rty", CancellationTokens.NONE);
         verify(observer, times(0)).onCompleted();
     }
 
@@ -55,21 +56,21 @@ public class ResponseStreamProcessorTest
     public void shouldProcessAllIfNotAborted()
     {
         // Given
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
         var data = List.of("Abc", "Xy", "Asd", "Rty");
 
         // When
-        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(observer, "Xy")).thenReturn(true);
-        when(lineProcessor.process(observer, "Asd")).thenReturn(true);
-        when(lineProcessor.process(observer, "Rty")).thenReturn(true);
-        provcessor.process(data.stream(), observer, CancellationTokens.NONE);
+        when(lineProcessor.process(observer, "Abc", CancellationTokens.NONE)).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy", CancellationTokens.NONE)).thenReturn(true);
+        when(lineProcessor.process(observer, "Asd", CancellationTokens.NONE)).thenReturn(true);
+        when(lineProcessor.process(observer, "Rty", CancellationTokens.NONE)).thenReturn(true);
+        processor.process(data.stream(), observer, CancellationTokens.NONE);
 
         // Then
-        verify(lineProcessor).process(observer, "Abc");
-        verify(lineProcessor).process(observer, "Xy");
-        verify(lineProcessor).process(observer, "Asd");
-        verify(lineProcessor).process(observer, "Rty");
+        verify(lineProcessor).process(observer, "Abc", CancellationTokens.NONE);
+        verify(lineProcessor).process(observer, "Xy", CancellationTokens.NONE);
+        verify(lineProcessor).process(observer, "Asd", CancellationTokens.NONE);
+        verify(lineProcessor).process(observer, "Rty", CancellationTokens.NONE);
         verify(observer, times(0)).onCompleted();
     }
 
@@ -79,14 +80,14 @@ public class ResponseStreamProcessorTest
     {
         // Given
         Mockito.doThrow(new CancellationException()).when(threadManager).cancel();
-        var provcessor = createInstance(1);
+        var processor = createInstance(1);
         var data = List.of("Abc", "Xy", "Asd", "Rty");
 
         // When
         final var cancellationTokenSource = new CancellationTokenSource();
 
-        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(observer, "Xy")).thenAnswer(new Answer<Boolean>()
+        when(lineProcessor.process(observer, "Abc", cancellationTokenSource)).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy", cancellationTokenSource)).thenAnswer(new Answer<Boolean>()
         {
             @Override
             public Boolean answer(InvocationOnMock invocation) throws Throwable
@@ -96,16 +97,16 @@ public class ResponseStreamProcessorTest
             }
 
         });
-        when(lineProcessor.process(observer, "Asd")).thenReturn(false);
+        when(lineProcessor.process(observer, "Asd", cancellationTokenSource)).thenReturn(false);
         assertThrows(CancellationException.class,
-            () -> provcessor.process(data.stream(), observer, cancellationTokenSource));
+            () -> processor.process(data.stream(), observer, cancellationTokenSource));
 
         // Then
         verify(threadManager).cancel();
-        verify(lineProcessor, times(1)).process(observer, "Abc");
-        verify(lineProcessor, times(1)).process(observer, "Xy");
-        verify(lineProcessor, times(0)).process(observer, "Asd");
-        verify(lineProcessor, times(0)).process(observer, "Rty");
+        verify(lineProcessor, times(1)).process(observer, "Abc", cancellationTokenSource);
+        verify(lineProcessor, times(1)).process(observer, "Xy", cancellationTokenSource);
+        verify(lineProcessor, times(0)).process(observer, "Asd", cancellationTokenSource);
+        verify(lineProcessor, times(0)).process(observer, "Rty", cancellationTokenSource);
         verify(observer, times(0)).onCompleted();
     }
 
@@ -119,16 +120,16 @@ public class ResponseStreamProcessorTest
         var error = new Throwable();
 
         // When
-        when(lineProcessor.process(observer, "Abc")).thenReturn(true);
-        when(lineProcessor.process(observer, "Xy")).thenAnswer(i -> {
+        when(lineProcessor.process(observer, "Abc", CancellationTokens.NONE)).thenReturn(true);
+        when(lineProcessor.process(observer, "Xy", CancellationTokens.NONE)).thenAnswer(i -> {
             throw error;
         });
         provcessor.process(data.stream(), observer, CancellationTokens.NONE);
 
         // Then
-        verify(lineProcessor).process(observer, "Abc");
-        verify(lineProcessor).process(observer, "Xy");
-        verify(lineProcessor, times(0)).process(observer, "Asd");
+        verify(lineProcessor).process(observer, "Abc", CancellationTokens.NONE);
+        verify(lineProcessor).process(observer, "Xy", CancellationTokens.NONE);
+        verify(lineProcessor, times(0)).process(observer, "Asd", CancellationTokens.NONE);
         verify(observer).onError(error);
         verify(observer, times(0)).onCompleted();
     }

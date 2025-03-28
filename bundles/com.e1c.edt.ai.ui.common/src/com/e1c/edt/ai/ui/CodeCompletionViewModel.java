@@ -100,11 +100,13 @@ class CodeCompletionViewModel
     private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private final ICodeCompletionStatistics statistics;
     private final ICodeCompletionTokenizer tokenizer;
+    private final ArrayList<CodeMethod> methods = new ArrayList<>();
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
     private SourceViewer sourceViewer;
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
+    private Job lastUpdateMethodJob;
     private List<Proposal> lastProposals = new ArrayList<>();
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
@@ -186,6 +188,7 @@ class CodeCompletionViewModel
             lastSession = null;
             isTextModifed = false;
             prevMethod = Optional.empty();
+            methods.clear();
             this.textWidget = textWidget;
             if (!textWidget.isDisposed())
             {
@@ -225,6 +228,11 @@ class CodeCompletionViewModel
 
     private void hideHint()
     {
+        if (hintPainter.getOffset() == -1)
+        {
+            return;
+        }
+
         dispatcher.dispatch(() -> {
             hintPainter.reset();
         });
@@ -347,6 +355,7 @@ class CodeCompletionViewModel
         }
     }
 
+    @SuppressWarnings("nls")
     private void ask(AIContext aiCtx, CompletionRequestProvider localContextProvider,
         Duration delayBeforeShow,
         int codeCompletionLinesCount,
@@ -390,7 +399,7 @@ class CodeCompletionViewModel
             var completionSource =
                 codeAssistant.createSource(aiCtx.getProjectId(), localContextProvider, cancellationTokenSource);
             requestDuration = Duration.between(startTime, clock.now());
-
+            var processingStatistics = new ProcessingStatistics();
             // @formatter:off
             completionSource.subscribe(Observers.create(
                 data -> {
@@ -414,7 +423,8 @@ class CodeCompletionViewModel
                     }
 
                     hint.append(new Text(text, session));
-                    showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
+                    showWithDelay(session, calculateDelay(startTime, delayBeforeShow), processingStatistics);
+                    processingStatistics.totalDuration = processingStatistics.totalDuration.plus(Duration.between(data.startTime, clock.now()));
                 },
                 error -> {
                     if (cancellationTokenSource.isCanceled())
@@ -432,8 +442,6 @@ class CodeCompletionViewModel
                     }
 
                     var hint = session.getHint();
-                    log.trace("AI generated text " + cancellationTokenSource, () -> format(hint.toString())); //$NON-NLS-1$
-
                     if (lastProposals.size() > 0) {
                         hint.append(new Text(lastProposals.get(0).prefix, Sources.UNKNOWN));
                         lastProposals.clear();
@@ -446,7 +454,20 @@ class CodeCompletionViewModel
                     }
 
                     session.complete();
-                    showWithDelay(session, calculateDelay(startTime, delayBeforeShow));
+                    showWithDelay(session, calculateDelay(startTime, delayBeforeShow), processingStatistics);
+                    log.trace("AI generated text " + cancellationTokenSource, () -> {
+                        var message = new StringBuilder();
+                        message.append(format(hint.toString()));
+
+                        message.append(System.lineSeparator());
+                        message.append("Total duration: ");
+                        message.append(processingStatistics.totalDuration);
+
+                        message.append(System.lineSeparator());
+                        message.append("Syntax check duration: ");
+                        message.append(processingStatistics.syntaxCheckDuration);
+                        return message.toString();
+                    });
                 }));
             // @formatter:on
         }
@@ -463,7 +484,27 @@ class CodeCompletionViewModel
 
     private Optional<CodeMethod> getCurrentMethod(int offset)
     {
-        return codeParser.parse(sourceViewer).flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
+        synchronized (lockObject)
+        {
+            for (var method : methods)
+            {
+                if (offset >= method.getStartOffest() && offset <= method.getEndOffest())
+                {
+                    return Optional.of(method);
+                }
+            }
+
+            var newMethod =
+                codeParser.parse(sourceViewer)
+                .flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
+
+            if (newMethod.isPresent())
+            {
+                methods.add(newMethod.get());
+            }
+
+            return newMethod;
+        }
     }
 
     private void cancel()
@@ -471,6 +512,12 @@ class CodeCompletionViewModel
         showTimer.purge();
         synchronized (lockObject)
         {
+            if (lastUpdateMethodJob != null)
+            {
+                lastUpdateMethodJob.cancel();
+                lastUpdateMethodJob = null;
+            }
+
             if (lastJob != null)
             {
                 lastJob.cancel();
@@ -487,12 +534,13 @@ class CodeCompletionViewModel
         }
     }
 
-    private void showWithDelay(ICodeCompletionSession<CodeCompletionContext> session, Duration delayBeforeShow)
+    private void showWithDelay(ICodeCompletionSession<CodeCompletionContext> session, Duration delayBeforeShow,
+        ProcessingStatistics processingStatistics)
     {
         showTimer.purge();
         if (delayBeforeShow.isNegative() || delayBeforeShow == Duration.ZERO)
         {
-            show(session);
+            show(session, processingStatistics);
             return;
         }
 
@@ -502,14 +550,14 @@ class CodeCompletionViewModel
                 @Override
                 public void run()
                 {
-                    show(session);
+                    show(session, processingStatistics);
                 }
             },
             delayBeforeShow.toMillis());
         // @formatter:on
     }
 
-    private void show(ICodeCompletionSession<CodeCompletionContext> session)
+    private void show(ICodeCompletionSession<CodeCompletionContext> session, ProcessingStatistics processingStatistics)
     {
         if (session.getContext().getCancellationTokenSource().isCanceled())
         {
@@ -526,9 +574,12 @@ class CodeCompletionViewModel
 
         var hintText = hint.getText(HintPart.LINES).getText();
         var aiCtx = context.getAiContext();
+        var startTime = clock.now();
         var validHint = getCurrentMethod(aiCtx.getSourceOffset()).map(
             method -> syntaxVaidator.getValidHint(method, aiCtx, hintText, context.getCancellationTokenSource()))
             .orElse(hintText);
+        processingStatistics.syntaxCheckDuration =
+            processingStatistics.syntaxCheckDuration.plus(Duration.between(startTime, clock.now()));
 
         dispatcher.dispatch(() -> {
             if (validHint.length() > 0)
@@ -656,12 +707,57 @@ class CodeCompletionViewModel
         }
     }
 
-    @SuppressWarnings("nls")
     @Override
     public void caretMoved(CaretEvent event)
     {
+        synchronized (lockObject)
+        {
+            updateMethodAsync();
+            if (lastSession == null
+                || (isTraversed || lastSession.isAccepting()) && !hintPainter.getHintText().isEmpty())
+            {
+                return;
+            }
+        }
+
+        commit(lastSession);
+        reset();
+    }
+
+    private void updateMethodAsync()
+    {
+        synchronized (lockObject)
+        {
+            var job = lastUpdateMethodJob;
+            if (job != null)
+            {
+                job.cancel();
+            }
+
+            job = dispatcher.createJob(Messages.CodeCompletionJobName,
+                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), null);
+            job.setPriority(Job.DECORATE);
+            this.lastUpdateMethodJob = job;
+            job.schedule(1000);
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private void updateMethod(ICancellationToken cancellationToken)
+    {
         // sync
-        var newMethod = getCurrentMethod(textWidget.getCaretOffset());
+        var offset = dispatcher.dispatch(() -> textWidget.getCaretOffset());
+        if (offset.isEmpty() || cancellationToken.isCanceled())
+        {
+            return;
+        }
+
+        var newMethod = getCurrentMethod(offset.get());
+        if (cancellationToken.isCanceled())
+        {
+            return;
+        }
+
         var newMethodName = newMethod.map(i -> i.getUniqueName()).orElse("");
         var prevMethodName = prevMethod.map(i -> i.getUniqueName()).orElse("");
         try
@@ -675,25 +771,16 @@ class CodeCompletionViewModel
         {
             prevMethod = newMethod;
         }
-
-        synchronized (lockObject)
-        {
-            if (lastSession == null
-                || (isTraversed || lastSession.isAccepting())
-                && !hintPainter.getHintText().isEmpty())
-            {
-                return;
-            }
-        }
-
-        commit(lastSession);
-        reset();
     }
 
     @Override
     public void modifyText(ModifyEvent e)
     {
-        isTextModifed = true;
+        synchronized (lockObject)
+        {
+            methods.clear();
+            isTextModifed = true;
+        }
     }
 
     @Override
@@ -749,8 +836,9 @@ class CodeCompletionViewModel
         if (isTextModifed && newMethod != null)
         {
             isTextModifed = false;
-            aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+            dispatcher.dispatchAsync(
+                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
+                    .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE)));
         }
 
         if (prevMethod != null)
@@ -946,5 +1034,11 @@ class CodeCompletionViewModel
     public void mouseUp(MouseEvent e)
     {
         //
+    }
+
+    private static class ProcessingStatistics
+    {
+        public Duration totalDuration = Duration.ZERO;
+        public Duration syntaxCheckDuration = Duration.ZERO;
     }
 }

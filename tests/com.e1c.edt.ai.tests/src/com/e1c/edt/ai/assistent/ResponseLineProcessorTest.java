@@ -11,17 +11,21 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 
+import org.junit.Assert;
+import org.junit.Test;
+
+import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.assistent.model.Completion;
 import com.e1c.edt.ai.assistent.model.CompletionResponse;
-import org.junit.Assert;
-import org.junit.Test;
 
 public class ResponseLineProcessorTest
 {
     private final IJson json = mock(IJson.class);
     private final ITextPreprocessor textPreprocessor = mock(ITextPreprocessor.class);
+    private final IClock clock = mock(IClock.class);
     @SuppressWarnings("unchecked")
     private final IObserver<Completion> observer = mock(IObserver.class);
 
@@ -37,7 +41,7 @@ public class ResponseLineProcessorTest
         var processor = createInstance(1);
 
         // When
-        var actualResult = processor.process(observer, null);
+        var actualResult = processor.process(observer, null, CancellationTokens.NONE);
 
         // Then
         Assert.assertTrue(actualResult);
@@ -51,7 +55,7 @@ public class ResponseLineProcessorTest
         var processor = createInstance(1);
 
         // When
-        var actualResult = processor.process(observer, "");
+        var actualResult = processor.process(observer, "", CancellationTokens.NONE);
 
         // Then
         Assert.assertTrue(actualResult);
@@ -73,7 +77,7 @@ public class ResponseLineProcessorTest
 
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
-        var actualResult = processor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc", CancellationTokens.NONE);
 
         // Then
         Assert.assertTrue(actualResult);
@@ -97,7 +101,7 @@ public class ResponseLineProcessorTest
         // When
         when(textPreprocessor.process("Xyz")).thenReturn("Asd");
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
-        var actualResult = processor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc", CancellationTokens.NONE);
 
         // Then
         Assert.assertTrue(actualResult);
@@ -121,7 +125,7 @@ public class ResponseLineProcessorTest
 
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
-        var actualResult = processor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc", CancellationTokens.NONE);
 
         // Then
         Assert.assertFalse(actualResult);
@@ -145,7 +149,7 @@ public class ResponseLineProcessorTest
 
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenReturn(Optional.of(response));
-        var actualResult = processor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc", CancellationTokens.NONE);
 
         // Then
         Assert.assertFalse(actualResult);
@@ -160,7 +164,7 @@ public class ResponseLineProcessorTest
         var processor = createInstance(1);
 
         // When
-        var actualResult = processor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc", CancellationTokens.NONE);
 
         // Then
         Assert.assertTrue(actualResult);
@@ -181,7 +185,7 @@ public class ResponseLineProcessorTest
         response.data = data;
         // When
         when(json.deserialize("{Abc}", CompletionResponse.class)).thenThrow(NullPointerException.class);
-        var actualResult = processor.process(observer, "Abc");
+        var actualResult = processor.process(observer, "Abc", CancellationTokens.NONE);
 
         // Then
         Assert.assertFalse(actualResult);
@@ -189,6 +193,6 @@ public class ResponseLineProcessorTest
 
     private ResponseLineProcessor createInstance(int codeCompletionLinesCount)
     {
-        return new ResponseLineProcessor(json, textPreprocessor);
+        return new ResponseLineProcessor(json, textPreprocessor, clock);
     }
 }
