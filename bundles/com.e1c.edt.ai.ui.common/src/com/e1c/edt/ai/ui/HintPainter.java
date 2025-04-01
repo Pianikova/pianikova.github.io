@@ -232,6 +232,11 @@ class HintPainter
             labelW = l - labelX;
             labelX = labelW - labelSize.x - BORDER;
 
+            if (!bounds.intersects(firstLineX, firstLineY, otherLinesX + otherLinesW, otherLinesY + otherLinesH))
+            {
+                return;
+            }
+
             if (firstLine.length() > 0 && !suffix.isBlank())
             {
                 gc.copyArea(firstLineX, firstLineY, bounds.width - firstLineX, firstLineH, firstLineX + firstLineW,
