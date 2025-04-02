@@ -195,20 +195,8 @@ class CodeCompletionViewModel
                 sourceViewer = ui.getSourceViewer(textWidget).orElse(null);
                 if (sourceViewer != null)
                 {
-                    textWidget.addPaintListener(hintPainter);
-                    textWidget.addTraverseListener(this);
-                    textWidget.addCaretListener(this);
-                    textWidget.addVerifyKeyListener(this);
-                    textWidget.addModifyListener(this);
-                    textWidget.addControlListener(this);
-                    textWidget.addMouseListener(this);
-                    Optional.ofNullable(textWidget.getHorizontalBar())
-                        .ifPresent(scroll -> scroll.addSelectionListener(this));
-                    Optional.ofNullable(textWidget.getVerticalBar())
-                        .ifPresent(scroll -> scroll.addSelectionListener(this));
-                    Optional.ofNullable(sourceViewer.getContentAssistantFacade())
-                        .ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
-                    textWidget.redraw();
+                    addListeners(textWidget);
+                    redraw();
                     warmup();
                     return Closeables.create(() -> deactivate());
                 }
@@ -235,6 +223,7 @@ class CodeCompletionViewModel
 
         dispatcher.dispatch(() -> {
             hintPainter.reset();
+            redraw();
         });
     }
 
@@ -245,9 +234,10 @@ class CodeCompletionViewModel
         var hint = session.getHint();
         var offset = widget.getCaretOffset();
         dispatcher.dispatch(() -> {
-            hintPainter.pinOffset(widget, offset, true, session.getContext().isSingleWordMode());
+            hintPainter.pinOffset(offset, true, session.getContext().isSingleWordMode());
             hintPainter.setHintAt(offset, hint.getText(HintPart.LINES).getText(),
                 hint.getText(HintPart.TOKEN).getText(), hint.getAcceptedTokens());
+            redraw();
         });
     }
 
@@ -334,25 +324,46 @@ class CodeCompletionViewModel
             reset();
             if (!textWidget.isDisposed())
             {
-                Optional.ofNullable(textWidget.getHorizontalBar())
-                    .ifPresent(scroll -> scroll.removeSelectionListener(this));
-                Optional.ofNullable(textWidget.getVerticalBar())
-                    .ifPresent(scroll -> scroll.removeSelectionListener(this));
-                Optional.ofNullable(sourceViewer.getContentAssistantFacade())
-                    .ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
-                textWidget.removePaintListener(hintPainter);
-                textWidget.removeCaretListener(this);
-                textWidget.removeVerifyKeyListener(this);
-                textWidget.removeTraverseListener(this);
-                textWidget.removeModifyListener(this);
-                textWidget.removeMouseListener(this);
-                textWidget.redraw();
+                removeListeners();
+                redraw();
             }
 
             lastSession = null;
             isTextModifed = false;
             prevMethod = null;
         }
+    }
+
+    private void addListeners(StyledText textWidget)
+    {
+        removeListeners();
+        textWidget.addPaintListener(hintPainter);
+        textWidget.addTraverseListener(this);
+        textWidget.addCaretListener(this);
+        textWidget.addVerifyKeyListener(this);
+        textWidget.addModifyListener(this);
+        textWidget.addControlListener(this);
+        textWidget.addMouseListener(this);
+        Optional.ofNullable(textWidget.getHorizontalBar()).ifPresent(scroll -> scroll.addSelectionListener(this));
+        Optional.ofNullable(textWidget.getVerticalBar()).ifPresent(scroll -> scroll.addSelectionListener(this));
+        Optional.ofNullable(sourceViewer.getContentAssistantFacade())
+            .ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
+    }
+
+    private void removeListeners()
+    {
+        Optional.ofNullable(textWidget.getHorizontalBar())
+            .ifPresent(scroll -> scroll.removeSelectionListener(this));
+        Optional.ofNullable(textWidget.getVerticalBar())
+            .ifPresent(scroll -> scroll.removeSelectionListener(this));
+        Optional.ofNullable(sourceViewer.getContentAssistantFacade())
+            .ifPresent(assistant -> assistant.removeCompletionListener(assistantListener));
+        textWidget.removePaintListener(hintPainter);
+        textWidget.removeCaretListener(this);
+        textWidget.removeVerifyKeyListener(this);
+        textWidget.removeTraverseListener(this);
+        textWidget.removeModifyListener(this);
+        textWidget.removeMouseListener(this);
     }
 
     @SuppressWarnings("nls")
@@ -390,8 +401,9 @@ class CodeCompletionViewModel
 
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
-                hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(), delay.isNegative() || delay == Duration.ZERO,
+                hintPainter.pinOffset(aiCtx.getСaretOffset(), delay.isNegative() || delay == Duration.ZERO,
                     singleWordMode);
+                redraw();
             });
 
             getCurrentMethod(aiCtx.getTextOffset()).ifPresent(currentMethod -> session.setMethod(currentMethod));
@@ -447,14 +459,6 @@ class CodeCompletionViewModel
                         lastProposals.clear();
                     }
 
-                    if (hint.isBlank())
-                    {
-                        hint.clear();
-                        reset();
-                    }
-
-                    session.complete();
-                    showWithDelay(session, calculateDelay(startTime, delayBeforeShow), processingStatistics);
                     log.trace("AI generated text " + cancellationTokenSource, () -> {
                         var message = new StringBuilder();
                         message.append(format(hint.toString()));
@@ -468,6 +472,17 @@ class CodeCompletionViewModel
                         message.append(processingStatistics.syntaxCheckDuration);
                         return message.toString();
                     });
+
+                    if (hint.isEmpty())
+                    {
+                        hideHint();
+                    }
+                    else
+                    {
+                        showWithDelay(session, calculateDelay(startTime, delayBeforeShow), processingStatistics);
+                    }
+
+                    session.complete();
                 }));
             // @formatter:on
         }
@@ -565,9 +580,8 @@ class CodeCompletionViewModel
         }
 
         var context = session.getContext();
-        var widget = context.getWidget();
         var hint = session.getHint();
-        if (hint.isBlank())
+        if (hint.isEmpty())
         {
             return;
         }
@@ -587,7 +601,7 @@ class CodeCompletionViewModel
                 var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
                 hintPainter.setHintAt(aiCtx.getСaretOffset(), validHint, nextToken.getValue(),
                     hint.getAcceptedTokens());
-                widget.redraw();
+                redraw();
             }
             else
             {
@@ -788,7 +802,7 @@ class CodeCompletionViewModel
     {
         if (hintPainter.getOffset() != -1)
         {
-            textWidget.redraw();
+            redraw();
         }
     }
 
@@ -797,7 +811,7 @@ class CodeCompletionViewModel
     {
         if (hintPainter.getOffset() != -1)
         {
-            textWidget.redraw();
+            redraw();
         }
     }
 
@@ -805,6 +819,14 @@ class CodeCompletionViewModel
     public void controlMoved(ControlEvent e)
     {
         if (hintPainter.getOffset() != -1)
+        {
+            redraw();
+        }
+    }
+
+    private void redraw()
+    {
+        if (!textWidget.isDisposed())
         {
             textWidget.redraw();
         }
@@ -815,7 +837,7 @@ class CodeCompletionViewModel
     {
         if (hintPainter.getOffset() != -1)
         {
-            textWidget.redraw();
+            redraw();
         }
     }
 

@@ -43,7 +43,7 @@ public class AIUICommonModule
         bind(IAIContextProvider.class).to(AIContextProvider.class).in(Singleton.class);
         bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(new TypeLiteral<ICodeCompletionViewModel<CodeCompletionContext>>() { /**/ }).to(CodeCompletionViewModel.class).in(Singleton.class);
-        bind(IHintPainter.class).to(HintPainter.class);
+        bind(IHintPainter.class).to(HintPainter.class).in(Singleton.class);
         bind(IHotKeys.class).to(HotKeys.class).in(Singleton.class);
         bind(IUserActions.class).to(UserActions.class).in(Singleton.class);
         bind(new TypeLiteral<ICodeCompletionSession<CodeCompletionContext>>() { /**/ }).to(new TypeLiteral<CodeCompletionSession<CodeCompletionContext>>() { /**/ });

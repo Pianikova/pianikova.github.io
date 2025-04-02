@@ -26,7 +26,6 @@ class HintPainter
     private final IHintTextBuilder hintTextBuilder;
     private final IUISettings uiSettings;
     private final IUserActions userActions;
-    private StyledText textWidget;
     private String hintText = ""; //$NON-NLS-1$
     private String nextToken = ""; //$NON-NLS-1$
     private int acceptedTokens;
@@ -46,19 +45,11 @@ class HintPainter
     }
 
     @Override
-    public void pinOffset(StyledText textWidget, int offset, boolean showEmpty, boolean isSingleWordMode)
+    public void pinOffset(int offset, boolean showEmpty, boolean isSingleWordMode)
     {
-        Preconditions.checkNotNull(textWidget);
-        this.textWidget = textWidget;
         pinnedOffset = offset;
         this.showEmpty = showEmpty;
         this.isSingleWordMode = isSingleWordMode;
-        if (textWidget == null || textWidget.isDisposed())
-        {
-            return;
-        }
-
-        textWidget.redraw();
     }
 
     @Override
@@ -94,20 +85,11 @@ class HintPainter
                 || acceptedTokens != this.acceptedTokens;
         }
 
-        if (textWidget == null)
-        {
-            return;
-        }
-
         if (changed)
         {
             this.hintText = hintText;
             this.nextToken = nextToken;
             this.acceptedTokens = acceptedTokens;
-            if (!textWidget.isDisposed())
-            {
-                textWidget.redraw();
-            }
         }
     }
 
@@ -115,6 +97,12 @@ class HintPainter
     public void paintControl(PaintEvent event)
     {
         Preconditions.checkNotNull(event);
+        if (!(event.widget instanceof StyledText))
+        {
+            return;
+        }
+
+        var textWidget = (StyledText)event.widget;
         if (textWidget == null || textWidget.isDisposed() || pinnedOffset == -1)
         {
             return;
@@ -170,10 +158,11 @@ class HintPainter
 
         var token = hintTextBuilder.build(prefix, this.nextToken, uiSettings.getTabWidth());
         token = firstLine.startsWith(token) ? token : ""; //$NON-NLS-1$
-        drawHint(event.gc, token, firstLine, otherLines, suffix);
+        drawHint(event.gc, textWidget, token, firstLine, otherLines, suffix);
     }
 
-    private void drawHint(GC gc, String nextToken, String firstLine, String otherLines, String suffix)
+    private void drawHint(GC gc, StyledText textWidget, String nextToken, String firstLine, String otherLines,
+        String suffix)
     {
         var zeroLocation = textWidget.getLocationAtOffset(0);
         var caretLocation = textWidget.getLocationAtOffset(pinnedOffset);
