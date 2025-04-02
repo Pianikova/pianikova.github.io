@@ -75,6 +75,7 @@ class CodeCompletionViewModel
     ModifyListener, SelectionListener, ControlListener, MouseListener
 {
     private final Object lockObject = new Object();
+    private final Object lastMethodLockObject = new Object();
     private final ILog log;
     private final IUISettings uiSettings;
     private final ICodeAssistant codeAssistant;
@@ -107,6 +108,7 @@ class CodeCompletionViewModel
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private Job lastUpdateMethodJob;
+    private Job commitJob;
     private List<Proposal> lastProposals = new ArrayList<>();
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
@@ -182,13 +184,17 @@ class CodeCompletionViewModel
     @Override
     public AutoCloseable activate(StyledText textWidget)
     {
+        synchronized (methods)
+        {
+            methods.clear();
+        }
+
         synchronized (lockObject)
         {
             reset();
             lastSession = null;
             isTextModifed = false;
             prevMethod = Optional.empty();
-            methods.clear();
             this.textWidget = textWidget;
             if (!textWidget.isDisposed())
             {
@@ -499,7 +505,7 @@ class CodeCompletionViewModel
 
     private Optional<CodeMethod> getCurrentMethod(int offset)
     {
-        synchronized (lockObject)
+        synchronized (methods)
         {
             for (var method : methods)
             {
@@ -724,9 +730,9 @@ class CodeCompletionViewModel
     @Override
     public void caretMoved(CaretEvent event)
     {
+        updateMethodAsync();
         synchronized (lockObject)
         {
-            updateMethodAsync();
             if (lastSession == null
                 || (isTraversed || lastSession.isAccepting()) && !hintPainter.getHintText().isEmpty())
             {
@@ -740,7 +746,7 @@ class CodeCompletionViewModel
 
     private void updateMethodAsync()
     {
-        synchronized (lockObject)
+        synchronized (lastMethodLockObject)
         {
             var job = lastUpdateMethodJob;
             if (job != null)
@@ -879,7 +885,17 @@ class CodeCompletionViewModel
             return;
         }
 
-        session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset());
+        if (commitJob != null)
+        {
+            commitJob.cancel();
+        }
+
+        var job = dispatcher.createJob(Messages.CodeCompletionJobName,
+            jobCtx -> session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset()),
+            null);
+        job.setPriority(Job.DECORATE);
+        this.commitJob = job;
+        job.schedule();
     }
 
     private class AssistantListener
@@ -964,6 +980,7 @@ class CodeCompletionViewModel
         public synchronized Optional<CompletionRequest> get(IStatistics statistics,
             ICancellationToken cancellationToken)
         {
+            dispatcher.checkThread(false, true);
             AIContext aiCtx;
             try (var measurement = statistics.measureDuration(StatisticsType.AI_CONTEXT_DURATUION))
             {

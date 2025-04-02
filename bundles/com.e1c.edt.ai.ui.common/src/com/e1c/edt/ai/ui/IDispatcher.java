@@ -7,9 +7,9 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import com.e1c.edt.ai.ICancellationToken;
 import org.eclipse.core.runtime.jobs.Job;
 
+import com.e1c.edt.ai.ICancellationToken;
 import com.google.common.base.Supplier;
 
 public interface IDispatcher
@@ -23,4 +23,6 @@ public interface IDispatcher
     Job createJob(String jobName, Consumer<JobContext> сonsumer, ICancellationToken cancellationToken);
 
     <T> Optional<T> dispatch(Supplier<? extends T> supplier, Duration timeout);
+
+    boolean checkThread(boolean isUI, boolean showWarning);
 }

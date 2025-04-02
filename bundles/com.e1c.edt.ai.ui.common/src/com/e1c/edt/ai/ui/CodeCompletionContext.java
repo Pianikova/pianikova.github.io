@@ -3,12 +3,12 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.swt.custom.StyledText;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICodeCompletionContext;
 import com.e1c.edt.ai.Text;
-import org.eclipse.swt.custom.StyledText;
-
 import com.google.common.base.Preconditions;
 
 class CodeCompletionContext
