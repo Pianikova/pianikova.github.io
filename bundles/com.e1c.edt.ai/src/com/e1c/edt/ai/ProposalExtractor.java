@@ -25,7 +25,12 @@ public class ProposalExtractor implements IProposalExtractor
         }
 
         proposal = proposal.subSequence(0, i).toString();
-        for (i = proposal.length(); i >= 0; i--)
+        if (prefix == null || prefix.isEmpty() || !Character.isAlphabetic(prefix.charAt(prefix.length() - 1)))
+        {
+            return Optional.ofNullable(proposal);
+        }
+
+        for (i = proposal.length(); i > 0; i--)
         {
             var prefixEnd = proposal.substring(0, i);
             if (prefix.endsWith(prefixEnd))
@@ -35,7 +40,7 @@ public class ProposalExtractor implements IProposalExtractor
             }
         }
 
-        if (proposal == null || proposal.isBlank())
+        if (i == 0)
         {
             return Optional.empty();
         }
