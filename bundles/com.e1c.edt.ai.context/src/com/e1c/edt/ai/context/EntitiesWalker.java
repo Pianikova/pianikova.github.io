@@ -84,6 +84,73 @@ class EntitiesWalker
 
             visitor.visitModule(moduleInfo);
             var module = moduleInfo.getModule();
+            var contentsIterator = module.eAllContents();
+            while (contentsIterator.hasNext())
+            {
+                var obj = contentsIterator.next();
+                var node = v8Model.getNode(obj);
+                if (node == null)
+                {
+                    continue;
+                }
+
+                visitor.visitNode(moduleInfo, obj, node);
+                if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
+                    || obj instanceof Method)
+                {
+                    var nodeStart = node.getTotalOffset();
+                    var nodeFinish = node.getTotalEndOffset();
+
+                    if (!((nodeStart >= start && nodeStart <= finish) || (nodeFinish >= start && nodeFinish <= finish))
+                        && !(obj instanceof Method))
+                    {
+                        continue;
+                    }
+
+                    var nodeId = idFactory.createNodeId(path, node);
+                    if (nodeId == null)
+                    {
+                        continue;
+                    }
+
+                    if (obj instanceof Method && visitor.visitMethod(moduleInfo, nodeId, (Method)obj, node))
+                    {
+                        traceVisit(obj, true);
+                        return true;
+                    }
+
+                    if (!cancellationToken.isCanceled())
+                    {
+                        if (obj instanceof Variable && visitor.visitVariable(moduleInfo, nodeId, (Variable)obj, node))
+                        {
+                            traceVisit(obj, true);
+                            return true;
+                        }
+
+                        if (obj instanceof Invocation
+                            && visitor.visitInvocation(moduleInfo, nodeId, (Invocation)obj, node))
+                        {
+                            traceVisit(obj, true);
+                            return true;
+                        }
+
+                        if (obj instanceof FeatureAccess
+                            && visitor.visitFeatureAccess(moduleInfo, nodeId, (FeatureAccess)obj, node))
+                        {
+                            traceVisit(obj, true);
+                            return true;
+                        }
+                    }
+                }
+
+                traceVisit(obj, false);
+            }
+
+            if (cancellationToken.isCanceled())
+            {
+                return true;
+            }
+
             var owner = module.getOwner();
             var project = resourceLookup.getProject(module);
             IBmModel bmModel = null;
@@ -121,69 +188,6 @@ class EntitiesWalker
                 {
                     owner = newOwner;
                 }
-            }
-
-            var contentsIterator = module.eAllContents();
-            while (contentsIterator.hasNext())
-            {
-                if (cancellationToken.isCanceled())
-                {
-                    break;
-                }
-
-                var obj = contentsIterator.next();
-                var node = v8Model.getNode(obj);
-                if (node == null)
-                {
-                    continue;
-                }
-
-                visitor.visitNode(moduleInfo, obj, node);
-                if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
-                    || obj instanceof Method)
-                {
-                    var nodeStart = node.getTotalOffset();
-                    var nodeFinish = node.getTotalEndOffset();
-
-                    if (!((nodeStart >= start && nodeStart <= finish) || (nodeFinish >= start && nodeFinish <= finish))
-                        && !(obj instanceof Method))
-                    {
-                        continue;
-                    }
-
-                    var nodeId = idFactory.createNodeId(path, node);
-                    if (nodeId == null)
-                    {
-                        continue;
-                    }
-
-                    if (obj instanceof Variable && visitor.visitVariable(moduleInfo, nodeId, (Variable)obj, node))
-                    {
-                        traceVisit(obj, true);
-                        return true;
-                    }
-
-                    if (obj instanceof Invocation && visitor.visitInvocation(moduleInfo, nodeId, (Invocation)obj, node))
-                    {
-                        traceVisit(obj, true);
-                        return true;
-                    }
-
-                    if (obj instanceof FeatureAccess
-                        && visitor.visitFeatureAccess(moduleInfo, nodeId, (FeatureAccess)obj, node))
-                    {
-                        traceVisit(obj, true);
-                        return true;
-                    }
-
-                    if (obj instanceof Method && visitor.visitMethod(moduleInfo, nodeId, (Method)obj, node))
-                    {
-                        traceVisit(obj, true);
-                        return true;
-                    }
-                }
-
-                traceVisit(obj, false);
             }
         }
         catch (Exception error)
