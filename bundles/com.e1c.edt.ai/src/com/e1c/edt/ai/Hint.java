@@ -203,7 +203,7 @@ public class Hint
     }
 
     @Override
-    public int getAcceptedTokens()
+    public synchronized int getAcceptedTokens()
     {
         return history.getCount();
     }

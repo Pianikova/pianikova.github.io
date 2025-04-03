@@ -11,7 +11,7 @@ public class HintHistory
     private final Stack<Text> history = new Stack<>();
 
     @Override
-    public int getCount()
+    public synchronized int getCount()
     {
         return history.size();
     }

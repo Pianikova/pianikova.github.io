@@ -222,11 +222,6 @@ class CodeCompletionViewModel
 
     private void hideHint()
     {
-        if (hintPainter.getOffset() == -1)
-        {
-            return;
-        }
-
         dispatcher.dispatch(() -> {
             hintPainter.reset();
             redraw();
@@ -239,12 +234,10 @@ class CodeCompletionViewModel
         var widget = content.getWidget();
         var hint = session.getHint();
         var offset = widget.getCaretOffset();
-        dispatcher.dispatch(() -> {
-            hintPainter.pinOffset(offset, true, session.getContext().isSingleWordMode());
-            hintPainter.setHintAt(offset, hint.getText(HintPart.LINES).getText(),
-                hint.getText(HintPart.TOKEN).getText(), hint.getAcceptedTokens());
-            redraw();
-        });
+        hintPainter.pinOffset(offset, true, session.getContext().isSingleWordMode());
+        hintPainter.setHintAt(hint.getText(HintPart.LINES).getText(), hint.getText(HintPart.TOKEN).getText(),
+            hint.getAcceptedTokens());
+        redraw();
     }
 
     private void askNew()
@@ -605,8 +598,8 @@ class CodeCompletionViewModel
             if (validHint.length() > 0)
             {
                 var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
-                hintPainter.setHintAt(aiCtx.getСaretOffset(), validHint, nextToken.getValue(),
-                    hint.getAcceptedTokens());
+                hintPainter.setHintAt(validHint, nextToken.getValue(),
+                hint.getAcceptedTokens());
                 redraw();
             }
             else
@@ -692,6 +685,8 @@ class CodeCompletionViewModel
         default:
             break;
         }
+
+        redraw();
 
         if (!event.doit)
         {
@@ -864,9 +859,10 @@ class CodeCompletionViewModel
         if (isTextModifed && newMethod != null)
         {
             isTextModifed = false;
-            dispatcher.dispatchAsync(
-                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                    .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE)));
+            dispatcher
+                .dispatch(() -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE))
+                .flatMap(i -> i)
+                .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
         }
 
         if (prevMethod != null)
