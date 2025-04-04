@@ -586,30 +586,32 @@ class CodeCompletionViewModel
         }
 
         var hintText = hint.getText(HintPart.LINES).getText();
-        var aiCtx = context.getAiContext();
         var startTime = clock.now();
-        var validHint = getCurrentMethod(aiCtx.getSourceOffset()).map(
-            method -> syntaxVaidator.getValidHint(method, aiCtx, hintText, context.getCancellationTokenSource()))
+        var optionalCode = dispatcher.dispatch(() -> new Code(textWidget.getText(), textWidget.getCaretOffset()));
+        if (optionalCode.isEmpty())
+        {
+            return;
+        }
+
+        var code = optionalCode.get();
+        var validHint = getCurrentMethod(code.offset).map(method -> syntaxVaidator.getValidHint(method, code.code,
+            code.offset, hintText, context.getCancellationTokenSource()))
             .orElse(hintText);
         processingStatistics.syntaxCheckDuration =
             processingStatistics.syntaxCheckDuration.plus(Duration.between(startTime, clock.now()));
-
-        dispatcher.dispatch(() -> {
-            if (validHint.length() > 0)
+        if (validHint.length() > 0)
+        {
+            var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
+            hintPainter.setHintAt(validHint, nextToken.getValue(), hint.getAcceptedTokens());
+            dispatcher.dispatch(() -> redraw());
+        }
+        else
+        {
+            if (session.isСompleted())
             {
-                var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
-                hintPainter.setHintAt(validHint, nextToken.getValue(),
-                hint.getAcceptedTokens());
-                redraw();
+                reset();
             }
-            else
-            {
-                if (session.isСompleted())
-                {
-                    reset();
-                }
-            }
-        });
+        }
     }
 
     private Duration calculateDelay(LocalDateTime startTime, Duration delayBeforeShow)
@@ -728,8 +730,7 @@ class CodeCompletionViewModel
         updateMethodAsync();
         synchronized (lockObject)
         {
-            if (lastSession == null
-                || (isTraversed || lastSession.isAccepting()) && !hintPainter.getHintText().isEmpty())
+            if (isTraversed || lastSession == null || lastSession.isAccepting())
             {
                 return;
             }
@@ -1075,5 +1076,17 @@ class CodeCompletionViewModel
     {
         public Duration totalDuration = Duration.ZERO;
         public Duration syntaxCheckDuration = Duration.ZERO;
+    }
+
+    private static class Code
+    {
+        public final String code;
+        public final int offset;
+
+        public Code(String code, int offset)
+        {
+            this.code = code;
+            this.offset = offset;
+        }
     }
 }

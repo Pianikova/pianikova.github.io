@@ -19,13 +19,11 @@ import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.resource.XtextResourceSet;
 import org.eclipse.xtext.util.LazyStringInputStream;
 
-import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CodeMethod;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -52,10 +50,10 @@ class SyntaxVaidator
     }
 
     @Override
-    public String getValidHint(CodeMethod method, AIContext aiContext, String hintText,
+    public String getValidHint(CodeMethod method, String sourceCode, int offset, String hintText,
         ICancellationToken cancellationToken)
     {
-        var source = aiContext.getSource();
+        var source = sourceCode;
         var end = method.getEndOffest();
         if (end >= source.length())
         {
@@ -63,8 +61,7 @@ class SyntaxVaidator
         }
 
         var code = source.substring(method.getStartOffest(), end);
-        var validCodeSize = getValidHintSize(aiContext.getPath(), code, hintText,
-            aiContext.getSourceOffset() - method.getStartOffest(),
+        var validCodeSize = getValidHintSize(code, hintText, offset - method.getStartOffest(),
             cancellationToken);
 
         var validHintLines = hintText.substring(0, validCodeSize);
@@ -94,10 +91,10 @@ class SyntaxVaidator
         return validHintLines;
     }
 
-    private int getValidHintSize(String filePath, String code, String hint, int offset,
+    private int getValidHintSize(String code, String hint, int offset,
         ICancellationToken cancellationToken)
     {
-        var paseResult = parse(filePath, code, hint, offset);
+        var paseResult = parse(code, hint, offset);
         if (paseResult.isEmpty())
         {
             return hint.length();
@@ -133,7 +130,7 @@ class SyntaxVaidator
         return minErrorOffset;
     }
 
-    private Optional<IParseResult> parse(String filePath, String code, String hint, int offset)
+    private Optional<IParseResult> parse(String code, String hint, int offset)
     {
         var fullCode = new StringBuilder(code);
         if (fullCode.length() < offset)
@@ -142,7 +139,7 @@ class SyntaxVaidator
         }
 
         fullCode.insert(offset, hint);
-        var fileExtension = Files.getFileExtension(filePath);
+        var fileExtension = ".bsl"; //$NON-NLS-1$
         if (fileExtension != null && !fileExtension.isBlank())
         {
             var codeStream = getAsStream(fullCode.toString());
