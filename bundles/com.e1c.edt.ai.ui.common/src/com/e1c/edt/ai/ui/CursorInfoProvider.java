@@ -5,30 +5,34 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
+import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
+
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.Range;
 import com.e1c.edt.ai.assistent.model.CursorInfo;
 import com.e1c.edt.ai.assistent.model.RelativeLocation;
-import org.eclipse.jface.text.source.SourceViewer;
-import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class CursorInfoProvider
     implements ICursorInfoProvider
 {
+    private final IDispatcher dispatcher;
     private final IUI ui;
     private final ICodePartsProvider codePartsProvider;
     private final ICodeParser codeParser;
 
     @Inject
-    public CursorInfoProvider(IUI ui, ICodePartsProvider codePartsProvider, ICodeParser codeParser)
+    public CursorInfoProvider(IDispatcher dispatcher, IUI ui, ICodePartsProvider codePartsProvider,
+        ICodeParser codeParser)
     {
+        Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(codePartsProvider);
         Preconditions.checkNotNull(codeParser);
+        this.dispatcher = dispatcher;
         this.ui = ui;
         this.codePartsProvider = codePartsProvider;
         this.codeParser = codeParser;
@@ -37,8 +41,8 @@ public class CursorInfoProvider
     @Override
     public Optional<CursorInfo> getCursorInfo(int cursorOffset)
     {
-        return ui.getTextWidget()
-            .flatMap(textWidget -> ui.getSourceViewer(textWidget))
+        return dispatcher.dispatch(() -> ui.getTextWidget().flatMap(textWidget -> ui.getSourceViewer(textWidget)))
+            .flatMap(i -> i)
             .flatMap(sourceViewer -> getCursorInfo(cursorOffset, sourceViewer));
     }
 

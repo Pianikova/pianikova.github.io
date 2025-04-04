@@ -82,9 +82,7 @@ class Dispatcher
         var vals = new ArrayList<T>();
         if(async)
         {
-            StackTraceElement[] stackTrace =
-                settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel()
-                    ? Thread.currentThread().getStackTrace() : EmptyStackTrace;
+            var stackTrace = getStack();
             Display.getDefault().asyncExec(() -> {
                 try
                 {
@@ -119,6 +117,17 @@ class Dispatcher
         }
 
         return Optional.ofNullable(vals.get(0));
+    }
+
+    /**
+     * TODO JavaDoc
+     *
+     * @return
+     */
+    private StackTraceElement[] getStack()
+    {
+        return settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel() ? Thread.currentThread().getStackTrace()
+            : EmptyStackTrace;
     }
 
     @SuppressWarnings("nls")
@@ -241,5 +250,50 @@ class Dispatcher
         {
             executor.shutdown();
         }
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public boolean checkThread(boolean isUI, boolean showWarning)
+    {
+        if (settings.getVerbosiry().getLevel() < Verbosity.TRACE.getLevel())
+        {
+            return true;
+        }
+
+        var actualIsUI = Thread.currentThread() == Display.getDefault().getThread();
+        if (actualIsUI == isUI)
+        {
+            return true;
+        }
+
+        if (!showWarning)
+        {
+            return false;
+        }
+
+        var stackTrace = getStack();
+        log.warning(isUI ? "Execution in the UI thread is expected" : "Execution not in a UI thread is expected",
+            () -> {
+                var sb = new StringBuilder();
+                sb.append("Stack:");
+                if (stackTrace.length > 0)
+                {
+                    sb.append(System.lineSeparator());
+                    for (StackTraceElement ste : stackTrace)
+                {
+                    sb.append(System.lineSeparator());
+                        sb.append(ste);
+                }
+                }
+                else
+                {
+                    sb.append(" empty");
+                }
+
+                return sb.toString();
+            });
+
+        return false;
     }
 }

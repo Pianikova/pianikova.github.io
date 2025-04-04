@@ -45,7 +45,7 @@ class HintPainter
     }
 
     @Override
-    public void pinOffset(int offset, boolean showEmpty, boolean isSingleWordMode)
+    public synchronized void pinOffset(int offset, boolean showEmpty, boolean isSingleWordMode)
     {
         pinnedOffset = offset;
         this.showEmpty = showEmpty;
@@ -53,28 +53,29 @@ class HintPainter
     }
 
     @Override
-    public String getHintText()
+    public synchronized String getHintText()
     {
         return hintText;
     }
 
     @Override
-    public int getOffset()
+    public synchronized int getOffset()
     {
         return pinnedOffset;
     }
 
     @Override
-    public void reset()
+    public synchronized void reset()
     {
-        setHintAt(-1, "", "", 0); //$NON-NLS-1$ //$NON-NLS-2$
+        pinnedOffset = -1;
+        setHintAt("", "", 0); //$NON-NLS-1$//$NON-NLS-2$
     }
 
     @Override
-    public void setHintAt(int offset, String hintText, String nextToken, int acceptedTokens)
+    public synchronized void setHintAt(String hintText, String nextToken, int acceptedTokens)
     {
         var changed = false;
-        if (hintText == null || offset == -1)
+        if (hintText == null)
         {
             pinnedOffset = -1;
             changed = true;
@@ -94,26 +95,31 @@ class HintPainter
     }
 
     @Override
-    public void paintControl(PaintEvent event)
+    public synchronized void paintControl(PaintEvent event)
     {
         Preconditions.checkNotNull(event);
+        if (pinnedOffset == -1)
+        {
+            return;
+        }
+
         if (!(event.widget instanceof StyledText))
         {
             return;
         }
 
         var textWidget = (StyledText)event.widget;
-        if (textWidget == null || textWidget.isDisposed() || pinnedOffset == -1)
-        {
-            return;
-        }
-
-        if (!showEmpty && getHintText().isEmpty())
+        if (textWidget == null || textWidget.isDisposed())
         {
             return;
         }
 
         var hint = getHintText();
+        if (!showEmpty && hint.isEmpty())
+        {
+            return;
+        }
+
         int line;
         var text = textWidget.getText();
         if (pinnedOffset < text.length())

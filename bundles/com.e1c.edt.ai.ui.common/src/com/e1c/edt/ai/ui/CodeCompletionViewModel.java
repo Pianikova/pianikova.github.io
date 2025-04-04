@@ -75,6 +75,7 @@ class CodeCompletionViewModel
     ModifyListener, SelectionListener, ControlListener, MouseListener
 {
     private final Object lockObject = new Object();
+    private final Object lastMethodLockObject = new Object();
     private final ILog log;
     private final IUISettings uiSettings;
     private final ICodeAssistant codeAssistant;
@@ -107,6 +108,7 @@ class CodeCompletionViewModel
     private AutoCloseable feedbackToken = Closeables.Empty;
     private Job lastJob;
     private Job lastUpdateMethodJob;
+    private Job commitJob;
     private List<Proposal> lastProposals = new ArrayList<>();
     private Duration requestDuration = Duration.ZERO;
     private boolean isTraversed;
@@ -182,13 +184,17 @@ class CodeCompletionViewModel
     @Override
     public AutoCloseable activate(StyledText textWidget)
     {
+        synchronized (methods)
+        {
+            methods.clear();
+        }
+
         synchronized (lockObject)
         {
             reset();
             lastSession = null;
             isTextModifed = false;
             prevMethod = Optional.empty();
-            methods.clear();
             this.textWidget = textWidget;
             if (!textWidget.isDisposed())
             {
@@ -216,11 +222,6 @@ class CodeCompletionViewModel
 
     private void hideHint()
     {
-        if (hintPainter.getOffset() == -1)
-        {
-            return;
-        }
-
         dispatcher.dispatch(() -> {
             hintPainter.reset();
             redraw();
@@ -233,12 +234,10 @@ class CodeCompletionViewModel
         var widget = content.getWidget();
         var hint = session.getHint();
         var offset = widget.getCaretOffset();
-        dispatcher.dispatch(() -> {
-            hintPainter.pinOffset(offset, true, session.getContext().isSingleWordMode());
-            hintPainter.setHintAt(offset, hint.getText(HintPart.LINES).getText(),
-                hint.getText(HintPart.TOKEN).getText(), hint.getAcceptedTokens());
-            redraw();
-        });
+        hintPainter.pinOffset(offset, true, session.getContext().isSingleWordMode());
+        hintPainter.setHintAt(hint.getText(HintPart.LINES).getText(), hint.getText(HintPart.TOKEN).getText(),
+            hint.getAcceptedTokens());
+        redraw();
     }
 
     private void askNew()
@@ -499,7 +498,7 @@ class CodeCompletionViewModel
 
     private Optional<CodeMethod> getCurrentMethod(int offset)
     {
-        synchronized (lockObject)
+        synchronized (methods)
         {
             for (var method : methods)
             {
@@ -587,30 +586,32 @@ class CodeCompletionViewModel
         }
 
         var hintText = hint.getText(HintPart.LINES).getText();
-        var aiCtx = context.getAiContext();
         var startTime = clock.now();
-        var validHint = getCurrentMethod(aiCtx.getSourceOffset()).map(
-            method -> syntaxVaidator.getValidHint(method, aiCtx, hintText, context.getCancellationTokenSource()))
+        var optionalCode = dispatcher.dispatch(() -> new Code(textWidget.getText(), textWidget.getCaretOffset()));
+        if (optionalCode.isEmpty())
+        {
+            return;
+        }
+
+        var code = optionalCode.get();
+        var validHint = getCurrentMethod(code.offset).map(method -> syntaxVaidator.getValidHint(method, code.code,
+            code.offset, hintText, context.getCancellationTokenSource()))
             .orElse(hintText);
         processingStatistics.syntaxCheckDuration =
             processingStatistics.syntaxCheckDuration.plus(Duration.between(startTime, clock.now()));
-
-        dispatcher.dispatch(() -> {
-            if (validHint.length() > 0)
+        if (validHint.length() > 0)
+        {
+            var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
+            hintPainter.setHintAt(validHint, nextToken.getValue(), hint.getAcceptedTokens());
+            dispatcher.dispatch(() -> redraw());
+        }
+        else
+        {
+            if (session.isСompleted())
             {
-                var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
-                hintPainter.setHintAt(aiCtx.getСaretOffset(), validHint, nextToken.getValue(),
-                    hint.getAcceptedTokens());
-                redraw();
+                reset();
             }
-            else
-            {
-                if (session.isСompleted())
-                {
-                    reset();
-                }
-            }
-        });
+        }
     }
 
     private Duration calculateDelay(LocalDateTime startTime, Duration delayBeforeShow)
@@ -687,6 +688,8 @@ class CodeCompletionViewModel
             break;
         }
 
+        redraw();
+
         if (!event.doit)
         {
             isTraversed = false;
@@ -724,11 +727,10 @@ class CodeCompletionViewModel
     @Override
     public void caretMoved(CaretEvent event)
     {
+        updateMethodAsync();
         synchronized (lockObject)
         {
-            updateMethodAsync();
-            if (lastSession == null
-                || (isTraversed || lastSession.isAccepting()) && !hintPainter.getHintText().isEmpty())
+            if (isTraversed || lastSession == null || lastSession.isAccepting())
             {
                 return;
             }
@@ -740,7 +742,7 @@ class CodeCompletionViewModel
 
     private void updateMethodAsync()
     {
-        synchronized (lockObject)
+        synchronized (lastMethodLockObject)
         {
             var job = lastUpdateMethodJob;
             if (job != null)
@@ -858,9 +860,10 @@ class CodeCompletionViewModel
         if (isTextModifed && newMethod != null)
         {
             isTextModifed = false;
-            dispatcher.dispatchAsync(
-                () -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-                    .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE)));
+            dispatcher
+                .dispatch(() -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE))
+                .flatMap(i -> i)
+                .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
         }
 
         if (prevMethod != null)
@@ -879,7 +882,17 @@ class CodeCompletionViewModel
             return;
         }
 
-        session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset());
+        if (commitJob != null)
+        {
+            commitJob.cancel();
+        }
+
+        var job = dispatcher.createJob(Messages.CodeCompletionJobName,
+            jobCtx -> session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset()),
+            null);
+        job.setPriority(Job.DECORATE);
+        this.commitJob = job;
+        job.schedule();
     }
 
     private class AssistantListener
@@ -964,6 +977,7 @@ class CodeCompletionViewModel
         public synchronized Optional<CompletionRequest> get(IStatistics statistics,
             ICancellationToken cancellationToken)
         {
+            dispatcher.checkThread(false, true);
             AIContext aiCtx;
             try (var measurement = statistics.measureDuration(StatisticsType.AI_CONTEXT_DURATUION))
             {
@@ -1062,5 +1076,17 @@ class CodeCompletionViewModel
     {
         public Duration totalDuration = Duration.ZERO;
         public Duration syntaxCheckDuration = Duration.ZERO;
+    }
+
+    private static class Code
+    {
+        public final String code;
+        public final int offset;
+
+        public Code(String code, int offset)
+        {
+            this.code = code;
+            this.offset = offset;
+        }
     }
 }

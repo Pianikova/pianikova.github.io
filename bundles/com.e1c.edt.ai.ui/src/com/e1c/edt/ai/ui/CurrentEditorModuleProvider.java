@@ -36,12 +36,11 @@ class CurrentEditorModuleProvider
     @Override
     public Optional<ModuleInfo> getModule(String filePath, ICancellationToken cancellationToken)
     {
-        var optionalModuleInfo = dispatcher.dispatch(() -> ui.getTextWidget()
-            .flatMap(textWidget -> ui.getSourceViewer(textWidget)))
-            .orElse(null)
-            .flatMap(
-                sourceViewer -> baseResourceSetProvider.getModuleInfo(sourceViewer.getDocument(), cancellationToken));
-
+        var optionalModuleInfo =
+            dispatcher.dispatch(() -> ui.getTextWidget().flatMap(textWidget -> ui.getSourceViewer(textWidget)))
+                .flatMap(i -> i).map(i -> i.getDocument())
+                .flatMap(doc -> baseResourceSetProvider.getModuleInfo(doc, cancellationToken));
+        
         if (optionalModuleInfo.isEmpty())
         {
             return baseResourceSetProvider.getModule(filePath, cancellationToken);

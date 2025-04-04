@@ -54,8 +54,18 @@ public class ProposalExtractorTest
                 { "A", "Abcd", "bcd" },
                 { "Ab", "Abcd", "cd" },
                 { "Abc", "Abcd", "d" },
-                { "Abcd", "Abcd", null },
-                { "AbZ", "Abcd", "Abcd" },
+                { "Abcd", "Abcd", "" },
+                { "AbZ", "Abcd", null },
+                { "x", "Abcd", null },
+                { "abc", "Abcd", null },
+                { " ", "Abcd", "Abcd" },
+                { "   ", "Abcd", "Abcd" },
+                { " \r\n", "Abcd", "Abcd" },
+                { " \n", "Abcd", "Abcd" },
+                { " \r\n\t", "Abcd", "Abcd" },
+                { " \r\n  ", "Abcd", "Abcd" },
+                { ".", "Abcd", "Abcd" },
+                { "+", "Abcd", "Abcd" },
             });
         // @formatter:on
     }

@@ -16,6 +16,7 @@ import com.google.inject.Inject;
 public class CodeCompletionStatistics
     implements ICodeCompletionContext, ICodeCompletionStatistics
 {
+    private static final int MAX_SIZE = 1024;
     private final ILog log;
     private final IFeedbackService feedbackService;
     private final ICursorInfoProvider cursorInfoProvider;
@@ -39,6 +40,11 @@ public class CodeCompletionStatistics
     public synchronized void apply(Text text, int offset)
     {
         Preconditions.checkNotNull(text);
+        if (code.size() > MAX_SIZE)
+        {
+            code.clear();
+        }
+
         if (offset < 0)
         {
             return;
@@ -175,6 +181,11 @@ public class CodeCompletionStatistics
 
     private void attachSourceIdToMethod(String sourceId, CodeMethod method)
     {
+        if (methods.size() > MAX_SIZE)
+        {
+            methods.clear();
+        }
+
         if (methods.computeIfAbsent(method, k -> new HashSet<>()).add(sourceId))
         {
             log.debug("Statistics", () -> "Add " + sourceId + " for " + method.getUniqueName()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$

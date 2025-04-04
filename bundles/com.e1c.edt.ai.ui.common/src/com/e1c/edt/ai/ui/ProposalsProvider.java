@@ -100,9 +100,14 @@ public class ProposalsProvider
         }
 
         var text = ((ICompletionProposalExtension3)proposal).getPrefixCompletionText(null, 0);
+        prop.prefix = proposalExtractor.extract(prefix, text.toString()).orElse(null);
+        if (prop.prefix == null)
+        {
+            return Optional.empty();
+        }
+
         prop.displayString = proposal.getDisplayString();
         prop.text = text.toString();
-        prop.prefix = proposalExtractor.extract(prefix, text.toString()).orElse(""); //$NON-NLS-1$
         return Optional.of(prop);
     }
 
