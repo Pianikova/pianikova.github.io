@@ -6,7 +6,6 @@ package com.e1c.edt.ai.ui;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
-import org.eclipse.swt.events.PaintListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 
@@ -16,7 +15,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 class HintPainter
-    implements PaintListener, IHintPainter
+    implements IHintPainter
 {
     private static final char CONTINUATION_SIGN = '…';
     private static final int BORDER = 1;
@@ -28,7 +27,11 @@ class HintPainter
     private final IUserActions userActions;
     private String hintText = ""; //$NON-NLS-1$
     private String nextToken = ""; //$NON-NLS-1$
+    private String displayedHintText = ""; //$NON-NLS-1$
+    private String suffix = ""; //$NON-NLS-1$
+    private String prefix = ""; //$NON-NLS-1$
     private int acceptedTokens;
+    private StyledText textWidget;
     private int pinnedOffset = -1;
     private boolean showEmpty;
     private boolean isSingleWordMode;
@@ -45,8 +48,9 @@ class HintPainter
     }
 
     @Override
-    public synchronized void pinOffset(int offset, boolean showEmpty, boolean isSingleWordMode)
+    public synchronized void pinOffset(StyledText textWidget, int offset, boolean showEmpty, boolean isSingleWordMode)
     {
+        this.textWidget = textWidget;
         pinnedOffset = offset;
         this.showEmpty = showEmpty;
         this.isSingleWordMode = isSingleWordMode;
@@ -59,6 +63,12 @@ class HintPainter
     }
 
     @Override
+    public synchronized String getDisplayedHintText()
+    {
+        return displayedHintText;
+    }
+
+    @Override
     public synchronized int getOffset()
     {
         return pinnedOffset;
@@ -68,29 +78,61 @@ class HintPainter
     public synchronized void reset()
     {
         pinnedOffset = -1;
-        setHintAt("", "", 0); //$NON-NLS-1$//$NON-NLS-2$
+        setHintAt(null, "", 0); //$NON-NLS-1$
     }
 
+    @SuppressWarnings("nls")
     @Override
     public synchronized void setHintAt(String hintText, String nextToken, int acceptedTokens)
     {
-        var changed = false;
         if (hintText == null)
         {
             pinnedOffset = -1;
-            changed = true;
-        }
-        else
-        {
-            changed = !hintText.equals(this.hintText) || !nextToken.equals(this.nextToken)
-                || acceptedTokens != this.acceptedTokens;
+            displayedHintText = "";
+            suffix = "";
+            prefix = "";
+            this.hintText = "";
+            this.nextToken = "";
+            this.acceptedTokens = 0;
+            return;
         }
 
-        if (changed)
+        this.hintText = hintText;
+        this.nextToken = nextToken;
+        this.acceptedTokens = acceptedTokens;
+        if (pinnedOffset >= 0 && hintText != null && textWidget != null)
         {
-            this.hintText = hintText;
-            this.nextToken = nextToken;
-            this.acceptedTokens = acceptedTokens;
+            var hint = hintText;
+            int line;
+            var text = textWidget.getText();
+            if (pinnedOffset < text.length())
+            {
+                line = textWidget.getLineAtOffset(pinnedOffset);
+            }
+            else
+            {
+                line = textWidget.getLineCount() - 1;
+            }
+
+            var lineOffset = textWidget.getOffsetAtLine(line);
+            var lineText = textWidget.getLine(line);
+            prefix = lineOffset < pinnedOffset ? textWidget.getText(lineOffset, pinnedOffset - 1) : ""; //$NON-NLS-1$
+            var suffixEnd = lineOffset + lineText.length();
+            var totalLength = text.length();
+            if (suffixEnd >= totalLength)
+            {
+                suffixEnd = totalLength - 1;
+            }
+
+            suffix = lineOffset < pinnedOffset && suffixEnd > 0 && pinnedOffset < suffixEnd
+                ? textWidget.getText(pinnedOffset, suffixEnd) : lineText;
+
+            if (!isSingleWordMode || hint.length() == 0)
+            {
+                hint = hintTextBuilder.build(prefix, hint, uiSettings.getTabWidth()) + CONTINUATION_SIGN;
+            }
+
+            displayedHintText = hint;
         }
     }
 
@@ -103,63 +145,27 @@ class HintPainter
             return;
         }
 
-        if (!(event.widget instanceof StyledText))
-        {
-            return;
-        }
-
-        var textWidget = (StyledText)event.widget;
         if (textWidget == null || textWidget.isDisposed())
         {
             return;
         }
 
-        var hint = getHintText();
-        if (!showEmpty && hint.isEmpty())
+        if (!showEmpty && displayedHintText.isEmpty())
         {
             return;
         }
 
-        int line;
-        var text = textWidget.getText();
-        if (pinnedOffset < text.length())
-        {
-            line = textWidget.getLineAtOffset(pinnedOffset);
-        }
-        else
-        {
-            line = textWidget.getLineCount() - 1;
-        }
-
-        var lineOffset = textWidget.getOffsetAtLine(line);
-        var lineText = textWidget.getLine(line);
-        var prefix = lineOffset < pinnedOffset ? textWidget.getText(lineOffset, pinnedOffset - 1) : ""; //$NON-NLS-1$
-        var suffixEnd = lineOffset + lineText.length();
-        var totalLength = textWidget.getText().length();
-        if (suffixEnd >= totalLength)
-        {
-            suffixEnd = totalLength - 1;
-        }
-        var suffix =
-            lineOffset < pinnedOffset && suffixEnd > 0 && pinnedOffset < suffixEnd
-                ? textWidget.getText(pinnedOffset, suffixEnd) : lineText;
-
-        if (!isSingleWordMode || hint.length() == 0)
-        {
-            hint = hintTextBuilder.build(prefix, hint, uiSettings.getTabWidth()) + CONTINUATION_SIGN;
-        }
-
-        var firstLineFinish = hint.indexOf('\n');
+        var firstLineFinish = displayedHintText.indexOf('\n');
         String firstLine = ""; //$NON-NLS-1$
         String otherLines = ""; //$NON-NLS-1$
         if (firstLineFinish >= 0)
         {
-            firstLine = hint.substring(0, firstLineFinish);
-            otherLines = hint.substring(firstLineFinish + 1);
+            firstLine = displayedHintText.substring(0, firstLineFinish);
+            otherLines = displayedHintText.substring(firstLineFinish + 1);
         }
         else
         {
-            firstLine = hint;
+            firstLine = displayedHintText;
         }
 
         var token = hintTextBuilder.build(prefix, this.nextToken, uiSettings.getTabWidth());

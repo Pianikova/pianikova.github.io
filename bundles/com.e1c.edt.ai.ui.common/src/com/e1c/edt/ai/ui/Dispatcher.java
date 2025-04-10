@@ -97,7 +97,8 @@ class Dispatcher
         }
         else
         {
-            Display.getDefault().syncExec(() -> {
+            if (Thread.currentThread() == Display.getDefault().getThread())
+            {
                 try
                 {
                     vals.add(supplier.get());
@@ -106,7 +107,20 @@ class Dispatcher
                 {
                     log.logError(ex);
                 }
-            });
+            }
+            else
+            {
+                Display.getDefault().syncExec(() -> {
+                    try
+                    {
+                        vals.add(supplier.get());
+                    }
+                    catch (Exception ex)
+                    {
+                        log.logError(ex);
+                    }
+                });
+            }
 
             checkMicrofreeze("Sync call", startTime, () -> Thread.currentThread().getStackTrace()); //$NON-NLS-1$
         }
@@ -256,12 +270,12 @@ class Dispatcher
     @Override
     public boolean checkThread(boolean isUI, boolean showWarning)
     {
+        var actualIsUI = Thread.currentThread() == Display.getDefault().getThread();
         if (settings.getVerbosiry().getLevel() < Verbosity.TRACE.getLevel())
         {
-            return true;
+            return actualIsUI;
         }
 
-        var actualIsUI = Thread.currentThread() == Display.getDefault().getThread();
         if (actualIsUI == isUI)
         {
             return true;
