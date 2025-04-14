@@ -472,7 +472,7 @@ class CodeCompletionViewModel
                         return message.toString();
                     });
 
-                    if (hint.isEmpty())
+                    if (hintPainter.getHintText().isEmpty())
                     {
                         hideHint();
                     }
@@ -510,7 +510,8 @@ class CodeCompletionViewModel
 
             var newMethod =
                 codeParser.parse(sourceViewer)
-                .flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
+                    .flatMap(parseResult -> parseResult.hasSyntaxErrors() ? Optional.empty()
+                        : codeProvider.getMethod(parseResult, offset));
 
             if (newMethod.isPresent())
             {
