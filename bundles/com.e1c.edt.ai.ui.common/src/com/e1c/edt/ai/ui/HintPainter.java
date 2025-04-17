@@ -25,6 +25,7 @@ class HintPainter
     private final IHintTextBuilder hintTextBuilder;
     private final IUISettings uiSettings;
     private final IUserActions userActions;
+    private final IGCTools gcTools;
     private String hintText = ""; //$NON-NLS-1$
     private String nextToken = ""; //$NON-NLS-1$
     private String displayedHintText = ""; //$NON-NLS-1$
@@ -37,14 +38,17 @@ class HintPainter
     private boolean isSingleWordMode;
 
     @Inject
-    public HintPainter(IHintTextBuilder hintTextBuilder, IUISettings uiSettings, IUserActions userActions)
+    public HintPainter(IHintTextBuilder hintTextBuilder, IUISettings uiSettings, IUserActions userActions,
+        IGCTools gcTools)
     {
         Preconditions.checkNotNull(hintTextBuilder);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(userActions);
+        Preconditions.checkNotNull(gcTools);
         this.hintTextBuilder = hintTextBuilder;
         this.uiSettings = uiSettings;
         this.userActions = userActions;
+        this.gcTools = gcTools;
     }
 
     @Override
@@ -140,12 +144,7 @@ class HintPainter
     public synchronized void paintControl(PaintEvent event)
     {
         Preconditions.checkNotNull(event);
-        if (pinnedOffset == -1)
-        {
-            return;
-        }
-
-        if (textWidget == null || textWidget.isDisposed())
+        if (pinnedOffset == -1 || event.gc.isDisposed() || textWidget == null || textWidget.isDisposed())
         {
             return;
         }
@@ -238,16 +237,16 @@ class HintPainter
                 return;
             }
 
-            if (firstLine.length() > 0 && !suffix.isBlank())
+            if (firstLine.length() > 0 && !suffix.isBlank() && bounds.width > firstLineX)
             {
-                gc.copyArea(firstLineX, firstLineY, bounds.width - firstLineX, firstLineH, firstLineX + firstLineW,
-                    firstLineY, true);
+                gcTools.copyArea(gc, firstLineX, firstLineY, bounds.width - firstLineX, firstLineH,
+                    firstLineX + firstLineW, firstLineY);
             }
 
             if (otherLines.length() > 0)
             {
-                gc.copyArea(bounds.x, otherLinesY, bounds.width, bounds.height, bounds.x, otherLinesY + otherLinesH,
-                    true);
+                gcTools.copyArea(gc, bounds.x, otherLinesY, bounds.width, bounds.height, bounds.x,
+                    otherLinesY + otherLinesH);
             }
 
             gc.fillRectangle(firstLineX, firstLineY, firstLineW, firstLineH);

@@ -7,11 +7,21 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 
 import com.e1c.edt.ai.Range;
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
 class VerticalRulerPainter
     implements IVerticalRulerPainter
 {
+    private final IGCTools gcTools;
     private Range pixelRange = Range.EMPTY;
+
+    @Inject
+    public VerticalRulerPainter(IGCTools gcTools)
+    {
+        Preconditions.checkNotNull(gcTools);
+        this.gcTools = gcTools;
+    }
 
     @Override
     public void pin(StyledText textWidget, String hintText)
@@ -64,10 +74,19 @@ class VerticalRulerPainter
         }
 
         var gc = e.gc;
+        if (gc.isDisposed())
+        {
+            return;
+        }
+
         var bounds = gc.getClipping();
         var y = pixelRange.getStart();
         var h = pixelRange.getLength();
-        gc.copyArea(0, y, bounds.width, bounds.height - y, 0, y + h, true);
+        if (bounds.height > y)
+        {
+            gcTools.copyArea(gc, 0, y, bounds.width, bounds.height - y, 0, y + h);
+        }
+
         gc.fillRectangle(0, y, bounds.width, h);
     }
 }

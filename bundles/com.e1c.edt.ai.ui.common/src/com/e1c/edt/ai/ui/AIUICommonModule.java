@@ -69,6 +69,7 @@ public class AIUICommonModule
         bind(ITextWidgetInfoProvider.class).to(TextWidgetInfo.class);
         bind(ICodeTools.class).to(CodeTools.class).in(Singleton.class);
         bind(IVerticalRulerManager.class).to(VerticalRulerManager.class).in(Singleton.class);
+        bind(IGCTools.class).to(GCTools.class).in(Singleton.class);
         // @formatter:on
     }
 }
