@@ -189,11 +189,11 @@ class Dispatcher
     }
 
     @Override
-    public Job createJob(String jobName, Consumer<JobContext> сonsumer,
+    public Job createJob(String jobName, Consumer<JobContext> consumer,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(jobName);
-        Preconditions.checkNotNull(сonsumer);
+        Preconditions.checkNotNull(consumer);
         var resources = new ArrayList<AutoCloseable>();
         var job = new Job(jobName)
         {
@@ -204,7 +204,7 @@ class Dispatcher
                 cancellationTokenSource.attachMonitor(monitor);
                 try
                 {
-                    сonsumer.accept(new JobContext(monitor, cancellationTokenSource));
+                    consumer.accept(new JobContext(monitor, cancellationTokenSource));
                     return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                 }
                 catch (Throwable error)

@@ -111,7 +111,7 @@ class CodeAssistant
         });
     }
 
-    private void generateText(Session session, ICompletionRequestProvider сompletionRequestProvider,
+    private void generateText(Session session, ICompletionRequestProvider completionRequestProvider,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
@@ -131,7 +131,7 @@ class CodeAssistant
             Optional<CompletionRequest> request;
             try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
             {
-                request = сompletionRequestProvider.get(statistics, cancellationToken);
+                request = completionRequestProvider.get(statistics, cancellationToken);
             }
 
             if (request.isEmpty())

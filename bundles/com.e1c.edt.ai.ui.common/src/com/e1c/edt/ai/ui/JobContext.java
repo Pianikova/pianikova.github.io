@@ -13,11 +13,11 @@ public class JobContext
     public final IProgressMonitor Monitor;
     public final CancellationTokenSource CancellationTokenSource;
 
-    public JobContext(IProgressMonitor monitor, CancellationTokenSource сancellationTokenSource)
+    public JobContext(IProgressMonitor monitor, CancellationTokenSource cancellationTokenSource)
     {
         Preconditions.checkNotNull(monitor);
-        Preconditions.checkNotNull(сancellationTokenSource);
+        Preconditions.checkNotNull(cancellationTokenSource);
         Monitor = monitor;
-        CancellationTokenSource = сancellationTokenSource;
+        CancellationTokenSource = cancellationTokenSource;
     }
 }

@@ -79,13 +79,13 @@ class UISettings
     @Override
     public boolean sendExtendedContext()
     {
-        return settingsProvider.getSettings().getLlmParameters().extendedСontext;
+        return settingsProvider.getSettings().getLlmParameters().extendedContext;
     }
 
     @Override
     public boolean sendGlobalContext()
     {
-        return settingsProvider.getSettings().getLlmParameters().globalСontext;
+        return settingsProvider.getSettings().getLlmParameters().globalContext;
     }
 
     @Override

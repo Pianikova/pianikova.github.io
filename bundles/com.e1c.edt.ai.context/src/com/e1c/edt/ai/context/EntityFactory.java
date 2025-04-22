@@ -10,30 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.ICodePartsProvider;
-import com.e1c.edt.ai.assistent.model.CursorLocation;
-import com.e1c.edt.ai.context.DTO.AttributeEntity;
-import com.e1c.edt.ai.context.DTO.DataType;
-import com.e1c.edt.ai.context.DTO.DynamicListEntity;
-import com.e1c.edt.ai.context.DTO.FieldEntity;
-import com.e1c.edt.ai.context.DTO.FormButtonEntity;
-import com.e1c.edt.ai.context.DTO.FormEntity;
-import com.e1c.edt.ai.context.DTO.FormFieldEntity;
-import com.e1c.edt.ai.context.DTO.FormGroupEntity;
-import com.e1c.edt.ai.context.DTO.FormTableEntity;
-import com.e1c.edt.ai.context.DTO.MetaEntity;
-import com.e1c.edt.ai.context.DTO.MethodEntity;
-import com.e1c.edt.ai.context.DTO.ObjectEntity;
-import com.e1c.edt.ai.context.DTO.ObjectEntityField;
-import com.e1c.edt.ai.context.DTO.Parameter;
-import com.e1c.edt.ai.context.DTO.PropertyEntity;
-import com.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
-import com.e1c.edt.ai.context.DTO.RegisterRecordEntity;
-import com.e1c.edt.ai.context.DTO.RegisterResourceEntity;
-import com.e1c.edt.ai.context.DTO.SignatureStructurized;
-import com.e1c.edt.ai.context.DTO.TabularSectionEntity;
-import com.e1c.edt.ai.context.DTO.ValueListEntity;
 import org.eclipse.emf.common.util.EMap;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
@@ -72,6 +48,30 @@ import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.ICodePartsProvider;
+import com.e1c.edt.ai.assistent.model.CursorLocation;
+import com.e1c.edt.ai.context.DTO.AttributeEntity;
+import com.e1c.edt.ai.context.DTO.DataType;
+import com.e1c.edt.ai.context.DTO.DynamicListEntity;
+import com.e1c.edt.ai.context.DTO.FieldEntity;
+import com.e1c.edt.ai.context.DTO.FormButtonEntity;
+import com.e1c.edt.ai.context.DTO.FormEntity;
+import com.e1c.edt.ai.context.DTO.FormFieldEntity;
+import com.e1c.edt.ai.context.DTO.FormGroupEntity;
+import com.e1c.edt.ai.context.DTO.FormTableEntity;
+import com.e1c.edt.ai.context.DTO.MetaEntity;
+import com.e1c.edt.ai.context.DTO.MethodEntity;
+import com.e1c.edt.ai.context.DTO.ObjectEntity;
+import com.e1c.edt.ai.context.DTO.ObjectEntityField;
+import com.e1c.edt.ai.context.DTO.Parameter;
+import com.e1c.edt.ai.context.DTO.PropertyEntity;
+import com.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
+import com.e1c.edt.ai.context.DTO.RegisterRecordEntity;
+import com.e1c.edt.ai.context.DTO.RegisterResourceEntity;
+import com.e1c.edt.ai.context.DTO.SignatureStructurized;
+import com.e1c.edt.ai.context.DTO.TabularSectionEntity;
+import com.e1c.edt.ai.context.DTO.ValueListEntity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -529,7 +529,7 @@ class EntityFactory
                 {
                     var defMethod = (BslContextDefMethod)method;
                     methodEntity.comment = defMethod.getCommentLines();
-                    methodEntity.structurizedСomment = commentFactory.create(v8Model.getComment(defMethod, true));
+                    methodEntity.structurizedComment = commentFactory.create(v8Model.getComment(defMethod, true));
                 }
 
                 hasData = true;
@@ -797,13 +797,13 @@ class EntityFactory
         if (method.isAsync())
         {
             methodEntity.signatureStructurized.attributes
-                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Асинх" : "Async"); //$NON-NLS-1$ //$NON-NLS-2$
+                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Аcинх" : "Async"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         if (method.isExport())
         {
             methodEntity.signatureStructurized.attributes
-                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Экспорт" : "Export"); //$NON-NLS-1$ //$NON-NLS-2$
+                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Экcпорт" : "Export"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         for (var param : method.getFormalParams())
@@ -823,7 +823,7 @@ class EntityFactory
         getEnvironments(method).ifPresent(areas -> methodEntity.environments = areas);
         getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
         methodEntity.comment = v8Model.getComment(method);
-        methodEntity.structurizedСomment = commentFactory.create(v8Model.getComment(method, true));
+        methodEntity.structurizedComment = commentFactory.create(v8Model.getComment(method, true));
     }
 
     @Override

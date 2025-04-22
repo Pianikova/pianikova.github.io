@@ -21,7 +21,7 @@ public interface ICodeCompletionSession<TContext extends ICodeCompletionContext>
 
     boolean isDone();
 
-    boolean isСompleted();
+    boolean isCompleted();
 
     CodeCompletionAction finish();
 

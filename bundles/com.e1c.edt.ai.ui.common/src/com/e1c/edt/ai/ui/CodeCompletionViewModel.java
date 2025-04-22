@@ -413,7 +413,7 @@ class CodeCompletionViewModel
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
                 verticalRulerPainter.reset();
-                hintPainter.pinOffset(textWidget, aiCtx.getСaretOffset(), delay.isNegative() || delay == Duration.ZERO,
+                hintPainter.pinOffset(textWidget, aiCtx.getCaretOffset(), delay.isNegative() || delay == Duration.ZERO,
                     singleWordMode);
                 hintPainter.setHintAt("", "", 0);
                 redraw();
@@ -626,7 +626,7 @@ class CodeCompletionViewModel
         }
         else
         {
-            if (session.isСompleted())
+            if (session.isCompleted())
             {
                 reset();
             }
@@ -725,7 +725,7 @@ class CodeCompletionViewModel
                 message.append(System.lineSeparator());
                 var aiCtx = session.getContext().getAiContext();
                 message.append("offset: ");
-                message.append(aiCtx.getСaretOffset());
+                message.append(aiCtx.getCaretOffset());
             }
 
             return message.toString();
