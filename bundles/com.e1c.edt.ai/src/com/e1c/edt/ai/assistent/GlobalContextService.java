@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.StatisticsType;

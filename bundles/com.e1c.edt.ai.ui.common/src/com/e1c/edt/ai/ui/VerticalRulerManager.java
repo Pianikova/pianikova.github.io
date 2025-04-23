@@ -17,6 +17,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 
 import com.e1c.edt.ai.Closeables;
+import com.e1c.edt.ai.IEnvironment;
+import com.e1c.edt.ai.OS;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -25,20 +27,28 @@ class VerticalRulerManager
 {
     private final IDispatcher dispatcher;
     private final IVerticalRulerPainter painterListener;
+    private final IEnvironment environment;
 
     @Inject
-    public VerticalRulerManager(IDispatcher dispatcher, IVerticalRulerPainter painterListener)
+    public VerticalRulerManager(IDispatcher dispatcher, IVerticalRulerPainter painterListener, IEnvironment environment)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(painterListener);
+        Preconditions.checkNotNull(environment);
         this.dispatcher = dispatcher;
         this.painterListener = painterListener;
+        this.environment = environment;
     }
 
     @Override
     public AutoCloseable activate(SourceViewer viewer, Runnable onReset)
     {
         Preconditions.checkNotNull(onReset);
+        if (environment.getOS() != OS.WINDOWS)
+        {
+            return Closeables.Empty;
+        }
+
         return Optional.ofNullable(viewer).flatMap(v -> getCompositeRuler(v)).map(ruler -> {
             var modelListener = createModelListener(ruler);
             var trackerListener = new RulerMouseTrackListener(onReset);

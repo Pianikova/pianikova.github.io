@@ -6,6 +6,8 @@ package com.e1c.edt.ai.ui;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
 
+import com.e1c.edt.ai.IEnvironment;
+import com.e1c.edt.ai.OS;
 import com.e1c.edt.ai.Range;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -14,19 +16,22 @@ class VerticalRulerPainter
     implements IVerticalRulerPainter
 {
     private final IGCTools gcTools;
+    private final IEnvironment environment;
     private Range pixelRange = Range.EMPTY;
 
     @Inject
-    public VerticalRulerPainter(IGCTools gcTools)
+    public VerticalRulerPainter(IGCTools gcTools, IEnvironment environment)
     {
         Preconditions.checkNotNull(gcTools);
+        Preconditions.checkNotNull(environment);
         this.gcTools = gcTools;
+        this.environment = environment;
     }
 
     @Override
     public void pin(StyledText textWidget, String hintText)
     {
-        if (hintText == null || hintText.isEmpty())
+        if (environment.getOS() != OS.WINDOWS || hintText == null || hintText.isEmpty())
         {
             pixelRange = Range.EMPTY;
             return;

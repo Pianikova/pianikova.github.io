@@ -1,13 +1,15 @@
 /**
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.assistent;
+package com.e1c.edt.ai;
 
 import java.util.Optional;
 
-interface IEnvironment
+public interface IEnvironment
 {
     String getOSName();
+
+    OS getOS();
 
     String getOSVersion();
 
