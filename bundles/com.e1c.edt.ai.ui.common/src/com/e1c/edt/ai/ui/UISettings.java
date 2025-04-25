@@ -119,7 +119,7 @@ class UISettings
     }
 
     @Override
-    public Verbosity getVerbosiry()
+    public Verbosity getVerbosity()
     {
         return settingsProvider.getSettings().getLlmParameters().verbosity;
     }

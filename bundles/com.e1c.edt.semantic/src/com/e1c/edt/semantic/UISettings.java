@@ -80,7 +80,7 @@ class UISettings
     }
 
     @Override
-    public Verbosity getVerbosiry()
+    public Verbosity getVerbosity()
     {
         return Verbosity.DEBUG;
     }

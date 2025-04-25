@@ -27,6 +27,8 @@ public class BasePluginStartup
     IStateService accessHolder;
     @Inject
     ILog log;
+    @Inject
+    IClipboardManager clipboardManager;
 
     public BasePluginStartup()
     {
@@ -44,6 +46,7 @@ public class BasePluginStartup
     public void earlyStartup()
     {
         accessHolder.startMonitoring(30000, 3000);
+        clipboardManager.initialize();
         ui.initialize();
     }
 }

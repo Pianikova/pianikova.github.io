@@ -115,7 +115,7 @@ class StateService
                 return Status.OK_STATUS;
             }
         };
-        job.setSystem(settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel());
+        job.setSystem(settings.getVerbosity().getLevel() >= Verbosity.TRACE.getLevel());
         job.setPriority(Job.DECORATE);
         job.schedule();
     };

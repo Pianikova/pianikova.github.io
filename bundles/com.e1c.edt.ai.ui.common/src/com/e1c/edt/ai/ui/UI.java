@@ -221,7 +221,6 @@ class UI
 
     private boolean isValidWidget(StyledText widget)
     {
-        Preconditions.checkNotNull(widget);
         return widget != null && !widget.isDisposed() && widget.getEditable() && widget.isEnabled()
             && widget.getVisible() && getSourceViewer(widget).isPresent();
     }

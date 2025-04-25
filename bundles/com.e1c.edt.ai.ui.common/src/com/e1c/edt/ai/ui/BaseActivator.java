@@ -191,7 +191,7 @@ public abstract class BaseActivator
 
     private StringBuilder log(String topic, Supplier<String> details, Verbosity verbosity)
     {
-        if (settings == null || settings.getVerbosiry().getLevel() < verbosity.getLevel())
+        if (settings == null || settings.getVerbosity().getLevel() < verbosity.getLevel())
         {
             return null;
         }
