@@ -486,7 +486,7 @@ class CodeCompletionViewModel
                         return message.toString();
                     });
 
-                    if (hintPainter.getHintText().isEmpty())
+                    if (hint.isEmpty())
                     {
                         hideHint();
                     }
