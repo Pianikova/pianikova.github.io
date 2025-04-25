@@ -257,10 +257,10 @@ class CodePartsProvider
     private Stream<AbstractElement> getAlternatives(EObject obj)
     {
         Preconditions.checkNotNull(obj);
-        var сontainer = obj.eContainer();
-        if (сontainer instanceof Alternatives)
+        var container = obj.eContainer();
+        if (container instanceof Alternatives)
         {
-            return ((Alternatives)сontainer).getElements().stream();
+            return ((Alternatives)container).getElements().stream();
         }
 
         return Stream.empty();

@@ -55,9 +55,15 @@ class SyntaxVaidator
     {
         var source = sourceCode;
         var end = method.getEndOffest();
-        if (end >= source.length())
+        var len = source.length();
+        if (len == 0)
         {
-            end = source.length() - 1;
+            return hintText;
+        }
+
+        if (end >= len)
+        {
+            end = len - 1;
         }
 
         var code = source.substring(method.getStartOffest(), end);

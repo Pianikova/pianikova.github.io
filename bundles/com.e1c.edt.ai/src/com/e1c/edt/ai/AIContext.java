@@ -70,7 +70,7 @@ public class AIContext
         return kind;
     }
 
-    public int getСaretOffset()
+    public int getCaretOffset()
     {
         return editorOffset;
     }

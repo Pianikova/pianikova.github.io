@@ -18,6 +18,7 @@ import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.IObserver;
@@ -111,7 +112,7 @@ class CodeAssistant
         });
     }
 
-    private void generateText(Session session, ICompletionRequestProvider сompletionRequestProvider,
+    private void generateText(Session session, ICompletionRequestProvider completionRequestProvider,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
@@ -131,7 +132,7 @@ class CodeAssistant
             Optional<CompletionRequest> request;
             try (var measurement = statistics.measureDuration(StatisticsType.CONTEXT_DURATUION))
             {
-                request = сompletionRequestProvider.get(statistics, cancellationToken);
+                request = completionRequestProvider.get(statistics, cancellationToken);
             }
 
             if (request.isEmpty())

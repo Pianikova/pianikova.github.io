@@ -5,7 +5,6 @@ package com.e1c.edt.ai.assistent;
 
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.Session;
-
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
@@ -17,7 +16,6 @@ public class AssistentModule
     protected void configure()
     {
         // @formatter:off
-        bind(IEnvironment.class).to(Environment.class).in(Singleton.class);
         bind(IResponseStreamProcessor.class).to(ResponseStreamProcessor.class).in(Singleton.class);
         bind(IResponseLineProcessor.class).to(ResponseLineProcessor.class).in(Singleton.class);
         bind(ICodeAssistant.class).to(CodeAssistant.class).in(Singleton.class);

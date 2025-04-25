@@ -380,13 +380,13 @@ public class HintTest
         var hint = createInstance();
         hint.append(new Text("Abc", source1));
         hint.append(new Text("Xyz", source2));
-        when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Abс", ""));
+        when(tokenizer.getNext(2, "Abc", Hint.LINE_DELIMITER)).thenReturn(new CodeCompletionToken("Abc", ""));
 
         // When
         var actualText = hint.getText(HintPart.LINE);
 
         // Then
-        Assert.assertEquals(new Text("Abс", source1), actualText);
+        Assert.assertEquals(new Text("Abc", source1), actualText);
     }
 
     @Test

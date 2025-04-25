@@ -112,10 +112,10 @@ public class Parameters
     public Integer timeout = 15000;
 
     @SerializedName("global_context")
-    public Boolean globalСontext = false;
+    public Boolean globalContext = false;
 
     @SerializedName("extended_context")
-    public Boolean extendedСontext = false;
+    public Boolean extendedContext = false;
 
     public Verbosity verbosity = Verbosity.WARNING;
 
@@ -288,14 +288,14 @@ public class Parameters
             timeout = params.timeout;
         }
 
-        if (params.globalСontext != null)
+        if (params.globalContext != null)
         {
-            globalСontext = params.globalСontext;
+            globalContext = params.globalContext;
         }
 
-        if (params.extendedСontext != null)
+        if (params.extendedContext != null)
         {
-            extendedСontext = params.extendedСontext;
+            extendedContext = params.extendedContext;
         }
 
         if (params.verbosity != null)
@@ -332,7 +332,7 @@ public class Parameters
         return Objects.hash(bestOf, url, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
-            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalСontext, extendedСontext,
+            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalContext, extendedContext,
             verbosity, scriptLanguage, configurationName, version, vendor);
     }
 
@@ -364,8 +364,8 @@ public class Parameters
             && Objects.equals(localFunctionsLength, other.localFunctionsLength)
             && Objects.equals(externalFunctionsLength, other.externalFunctionsLength)
             && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
-            && Objects.equals(globalСontext, other.globalСontext)
-            && Objects.equals(extendedСontext, other.extendedСontext)
+            && Objects.equals(globalContext, other.globalContext)
+            && Objects.equals(extendedContext, other.extendedContext)
             && Objects.equals(verbosity, other.verbosity) && Objects.equals(scriptLanguage, other.scriptLanguage)
             && Objects.equals(configurationName, other.configurationName) && Objects.equals(version, other.version)
             && Objects.equals(vendor, other.vendor);

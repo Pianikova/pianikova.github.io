@@ -96,11 +96,11 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     @Override
     public synchronized boolean isDone()
     {
-        return isСompleted() && hint.isEmpty();
+        return isCompleted() && hint.isEmpty();
     }
 
     @Override
-    public synchronized boolean isСompleted()
+    public synchronized boolean isCompleted()
     {
         return inCompleted;
     }

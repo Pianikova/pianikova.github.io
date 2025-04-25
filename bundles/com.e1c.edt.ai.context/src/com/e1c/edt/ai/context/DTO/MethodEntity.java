@@ -36,5 +36,5 @@ public class MethodEntity
     public List<String> comment;
 
     @SerializedName("сomment_structurized")
-    public Comment structurizedСomment;
+    public Comment structurizedComment;
 }

@@ -97,7 +97,8 @@ class Dispatcher
         }
         else
         {
-            Display.getDefault().syncExec(() -> {
+            if (Thread.currentThread() == Display.getDefault().getThread())
+            {
                 try
                 {
                     vals.add(supplier.get());
@@ -106,7 +107,20 @@ class Dispatcher
                 {
                     log.logError(ex);
                 }
-            });
+            }
+            else
+            {
+                Display.getDefault().syncExec(() -> {
+                    try
+                    {
+                        vals.add(supplier.get());
+                    }
+                    catch (Exception ex)
+                    {
+                        log.logError(ex);
+                    }
+                });
+            }
 
             checkMicrofreeze("Sync call", startTime, () -> Thread.currentThread().getStackTrace()); //$NON-NLS-1$
         }
@@ -175,11 +189,11 @@ class Dispatcher
     }
 
     @Override
-    public Job createJob(String jobName, Consumer<JobContext> сonsumer,
+    public Job createJob(String jobName, Consumer<JobContext> consumer,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(jobName);
-        Preconditions.checkNotNull(сonsumer);
+        Preconditions.checkNotNull(consumer);
         var resources = new ArrayList<AutoCloseable>();
         var job = new Job(jobName)
         {
@@ -190,7 +204,7 @@ class Dispatcher
                 cancellationTokenSource.attachMonitor(monitor);
                 try
                 {
-                    сonsumer.accept(new JobContext(monitor, cancellationTokenSource));
+                    consumer.accept(new JobContext(monitor, cancellationTokenSource));
                     return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                 }
                 catch (Throwable error)
@@ -256,12 +270,12 @@ class Dispatcher
     @Override
     public boolean checkThread(boolean isUI, boolean showWarning)
     {
+        var actualIsUI = Thread.currentThread() == Display.getDefault().getThread();
         if (settings.getVerbosiry().getLevel() < Verbosity.TRACE.getLevel())
         {
-            return true;
+            return actualIsUI;
         }
 
-        var actualIsUI = Thread.currentThread() == Display.getDefault().getThread();
         if (actualIsUI == isUI)
         {
             return true;

@@ -82,6 +82,7 @@ class CodeCompletionViewModel
     private final IAIContextProvider aiContextProvider;
     private final IDispatcher dispatcher;
     private final IHintPainter hintPainter;
+    private final IVerticalRulerPainter verticalRulerPainter;
     private final IInputDelayStatistics inputRateStatistics;
     private final IClock clock;
     private final Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider;
@@ -101,6 +102,7 @@ class CodeCompletionViewModel
     private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private final ICodeCompletionStatistics statistics;
     private final ICodeCompletionTokenizer tokenizer;
+    private final IVerticalRulerManager rulerManager;
     private final ArrayList<CodeMethod> methods = new ArrayList<>();
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
@@ -120,7 +122,8 @@ class CodeCompletionViewModel
     public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
         ICodeAssistant codeAssistant,
         IAIContextProvider aiContextProvider,
-        IDispatcher dispatcher, IHintPainter hintPainter, IInputDelayStatistics inputRateStatistics,
+        IDispatcher dispatcher, IHintPainter hintPainter, IVerticalRulerPainter verticalRulerPainter,
+        IInputDelayStatistics inputRateStatistics,
         IClock clock,
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
@@ -128,7 +131,7 @@ class CodeCompletionViewModel
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
         IProposalsProvider proposalsProvider, ICodeParser codeParser, ITextWidgetInfoUpdater textWidgetInfoUpdater,
-        ICodeCompletionStatistics statistics, ICodeCompletionTokenizer tokenizer)
+        ICodeCompletionStatistics statistics, ICodeCompletionTokenizer tokenizer, IVerticalRulerManager rulerManager)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -137,6 +140,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(aiContextProvider);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(hintPainter);
+        Preconditions.checkNotNull(verticalRulerPainter);
         Preconditions.checkNotNull(inputRateStatistics);
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(sessionProvider);
@@ -155,12 +159,14 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(textWidgetInfoUpdater);
         Preconditions.checkNotNull(statistics);
         Preconditions.checkNotNull(tokenizer);
+        Preconditions.checkNotNull(rulerManager);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
         this.aiContextProvider = aiContextProvider;
         this.dispatcher = dispatcher;
         this.hintPainter = hintPainter;
+        this.verticalRulerPainter = verticalRulerPainter;
         this.inputRateStatistics = inputRateStatistics;
         this.clock = clock;
         this.sessionProvider = sessionProvider;
@@ -179,6 +185,7 @@ class CodeCompletionViewModel
         this.textWidgetInfoUpdater = textWidgetInfoUpdater;
         this.statistics = statistics;
         this.tokenizer = tokenizer;
+        this.rulerManager = rulerManager;
     }
 
     @Override
@@ -204,7 +211,9 @@ class CodeCompletionViewModel
                     addListeners(textWidget);
                     redraw();
                     warmup();
-                    return Closeables.create(() -> deactivate());
+                    var rulerManagerToken = rulerManager.activate(sourceViewer, () -> reset());
+                    var activationToken = Closeables.create(() -> deactivate());
+                    return Closeables.create(rulerManagerToken, activationToken);
                 }
             }
 
@@ -224,6 +233,7 @@ class CodeCompletionViewModel
     {
         dispatcher.dispatch(() -> {
             hintPainter.reset();
+            verticalRulerPainter.reset();
             redraw();
         });
     }
@@ -234,9 +244,10 @@ class CodeCompletionViewModel
         var widget = content.getWidget();
         var hint = session.getHint();
         var offset = widget.getCaretOffset();
-        hintPainter.pinOffset(offset, true, session.getContext().isSingleWordMode());
+        hintPainter.pinOffset(textWidget, offset, true, session.getContext().isSingleWordMode());
         hintPainter.setHintAt(hint.getText(HintPart.LINES).getText(), hint.getText(HintPart.TOKEN).getText(),
             hint.getAcceptedTokens());
+        verticalRulerPainter.pin(textWidget, hintPainter.getDisplayedHintText());
         redraw();
     }
 
@@ -365,6 +376,7 @@ class CodeCompletionViewModel
         textWidget.removeMouseListener(this);
     }
 
+
     @SuppressWarnings("nls")
     private void ask(AIContext aiCtx, CompletionRequestProvider localContextProvider,
         Duration delayBeforeShow,
@@ -400,8 +412,10 @@ class CodeCompletionViewModel
 
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
-                hintPainter.pinOffset(aiCtx.getСaretOffset(), delay.isNegative() || delay == Duration.ZERO,
+                verticalRulerPainter.reset();
+                hintPainter.pinOffset(textWidget, aiCtx.getCaretOffset(), delay.isNegative() || delay == Duration.ZERO,
                     singleWordMode);
+                hintPainter.setHintAt("", "", 0);
                 redraw();
             });
 
@@ -603,12 +617,16 @@ class CodeCompletionViewModel
         if (validHint.length() > 0)
         {
             var nextToken = tokenizer.getNext(1, validHint, Delimiters::isTokenDelimiter);
-            hintPainter.setHintAt(validHint, nextToken.getValue(), hint.getAcceptedTokens());
-            dispatcher.dispatch(() -> redraw());
+            dispatcher.dispatch(() -> {
+                hintPainter.setHintAt(validHint, nextToken.getValue(), hint.getAcceptedTokens());
+                verticalRulerPainter
+                    .pin(textWidget, hintPainter.getDisplayedHintText());
+                redraw();
+            });
         }
         else
         {
-            if (session.isСompleted())
+            if (session.isCompleted())
             {
                 reset();
             }
@@ -689,8 +707,6 @@ class CodeCompletionViewModel
             break;
         }
 
-        redraw();
-
         if (!event.doit)
         {
             isTraversed = false;
@@ -709,7 +725,7 @@ class CodeCompletionViewModel
                 message.append(System.lineSeparator());
                 var aiCtx = session.getContext().getAiContext();
                 message.append("offset: ");
-                message.append(aiCtx.getСaretOffset());
+                message.append(aiCtx.getCaretOffset());
             }
 
             return message.toString();
@@ -829,9 +845,10 @@ class CodeCompletionViewModel
 
     private void redraw()
     {
-        if (!textWidget.isDisposed())
+        if (textWidget != null && !textWidget.isDisposed())
         {
             textWidget.redraw();
+            dispatcher.dispatch(() -> rulerManager.redraw(sourceViewer));
         }
     }
 

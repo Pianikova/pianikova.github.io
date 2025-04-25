@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.assistent;
+package com.e1c.edt.ai;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
@@ -16,11 +16,24 @@ class Environment
     private final OperatingSystemMXBean osMXBean =
         ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
     private final MBeanServer beanServer = ManagementFactory.getPlatformMBeanServer();
+    private OS os;
 
     @Override
     public String getOSName()
     {
         return osMXBean.getName();
+    }
+
+    @Override
+    public synchronized OS getOS()
+    {
+        if (os != null)
+        {
+            return os;
+        }
+
+        os = getOSInternal();
+        return os;
     }
 
     @Override
@@ -73,5 +86,33 @@ class Environment
         {
             return Optional.empty();
         }
+    }
+
+    @SuppressWarnings("nls")
+    private OS getOSInternal()
+    {
+        if (os != null)
+        {
+            return os;
+        }
+
+        var osName = osMXBean.getName();
+        if (osName == null)
+        {
+            return OS.WINDOWS;
+        }
+
+        osName = osName.toLowerCase();
+        if (osName.contains("windows"))
+        {
+            return OS.WINDOWS;
+        }
+
+        if (osName.contains("mac"))
+        {
+            return OS.MAC;
+        }
+
+        return OS.LINUX;
     }
 }

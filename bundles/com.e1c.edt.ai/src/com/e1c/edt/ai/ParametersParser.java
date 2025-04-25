@@ -182,10 +182,10 @@ public class ParametersParser
         }));
 
         names.remove(parse(properties, "global_context", validationResult,
-            val -> parameters.globalСontext = parseBoolean(val)));
+            val -> parameters.globalContext = parseBoolean(val)));
 
         names.remove(parse(properties, "extended_context", validationResult,
-            val -> parameters.extendedСontext = parseBoolean(val)));
+            val -> parameters.extendedContext = parseBoolean(val)));
 
         names.remove(parse(properties, "verbosity", validationResult,
             val -> parameters.verbosity = parseEnum(val, Verbosity.class)));
