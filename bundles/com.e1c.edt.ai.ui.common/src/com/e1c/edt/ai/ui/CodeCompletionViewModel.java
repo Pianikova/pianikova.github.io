@@ -103,6 +103,7 @@ class CodeCompletionViewModel
     private final ICodeCompletionStatistics statistics;
     private final ICodeCompletionTokenizer tokenizer;
     private final IVerticalRulerManager rulerManager;
+    private final IClipboard clipboard;
     private final ArrayList<CodeMethod> methods = new ArrayList<>();
     private ICodeCompletionSession<CodeCompletionContext> lastSession;
     private StyledText textWidget;
@@ -131,7 +132,8 @@ class CodeCompletionViewModel
         ILocalContextFactory localContextFactory, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
         IProposalsProvider proposalsProvider, ICodeParser codeParser, ITextWidgetInfoUpdater textWidgetInfoUpdater,
-        ICodeCompletionStatistics statistics, ICodeCompletionTokenizer tokenizer, IVerticalRulerManager rulerManager)
+        ICodeCompletionStatistics statistics, ICodeCompletionTokenizer tokenizer, IVerticalRulerManager rulerManager,
+        IClipboard clipboard)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
@@ -160,6 +162,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(statistics);
         Preconditions.checkNotNull(tokenizer);
         Preconditions.checkNotNull(rulerManager);
+        Preconditions.checkNotNull(clipboard);
         this.log = log;
         this.codeAssistant = codeAssistant;
         this.uiSettings = uiSettings;
@@ -186,6 +189,7 @@ class CodeCompletionViewModel
         this.statistics = statistics;
         this.tokenizer = tokenizer;
         this.rulerManager = rulerManager;
+        this.clipboard = clipboard;
     }
 
     @Override
@@ -1044,6 +1048,8 @@ class CodeCompletionViewModel
 
             lastRequest.localContext.forced = isForced();
             lastRequest.localContext.contentAssist = isContentAssist();
+            clipboard.getText()
+                .ifPresent(clipboardText -> lastRequest.localContext.clipboard = clipboardText);
             return Optional.of(lastRequest);
         }
 

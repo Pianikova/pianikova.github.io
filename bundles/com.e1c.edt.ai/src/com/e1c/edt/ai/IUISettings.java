@@ -31,5 +31,5 @@ public interface IUISettings
 
     String getTheme();
 
-    Verbosity getVerbosiry();
+    Verbosity getVerbosity();
 }

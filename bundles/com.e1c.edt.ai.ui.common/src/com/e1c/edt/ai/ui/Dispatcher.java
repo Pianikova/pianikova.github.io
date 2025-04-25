@@ -140,7 +140,7 @@ class Dispatcher
      */
     private StackTraceElement[] getStack()
     {
-        return settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel() ? Thread.currentThread().getStackTrace()
+        return settings.getVerbosity().getLevel() >= Verbosity.TRACE.getLevel() ? Thread.currentThread().getStackTrace()
             : EmptyStackTrace;
     }
 
@@ -148,7 +148,7 @@ class Dispatcher
     private void checkMicrofreeze(String description, LocalDateTime startTime,
         Supplier<StackTraceElement[]> stackTraceSupplier)
     {
-        if (settings.getVerbosiry().getLevel() < Verbosity.TRACE.getLevel())
+        if (settings.getVerbosity().getLevel() < Verbosity.TRACE.getLevel())
         {
             return;
         }
@@ -240,7 +240,7 @@ class Dispatcher
             }
         }
 
-        job.setSystem(settings.getVerbosiry().getLevel() >= Verbosity.TRACE.getLevel());
+        job.setSystem(settings.getVerbosity().getLevel() >= Verbosity.TRACE.getLevel());
         return job;
     }
 
@@ -271,7 +271,7 @@ class Dispatcher
     public boolean checkThread(boolean isUI, boolean showWarning)
     {
         var actualIsUI = Thread.currentThread() == Display.getDefault().getThread();
-        if (settings.getVerbosiry().getLevel() < Verbosity.TRACE.getLevel())
+        if (settings.getVerbosity().getLevel() < Verbosity.TRACE.getLevel())
         {
             return actualIsUI;
         }

@@ -48,4 +48,6 @@ public class LocalContext
 
     @SerializedName("proposals")
     public List<Proposal> proposals;
+
+    public String clipboard;
 }
