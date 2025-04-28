@@ -79,8 +79,12 @@ public class ClientAIPreferencePage
     {
         var parent = getFieldEditorParent();
 
-        addField(
-            new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_Token, parent));
+        var tokenField =
+            new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_Token, parent);
+
+        addField(tokenField);
+        var TokenText = tokenField.getTextControl(getFieldEditorParent());
+        TokenText.setEchoChar('*');
 
         addField(
             new BooleanFieldEditor(ISettingsStore.CODE_COMPLETION,
