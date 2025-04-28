@@ -13,6 +13,8 @@ import java.util.TimerTask;
 import java.util.concurrent.CancellationException;
 
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.jface.text.DocumentEvent;
+import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.jface.text.contentassist.ContentAssistEvent;
 import org.eclipse.jface.text.contentassist.ICompletionListener;
 import org.eclipse.jface.text.contentassist.ICompletionListenerExtension2;
@@ -72,7 +74,7 @@ import com.google.inject.Provider;
 
 class CodeCompletionViewModel
     implements ICodeCompletionViewModel<CodeCompletionContext>, VerifyKeyListener, CaretListener, TraverseListener,
-    ModifyListener, SelectionListener, ControlListener, MouseListener
+    ModifyListener, SelectionListener, ControlListener, MouseListener, IDocumentListener
 {
     private final Object lockObject = new Object();
     private final Object lastMethodLockObject = new Object();
@@ -212,11 +214,11 @@ class CodeCompletionViewModel
                 sourceViewer = ui.getSourceViewer(textWidget).orElse(null);
                 if (sourceViewer != null)
                 {
-                    addListeners(textWidget);
+                    addListeners(textWidget, sourceViewer);
                     redraw();
                     warmup();
                     var rulerManagerToken = rulerManager.activate(sourceViewer, () -> reset());
-                    var activationToken = Closeables.create(() -> deactivate());
+                    var activationToken = Closeables.create(() -> deactivate(textWidget, sourceViewer));
                     return Closeables.create(rulerManagerToken, activationToken);
                 }
             }
@@ -319,7 +321,7 @@ class CodeCompletionViewModel
                 : new CompletionRequestProvider(maxDuration, forced, contentAssist);
     }
 
-    private void deactivate()
+    private void deactivate(StyledText textWidget, SourceViewer sourceViewer)
     {
         synchronized (lockObject)
         {
@@ -338,7 +340,7 @@ class CodeCompletionViewModel
             reset();
             if (!textWidget.isDisposed())
             {
-                removeListeners();
+                removeListeners(textWidget, sourceViewer);
                 redraw();
             }
 
@@ -348,9 +350,9 @@ class CodeCompletionViewModel
         }
     }
 
-    private void addListeners(StyledText textWidget)
+    private void addListeners(StyledText textWidget, SourceViewer sourceViewer)
     {
-        removeListeners();
+        removeListeners(textWidget, sourceViewer);
         textWidget.addPaintListener(hintPainter);
         textWidget.addTraverseListener(this);
         textWidget.addCaretListener(this);
@@ -362,9 +364,11 @@ class CodeCompletionViewModel
         Optional.ofNullable(textWidget.getVerticalBar()).ifPresent(scroll -> scroll.addSelectionListener(this));
         Optional.ofNullable(sourceViewer.getContentAssistantFacade())
             .ifPresent(assistant -> assistant.addCompletionListener(assistantListener));
+        var document = sourceViewer.getDocument();
+        document.addDocumentListener(this);
     }
 
-    private void removeListeners()
+    private void removeListeners(StyledText textWidget, SourceViewer sourceViewer)
     {
         Optional.ofNullable(textWidget.getHorizontalBar())
             .ifPresent(scroll -> scroll.removeSelectionListener(this));
@@ -378,6 +382,8 @@ class CodeCompletionViewModel
         textWidget.removeTraverseListener(this);
         textWidget.removeModifyListener(this);
         textWidget.removeMouseListener(this);
+        var document = sourceViewer.getDocument();
+        document.removeDocumentListener(this);
     }
 
 
@@ -510,7 +516,7 @@ class CodeCompletionViewModel
         catch (Exception e)
         {
             log.logError(e);
-            deactivate();
+            reset();
         }
     }
 
@@ -865,6 +871,53 @@ class CodeCompletionViewModel
         }
     }
 
+    @Override
+    public void mouseDoubleClick(MouseEvent e)
+    {
+        //
+    }
+
+    @Override
+    public void mouseDown(MouseEvent e)
+    {
+        var offset = textWidget.getOffsetAtPoint(new Point(e.x, e.y));
+        if (offset < 0)
+        {
+            var line = textWidget.getLineIndex(e.y);
+            if (line < textWidget.getLineCount() - 1)
+            {
+                offset = textWidget.getOffsetAtLine(line + 1) - 1;
+            }
+            else
+            {
+                offset = textWidget.getOffsetAtLine(line);
+            }
+        }
+
+        textWidgetInfoUpdater.setLastMouseOffset(textWidget, offset);
+    }
+
+    @Override
+    public void mouseUp(MouseEvent e)
+    {
+        //
+    }
+
+    @Override
+    public void documentAboutToBeChanged(DocumentEvent event)
+    {
+        //
+    }
+
+    @Override
+    public void documentChanged(DocumentEvent event)
+    {
+        if (clipboard.isPasting())
+        {
+            askNew();
+        }
+    }
+
     @SuppressWarnings("nls")
     private void methodChanged(CodeMethod prevMethod, CodeMethod newMethod)
     {
@@ -1062,38 +1115,6 @@ class CodeCompletionViewModel
         {
             return contentAssist;
         }
-    }
-
-    @Override
-    public void mouseDoubleClick(MouseEvent e)
-    {
-        //
-    }
-
-    @Override
-    public void mouseDown(MouseEvent e)
-    {
-        var offset = textWidget.getOffsetAtPoint(new Point(e.x, e.y));
-        if (offset < 0)
-        {
-            var line = textWidget.getLineIndex(e.y);
-            if (line < textWidget.getLineCount() - 1)
-            {
-                offset = textWidget.getOffsetAtLine(line + 1) - 1;
-            }
-            else
-            {
-                offset = textWidget.getOffsetAtLine(line);
-            }
-        }
-
-        textWidgetInfoUpdater.setLastMouseOffset(textWidget, offset);
-    }
-
-    @Override
-    public void mouseUp(MouseEvent e)
-    {
-        //
     }
 
     private static class ProcessingStatistics

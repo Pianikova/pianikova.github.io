@@ -25,9 +25,12 @@ public class ClipboardManager
     implements IClipboardManager, IClipboard
 {
     private static final int MAX_SIZE = 8192;
+    private static final String COPY_COMMAND_ID = "org.eclipse.ui.edit.copy"; //$NON-NLS-1$
+    private static final String PASTE_COMMAND_ID = "org.eclipse.ui.edit.paste"; //$NON-NLS-1$
     private final IDispatcher dispatcher;
     private final IUISettings settings;
     private final CopyExecutionListener copyCommandListener = new CopyExecutionListener();
+    private final PasteExecutionListener pasteCommandListener = new PasteExecutionListener();
 
     @Inject
     public ClipboardManager(IDispatcher dispatcher, IUISettings settings)
@@ -41,9 +44,13 @@ public class ClipboardManager
     @Override
     public void initialize()
     {
-        var copyCommand = getCopyCommand();
+        var copyCommand = getCommand(COPY_COMMAND_ID);
         copyCommand.removeExecutionListener(copyCommandListener);
         copyCommand.addExecutionListener(copyCommandListener);
+
+        var pasteCommand = getCommand(PASTE_COMMAND_ID);
+        pasteCommand.removeExecutionListener(pasteCommandListener);
+        pasteCommand.addExecutionListener(pasteCommandListener);
     }
 
     @Override
@@ -74,6 +81,12 @@ public class ClipboardManager
         return Optional.of(eclipseText);
     }
 
+    @Override
+    public boolean isPasting()
+    {
+        return pasteCommandListener.isPasting;
+    }
+
     private Optional<String> getTextFromClipoard()
     {
         var clipboard = getClipboard();
@@ -102,10 +115,10 @@ public class ClipboardManager
         return new Clipboard(Display.getCurrent());
     }
 
-    private Command getCopyCommand()
+    private Command getCommand(String commandId)
     {
-        ICommandService commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
-        return commandService.getCommand("org.eclipse.ui.edit.copy"); //$NON-NLS-1$
+        var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
+        return commandService.getCommand(commandId);
     }
 
     private class CopyExecutionListener
@@ -135,6 +148,36 @@ public class ClipboardManager
         public void postExecuteFailure(String commandId, ExecutionException exception)
         {
             //
+        }
+    }
+
+    private class PasteExecutionListener
+        implements IExecutionListener
+    {
+        private boolean isPasting;
+
+        @Override
+        public void preExecute(String commandId, ExecutionEvent event)
+        {
+            isPasting = true;
+        }
+
+        @Override
+        public void postExecuteSuccess(String commandId, Object returnValue)
+        {
+            isPasting = false;
+        }
+
+        @Override
+        public void notHandled(String commandId, NotHandledException exception)
+        {
+            isPasting = false;
+        }
+
+        @Override
+        public void postExecuteFailure(String commandId, ExecutionException exception)
+        {
+            isPasting = false;
         }
     }
 }
