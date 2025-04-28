@@ -8,4 +8,6 @@ import java.util.Optional;
 interface IClipboard
 {
     Optional<String> getText();
+
+    boolean isPasting();
 }
