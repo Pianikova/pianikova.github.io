@@ -25,36 +25,37 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IUISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 
 class UI
-    implements IUI, Listener
+    implements IUIInitializer, IUI, Listener
 {
     private final ILog log;
-    private final Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider;
+    private final ICodeCompletionViewModel<CodeCompletionContext> codeCompletionViewModel;
     private final IDispatcher dispatcher;
     private final IUISettings uiSettings;
     private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private StyledText textWidget;
+    private StyledText lastTextWidget;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
-    public UI(ILog log, Provider<ICodeCompletionViewModel<CodeCompletionContext>> codeCompletionViewModelProvider,
+    public UI(ILog log, ICodeCompletionViewModel<CodeCompletionContext> codeCompletionViewModel,
         IDispatcher dispatcher, IUISettings uiSettings,
         ITextWidgetInfoUpdater textWidgetInfoUpdater)
     {
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(codeCompletionViewModelProvider);
+        Preconditions.checkNotNull(codeCompletionViewModel);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(textWidgetInfoUpdater);
         this.log = log;
-        this.codeCompletionViewModelProvider = codeCompletionViewModelProvider;
+        this.codeCompletionViewModel = codeCompletionViewModel;
         this.dispatcher = dispatcher;
         this.uiSettings = uiSettings;
         this.textWidgetInfoUpdater = textWidgetInfoUpdater;
     }
 
+    @Override
     public void initialize()
     {
         dispatcher.dispatchAsync(() -> {
@@ -111,11 +112,16 @@ class UI
                 }
 
                 textWidget = newTextWidget;
+                lastTextWidget = textWidget;
                 textWidgetInfoUpdater.reset();
                 queryToken = Closeables.Empty;
                 dispatcher.dispatchAsync(() -> {
-                    queryToken = codeCompletionViewModelProvider.get().activate(newTextWidget);
+                    queryToken = codeCompletionViewModel.activate(newTextWidget);
                 });
+            }
+            else
+            {
+                textWidget = null;
             }
         }
     }
@@ -124,6 +130,18 @@ class UI
     public synchronized Optional<StyledText> getTextWidget()
     {
         var widget = textWidget;
+        if (!isValidWidget(widget))
+        {
+            return Optional.empty();
+        }
+
+        return Optional.of(widget);
+    }
+
+    @Override
+    public synchronized Optional<StyledText> getLastTextWidget()
+    {
+        var widget = lastTextWidget;
         if (!isValidWidget(widget))
         {
             return Optional.empty();

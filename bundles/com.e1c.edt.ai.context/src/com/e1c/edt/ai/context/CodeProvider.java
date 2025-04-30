@@ -24,6 +24,14 @@ class CodeProvider
             return Optional.empty();
         }
 
+        for (var error : parseResult.getSyntaxErrors())
+        {
+            if (error.getTotalEndOffset() < offset)
+            {
+                return Optional.empty();
+            }
+        }
+
         var rootNode = parseResult.getRootNode();
         if (rootNode == null)
         {

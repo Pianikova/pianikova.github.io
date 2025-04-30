@@ -3,6 +3,9 @@
  */
 package com.e1c.edt.ai.ui.quickaccess;
 
+import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.ui.quickaccess.QuickAccessElement;
+
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ui.AITarget;
 import com.e1c.edt.ai.ui.BaseActivator;
@@ -10,9 +13,6 @@ import com.e1c.edt.ai.ui.BaseChatView;
 import com.e1c.edt.ai.ui.IAIContextProvider;
 import com.e1c.edt.ai.ui.IChat;
 import com.e1c.edt.ai.ui.IUI;
-import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.ui.quickaccess.QuickAccessElement;
-
 import com.google.inject.Inject;
 
 
@@ -54,7 +54,7 @@ public class AskAIQuickAccessElement
     @Override
     public void execute()
     {
-        var ctx = ui.getTextWidget()
+        var ctx = ui.getLastTextWidget()
             .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true),
                 CancellationTokens.NONE))
             .orElse(null);

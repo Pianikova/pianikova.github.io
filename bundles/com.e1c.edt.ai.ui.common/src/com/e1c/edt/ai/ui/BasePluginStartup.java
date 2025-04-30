@@ -22,7 +22,7 @@ public class BasePluginStartup
     implements IStartup
 {
     @Inject
-    UI ui;
+    IUIInitializer ui;
     @Inject
     IStateService accessHolder;
     @Inject

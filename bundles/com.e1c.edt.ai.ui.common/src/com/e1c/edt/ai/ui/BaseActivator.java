@@ -284,11 +284,12 @@ public abstract class BaseActivator
 
     private synchronized Injector getInjector()
     {
-        if (injector == null)
+        var defaultActivator = getDefault();
+        if (defaultActivator.injector == null)
         {
             try
             {
-                injector = createInjector();
+                defaultActivator.injector = createInjector();
             }
             catch (Exception e)
             {

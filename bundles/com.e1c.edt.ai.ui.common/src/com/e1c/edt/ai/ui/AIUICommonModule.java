@@ -34,7 +34,9 @@ public class AIUICommonModule
         install(new AIModule());
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);
-        bind(IUI.class).to(UI.class).in(Singleton.class);
+        bind(UI.class).in(Singleton.class);
+        bind(IUI.class).to(UI.class);
+        bind(IUIInitializer.class).to(UI.class);
         bind(ClipboardManager.class).in(Singleton.class);
         bind(IClipboardManager.class).to(ClipboardManager.class);
         bind(IClipboard.class).to(ClipboardManager.class);

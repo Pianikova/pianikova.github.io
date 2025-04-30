@@ -6,6 +6,10 @@ package com.e1c.edt.ai.ui.handlers;
 import java.util.HashSet;
 import java.util.Optional;
 
+import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.CancellationTokens;
@@ -21,10 +25,6 @@ import com.e1c.edt.ai.ui.ICodeParser;
 import com.e1c.edt.ai.ui.IContentProvider;
 import com.e1c.edt.ai.ui.ITextWidgetInfoProvider;
 import com.e1c.edt.ai.ui.IUI;
-import org.eclipse.jface.text.source.SourceViewer;
-import org.eclipse.swt.custom.StyledText;
-import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -62,7 +62,7 @@ public class CodeTools
     @Override
     public boolean hasTarget()
     {
-        return ui.getTextWidget()
+        return ui.getLastTextWidget()
             .map(textWidget -> !textWidget.getSelectionText().isBlank() || getTargetMethod().isPresent())
             .orElse(false);
     }
@@ -70,7 +70,7 @@ public class CodeTools
     @Override
     public Optional<AIContext> createContextForTarget()
     {
-        return ui.getTextWidget()
+        return ui.getLastTextWidget()
             .flatMap(textWidget -> {
                 if (!textWidget.getSelectionText().isBlank())
                 {
@@ -91,7 +91,7 @@ public class CodeTools
     @Override
     public Optional<TargetMethod> getTargetMethod()
     {
-        return ui.getTextWidget()
+        return ui.getLastTextWidget()
             .flatMap(textWidget -> ui.getSourceViewer(textWidget))
             .flatMap(sourceViewer -> getTargetMethod(sourceViewer));
     }
