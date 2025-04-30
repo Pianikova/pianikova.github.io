@@ -61,6 +61,14 @@ class VerticalRulerPainter
         var hintOffset = textWidget.getCaretOffset();
         var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight();
         var h = (textWidget.getLineHeight() - 1) * (lineCount - 1);
+
+        // scroll if hint is out of view. 1 line can be hidden under the side scrollbar
+        var bounds = textWidget.getBounds();
+        if (y + h >= bounds.height)
+        {
+            textWidget.setTopIndex(textWidget.getTopIndex() + lineCount + 1);
+        }
+
         pixelRange = new Range(y, h);
     }
 
