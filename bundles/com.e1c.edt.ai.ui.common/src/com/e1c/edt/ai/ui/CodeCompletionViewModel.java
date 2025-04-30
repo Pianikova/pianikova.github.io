@@ -857,7 +857,7 @@ class CodeCompletionViewModel
         if (textWidget != null && !textWidget.isDisposed())
         {
             textWidget.redraw();
-            dispatcher.dispatch(() -> rulerManager.redraw(sourceViewer));
+            rulerManager.redraw(sourceViewer);
         }
     }
 

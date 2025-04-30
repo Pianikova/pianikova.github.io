@@ -17,7 +17,10 @@ class VerticalRulerPainter
 {
     private final IGCTools gcTools;
     private final IEnvironment environment;
-    private Range pixelRange = Range.EMPTY;
+    StyledText textWidget;
+    String hintText;
+    private Range range = Range.EMPTY;
+    private int lineCount;
 
     @Inject
     public VerticalRulerPainter(IGCTools gcTools, IEnvironment environment)
@@ -29,15 +32,37 @@ class VerticalRulerPainter
     }
 
     @Override
-    public void pin(StyledText textWidget, String hintText)
+    public synchronized void pin(StyledText textWidget, String hintText)
     {
-        if (environment.getOS() != OS.WINDOWS || hintText == null || hintText.isEmpty())
+        this.textWidget = textWidget;
+        this.hintText = hintText;
+        updateRange();
+
+        if (range == Range.EMPTY)
         {
-            pixelRange = Range.EMPTY;
             return;
         }
 
-        var lineCount = 0;
+        // scroll if hint is out of view. 1 line can be hidden under the side scrollbar
+        var y = range.getStart();
+        var h = range.getLength();
+        var bounds = textWidget.getBounds();
+        if (y + h >= bounds.height)
+        {
+            textWidget.setTopIndex(textWidget.getTopIndex() + lineCount + 1);
+        }
+    }
+
+    @Override
+    public synchronized void updateRange()
+    {
+        if (textWidget == null || hintText == null || environment.getOS() != OS.WINDOWS || hintText.isEmpty())
+        {
+            range = Range.EMPTY;
+            return;
+        }
+
+        lineCount = 0;
         var currentOffset = 0;
         while (currentOffset < hintText.length())
         {
@@ -54,34 +79,32 @@ class VerticalRulerPainter
 
         if (lineCount < 2)
         {
-            pixelRange = Range.EMPTY;
+            range = Range.EMPTY;
             return;
         }
 
         var hintOffset = textWidget.getCaretOffset();
         var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight();
         var h = (textWidget.getLineHeight() - 1) * (lineCount - 1);
-
-        // scroll if hint is out of view. 1 line can be hidden under the side scrollbar
-        var bounds = textWidget.getBounds();
-        if (y + h >= bounds.height)
+        if (h <= 0)
         {
-            textWidget.setTopIndex(textWidget.getTopIndex() + lineCount + 1);
+            range = Range.EMPTY;
+            return;
         }
 
-        pixelRange = new Range(y, h);
+        range = new Range(y, h);
     }
 
     @Override
-    public void reset()
+    public synchronized void reset()
     {
-        this.pixelRange = Range.EMPTY;
+        this.range = Range.EMPTY;
     }
 
     @Override
-    public void paintControl(PaintEvent e)
+    public synchronized void paintControl(PaintEvent e)
     {
-        if (pixelRange == Range.EMPTY)
+        if (range == Range.EMPTY)
         {
             return;
         }
@@ -93,13 +116,18 @@ class VerticalRulerPainter
         }
 
         var bounds = gc.getClipping();
-        var y = pixelRange.getStart();
-        var h = pixelRange.getLength();
-        if (bounds.height > y)
+        if (bounds == null)
         {
-            gcTools.copyArea(gc, 0, y, bounds.width, bounds.height - y, 0, y + h);
+            return;
         }
 
-        gc.fillRectangle(0, y, bounds.width, h);
+        var y = range.getStart();
+        var h = range.getLength();
+        if (y >= 0)
+        {
+            gcTools.copyArea(gc, bounds.x, y, bounds.width, bounds.height - y - h, bounds.x, y + h);
+        }
+
+        gc.fillRectangle(bounds.x, y, bounds.width, h);
     }
 }

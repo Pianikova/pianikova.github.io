@@ -5,6 +5,7 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
+import org.eclipse.jface.text.IViewportListener;
 import org.eclipse.jface.text.source.CompositeRuler;
 import org.eclipse.jface.text.source.IAnnotationModel;
 import org.eclipse.jface.text.source.IAnnotationModelListener;
@@ -52,8 +53,10 @@ class VerticalRulerManager
         return Optional.ofNullable(viewer).flatMap(v -> getCompositeRuler(v)).map(ruler -> {
             var modelListener = createModelListener(ruler);
             var trackerListener = new RulerMouseTrackListener(onReset);
-            addListeners(ruler, modelListener, trackerListener);
-            return Closeables.create(() -> removeListeners(ruler, modelListener, trackerListener));
+            var viewportListener = new ViewportListener(viewer);
+            addListeners(viewer, ruler, modelListener, trackerListener, viewportListener);
+            return Closeables
+                .create(() -> removeListeners(viewer, ruler, modelListener, trackerListener, viewportListener));
         }).orElse(Closeables.Empty);
     }
 
@@ -68,6 +71,11 @@ class VerticalRulerManager
 
     @Override
     public void redraw(SourceViewer viewer)
+    {
+        dispatcher.dispatch(() -> redrawInternal(viewer));
+    }
+
+    private void redrawInternal(SourceViewer viewer)
     {
         Optional.ofNullable(viewer)
             .flatMap(v -> getCompositeRuler(v))
@@ -103,8 +111,8 @@ class VerticalRulerManager
         }
     }
 
-    private void addListeners(CompositeRuler ruler, AnnotationModelListener modelListener,
-        RulerMouseTrackListener tackerListener)
+    private void addListeners(SourceViewer viewer, CompositeRuler ruler, AnnotationModelListener modelListener,
+        RulerMouseTrackListener trackerListener, ViewportListener viewportListener)
     {
         var decorators = ruler.getDecoratorIterator();
         while (decorators.hasNext())
@@ -118,12 +126,14 @@ class VerticalRulerManager
 
             var control = column.getControl();
             control.addPaintListener(painterListener);
-            control.addMouseTrackListener(tackerListener);
+            control.addMouseTrackListener(trackerListener);
         }
+
+        viewer.addViewportListener(viewportListener);
     }
 
-    private void removeListeners(CompositeRuler ruler, AnnotationModelListener modelListener,
-        RulerMouseTrackListener tackerListener)
+    private void removeListeners(SourceViewer viewer, CompositeRuler ruler, AnnotationModelListener modelListener,
+        RulerMouseTrackListener tackerListener, ViewportListener viewportListener)
     {
         var decorators = ruler.getDecoratorIterator();
         while (decorators.hasNext())
@@ -139,6 +149,8 @@ class VerticalRulerManager
             control.removePaintListener(painterListener);
             control.removeMouseTrackListener(tackerListener);
         }
+
+        viewer.removeViewportListener(viewportListener);
     }
 
     private Optional<CompositeRuler> getCompositeRuler(SourceViewer viewer)
@@ -205,6 +217,25 @@ class VerticalRulerManager
         public void mouseHover(MouseEvent e)
         {
             //
+        }
+    }
+
+    private class ViewportListener implements IViewportListener
+    {
+        private final SourceViewer viewer;
+
+        public ViewportListener(SourceViewer viewer)
+        {
+            this.viewer = viewer;
+        }
+
+        @Override
+        public void viewportChanged(int verticalOffset)
+        {
+            dispatcher.dispatchAsync(() -> dispatcher.dispatchAsync(() -> {
+                painterListener.updateRange();
+                redrawInternal(viewer);
+            }));
         }
     }
 }
