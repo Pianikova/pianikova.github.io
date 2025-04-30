@@ -534,8 +534,7 @@ class CodeCompletionViewModel
 
             var newMethod =
                 codeParser.parse(sourceViewer)
-                    .flatMap(parseResult -> parseResult.hasSyntaxErrors() ? Optional.empty()
-                        : codeProvider.getMethod(parseResult, offset));
+                    .flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
 
             if (newMethod.isPresent())
             {

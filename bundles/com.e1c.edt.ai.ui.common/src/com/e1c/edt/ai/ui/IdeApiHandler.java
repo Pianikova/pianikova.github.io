@@ -45,7 +45,7 @@ public class IdeApiHandler
         }
 
         final var processedCode = textPreprocessor.process(code);
-        ui.getTextWidget().ifPresent(textWidget -> {
+        ui.getLastTextWidget().ifPresent(textWidget -> {
             var contet = textWidget.getContent();
             ui.getSourceViewer(textWidget).ifPresent(sourceViewer -> {
                 var selection = sourceViewer.getSelection();
