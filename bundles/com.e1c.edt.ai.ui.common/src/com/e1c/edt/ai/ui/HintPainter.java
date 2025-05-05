@@ -200,6 +200,11 @@ class HintPainter
         try
         {
             var bounds = gc.getClipping();
+            if (bounds == null)
+            {
+                return;
+            }
+
             var boundsWidth = bounds.width - BORDER * 2 - 1;
             gc.setFont(hintFont);
 
@@ -237,12 +242,7 @@ class HintPainter
             labelW = l - labelX;
             labelX = labelW - labelSize.x - BORDER;
 
-            if (!bounds.intersects(firstLineX, firstLineY, otherLinesX + otherLinesW, otherLinesY + otherLinesH))
-            {
-                return;
-            }
-
-            if (environment.getOS() == OS.WINDOWS)
+            if (otherLinesY >= 0 && environment.getOS() == OS.WINDOWS)
             {
                 if (firstLine.length() > 0 && !suffix.isBlank() && bounds.width > firstLineX)
                 {

@@ -14,9 +14,13 @@ class GCTools implements IGCTools
     {
         Preconditions.checkNotNull(gc);
         Preconditions.checkArgument(!gc.isDisposed());
-        Preconditions.checkArgument(width > 0);
-        Preconditions.checkArgument(height > 0);
-        gc.copyArea(srcX, srcY, width, height, destX, destY, true);
+        if (width < 1 || height < 1)
+        {
+            return;
+        }
+
+        gc.copyArea(srcX, srcY, width, height, destX, destY);
+
         /*var buffer = new Image(gc.getDevice(), width, height);
         try
         {

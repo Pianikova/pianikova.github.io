@@ -11,5 +11,7 @@ interface IVerticalRulerPainter
 {
     void pin(StyledText textWidget, String hintText);
 
+    void updateRange();
+
     void reset();
 }

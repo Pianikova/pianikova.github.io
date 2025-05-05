@@ -15,7 +15,6 @@ public class Range
 
     public Range(int start, int length)
     {
-        Preconditions.checkArgument(start >= 0);
         Preconditions.checkArgument(length >= 0);
         this.start = start;
         this.length = length;

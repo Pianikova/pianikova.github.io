@@ -37,51 +37,57 @@ public class CodeCompletionStatistics
     }
 
     @Override
-    public synchronized void apply(Text text, int offset)
+    public void apply(Text text, int offset)
     {
         Preconditions.checkNotNull(text);
-        if (code.size() > MAX_SIZE)
+        synchronized (code)
         {
-            code.clear();
-        }
+            if (code.size() > MAX_SIZE)
+            {
+                code.clear();
+            }
 
-        if (offset < 0)
-        {
-            return;
-        }
+            if (offset < 0)
+            {
+                return;
+            }
 
-        var sourceId = text.getSource().getId();
-        if (sourceId.isBlank())
-        {
-            return;
-        }
+            var sourceId = text.getSource().getId();
+            if (sourceId.isBlank())
+            {
+                return;
+            }
 
-        if (startOffset == null)
-        {
-            startOffset = offset;
-        }
+            if (startOffset == null)
+            {
+                startOffset = offset;
+            }
 
-        code.add(text);
+            code.add(text);
+        }
     }
 
     @Override
-    public synchronized void rollback(int offset, int length)
+    public void rollback(int offset, int length)
     {
-        while (length > 0 && code.size() > 0)
+        synchronized (code)
         {
-            var index = code.size() - 1;
-            var lastText = code.get(index);
-            code.remove(index);
-            var text = lastText.getText();
-            var len = text.length();
-            if (len <= length)
+            while (length > 0 && code.size() > 0)
             {
-                length -= len;
-            }
-            else
-            {
-                code.add(new Text(text.substring(0, len - length), lastText.getSource()));
-                length = 0;
+                var index = code.size() - 1;
+                var lastText = code.get(index);
+                code.remove(index);
+                var text = lastText.getText();
+                var len = text.length();
+                if (len <= length)
+                {
+                    length -= len;
+                }
+                else
+                {
+                    code.add(new Text(text.substring(0, len - length), lastText.getSource()));
+                    length = 0;
+                }
             }
         }
     }
@@ -96,7 +102,14 @@ public class CodeCompletionStatistics
                 return;
             }
 
-            if (code.isEmpty() && lastOffset >= 0 && !lastSourceId.isBlank())
+            var curCode = new ArrayList<Text>();
+            synchronized (code)
+            {
+                curCode.addAll(code);
+                code.clear();
+            }
+
+            if (curCode.isEmpty() && lastOffset >= 0 && !lastSourceId.isBlank())
             {
                 lastAcceptedSourceId = lastSourceId;
                 var cursorInfo = cursorInfoProvider.getCursorInfo(lastOffset);
@@ -112,7 +125,7 @@ public class CodeCompletionStatistics
 
             lastSourceId = null;
             var sb = new StringBuilder();
-            for (var text : code)
+            for (var text : curCode)
             {
                 var source = text.getSource();
                 var sourceId = source.getId();
@@ -144,7 +157,6 @@ public class CodeCompletionStatistics
         }
         finally
         {
-            code.clear();
             startOffset = null;
         }
     }
