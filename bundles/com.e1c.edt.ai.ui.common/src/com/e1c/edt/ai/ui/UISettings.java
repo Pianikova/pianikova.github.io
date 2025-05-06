@@ -11,6 +11,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
+import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IUISettings;
@@ -35,9 +36,16 @@ class UISettings
     }
 
     @Override
-    public boolean isCodeCompletion()
+    public CodeCompletionPolicy getCodeCompletionPolicy()
     {
-        return settingsStore.getBoolean(ISettingsStore.CODE_COMPLETION);
+        var id = settingsStore.getString(ISettingsStore.CODE_COMPLETION_POLICY);
+        return CodeCompletionPolicy.parse(id);
+    }
+
+    @Override
+    public void setCodeCompletionPolicy(CodeCompletionPolicy policy)
+    {
+        settingsStore.setString(ISettingsStore.CODE_COMPLETION_POLICY, policy.getId());
     }
 
     @Override
@@ -50,12 +58,6 @@ class UISettings
     public int getCodeCompletionLinesCount()
     {
         return settingsStore.getInt(ISettingsStore.CODE_COMPLETION_LINES_COUNT);
-    }
-
-    @Override
-    public boolean isContinuousCodeCompletion()
-    {
-        return settingsStore.getBoolean(ISettingsStore.CONTINUOUS_CODE_COMPLETION);
     }
 
     @Override

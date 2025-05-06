@@ -83,20 +83,6 @@ class UI
     public synchronized void handleEvent(Event event)
     {
         Preconditions.checkNotNull(event);
-        if (!uiSettings.isCodeCompletion())
-        {
-            try
-            {
-                queryToken.close();
-            }
-            catch (Exception e)
-            {
-                // ignored
-            }
-            queryToken = Closeables.Empty;
-            return;
-        }
-
         if (event.type == SWT.FocusIn && event.widget != textWidget && event.widget instanceof StyledText)
         {
             var newTextWidget = (StyledText)event.widget;

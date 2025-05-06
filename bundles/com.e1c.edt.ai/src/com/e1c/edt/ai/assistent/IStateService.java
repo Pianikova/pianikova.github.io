@@ -16,6 +16,8 @@ public interface IStateService
 
     void setState(String className, ActionState actionState);
 
+    void refresh();
+
     void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs);
 
     void addListener(IAIStateListener serverAccessListener);

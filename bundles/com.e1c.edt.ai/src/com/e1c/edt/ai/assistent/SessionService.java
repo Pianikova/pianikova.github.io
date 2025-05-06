@@ -21,7 +21,6 @@ import com.e1c.edt.ai.assistent.model.SessionRequest;
 import com.e1c.edt.ai.assistent.model.SystemInfo;
 import com.e1c.edt.ai.assistent.model.UserParameters;
 import com.e1c.edt.ai.client.AIClientException;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -106,7 +105,7 @@ class SessionService
 
         userParameters.tabWidth = uiSettings.getTabWidth();
         userParameters.codeCompletionLinesCount = uiSettings.getCodeCompletionLinesCount();
-        userParameters.isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
+        userParameters.codeCompletionPolicy = uiSettings.getCodeCompletionPolicy();
         userParameters.minRequestDelayMs = uiSettings.getMinRequestDelay().toMillis();
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();

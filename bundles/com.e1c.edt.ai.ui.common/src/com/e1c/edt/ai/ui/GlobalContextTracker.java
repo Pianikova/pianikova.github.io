@@ -12,6 +12,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IUISettings;
@@ -56,7 +57,7 @@ class GlobalContextTracker
     @Override
     public void track(AIContext aiCtx)
     {
-        if (!settings.isCodeCompletion())
+        if (!settings.getCodeCompletionPolicy().isMeet(CodeCompletionPolicy.FOCUSING))
         {
             return;
         }
