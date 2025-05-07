@@ -8,7 +8,6 @@ import java.net.URI;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -19,6 +18,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
@@ -26,10 +26,12 @@ import org.eclipse.swt.widgets.Link;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
+import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IValidator;
+import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.ui.AIUICommonModule;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.google.inject.Inject;
@@ -48,6 +50,12 @@ public class ClientAIPreferencePage
 {
     private final Image SPLASH = createImage("icons/obj16/splash.png"); //$NON-NLS-1$
 
+    @SuppressWarnings("nls")
+    private static final String[][] LANGUAGES = {
+        { Messages.ClientAIPreferencePage_Language_Default, "" },
+        { Messages.ClientAIPreferencePage_Language_English, "english" },
+        { Messages.ClientAIPreferencePage_Language_Russian, "russian" } };
+
     @Inject
     ILog log;
     @Inject
@@ -60,6 +68,8 @@ public class ClientAIPreferencePage
     IPreferenceStore preferenceStore;
     @Inject
     IDefaultSettings defaultSettings;
+    @Inject
+    IStateService stateService;
 
     public ClientAIPreferencePage()
     {
@@ -86,27 +96,15 @@ public class ClientAIPreferencePage
         var TokenText = tokenField.getTextControl(getFieldEditorParent());
         TokenText.setEchoChar('*');
 
-        addField(
-            new BooleanFieldEditor(ISettingsStore.CODE_COMPLETION,
-                Messages.ClientAIPreferencePage_CodeCompletitionEnabled,
-                parent));
-
-        addField(new BooleanFieldEditor(ISettingsStore.CONTINUOUS_CODE_COMPLETION,
-            Messages.ClientAIPreferencePage_ContinuousCodeCompletition, parent));
+        addField(new PolictyComboFieldEditor(parent));
 
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
             Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
         codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
         addField(codeCompletionLinesCount);
 
-        @SuppressWarnings("nls")
-        String[][] languages = {
-            { Messages.ClientAIPreferencePage_Language_Default, "" },
-            { Messages.ClientAIPreferencePage_Language_English, "english" },
-            { Messages.ClientAIPreferencePage_Language_Russian, "russian" } };
-
         addField(
-            new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, languages, parent));
+            new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, LANGUAGES, parent));
 
         addField(new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
             Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator));
@@ -164,10 +162,101 @@ public class ClientAIPreferencePage
         super.dispose();
     }
 
+    @Override
+    protected void performDefaults()
+    {
+        stateService.refresh();
+        super.performDefaults();
+    }
+
+    @Override
+    public boolean performOk()
+    {
+        stateService.refresh();
+        return super.performOk();
+    }
+
     private static Image createImage(String path)
     {
         var descriptor = ImageDescriptor
             .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
         return descriptor.createImage();
+    }
+
+    private static class PolictyComboFieldEditor
+        extends ComboFieldEditor
+    {
+        private static final String[][] CODE_COMPLETION_POLICIES;
+        private Combo combo;
+
+        static
+        {
+            CODE_COMPLETION_POLICIES = new String[CodeCompletionPolicy.values().length][];
+            var index = 0;
+            for (var policy : CodeCompletionPolicy.values())
+            {
+                CODE_COMPLETION_POLICIES[index++] = new String[] { policy.getName(), policy.getId() };
+            }
+        }
+
+        public PolictyComboFieldEditor(Composite parent)
+        {
+            super(ISettingsStore.CODE_COMPLETION_POLICY, Messages.ClientAIPreferencePage_CodeCompletionPolicy,
+                CODE_COMPLETION_POLICIES, parent);
+        }
+
+        @Override
+        protected void doFillIntoGrid(Composite parent, int numColumns)
+        {
+            super.doFillIntoGrid(parent, numColumns);
+            var childernAfter = parent.getChildren();
+            if (childernAfter.length > 0)
+            {
+                var control = childernAfter[childernAfter.length - 1];
+                if (control instanceof Combo)
+                {
+                    combo = (Combo)control;
+                }
+            }
+        }
+
+        @Override
+        protected void doLoad()
+        {
+            super.doLoad();
+            updateToolTipText();
+        }
+
+        @Override
+        protected void doLoadDefault()
+        {
+            super.doLoadDefault();
+            updateToolTipText();
+        }
+
+        @Override
+        protected void valueChanged(String oldValue, String newValue)
+        {
+            super.valueChanged(oldValue, newValue);
+            updateToolTipText();
+        }
+
+        private void updateToolTipText()
+        {
+            if (combo == null)
+            {
+                return;
+            }
+
+            var index = combo.getSelectionIndex();
+            if (index >= 0 && index < CodeCompletionPolicy.values().length)
+            {
+                combo.setToolTipText(CodeCompletionPolicy.values()[index].getDescription());
+            }
+            else
+            {
+                combo.setToolTipText(""); //$NON-NLS-1$
+            }
+        }
     }
 }

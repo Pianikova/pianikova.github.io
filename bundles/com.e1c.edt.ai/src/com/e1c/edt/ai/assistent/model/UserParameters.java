@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.google.gson.annotations.SerializedName;
 
 public class UserParameters
@@ -19,8 +20,8 @@ public class UserParameters
     @SerializedName("code_completion_lines_count")
     public int codeCompletionLinesCount;
 
-    @SerializedName("is_continuous_code_completion")
-    public boolean isContinuousCodeCompletion;
+    @SerializedName("code_completion_policy")
+    public CodeCompletionPolicy codeCompletionPolicy;
 
     @SerializedName("min_request_delay_ms")
     public long minRequestDelayMs;

@@ -5,10 +5,10 @@ package com.e1c.edt.ai.ui.preferences;
 
 import java.util.Optional;
 
-import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.ISettingsStore;
 import org.eclipse.jface.preference.IPreferenceStore;
 
+import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ISettingsStore;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -30,6 +30,12 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     public String getString(String key)
     {
         return preferenceStore.getString(key);
+    }
+
+    @Override
+    public void setString(String key, String value)
+    {
+        preferenceStore.setValue(key, value);
     }
 
     @Override

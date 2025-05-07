@@ -41,6 +41,7 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.Closeables;
+import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.CodeMethod;
 import com.e1c.edt.ai.Delimiters;
 import com.e1c.edt.ai.HintPart;
@@ -227,6 +228,21 @@ class CodeCompletionViewModel
         }
     }
 
+    private boolean isEnabled()
+    {
+        return CodeCompletionPolicy.FOCUSING.isMeet(uiSettings.getCodeCompletionPolicy());
+    }
+
+    private boolean isBalanced()
+    {
+        return CodeCompletionPolicy.BALANCE.isMeet(uiSettings.getCodeCompletionPolicy());
+    }
+
+    private boolean isCreative()
+    {
+        return CodeCompletionPolicy.CREATIVITY.isMeet(uiSettings.getCodeCompletionPolicy());
+    }
+
     private void reset()
     {
         cancel();
@@ -259,6 +275,11 @@ class CodeCompletionViewModel
 
     private void askNew()
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
         var delay = delayBeforeShow.minus(requestDuration);
         if (delay.toNanos() < uiSettings.getMinRequestDelay().toNanos())
@@ -278,6 +299,11 @@ class CodeCompletionViewModel
         int codeCompletionLinesCount, CompletionRequestProvider localContextProvider, boolean forced,
         boolean contentAssist)
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         cancel();
         var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
             getAiContext(jobCtx.CancellationTokenSource)
@@ -297,12 +323,22 @@ class CodeCompletionViewModel
 
     private void askWithoutDelay(boolean forced, boolean contentAssist)
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
             uiSettings.getCodeCompletionLinesCount(), null, forced, contentAssist);
     }
 
     private void warmup()
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
             .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
 
@@ -576,7 +612,7 @@ class CodeCompletionViewModel
         ProcessingStatistics processingStatistics)
     {
         showTimer.purge();
-        if (delayBeforeShow.isNegative() || delayBeforeShow == Duration.ZERO)
+        if (delayBeforeShow.isNegative() || delayBeforeShow == Duration.ZERO || isCreative())
         {
             show(session, processingStatistics);
             return;
@@ -597,6 +633,11 @@ class CodeCompletionViewModel
 
     private void show(ICodeCompletionSession<CodeCompletionContext> session, ProcessingStatistics processingStatistics)
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         if (session.getContext().getCancellationTokenSource().isCanceled())
         {
             return;
@@ -657,6 +698,11 @@ class CodeCompletionViewModel
     @Override
     public void verifyKey(VerifyEvent event)
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         ICodeCompletionSession<CodeCompletionContext> session;
         synchronized (lockObject)
         {
@@ -664,7 +710,7 @@ class CodeCompletionViewModel
         }
 
         var actionToProcess = userActions.getAction(event);
-        var isContinuousCodeCompletion = uiSettings.isContinuousCodeCompletion();
+        var isContinuousCodeCompletion = isBalanced();
         var action = handler.handle(session, actionToProcess, event.character, hintPainter.getOffset(),
             isContinuousCodeCompletion);
         switch (action)
@@ -787,6 +833,11 @@ class CodeCompletionViewModel
     @SuppressWarnings("nls")
     private void updateMethod(ICancellationToken cancellationToken)
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         // sync
         var offset = dispatcher.dispatch(() -> textWidget.getCaretOffset());
         if (offset.isEmpty() || cancellationToken.isCanceled())
@@ -911,6 +962,11 @@ class CodeCompletionViewModel
     @Override
     public void documentChanged(DocumentEvent event)
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         if (clipboard.isPasting())
         {
             askNew();
@@ -1000,6 +1056,11 @@ class CodeCompletionViewModel
         @Override
         public void selectionChanged(ICompletionProposal prop, boolean smartToggle)
         {
+            if (!isBalanced())
+            {
+                return;
+            }
+
             if (lastProp == prop)
             {
                 return;

@@ -9,13 +9,13 @@ import com.e1c.edt.ai.assistent.model.Verbosity;
 
 public interface IUISettings
 {
-    boolean isCodeCompletion();
+    CodeCompletionPolicy getCodeCompletionPolicy();
+
+    void setCodeCompletionPolicy(CodeCompletionPolicy policy);
 
     int getTabWidth();
 
     int getCodeCompletionLinesCount();
-
-    boolean isContinuousCodeCompletion();
 
     Duration getMinRequestDelay();
 

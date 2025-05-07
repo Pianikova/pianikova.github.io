@@ -7,6 +7,7 @@ import java.time.Duration;
 
 import org.eclipse.core.runtime.Platform;
 
+import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 
@@ -14,9 +15,15 @@ class UISettings
     implements IUISettings
 {
     @Override
-    public boolean isCodeCompletion()
+    public CodeCompletionPolicy getCodeCompletionPolicy()
     {
-        return true;
+        return CodeCompletionPolicy.CREATIVITY;
+    }
+
+    @Override
+    public void setCodeCompletionPolicy(CodeCompletionPolicy policy)
+    {
+        //
     }
 
     @Override
@@ -29,12 +36,6 @@ class UISettings
     public int getCodeCompletionLinesCount()
     {
         return 0;
-    }
-
-    @Override
-    public boolean isContinuousCodeCompletion()
-    {
-        return false;
     }
 
     @Override

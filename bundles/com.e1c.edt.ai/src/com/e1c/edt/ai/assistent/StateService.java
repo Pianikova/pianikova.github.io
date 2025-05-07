@@ -63,7 +63,7 @@ class StateService
         if (this.serviceState != serviceState)
         {
             this.serviceState = serviceState;
-            notifyListeners();
+            refresh();
         }
     }
 
@@ -73,7 +73,7 @@ class StateService
         if (this.actionState != actionState)
         {
             this.actionState = actionState;
-            notifyListeners();
+            refresh();
         }
     }
 
@@ -120,7 +120,8 @@ class StateService
         job.schedule();
     };
 
-    private void notifyListeners()
+    @Override
+    public void refresh()
     {
         if (serviceState == null)
         {
