@@ -37,7 +37,7 @@ class HintPainter
     private int acceptedTokens;
     private StyledText textWidget;
     private int pinnedOffset = -1;
-    private boolean showEmpty;
+    private boolean showBlank;
     private boolean isSingleWordMode;
 
     @Inject
@@ -57,11 +57,11 @@ class HintPainter
     }
 
     @Override
-    public synchronized void pinOffset(StyledText textWidget, int offset, boolean showEmpty, boolean isSingleWordMode)
+    public synchronized void pinOffset(StyledText textWidget, int offset, boolean showBlank, boolean isSingleWordMode)
     {
         this.textWidget = textWidget;
         pinnedOffset = offset;
-        this.showEmpty = showEmpty;
+        this.showBlank = showBlank;
         this.isSingleWordMode = isSingleWordMode;
     }
 
@@ -154,7 +154,7 @@ class HintPainter
             return;
         }
 
-        if (!showEmpty && displayedHintText.isEmpty())
+        if (!showBlank && hintText.isBlank())
         {
             return;
         }
