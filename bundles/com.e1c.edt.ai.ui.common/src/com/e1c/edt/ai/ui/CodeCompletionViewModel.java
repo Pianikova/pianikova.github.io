@@ -459,7 +459,8 @@ class CodeCompletionViewModel
             dispatcher.dispatch(() -> {
                 hintPainter.reset();
                 verticalRulerPainter.reset();
-                hintPainter.pinOffset(textWidget, aiCtx.getCaretOffset(), delay.isNegative() || delay == Duration.ZERO,
+                hintPainter.pinOffset(textWidget, aiCtx.getCaretOffset(),
+                    isCreative() || (delay.isNegative() || delay == Duration.ZERO),
                     singleWordMode);
                 hintPainter.setHintAt("", "", 0);
                 redraw();
@@ -532,7 +533,7 @@ class CodeCompletionViewModel
                         return message.toString();
                     });
 
-                    if (hint.isEmpty())
+                    if (hint.isEmpty() || (!isCreative() && hint.isBlank()))
                     {
                         hideHint();
                     }
@@ -646,6 +647,11 @@ class CodeCompletionViewModel
         var context = session.getContext();
         var hint = session.getHint();
         if (hint.isEmpty())
+        {
+            return;
+        }
+
+        if (!isCreative() && hint.isBlank())
         {
             return;
         }

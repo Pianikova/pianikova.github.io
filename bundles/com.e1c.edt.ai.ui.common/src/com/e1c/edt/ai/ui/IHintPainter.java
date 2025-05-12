@@ -9,7 +9,7 @@ import org.eclipse.swt.events.PaintListener;
 interface IHintPainter
     extends PaintListener
 {
-    void pinOffset(StyledText textWidget, int offset, boolean showEmpty, boolean isSingleWordMode);
+    void pinOffset(StyledText textWidget, int offset, boolean showBlank, boolean isSingleWordMode);
 
     int getOffset();
 
