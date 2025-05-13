@@ -7,10 +7,21 @@ import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Комментарии к типу.
+ *
+ * @author Evgeniy_Sysoletin
+ */
 public class CommentTypeDefinition
 {
+    /**
+     * Наименование типа.
+     */
     public String name;
 
+    /**
+     * Поля типа.
+     */
     @SerializedName("field_definitions")
     public List<CommentFieldDefinition> fieldDefinitions;
 }

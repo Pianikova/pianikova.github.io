@@ -11,10 +11,10 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
-import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;

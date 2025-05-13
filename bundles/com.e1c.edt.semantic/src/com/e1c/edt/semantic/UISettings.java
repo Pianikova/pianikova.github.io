@@ -7,8 +7,8 @@ import java.time.Duration;
 
 import org.eclipse.core.runtime.Platform;
 
-import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 
 class UISettings

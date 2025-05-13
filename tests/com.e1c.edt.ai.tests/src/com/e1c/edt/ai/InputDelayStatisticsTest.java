@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
+
 public class InputDelayStatisticsTest
 {
     private static final LocalDateTime START_TIME = LocalDateTime.of(1977, 11, 16, 17, 35, 00);

@@ -7,11 +7,20 @@ import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Ответ на запрос обновления глобального контекста.
+ */
 public class GlobalContextUpdateResponse
 {
+    /**
+     * Список неизвестных значений.
+     */
     @SerializedName("unk_vals")
     public List<EntityValue> unknownValues;
 
+    /**
+     * Список неизвестных ключей.
+     */
     @SerializedName("unk_keys")
     public List<EntityKey> unknownKeys;
 }

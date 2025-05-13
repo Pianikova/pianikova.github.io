@@ -5,19 +5,43 @@ package com.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
+/**
+ * Оъбект ИИ контеста.
+ */
 public class ObjectEntity
 {
+    /**
+     * Наименование объекта.
+     */
     public String name;
 
+    /**
+     * Типы, которые принимает объект в коде.
+     */
     public List<DataType> types;
 
+    /**
+     * Поля объекта.
+     */
     public List<ObjectEntityField> fields;
 
+    /**
+     * Начало использование в коде.
+     */
     public Integer start;
 
+    /**
+     * Конец использования в коде.
+     */
     public Integer finish;
 
+    /**
+     * Фрагмент кода.
+     */
     public String code;
 
+    /**
+     * Комментарий.
+     */
     public List<String> comment;
 }

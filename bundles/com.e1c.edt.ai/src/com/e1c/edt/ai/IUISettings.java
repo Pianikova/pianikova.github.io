@@ -5,6 +5,7 @@ package com.e1c.edt.ai;
 
 import java.time.Duration;
 
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 
 public interface IUISettings

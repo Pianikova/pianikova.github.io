@@ -6,8 +6,8 @@ package com.e1c.edt.ai.ui.preferences;
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
-import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.ISettingsStore;
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.ui.BaseActivator;
 
 /**
