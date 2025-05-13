@@ -57,7 +57,7 @@ class GlobalContextTracker
     @Override
     public void track(AIContext aiCtx)
     {
-        if (!settings.getCodeCompletionPolicy().isMeet(CodeCompletionPolicy.FOCUSING))
+        if (!CodeCompletionPolicy.FOCUSING.isMeet(settings.getCodeCompletionPolicy()))
         {
             return;
         }
