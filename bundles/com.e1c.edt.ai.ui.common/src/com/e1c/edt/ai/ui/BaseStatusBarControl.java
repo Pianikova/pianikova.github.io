@@ -22,11 +22,11 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
-import com.e1c.edt.ai.CodeCompletionPolicy;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.assistent.IAIStateListener;
 import com.e1c.edt.ai.assistent.IStateService;
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.inject.Inject;
 
 /**

@@ -13,6 +13,9 @@ import org.osgi.framework.Version;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Параметры запроса для запроса к модели.
+ */
 public class Parameters
 {
     public Parameters(IDefaultSettings defaultSettings)
@@ -27,107 +30,218 @@ public class Parameters
         }
     }
 
+    /**
+     * Максимальная длина префикса (токенов). Например, 2160.
+     */
     @SerializedName("prefix_length")
     public Integer prefixLength;
 
+    /**
+     * Максимальная длина суффикса (токенов). Например, 1080.
+     */
     @SerializedName("suffix_length")
     public Integer suffixLength;
 
+    /**
+     * Общая длина формы (символов). Например, 3240.
+     */
     @SerializedName("form_length")
     public Integer formLength;
 
+    /**
+     * Длина метаданных (символов). Например, 2160.
+     */
     @SerializedName("meta_length")
     public Integer metaLength;
 
+    /**
+     * Количество лучших результатов для выбора. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("best_of")
     public Integer bestOf;
 
+    /**
+     * Включать детали входного декодера. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("decoder_input_details")
     public Boolean decoderInputDetails;
 
+    /**
+     * Включать подробные логи. Нужно определить только для изменения стандартных настроек модели.
+     */
     public Boolean details;
 
+    /**
+     * Использовать выборку. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("do_sample")
     public Boolean doSample;
 
+    /**
+     * Максимальное количество новых генерируемых токенов. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("max_new_tokens")
     public Integer maxNewTokens;
 
+    /**
+     * Штраф за повторения (числовое значение). Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("repetition_penalty")
     public Double repetitionPenalty;
 
+    /**
+     * Штраф за частотность слов (числовое значение). Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("frequency_penalty")
     public Double frequencyPenalty;
 
+    /**
+     * Возвращать полный текст или только сгенерированную часть. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("return_full_text")
     public Boolean returnFullText;
 
+    /**
+     * Использовать фиксированное начальное значение для воспроизводимости. Нужно определить только для изменения стандартных настроек модели.
+     */
     public Boolean seed;
 
+    /**
+     * Список стоп-слов или фраз для остановки генерации. Нужно определить только для изменения стандартных настроек модели.
+     */
     public List<String> stop = List.of();
 
+    /**
+     * Температура выборки (от 0 до 1). Нужно определить только для изменения стандартных настроек модели.
+     */
     public Double temperature;
 
+    /**
+     * Количество наиболее вероятных токенов для выборки. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("top_k")
     public Integer topK;
 
+    /**
+     * Количество токенов для выборки. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("top_n_tokens")
     public Integer topNTokens;
 
+    /**
+     * Параметр для выборочной генерации (от 0 до 1). Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("top_p")
     public Double topP;
 
+    /**
+     * Включать усечение. Нужно определить только для изменения стандартных настроек модели.
+     */
     public Boolean truncate;
 
+    /**
+     * Параметр типичности (числовое значение). Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("typical_p")
     public Double typicalP;
 
+    /**
+     * Включать водяные знаки. Нужно определить только для изменения стандартных настроек модели.
+     */
     public Boolean watermark;
 
+    /**
+     * Метод исправления токенов (None/guidance/streaming). Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("token_healing")
     public TokenHealing tokenHealing;
 
+    /**
+     * Возвращать текст построчно. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("return_line")
     public Boolean returnLine;
 
+    /**
+     * Обрезать текст после стоп-слов. Нужно определить только для изменения стандартных настроек модели.
+     */
     @SerializedName("trim_stop")
     public Boolean trimStop;
 
+    /**
+     * URL для запросов. Например, "https://code.1c.ai/api/v1/".
+     */
     @SerializedName("url")
     public URL url;
 
+    /**
+     * URL для чата. Например, "https://code.1c.ai/chat/".
+     */
     @SerializedName("chat_url")
     public URL chatUrl;
 
+    /**
+     * Максимальная длина данных локальных функций. Например, 2590.
+     */
     @SerializedName("local_functions_length")
     public Integer localFunctionsLength;
 
+    /**
+     * Длина внешних функций. Например, 2160.
+     */
     @SerializedName("external_functions_length")
     public Integer externalFunctionsLength;
 
+    /**
+     * Минимальная задержка миллисекунд. Например, 300.
+     */
     @SerializedName("min_delay")
     public Integer minDelay = 300;
 
+    /**
+     * Время ожидания ответа миллисекунд. Например, 15000.
+     */
     @SerializedName("timeout")
     public Integer timeout = 15000;
 
+    /**
+     * Определяет передавать ли глобальный контекст. Например, true.
+     */
     @SerializedName("global_context")
     public Boolean globalContext = false;
 
+    /**
+     * Определяет передавать ли расширенный контекст. Например, true.
+     */
     @SerializedName("extended_context")
     public Boolean extendedContext = false;
 
+    /**
+     * Уровень детализации логов (error/warning/info/trace/debug). Например, warning.
+     */
     public Verbosity verbosity = Verbosity.WARNING;
 
+    /**
+     * Переопределяет scriptLanguage для тестирования.
+     */
     @SerializedName("script_language")
     public String scriptLanguage = ""; //$NON-NLS-1$
 
+    /**
+     * Переопределяет scriptLanguage для тестирования.
+     */
     @SerializedName("configuration_name")
     public String configurationName = ""; //$NON-NLS-1$
 
+    /**
+     * Переопределяет plugin_version для тестирования. Например, "1.0.0".
+     */
     @SerializedName("version")
     public Version version = Version.emptyVersion;
 
+    /**
+     * Поставщик.
+     */
     @SerializedName("vendor")
     public String vendor = ""; //$NON-NLS-1$
 

@@ -6,6 +6,7 @@ package com.e1c.edt.ai;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 

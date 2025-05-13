@@ -10,15 +10,30 @@ import com.google.gson.annotations.SerializedName;
 
 public class DataType
 {
+    /**
+     * Название типа на английском.
+     */
     public String type;
 
+    /**
+     * Название типа на русском.
+     */
     @SerializedName("type_ru")
     public String typeRu;
 
+    /**
+     * Список полей типа.
+     */
     public List<ObjectEntityField> fields;
 
+    /**
+     * Уникальный идентификатор типа.
+     */
     public String uuid;
 
+    /**
+     * Список комментариев к типу.
+     */
     public List<String> comment;
 
     @Override
