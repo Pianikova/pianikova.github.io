@@ -8,5 +8,5 @@ import java.util.Map;
 
 class GlobalContextState
 {
-    public Map<String, GlobalContextFile> files = new HashMap<>();
+    public Map<String, GlobalContextFileState> files = new HashMap<>();
 }
