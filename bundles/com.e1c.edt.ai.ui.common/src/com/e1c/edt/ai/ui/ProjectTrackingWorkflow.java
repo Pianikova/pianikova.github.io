@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -31,6 +32,7 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -155,14 +157,12 @@ class ProjectTrackingWorkflow
         {
             for (var filesToHash : filesToHash.values())
             {
-                if (filesToHash.path != null && !filesToHash.path.isBlank() && filesToHash.modificationStamp > 0
-                    && filesToHash.hash != null)
+                if (filesToHash.isEmpty())
                 {
-                    var file = new GlobalContextFile();
-                    file.time = filesToHash.modificationStamp;
-                    file.hash = filesToHash.hash;
-                    state.files.put(filesToHash.path, file);
+                    continue;
                 }
+
+                state.files.put(filesToHash.path, filesToHash.getState());
             }
         }
     }
@@ -327,28 +327,38 @@ class ProjectTrackingWorkflow
                     }
 
                     var modificationStamp = file.file.getModificationStamp();
-                    if (file.modificationStamp == modificationStamp)
+                    if (file.modificationStamp != modificationStamp)
                     {
-                        continue;
+                        log.debug("Sync required", () -> {
+                            var message = new StringBuilder();
+                            message.append("File: ");
+                            message.append(file.path);
+
+                            message.append(System.lineSeparator());
+                            message.append("Prev timestamp: ");
+                            message.append(file.modificationStamp);
+
+                            message.append(System.lineSeparator());
+                            message.append("Cur timestamp: ");
+                            message.append(modificationStamp);
+                            return message.toString();
+                        });
+
+                        file.modificationStamp = modificationStamp;
+                        file.hash = hashTools.format(hashTools.compute(file.file, buffer), true);
                     }
+                    else
+                    {
+                        if (file.hasState())
+                        {
+                            if (filesToSync.add(file))
+                            {
+                                hasFileToSync[0] = true;
+                            }
 
-                    log.debug("Sync required", () -> {
-                        var message = new StringBuilder();
-                        message.append("File: ");
-                        message.append(file.path);
-
-                        message.append(System.lineSeparator());
-                        message.append("Prev timestamp: ");
-                        message.append(file.modificationStamp);
-
-                        message.append(System.lineSeparator());
-                        message.append("Cur timestamp: ");
-                        message.append(modificationStamp);
-                        return message.toString();
-                    });
-
-                    file.modificationStamp = modificationStamp;
-                    file.hash = hashTools.format(hashTools.compute(file.file, buffer), true);
+                            continue;
+                        }
+                    }
                 }
                 else
                 {
@@ -360,8 +370,7 @@ class ProjectTrackingWorkflow
                     }
                 }
 
-
-                if (file.hash.equals(prevHash))
+                if (!file.hasState() && file.hash.equals(prevHash))
                 {
                     continue;
                 }
@@ -418,7 +427,9 @@ class ProjectTrackingWorkflow
             }
 
             var statistics = statisticsProvider.get();
-            var updates = globalContextSync.getSyncData(file.aiCtx, statistics, cancellationToken);
+            var updates = file.hasState() ? file.updates
+                : globalContextSync.getSyncData(file.aiCtx, statistics, cancellationToken);
+            file.updateState(updates);
 
             if (futures.size() >= MaxConcurrentSyncs)
             {
@@ -471,24 +482,20 @@ class ProjectTrackingWorkflow
 
     private ProjectFile initProjectFile(ProjectFile projectFile)
     {
-        var fileState = state.files.get(projectFile.path);
-        if (fileState != null)
-        {
-            projectFile.modificationStamp = fileState.time;
-            projectFile.hash = fileState.hash;
-        }
-
+        projectFile.setState(state.files.get(projectFile.path));
         return projectFile;
     }
 
     private static class ProjectFile
     {
-        public AIContext aiCtx;
         private final String path;
+        public AIContext aiCtx;
         public final IFile file;
         public LocalDateTime updateTime;
         public String hash;
         public long modificationStamp = -1;
+        private boolean hasInitialState;
+        private List<GlobalContextUpdate> updates;
 
         public ProjectFile(AIContext aiCtx, String path, IFile file, LocalDateTime updateTime)
         {
@@ -500,6 +507,44 @@ class ProjectTrackingWorkflow
             this.path = path;
             this.file = file;
             this.updateTime = updateTime;
+        }
+
+        public GlobalContextFileState getState()
+        {
+            var state = new GlobalContextFileState();
+            state.time = modificationStamp;
+            state.hash = hash;
+            state.updates = updates;
+            return state;
+        }
+
+        public void setState(GlobalContextFileState state)
+        {
+            if (state == null)
+            {
+                return;
+            }
+
+            modificationStamp = state.time;
+            hash = state.hash;
+            updates = state.updates;
+            hasInitialState = true;
+        }
+
+        public boolean hasState()
+        {
+            return hasInitialState && updates != null;
+        }
+
+        public boolean isEmpty()
+        {
+            return path == null || hash == null || modificationStamp <= 0 || path.isBlank() || hash.isBlank();
+        }
+
+        public void updateState(List<GlobalContextUpdate> updates)
+        {
+            this.updates = updates;
+            hasInitialState = false;
         }
 
         @Override
