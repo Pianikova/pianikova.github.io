@@ -339,14 +339,20 @@ class CodeCompletionViewModel
             return;
         }
 
-        aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-            .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+        updateGlobalContext();
 
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
                 ct -> CreateContextProvider(null, uiSettings.getTimeout(), false, false), null);
         warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
+    }
+
+    private void updateGlobalContext()
+    {
+        dispatcher.dispatch(() -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE))
+            .flatMap(i -> i)
+            .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
@@ -361,6 +367,11 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
+            if (isTextModifed)
+            {
+                updateGlobalContext();
+            }
+
             commit(lastSession);
 
             try
@@ -996,10 +1007,7 @@ class CodeCompletionViewModel
         if (isTextModifed && newMethod != null)
         {
             isTextModifed = false;
-            dispatcher
-                .dispatch(() -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE))
-                .flatMap(i -> i)
-                .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+            updateGlobalContext();
         }
 
         if (prevMethod != null)

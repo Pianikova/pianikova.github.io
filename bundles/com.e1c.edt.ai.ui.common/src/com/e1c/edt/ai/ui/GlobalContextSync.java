@@ -20,6 +20,7 @@ import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -94,7 +95,7 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken)
+            return sync(aiCtx.getProjectId(), updates, statistics, cancellationToken)
                 .thenApplyAsync(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
@@ -110,6 +111,14 @@ class GlobalContextSync implements IGlobalContextSync
             log.logError(error);
             return CompletableFuture.completedFuture(false);
         }
+    }
+
+    @Override
+    public CompletableFuture<Optional<GlobalContextUpdateResponse>> sync(ProjectId projectId,
+        List<GlobalContextUpdate> updates,
+        IStatistics statistics, ICancellationToken cancellationToken)
+    {
+        return globalContextService.update(projectId, updates, statistics, cancellationToken);
     }
 
     @Override
