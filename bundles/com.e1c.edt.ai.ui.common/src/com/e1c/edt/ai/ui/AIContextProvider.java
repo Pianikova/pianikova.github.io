@@ -40,17 +40,7 @@ class AIContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(AITarget target, ICancellationToken cancellationToken)
-    {
-        Preconditions.checkNotNull(target);
-        Preconditions.checkNotNull(cancellationToken);
-        var textWidget = target.getTextWidget();
-        return ui.getSourceViewer(textWidget)
-            .flatMap(sourceViewer -> create(sourceViewer, target, cancellationToken));
-    }
-
-    private Optional<AIContext> create(SourceViewer sourceViewer, AITarget target,
-        ICancellationToken cancellationToken)
+    public Optional<AIContext> create(SourceViewer sourceViewer, AITarget target, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(target);
@@ -72,7 +62,7 @@ class AIContextProvider
             aiContext =
                 new AIContext(projectId, AIContextKind.ActiveEditor, textWidget.getCaretOffset(), content.text,
                     content.offset, path,
-                content.selectionText, content.selectionOffset);
+                    content.selectionText, content.selectionOffset, sourceViewer.getDocument());
         }
         else
         {
@@ -80,7 +70,7 @@ class AIContextProvider
                 content.text,
                 content.offset, path,
                 content.text,
-                content.offset);
+                content.offset, sourceViewer.getDocument());
         }
 
         return contextInitializer.initialize(aiContext);

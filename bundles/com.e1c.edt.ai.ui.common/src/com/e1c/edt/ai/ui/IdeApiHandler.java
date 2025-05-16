@@ -45,33 +45,31 @@ public class IdeApiHandler
         }
 
         final var processedCode = textPreprocessor.process(code);
-        ui.getLastTextWidget().ifPresent(textWidget -> {
-            var contet = textWidget.getContent();
-            ui.getSourceViewer(textWidget).ifPresent(sourceViewer -> {
-                var selection = sourceViewer.getSelection();
-                if (selection instanceof TextSelection)
+        ui.getLastSourceViewer().ifPresent(sourceViewer -> {
+            var selection = sourceViewer.getSelection();
+            var textWidget = sourceViewer.getTextWidget();
+            var content = textWidget.getContent();
+            if (selection instanceof TextSelection)
+            {
+                var textSelection = (TextSelection)selection;
+                if (textSelection.getLength() > 0)
                 {
-                    var textSelection = (TextSelection)selection;
-                    if (textSelection.getLength() > 0)
+                    var shellOptional = ui.getShell();
+                    if (shellOptional.isPresent())
                     {
-                        var shellOptional = ui.getShell();
-                        if (shellOptional.isPresent())
+                        if (!MessageDialog.openQuestion(shellOptional.get(), Messages.AIName, Messages.ReplaceCode))
                         {
-                            if (!MessageDialog.openQuestion(shellOptional.get(), Messages.AIName,
-                                Messages.ReplaceCode))
-                            {
-                                return;
-                            }
+                            return;
                         }
                     }
-
-                    contet.replaceTextRange(sourceViewer.modelOffset2WidgetOffset(textSelection.getOffset()),
-                        textSelection.getLength(), processedCode);
-                    return;
                 }
 
-                contet.replaceTextRange(textWidget.getCaretOffset(), 0, processedCode);
-            });
+                content.replaceTextRange(sourceViewer.modelOffset2WidgetOffset(textSelection.getOffset()),
+                    textSelection.getLength(), processedCode);
+                return;
+            }
+
+            content.replaceTextRange(textWidget.getCaretOffset(), 0, processedCode);
         });
     }
 

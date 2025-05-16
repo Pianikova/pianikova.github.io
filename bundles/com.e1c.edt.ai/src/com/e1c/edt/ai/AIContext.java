@@ -5,8 +5,9 @@ package com.e1c.edt.ai;
 
 import java.util.Objects;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.jface.text.IDocument;
 
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 
 public class AIContext
@@ -23,12 +24,13 @@ public class AIContext
     private final String sufix;
     private final int start;
     private final int finish;
+    private final IDocument document;
 
     public AIContext(ProjectId projectId, AIContextKind kind, int caretOffset, String source, int sourceOffset,
         String path, String text,
         int textOffset,
         String prefix,
-        String sufix, int start, int finish)
+        String sufix, int start, int finish, IDocument document)
     {
         Preconditions.checkNotNull(projectId);
         Preconditions.checkNotNull(kind);
@@ -51,13 +53,14 @@ public class AIContext
         this.sufix = sufix;
         this.start = start;
         this.finish = finish;
+        this.document = document;
     }
 
     public AIContext(ProjectId projectId, AIContextKind kind, int caretOffset, String source, int sourceOffset,
         String path, String text,
-        int textOffset)
+        int textOffset, IDocument document)
     {
-        this(projectId, kind, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
+        this(projectId, kind, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document); //$NON-NLS-1$//$NON-NLS-2$
     }
 
     public ProjectId getProjectId()
@@ -118,6 +121,11 @@ public class AIContext
     public int getFinish()
     {
         return finish;
+    }
+
+    public IDocument getDocument()
+    {
+        return document;
     }
 
     @Override

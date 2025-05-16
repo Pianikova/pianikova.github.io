@@ -3,7 +3,10 @@
  */
 package com.e1c.edt.ai.context;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -142,7 +145,8 @@ class EntityInfo
         var nodeId = nodeIdOptional.get();
         var response = new EntityInfoResponse();
         response.ref = request.ref;
-        var result = entitiesWalker.walk(nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(), activeEditorResourceSetProvider,
+        var result = entitiesWalker.walk(null, nodeId.getPath(), nodeId.getStart(), nodeId.getFinish(),
+            activeEditorResourceSetProvider,
             new EntityVisitor()
         {
             @Override
@@ -235,7 +239,7 @@ class EntityInfo
         var cursorObjects = new EObject[1];
         var owners = new ArrayList<IBmObject>();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
-        entitiesWalker.walk(filePath, start, finish, resourceSetProvider, new EntityVisitor()
+        entitiesWalker.walk(aiContext.getDocument(), filePath, start, finish, resourceSetProvider, new EntityVisitor()
         {
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)
@@ -254,6 +258,17 @@ class EntityInfo
                 var project = v8ProjectManager.getProject(module);
                 if (project != null)
                 {
+                    var code = moduleInfo.getModule().toString();
+                    try (var inputStream = new ByteArrayInputStream(code.getBytes(StandardCharsets.UTF_8));)
+                    {
+                        globalContext.module =
+                            hashTools.format(hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer), true);
+                    }
+                    catch (IOException error)
+                    {
+                        log.logError(error);
+                    }
+
                     localContext.scriptLanguage = project.getScriptVariant().getName();
                     if (actionFilter.test(new FillAction(DataType.DATA, Fields.CONFIGURATION_NAME, ""))) //$NON-NLS-1$
                     {
@@ -640,7 +655,8 @@ class EntityInfo
         var start = aiContext.getStart();
         var finish = aiContext.getFinish();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> context.programingLanguage = lang);
-        entitiesWalker.walk(filePath, start, finish, activeEditorResourceSetProvider, new EntityVisitor()
+        entitiesWalker.walk(aiContext.getDocument(), filePath, start, finish, activeEditorResourceSetProvider,
+            new EntityVisitor()
         {
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)

@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.jface.text.IDocument;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,10 +17,13 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.e1c.edt.ai.assistent.model.ProjectId;
+
 @RunWith(Parameterized.class)
 public class ContextInitializerTest
 {
     private final IContextSplitter splitter = mock(IContextSplitter.class);
+    private final IDocument document = mock(IDocument.class);
 
     @Parameter(0)
     public String prefix;
@@ -53,7 +56,7 @@ public class ContextInitializerTest
             factory.initialize(
                 new AIContext(new ProjectId("path"), AIContextKind.ActiveEditor, textOffset + 3, "full_" + text,
                     textOffset + 3, "", text,
-                    textOffset));
+                    textOffset, document));
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());

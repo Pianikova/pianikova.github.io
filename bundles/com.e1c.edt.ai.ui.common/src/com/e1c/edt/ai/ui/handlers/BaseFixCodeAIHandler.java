@@ -3,13 +3,14 @@
  */
 package com.e1c.edt.ai.ui.handlers;
 
-import com.e1c.edt.ai.ui.BaseActivator;
-import com.e1c.edt.ai.ui.IChat;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.jface.window.Window;
 
+import com.e1c.edt.ai.ui.BaseActivator;
+import com.e1c.edt.ai.ui.IChat;
+import com.e1c.edt.ai.ui.IUI;
 import com.google.inject.Inject;
 
 /**
@@ -20,6 +21,8 @@ import com.google.inject.Inject;
 public class BaseFixCodeAIHandler
     extends AbstractHandler
 {
+    @Inject
+    IUI ui;
     @Inject
     IChat chat;
     @Inject
@@ -41,7 +44,9 @@ public class BaseFixCodeAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        codeTools.createContextForTarget().ifPresent(ctx -> {
+        ui.getLastSourceViewer()
+            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer))
+            .ifPresent(ctx -> {
             if (fixDialog.show() == Window.OK)
             {
                 chat.fixCode(ctx, ctx.getText(), fixDialog.getDetails());

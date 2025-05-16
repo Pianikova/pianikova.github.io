@@ -350,7 +350,8 @@ class CodeCompletionViewModel
 
     private void updateGlobalContext()
     {
-        dispatcher.dispatch(() -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE))
+        dispatcher.dispatch(
+            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, 0, false), CancellationTokens.NONE))
             .flatMap(i -> i)
             .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
     }
@@ -367,11 +368,7 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            if (isTextModifed)
-            {
-                updateGlobalContext();
-            }
-
+            updateGlobalContext();
             commit(lastSession);
 
             try
@@ -1098,7 +1095,8 @@ class CodeCompletionViewModel
     public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
     {
         return dispatcher.dispatch(
-            () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationToken).orElse(null));
+            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, 0, false), cancellationToken)
+                .orElse(null));
     }
 
     private class CompletionRequestProvider

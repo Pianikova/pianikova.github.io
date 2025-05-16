@@ -21,6 +21,9 @@ public class GlobalContext
 
     public transient String metaPath;
 
+    // hash
+    public String module;
+
     // hashes
     @SerializedName("local_functions")
     public Map<String, String> localFunctions;

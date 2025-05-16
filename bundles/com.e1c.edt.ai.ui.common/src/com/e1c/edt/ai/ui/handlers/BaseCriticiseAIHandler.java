@@ -3,12 +3,13 @@
  */
 package com.e1c.edt.ai.ui.handlers;
 
-import com.e1c.edt.ai.ui.BaseActivator;
-import com.e1c.edt.ai.ui.IChat;
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
+import com.e1c.edt.ai.ui.BaseActivator;
+import com.e1c.edt.ai.ui.IChat;
+import com.e1c.edt.ai.ui.IUI;
 import com.google.inject.Inject;
 
 /**
@@ -19,6 +20,8 @@ import com.google.inject.Inject;
 public class BaseCriticiseAIHandler
     extends AbstractHandler
 {
+    @Inject
+    IUI ui;
     @Inject
     IChat chat;
     @Inject
@@ -38,7 +41,9 @@ public class BaseCriticiseAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        codeTools.createContextForTarget().ifPresent(ctx -> chat.reviewCode(ctx, ctx.getText()));
+        ui.getLastSourceViewer()
+            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer))
+            .ifPresent(ctx -> chat.reviewCode(ctx, ctx.getText()));
         return null;
     }
 }

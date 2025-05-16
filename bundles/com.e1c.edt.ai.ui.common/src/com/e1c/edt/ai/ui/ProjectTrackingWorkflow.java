@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -132,7 +133,7 @@ class ProjectTrackingWorkflow
                 break;
 
             case SYNC:
-                result = sync(30, progressMonitor, cancellationToken);
+                result = sync(300, progressMonitor, cancellationToken);
                 break;
             }
         }
@@ -183,6 +184,7 @@ class ProjectTrackingWorkflow
         return new Result(ProjectTrackingWorkflowState.SCAN, ShortDelay);
     }
 
+    @SuppressWarnings("nls")
     private Result scan(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
         throws CoreException
     {
@@ -217,10 +219,12 @@ class ProjectTrackingWorkflow
                 for (var file : files)
                 {
                     var path = file.getFullPath().makeRelative().toPortableString();
-                    var aiCtx = new AIContext(projectId, AIContextKind.Common, 0, "", 0, path, "", 0); //$NON-NLS-1$//$NON-NLS-2$
                     if (!filesToHash.containsKey(path))
                     {
+                        var document =
+                            Optional.ofNullable(filesToTrack.get(path)).map(i -> i.aiCtx.getDocument()).orElse(null);
                         hasFileToHash[0] = true;
+                        var aiCtx = new AIContext(projectId, AIContextKind.Common, 0, "", 0, path, "", 0, document);
                         filesToHash.put(path, initProjectFile(new ProjectFile(aiCtx, path, file, now)));
                     }
                 }

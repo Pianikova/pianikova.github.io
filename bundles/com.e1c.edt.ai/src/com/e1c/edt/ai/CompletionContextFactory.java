@@ -148,6 +148,7 @@ class CompletionContextFactory
             request = new GlobalContextUpdate();
             request.path = path;
             request.field = Fields.LOCAL_FUNCTIONS;
+            request.hash = globalContext.module;
             request.value = globalContext.localFunctions;
             result.add(request);
         }

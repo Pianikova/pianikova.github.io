@@ -22,7 +22,6 @@ import org.eclipse.ui.PlatformUI;
 
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -32,26 +31,22 @@ class UI
     private final ILog log;
     private final ICodeCompletionViewModel<CodeCompletionContext> codeCompletionViewModel;
     private final IDispatcher dispatcher;
-    private final IUISettings uiSettings;
     private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private StyledText textWidget;
-    private StyledText lastTextWidget;
+    private SourceViewer lastSourceViewer;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
     public UI(ILog log, ICodeCompletionViewModel<CodeCompletionContext> codeCompletionViewModel,
-        IDispatcher dispatcher, IUISettings uiSettings,
-        ITextWidgetInfoUpdater textWidgetInfoUpdater)
+        IDispatcher dispatcher, ITextWidgetInfoUpdater textWidgetInfoUpdater)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(codeCompletionViewModel);
         Preconditions.checkNotNull(dispatcher);
-        Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(textWidgetInfoUpdater);
         this.log = log;
         this.codeCompletionViewModel = codeCompletionViewModel;
         this.dispatcher = dispatcher;
-        this.uiSettings = uiSettings;
         this.textWidgetInfoUpdater = textWidgetInfoUpdater;
     }
 
@@ -98,7 +93,7 @@ class UI
                 }
 
                 textWidget = newTextWidget;
-                lastTextWidget = textWidget;
+                lastSourceViewer = getSourceViewer(newTextWidget).orElse(null);
                 textWidgetInfoUpdater.reset();
                 queryToken = Closeables.Empty;
                 dispatcher.dispatchAsync(() -> {
@@ -125,15 +120,9 @@ class UI
     }
 
     @Override
-    public synchronized Optional<StyledText> getLastTextWidget()
+    public synchronized Optional<SourceViewer> getLastSourceViewer()
     {
-        var widget = lastTextWidget;
-        if (!isValidWidget(widget))
-        {
-            return Optional.empty();
-        }
-
-        return Optional.of(widget);
+        return Optional.ofNullable(lastSourceViewer);
     }
 
     @Override
