@@ -63,7 +63,6 @@ class ProjectTrackingWorkflow
     private final HashMap<String, FileToTrack> filesToTrack = new HashMap<>();
     private final CharBuffer buffer = CharBuffer.allocate(1024);
     private final Object lockObject = new Object();
-    private GlobalContextState state;
     private IProject project;
     private ProjectId projectId;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
@@ -92,14 +91,12 @@ class ProjectTrackingWorkflow
     }
 
     @Override
-    public ProjectTrackingWorkflow initialize(IProject project, GlobalContextState state)
+    public ProjectTrackingWorkflow initialize(IProject project)
     {
         Preconditions.checkNotNull(project);
-        Preconditions.checkNotNull(state);
         synchronized (lockObject)
         {
             this.project = project;
-            this.state = state;
             projectId = projectIdProvider.getProjectId(project);
         }
 
@@ -162,23 +159,6 @@ class ProjectTrackingWorkflow
         }
     }
 
-    @Override
-    public void saveState(GlobalContextState state)
-    {
-        synchronized (lockObject)
-        {
-            for (var filesToHash : filesToHash.values())
-            {
-                if (filesToHash.isEmpty())
-                {
-                    continue;
-                }
-
-                state.files.put(filesToHash.path, filesToHash.getState());
-            }
-        }
-    }
-
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
         return new Result(ProjectTrackingWorkflowState.SCAN, ShortDelay);
@@ -225,9 +205,14 @@ class ProjectTrackingWorkflow
                             Optional.ofNullable(filesToTrack.get(path)).map(i -> i.aiCtx.getDocument()).orElse(null);
                         hasFileToHash[0] = true;
                         var aiCtx = new AIContext(projectId, AIContextKind.Common, 0, "", 0, path, "", 0, document);
-                        filesToHash.put(path, initProjectFile(new ProjectFile(aiCtx, path, file, now)));
+                        filesToHash.put(path, new ProjectFile(aiCtx, path, file, now));
                     }
                 }
+            }
+
+            if (files.size() > 0)
+            {
+                log.trace("Scaning", () -> files.size() + " files");
             }
         }
 
@@ -261,8 +246,8 @@ class ProjectTrackingWorkflow
                 var path = fileToTrack.getKey();
                 ProjectFile fileToHash;
                 fileToHash = filesToHash.computeIfAbsent(path,
-                    key -> initProjectFile(new ProjectFile(fileToTrack.getValue().aiCtx, path,
-                        project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1)), now)));
+                    key -> new ProjectFile(fileToTrack.getValue().aiCtx, path,
+                        project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1)), now));
 
                 processedFiles.add(path);
                 if (!fileToHash.file.isAccessible())
@@ -287,10 +272,15 @@ class ProjectTrackingWorkflow
         var filesToProcess =
             filesToHash.values()
                 .stream()
-                .filter(i -> i.hasState() || Duration.between(i.updateTime, now).compareTo(delay) >= 0)
+                .filter(i -> Duration.between(i.updateTime, now).compareTo(delay) >= 0)
                 .sorted(ProjectFileComparator)
                 .limit(maxFiles)
                 .collect(Collectors.toList());
+
+        if (filesToProcess.size() > 0)
+        {
+            log.trace("Hashing", () -> filesToProcess.size() + " files");
+        }
 
         progressMonitor.beginTask(Messages.CodeCompletionBackgroundHashSubtaskName, filesToProcess.size());
         for (var file : filesToProcess)
@@ -312,38 +302,28 @@ class ProjectTrackingWorkflow
                     }
 
                     var modificationStamp = file.file.getModificationStamp();
-                    if (file.modificationStamp != modificationStamp)
+                    if (file.modificationStamp == modificationStamp)
                     {
-                        log.debug("Sync required", () -> {
-                            var message = new StringBuilder();
-                            message.append("File: ");
-                            message.append(file.path);
-
-                            message.append(System.lineSeparator());
-                            message.append("Prev timestamp: ");
-                            message.append(file.modificationStamp);
-
-                            message.append(System.lineSeparator());
-                            message.append("Cur timestamp: ");
-                            message.append(modificationStamp);
-                            return message.toString();
-                        });
-
-                        file.modificationStamp = modificationStamp;
-                        file.hash = hashTools.format(hashTools.compute(file.file, buffer), true);
+                        continue;
                     }
-                    else
-                    {
-                        if (file.hasState())
-                        {
-                            if (filesToSync.add(file))
-                            {
-                                hasFileToSync[0] = true;
-                            }
 
-                            continue;
-                        }
-                    }
+                    log.debug("Sync required (timestamp)", () -> {
+                        var message = new StringBuilder();
+                        message.append("File: ");
+                        message.append(file.path);
+
+                        message.append(System.lineSeparator());
+                        message.append("Prev timestamp: ");
+                        message.append(file.modificationStamp);
+
+                        message.append(System.lineSeparator());
+                        message.append("Cur timestamp: ");
+                        message.append(modificationStamp);
+                        return message.toString();
+                    });
+
+                    file.modificationStamp = modificationStamp;
+                    file.hash = hashTools.format(hashTools.compute(file.file, buffer), true);
                 }
                 else
                 {
@@ -355,28 +335,28 @@ class ProjectTrackingWorkflow
                     }
                 }
 
-                if (!file.hasState() && file.hash.equals(prevHash))
+                if (file.hash.equals(prevHash))
                 {
                     continue;
                 }
 
-                if (prevHash != null)
-                {
-                    log.debug("Sync required", () -> {
-                        var message = new StringBuilder();
-                        message.append("File: ");
-                        message.append(file.path);
+                log.debug("Sync required (hash)", () -> {
+                    var message = new StringBuilder();
+                    message.append("File: ");
+                    message.append(file.path);
 
+                    if (prevHash != null)
+                    {
                         message.append(System.lineSeparator());
                         message.append("Prev hash: ");
                         message.append(prevHash);
+                    }
 
-                        message.append(System.lineSeparator());
-                        message.append("Cur hash: ");
-                        message.append(file.hash);
-                        return message.toString();
-                    });
-                }
+                    message.append(System.lineSeparator());
+                    message.append("Cur hash: ");
+                    message.append(file.hash);
+                    return message.toString();
+                });
 
                 if (filesToSync.add(file))
                 {
@@ -397,10 +377,16 @@ class ProjectTrackingWorkflow
             ShortDelay);
     }
 
+    @SuppressWarnings("nls")
     private Result sync(int maxFiles, IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
         var filesToProcess =
             filesToSync.stream().sorted(ProjectFileComparator).limit(maxFiles).collect(Collectors.toList());
+
+        if (filesToProcess.size() > 0)
+        {
+            log.trace("Syncing", () -> filesToProcess.size() + " files");
+        }
 
         var filesUpdates = new ArrayList<GlobalContextUpdate>();
         for (var file : filesToProcess)
@@ -440,7 +426,6 @@ class ProjectTrackingWorkflow
             }
 
             progressMonitor.worked(1);
-            file.updateState();
 
             if (!unknowFilePaths.contains(file.path))
             {
@@ -509,12 +494,6 @@ class ProjectTrackingWorkflow
         return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
     }
 
-    private ProjectFile initProjectFile(ProjectFile projectFile)
-    {
-        projectFile.setState(state.files.get(projectFile.path));
-        return projectFile;
-    }
-
     private static class ProjectFile
     {
         private final String path;
@@ -523,7 +502,6 @@ class ProjectTrackingWorkflow
         public LocalDateTime updateTime;
         public String hash;
         public long modificationStamp = -1;
-        private boolean hasInitialState;
 
         public ProjectFile(AIContext aiCtx, String path, IFile file, LocalDateTime updateTime)
         {
@@ -535,41 +513,6 @@ class ProjectTrackingWorkflow
             this.path = path;
             this.file = file;
             this.updateTime = updateTime;
-        }
-
-        public GlobalContextFileState getState()
-        {
-            var state = new GlobalContextFileState();
-            state.time = modificationStamp;
-            state.hash = hash;
-            return state;
-        }
-
-        public void setState(GlobalContextFileState state)
-        {
-            if (state == null)
-            {
-                return;
-            }
-
-            modificationStamp = state.time;
-            hash = state.hash;
-            hasInitialState = true;
-        }
-
-        public boolean hasState()
-        {
-            return hasInitialState;
-        }
-
-        public boolean isEmpty()
-        {
-            return path == null || hash == null || modificationStamp <= 0 || path.isBlank() || hash.isBlank();
-        }
-
-        public void updateState()
-        {
-            hasInitialState = false;
         }
 
         @Override

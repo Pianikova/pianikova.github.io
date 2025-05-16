@@ -13,13 +13,11 @@ import com.e1c.edt.ai.ICancellationToken;
 
 interface IProjectTrackingWorkflow
 {
-    IProjectTrackingWorkflow initialize(IProject project, GlobalContextState state);
+    IProjectTrackingWorkflow initialize(IProject project);
 
     String getId();
 
     Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken);
 
     void track(AIContext aiCtx);
-
-    void saveState(GlobalContextState state);
 }
