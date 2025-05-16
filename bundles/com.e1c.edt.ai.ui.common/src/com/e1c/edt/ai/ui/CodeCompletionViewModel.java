@@ -368,9 +368,12 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            updateGlobalContext();
-            commit(lastSession);
+            if (isTextModifed)
+            {
+                updateGlobalContext();
+            }
 
+            commit(lastSession);
             try
             {
                 feedbackToken.close();

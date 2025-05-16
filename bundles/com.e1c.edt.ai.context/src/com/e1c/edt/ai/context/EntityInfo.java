@@ -36,7 +36,6 @@ import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.DataType;
 import com.e1c.edt.ai.Fields;
 import com.e1c.edt.ai.FillAction;
@@ -206,7 +205,7 @@ class EntityInfo
         ICancellationToken cancellationToken)
     {
         var curResourceSetProvider =
-            aiContext.getKind() == AIContextKind.ActiveEditor ? activeEditorResourceSetProvider : baseResourceSetProvider;
+            aiContext.getDocument() != null ? activeEditorResourceSetProvider : baseResourceSetProvider;
         return fillInternal(aiContext, localContext, globalContext, curResourceSetProvider, statistics, actionFilter,
             cancellationToken);
     }
@@ -224,7 +223,6 @@ class EntityInfo
         var offset = aiContext.getTextOffset();
         var finish = aiContext.getFinish();
         var sourceOffset = aiContext.getSourceOffset();
-        var aiContextKind = aiContext.getKind();
         localContext.relatedObjects = new ArrayList<>();
         localContext.relatedFunctions = new ArrayList<>();
         globalContext.localFunctions = new HashMap<>();
@@ -238,8 +236,9 @@ class EntityInfo
         var actions = new ArrayList<Action>();
         var cursorObjects = new EObject[1];
         var owners = new ArrayList<IBmObject>();
+        var document = aiContext.getDocument();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
-        entitiesWalker.walk(aiContext.getDocument(), filePath, start, finish, resourceSetProvider, new EntityVisitor()
+        entitiesWalker.walk(document, filePath, start, finish, resourceSetProvider, new EntityVisitor()
         {
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)
@@ -478,7 +477,7 @@ class EntityInfo
             @Override
             public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
             {
-                if (aiContextKind != AIContextKind.ActiveEditor && !method.isExport())
+                if (document == null && !method.isExport())
                 {
                     return false;
                 }
@@ -492,7 +491,7 @@ class EntityInfo
 
                 final var methodName = uniqueName;
                 var field = Fields.LOCAL_FUNCTIONS + '.' + methodName;
-                if (aiContextKind == AIContextKind.ActiveEditor && sourceOffset >= node.getTotalOffset()
+                if (document != null && sourceOffset >= node.getTotalOffset()
                     && sourceOffset <= node.getTotalEndOffset())
                 {
                     localContext.currenMethodName = methodName;

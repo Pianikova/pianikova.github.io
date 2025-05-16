@@ -8,7 +8,6 @@ import java.util.Optional;
 import org.eclipse.jface.text.source.SourceViewer;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IContextInitializer;
 import com.e1c.edt.ai.IProjectIdProvider;
@@ -60,13 +59,13 @@ class AIContextProvider
         if (target.isPreferSelection() && !content.selectionText.isBlank())
         {
             aiContext =
-                new AIContext(projectId, AIContextKind.ActiveEditor, textWidget.getCaretOffset(), content.text,
+                new AIContext(projectId, textWidget.getCaretOffset(), content.text,
                     content.offset, path,
                     content.selectionText, content.selectionOffset, sourceViewer.getDocument());
         }
         else
         {
-            aiContext = new AIContext(projectId, AIContextKind.ActiveEditor, textWidget.getCaretOffset(),
+            aiContext = new AIContext(projectId, textWidget.getCaretOffset(),
                 content.text,
                 content.offset, path,
                 content.text,

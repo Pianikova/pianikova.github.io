@@ -11,7 +11,6 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.CodePart;
 import com.e1c.edt.ai.ICodePartsProvider;
@@ -198,7 +197,7 @@ public class CodeTools
         var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
         var lastRange = range;
         aiContextProvider.create(sourceViewer, target, CancellationTokens.NONE).ifPresent(ctx -> {
-            var methodCtx = new AIContext(ctx.getProjectId(), AIContextKind.ActiveEditor, lastRange.getStart(),
+            var methodCtx = new AIContext(ctx.getProjectId(), lastRange.getStart(),
                 ctx.getSource(), lastRange.getStart(), ctx.getPath(), commentingMethod.methodText, 0, "", //$NON-NLS-1$
                 commentingMethod.methodText, lastRange.getStart(), lastRange.getStart() + lastRange.getLength(),
                 sourceViewer.getDocument());
