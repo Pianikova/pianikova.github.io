@@ -59,7 +59,7 @@ class GlobalContextSync implements IGlobalContextSync
         try
         {
             var statistics = statisticsProvider.get();
-            var updates = getSyncData(aiCtx, statistics, cancellationToken);
+            var updates = getSyncData(aiCtx, statistics, false, cancellationToken);
             return sync(aiCtx, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
@@ -70,10 +70,11 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public List<GlobalContextUpdate> getSyncData(AIContext aiCtx, IStatistics statistics,
+    public List<GlobalContextUpdate> getSyncData(AIContext aiCtx, IStatistics statistics, boolean initial,
         ICancellationToken cancellationToken)
     {
         var globalContext = globalContextFactory.createGlobalContext(aiCtx, statistics, cancellationToken);
+        globalContext.initial = initial;
         return globalContextRequestFactory.createGlobalContextUpdates(aiCtx, globalContext, statistics,
             cancellationToken);
     }

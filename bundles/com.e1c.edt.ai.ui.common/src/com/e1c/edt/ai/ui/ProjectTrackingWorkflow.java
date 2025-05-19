@@ -57,10 +57,10 @@ class ProjectTrackingWorkflow
     private final HashMap<String, ProjectFile> filesToHash = new HashMap<>();
     private final ArrayList<ProjectFile> filesToTrack = new ArrayList<>();
     private final CharBuffer buffer = CharBuffer.allocate(1024);
-    private final Object lockObject = new Object();
     private IProject project;
     private ProjectId projectId;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
+    private boolean initial = true;
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
@@ -89,12 +89,8 @@ class ProjectTrackingWorkflow
     public ProjectTrackingWorkflow initialize(IProject project)
     {
         Preconditions.checkNotNull(project);
-        synchronized (lockObject)
-        {
-            this.project = project;
-            projectId = projectIdProvider.getProjectId(project);
-        }
-
+        this.project = project;
+        projectId = projectIdProvider.getProjectId(project);
         return this;
     }
 
@@ -147,11 +143,11 @@ class ProjectTrackingWorkflow
     @Override
     public void track(AIContext aiCtx)
     {
-        synchronized (lockObject)
+        log.debug("Track", () -> aiCtx.toString()); //$NON-NLS-1$
+        var path = aiCtx.getPath();
+        var fileOnDisk = project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1));
+        synchronized (filesToTrack)
         {
-            log.debug("Track", () -> aiCtx.toString()); //$NON-NLS-1$
-            var path = aiCtx.getPath();
-            var fileOnDisk = project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1));
             while (filesToTrack.size() > 1)
             {
                 filesToTrack.remove(0);
@@ -181,18 +177,16 @@ class ProjectTrackingWorkflow
         {
             List<IFile> files = fileScaner.scan(project);
             var now = clock.now();
-            synchronized (lockObject)
+            for (var file : files)
             {
-                for (var file : files)
-                {
-                    var path = file.getFullPath().makeRelative().toPortableString();
-                    filesToHash.computeIfAbsent(path,
-                        key -> new ProjectFile(
-                            new AIContext(projectId, 0, "", 0, key, "", 0, null), path, file,
-                            now));
-                }
+                var path = file.getFullPath().makeRelative().toPortableString();
+                filesToHash.computeIfAbsent(path,
+                    key -> new ProjectFile(new AIContext(projectId, 0, "", 0, key, "", 0, null), path, file, now));
+            }
 
-                var newFilesToHashCount = 0;
+            var newFilesToHashCount = 0;
+            synchronized (filesToTrack)
+            {
                 for (var file : filesToTrack)
                 {
                     if (file.getHash() == null)
@@ -202,29 +196,28 @@ class ProjectTrackingWorkflow
 
                     filesToHash.remove(file.path);
                 }
-
-                for (var file : filesToHash.values())
-                {
-                    if (file.getModificationStamp() <= 0 && file.getHash() == null)
-                    {
-                        newFilesToHashCount++;
-                    }
-                }
-
-                var newFilesToHashCountVal = newFilesToHashCount;
-                log.debug("Scaned", () -> {
-                    var message = new StringBuilder();
-                    message.append("Files: ");
-                    message.append(files.size());
-                    message.append(System.lineSeparator());
-                    message.append("New files to hash: ");
-                    message.append(newFilesToHashCountVal);
-                    return files.size() + " files";
-                });
-
-                return new Result(ProjectTrackingWorkflowState.HASH,
-                    newFilesToHashCount > 0 ? ShortDelay : ExtraLongDelay);
             }
+
+            for (var file : filesToHash.values())
+            {
+                if (file.getModificationStamp() <= 0 && file.getHash() == null)
+                {
+                    newFilesToHashCount++;
+                }
+            }
+
+            var newFilesToHashCountVal = newFilesToHashCount;
+            log.debug("Scaned", () -> {
+                var message = new StringBuilder();
+                message.append("Files: ");
+                message.append(files.size());
+                message.append(System.lineSeparator());
+                message.append("New files to hash: ");
+                message.append(newFilesToHashCountVal);
+                return files.size() + " files";
+            });
+
+            return new Result(ProjectTrackingWorkflowState.HASH, newFilesToHashCount > 0 ? ShortDelay : ExtraLongDelay);
         }
 
         return new Result(ProjectTrackingWorkflowState.SCAN, ExtraLongDelay);
@@ -251,7 +244,10 @@ class ProjectTrackingWorkflow
                 .limit(maxFiles)
                 .collect(Collectors.toList());
 
-        hashingFiles.addAll(filesToTrack);
+        synchronized (filesToTrack)
+        {
+            hashingFiles.addAll(filesToTrack);
+        }
 
         var hashed = 0;
         progressMonitor.beginTask(Messages.CodeCompletionBackgroundHashSubtaskName, hashingFiles.size());
@@ -414,7 +410,7 @@ class ProjectTrackingWorkflow
 
             if (!unknowFilePaths.contains(file.path))
             {
-                synchronized (lockObject)
+                synchronized (filesToSync)
                 {
                     filesToSync.remove(file);
                 }
@@ -423,7 +419,8 @@ class ProjectTrackingWorkflow
             }
 
             var statistics = statisticsProvider.get();
-            var updates = globalContextSync.getSyncData(file.aiCtx, statistics, cancellationToken);
+            var updates = globalContextSync.getSyncData(file.aiCtx, statistics, initial, cancellationToken);
+            initial = false;
             for (var update : updates)
             {
                 if (Fields.LOCAL_FUNCTIONS.equals(update.field))
@@ -452,7 +449,7 @@ class ProjectTrackingWorkflow
                 .whenComplete((result, error) -> {
                     if (result != null && result)
                     {
-                        synchronized (lockObject)
+                        synchronized (filesToSync)
                         {
                             filesToSync.remove(file);
                         }

@@ -20,7 +20,7 @@ interface IGlobalContextSync
 {
     CompletableFuture<Boolean> sync(AIContext aiCtx, int maxDept, ICancellationToken cancellationToken);
 
-    List<GlobalContextUpdate> getSyncData(AIContext aiCtx, IStatistics statistics,
+    List<GlobalContextUpdate> getSyncData(AIContext aiCtx, IStatistics statistics, boolean initial,
         ICancellationToken cancellationToken);
 
     CompletableFuture<Optional<GlobalContextUpdateResponse>> sync(ProjectId projectId,

@@ -277,6 +277,11 @@ class EntityInfo
                             var parentProject = extensionProject.getParentProject();
                             globalContext.configurationName = parentProject.getName();
                         }
+
+                        if (globalContext.configurationName == null)
+                        {
+                            globalContext.configurationName = ""; //$NON-NLS-1$
+                        }
                     }
                 }
 

@@ -105,23 +105,27 @@ class CompletionContextFactory
         IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        var settings = settingsProvider.getSettings();
         var path = aiContext.getPath();
         var result = new ArrayList<GlobalContextUpdate>();
 
-        var request = new GlobalContextUpdate();
-        request.field = Fields.CONFIGURATION_NAME;
-        var settingsConfigurationName = settings.getLlmParameters().configurationName;
-        if (settingsConfigurationName != null && !settingsConfigurationName.isBlank())
+        GlobalContextUpdate request;
+        if (globalContext.initial && globalContext.configurationName != null)
         {
-            request.value = settingsConfigurationName;
-        }
-        else
-        {
-            request.value = globalContext.configurationName != null ? globalContext.configurationName : ""; //$NON-NLS-1$
-        }
+            request = new GlobalContextUpdate();
+            request.field = Fields.CONFIGURATION_NAME;
+            var settings = settingsProvider.getSettings();
+            var settingsConfigurationName = settings.getLlmParameters().configurationName;
+            if (settingsConfigurationName != null && !settingsConfigurationName.isBlank())
+            {
+                request.value = settingsConfigurationName;
+            }
+            else
+            {
+                request.value = globalContext.configurationName;
+            }
 
-        result.add(request);
+            result.add(request);
+        }
 
         if (globalContext.form != null || globalContext.formEntity != null)
         {
