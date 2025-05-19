@@ -4,9 +4,10 @@
 package com.e1c.edt.ai;
 
 import com.e1c.edt.ai.assistent.model.GlobalContext;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 
 public interface IGlobalContextFactory
 {
-    GlobalContext createGlobalContext(AIContext aiContext, IStatistics statistics,
+    GlobalContext createGlobalContext(ProjectId projectId, String filePath, IStatistics statistics,
         ICancellationToken cancellationToken);
 }

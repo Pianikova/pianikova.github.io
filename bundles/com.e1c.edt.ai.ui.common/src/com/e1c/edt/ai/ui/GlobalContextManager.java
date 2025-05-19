@@ -44,7 +44,8 @@ class GlobalContextManager implements IGlobalContextManager
                 jobCtx -> {
                     try
                     {
-                        globalContextSync.sync(aiCtx, 5, jobCtx.CancellationTokenSource).get();
+                        globalContextSync.sync(aiCtx.getProjectId(), aiCtx.getPath(), 5, jobCtx.CancellationTokenSource)
+                            .get();
                         globalContextTracker.track(aiCtx);
                     }
                     catch (Exception error)
@@ -58,8 +59,9 @@ class GlobalContextManager implements IGlobalContextManager
     @Override
     public void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken)
     {
-        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.sync(aiCtx,
-            completion.unknownValues, completion.unknownKeys, 5, jobCtx.CancellationTokenSource), cancellationToken);
+        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.sync(
+            aiCtx.getProjectId(), completion.unknownValues, completion.unknownKeys, 5, jobCtx.CancellationTokenSource),
+            cancellationToken);
         runJob(job);
     }
 

@@ -53,11 +53,19 @@ public class AIContext
         this.document = document;
     }
 
+    @SuppressWarnings("nls")
     public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset,
         String path, String text,
         int textOffset, IDocument document)
     {
-        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document); //$NON-NLS-1$//$NON-NLS-2$
+        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document);
+    }
+
+    // Global
+    @SuppressWarnings("nls")
+    public AIContext(ProjectId projectId, String path)
+    {
+        this(projectId, 0, "", 0, path, "", 0, "", "", 0, 0, null);
     }
 
     public ProjectId getProjectId()

@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -41,7 +40,6 @@ import com.google.inject.Provider;
 class ProjectTrackingWorkflow
     implements IProjectTrackingWorkflow
 {
-    private final static int MaxConcurrentSyncs = 1;
     private final static Duration ExtraLongDelay = Duration.ofSeconds(5);
     private final static Duration LongDelay = Duration.ofSeconds(1);
     private final static Duration ShortDelay = Duration.ofMillis(10);
@@ -121,7 +119,7 @@ class ProjectTrackingWorkflow
                 break;
 
             case SYNC:
-                result = sync(300, progressMonitor, cancellationToken);
+                result = sync(1000, progressMonitor, cancellationToken);
                 break;
             }
         }
@@ -398,7 +396,8 @@ class ProjectTrackingWorkflow
         }
 
         progressMonitor.beginTask(Messages.CodeCompletionBackgroundSyncSubtaskName, filesToProcess.size());
-        var futures = new ArrayList<CompletableFuture<Boolean>>();
+        var newUpdates = new ArrayList<GlobalContextUpdate>();
+        var statistics = statisticsProvider.get();
         for (var file : filesToProcess)
         {
             if (cancellationToken.isCanceled())
@@ -418,8 +417,7 @@ class ProjectTrackingWorkflow
                 continue;
             }
 
-            var statistics = statisticsProvider.get();
-            var updates = globalContextSync.getSyncData(file.aiCtx, statistics, initial, cancellationToken);
+            var updates = globalContextSync.getSyncData(projectId, file.path, statistics, initial, cancellationToken);
             initial = false;
             for (var update : updates)
             {
@@ -427,50 +425,31 @@ class ProjectTrackingWorkflow
                 {
                     update.hash = file.getHash();
                 }
+
+                newUpdates.add(update);
             }
 
-            if (futures.size() >= MaxConcurrentSyncs)
+        }
+
+        if (!newUpdates.isEmpty())
+        {
+            try
             {
-                try
+                var success = globalContextSync.sync(projectId, newUpdates, 5, statistics, cancellationToken).get();
+                if (success)
                 {
-                    futures.forEach(CompletableFuture::join);
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
-                }
-                finally
-                {
-                    futures.clear();
+                    synchronized (filesToSync)
+                    {
+                        filesToSync.clear();
+                    }
+
+                    return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
                 }
             }
-
-            var feature = globalContextSync.sync(file.aiCtx, updates, 5, statistics, cancellationToken)
-                .whenComplete((result, error) -> {
-                    if (result != null && result)
-                    {
-                        synchronized (filesToSync)
-                        {
-                            filesToSync.remove(file);
-                        }
-                    }
-                });
-
-            futures.add(feature);
-        }
-
-        try
-        {
-            futures.forEach(CompletableFuture::join);
-        }
-        catch (Exception error)
-        {
-            log.logError(error);
-        }
-
-        if (!filesToSync.isEmpty())
-        {
-            return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
+            catch (InterruptedException | ExecutionException error)
+            {
+                log.logError(error);
+            }
         }
 
         return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);

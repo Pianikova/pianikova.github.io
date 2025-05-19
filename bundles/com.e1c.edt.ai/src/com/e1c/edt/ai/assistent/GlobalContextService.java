@@ -7,6 +7,7 @@ import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -20,7 +21,6 @@ import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -61,33 +61,48 @@ class GlobalContextService
         Collection<GlobalContextUpdate> updates,
         IStatistics statistics, ICancellationToken cancellationToken)
     {
-        return sessionService.getSessionAsync(projectId)
-            .<Optional<GlobalContextUpdateResponse>> thenApply(session -> {
-                if (session.isEmpty())
-                {
-                    return Optional.empty();
-                }
-
-                try
-                {
-                    return update(session.get(), updates, statistics, cancellationToken).get();
-                }
-                catch (Exception error)
-                {
-                    log.error(error, cancellationToken.toString());
-                }
-
+        return sessionService.getSessionAsync(projectId).<Optional<GlobalContextUpdateResponse>> thenApply(session -> {
+            if (session.isEmpty())
+            {
                 return Optional.empty();
+            }
+
+            try
+            {
+                return update(session.get(), updates, statistics, cancellationToken).get();
+            }
+            catch (Exception error)
+            {
+                log.error(error, cancellationToken.toString());
+            }
+
+            return Optional.empty();
             });
     }
 
     private CompletableFuture<Optional<GlobalContextUpdateResponse>> update(Session session,
         Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
     {
+        CompletableFuture<Optional<GlobalContextUpdateResponse>> feature =
+            CompletableFuture.completedFuture(Optional.empty());
+
+        for (var updatePart : splitCollection(updates, 200))
+        {
+            feature = feature.thenCompose(
+                results -> update(results, session, updatePart, statistics, cancellationToken));
+        }
+
+        return feature;
+    }
+
+    private CompletableFuture<Optional<GlobalContextUpdateResponse>> update(
+        Optional<GlobalContextUpdateResponse> results, Session session,
+        Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
+    {
         var optionalRequest = requestBuilder.create("./context/update"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture.completedFuture(Optional.empty());
+            return CompletableFuture.completedFuture(results);
         }
 
         var requestBuilder = optionalRequest.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
@@ -120,7 +135,7 @@ class GlobalContextService
         catch (Exception error)
         {
             log.error(error, cancellationToken.toString());
-            return CompletableFuture.completedFuture(Optional.empty());
+            return CompletableFuture.completedFuture(results);
         }
 
         var freePhysicalMemorySize = environment.getFreePhysicalMemorySize();
@@ -143,6 +158,53 @@ class GlobalContextService
             .sendAsync(request, BodyHandlers.ofString())
             .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
             .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(content -> json.deserialize(content, GlobalContextUpdateResponse.class));
+            .thenApplyAsync(content -> {
+                var newResults = json.deserialize(content, GlobalContextUpdateResponse.class);
+                if (results.isEmpty())
+                {
+                    return newResults;
+                }
+
+                var response = results.get();
+                results.ifPresent(r -> {
+                    if (response.unknownKeys == null)
+                    {
+                        response.unknownKeys = new ArrayList<>();
+                    }
+
+                    response.unknownKeys.addAll(r.unknownKeys);
+
+                    if (response.unknownValues == null)
+                    {
+                        response.unknownValues = new ArrayList<>();
+                    }
+
+                    response.unknownValues.addAll(r.unknownValues);
+                });
+
+                return Optional.of(response);
+            });
+    }
+
+    private static <T> Collection<Collection<T>> splitCollection(Collection<T> collection, int partitionSize)
+    {
+        var result = new ArrayList<Collection<T>>();
+        var partition = new ArrayList<T>();
+        for (T val : collection)
+        {
+            if (partition.size() == partitionSize)
+            {
+                result.add(partition);
+                partition = new ArrayList<>();
+            }
+            partition.add(val);
+        }
+
+        if (!partition.isEmpty())
+        {
+            result.add(partition);
+        }
+
+        return result;
     }
 }
