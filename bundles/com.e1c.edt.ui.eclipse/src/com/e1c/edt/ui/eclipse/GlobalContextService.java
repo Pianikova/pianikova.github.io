@@ -10,16 +10,13 @@ import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 
-/**
- * Copyright (C) 2025, 1C
- */
-
 class GlobalContextService
     implements IGlobalContextService
 {
     @Override
     public CompletableFuture<Optional<GlobalContextUpdateResponse>> update(ProjectId projectId,
-        Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
+        Collection<GlobalContextUpdate> updates, int partitionSize, IStatistics statistics,
+        ICancellationToken cancellationToken)
     {
         return CompletableFuture.completedFuture(Optional.empty());
     }

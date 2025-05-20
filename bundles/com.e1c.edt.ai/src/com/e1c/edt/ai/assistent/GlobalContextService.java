@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import com.e1c.edt.ai.Collections;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
@@ -59,6 +60,7 @@ class GlobalContextService
     @Override
     public CompletableFuture<Optional<GlobalContextUpdateResponse>> update(ProjectId projectId,
         Collection<GlobalContextUpdate> updates,
+        int partitionSize,
         IStatistics statistics, ICancellationToken cancellationToken)
     {
         return sessionService.getSessionAsync(projectId).<Optional<GlobalContextUpdateResponse>> thenApply(session -> {
@@ -69,7 +71,7 @@ class GlobalContextService
 
             try
             {
-                return update(session.get(), updates, statistics, cancellationToken).get();
+                return update(session.get(), updates, partitionSize, statistics, cancellationToken).get();
             }
             catch (Exception error)
             {
@@ -81,18 +83,39 @@ class GlobalContextService
     }
 
     private CompletableFuture<Optional<GlobalContextUpdateResponse>> update(Session session,
-        Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
+        Collection<GlobalContextUpdate> updates, int partitionSize, IStatistics statistics,
+        ICancellationToken cancellationToken)
     {
         CompletableFuture<Optional<GlobalContextUpdateResponse>> feature =
             CompletableFuture.completedFuture(Optional.empty());
 
-        for (var updatePart : splitCollection(updates, 200))
+        for (var updatePart : Collections.split(updates, getPartitionSize(updates, partitionSize)))
         {
             feature = feature.thenCompose(
                 results -> update(results, session, updatePart, statistics, cancellationToken));
         }
 
         return feature;
+    }
+
+    private int getPartitionSize(Collection<GlobalContextUpdate> updates, int defaultPartitionSize)
+    {
+        if (defaultPartitionSize > 0)
+        {
+            return defaultPartitionSize;
+        }
+
+        var partitionSize = 200;
+        for (var update : updates)
+        {
+            if (update.value != null)
+            {
+                partitionSize = 10;
+                break;
+            }
+        }
+
+        return partitionSize;
     }
 
     private CompletableFuture<Optional<GlobalContextUpdateResponse>> update(
@@ -186,25 +209,4 @@ class GlobalContextService
             });
     }
 
-    private static <T> Collection<Collection<T>> splitCollection(Collection<T> collection, int partitionSize)
-    {
-        var result = new ArrayList<Collection<T>>();
-        var partition = new ArrayList<T>();
-        for (T val : collection)
-        {
-            if (partition.size() == partitionSize)
-            {
-                result.add(partition);
-                partition = new ArrayList<>();
-            }
-            partition.add(val);
-        }
-
-        if (!partition.isEmpty())
-        {
-            result.add(partition);
-        }
-
-        return result;
-    }
 }
