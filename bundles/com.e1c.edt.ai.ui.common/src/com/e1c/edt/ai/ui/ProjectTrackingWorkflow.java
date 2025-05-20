@@ -26,11 +26,13 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.Fields;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
+import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.IGlobalContextService;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
@@ -48,9 +50,11 @@ class ProjectTrackingWorkflow
     private final IHashTools hashTools;
     private final IClock clock;
     private final IProjectIdProvider projectIdProvider;
+    private final IGlobalContextService globalContextService;
     private final IGlobalContextSync globalContextSync;
     private final IUISettings settings;
     private final IFileScaner fileScaner;
+    private final IGlobalContext globalContext;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final HashMap<String, ProjectFile> filesToHash = new HashMap<>();
     private final ArrayList<ProjectFile> filesToTrack = new ArrayList<>();
@@ -62,25 +66,30 @@ class ProjectTrackingWorkflow
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
-        IClock clock, IProjectIdProvider projectIdProvider,
-        IGlobalContextSync globalContextSync, IUISettings settings, IFileScaner fileScaner)
+        IClock clock, IProjectIdProvider projectIdProvider, IGlobalContextService globalContextService,
+        IGlobalContextSync globalContextSync, IUISettings settings, IFileScaner fileScaner,
+        IGlobalContext globalContext)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(projectIdProvider);
+        Preconditions.checkNotNull(globalContextService);
         Preconditions.checkNotNull(globalContextSync);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(fileScaner);
+        Preconditions.checkNotNull(globalContext);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
         this.clock = clock;
         this.projectIdProvider = projectIdProvider;
+        this.globalContextService = globalContextService;
         this.globalContextSync = globalContextSync;
         this.settings = settings;
         this.fileScaner = fileScaner;
+        this.globalContext = globalContext;
     }
 
     @Override
@@ -381,7 +390,7 @@ class ProjectTrackingWorkflow
         try
         {
             unknowFilePaths =
-                globalContextSync.sync(projectId, filesUpdates, statisticsProvider.get(), cancellationToken)
+                globalContextService.update(projectId, filesUpdates, 100, statisticsProvider.get(), cancellationToken)
                     .get()
                     .map(i -> i.unknownValues)
                     .orElseGet(() -> Collections.emptyList())
@@ -389,7 +398,7 @@ class ProjectTrackingWorkflow
                     .map(i -> i.path)
                     .collect(Collectors.toSet());
         }
-        catch (InterruptedException | ExecutionException error)
+        catch (Throwable error)
         {
             log.logError(error);
             return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
@@ -417,7 +426,8 @@ class ProjectTrackingWorkflow
                 continue;
             }
 
-            var updates = globalContextSync.getSyncData(projectId, file.path, statistics, initial, cancellationToken);
+            var updates =
+                globalContext.getUpdates(projectId, file.path, initial, statistics, cancellationToken);
             initial = false;
             for (var update : updates)
             {
@@ -435,7 +445,7 @@ class ProjectTrackingWorkflow
         {
             try
             {
-                var success = globalContextSync.sync(projectId, newUpdates, 5, statistics, cancellationToken).get();
+                var success = globalContextSync.syncUpdates(projectId, newUpdates, 5, statistics, cancellationToken).get();
                 if (success)
                 {
                     synchronized (filesToSync)

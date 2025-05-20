@@ -11,8 +11,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IGlobalContextFactory;
-import com.e1c.edt.ai.IGlobalContextRequestFactory;
+import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStatistics;
@@ -31,27 +30,23 @@ class GlobalContextSync implements IGlobalContextSync
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;
     private final IJson json;
-    private final IGlobalContextRequestFactory globalContextRequestFactory;
+    private final IGlobalContext globalContext;
     private final IGlobalContextService globalContextService;
-    private final IGlobalContextFactory globalContextFactory;
 
     @Inject
     public GlobalContextSync(ILog log, Provider<IStatistics> statisticsProvider, IJson json,
-        IGlobalContextRequestFactory globalContextRequestFactory, IGlobalContextService globalContextService,
-        IGlobalContextFactory globalContextFactory)
+        IGlobalContext globalContext, IGlobalContextService globalContextService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(json);
-        Preconditions.checkNotNull(globalContextRequestFactory);
+        Preconditions.checkNotNull(globalContext);
         Preconditions.checkNotNull(globalContextService);
-        Preconditions.checkNotNull(globalContextFactory);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.json = json;
-        this.globalContextRequestFactory = globalContextRequestFactory;
+        this.globalContext = globalContext;
         this.globalContextService = globalContextService;
-        this.globalContextFactory = globalContextFactory;
     }
 
     @Override
@@ -61,8 +56,8 @@ class GlobalContextSync implements IGlobalContextSync
         try
         {
             var statistics = statisticsProvider.get();
-            var updates = getSyncData(projectId, filePath, statistics, false, cancellationToken);
-            return sync(projectId, updates, maxDept, statistics, cancellationToken);
+            var updates = globalContext.getUpdates(projectId, filePath, false, statistics, cancellationToken);
+            return syncUpdates(projectId, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -72,19 +67,7 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public List<GlobalContextUpdate> getSyncData(ProjectId projectId, String filePath, IStatistics statistics,
-        boolean initial,
-        ICancellationToken cancellationToken)
-    {
-        var globalContext = globalContextFactory.createGlobalContext(projectId, filePath, statistics,
-            cancellationToken);
-        globalContext.initial = initial;
-        return globalContextRequestFactory.createGlobalContextUpdates(filePath, globalContext, statistics,
-            cancellationToken);
-    }
-
-    @Override
-    public CompletableFuture<Boolean> sync(ProjectId projectId, List<GlobalContextUpdate> updates,
+    public CompletableFuture<Boolean> syncUpdates(ProjectId projectId, List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics,
         ICancellationToken cancellationToken)
@@ -101,7 +84,7 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return sync(projectId, updates, statistics, cancellationToken)
+            return globalContextService.update(projectId, updates, 10, statistics, cancellationToken)
                 .thenApplyAsync(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
@@ -109,7 +92,7 @@ class GlobalContextSync implements IGlobalContextSync
                     }
 
                     var result = optionalResult.get();
-                    return sync(projectId, result.unknownValues, result.unknownKeys, maxDept,
+                    return syncUnknown(projectId, result.unknownValues, result.unknownKeys, maxDept,
                         cancellationToken);
                 });
         }
@@ -121,15 +104,7 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Optional<GlobalContextUpdateResponse>> sync(ProjectId projectId,
-        List<GlobalContextUpdate> updates,
-        IStatistics statistics, ICancellationToken cancellationToken)
-    {
-        return globalContextService.update(projectId, updates, statistics, cancellationToken);
-    }
-
-    @Override
-    public boolean sync(ProjectId projectId, List<EntityValue> unknownValues,
+    public boolean syncUnknown(ProjectId projectId, List<EntityValue> unknownValues,
         List<EntityKey> unknownKeys, int maxDept,
         ICancellationToken cancellationToken)
     {
@@ -211,7 +186,7 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     var path = fileUpdate.getKey();
                     var data = fileUpdate.getValue();
-                    var updates = globalContextRequestFactory.createGlobalContextUpdates(projectId,
+                    var updates = globalContext.getUpdates(projectId,
                         path, data.hashes, data.fields, statistics, cancellationToken);
                     allUpdates.addAll(updates);
                 }
@@ -227,7 +202,7 @@ class GlobalContextSync implements IGlobalContextSync
                 }
 
                 optionalResult =
-                    globalContextService.update(projectId, allUpdates, statistics, cancellationToken).get();
+                    globalContextService.update(projectId, allUpdates, 10, statistics, cancellationToken).get();
             }
         }
         catch (Exception error)

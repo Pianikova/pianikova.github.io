@@ -59,7 +59,7 @@ class GlobalContextManager implements IGlobalContextManager
     @Override
     public void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken)
     {
-        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.sync(
+        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.syncUnknown(
             aiCtx.getProjectId(), completion.unknownValues, completion.unknownKeys, 5, jobCtx.CancellationTokenSource),
             cancellationToken);
         runJob(job);

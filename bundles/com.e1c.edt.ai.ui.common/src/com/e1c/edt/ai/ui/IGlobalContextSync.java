@@ -4,7 +4,6 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.ICancellationToken;
@@ -12,7 +11,6 @@ import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
-import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 
 interface IGlobalContextSync
@@ -20,17 +18,11 @@ interface IGlobalContextSync
     CompletableFuture<Boolean> sync(ProjectId projectId, String filePath, int maxDept,
         ICancellationToken cancellationToken);
 
-    List<GlobalContextUpdate> getSyncData(ProjectId projectId, String filePath, IStatistics statistics, boolean initial,
-        ICancellationToken cancellationToken);
-
-    CompletableFuture<Optional<GlobalContextUpdateResponse>> sync(ProjectId projectId,
-        List<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken);
-
-    CompletableFuture<Boolean> sync(ProjectId projectId, List<GlobalContextUpdate> updates,
+    CompletableFuture<Boolean> syncUpdates(ProjectId projectId, List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics, ICancellationToken cancellationToken);
 
-    boolean sync(ProjectId projectId, List<EntityValue> unknownValues, List<EntityKey> unknownKeys,
+    boolean syncUnknown(ProjectId projectId, List<EntityValue> unknownValues, List<EntityKey> unknownKeys,
         int maxDept,
         ICancellationToken cancellationToken);
 }
