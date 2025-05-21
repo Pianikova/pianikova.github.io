@@ -60,6 +60,7 @@ class Contexts
         localContext.path = aiContext.getPath();
         localContext.offset = aiContext.getSourceOffset();
         var globalContext = new GlobalContext();
+        globalContext.modulePath = aiContext.getPath();
         try (var measurement = statistics.measureDuration(StatisticsType.LOCAL_CONTEXT_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext,
@@ -90,6 +91,7 @@ class Contexts
     {
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
+        globalContext.modulePath = filePath;
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_DURATUION))
         {
             var aiCtx = new AIContext(projectId, filePath);
@@ -102,7 +104,6 @@ class Contexts
             log.logError(error);
         }
 
-        globalContext.modulePath = filePath;
         globalContext.formEntity = null;
         globalContext.metaEntity = null;
         globalContext.localFunctionsEntities = null;
@@ -199,6 +200,7 @@ class Contexts
 
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
+        globalContext.modulePath = filePath;
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_HASHING_DURATUION))
         {
             contextEntities.fill(new AIContext(projectId, filePath), localContext, globalContext, action -> {
