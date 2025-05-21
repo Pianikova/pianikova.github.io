@@ -181,32 +181,57 @@ class GlobalContextService
             .sendAsync(request, BodyHandlers.ofString())
             .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
             .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(content -> {
-                var newResults = json.deserialize(content, GlobalContextUpdateResponse.class);
-                if (results.isEmpty())
-                {
-                    return newResults;
-                }
+            .thenApplyAsync(
+                content -> combine(results, init(json.deserialize(content, GlobalContextUpdateResponse.class))));
+    }
 
-                var response = results.get();
-                results.ifPresent(r -> {
-                    if (response.unknownKeys == null)
-                    {
-                        response.unknownKeys = new ArrayList<>();
-                    }
+    private Optional<GlobalContextUpdateResponse> init(Optional<GlobalContextUpdateResponse> response)
+    {
+        if (response.isEmpty())
+        {
+            return response;
+        }
 
-                    response.unknownKeys.addAll(r.unknownKeys);
+        var resp = response.get();
+        if (resp.isEmpty())
+        {
+            return Optional.empty();
+        }
 
-                    if (response.unknownValues == null)
-                    {
-                        response.unknownValues = new ArrayList<>();
-                    }
+        if (resp.unknownKeys == null)
+        {
+            resp.unknownKeys = new ArrayList<>();
+        }
 
-                    response.unknownValues.addAll(r.unknownValues);
-                });
+        if (resp.unknownValues == null)
+        {
+            resp.unknownValues = new ArrayList<>();
+        }
 
-                return Optional.of(response);
-            });
+        return Optional.of(resp);
+    }
+
+    private Optional<GlobalContextUpdateResponse> combine(Optional<GlobalContextUpdateResponse> results,
+        Optional<GlobalContextUpdateResponse> newResults)
+    {
+        if (results.isEmpty())
+        {
+            return newResults;
+        }
+
+        if (newResults.isEmpty())
+        {
+            return results;
+        }
+
+        var response = new GlobalContextUpdateResponse();
+        response.unknownValues = new ArrayList<>();
+        response.unknownValues.addAll(results.get().unknownValues);
+        response.unknownValues.addAll(newResults.get().unknownValues);
+        response.unknownKeys = new ArrayList<>();
+        response.unknownKeys.addAll(results.get().unknownKeys);
+        response.unknownKeys.addAll(newResults.get().unknownKeys);
+        return Optional.of(response);
     }
 
 }

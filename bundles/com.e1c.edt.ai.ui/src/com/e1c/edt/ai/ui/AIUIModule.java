@@ -3,6 +3,9 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.xtext.builder.IXtextBuilderParticipant;
+
 import com.e1c.edt.ai.AIModule;
 import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.IDefaultSettings;
@@ -12,8 +15,6 @@ import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.context.IModuleProvider;
 import com.e1c.edt.ai.context.ModuleProvider;
-import org.eclipse.jface.preference.IPreferenceStore;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -47,6 +48,7 @@ public class AIUIModule
         bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
         bind(IProjectIdProvider.class).to(ModuleProvider.class);
         bind(IProjectProvider.class).to(ModuleProvider.class);
+        bind(IXtextBuilderParticipant.class).to(BuildTrackingParticipant.class).in(Singleton.class);
         // @formatter:on
     }
 }

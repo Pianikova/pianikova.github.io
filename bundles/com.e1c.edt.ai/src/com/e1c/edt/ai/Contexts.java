@@ -79,11 +79,11 @@ class Contexts
     }
 
     @Override
-    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, boolean initial,
+    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, boolean sendInitialState,
         IStatistics statistics, ICancellationToken cancellationToken)
     {
         var globalContext = create(projectId, filePath, statistics, cancellationToken);
-        return getUpdates(globalContext, initial, statistics, cancellationToken);
+        return getUpdates(globalContext, sendInitialState, statistics, cancellationToken);
     }
 
     private GlobalContext create(ProjectId projectId, String filePath, IStatistics statistics,
@@ -112,14 +112,13 @@ class Contexts
 
     private List<GlobalContextUpdate> getUpdates(
         GlobalContext globalContext,
-        boolean initial,
+        boolean sendInitialState,
         IStatistics statistics,
         ICancellationToken cancellationToken)
     {
         var result = new ArrayList<GlobalContextUpdate>();
-
         GlobalContextUpdate request;
-        if (initial && globalContext.configurationName != null)
+        if (sendInitialState && globalContext.configurationName != null)
         {
             request = new GlobalContextUpdate();
             request.field = Fields.CONFIGURATION_NAME;

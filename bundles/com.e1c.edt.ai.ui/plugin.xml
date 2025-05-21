@@ -275,5 +275,11 @@
                refid="org.eclipse.e4.ui.css.theme.e4_dark"></themeid>
       </stylesheet>
    </extension>
+    <extension
+          point="org.eclipse.xtext.builder.participant">
+       <participant
+             class="com.e1c.edt.ai.ui.BuildTrackingParticipant">
+       </participant>
+    </extension>
 
 </plugin>

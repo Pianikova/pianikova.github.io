@@ -92,6 +92,11 @@ class GlobalContextSync implements IGlobalContextSync
                     }
 
                     var result = optionalResult.get();
+                    if (result.isEmpty())
+                    {
+                        return true;
+                    }
+
                     return syncUnknown(projectId, result.unknownValues, result.unknownKeys, maxDept,
                         cancellationToken);
                 });
@@ -123,15 +128,15 @@ class GlobalContextSync implements IGlobalContextSync
             while (maxDept-- > 0 && optionalResult.isPresent())
             {
                 var result = optionalResult.get();
-                var vals = result.unknownValues;
-                var keys = result.unknownKeys;
-                var hasUnknownValues = vals != null && !vals.isEmpty();
-                var hasUnknownKeys = keys != null && !keys.isEmpty();
-                if (!hasUnknownValues && !hasUnknownKeys)
+                if (result.isEmpty())
                 {
                     return true;
                 }
 
+                var vals = result.unknownValues;
+                var keys = result.unknownKeys;
+                var hasUnknownValues = vals != null && !vals.isEmpty();
+                var hasUnknownKeys = keys != null && !keys.isEmpty();
                 log.debug("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
                     var trace = new StringBuilder();
                     if (hasUnknownValues)
