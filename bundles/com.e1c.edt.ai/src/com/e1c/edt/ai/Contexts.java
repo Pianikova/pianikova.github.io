@@ -12,13 +12,14 @@ import java.util.concurrent.TimeUnit;
 import com.e1c.edt.ai.assistent.model.GlobalContext;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.LocalContext;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
-class CompletionContextFactory
-    implements ILocalContextFactory, IGlobalContextFactory, IGlobalContextRequestFactory
+class Contexts
+    implements ILocalContext, IGlobalContext
 {
     private static final String FIELD_PREFIX = Fields.LOCAL_FUNCTIONS + '.';
     private final ILog log;
@@ -27,11 +28,11 @@ class CompletionContextFactory
     private final IHashTools hashTools;
     private final IUISettings uiSettings;
     private final ISettingsProvider settingsProvider;
-    private final Cache<String, GlobalContextUpdate> enitiCache =
+    private final Cache<String, GlobalContextUpdate> enitiesCache =
         CacheBuilder.newBuilder().maximumSize(1024).expireAfterWrite(15, TimeUnit.MINUTES).build();
 
     @Inject
-    public CompletionContextFactory(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
+    public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
         IHashTools hashTools, IUISettings uiSettings, ISettingsProvider settingsProvider)
     {
         Preconditions.checkNotNull(log);
@@ -49,7 +50,7 @@ class CompletionContextFactory
     }
 
     @Override
-    public LocalContext createLocalContext(AIContext aiContext, IStatistics statistics,
+    public LocalContext create(AIContext aiContext, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
         var sendExtendedContext = uiSettings.sendExtendedContext();
@@ -59,6 +60,7 @@ class CompletionContextFactory
         localContext.path = aiContext.getPath();
         localContext.offset = aiContext.getSourceOffset();
         var globalContext = new GlobalContext();
+        globalContext.modulePath = aiContext.getPath();
         try (var measurement = statistics.measureDuration(StatisticsType.LOCAL_CONTEXT_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext,
@@ -77,14 +79,23 @@ class CompletionContextFactory
     }
 
     @Override
-    public GlobalContext createGlobalContext(AIContext aiContext, IStatistics statistics,
+    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, boolean initial,
+        IStatistics statistics, ICancellationToken cancellationToken)
+    {
+        var globalContext = create(projectId, filePath, statistics, cancellationToken);
+        return getUpdates(globalContext, initial, statistics, cancellationToken);
+    }
+
+    private GlobalContext create(ProjectId projectId, String filePath, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
+        globalContext.modulePath = filePath;
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_DURATUION))
         {
-            contextEntities.fill(aiContext, localContext, globalContext,
+            var aiCtx = new AIContext(projectId, filePath);
+            contextEntities.fill(aiCtx, localContext, globalContext,
                 action -> action.getDataType() == DataType.HASH || Fields.CONFIGURATION_NAME.equals(action.getField()),
                 statistics, cancellationToken);
         }
@@ -99,34 +110,37 @@ class CompletionContextFactory
         return globalContext;
     }
 
-    @Override
-    public List<GlobalContextUpdate> createGlobalContextUpdates(AIContext aiContext,
+    private List<GlobalContextUpdate> getUpdates(
         GlobalContext globalContext,
+        boolean initial,
         IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        var settings = settingsProvider.getSettings();
-        var path = aiContext.getPath();
         var result = new ArrayList<GlobalContextUpdate>();
 
-        var request = new GlobalContextUpdate();
-        request.field = Fields.CONFIGURATION_NAME;
-        var settingsConfigurationName = settings.getLlmParameters().configurationName;
-        if (settingsConfigurationName != null && !settingsConfigurationName.isBlank())
+        GlobalContextUpdate request;
+        if (initial && globalContext.configurationName != null)
         {
-            request.value = settingsConfigurationName;
-        }
-        else
-        {
-            request.value = globalContext.configurationName != null ? globalContext.configurationName : ""; //$NON-NLS-1$
-        }
+            request = new GlobalContextUpdate();
+            request.field = Fields.CONFIGURATION_NAME;
+            var settings = settingsProvider.getSettings();
+            var settingsConfigurationName = settings.getLlmParameters().configurationName;
+            if (settingsConfigurationName != null && !settingsConfigurationName.isBlank())
+            {
+                request.value = settingsConfigurationName;
+            }
+            else
+            {
+                request.value = globalContext.configurationName;
+            }
 
-        result.add(request);
+            result.add(request);
+        }
 
         if (globalContext.form != null || globalContext.formEntity != null)
         {
             request = new GlobalContextUpdate();
-            request.path = path;
+            request.path = globalContext.modulePath;
             request.field = Fields.FORM;
             request.hash = globalContext.form;
             request.value = globalContext.formEntity;
@@ -136,7 +150,7 @@ class CompletionContextFactory
         if (globalContext.meta != null || globalContext.metaEntity != null)
         {
             request = new GlobalContextUpdate();
-            request.path = path;
+            request.path = globalContext.modulePath;
             request.field = Fields.META;
             request.hash = globalContext.meta;
             request.value = globalContext.metaEntity;
@@ -146,8 +160,9 @@ class CompletionContextFactory
         if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
         {
             request = new GlobalContextUpdate();
-            request.path = path;
+            request.path = globalContext.modulePath;
             request.field = Fields.LOCAL_FUNCTIONS;
+            request.hash = globalContext.module;
             request.value = globalContext.localFunctions;
             result.add(request);
         }
@@ -157,7 +172,7 @@ class CompletionContextFactory
             for (var localFunction : globalContext.localFunctionsEntities.entrySet())
             {
                 request = new GlobalContextUpdate();
-                request.path = path;
+                request.path = globalContext.modulePath;
                 request.hash = hashTools.format(localFunction.getValue().Hash, true);
                 request.field = FIELD_PREFIX + localFunction.getKey();
                 request.value = localFunction.getValue().Value;
@@ -169,13 +184,14 @@ class CompletionContextFactory
     }
 
     @Override
-    public List<GlobalContextUpdate> createGlobalContextUpdates(AIContext aiContext, HashSet<String> hashes,
+    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath,
+        HashSet<String> hashes,
         HashSet<String> fields, IStatistics statistics, ICancellationToken cancellationToken)
     {
         var existingUpdates = new HashMap<String, GlobalContextUpdate>();
         for (var hash : hashes)
         {
-            var obj = enitiCache.getIfPresent(hash);
+            var obj = enitiesCache.getIfPresent(hash);
             if (obj != null)
             {
                 existingUpdates.put(hash, obj);
@@ -184,9 +200,10 @@ class CompletionContextFactory
 
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
+        globalContext.modulePath = filePath;
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_HASHING_DURATUION))
         {
-            contextEntities.fill(aiContext, localContext, globalContext, action -> {
+            contextEntities.fill(new AIContext(projectId, filePath), localContext, globalContext, action -> {
                 switch (action.getDataType())
                 {
                 case HASH:
@@ -207,7 +224,7 @@ class CompletionContextFactory
             log.logError(error);
         }
 
-        var result = createGlobalContextUpdates(aiContext, globalContext, statistics, cancellationToken);
+        var result = getUpdates(globalContext, false, statistics, cancellationToken);
         for (var existingUpdate : existingUpdates.values())
         {
             result.add(existingUpdate);

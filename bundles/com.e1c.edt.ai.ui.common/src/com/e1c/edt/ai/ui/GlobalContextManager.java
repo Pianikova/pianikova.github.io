@@ -3,13 +3,13 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.core.runtime.jobs.Job;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.assistent.model.Completion;
-import org.eclipse.core.runtime.jobs.Job;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -44,7 +44,8 @@ class GlobalContextManager implements IGlobalContextManager
                 jobCtx -> {
                     try
                     {
-                        globalContextSync.sync(aiCtx, 3, jobCtx.CancellationTokenSource).get();
+                        globalContextSync.sync(aiCtx.getProjectId(), aiCtx.getPath(), 5, jobCtx.CancellationTokenSource)
+                            .get();
                         globalContextTracker.track(aiCtx);
                     }
                     catch (Exception error)
@@ -58,8 +59,9 @@ class GlobalContextManager implements IGlobalContextManager
     @Override
     public void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken)
     {
-        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.sync(aiCtx,
-            completion.unknownValues, completion.unknownKeys, 3, jobCtx.CancellationTokenSource), cancellationToken);
+        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> globalContextSync.syncUnknown(
+            aiCtx.getProjectId(), completion.unknownValues, completion.unknownKeys, 5, jobCtx.CancellationTokenSource),
+            cancellationToken);
         runJob(job);
     }
 

@@ -17,7 +17,7 @@ public interface IUI
 
     Optional<StyledText> getTextWidget();
 
-    Optional<StyledText> getLastTextWidget();
+    Optional<SourceViewer> getLastSourceViewer();
 
     Optional<SourceViewer> getSourceViewer(StyledText textWidget);
 

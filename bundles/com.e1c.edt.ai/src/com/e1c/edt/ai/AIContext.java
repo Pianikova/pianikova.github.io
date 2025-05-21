@@ -5,14 +5,14 @@ package com.e1c.edt.ai;
 
 import java.util.Objects;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.jface.text.IDocument;
 
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 
 public class AIContext
 {
     private final ProjectId projectId;
-    private final AIContextKind kind;
     private final int editorOffset;
     private final String source;
     private final int sourceOffset;
@@ -23,15 +23,15 @@ public class AIContext
     private final String sufix;
     private final int start;
     private final int finish;
+    private final IDocument document;
 
-    public AIContext(ProjectId projectId, AIContextKind kind, int caretOffset, String source, int sourceOffset,
+    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset,
         String path, String text,
         int textOffset,
         String prefix,
-        String sufix, int start, int finish)
+        String sufix, int start, int finish, IDocument document)
     {
         Preconditions.checkNotNull(projectId);
-        Preconditions.checkNotNull(kind);
         Preconditions.checkNotNull(source);
         Preconditions.checkArgument(sourceOffset >= 0);
         Preconditions.checkNotNull(path);
@@ -40,7 +40,6 @@ public class AIContext
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
         this.projectId = projectId;
-        this.kind = kind;
         this.editorOffset = caretOffset;
         this.source = source;
         this.sourceOffset = sourceOffset;
@@ -51,23 +50,27 @@ public class AIContext
         this.sufix = sufix;
         this.start = start;
         this.finish = finish;
+        this.document = document;
     }
 
-    public AIContext(ProjectId projectId, AIContextKind kind, int caretOffset, String source, int sourceOffset,
+    @SuppressWarnings("nls")
+    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset,
         String path, String text,
-        int textOffset)
+        int textOffset, IDocument document)
     {
-        this(projectId, kind, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0); //$NON-NLS-1$//$NON-NLS-2$
+        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document);
+    }
+
+    // Global
+    @SuppressWarnings("nls")
+    public AIContext(ProjectId projectId, String path)
+    {
+        this(projectId, 0, "", 0, path, "", 0, "", "", 0, 0, null);
     }
 
     public ProjectId getProjectId()
     {
         return projectId;
-    }
-
-    public AIContextKind getKind()
-    {
-        return kind;
     }
 
     public int getCaretOffset()
@@ -120,6 +123,11 @@ public class AIContext
         return finish;
     }
 
+    public IDocument getDocument()
+    {
+        return document;
+    }
+
     @Override
     public String toString()
     {
@@ -127,10 +135,6 @@ public class AIContext
 
         str.append("project:"); //$NON-NLS-1$
         str.append(projectId);
-        str.append(System.lineSeparator());
-
-        str.append("kind:"); //$NON-NLS-1$
-        str.append(kind);
         str.append(System.lineSeparator());
 
         str.append("path:"); //$NON-NLS-1$

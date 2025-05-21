@@ -17,40 +17,29 @@ import com.google.inject.name.Named;
 class CurrentEditorModuleProvider
     implements IModuleProvider
 {
-    private final IUI ui;
-    private final IDispatcher dispatcher;
     private final IModuleProvider baseResourceSetProvider;
 
     @Inject
-    public CurrentEditorModuleProvider(IUI ui, IDispatcher dispatcher,
-        @Named("BaseModuleProvider") IModuleProvider baseResourceSetProvider)
+    public CurrentEditorModuleProvider(@Named("BaseModuleProvider") IModuleProvider baseResourceSetProvider)
     {
-        Preconditions.checkNotNull(ui);
-        Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(baseResourceSetProvider);
-        this.ui = ui;
-        this.dispatcher = dispatcher;
         this.baseResourceSetProvider = baseResourceSetProvider;
     }
 
     @Override
-    public Optional<ModuleInfo> getModule(String filePath, ICancellationToken cancellationToken)
+    public Optional<ModuleInfo> getModule(IDocument document, String filePath, ICancellationToken cancellationToken)
     {
-        var optionalModuleInfo =
-            dispatcher.dispatch(() -> ui.getTextWidget().flatMap(textWidget -> ui.getSourceViewer(textWidget)))
-                .flatMap(i -> i).map(i -> i.getDocument())
-                .flatMap(doc -> baseResourceSetProvider.getModuleInfo(doc, cancellationToken));
-        
+        var optionalModuleInfo = baseResourceSetProvider.getModuleInfo(document, cancellationToken);
         if (optionalModuleInfo.isEmpty())
         {
-            return baseResourceSetProvider.getModule(filePath, cancellationToken);
+            return baseResourceSetProvider.getModule(document, filePath, cancellationToken);
         }
 
         var moduleInfo = optionalModuleInfo.get();
         var moduleFilePath = moduleInfo.getFilePath();
         if (!filePath.equals(moduleFilePath))
         {
-            return baseResourceSetProvider.getModule(moduleFilePath, cancellationToken);
+            return baseResourceSetProvider.getModule(document, moduleFilePath, cancellationToken);
         }
 
         return Optional.of(moduleInfo);

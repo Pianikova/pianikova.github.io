@@ -8,7 +8,6 @@ import java.util.Optional;
 import org.eclipse.jface.text.source.SourceViewer;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IContextInitializer;
 import com.e1c.edt.ai.IProjectIdProvider;
@@ -40,17 +39,7 @@ class AIContextProvider
     }
 
     @Override
-    public Optional<AIContext> create(AITarget target, ICancellationToken cancellationToken)
-    {
-        Preconditions.checkNotNull(target);
-        Preconditions.checkNotNull(cancellationToken);
-        var textWidget = target.getTextWidget();
-        return ui.getSourceViewer(textWidget)
-            .flatMap(sourceViewer -> create(sourceViewer, target, cancellationToken));
-    }
-
-    private Optional<AIContext> create(SourceViewer sourceViewer, AITarget target,
-        ICancellationToken cancellationToken)
+    public Optional<AIContext> create(SourceViewer sourceViewer, AITarget target, ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(sourceViewer);
         Preconditions.checkNotNull(target);
@@ -70,17 +59,17 @@ class AIContextProvider
         if (target.isPreferSelection() && !content.selectionText.isBlank())
         {
             aiContext =
-                new AIContext(projectId, AIContextKind.ActiveEditor, textWidget.getCaretOffset(), content.text,
+                new AIContext(projectId, textWidget.getCaretOffset(), content.text,
                     content.offset, path,
-                content.selectionText, content.selectionOffset);
+                    content.selectionText, content.selectionOffset, sourceViewer.getDocument());
         }
         else
         {
-            aiContext = new AIContext(projectId, AIContextKind.ActiveEditor, textWidget.getCaretOffset(),
+            aiContext = new AIContext(projectId, textWidget.getCaretOffset(),
                 content.text,
                 content.offset, path,
                 content.text,
-                content.offset);
+                content.offset, sourceViewer.getDocument());
         }
 
         return contextInitializer.initialize(aiContext);

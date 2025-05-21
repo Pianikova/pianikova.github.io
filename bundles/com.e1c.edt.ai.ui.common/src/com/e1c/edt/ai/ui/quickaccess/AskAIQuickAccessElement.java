@@ -54,8 +54,9 @@ public class AskAIQuickAccessElement
     @Override
     public void execute()
     {
-        var ctx = ui.getLastTextWidget()
-            .flatMap(textWidget -> aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true),
+        var ctx = ui.getLastSourceViewer()
+            .flatMap(sourceViewer -> aiContextProvider.create(sourceViewer,
+                new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true),
                 CancellationTokens.NONE))
             .orElse(null);
 

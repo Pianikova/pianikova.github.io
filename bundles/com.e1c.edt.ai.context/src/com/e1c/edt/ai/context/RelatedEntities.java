@@ -92,7 +92,8 @@ public class RelatedEntities implements IRelatedEntities
         var registerDimensions = new ArrayList<RegisterDimension>();
         var registerRecords = new ArrayList<BasicRegister>();
         var result =
-            entitiesWalker.walk(request.path, request.start, request.finish, resourceSetProvider, new EntityVisitor()
+            entitiesWalker.walk(null, request.path, request.start, request.finish, resourceSetProvider,
+                new EntityVisitor()
         {
             @Override
             public boolean visitModule(ModuleInfo moduleInfo)
@@ -253,7 +254,7 @@ public class RelatedEntities implements IRelatedEntities
                 cancellationToken)
             .ifPresent(meta -> response.meta = meta);
 
-        entitiesWalker.walk(request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()
+        entitiesWalker.walk(null, request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()
         {
             @Override
             public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)

@@ -9,6 +9,7 @@ import org.eclipse.core.commands.ExecutionException;
 
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
+import com.e1c.edt.ai.ui.IUI;
 import com.google.inject.Inject;
 
 /**
@@ -19,6 +20,8 @@ import com.google.inject.Inject;
 public class BaseGenerateDocCommentsAIHandler
     extends AbstractHandler
 {
+    @Inject
+    IUI ui;
     @Inject
     IChat chat;
     @Inject
@@ -47,7 +50,9 @@ public class BaseGenerateDocCommentsAIHandler
         }
         else
         {
-            codeTools.createContextForTarget().ifPresent(ctx -> chat.generateDocComments(ctx, ctx.getText()));
+            ui.getLastSourceViewer()
+                .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer))
+                .ifPresent(ctx -> chat.generateDocComments(ctx, ctx.getText()));
         }
 
         return null;

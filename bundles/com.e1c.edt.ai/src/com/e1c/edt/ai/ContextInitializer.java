@@ -28,10 +28,10 @@ public class ContextInitializer
         if (text.isEmpty())
         {
             return Optional
-                .of(new AIContext(ctx.getProjectId(), AIContextKind.ActiveEditor, ctx.getCaretOffset(), ctx.getSource(),
+                .of(new AIContext(ctx.getProjectId(), ctx.getCaretOffset(), ctx.getSource(),
                     ctx.getSourceOffset(),
                     ctx.getPath(), text,
-                    ctx.getTextOffset()));
+                    ctx.getTextOffset(), ctx.getDocument()));
         }
 
         var source = ctx.getSource();
@@ -51,9 +51,10 @@ public class ContextInitializer
         var prefix = parts.getPrefix().apply(text);
         var sufix = parts.getSufix().apply(text);
         return Optional
-            .of(new AIContext(ctx.getProjectId(), AIContextKind.ActiveEditor, ctx.getCaretOffset(), source, sourceOffset,
+            .of(new AIContext(ctx.getProjectId(), ctx.getCaretOffset(), source, sourceOffset,
                 ctx.getPath(), text,
                 offset, prefix, sufix,
-                sourceOffset - parts.getPrefix().getLength(), sourceOffset + parts.getSufix().getLength()));
+                sourceOffset - parts.getPrefix().getLength(), sourceOffset + parts.getSufix().getLength(),
+                ctx.getDocument()));
     }
 }

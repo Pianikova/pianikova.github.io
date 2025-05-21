@@ -5,11 +5,6 @@ package com.e1c.edt.ai.context;
 
 import java.util.Optional;
 
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IProjectIdProvider;
-import com.e1c.edt.ai.IProjectProvider;
-import com.e1c.edt.ai.IUISettings;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.jface.text.IDocument;
@@ -25,6 +20,11 @@ import com._1c.g5.v8.dt.bsl.resource.BslResource;
 import com._1c.g5.v8.dt.bsl.ui.editor.BslXtextDocument;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IProjectIdProvider;
+import com.e1c.edt.ai.IProjectProvider;
+import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -64,7 +64,8 @@ public class ModuleProvider
     }
 
     @Override
-    public synchronized Optional<ModuleInfo> getModule(String filePath, ICancellationToken cancellationToken)
+    public synchronized Optional<ModuleInfo> getModule(IDocument document, String filePath,
+        ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(filePath);
         Preconditions.checkNotNull(cancellationToken);

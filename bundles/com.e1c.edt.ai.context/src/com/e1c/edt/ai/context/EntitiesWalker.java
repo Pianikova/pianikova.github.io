@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.context;
 
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.jface.text.IDocument;
 
 import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.bm.integration.IBmModel;
@@ -65,7 +66,8 @@ class EntitiesWalker
     }
 
     @Override
-    public boolean walk(String path, int start, int finish, IModuleProvider resourceSetProvider, IEntityVisitor visitor,
+    public boolean walk(IDocument document, String path, int start, int finish, IModuleProvider resourceSetProvider,
+        IEntityVisitor visitor,
         IStatistics statistics, ICancellationToken cancellationToken)
     {
         try
@@ -73,7 +75,7 @@ class EntitiesWalker
             ModuleInfo moduleInfo;
             try (var measurement = statistics.measureDuration(StatisticsType.LOAD_MODULE_DURATUION))
             {
-                var optionalModuleInfo = resourceSetProvider.getModule(path, cancellationToken);
+                var optionalModuleInfo = resourceSetProvider.getModule(document, path, cancellationToken);
                 if (optionalModuleInfo.isEmpty())
                 {
                     return false;

@@ -9,6 +9,7 @@ import com.google.gson.annotations.SerializedName;
 
 public class GlobalContext
 {
+    // initial seeesion conttext
     public transient String configurationName;
 
     // hash
@@ -20,6 +21,11 @@ public class GlobalContext
     public String meta;
 
     public transient String metaPath;
+
+    // hash
+    public String module;
+
+    public transient String modulePath;
 
     // hashes
     @SerializedName("local_functions")

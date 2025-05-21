@@ -11,7 +11,6 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.AIContextKind;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.CodePart;
 import com.e1c.edt.ai.ICodePartsProvider;
@@ -62,37 +61,35 @@ public class CodeTools
     @Override
     public boolean hasTarget()
     {
-        return ui.getLastTextWidget()
-            .map(textWidget -> !textWidget.getSelectionText().isBlank() || getTargetMethod().isPresent())
+        return ui.getLastSourceViewer()
+            .map(sourceViewer -> !sourceViewer.getTextWidget().getSelectionText().isBlank()
+                || getTargetMethod().isPresent())
             .orElse(false);
     }
 
     @Override
-    public Optional<AIContext> createContextForTarget()
+    public Optional<AIContext> createContextForTarget(SourceViewer sourceViewer)
     {
-        return ui.getLastTextWidget()
-            .flatMap(textWidget -> {
-                if (!textWidget.getSelectionText().isBlank())
-                {
-                    return aiContextProvider.create(new AITarget(textWidget, Integer.MAX_VALUE, true),
-                        CancellationTokens.NONE);
-                }
+        var textWidget = sourceViewer.getTextWidget();
+        if (!textWidget.getSelectionText().isBlank())
+        {
+            return aiContextProvider.create(sourceViewer, new AITarget(textWidget, Integer.MAX_VALUE, true),
+                CancellationTokens.NONE);
+        }
 
-                var optionalTargetMethod = getTargetMethod();
-                if (optionalTargetMethod.isPresent())
-                {
-                    return Optional.of(optionalTargetMethod.get().ctx);
-                }
+        var optionalTargetMethod = getTargetMethod();
+        if (optionalTargetMethod.isPresent())
+        {
+            return Optional.of(optionalTargetMethod.get().ctx);
+        }
 
-                return Optional.empty();
-            });
+        return Optional.empty();
     }
 
     @Override
     public Optional<TargetMethod> getTargetMethod()
     {
-        return ui.getLastTextWidget()
-            .flatMap(textWidget -> ui.getSourceViewer(textWidget))
+        return ui.getLastSourceViewer()
             .flatMap(sourceViewer -> getTargetMethod(sourceViewer));
     }
 
@@ -199,10 +196,11 @@ public class CodeTools
         commentingMethod.sourceViewer = sourceViewer;
         var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
         var lastRange = range;
-        aiContextProvider.create(target, CancellationTokens.NONE).ifPresent(ctx -> {
-            var methodCtx = new AIContext(ctx.getProjectId(), AIContextKind.ActiveEditor, lastRange.getStart(),
+        aiContextProvider.create(sourceViewer, target, CancellationTokens.NONE).ifPresent(ctx -> {
+            var methodCtx = new AIContext(ctx.getProjectId(), lastRange.getStart(),
                 ctx.getSource(), lastRange.getStart(), ctx.getPath(), commentingMethod.methodText, 0, "", //$NON-NLS-1$
-                commentingMethod.methodText, lastRange.getStart(), lastRange.getStart() + lastRange.getLength());
+                commentingMethod.methodText, lastRange.getStart(), lastRange.getStart() + lastRange.getLength(),
+                sourceViewer.getDocument());
             commentingMethod.ctx = methodCtx;
         });
         return Optional.of(commentingMethod);

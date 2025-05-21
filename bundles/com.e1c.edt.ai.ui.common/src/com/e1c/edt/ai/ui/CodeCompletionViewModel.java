@@ -55,7 +55,7 @@ import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.IHintHistory;
 import com.e1c.edt.ai.IInputDelayStatistics;
-import com.e1c.edt.ai.ILocalContextFactory;
+import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStatistics;
@@ -96,7 +96,7 @@ class CodeCompletionViewModel
     private final Timer showTimer = new Timer(true);
     private final IUI ui;
     private final ICodeProvider codeProvider;
-    private final ILocalContextFactory localContextFactory;
+    private final ILocalContext localContext;
     private final IHotKeys hotKeys;
     private final IGlobalContextManager globalContextManager;
     private final ISyntaxVaidator syntaxVaidator;
@@ -132,7 +132,7 @@ class CodeCompletionViewModel
         Provider<ICodeCompletionSession<CodeCompletionContext>> sessionProvider,
         ICodeCompletionActionHandler<CodeCompletionContext> handler, IHintHistory history, IUserActions userActions,
         ICodeCompletionContext codeCompletionContext, IUI ui, ICodeProvider codeProvider,
-        ILocalContextFactory localContextFactory, IHotKeys hotKeys,
+        ILocalContext localContext, IHotKeys hotKeys,
         IGlobalContextManager globalContextManager, ISyntaxVaidator syntaxVaidator,
         IProposalsProvider proposalsProvider, ICodeParser codeParser, ITextWidgetInfoUpdater textWidgetInfoUpdater,
         ICodeCompletionStatistics statistics, ICodeCompletionTokenizer tokenizer, IVerticalRulerManager rulerManager,
@@ -155,7 +155,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(codeCompletionContext);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(codeProvider);
-        Preconditions.checkNotNull(localContextFactory);
+        Preconditions.checkNotNull(localContext);
         Preconditions.checkNotNull(hotKeys);
         Preconditions.checkNotNull(globalContextManager);
         Preconditions.checkNotNull(syntaxVaidator);
@@ -182,7 +182,7 @@ class CodeCompletionViewModel
         this.codeCompletionContext = codeCompletionContext;
         this.ui = ui;
         this.codeProvider = codeProvider;
-        this.localContextFactory = localContextFactory;
+        this.localContext = localContext;
         this.hotKeys = hotKeys;
         this.globalContextManager = globalContextManager;
         this.syntaxVaidator = syntaxVaidator;
@@ -339,14 +339,21 @@ class CodeCompletionViewModel
             return;
         }
 
-        aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE)
-            .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+        updateGlobalContext();
 
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
                 ct -> CreateContextProvider(null, uiSettings.getTimeout(), false, false), null);
         warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
+    }
+
+    private void updateGlobalContext()
+    {
+        dispatcher.dispatch(
+            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, 0, false), CancellationTokens.NONE))
+            .flatMap(i -> i)
+            .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
     }
 
     private CompletionRequestProvider CreateContextProvider(CompletionRequestProvider localContextProvider,
@@ -361,8 +368,12 @@ class CodeCompletionViewModel
     {
         synchronized (lockObject)
         {
-            commit(lastSession);
+            if (isTextModifed)
+            {
+                updateGlobalContext();
+            }
 
+            commit(lastSession);
             try
             {
                 feedbackToken.close();
@@ -996,10 +1007,7 @@ class CodeCompletionViewModel
         if (isTextModifed && newMethod != null)
         {
             isTextModifed = false;
-            dispatcher
-                .dispatch(() -> aiContextProvider.create(new AITarget(textWidget, 0, false), CancellationTokens.NONE))
-                .flatMap(i -> i)
-                .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
+            updateGlobalContext();
         }
 
         if (prevMethod != null)
@@ -1090,7 +1098,8 @@ class CodeCompletionViewModel
     public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
     {
         return dispatcher.dispatch(
-            () -> aiContextProvider.create(new AITarget(textWidget, 0, false), cancellationToken).orElse(null));
+            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, 0, false), cancellationToken)
+                .orElse(null));
     }
 
     private class CompletionRequestProvider
@@ -1151,7 +1160,7 @@ class CodeCompletionViewModel
             lastAiContext = aiCtx;
             lastRequest = new CompletionRequest();
             lastRequest.localContext =
-                localContextFactory.createLocalContext(aiCtx, statistics, cancellationToken);
+                localContext.create(aiCtx, statistics, cancellationToken);
             originalPrefix = lastRequest.localContext.prefix;
             if (lastProposals.size() > 0)
             {

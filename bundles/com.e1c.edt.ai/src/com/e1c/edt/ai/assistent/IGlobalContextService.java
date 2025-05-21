@@ -17,5 +17,6 @@ public interface IGlobalContextService
 {
     CompletableFuture<Optional<GlobalContextUpdateResponse>> update(ProjectId projectId,
         Collection<GlobalContextUpdate> updates,
+        int partitionSize,
         IStatistics statistics, ICancellationToken cancellationToken);
 }

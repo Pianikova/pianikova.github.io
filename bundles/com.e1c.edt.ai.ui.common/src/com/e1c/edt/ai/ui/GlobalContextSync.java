@@ -3,15 +3,15 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IGlobalContextFactory;
-import com.e1c.edt.ai.IGlobalContextRequestFactory;
+import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStatistics;
@@ -20,6 +20,7 @@ import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -29,37 +30,34 @@ class GlobalContextSync implements IGlobalContextSync
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;
     private final IJson json;
-    private final IGlobalContextRequestFactory globalContextRequestFactory;
+    private final IGlobalContext globalContext;
     private final IGlobalContextService globalContextService;
-    private final IGlobalContextFactory globalContextFactory;
 
     @Inject
     public GlobalContextSync(ILog log, Provider<IStatistics> statisticsProvider, IJson json,
-        IGlobalContextRequestFactory globalContextRequestFactory, IGlobalContextService globalContextService,
-        IGlobalContextFactory globalContextFactory)
+        IGlobalContext globalContext, IGlobalContextService globalContextService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(json);
-        Preconditions.checkNotNull(globalContextRequestFactory);
+        Preconditions.checkNotNull(globalContext);
         Preconditions.checkNotNull(globalContextService);
-        Preconditions.checkNotNull(globalContextFactory);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.json = json;
-        this.globalContextRequestFactory = globalContextRequestFactory;
+        this.globalContext = globalContext;
         this.globalContextService = globalContextService;
-        this.globalContextFactory = globalContextFactory;
     }
 
     @Override
-    public CompletableFuture<Boolean> sync(AIContext aiCtx, int maxDept, ICancellationToken cancellationToken)
+    public CompletableFuture<Boolean> sync(ProjectId projectId, String filePath, int maxDept,
+        ICancellationToken cancellationToken)
     {
         try
         {
             var statistics = statisticsProvider.get();
-            var updates = getSyncData(aiCtx, statistics, cancellationToken);
-            return sync(aiCtx, updates, maxDept, statistics, cancellationToken);
+            var updates = globalContext.getUpdates(projectId, filePath, false, statistics, cancellationToken);
+            return syncUpdates(projectId, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -69,16 +67,8 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public List<GlobalContextUpdate> getSyncData(AIContext aiCtx, IStatistics statistics,
-        ICancellationToken cancellationToken)
-    {
-        var globalContext = globalContextFactory.createGlobalContext(aiCtx, statistics, cancellationToken);
-        return globalContextRequestFactory.createGlobalContextUpdates(aiCtx, globalContext, statistics,
-            cancellationToken);
-    }
-
-    @Override
-    public CompletableFuture<Boolean> sync(AIContext aiCtx, List<GlobalContextUpdate> updates, int maxDept,
+    public CompletableFuture<Boolean> syncUpdates(ProjectId projectId, List<GlobalContextUpdate> updates,
+        int maxDept,
         IStatistics statistics,
         ICancellationToken cancellationToken)
     {
@@ -94,7 +84,7 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken)
+            return globalContextService.update(projectId, updates, 10, statistics, cancellationToken)
                 .thenApplyAsync(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
@@ -102,7 +92,8 @@ class GlobalContextSync implements IGlobalContextSync
                     }
 
                     var result = optionalResult.get();
-                    return sync(aiCtx, result.unknownValues, result.unknownKeys, maxDept, cancellationToken);
+                    return syncUnknown(projectId, result.unknownValues, result.unknownKeys, maxDept,
+                        cancellationToken);
                 });
         }
         catch (Exception error)
@@ -113,7 +104,8 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public boolean sync(AIContext aiCtx, List<EntityValue> unknownValues, List<EntityKey> unknownKeys, int maxDept,
+    public boolean syncUnknown(ProjectId projectId, List<EntityValue> unknownValues,
+        List<EntityKey> unknownKeys, int maxDept,
         ICancellationToken cancellationToken)
     {
         try
@@ -164,14 +156,14 @@ class GlobalContextSync implements IGlobalContextSync
                     return trace.toString();
                 });
 
-                var hashes = new HashSet<String>();
-                var fields = new HashSet<String>();
+                var fileUpdates = new HashMap<String, FileUpdates>();
                 if (vals != null)
                 {
                     for (var val : vals)
                     {
-                        hashes.add(val.hash);
-                        fields.add(val.field);
+                        var fileUpdate = fileUpdates.computeIfAbsent(val.path, k -> new FileUpdates());
+                        fileUpdate.hashes.add(val.hash);
+                        fileUpdate.fields.add(val.field);
                     }
                 }
 
@@ -179,19 +171,27 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     for (var key : keys)
                     {
-                        fields.add(key.field);
+                        var fileUpdate = fileUpdates.computeIfAbsent(key.path, k -> new FileUpdates());
+                        fileUpdate.fields.add(key.field);
                     }
                 }
 
-                if (hashes.isEmpty() && fields.isEmpty())
+                if (fileUpdates.isEmpty())
                 {
                     return true;
                 }
 
-                var updates = globalContextRequestFactory.createGlobalContextUpdates(aiCtx, hashes, fields, statistics,
-                    cancellationToken);
+                var allUpdates = new ArrayList<GlobalContextUpdate>();
+                for (var fileUpdate : fileUpdates.entrySet())
+                {
+                    var path = fileUpdate.getKey();
+                    var data = fileUpdate.getValue();
+                    var updates = globalContext.getUpdates(projectId,
+                        path, data.hashes, data.fields, statistics, cancellationToken);
+                    allUpdates.addAll(updates);
+                }
 
-                if (updates.isEmpty())
+                if (allUpdates.isEmpty())
                 {
                     return true;
                 }
@@ -202,7 +202,7 @@ class GlobalContextSync implements IGlobalContextSync
                 }
 
                 optionalResult =
-                    globalContextService.update(aiCtx.getProjectId(), updates, statistics, cancellationToken).get();
+                    globalContextService.update(projectId, allUpdates, 10, statistics, cancellationToken).get();
             }
         }
         catch (Exception error)
@@ -212,5 +212,12 @@ class GlobalContextSync implements IGlobalContextSync
         }
 
         return true;
+    }
+
+    private static class FileUpdates
+    {
+        public final HashSet<String> hashes = new HashSet<>();
+
+        public final HashSet<String> fields = new HashSet<>();
     }
 }

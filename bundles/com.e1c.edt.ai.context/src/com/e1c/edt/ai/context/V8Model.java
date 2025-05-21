@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
-import com.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -45,6 +44,7 @@ import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
+import com.e1c.edt.ai.ICancellationToken;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -346,7 +346,7 @@ class V8Model
 
         var modules = new ArrayList<com._1c.g5.v8.dt.bsl.model.Module>();
         getPath(methodAccess).ifPresent(path -> {
-            moduleProvider.getModule(path, cancellationToken)
+            moduleProvider.getModule(null, path, cancellationToken)
                 .ifPresent(moduleInfo -> modules.add(moduleInfo.getModule()));
         });
 

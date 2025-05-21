@@ -1012,7 +1012,7 @@ class EntityFactory
                 if (featureAccess != null)
                 {
                     v8Model.getPath(featureAccess).ifPresent(path -> {
-                        moduleProvider.getModule(path, cancellationToken);
+                        moduleProvider.getModule(null, path, cancellationToken);
                         var fieldNode = NodeModelUtils.getNode(featureAccess);
                         propDataType.uuid = idFactory.createNodeId(path, fieldNode);
                     });
