@@ -31,7 +31,7 @@ public class ContextInitializer
                 .of(new AIContext(ctx.getProjectId(), ctx.getCaretOffset(), ctx.getSource(),
                     ctx.getSourceOffset(),
                     ctx.getPath(), text,
-                    ctx.getTextOffset(), ctx.getDocument()));
+                    ctx.getTextOffset(), ctx.getDocument(), () -> ctx.isDisposed()));
         }
 
         var source = ctx.getSource();
@@ -55,6 +55,6 @@ public class ContextInitializer
                 ctx.getPath(), text,
                 offset, prefix, sufix,
                 sourceOffset - parts.getPrefix().getLength(), sourceOffset + parts.getSufix().getLength(),
-                ctx.getDocument()));
+                ctx.getDocument(), () -> ctx.isDisposed()));
     }
 }

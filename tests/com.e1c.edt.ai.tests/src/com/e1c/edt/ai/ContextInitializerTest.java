@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.function.Supplier;
 
 import org.eclipse.jface.text.IDocument;
 import org.junit.Assert;
@@ -24,6 +25,7 @@ public class ContextInitializerTest
 {
     private final IContextSplitter splitter = mock(IContextSplitter.class);
     private final IDocument document = mock(IDocument.class);
+    private final Supplier<Boolean> isDisposed = mock(Supplier.class);
 
     @Parameter(0)
     public String prefix;
@@ -56,7 +58,7 @@ public class ContextInitializerTest
             factory.initialize(
                 new AIContext(new ProjectId("path"), textOffset + 3, "full_" + text,
                     textOffset + 3, "", text,
-                    textOffset, document));
+                    textOffset, document, isDisposed));
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());

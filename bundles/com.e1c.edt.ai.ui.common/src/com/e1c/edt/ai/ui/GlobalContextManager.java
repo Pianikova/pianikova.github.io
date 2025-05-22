@@ -44,7 +44,7 @@ class GlobalContextManager implements IGlobalContextManager
                 jobCtx -> {
                     try
                     {
-                        globalContextSync.sync(aiCtx.getProjectId(), aiCtx.getPath(), 5, jobCtx.CancellationTokenSource)
+                        globalContextSync.sync(aiCtx, 5, jobCtx.CancellationTokenSource)
                             .get();
                         globalContextTracker.track(aiCtx);
                     }

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
@@ -50,14 +51,14 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Boolean> sync(ProjectId projectId, String filePath, int maxDept,
+    public CompletableFuture<Boolean> sync(AIContext aiContext, int maxDept,
         ICancellationToken cancellationToken)
     {
         try
         {
             var statistics = statisticsProvider.get();
-            var updates = globalContext.getUpdates(projectId, filePath, false, statistics, cancellationToken);
-            return syncUpdates(projectId, updates, maxDept, statistics, cancellationToken);
+            var updates = globalContext.getUpdates(aiContext, false, statistics, cancellationToken);
+            return syncUpdates(aiContext.getProjectId(), updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -92,6 +93,11 @@ class GlobalContextSync implements IGlobalContextSync
                     }
 
                     var result = optionalResult.get();
+                    if (result.isEmpty())
+                    {
+                        return true;
+                    }
+
                     return syncUnknown(projectId, result.unknownValues, result.unknownKeys, maxDept,
                         cancellationToken);
                 });
@@ -123,15 +129,15 @@ class GlobalContextSync implements IGlobalContextSync
             while (maxDept-- > 0 && optionalResult.isPresent())
             {
                 var result = optionalResult.get();
-                var vals = result.unknownValues;
-                var keys = result.unknownKeys;
-                var hasUnknownValues = vals != null && !vals.isEmpty();
-                var hasUnknownKeys = keys != null && !keys.isEmpty();
-                if (!hasUnknownValues && !hasUnknownKeys)
+                if (result.isEmpty())
                 {
                     return true;
                 }
 
+                var vals = result.unknownValues;
+                var keys = result.unknownKeys;
+                var hasUnknownValues = vals != null && !vals.isEmpty();
+                var hasUnknownKeys = keys != null && !keys.isEmpty();
                 log.debug("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
                     var trace = new StringBuilder();
                     if (hasUnknownValues)

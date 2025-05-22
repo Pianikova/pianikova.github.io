@@ -49,6 +49,21 @@ class GlobalContextTracker
     }
 
     @Override
+    public void track(IProject project)
+    {
+        if (!CodeCompletionPolicy.FOCUSING.isMeet(settings.getCodeCompletionPolicy()))
+        {
+            return;
+        }
+
+        synchronized (lockObject)
+        {
+            var workflow = projectWorkflows.computeIfAbsent(project, k -> projectTrackingWorkflowProvider.get());
+            workflow.initialize(project);
+        }
+    }
+
+    @Override
     public void track(AIContext aiCtx)
     {
         if (!CodeCompletionPolicy.FOCUSING.isMeet(settings.getCodeCompletionPolicy()))

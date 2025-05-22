@@ -200,7 +200,7 @@ public class CodeTools
             var methodCtx = new AIContext(ctx.getProjectId(), lastRange.getStart(),
                 ctx.getSource(), lastRange.getStart(), ctx.getPath(), commentingMethod.methodText, 0, "", //$NON-NLS-1$
                 commentingMethod.methodText, lastRange.getStart(), lastRange.getStart() + lastRange.getLength(),
-                sourceViewer.getDocument());
+                sourceViewer.getDocument(), () -> sourceViewer.getTextWidget().isDisposed());
             commentingMethod.ctx = methodCtx;
         });
         return Optional.of(commentingMethod);

@@ -23,4 +23,11 @@ public class GlobalContextUpdateResponse
      */
     @SerializedName("unk_keys")
     public List<EntityKey> unknownKeys;
+
+    public boolean isEmpty()
+    {
+        var hasUnknownValues = unknownValues != null && !unknownValues.isEmpty();
+        var hasUnknownKeys = unknownKeys != null && !unknownKeys.isEmpty();
+        return !hasUnknownValues && !hasUnknownKeys;
+    }
 }
