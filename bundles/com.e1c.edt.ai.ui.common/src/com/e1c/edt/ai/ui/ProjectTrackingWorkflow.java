@@ -154,6 +154,11 @@ class ProjectTrackingWorkflow
         log.debug("Track", () -> aiCtx.toString()); //$NON-NLS-1$
         var path = aiCtx.getPath();
         var fileOnDisk = project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1));
+        if (fileOnDisk == null)
+        {
+            return;
+        }
+
         synchronized (filesToTrack)
         {
             while (filesToTrack.size() > 1)
@@ -436,10 +441,7 @@ class ProjectTrackingWorkflow
                 continue;
             }
 
-            synchronized (filesToSync)
-            {
-                filesToSync.remove(file);
-            }
+            filesToSync.remove(file);
         }
 
         if (files.isEmpty())
@@ -451,7 +453,7 @@ class ProjectTrackingWorkflow
         progressMonitor.beginTask(Messages.CodeCompletionBackgroundSyncSubtaskName, files.size());
         var statistics = statisticsProvider.get();
         var feature = CompletableFuture.completedFuture(true);
-        var allUpdates = new ArrayList<GlobalContextUpdate>();
+        var updates = new ArrayList<GlobalContextUpdate>();
         for (var file : files)
         {
             if (cancellationToken.isCanceled())
@@ -459,9 +461,9 @@ class ProjectTrackingWorkflow
                 break;
             }
 
-            var updates = globalContext.getUpdates(projectId, file.path, !initialStateSent, statistics, cancellationToken);
+            var fileUpdates = globalContext.getUpdates(projectId, file.path, !initialStateSent, statistics, cancellationToken);
             initialStateSent = true;
-            for (var update : updates)
+            for (var update : fileUpdates)
             {
                 if (Fields.LOCAL_FUNCTIONS.equals(update.field))
                 {
@@ -469,46 +471,40 @@ class ProjectTrackingWorkflow
                 }
             }
 
-            synchronized (allUpdates)
+            synchronized (updates)
             {
-                allUpdates.addAll(updates);
+                updates.addAll(fileUpdates);
             }
 
             feature = feature
                 .thenCompose(i -> {
-                    ArrayList<GlobalContextUpdate> curUpdates;
-                    synchronized (allUpdates)
+                    ArrayList<GlobalContextUpdate> latestUpdates;
+                    synchronized (updates)
                     {
-                        curUpdates = new ArrayList<>(allUpdates);
-                        allUpdates.clear();
+                        latestUpdates = new ArrayList<>(updates);
+                        updates.clear();
                     }
 
-                    if (curUpdates.isEmpty())
+                    if (latestUpdates.isEmpty())
                     {
                         return CompletableFuture.completedFuture(true);
                     }
 
-                    return globalContextSync.syncUpdates(projectId, curUpdates, 5, statistics, cancellationToken)
+                    return globalContextSync.syncUpdates(projectId, latestUpdates, 5, statistics, cancellationToken)
                         .whenComplete((result, error) -> {
                             progressMonitor.worked(1);
                             if (result != null && result)
                             {
-                                synchronized (filesToSync)
-                                {
-                                    filesToSync.remove(file);
-                                }
+                                filesToSync.remove(file);
                             }
                         });
                 });
         }
 
         feature.join();
-        synchronized (filesToSync)
+        if (!filesToSync.isEmpty())
         {
-            if (!filesToSync.isEmpty())
-            {
-                return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
-            }
+            return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
         }
 
         if (!filesToProcess.isEmpty())
