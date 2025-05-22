@@ -9,17 +9,18 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.text.IDocumentExtension4;
 
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.Fields;
@@ -54,8 +55,7 @@ class ProjectTrackingWorkflow
     private final IFileScaner fileScaner;
     private final IGlobalContext globalContext;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
-    private final HashMap<String, ProjectFile> filesToHash = new HashMap<>();
-    private final ArrayList<ProjectFile> filesToTrack = new ArrayList<>();
+    private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
     private final CharBuffer buffer = CharBuffer.allocate(1024);
     private IProject project;
     private ProjectId projectId;
@@ -159,21 +159,7 @@ class ProjectTrackingWorkflow
             return;
         }
 
-        synchronized (filesToTrack)
-        {
-            while (filesToTrack.size() > 1)
-            {
-                filesToTrack.remove(0);
-            }
-
-            if (filesToTrack.size() > 0 && filesToTrack.get(0).path.equals(path))
-            {
-                return;
-            }
-
-            filesToTrack.add(new ProjectFile(aiCtx, path, fileOnDisk, LocalDateTime.MIN));
-            filesToHash.remove(path);
-        }
+        filesToHash.put(path, new ProjectFile(aiCtx, path, fileOnDisk, LocalDateTime.MIN));
     }
 
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
@@ -206,23 +192,10 @@ class ProjectTrackingWorkflow
         {
             var path = file.getFullPath().makeRelative().toPortableString();
             filesToHash.computeIfAbsent(path,
-                key -> new ProjectFile(new AIContext(projectId, 0, "", 0, key, "", 0, null), path, file, now));
+                key -> new ProjectFile(new AIContext(projectId, key), key, file, now));
         }
 
         var newFilesToHashCount = 0;
-        synchronized (filesToTrack)
-        {
-            for (var file : filesToTrack)
-            {
-                if (file.getHash() == null)
-                {
-                    newFilesToHashCount++;
-                }
-
-                filesToHash.remove(file.path);
-            }
-        }
-
         for (var file : filesToHash.values())
         {
             if (file.getModificationStamp() <= 0 && file.getHash() == null)
@@ -271,11 +244,6 @@ class ProjectTrackingWorkflow
                 .limit(maxFiles)
                 .collect(Collectors.toList());
 
-        synchronized (filesToTrack)
-        {
-            hashingFiles.addAll(filesToTrack);
-        }
-
         var hashed = 0;
         progressMonitor.beginTask(Messages.CodeCompletionBackgroundHashSubtaskName, hashingFiles.size());
         for (var file : hashingFiles)
@@ -299,8 +267,15 @@ class ProjectTrackingWorkflow
                 var prevHash = file.getHash();
                 String newHash;
                 var document = file.aiCtx.getDocument();
-                if (document != null)
+                if (!file.aiCtx.isDisposed() && document != null && document instanceof IDocumentExtension4)
                 {
+                    var docExtension = (IDocumentExtension4)document;
+                    newModificationStamp = docExtension.getModificationStamp();
+                    if (file.getModificationStamp() == newModificationStamp)
+                    {
+                        continue;
+                    }
+
                     try (var inputStream = new ByteArrayInputStream(document.get().getBytes(StandardCharsets.UTF_8));)
                     {
                         newHash =
@@ -384,7 +359,7 @@ class ProjectTrackingWorkflow
 
         if (!hashingFiles.isEmpty())
         {
-            return new Result(ProjectTrackingWorkflowState.HASH, ShortDelay);
+            return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
         }
 
         return new Result(ProjectTrackingWorkflowState.INIT, LongDelay);
@@ -461,7 +436,7 @@ class ProjectTrackingWorkflow
                 break;
             }
 
-            var fileUpdates = globalContext.getUpdates(projectId, file.path, !initialStateSent, statistics, cancellationToken);
+            var fileUpdates = globalContext.getUpdates(file.aiCtx, !initialStateSent, statistics, cancellationToken);
             initialStateSent = true;
             for (var update : fileUpdates)
             {

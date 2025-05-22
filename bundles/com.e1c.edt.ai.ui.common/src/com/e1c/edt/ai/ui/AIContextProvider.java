@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.lang.ref.WeakReference;
 import java.util.Optional;
 
 import org.eclipse.jface.text.source.SourceViewer;
@@ -61,7 +62,12 @@ class AIContextProvider
             aiContext =
                 new AIContext(projectId, textWidget.getCaretOffset(), content.text,
                     content.offset, path,
-                    content.selectionText, content.selectionOffset, sourceViewer.getDocument());
+                    content.selectionText, content.selectionOffset, sourceViewer.getDocument(),
+                    () -> Optional.ofNullable(new WeakReference<>(sourceViewer))
+                        .map(i -> i.get())
+                        .map(i -> i.getTextWidget())
+                        .map(i -> i.isDisposed())
+                        .orElse(true));
         }
         else
         {
@@ -69,7 +75,12 @@ class AIContextProvider
                 content.text,
                 content.offset, path,
                 content.text,
-                content.offset, sourceViewer.getDocument());
+                content.offset, sourceViewer.getDocument(),
+                () -> Optional.ofNullable(new WeakReference<>(sourceViewer))
+                    .map(i -> i.get())
+                    .map(i -> i.getTextWidget())
+                    .map(i -> i.isDisposed())
+                    .orElse(true));
         }
 
         return contextInitializer.initialize(aiContext);

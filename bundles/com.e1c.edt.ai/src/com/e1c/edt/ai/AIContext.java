@@ -3,7 +3,9 @@
  */
 package com.e1c.edt.ai;
 
+import java.lang.ref.WeakReference;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 import org.eclipse.jface.text.IDocument;
 
@@ -23,13 +25,14 @@ public class AIContext
     private final String sufix;
     private final int start;
     private final int finish;
-    private final IDocument document;
+    private final WeakReference<IDocument> document;
+    private final Supplier<Boolean> isDisposed;
 
     public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset,
         String path, String text,
         int textOffset,
         String prefix,
-        String sufix, int start, int finish, IDocument document)
+        String sufix, int start, int finish, IDocument document, Supplier<Boolean> isDisposed)
     {
         Preconditions.checkNotNull(projectId);
         Preconditions.checkNotNull(source);
@@ -50,22 +53,23 @@ public class AIContext
         this.sufix = sufix;
         this.start = start;
         this.finish = finish;
-        this.document = document;
+        this.document = new WeakReference<>(document);
+        this.isDisposed = isDisposed;
     }
 
     @SuppressWarnings("nls")
     public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset,
         String path, String text,
-        int textOffset, IDocument document)
+        int textOffset, IDocument document, Supplier<Boolean> isDisposed)
     {
-        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document);
+        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document, isDisposed);
     }
 
     // Global
     @SuppressWarnings("nls")
     public AIContext(ProjectId projectId, String path)
     {
-        this(projectId, 0, "", 0, path, "", 0, "", "", 0, 0, null);
+        this(projectId, 0, "", 0, path, "", 0, "", "", 0, 0, null, () -> false);
     }
 
     public ProjectId getProjectId()
@@ -125,7 +129,12 @@ public class AIContext
 
     public IDocument getDocument()
     {
-        return document;
+        return document.get();
+    }
+
+    public boolean isDisposed()
+    {
+        return isDisposed.get();
     }
 
     @Override

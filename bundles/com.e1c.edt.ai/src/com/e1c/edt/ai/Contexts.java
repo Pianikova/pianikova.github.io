@@ -79,23 +79,22 @@ class Contexts
     }
 
     @Override
-    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, boolean sendInitialState,
+    public List<GlobalContextUpdate> getUpdates(AIContext aiContext, boolean sendInitialState,
         IStatistics statistics, ICancellationToken cancellationToken)
     {
-        var globalContext = create(projectId, filePath, statistics, cancellationToken);
+        var globalContext = createGlobalContext(aiContext, statistics, cancellationToken);
         return getUpdates(globalContext, sendInitialState, statistics, cancellationToken);
     }
 
-    private GlobalContext create(ProjectId projectId, String filePath, IStatistics statistics,
+    private GlobalContext createGlobalContext(AIContext aiContext, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
-        globalContext.modulePath = filePath;
+        globalContext.modulePath = aiContext.getPath();
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_DURATUION))
         {
-            var aiCtx = new AIContext(projectId, filePath);
-            contextEntities.fill(aiCtx, localContext, globalContext,
+            contextEntities.fill(aiContext, localContext, globalContext,
                 action -> action.getDataType() == DataType.HASH || Fields.CONFIGURATION_NAME.equals(action.getField()),
                 statistics, cancellationToken);
         }

@@ -11,7 +11,7 @@ import com.e1c.edt.ai.assistent.model.ProjectId;
 
 public interface IGlobalContext
 {
-    List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, boolean sendInitialState, IStatistics statistics,
+    List<GlobalContextUpdate> getUpdates(AIContext aiContext, boolean sendInitialState, IStatistics statistics,
         ICancellationToken cancellationToken);
 
     List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, HashSet<String> hashes,
