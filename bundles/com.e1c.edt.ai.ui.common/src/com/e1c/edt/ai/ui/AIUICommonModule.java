@@ -66,7 +66,6 @@ public class AIUICommonModule
         bind(IProjectTrackingWorkflow.class).to(ProjectTrackingWorkflow.class);
         bind(IGlobalContextSync.class).to(GlobalContextSync.class).in(Singleton.class);
         bind(IProposalsProvider.class).to(ProposalsProvider.class).in(Singleton.class);
-        bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);
         bind(TextWidgetInfo.class).in(Singleton.class);
         bind(ITextWidgetInfoUpdater.class).to(TextWidgetInfo.class);
         bind(ITextWidgetInfoProvider.class).to(TextWidgetInfo.class);

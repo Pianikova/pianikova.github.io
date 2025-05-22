@@ -18,6 +18,7 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.Range;
 import com.e1c.edt.ai.assistent.model.CursorLocation;
 import com.e1c.edt.ai.ui.AITarget;
+import com.e1c.edt.ai.ui.Consts;
 import com.e1c.edt.ai.ui.Content;
 import com.e1c.edt.ai.ui.IAIContextProvider;
 import com.e1c.edt.ai.ui.ICodeParser;
@@ -101,6 +102,11 @@ public class CodeTools
 
     private Optional<TargetMethod> getTargetMethod(SourceViewer sourceViewer)
     {
+        if (sourceViewer.getDocument().getLength() > Consts.NORMAL_CODE_SIZE)
+        {
+            return Optional.empty();
+        }
+
         var optionalContent = getContent(sourceViewer);
         if (optionalContent.isEmpty())
         {

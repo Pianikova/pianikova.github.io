@@ -48,6 +48,11 @@ public class CursorInfoProvider
 
     private Optional<CursorInfo> getCursorInfo(int cursorOffset, SourceViewer sourceViewer)
     {
+        if (sourceViewer.getDocument().getLength() > Consts.NORMAL_CODE_SIZE)
+        {
+            return Optional.empty();
+        }
+
         var rootNoodeOptional = codeParser.parse(sourceViewer).map(parseResult -> parseResult.getRootNode());
         if (rootNoodeOptional.isEmpty())
         {
