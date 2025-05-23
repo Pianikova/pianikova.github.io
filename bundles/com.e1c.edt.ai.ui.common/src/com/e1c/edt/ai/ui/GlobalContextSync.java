@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.Fields;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
@@ -85,7 +86,7 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return globalContextService.update(projectId, updates, 10, statistics, cancellationToken)
+            return globalContextService.update(projectId, updates, 100, statistics, cancellationToken)
                 .thenApplyAsync(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
@@ -167,7 +168,7 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     for (var val : vals)
                     {
-                        var fileUpdate = fileUpdates.computeIfAbsent(val.path, k -> new FileUpdates());
+                        var fileUpdate = fileUpdates.computeIfAbsent(val.path, path -> new FileUpdates(path, val.hash));
                         fileUpdate.hashes.add(val.hash);
                         fileUpdate.fields.add(val.field);
                     }
@@ -177,7 +178,7 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     for (var key : keys)
                     {
-                        var fileUpdate = fileUpdates.computeIfAbsent(key.path, k -> new FileUpdates());
+                        var fileUpdate = fileUpdates.computeIfAbsent(key.path, path -> new FileUpdates(path, null));
                         fileUpdate.fields.add(key.field);
                     }
                 }
@@ -188,12 +189,19 @@ class GlobalContextSync implements IGlobalContextSync
                 }
 
                 var allUpdates = new ArrayList<GlobalContextUpdate>();
-                for (var fileUpdate : fileUpdates.entrySet())
+                for (var fileUpdate : fileUpdates.values())
                 {
-                    var path = fileUpdate.getKey();
-                    var data = fileUpdate.getValue();
+                    var path = fileUpdate.filePath;
                     var updates = globalContext.getUpdates(projectId,
-                        path, data.hashes, data.fields, statistics, cancellationToken);
+                        path, fileUpdate.hashes, fileUpdate.fields, statistics, cancellationToken);
+                    for (var update : updates)
+                    {
+                        if (Fields.LOCAL_FUNCTIONS.equals(update.field))
+                        {
+                            update.hash = fileUpdate.getFileHash();
+                        }
+                    }
+
                     allUpdates.addAll(updates);
                 }
 
@@ -222,6 +230,25 @@ class GlobalContextSync implements IGlobalContextSync
 
     private static class FileUpdates
     {
+        private final String filePath;
+        private final String fileHash;
+
+        public FileUpdates(String filePath, String fileHash)
+        {
+            this.filePath = filePath;
+            this.fileHash = fileHash;
+        }
+
+        public String getFilePath()
+        {
+            return filePath;
+        }
+
+        public String getFileHash()
+        {
+            return fileHash;
+        }
+
         public final HashSet<String> hashes = new HashSet<>();
 
         public final HashSet<String> fields = new HashSet<>();

@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -365,7 +363,6 @@ class ProjectTrackingWorkflow
         return new Result(ProjectTrackingWorkflowState.INIT, LongDelay);
     }
 
-    @SuppressWarnings("nls")
     private Result sync(int maxFiles, IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
         var filesToProcess =
@@ -379,9 +376,11 @@ class ProjectTrackingWorkflow
             update.path = file.path;
             update.hash = file.getHash();
             filesUpdates.add(update);
+            filesToSync.remove(file);
         }
 
-        Set<String> unknowFilePaths;
+        globalContextSync.syncUpdates(projectId, filesUpdates, 5, statisticsProvider.get(), cancellationToken).join();
+        /*Set<String> unknowFilePaths;
         try
         {
             unknowFilePaths =
@@ -474,15 +473,10 @@ class ProjectTrackingWorkflow
                             }
                         });
                 });
-        }
+        }*/
 
-        feature.join();
+        // feature.join();
         if (!filesToSync.isEmpty())
-        {
-            return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
-        }
-
-        if (!filesToProcess.isEmpty())
         {
             return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
         }
