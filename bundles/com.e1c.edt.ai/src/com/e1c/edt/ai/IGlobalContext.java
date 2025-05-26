@@ -14,6 +14,6 @@ public interface IGlobalContext
     List<GlobalContextUpdate> getUpdates(AIContext aiContext, boolean sendInitialState, IStatistics statistics,
         ICancellationToken cancellationToken);
 
-    List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, HashSet<String> hashes,
+    List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, String fileHash, HashSet<String> hashes,
         HashSet<String> fields, IStatistics statistics, ICancellationToken cancellationToken);
 }

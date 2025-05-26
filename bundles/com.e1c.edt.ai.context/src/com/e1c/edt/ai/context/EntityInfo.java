@@ -518,7 +518,8 @@ class EntityInfo
                 var hashStr = hashTools.format(hash, true);
                 globalContext.localFunctions.put(methodName, hashStr);
 
-                if (actionFilter.test(new FillAction(DataType.DATA, field, hashStr)))
+                if (actionFilter.test(new FillAction(DataType.DATA, field, hashStr))
+                    || actionFilter.test(new FillAction(DataType.DATA, field, hashStr)))
                 {
                     var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS_DURATUION,
                         () -> entityFactory.createMethodEntity(method, node, false, cancellationToken)

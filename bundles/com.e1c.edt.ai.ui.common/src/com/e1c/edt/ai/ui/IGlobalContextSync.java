@@ -19,11 +19,12 @@ interface IGlobalContextSync
     CompletableFuture<Boolean> sync(AIContext aiContext, int maxDept,
         ICancellationToken cancellationToken);
 
-    CompletableFuture<Boolean> syncUpdates(ProjectId projectId, List<GlobalContextUpdate> updates,
+    CompletableFuture<Boolean> syncUpdates(ProjectId projectId, boolean isInitial, List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics, ICancellationToken cancellationToken);
 
-    boolean syncUnknown(ProjectId projectId, List<EntityValue> unknownValues, List<EntityKey> unknownKeys,
+    CompletableFuture<Boolean> syncUnknown(ProjectId projectId, boolean isInitial, List<EntityValue> unknownValues,
+        List<EntityKey> unknownKeys,
         int maxDept,
         ICancellationToken cancellationToken);
 }

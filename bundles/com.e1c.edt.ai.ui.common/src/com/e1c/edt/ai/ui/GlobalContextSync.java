@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.Fields;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
@@ -59,7 +58,7 @@ class GlobalContextSync implements IGlobalContextSync
         {
             var statistics = statisticsProvider.get();
             var updates = globalContext.getUpdates(aiContext, false, statistics, cancellationToken);
-            return syncUpdates(aiContext.getProjectId(), updates, maxDept, statistics, cancellationToken);
+            return syncUpdates(aiContext.getProjectId(), false, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -69,7 +68,8 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Boolean> syncUpdates(ProjectId projectId, List<GlobalContextUpdate> updates,
+    public CompletableFuture<Boolean> syncUpdates(ProjectId projectId, boolean isInitial,
+        List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics,
         ICancellationToken cancellationToken)
@@ -86,20 +86,20 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return globalContextService.update(projectId, updates, 100, statistics, cancellationToken)
-                .thenApplyAsync(optionalResult -> {
+            return globalContextService.update(projectId, updates, 200, statistics, cancellationToken)
+                .thenCompose(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
-                        return false;
+                        return CompletableFuture.completedFuture(false);
                     }
 
                     var result = optionalResult.get();
                     if (result.isEmpty())
                     {
-                        return true;
+                        return CompletableFuture.completedFuture(true);
                     }
 
-                    return syncUnknown(projectId, result.unknownValues, result.unknownKeys, maxDept,
+                    return syncUnknown(projectId, isInitial, result.unknownValues, result.unknownKeys, maxDept,
                         cancellationToken);
                 });
         }
@@ -111,15 +111,17 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public boolean syncUnknown(ProjectId projectId, List<EntityValue> unknownValues,
+    public CompletableFuture<Boolean> syncUnknown(ProjectId projectId, boolean isInitial,
+        List<EntityValue> unknownValues,
         List<EntityKey> unknownKeys, int maxDept,
         ICancellationToken cancellationToken)
     {
+        var feature = CompletableFuture.completedFuture(true);
         try
         {
             if (cancellationToken.isCanceled())
             {
-                return false;
+                return CompletableFuture.completedFuture(false);
             }
 
             var statistics = statisticsProvider.get();
@@ -132,7 +134,7 @@ class GlobalContextSync implements IGlobalContextSync
                 var result = optionalResult.get();
                 if (result.isEmpty())
                 {
-                    return true;
+                    return feature;
                 }
 
                 var vals = result.unknownValues;
@@ -185,47 +187,62 @@ class GlobalContextSync implements IGlobalContextSync
 
                 if (fileUpdates.isEmpty())
                 {
-                    return true;
+                    return feature;
                 }
 
-                var allUpdates = new ArrayList<GlobalContextUpdate>();
+                var updates = new ArrayList<GlobalContextUpdate>();
                 for (var fileUpdate : fileUpdates.values())
                 {
-                    var path = fileUpdate.filePath;
-                    var updates = globalContext.getUpdates(projectId,
-                        path, fileUpdate.hashes, fileUpdate.fields, statistics, cancellationToken);
-                    for (var update : updates)
+                    var newUpdates = globalContext.getUpdates(projectId,
+                        fileUpdate.filePath, fileUpdate.fileHash, fileUpdate.hashes, fileUpdate.fields, statistics,
+                        cancellationToken);
+
+                    if (newUpdates.isEmpty())
                     {
-                        if (Fields.LOCAL_FUNCTIONS.equals(update.field))
-                        {
-                            update.hash = fileUpdate.getFileHash();
-                        }
+                        continue;
                     }
 
-                    allUpdates.addAll(updates);
-                }
+                    synchronized (updates)
+                    {
+                        updates.addAll(newUpdates);
+                    }
 
-                if (allUpdates.isEmpty())
-                {
-                    return true;
+                    var currentIsInitial = isInitial;
+                    isInitial = false;
+                    feature = feature.thenCompose(i -> {
+                        ArrayList<GlobalContextUpdate> latestUpdates;
+                        synchronized (updates)
+                        {
+                            latestUpdates = new ArrayList<>(updates);
+                            updates.clear();
+                        }
+
+                        if (cancellationToken.isCanceled() || latestUpdates.isEmpty())
+                        {
+                            return CompletableFuture.completedFuture(true);
+                        }
+
+                        return syncUpdates(projectId, currentIsInitial, latestUpdates, 5, statistics,
+                            cancellationToken);
+                    });
+
+                    optionalResult =
+                        globalContextService.update(projectId, updates, 10, statistics, cancellationToken).get();
                 }
 
                 if (cancellationToken.isCanceled())
                 {
-                    return true;
+                    return feature;
                 }
-
-                optionalResult =
-                    globalContextService.update(projectId, allUpdates, 10, statistics, cancellationToken).get();
             }
         }
         catch (Exception error)
         {
             log.logError(error);
-            return false;
+            return CompletableFuture.completedFuture(false);
         }
 
-        return true;
+        return feature;
     }
 
     private static class FileUpdates
@@ -237,16 +254,6 @@ class GlobalContextSync implements IGlobalContextSync
         {
             this.filePath = filePath;
             this.fileHash = fileHash;
-        }
-
-        public String getFilePath()
-        {
-            return filePath;
-        }
-
-        public String getFileHash()
-        {
-            return fileHash;
         }
 
         public final HashSet<String> hashes = new HashSet<>();

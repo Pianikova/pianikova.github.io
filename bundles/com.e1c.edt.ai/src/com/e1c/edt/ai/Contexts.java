@@ -182,7 +182,7 @@ class Contexts
     }
 
     @Override
-    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath,
+    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, String fileHash,
         HashSet<String> hashes,
         HashSet<String> fields, IStatistics statistics, ICancellationToken cancellationToken)
     {
@@ -198,6 +198,7 @@ class Contexts
 
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
+        globalContext.module = fileHash;
         globalContext.modulePath = filePath;
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_HASHING_DURATUION))
         {
@@ -209,7 +210,10 @@ class Contexts
 
                 case DATA:
                     var hash = action.getHash();
-                    return hash == null || !existingUpdates.containsKey(hash) || hashes.contains(hash);
+                    return hash == null || !existingUpdates.containsKey(hash)
+                        || (action.getField().startsWith(Fields.LOCAL_FUNCTIONS)
+                            && fields.contains(Fields.LOCAL_FUNCTIONS))
+                        || hashes.contains(hash);
 
                 default:
                     return false;
