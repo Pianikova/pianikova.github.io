@@ -53,6 +53,7 @@ class VerticalRulerPainter
         }
     }
 
+    @SuppressWarnings("nls")
     @Override
     public synchronized void updateRange()
     {
@@ -62,21 +63,8 @@ class VerticalRulerPainter
             return;
         }
 
-        lineCount = 0;
-        var currentOffset = 0;
-        while (currentOffset < hintText.length())
-        {
-            int nextLineOffset = hintText.indexOf('\n', currentOffset);
-            if (nextLineOffset == -1)
-            {
-                lineCount++;
-                break;
-            }
-
-            lineCount++;
-            currentOffset = nextLineOffset + 1;
-        }
-
+        var lines = hintText.split("\n");
+        var lineCount = lines.length;
         if (lineCount < 2)
         {
             range = Range.EMPTY;
@@ -84,8 +72,14 @@ class VerticalRulerPainter
         }
 
         var hintOffset = textWidget.getCaretOffset();
-        var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight();
-        var h = (textWidget.getLineHeight() - 1) * (lineCount - 1);
+        var firtsLine = textWidget.getLineAtOffset(hintOffset);
+        var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight(firtsLine);
+        var h = 0;
+        for (var line = 1; line < lineCount; line++)
+        {
+            h += (textWidget.getLineHeight(firtsLine + line) - 1);
+        }
+
         if (h <= 0)
         {
             range = Range.EMPTY;
@@ -95,10 +89,13 @@ class VerticalRulerPainter
         range = new Range(y, h);
     }
 
+    @SuppressWarnings("nls")
     @Override
     public synchronized void reset()
     {
-        this.range = Range.EMPTY;
+        hintText = "";
+        range = Range.EMPTY;
+        lineCount = 0;
     }
 
     @Override
