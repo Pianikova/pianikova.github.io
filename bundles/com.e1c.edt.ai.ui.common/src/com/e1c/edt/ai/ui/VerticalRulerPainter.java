@@ -64,22 +64,16 @@ class VerticalRulerPainter
         }
 
         var lines = hintText.split("\n");
-        var lineCount = lines.length;
-        if (lineCount < 2)
+        var linesCount = lines.length;
+        if (linesCount < 2)
         {
             range = Range.EMPTY;
             return;
         }
 
         var hintOffset = textWidget.getCaretOffset();
-        var firtsLine = textWidget.getLineAtOffset(hintOffset);
-        var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight(firtsLine);
-        var h = 0;
-        for (var line = 1; line < lineCount; line++)
-        {
-            h += (textWidget.getLineHeight(firtsLine + line) - 1);
-        }
-
+        var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight();
+        var h = textWidget.getLineHeight() * linesCount;
         if (h <= 0)
         {
             range = Range.EMPTY;
