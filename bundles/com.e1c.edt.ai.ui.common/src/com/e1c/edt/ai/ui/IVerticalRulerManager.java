@@ -9,5 +9,7 @@ interface IVerticalRulerManager
 {
     AutoCloseable activate(SourceViewer viewer, Runnable onReset);
 
+    void reset(SourceViewer viewer);
+
     void redraw(SourceViewer viewer);
 }

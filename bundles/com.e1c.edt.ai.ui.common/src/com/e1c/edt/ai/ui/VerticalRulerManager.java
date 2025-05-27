@@ -60,6 +60,12 @@ class VerticalRulerManager
         }).orElse(Closeables.Empty);
     }
 
+    @Override
+    public void reset(SourceViewer viewer)
+    {
+        dispatcher.dispatch(() -> viewer.getTextWidget().redraw());
+    }
+
     private AnnotationModelListener createModelListener(CompositeRuler ruler)
     {
         Runnable run = () -> redraw(ruler.getControl());

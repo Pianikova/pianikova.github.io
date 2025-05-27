@@ -256,6 +256,7 @@ class CodeCompletionViewModel
         dispatcher.dispatch(() -> {
             hintPainter.reset();
             verticalRulerPainter.reset();
+            rulerManager.reset(sourceViewer);
             redraw();
         });
     }
