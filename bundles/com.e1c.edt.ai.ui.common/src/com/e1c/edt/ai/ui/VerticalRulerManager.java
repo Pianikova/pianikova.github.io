@@ -43,8 +43,12 @@ class VerticalRulerManager
     @Override
     public AutoCloseable activate(SourceViewer viewer, Runnable onReset)
     {
-        viewer.enableOperation(0, false);
         Preconditions.checkNotNull(onReset);
+        if (viewer == null)
+        {
+            return Closeables.Empty;
+        }
+
         if (environment.getOS() != OS.WINDOWS)
         {
             return Closeables.Empty;
@@ -62,6 +66,11 @@ class VerticalRulerManager
     @Override
     public AutoCloseable freeze(SourceViewer viewer)
     {
+        if (viewer == null)
+        {
+            return Closeables.Empty;
+        }
+
         if (environment.getOS() != OS.WINDOWS)
         {
             return Closeables.Empty;
@@ -86,6 +95,11 @@ class VerticalRulerManager
     @Override
     public void reset(SourceViewer viewer)
     {
+        if (viewer == null)
+        {
+            return;
+        }
+
         dispatcher.dispatch(() -> viewer.getTextWidget().redraw());
     }
 

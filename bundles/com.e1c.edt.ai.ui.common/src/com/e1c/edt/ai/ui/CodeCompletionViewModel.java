@@ -1007,7 +1007,19 @@ class CodeCompletionViewModel
 
         if (clipboard.isPasting())
         {
-            askNew();
+            ICodeCompletionSession<CodeCompletionContext> session;
+            synchronized (lockObject)
+            {
+                session = lastSession;
+            }
+
+            if (session != null)
+            {
+                commit(session);
+            }
+
+            log.debug("Clipboard paste", () -> '[' + event.fText + ']'); //$NON-NLS-1$
+            dispatcher.dispatchAsync(() -> askNew());
         }
     }
 
