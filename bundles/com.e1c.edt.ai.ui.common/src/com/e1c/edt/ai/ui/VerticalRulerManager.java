@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import org.eclipse.jface.text.IViewportListener;
@@ -12,8 +13,6 @@ import org.eclipse.jface.text.source.IAnnotationModelListener;
 import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.jface.text.source.IVerticalRulerInfoExtension;
 import org.eclipse.jface.text.source.SourceViewer;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseTrackListener;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 
@@ -44,6 +43,7 @@ class VerticalRulerManager
     @Override
     public AutoCloseable activate(SourceViewer viewer, Runnable onReset)
     {
+        viewer.enableOperation(0, false);
         Preconditions.checkNotNull(onReset);
         if (environment.getOS() != OS.WINDOWS)
         {
@@ -52,11 +52,34 @@ class VerticalRulerManager
 
         return Optional.ofNullable(viewer).flatMap(v -> getCompositeRuler(v)).map(ruler -> {
             var modelListener = createModelListener(ruler);
-            var trackerListener = new RulerMouseTrackListener(onReset);
             var viewportListener = new ViewportListener(viewer);
-            addListeners(viewer, ruler, modelListener, trackerListener, viewportListener);
+            addListeners(viewer, ruler, modelListener, viewportListener);
             return Closeables
-                .create(() -> removeListeners(viewer, ruler, modelListener, trackerListener, viewportListener));
+                .create(() -> removeListeners(viewer, ruler, modelListener, viewportListener));
+        }).orElse(Closeables.Empty);
+    }
+
+    @Override
+    public AutoCloseable freeze(SourceViewer viewer)
+    {
+        if (environment.getOS() != OS.WINDOWS)
+        {
+            return Closeables.Empty;
+        }
+
+        return Optional.ofNullable(viewer).flatMap(v -> getCompositeRuler(v)).map(ruler -> {
+            var decorators = ruler.getDecoratorIterator();
+            var tokens = new ArrayList<AutoCloseable>();
+            while (decorators.hasNext())
+            {
+                var column = decorators.next();
+                var columnControl = column.getControl();
+                var isEnabeld = columnControl.isEnabled();
+                columnControl.setEnabled(false);
+                tokens.add(Closeables.create(() -> columnControl.setEnabled(isEnabeld)));
+            }
+
+            return Closeables.create(tokens.toArray(new AutoCloseable[tokens.size()]));
         }).orElse(Closeables.Empty);
     }
 
@@ -118,7 +141,7 @@ class VerticalRulerManager
     }
 
     private void addListeners(SourceViewer viewer, CompositeRuler ruler, AnnotationModelListener modelListener,
-        RulerMouseTrackListener trackerListener, ViewportListener viewportListener)
+        ViewportListener viewportListener)
     {
         var decorators = ruler.getDecoratorIterator();
         while (decorators.hasNext())
@@ -132,14 +155,13 @@ class VerticalRulerManager
 
             var control = column.getControl();
             control.addPaintListener(painterListener);
-            control.addMouseTrackListener(trackerListener);
         }
 
         viewer.addViewportListener(viewportListener);
     }
 
     private void removeListeners(SourceViewer viewer, CompositeRuler ruler, AnnotationModelListener modelListener,
-        RulerMouseTrackListener tackerListener, ViewportListener viewportListener)
+        ViewportListener viewportListener)
     {
         var decorators = ruler.getDecoratorIterator();
         while (decorators.hasNext())
@@ -153,7 +175,6 @@ class VerticalRulerManager
 
             var control = column.getControl();
             control.removePaintListener(painterListener);
-            control.removeMouseTrackListener(tackerListener);
         }
 
         viewer.removeViewportListener(viewportListener);
@@ -193,36 +214,6 @@ class VerticalRulerManager
         public void modelChanged(IAnnotationModel model)
         {
             onModelChanged.run();
-        }
-    }
-
-    private class RulerMouseTrackListener
-        implements MouseTrackListener
-    {
-        private final Runnable onReset;
-
-        public RulerMouseTrackListener(Runnable onReset)
-        {
-            Preconditions.checkNotNull(onReset);
-            this.onReset = onReset;
-        }
-
-        @Override
-        public void mouseEnter(MouseEvent e)
-        {
-            onReset.run();
-        }
-
-        @Override
-        public void mouseExit(MouseEvent e)
-        {
-            //
-        }
-
-        @Override
-        public void mouseHover(MouseEvent e)
-        {
-            //
         }
     }
 
