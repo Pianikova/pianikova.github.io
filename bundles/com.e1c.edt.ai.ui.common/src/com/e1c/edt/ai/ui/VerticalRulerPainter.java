@@ -3,8 +3,10 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.PaintEvent;
+import org.eclipse.swt.internal.DPIUtil;
 
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.OS;
@@ -15,6 +17,8 @@ import com.google.inject.Inject;
 class VerticalRulerPainter
     implements IVerticalRulerPainter
 {
+    private static final int TEXT_EXTENT_FLAGS =
+        SWT.DRAW_TRANSPARENT | SWT.DRAW_DELIMITER | SWT.DRAW_TAB | SWT.DRAW_MNEMONIC;
     private final IGCTools gcTools;
     private final IEnvironment environment;
     StyledText textWidget;
@@ -64,29 +68,23 @@ class VerticalRulerPainter
         }
 
         var lines = hintText.split("\n");
-        var lineCount = lines.length;
-        if (lineCount < 2)
+        var linesCount = lines.length;
+        if (linesCount < 2)
         {
             range = Range.EMPTY;
             return;
         }
 
         var hintOffset = textWidget.getCaretOffset();
-        var firtsLine = textWidget.getLineAtOffset(hintOffset);
-        var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight(firtsLine);
-        var h = 0;
-        for (var line = 1; line < lineCount; line++)
-        {
-            h += (textWidget.getLineHeight(firtsLine + line) - 1);
-        }
-
+        var y = textWidget.getLocationAtOffset(hintOffset).y + textWidget.getLineHeight();
+        var h = (textWidget.getLineHeight() + 1) * (linesCount - 1);
         if (h <= 0)
         {
             range = Range.EMPTY;
             return;
         }
 
-        range = new Range(y, h);
+        range = new Range(y, (int)(h * (DPIUtil.autoScaleUp(1) == 2 ? .9 : 1.0)));
     }
 
     @SuppressWarnings("nls")
@@ -126,5 +124,6 @@ class VerticalRulerPainter
         }
 
         gc.fillRectangle(bounds.x, y, bounds.width, h);
+        // gc.drawRectangle(bounds.x, y, bounds.width, h);
     }
 }

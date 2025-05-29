@@ -112,6 +112,7 @@ class CodeCompletionViewModel
     private StyledText textWidget;
     private SourceViewer sourceViewer;
     private AutoCloseable feedbackToken = Closeables.Empty;
+    private AutoCloseable rulerManagerFreezeToken = Closeables.Empty;
     private Job lastJob;
     private Job lastUpdateMethodJob;
     private Job commitJob;
@@ -254,6 +255,15 @@ class CodeCompletionViewModel
     private void hideHint()
     {
         dispatcher.dispatch(() -> {
+            try
+            {
+                rulerManagerFreezeToken.close();
+            }
+            catch (Exception e)
+            {
+                //
+            }
+
             hintPainter.reset();
             verticalRulerPainter.reset();
             rulerManager.reset(sourceViewer);
@@ -689,6 +699,16 @@ class CodeCompletionViewModel
                 hintPainter.setHintAt(validHint, nextToken.getValue(), hint.getAcceptedTokens());
                 verticalRulerPainter
                     .pin(textWidget, hintPainter.getDisplayedHintText());
+                try
+                {
+                    rulerManagerFreezeToken.close();
+                }
+                catch (Exception e)
+                {
+                    //
+                }
+
+                rulerManagerFreezeToken = rulerManager.freeze(sourceViewer);
                 redraw();
             });
         }
@@ -987,7 +1007,19 @@ class CodeCompletionViewModel
 
         if (clipboard.isPasting())
         {
-            askNew();
+            ICodeCompletionSession<CodeCompletionContext> session;
+            synchronized (lockObject)
+            {
+                session = lastSession;
+            }
+
+            if (session != null)
+            {
+                commit(session);
+            }
+
+            log.debug("Clipboard paste", () -> '[' + event.fText + ']'); //$NON-NLS-1$
+            dispatcher.dispatchAsync(() -> askNew());
         }
     }
 
