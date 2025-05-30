@@ -13,17 +13,20 @@ public class GlobalContext
     public transient String configurationName;
 
     // hash
-    public String form;
+    @SerializedName("form")
+    public String formHash;
 
     public transient String formPath;
 
     // hash
-    public String meta;
+    @SerializedName("meta")
+    public String metaHash;
 
     public transient String metaPath;
 
     // hash
-    public String module;
+    @SerializedName("module")
+    public String moduleHash;
 
     public transient String modulePath;
 

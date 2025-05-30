@@ -63,7 +63,7 @@ class GlobalContextManager implements IGlobalContextManager
             try
             {
                 globalContextSync
-                    .syncUnknown(aiCtx.getProjectId(), false, completion.unknownValues, completion.unknownKeys, 5,
+                    .syncUnknown(aiCtx, false, completion.unknownValues, completion.unknownKeys, 5,
                         jobCtx.CancellationTokenSource)
                     .join();
             }

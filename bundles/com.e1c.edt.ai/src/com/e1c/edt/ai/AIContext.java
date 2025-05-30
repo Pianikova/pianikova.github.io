@@ -67,9 +67,9 @@ public class AIContext
 
     // Global
     @SuppressWarnings("nls")
-    public AIContext(ProjectId projectId, String path)
+    public AIContext(ProjectId projectId, String path, IDocument document)
     {
-        this(projectId, 0, "", 0, path, "", 0, "", "", 0, 0, null, () -> false);
+        this(projectId, 0, "", 0, path, "", 0, "", "", 0, 0, document, () -> false);
     }
 
     public ProjectId getProjectId()

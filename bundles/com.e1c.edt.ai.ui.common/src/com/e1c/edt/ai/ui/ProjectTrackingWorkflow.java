@@ -3,14 +3,12 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.ByteArrayInputStream;
-import java.nio.CharBuffer;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -50,7 +48,6 @@ class ProjectTrackingWorkflow
     private final IFileScaner fileScaner;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
-    private final CharBuffer buffer = CharBuffer.allocate(1024);
     private IProject project;
     private ProjectId projectId;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
@@ -181,7 +178,7 @@ class ProjectTrackingWorkflow
         {
             var path = file.getFullPath().makeRelative().toPortableString();
             filesToHash.computeIfAbsent(path,
-                key -> new ProjectFile(new AIContext(projectId, key), key, file, now));
+                key -> new ProjectFile(new AIContext(projectId, key, null), key, file, now));
         }
 
         var newFilesToHashCount = 0;
@@ -264,16 +261,10 @@ class ProjectTrackingWorkflow
                     {
                         continue;
                     }
-
-                    try (var inputStream = new ByteArrayInputStream(document.get().getBytes(StandardCharsets.UTF_8));)
-                    {
-                        newHash =
-                            hashTools.format(hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer), true);
-                        hashed++;
-                    }
                 }
                 else
                 {
+                    document = null;
                     if (!file.file.isAccessible())
                     {
                         continue;
@@ -284,11 +275,15 @@ class ProjectTrackingWorkflow
                     {
                         continue;
                     }
-
-                    newHash = hashTools.format(hashTools.compute(file.file, buffer), true);
-                    hashed++;
                 }
 
+                newHash = hashTools.hashOf(document, file.file).map(hash -> hashTools.format(hash, true)).orElse(null);
+                if (newHash == null)
+                {
+                    continue;
+                }
+
+                hashed++;
                 file.update(now, newHash, newModificationStamp);
                 if (newHash.equals(prevHash))
                 {
@@ -359,6 +354,7 @@ class ProjectTrackingWorkflow
         var filesToProcess =
             filesToSync.stream().sorted(ProjectFile.COMPARATOR).limit(maxFiles).collect(Collectors.toList());
 
+        var features = new ArrayList<CompletableFuture<Boolean>>();
         var filesUpdates = new ArrayList<GlobalContextUpdate>();
         for (var file : filesToProcess)
         {
@@ -366,13 +362,25 @@ class ProjectTrackingWorkflow
             update.field = Fields.LOCAL_FUNCTIONS;
             update.path = file.path;
             update.hash = file.getHash();
-            filesUpdates.add(update);
             filesToSync.remove(file);
+            if (file.aiCtx.getDocument() != null)
+            {
+                features.add(
+                    globalContextSync.syncUpdates(file.aiCtx, initialStateSent, filesUpdates, 5,
+                        statisticsProvider.get(), cancellationToken));
+
+                continue;
+            }
+
+            filesUpdates.add(update);
         }
 
-        globalContextSync
-            .syncUpdates(projectId, initialStateSent, filesUpdates, 5, statisticsProvider.get(), cancellationToken)
-            .join();
+        features.add(
+            globalContextSync.syncUpdates(new AIContext(projectId, "", null), initialStateSent, filesUpdates, 5, //$NON-NLS-1$
+                statisticsProvider.get(), cancellationToken));
+
+        CompletableFuture.allOf(features.toArray(new CompletableFuture[features.size()])).join();
+
         initialStateSent = true;
         if (!filesToSync.isEmpty())
         {

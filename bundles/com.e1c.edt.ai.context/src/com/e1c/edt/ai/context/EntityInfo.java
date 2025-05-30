@@ -3,10 +3,7 @@
  */
 package com.e1c.edt.ai.context;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.CharBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -254,20 +251,13 @@ class EntityInfo
                     return false;
                 }
 
+                var file = getFile(moduleInfo, moduleInfo.getModule()).orElse(null);
+                globalContext.moduleHash =
+                    hashTools.hashOf(document, file).map(hash -> hashTools.format(hash, true)).orElse(null);
+
                 var project = v8ProjectManager.getProject(module);
                 if (project != null)
                 {
-                    var code = moduleInfo.getModule().toString();
-                    try (var inputStream = new ByteArrayInputStream(code.getBytes(StandardCharsets.UTF_8));)
-                    {
-                        globalContext.module =
-                            hashTools.format(hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer), true);
-                    }
-                    catch (IOException error)
-                    {
-                        log.logError(error);
-                    }
-
                     localContext.scriptLanguage = project.getScriptVariant().getName();
                     if (actionFilter.test(new FillAction(DataType.DATA, Fields.CONFIGURATION_NAME, ""))) //$NON-NLS-1$
                     {
@@ -316,7 +306,7 @@ class EntityInfo
                     return true;
                 }
 
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
                 {
                     attributes.add(attribute);
                 }
@@ -333,7 +323,7 @@ class EntityInfo
                     return true;
                 }
 
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
                 {
                     tabularSections.add(tabularSection);
                 }
@@ -349,7 +339,7 @@ class EntityInfo
                     return true;
                 }
 
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
                 {
                     registerResources.add(resource);
                 }
@@ -365,7 +355,7 @@ class EntityInfo
                     return true;
                 }
 
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
                 {
                     registerDimensions.add(dimension);
                 }
@@ -382,7 +372,7 @@ class EntityInfo
                     return true;
                 }
 
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.meta)))
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
                 {
                     registerRecords.add(registerRecord);
                 }
@@ -411,9 +401,9 @@ class EntityInfo
                             log.logError(error);
                             return null;
                         }
-                    }).ifPresent(hash -> globalContext.form = hashTools.format(hash, true));
+                    }).ifPresent(hash -> globalContext.formHash = hashTools.format(hash, true));
 
-                    if (actionFilter.test(new FillAction(DataType.DATA, Fields.FORM, globalContext.form)))
+                    if (actionFilter.test(new FillAction(DataType.DATA, Fields.FORM, globalContext.formHash)))
                     {
                         entityFactory.createFormEntity(form, cancellationToken)
                             .ifPresent(enity -> globalContext.formEntity = enity);
@@ -534,14 +524,14 @@ class EntityInfo
 
             private boolean caluclateMetadataHash(ModuleInfo moduleInfo, EObject metadata)
             {
-                if (globalContext.meta == null)
+                if (globalContext.metaHash == null)
                 {
                     if (!actionFilter.test(new FillAction(DataType.HASH, Fields.META, null)))
                     {
                         return true;
                     }
 
-                    globalContext.meta =
+                    globalContext.metaHash =
                         getFile(moduleInfo, metadata).map(file -> {
                             globalContext.metaPath = file.getFullPath().makeRelative().toPortableString();
                             try

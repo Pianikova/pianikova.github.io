@@ -21,7 +21,6 @@ import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -58,7 +57,7 @@ class GlobalContextSync implements IGlobalContextSync
         {
             var statistics = statisticsProvider.get();
             var updates = globalContext.getUpdates(aiContext, false, statistics, cancellationToken);
-            return syncUpdates(aiContext.getProjectId(), false, updates, maxDept, statistics, cancellationToken);
+            return syncUpdates(aiContext, false, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -68,7 +67,7 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Boolean> syncUpdates(ProjectId projectId, boolean isInitial,
+    public CompletableFuture<Boolean> syncUpdates(AIContext aiContext, boolean isInitial,
         List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics,
@@ -86,7 +85,7 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return globalContextService.update(projectId, updates, 200, statistics, cancellationToken)
+            return globalContextService.update(aiContext.getProjectId(), updates, 200, statistics, cancellationToken)
                 .thenCompose(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
@@ -99,7 +98,7 @@ class GlobalContextSync implements IGlobalContextSync
                         return CompletableFuture.completedFuture(true);
                     }
 
-                    return syncUnknown(projectId, isInitial, result.unknownValues, result.unknownKeys, maxDept,
+                    return syncUnknown(aiContext, isInitial, result.unknownValues, result.unknownKeys, maxDept,
                         cancellationToken);
                 });
         }
@@ -111,7 +110,7 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Boolean> syncUnknown(ProjectId projectId, boolean isInitial,
+    public CompletableFuture<Boolean> syncUnknown(AIContext aiContext, boolean isInitial,
         List<EntityValue> unknownValues,
         List<EntityKey> unknownKeys, int maxDept,
         ICancellationToken cancellationToken)
@@ -193,8 +192,9 @@ class GlobalContextSync implements IGlobalContextSync
                 var updates = new ArrayList<GlobalContextUpdate>();
                 for (var fileUpdate : fileUpdates.values())
                 {
-                    var newUpdates = globalContext.getUpdates(projectId,
-                        fileUpdate.filePath, fileUpdate.fileHash, fileUpdate.hashes, fileUpdate.fields, statistics,
+                    var newUpdates = globalContext.getUpdates(
+                        new AIContext(aiContext.getProjectId(), fileUpdate.filePath, aiContext.getDocument()),
+                        fileUpdate.fileHash, fileUpdate.hashes, fileUpdate.fields, statistics,
                         cancellationToken);
 
                     if (newUpdates.isEmpty())
@@ -222,12 +222,14 @@ class GlobalContextSync implements IGlobalContextSync
                             return CompletableFuture.completedFuture(true);
                         }
 
-                        return syncUpdates(projectId, currentIsInitial, latestUpdates, 5, statistics,
+                        return syncUpdates(aiContext, currentIsInitial, latestUpdates, 5, statistics,
                             cancellationToken);
                     });
 
                     optionalResult =
-                        globalContextService.update(projectId, updates, 10, statistics, cancellationToken).get();
+                        globalContextService
+                            .update(aiContext.getProjectId(), updates, 10, statistics, cancellationToken)
+                            .get();
                 }
 
                 if (cancellationToken.isCanceled())

@@ -25,6 +25,7 @@ import com.google.inject.Provider;
 @RunWith(Parameterized.class)
 public class HashToolsTest
 {
+    private static final ILog Log = mock(ILog.class);
     @SuppressWarnings("unchecked")
     private static final Provider<MessageDigest> MessageDigestProvider = mock(Provider.class);
 
@@ -45,7 +46,7 @@ public class HashToolsTest
         var allBytes = new ArrayList<Byte>();
         var stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
         var buffer = CharBuffer.allocate(size);
-        var hashTools = new HashTools(MessageDigestProvider);
+        var hashTools = new HashTools(Log, MessageDigestProvider);
 
         // When
         try

@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 import com.e1c.edt.ai.assistent.model.GlobalContext;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.LocalContext;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -135,32 +134,32 @@ class Contexts
             result.add(request);
         }
 
-        if (globalContext.form != null || globalContext.formEntity != null)
+        if (globalContext.formPath != null && globalContext.formHash != null)
         {
             request = new GlobalContextUpdate();
-            request.path = globalContext.modulePath;
+            request.path = globalContext.formPath;
             request.field = Fields.FORM;
-            request.hash = globalContext.form;
+            request.hash = globalContext.formHash;
             request.value = globalContext.formEntity;
             result.add(request);
         }
 
-        if (globalContext.meta != null || globalContext.metaEntity != null)
+        if (globalContext.metaPath != null && globalContext.metaHash != null)
         {
             request = new GlobalContextUpdate();
-            request.path = globalContext.modulePath;
+            request.path = globalContext.metaPath;
             request.field = Fields.META;
-            request.hash = globalContext.meta;
+            request.hash = globalContext.metaHash;
             request.value = globalContext.metaEntity;
             result.add(request);
         }
 
-        if (globalContext.localFunctions != null && !globalContext.localFunctions.isEmpty())
+        if (globalContext.modulePath != null && globalContext.moduleHash != null)
         {
             request = new GlobalContextUpdate();
             request.path = globalContext.modulePath;
             request.field = Fields.LOCAL_FUNCTIONS;
-            request.hash = globalContext.module;
+            request.hash = globalContext.moduleHash;
             request.value = globalContext.localFunctions;
             result.add(request);
         }
@@ -182,7 +181,7 @@ class Contexts
     }
 
     @Override
-    public List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, String fileHash,
+    public List<GlobalContextUpdate> getUpdates(AIContext aiContext, String fileHash,
         HashSet<String> hashes,
         HashSet<String> fields, IStatistics statistics, ICancellationToken cancellationToken)
     {
@@ -198,11 +197,11 @@ class Contexts
 
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
-        globalContext.module = fileHash;
-        globalContext.modulePath = filePath;
+        globalContext.moduleHash = fileHash;
+        globalContext.modulePath = aiContext.getPath();
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_HASHING_DURATUION))
         {
-            contextEntities.fill(new AIContext(projectId, filePath), localContext, globalContext, action -> {
+            contextEntities.fill(aiContext, localContext, globalContext, action -> {
                 switch (action.getDataType())
                 {
                 case HASH:
