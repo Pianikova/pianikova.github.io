@@ -125,5 +125,7 @@ class VerticalRulerPainter
 
         gc.fillRectangle(bounds.x, y, bounds.width, h);
         // gc.drawRectangle(bounds.x, y, bounds.width, h);
+        gc.setAlpha(200);
+        gc.fillRectangle(bounds.x, bounds.y, bounds.width, bounds.height);
     }
 }
