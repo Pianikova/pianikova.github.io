@@ -95,12 +95,7 @@ class VerticalRulerManager
     @Override
     public void reset(SourceViewer viewer)
     {
-        if (viewer == null)
-        {
-            return;
-        }
-
-        dispatcher.dispatch(() -> viewer.getTextWidget().redraw());
+        dispatcher.dispatch(() -> Optional.ofNullable(viewer).map(v -> v.getTextWidget()).ifPresent(w -> w.redraw()));
     }
 
     private AnnotationModelListener createModelListener(CompositeRuler ruler)
