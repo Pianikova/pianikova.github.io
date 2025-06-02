@@ -1,0 +1,127 @@
+/**
+ * Copyright (C) 2025, 1C
+ */
+package com.e1c.edt.ai.context;
+
+import java.util.Optional;
+
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.xtext.EcoreUtil2;
+import org.eclipse.xtext.util.CancelIndicator;
+
+import com._1c.g5.v8.bm.core.IBmExternalUriResolver;
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.dt.bsl.model.Module;
+import com._1c.g5.v8.dt.bsl.resource.BslResource;
+import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
+import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
+import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.core.platform.IResourceLookup;
+import com.e1c.edt.ai.ICancellationToken;
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
+public class BmPovider implements IBmPovider
+{
+    private final IQualifiedNameFilePathConverter qualifiedNameFilePathConverter;
+    private final IResourceLookup resourceLookup;
+    private final IBmModelManager modelManager;
+    private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
+
+    @Inject
+    public BmPovider(IQualifiedNameFilePathConverter qualifiedNameFilePathConverter, IResourceLookup resourceLookup,
+        IBmModelManager modelManager, IProjectFileSystemSupportProvider projectFileSystemSupportProvider)
+    {
+        this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
+        Preconditions.checkNotNull(qualifiedNameFilePathConverter);
+        Preconditions.checkNotNull(resourceLookup);
+        Preconditions.checkNotNull(modelManager);
+        this.qualifiedNameFilePathConverter = qualifiedNameFilePathConverter;
+        this.resourceLookup = resourceLookup;
+        this.modelManager = modelManager;
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public Optional<BmRoot> getRoot(String filePath, ICancellationToken cancellationToken)
+    {
+        var uri = getURI(filePath);
+        var project = resourceLookup.getProject(uri);
+        if (project == null)
+        {
+            return Optional.empty();
+        }
+
+        var model = modelManager.getModel(project);
+        if (model == null)
+        {
+            return Optional.empty();
+        }
+
+        var dtProject = modelManager.getDtProject(model);
+        if (dtProject == null)
+        {
+            return Optional.empty();
+        }
+
+        var engine = model.getEngine();
+        if (engine == null)
+        {
+            return Optional.empty();
+        }
+
+        IBmObject bmObject = null;
+        for (IBmExternalUriResolver provider : engine.getExternalUriResolvers())
+        {
+            if(cancellationToken.isCanceled())
+            {
+                break;
+            }
+
+            var obj = provider.getObject(uri);
+            if (obj != null && obj instanceof IBmObject)
+            {
+                bmObject = (IBmObject)obj;
+                break;
+            }
+        }
+
+        if (bmObject == null)
+        {
+            return Optional.empty();
+        }
+
+        return Optional.of(
+            new BmRoot(filePath, uri, project, model, dtProject, engine, bmObject, projectFileSystemSupportProvider));
+    }
+
+    private URI getURI(String filePath)
+    {
+        Preconditions.checkNotNull(filePath);
+        return URI.createPlatformResourceURI(filePath, true).appendFragment("/0"); //$NON-NLS-1$
+    }
+
+    private Module analyzeModule(Module module, ICancellationToken cancellationToken)
+    {
+        /*if (!uiSettings.sendExtendedContext())
+        {
+            return module;
+        }*/
+
+        var moduleResource = module.eResource();
+        if (moduleResource instanceof BslResource)
+        {
+            ((BslResource)moduleResource).setDeepAnalysis(true);
+            EcoreUtil2.resolveLazyCrossReferences(moduleResource, new CancelIndicator()
+            {
+                @Override
+                public boolean isCanceled()
+                {
+                    return cancellationToken.isCanceled();
+                }
+            });
+        }
+
+        return module;
+    }
+}

@@ -18,6 +18,7 @@ import com.google.inject.Inject;
 class FileScaner
     implements IFileScaner
 {
+    @SuppressWarnings("nls")
     private final ILog log;
 
     @Inject
@@ -27,6 +28,7 @@ class FileScaner
         this.log = log;
     }
 
+    @SuppressWarnings("nls")
     @Override
     public List<IFile> scan(IProject project)
     {
@@ -37,9 +39,28 @@ class FileScaner
                 if (resource instanceof IFile)
                 {
                     var file = (IFile)resource;
-                    if ("bsl".equalsIgnoreCase(file.getFileExtension())) //$NON-NLS-1$)
+                    var pathSegments = file.getProjectRelativePath().segments();
+                    if (pathSegments.length <= 2)
+                    {
+                        return false;
+                    }
+
+                    var ext = file.getFileExtension();
+                    if (ext == null)
+                    {
+                        return false;
+                    }
+
+                    if ("mdo".equalsIgnoreCase(ext))
                     {
                         files.add(file);
+                        return false;
+                    }
+
+                    if ("CommonModules".equalsIgnoreCase(pathSegments[1]) && "bsl".equalsIgnoreCase(ext))
+                    {
+                        files.add(file);
+                        return false;
                     }
 
                     return false;
@@ -56,7 +77,7 @@ class FileScaner
 
                     if (pathSegments.length == 2)
                     {
-                        return "CommonModules".equalsIgnoreCase(pathSegments[1]); //$NON-NLS-1$
+                        return !"Configuration".equalsIgnoreCase(pathSegments[1]); //$NON-NLS-1$
                     }
 
                     return pathSegments.length > 2;

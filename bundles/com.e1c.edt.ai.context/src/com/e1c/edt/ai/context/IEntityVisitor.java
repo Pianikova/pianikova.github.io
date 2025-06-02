@@ -10,6 +10,7 @@ import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
@@ -20,29 +21,29 @@ import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
 interface IEntityVisitor
 {
-    boolean visitModule(ModuleInfo moduleInfo);
+    boolean visitModule(BmRoot root, Module module);
 
-    boolean visitNode(ModuleInfo moduleInfo, EObject eObject, ICompositeNode node);
+    boolean visitNode(BmRoot root, EObject eObject, ICompositeNode node);
 
-    boolean visitOwner(ModuleInfo moduleInfo, IBmObject owner);
+    boolean visitBmObject(BmRoot root, IBmObject owner);
 
-    boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute);
+    boolean visitOwnerAttribute(BmRoot root, IBmObject owner, BasicFeature attribute);
 
-    boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner, DbObjectTabularSection tabularSection);
+    boolean visitOwnerTabularSection(BmRoot root, IBmObject owner, DbObjectTabularSection tabularSection);
 
-    boolean visitOwnerResource(ModuleInfo moduleInfo, IBmObject owner, RegisterResource resource);
+    boolean visitOwnerResource(BmRoot root, IBmObject owner, RegisterResource resource);
 
-    boolean visitOwnerDimension(ModuleInfo moduleInfo, IBmObject owner, RegisterDimension dimension);
+    boolean visitOwnerDimension(BmRoot root, IBmObject owner, RegisterDimension dimension);
 
-    boolean visitOwnerRegisterRecord(ModuleInfo moduleInfo, IBmObject owner, BasicRegister registerRecord);
+    boolean visitOwnerRegisterRecord(BmRoot root, IBmObject owner, BasicRegister registerRecord);
 
-    boolean visitForm(ModuleInfo moduleInfo, Form form);
+    boolean visitForm(BmRoot root, Form form);
 
-    boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation, ICompositeNode node);
+    boolean visitInvocation(BmRoot root, String nodeId, Invocation invocation, ICompositeNode node);
 
-    boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess, ICompositeNode node);
+    boolean visitFeatureAccess(BmRoot root, String nodeId, FeatureAccess featureAccess, ICompositeNode node);
 
-    boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node);
+    boolean visitVariable(BmRoot root, String nodeId, Variable variable, ICompositeNode node);
 
-    boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node);
+    boolean visitMethod(BmRoot root, String nodeId, Method method, ICompositeNode node);
 }

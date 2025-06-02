@@ -12,7 +12,6 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import org.eclipse.core.resources.IFile;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
@@ -20,8 +19,8 @@ import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
-import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.Form;
@@ -71,7 +70,6 @@ class EntityInfo
     private final IProgramingLanguage programingLanguage;
     private final Provider<MessageDigest> messageDigestProvider;
     private final IHashTools hashTools;
-    private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
     private final ICodePartsProvider codePartsProvider;
     private final IModuleProvider activeEditorResourceSetProvider;
     private final IModuleProvider baseResourceSetProvider;
@@ -86,8 +84,7 @@ class EntityInfo
     @Inject
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
         IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager,
-        IProgramingLanguage programingLanguage, Provider<MessageDigest> messageDigestProvider,
-        IHashTools hashTools, IProjectFileSystemSupportProvider projectFileSystemSupportProvider,
+        IProgramingLanguage programingLanguage, Provider<MessageDigest> messageDigestProvider, IHashTools hashTools,
         ICodePartsProvider codePartsProvider, IModuleProvider activeEditorResourceSetProvider,
         @Named("BaseModuleProvider") IModuleProvider baseResourceSetProvider)
     {
@@ -101,7 +98,6 @@ class EntityInfo
         Preconditions.checkNotNull(programingLanguage);
         Preconditions.checkNotNull(messageDigestProvider);
         Preconditions.checkNotNull(hashTools);
-        Preconditions.checkNotNull(projectFileSystemSupportProvider);
         Preconditions.checkNotNull(codePartsProvider);
         Preconditions.checkNotNull(activeEditorResourceSetProvider);
         Preconditions.checkNotNull(baseResourceSetProvider);
@@ -115,7 +111,6 @@ class EntityInfo
         this.programingLanguage = programingLanguage;
         this.messageDigestProvider = messageDigestProvider;
         this.hashTools = hashTools;
-        this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
         this.codePartsProvider = codePartsProvider;
         this.activeEditorResourceSetProvider = activeEditorResourceSetProvider;
         this.baseResourceSetProvider = baseResourceSetProvider;
@@ -144,7 +139,7 @@ class EntityInfo
             new EntityVisitor()
         {
             @Override
-            public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
+                public boolean visitVariable(BmRoot root, String nodeId, Variable variable, ICompositeNode node)
             {
                 if (request.ref == null || !request.ref.equals(nodeId))
                 {
@@ -157,7 +152,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
+                public boolean visitFeatureAccess(BmRoot root, String nodeId, FeatureAccess featureAccess,
                 ICompositeNode node)
             {
                 if (request.ref == null || !request.ref.equals(nodeId))
@@ -171,7 +166,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation,
+                public boolean visitInvocation(BmRoot root, String nodeId, Invocation invocation,
                 ICompositeNode node)
             {
                 if (request.ref == null || !request.ref.equals(nodeId))
@@ -235,20 +230,14 @@ class EntityInfo
         entitiesWalker.walk(document, filePath, start, finish, resourceSetProvider, new EntityVisitor()
         {
             @Override
-            public boolean visitModule(ModuleInfo moduleInfo)
+            public boolean visitModule(BmRoot root, Module module)
             {
                 if (!actionFilter.test(new FillAction(DataType.HASH, Fields.CONFIGURATION_NAME, null)))
                 {
                     return false;
                 }
 
-                var module = moduleInfo.getModule();
-                if (module == null)
-                {
-                    return false;
-                }
-
-                var file = getFile(moduleInfo, moduleInfo.getModule()).orElse(null);
+                var file = root.getFile(module).orElse(null);
                 globalContext.moduleHash =
                     hashTools.hashOf(document, file).map(hash -> hashTools.format(hash, true)).orElse(null);
 
@@ -276,7 +265,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitNode(ModuleInfo moduleInfo, EObject eObject, ICompositeNode node)
+            public boolean visitNode(BmRoot root, EObject eObject, ICompositeNode node)
             {
                 var nodeStart = node.getTotalOffset();
                 var nodeFinish = node.getTotalEndOffset();
@@ -289,16 +278,16 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwner(ModuleInfo moduleInfo, IBmObject owner)
+            public boolean visitBmObject(BmRoot root, IBmObject owner)
             {
                 owners.add(owner);
                 return false;
             }
 
             @Override
-            public boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute)
+            public boolean visitOwnerAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
             {
-                if (caluclateMetadataHash(moduleInfo, attribute))
+                if (caluclateMetadataHash(root, attribute))
                 {
                     return true;
                 }
@@ -312,10 +301,10 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner,
+            public boolean visitOwnerTabularSection(BmRoot root, IBmObject owner,
                 DbObjectTabularSection tabularSection)
             {
-                if (caluclateMetadataHash(moduleInfo, tabularSection))
+                if (caluclateMetadataHash(root, tabularSection))
                 {
                     return true;
                 }
@@ -329,9 +318,9 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerResource(ModuleInfo moduleInfo, IBmObject owner, RegisterResource resource)
+            public boolean visitOwnerResource(BmRoot root, IBmObject owner, RegisterResource resource)
             {
-                if (caluclateMetadataHash(moduleInfo, resource))
+                if (caluclateMetadataHash(root, resource))
                 {
                     return true;
                 }
@@ -345,9 +334,9 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerDimension(ModuleInfo moduleInfo, IBmObject owner, RegisterDimension dimension)
+            public boolean visitOwnerDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
             {
-                if (caluclateMetadataHash(moduleInfo, dimension))
+                if (caluclateMetadataHash(root, dimension))
                 {
                     return true;
                 }
@@ -361,10 +350,10 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerRegisterRecord(ModuleInfo moduleInfo, IBmObject owner,
+            public boolean visitOwnerRegisterRecord(BmRoot root, IBmObject owner,
                 BasicRegister registerRecord)
             {
-                if (caluclateMetadataHash(moduleInfo, registerRecord))
+                if (caluclateMetadataHash(root, registerRecord))
                 {
                     return true;
                 }
@@ -378,7 +367,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitForm(ModuleInfo moduleInfo, Form form)
+            public boolean visitForm(BmRoot root, Form form)
             {
                 try (var measurement = statistics.measureDuration(StatisticsType.FORM_DURATUION))
                 {
@@ -387,7 +376,7 @@ class EntityInfo
                         return false;
                     }
 
-                    getFile(moduleInfo, form).map(file -> {
+                    root.getFile(form).map(file -> {
                         globalContext.formPath = file.getFullPath().makeRelative().toPortableString();
                         try
                         {
@@ -415,7 +404,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
+            public boolean visitVariable(BmRoot root, String nodeId, Variable variable, ICompositeNode node)
             {
                 if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_OBJECTS, null)))
                 {
@@ -433,7 +422,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
+            public boolean visitFeatureAccess(BmRoot root, String nodeId, FeatureAccess featureAccess,
                 ICompositeNode node)
             {
                 if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_OBJECTS, null)))
@@ -447,7 +436,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation,
+            public boolean visitInvocation(BmRoot root, String nodeId, Invocation invocation,
                 ICompositeNode node)
             {
                 if (!actionFilter.test(new FillAction(DataType.DATA, Fields.RELATED_FUNCTIONS, null)))
@@ -461,7 +450,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
+            public boolean visitMethod(BmRoot root, String nodeId, Method method, ICompositeNode node)
             {
                 if (document == null && !method.isExport())
                 {
@@ -508,7 +497,7 @@ class EntityInfo
                 return false;
             }
 
-            private boolean caluclateMetadataHash(ModuleInfo moduleInfo, EObject metadata)
+            private boolean caluclateMetadataHash(BmRoot root, EObject metadata)
             {
                 if (globalContext.metaHash == null)
                 {
@@ -518,7 +507,7 @@ class EntityInfo
                     }
 
                     globalContext.metaHash =
-                        getFile(moduleInfo, metadata).map(file -> {
+                        root.getFile(metadata).map(file -> {
                             globalContext.metaPath = file.getFullPath().makeRelative().toPortableString();
                             try
                             {
@@ -571,24 +560,6 @@ class EntityInfo
         return stopwatch.elapsed();
     }
 
-    private Optional<IFile> getFile(ModuleInfo moduleInfo, EObject obj)
-    {
-        var module = moduleInfo.getModule();
-        if (module == null)
-        {
-            return Optional.empty();
-        }
-
-        var project = v8ProjectManager.getProject(module);
-        if (project == null)
-        {
-            return Optional.empty();
-        }
-
-        return Optional.ofNullable(
-            projectFileSystemSupportProvider.getProjectFileSystemSupport(project.getDtProject()).getFile(obj));
-    }
-
     @Override
     public void fill(AIContext aiContext, ChatContext context, IStatistics statistics,
         ICancellationToken cancellationToken)
@@ -608,9 +579,8 @@ class EntityInfo
             new EntityVisitor()
         {
             @Override
-            public boolean visitModule(ModuleInfo moduleInfo)
+                public boolean visitModule(BmRoot root, Module module)
             {
-                var module = moduleInfo.getModule();
                 var project = v8ProjectManager.getProject(module);
                 if (project != null)
                 {
@@ -621,43 +591,5 @@ class EntityInfo
             }
         }, statistics, cancellationToken);
         return null;
-    }
-
-    private class Action
-    {
-        private final int priority;
-        private final IStatistics statistics;
-        private final StatisticsType statisticsType;
-        private final Runnable runnable;
-
-        public Action(ICompositeNode node, int offset, IStatistics statistics, StatisticsType statisticsType,
-            Runnable runnable)
-        {
-            this.statistics = statistics;
-            this.statisticsType = statisticsType;
-            this.runnable = runnable;
-            var start = node.getTotalOffset();
-            var finish = node.getTotalEndOffset();
-            var pr = (offset - start) * (finish - offset);
-            if (pr < 0)
-            {
-                pr *= -1;
-            }
-
-            priority = pr;
-        }
-
-        public int getPriority()
-        {
-            return priority;
-        }
-
-        public void apply() throws Exception
-        {
-            try (var measurement = statistics.measureDuration(statisticsType))
-            {
-                runnable.run();
-            }
-        }
     }
 }

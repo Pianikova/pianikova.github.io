@@ -17,6 +17,7 @@ import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
@@ -96,14 +97,8 @@ public class RelatedEntities implements IRelatedEntities
                 new EntityVisitor()
         {
             @Override
-            public boolean visitModule(ModuleInfo moduleInfo)
+                    public boolean visitModule(BmRoot root, Module module)
             {
-                var module = moduleInfo.getModule();
-                if (module == null)
-                {
-                    return false;
-                }
-
                 var project = v8ProjectManager.getProject(module);
                 if (project == null)
                 {
@@ -142,14 +137,14 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-            public boolean visitOwnerAttribute(ModuleInfo moduleInfo, IBmObject owner, BasicFeature attribute)
+                    public boolean visitOwnerAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
             {
                 attributes.add(attribute);
                 return false;
             }
 
             @Override
-            public boolean visitOwnerTabularSection(ModuleInfo moduleInfo, IBmObject owner,
+                    public boolean visitOwnerTabularSection(BmRoot root, IBmObject owner,
                 DbObjectTabularSection tabularSection)
             {
                 tabularSections.add(tabularSection);
@@ -157,21 +152,21 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-            public boolean visitOwnerResource(ModuleInfo moduleInfo, IBmObject owner, RegisterResource resource)
+                    public boolean visitOwnerResource(BmRoot root, IBmObject owner, RegisterResource resource)
             {
                 registerResources.add(resource);
                 return false;
             }
 
             @Override
-            public boolean visitOwnerDimension(ModuleInfo moduleInfo, IBmObject owner, RegisterDimension dimension)
+                    public boolean visitOwnerDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
             {
                 registerDimensions.add(dimension);
                 return false;
             }
 
             @Override
-            public boolean visitOwnerRegisterRecord(ModuleInfo moduleInfo, IBmObject owner,
+                    public boolean visitOwnerRegisterRecord(BmRoot root, IBmObject owner,
                 BasicRegister registerRecord)
             {
                 registerRecords.add(registerRecord);
@@ -179,14 +174,14 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-            public boolean visitForm(ModuleInfo moduleInfo, Form form)
+                    public boolean visitForm(BmRoot root, Form form)
             {
                 entityFactory.createFormEntity(form, cancellationToken).ifPresent(i -> response.form = i);
                 return false;
             }
 
             @Override
-            public boolean visitVariable(ModuleInfo moduleInfo, String nodeId, Variable variable, ICompositeNode node)
+                    public boolean visitVariable(BmRoot root, String nodeId, Variable variable, ICompositeNode node)
             {
                 var entity = createEntity(request.path, nodeId, variable, node, cancellationToken);
                 if (!entities.add(entity))
@@ -200,7 +195,7 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-            public boolean visitFeatureAccess(ModuleInfo moduleInfo, String nodeId, FeatureAccess featureAccess,
+                    public boolean visitFeatureAccess(BmRoot root, String nodeId, FeatureAccess featureAccess,
                 ICompositeNode node)
             {
                 var entity = createEntity(request.path, nodeId, featureAccess, node, cancellationToken);
@@ -234,7 +229,7 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-            public boolean visitInvocation(ModuleInfo moduleInfo, String nodeId, Invocation invocation,
+                    public boolean visitInvocation(BmRoot root, String nodeId, Invocation invocation,
                 ICompositeNode node)
             {
                 var entity = createEntity(request.path, nodeId, invocation, node, cancellationToken);
@@ -257,7 +252,7 @@ public class RelatedEntities implements IRelatedEntities
         entitiesWalker.walk(null, request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()
         {
             @Override
-            public boolean visitMethod(ModuleInfo moduleInfo, String nodeId, Method method, ICompositeNode node)
+            public boolean visitMethod(BmRoot root, String nodeId, Method method, ICompositeNode node)
             {
                 entityFactory.createMethodEntity(method, node, true, cancellationToken)
                     .ifPresent(i -> response.localFunctions.add(i));

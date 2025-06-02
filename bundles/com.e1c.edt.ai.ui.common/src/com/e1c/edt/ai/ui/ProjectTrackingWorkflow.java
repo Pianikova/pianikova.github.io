@@ -222,7 +222,7 @@ class ProjectTrackingWorkflow
         }
 
         var fileToSyncCount = 0;
-        var delay = Duration.ofSeconds(3);
+        var delay = LongDelay;
         var now = clock.now();
         var hashingFiles =
             filesToHash.values()
@@ -261,6 +261,7 @@ class ProjectTrackingWorkflow
                     newModificationStamp = docExtension.getModificationStamp();
                     if (file.getModificationStamp() == newModificationStamp)
                     {
+                        file.update(now, prevHash, newModificationStamp);
                         continue;
                     }
                 }
@@ -275,18 +276,19 @@ class ProjectTrackingWorkflow
                     newModificationStamp = file.file.getModificationStamp();
                     if (file.getModificationStamp() == newModificationStamp)
                     {
+                        file.update(now, prevHash, newModificationStamp);
                         continue;
                     }
                 }
 
                 newHash = hashTools.hashOf(document, file.file).map(hash -> hashTools.format(hash, true)).orElse(null);
+                file.update(now, newHash, newModificationStamp);
                 if (newHash == null)
                 {
                     continue;
                 }
 
                 hashed++;
-                file.update(now, newHash, newModificationStamp);
                 if (newHash.equals(prevHash))
                 {
                     continue;
@@ -343,14 +345,10 @@ class ProjectTrackingWorkflow
             return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
         }
 
-        if (!hashingFiles.isEmpty())
-        {
-            return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
-        }
-
         return new Result(ProjectTrackingWorkflowState.INIT, LongDelay);
     }
 
+    @SuppressWarnings("nls")
     private Result sync(int maxFiles, IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
         var filesToProcess =
@@ -360,11 +358,30 @@ class ProjectTrackingWorkflow
         var filesUpdates = new ArrayList<GlobalContextUpdate>();
         for (var file : filesToProcess)
         {
+            filesToSync.remove(file);
             var update = new GlobalContextUpdate();
-            update.field = Fields.LOCAL_FUNCTIONS;
+            var ext = file.file.getFileExtension();
+            if (ext == null)
+            {
+                continue;
+            }
+
+            switch (file.file.getFileExtension())
+            {
+            case "bsl":
+                update.field = Fields.LOCAL_FUNCTIONS;
+                break;
+
+            case "mdo":
+                update.field = Fields.META;
+                break;
+
+            default:
+                continue;
+            }
+
             update.path = file.path;
             update.hash = file.getHash();
-            filesToSync.remove(file);
             if (file.aiCtx.getDocument() != null)
             {
                 var documentUpdates = new ArrayList<GlobalContextUpdate>();

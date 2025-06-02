@@ -3,17 +3,17 @@
  */
 package com.e1c.edt.ai.context;
 
+import java.util.Optional;
+
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.jface.text.IDocument;
 
 import com._1c.g5.v8.bm.core.IBmObject;
-import com._1c.g5.v8.bm.integration.IBmModel;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
+import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
-import com._1c.g5.v8.dt.core.platform.IBmModelManager;
-import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
@@ -47,22 +47,20 @@ class EntitiesWalker
     private final ILog log;
     private final IV8Model v8Model;
     private final IIdFactory idFactory;
-    private final IBmModelManager modelManager;
-    private final IResourceLookup resourceLookup;
+    private final IBmPovider bmPovider;
 
     @Inject
     public EntitiesWalker(ILog log, IV8Model v8Model, IIdFactory idFactory,
-        IBmModelManager modelManager, IResourceLookup resourceLookup)
+        IBmPovider bmPovider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
-        Preconditions.checkNotNull(resourceLookup);
+        Preconditions.checkNotNull(bmPovider);
         this.log = log;
         this.v8Model = v8Model;
         this.idFactory = idFactory;
-        this.modelManager = modelManager;
-        this.resourceLookup = resourceLookup;
+        this.bmPovider = bmPovider;
     }
 
     @Override
@@ -72,123 +70,539 @@ class EntitiesWalker
     {
         try
         {
-            ModuleInfo moduleInfo;
+            Optional<BmRoot> optionalRoot;
             try (var measurement = statistics.measureDuration(StatisticsType.LOAD_MODULE_DURATUION))
             {
-                var optionalModuleInfo = resourceSetProvider.getModule(document, path, cancellationToken);
-                if (optionalModuleInfo.isEmpty())
+                optionalRoot = bmPovider.getRoot(path, cancellationToken);
+                if (optionalRoot.isEmpty())
                 {
                     return false;
                 }
-
-                moduleInfo = optionalModuleInfo.get();
             }
 
-            visitor.visitModule(moduleInfo);
-            var module = moduleInfo.getModule();
-            var contentsIterator = module.eAllContents();
-            while (contentsIterator.hasNext())
-            {
-                var obj = contentsIterator.next();
-                var node = v8Model.getNode(obj);
-                if (node == null)
-                {
-                    continue;
-                }
-
-                visitor.visitNode(moduleInfo, obj, node);
-                if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
-                    || obj instanceof Method)
-                {
-                    var nodeStart = node.getTotalOffset();
-                    var nodeFinish = node.getTotalEndOffset();
-
-                    if (!((nodeStart >= start && nodeStart <= finish) || (nodeFinish >= start && nodeFinish <= finish))
-                        && !(obj instanceof Method))
-                    {
-                        continue;
-                    }
-
-                    var nodeId = idFactory.createNodeId(path, node);
-                    if (nodeId == null)
-                    {
-                        continue;
-                    }
-
-                    if (obj instanceof Method && visitor.visitMethod(moduleInfo, nodeId, (Method)obj, node))
-                    {
-                        traceVisit(obj, true);
-                        return true;
-                    }
-
-                    if (!cancellationToken.isCanceled())
-                    {
-                        if (obj instanceof Variable && visitor.visitVariable(moduleInfo, nodeId, (Variable)obj, node))
-                        {
-                            traceVisit(obj, true);
-                            return true;
-                        }
-
-                        if (obj instanceof Invocation
-                            && visitor.visitInvocation(moduleInfo, nodeId, (Invocation)obj, node))
-                        {
-                            traceVisit(obj, true);
-                            return true;
-                        }
-
-                        if (obj instanceof FeatureAccess
-                            && visitor.visitFeatureAccess(moduleInfo, nodeId, (FeatureAccess)obj, node))
-                        {
-                            traceVisit(obj, true);
-                            return true;
-                        }
-                    }
-                }
-
-                traceVisit(obj, false);
-            }
-
-            if (cancellationToken.isCanceled())
-            {
-                return true;
-            }
-
-            var owner = module.getOwner();
-            var project = resourceLookup.getProject(module);
-            IBmModel bmModel = null;
-            if (project != null)
-            {
-                bmModel = modelManager.getModel(project);
-            }
-
-            while (owner != null)
+            var root = optionalRoot.get();
+            EObject nextObject = null;
+            while (true)
             {
                 if (cancellationToken.isCanceled())
                 {
                     break;
                 }
 
-                if (owner instanceof Form)
+                if (nextObject == null)
                 {
-                    if (visitor.visitForm(moduleInfo, (Form)owner))
-                    {
-                        return true;
-                    }
-                }
-
-                if (owner instanceof IBmObject)
-                {
-                    visitOwner(moduleInfo, visitor, (IBmObject)owner);
-                }
-
-                var newOwner = owner.eContainer();
-                if (newOwner == null && bmModel != null)
-                {
-                    owner = v8Model.getBmObjectOwner(bmModel, owner);
+                    nextObject = root.getBmObject();
                 }
                 else
                 {
-                    owner = newOwner;
+                    var newOwner = nextObject.eContainer();
+                    if (newOwner == null)
+                    {
+                        nextObject = v8Model.getBmObjectOwner(root.getModel(), nextObject);
+                    }
+                    else
+                    {
+                        nextObject = newOwner;
+                    }
+
+                    if (nextObject == null)
+                    {
+                        break;
+                    }
+                }
+
+                if (nextObject instanceof Module)
+                {
+                    visitor.visitModule(root, (Module)nextObject);
+                    var contentsIterator = nextObject.eAllContents();
+                    while (contentsIterator.hasNext())
+                    {
+                        if (cancellationToken.isCanceled())
+                        {
+                            break;
+                        }
+
+                        var obj = contentsIterator.next();
+                        var node = v8Model.getNode(obj);
+                        if (node == null)
+                        {
+                            continue;
+                        }
+
+                        visitor.visitNode(root, obj, node);
+                        if (obj instanceof Variable || obj instanceof Invocation || obj instanceof FeatureAccess
+                            || obj instanceof Method)
+                        {
+                            var nodeStart = node.getTotalOffset();
+                            var nodeFinish = node.getTotalEndOffset();
+
+                            if (!((nodeStart >= start && nodeStart <= finish)
+                                || (nodeFinish >= start && nodeFinish <= finish)) && !(obj instanceof Method))
+                            {
+                                continue;
+                            }
+
+                            var nodeId = idFactory.createNodeId(path, node);
+                            if (nodeId == null)
+                            {
+                                continue;
+                            }
+
+                            if (obj instanceof Method && visitor.visitMethod(root, nodeId, (Method)obj, node))
+                            {
+                                traceVisitEObject(obj, true);
+                                return true;
+                            }
+
+                            if (!cancellationToken.isCanceled())
+                            {
+                                if (obj instanceof Variable && visitor.visitVariable(root, nodeId, (Variable)obj, node))
+                                {
+                                    traceVisitEObject(obj, true);
+                                    return true;
+                                }
+
+                                if (obj instanceof Invocation
+                                    && visitor.visitInvocation(root, nodeId, (Invocation)obj, node))
+                                {
+                                    traceVisitEObject(obj, true);
+                                    return true;
+                                }
+
+                                if (obj instanceof FeatureAccess
+                                    && visitor.visitFeatureAccess(root, nodeId, (FeatureAccess)obj, node))
+                                {
+                                    traceVisitEObject(obj, true);
+                                    return true;
+                                }
+                            }
+                        }
+
+                        traceVisitEObject(obj, false);
+                    }
+
+                    continue;
+                }
+
+                if (nextObject instanceof Form)
+                {
+                    if (visitor.visitForm(root, (Form)nextObject))
+                    {
+                        return true;
+                    }
+
+                    continue;
+                }
+
+                if (!(nextObject instanceof IBmObject))
+                {
+                    continue;
+                }
+
+                var bmObject = (IBmObject)nextObject;
+                if (visitor.visitBmObject(root, bmObject))
+                {
+                    return true;
+                }
+
+                if (bmObject instanceof AccountingRegister)
+                {
+                    var element = (AccountingRegister)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var resource : element.getResources())
+                    {
+                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var dimension : element.getDimensions())
+                    {
+                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof AccumulationRegister)
+                {
+                    var element = (AccumulationRegister)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var resource : element.getResources())
+                    {
+                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var dimension : element.getDimensions())
+                    {
+                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof BusinessProcess)
+                {
+                    var element = (BusinessProcess)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof CalculationRegister)
+                {
+                    var element = (CalculationRegister)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var resource : element.getResources())
+                    {
+                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var dimension : element.getDimensions())
+                    {
+                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof Catalog)
+                {
+                    var element = (Catalog)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof ChartOfAccounts)
+                {
+                    var element = (ChartOfAccounts)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof ChartOfCalculationTypes)
+                {
+                    var element = (ChartOfCalculationTypes)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof ChartOfCharacteristicTypes)
+                {
+                    var element = (ChartOfCharacteristicTypes)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof DataProcessor)
+                {
+                    var element = (DataProcessor)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof DataProcessorTabularSection)
+                {
+                    var element = (DataProcessorTabularSection)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof DbObjectTabularSection)
+                {
+                    var element = (DbObjectTabularSection)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof Document)
+                {
+                    var element = (Document)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        visitor.visitOwnerTabularSection(root, bmObject, tabularSection);
+                    }
+
+                    // There's a lot of data here (IDEAI-134):
+                    /*for (var registerRecord : element.getRegisterRecords())
+                    {
+                        if (visitor.visitOwnerRegisterRecord(root, bmObject, registerRecord))
+                        {
+                            return true;
+                        }
+                    }*/
+
+                    continue;
+                }
+
+                if (bmObject instanceof ExchangePlan)
+                {
+                    var element = (ExchangePlan)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof ExternalDataProcessor)
+                {
+                    var element = (ExternalDataProcessor)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof ExternalReport)
+                {
+                    var element = (ExternalReport)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof InformationRegister)
+                {
+                    var element = (InformationRegister)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var resource : element.getResources())
+                    {
+                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var dimension : element.getDimensions())
+                    {
+                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof Report)
+                {
+                    var element = (Report)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof ReportTabularSection)
+                {
+                    var element = (ReportTabularSection)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof Task)
+                {
+                    var element = (Task)bmObject;
+                    for (var attr : element.getAttributes())
+                    {
+                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        {
+                            return true;
+                        }
+                    }
+
+                    for (var tabularSection : element.getTabularSections())
+                    {
+                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
                 }
             }
         }
@@ -201,379 +615,7 @@ class EntitiesWalker
         return true;
     }
 
-    private boolean visitOwner(ModuleInfo moduleInfo, IEntityVisitor visitor, IBmObject owner)
-    {
-        if (visitor.visitOwner(moduleInfo, owner))
-        {
-            return true;
-        }
-
-        if (owner instanceof AccountingRegister)
-        {
-            var element = (AccountingRegister)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var resource : element.getResources())
-            {
-                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
-                {
-                    return true;
-                }
-            }
-
-            for (var dimension : element.getDimensions())
-            {
-                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof AccumulationRegister)
-        {
-            var element = (AccumulationRegister)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var resource : element.getResources())
-            {
-                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
-                {
-                    return true;
-                }
-            }
-
-            for (var dimension : element.getDimensions())
-            {
-                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof BusinessProcess)
-        {
-            var element = (BusinessProcess)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof CalculationRegister)
-        {
-            var element = (CalculationRegister)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var resource : element.getResources())
-            {
-                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
-                {
-                    return true;
-                }
-            }
-
-            for (var dimension : element.getDimensions())
-            {
-                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof Catalog)
-        {
-            var element = (Catalog)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof ChartOfAccounts)
-        {
-            var element = (ChartOfAccounts)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof ChartOfCalculationTypes)
-        {
-            var element = (ChartOfCalculationTypes)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof ChartOfCharacteristicTypes)
-        {
-            var element = (ChartOfCharacteristicTypes)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof DataProcessor)
-        {
-            var element = (DataProcessor)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof DataProcessorTabularSection)
-        {
-            var element = (DataProcessorTabularSection)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof DbObjectTabularSection)
-        {
-            var element = (DbObjectTabularSection)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof Document)
-        {
-            var element = (Document)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection);
-            }
-
-            // There's a lot of data here (IDEAI-134):
-            /*for (var registerRecord : element.getRegisterRecords())
-            {
-                if (visitor.visitOwnerRegisterRecord(moduleInfo, owner, registerRecord))
-                {
-                    return true;
-                }
-            }*/
-        }
-
-        if (owner instanceof ExchangePlan)
-        {
-            var element = (ExchangePlan)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof ExternalDataProcessor)
-        {
-            var element = (ExternalDataProcessor)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof ExternalReport)
-        {
-            var element = (ExternalReport)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof InformationRegister)
-        {
-            var element = (InformationRegister)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var resource : element.getResources())
-            {
-                if (visitor.visitOwnerResource(moduleInfo, owner, resource))
-                {
-                    return true;
-                }
-            }
-
-            for (var dimension : element.getDimensions())
-            {
-                if (visitor.visitOwnerDimension(moduleInfo, owner, dimension))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof Report)
-        {
-            var element = (Report)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof ReportTabularSection)
-        {
-            var element = (ReportTabularSection)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-        }
-
-        if (owner instanceof Task)
-        {
-            var element = (Task)owner;
-            for (var attr : element.getAttributes())
-            {
-                if (visitor.visitOwnerAttribute(moduleInfo, owner, attr))
-                {
-                    return true;
-                }
-            }
-
-            for (var tabularSection : element.getTabularSections())
-            {
-                if (visitor.visitOwnerTabularSection(moduleInfo, owner, tabularSection))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private void traceVisit(EObject eObject, boolean visited)
+    private void traceVisitEObject(EObject eObject, boolean visited)
     {
         /*System.out.println(visited + ", " + eObject.getClass().getName() + ": "
             + getNode(eObject).getText().replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t"));*/
