@@ -3,15 +3,11 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.ByteArrayInputStream;
-import java.nio.CharBuffer;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -26,13 +22,11 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.Fields;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
-import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.IUISettings;
-import com.e1c.edt.ai.assistent.IGlobalContextService;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
@@ -49,14 +43,11 @@ class ProjectTrackingWorkflow
     private final IHashTools hashTools;
     private final IClock clock;
     private final IProjectIdProvider projectIdProvider;
-    private final IGlobalContextService globalContextService;
     private final IGlobalContextSync globalContextSync;
     private final IUISettings settings;
     private final IFileScaner fileScaner;
-    private final IGlobalContext globalContext;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
-    private final CharBuffer buffer = CharBuffer.allocate(1024);
     private IProject project;
     private ProjectId projectId;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
@@ -65,30 +56,25 @@ class ProjectTrackingWorkflow
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
-        IClock clock, IProjectIdProvider projectIdProvider, IGlobalContextService globalContextService,
-        IGlobalContextSync globalContextSync, IUISettings settings, IFileScaner fileScaner,
-        IGlobalContext globalContext)
+        IClock clock, IProjectIdProvider projectIdProvider, IGlobalContextSync globalContextSync, IUISettings settings,
+        IFileScaner fileScaner)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(projectIdProvider);
-        Preconditions.checkNotNull(globalContextService);
         Preconditions.checkNotNull(globalContextSync);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(fileScaner);
-        Preconditions.checkNotNull(globalContext);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
         this.clock = clock;
         this.projectIdProvider = projectIdProvider;
-        this.globalContextService = globalContextService;
         this.globalContextSync = globalContextSync;
         this.settings = settings;
         this.fileScaner = fileScaner;
-        this.globalContext = globalContext;
     }
 
     @Override
@@ -192,7 +178,7 @@ class ProjectTrackingWorkflow
         {
             var path = file.getFullPath().makeRelative().toPortableString();
             filesToHash.computeIfAbsent(path,
-                key -> new ProjectFile(new AIContext(projectId, key), key, file, now));
+                key -> new ProjectFile(new AIContext(projectId, key, null), key, file, now));
         }
 
         var newFilesToHashCount = 0;
@@ -275,16 +261,10 @@ class ProjectTrackingWorkflow
                     {
                         continue;
                     }
-
-                    try (var inputStream = new ByteArrayInputStream(document.get().getBytes(StandardCharsets.UTF_8));)
-                    {
-                        newHash =
-                            hashTools.format(hashTools.compute(inputStream, StandardCharsets.UTF_8, buffer), true);
-                        hashed++;
-                    }
                 }
                 else
                 {
+                    document = null;
                     if (!file.file.isAccessible())
                     {
                         continue;
@@ -295,11 +275,15 @@ class ProjectTrackingWorkflow
                     {
                         continue;
                     }
-
-                    newHash = hashTools.format(hashTools.compute(file.file, buffer), true);
-                    hashed++;
                 }
 
+                newHash = hashTools.hashOf(document, file.file).map(hash -> hashTools.format(hash, true)).orElse(null);
+                if (newHash == null)
+                {
+                    continue;
+                }
+
+                hashed++;
                 file.update(now, newHash, newModificationStamp);
                 if (newHash.equals(prevHash))
                 {
@@ -365,12 +349,12 @@ class ProjectTrackingWorkflow
         return new Result(ProjectTrackingWorkflowState.INIT, LongDelay);
     }
 
-    @SuppressWarnings("nls")
     private Result sync(int maxFiles, IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
         var filesToProcess =
             filesToSync.stream().sorted(ProjectFile.COMPARATOR).limit(maxFiles).collect(Collectors.toList());
 
+        var features = new ArrayList<CompletableFuture<Boolean>>();
         var filesUpdates = new ArrayList<GlobalContextUpdate>();
         for (var file : filesToProcess)
         {
@@ -378,111 +362,27 @@ class ProjectTrackingWorkflow
             update.field = Fields.LOCAL_FUNCTIONS;
             update.path = file.path;
             update.hash = file.getHash();
-            filesUpdates.add(update);
-        }
-
-        Set<String> unknowFilePaths;
-        try
-        {
-            unknowFilePaths =
-                globalContextService.update(projectId, filesUpdates, 100, statisticsProvider.get(), cancellationToken)
-                    .get()
-                    .map(i -> {
-                        var paths = new HashSet<String>();
-                        for (var unknownValue : i.unknownValues)
-                        {
-                            paths.add(unknownValue.path);
-                        }
-                        for (var unknownKey : i.unknownKeys)
-                        {
-                            paths.add(unknownKey.path);
-                        }
-                        return paths;
-                    })
-                    .orElseGet(() -> new HashSet<>());
-        }
-        catch (Throwable error)
-        {
-            log.logError(error);
-            return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
-        }
-
-        var files = new ArrayList<ProjectFile>();
-        for (var file : filesToProcess)
-        {
-            if (unknowFilePaths.contains(file.path))
+            filesToSync.remove(file);
+            if (file.aiCtx.getDocument() != null)
             {
-                files.add(file);
+                features.add(
+                    globalContextSync.syncUpdates(file.aiCtx, initialStateSent, filesUpdates, 5,
+                        statisticsProvider.get(), cancellationToken));
+
                 continue;
             }
 
-            filesToSync.remove(file);
+            filesUpdates.add(update);
         }
 
-        if (files.isEmpty())
-        {
-            return new Result(ProjectTrackingWorkflowState.HASH, ShortDelay);
-        }
+        features.add(
+            globalContextSync.syncUpdates(new AIContext(projectId, "", null), initialStateSent, filesUpdates, 5, //$NON-NLS-1$
+                statisticsProvider.get(), cancellationToken));
 
-        log.debug("Syncing", () -> files.size() + " files");
-        progressMonitor.beginTask(Messages.CodeCompletionBackgroundSyncSubtaskName, files.size());
-        var statistics = statisticsProvider.get();
-        var feature = CompletableFuture.completedFuture(true);
-        var updates = new ArrayList<GlobalContextUpdate>();
-        for (var file : files)
-        {
-            if (cancellationToken.isCanceled())
-            {
-                break;
-            }
+        CompletableFuture.allOf(features.toArray(new CompletableFuture[features.size()])).join();
 
-            var fileUpdates = globalContext.getUpdates(file.aiCtx, !initialStateSent, statistics, cancellationToken);
-            initialStateSent = true;
-            for (var update : fileUpdates)
-            {
-                if (Fields.LOCAL_FUNCTIONS.equals(update.field))
-                {
-                    update.hash = file.getHash();
-                }
-            }
-
-            synchronized (updates)
-            {
-                updates.addAll(fileUpdates);
-            }
-
-            feature = feature
-                .thenCompose(i -> {
-                    ArrayList<GlobalContextUpdate> latestUpdates;
-                    synchronized (updates)
-                    {
-                        latestUpdates = new ArrayList<>(updates);
-                        updates.clear();
-                    }
-
-                    if (latestUpdates.isEmpty())
-                    {
-                        return CompletableFuture.completedFuture(true);
-                    }
-
-                    return globalContextSync.syncUpdates(projectId, latestUpdates, 5, statistics, cancellationToken)
-                        .whenComplete((result, error) -> {
-                            progressMonitor.worked(1);
-                            if (result != null && result)
-                            {
-                                filesToSync.remove(file);
-                            }
-                        });
-                });
-        }
-
-        feature.join();
+        initialStateSent = true;
         if (!filesToSync.isEmpty())
-        {
-            return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
-        }
-
-        if (!filesToProcess.isEmpty())
         {
             return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
         }

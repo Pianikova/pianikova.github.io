@@ -4,6 +4,7 @@
 package com.e1c.edt.ai;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,11 +13,13 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.text.IDocument;
 
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -25,12 +28,15 @@ import com.google.inject.Provider;
 public class HashTools
     implements IHashTools
 {
+    private final ILog log;
     private final Provider<MessageDigest> messageDigestProvider;
 
     @Inject
-    public HashTools(Provider<MessageDigest> messageDigestProvider)
+    public HashTools(ILog log, Provider<MessageDigest> messageDigestProvider)
     {
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(messageDigestProvider);
+        this.log = log;
         this.messageDigestProvider = messageDigestProvider;
     }
 
@@ -149,5 +155,36 @@ public class HashTools
         var hash = messageDigestProvider.get();
         scanTextStream(buffer, bytes -> hash.update(bytes), inputStream, charset, null);
         return hash;
+    }
+
+    @Override
+    public Optional<MessageDigest> hashOf(IDocument document, IFile file)
+    {
+        var buffer = CharBuffer.allocate(1024);
+        if (document != null)
+        {
+            try (var inputStream = new ByteArrayInputStream(document.get().getBytes(StandardCharsets.UTF_8));)
+            {
+                return Optional.ofNullable(compute(inputStream, StandardCharsets.UTF_8, buffer));
+            }
+            catch (IOException error)
+            {
+                log.logError(error);
+            }
+        }
+
+        if (file != null)
+        {
+            try
+            {
+                return Optional.ofNullable(compute(file, buffer));
+            }
+            catch (Exception error)
+            {
+                log.logError(error);
+            }
+        }
+
+        return Optional.empty();
     }
 }

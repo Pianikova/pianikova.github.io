@@ -6,9 +6,6 @@ package com.e1c.edt.ai.context;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import com.e1c.edt.ai.ICodePartsProvider;
-import com.e1c.edt.ai.ICodeProvider;
-import com.e1c.edt.ai.IContextEntities;
 import org.eclipse.core.runtime.Plugin;
 
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
@@ -19,6 +16,9 @@ import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
+import com.e1c.edt.ai.ICodePartsProvider;
+import com.e1c.edt.ai.ICodeProvider;
+import com.e1c.edt.ai.IContextEntities;
 import com.google.inject.Singleton;
 import com.google.inject.name.Names;
 

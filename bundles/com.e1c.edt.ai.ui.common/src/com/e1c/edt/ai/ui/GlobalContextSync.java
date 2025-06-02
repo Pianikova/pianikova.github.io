@@ -21,7 +21,6 @@ import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -58,7 +57,7 @@ class GlobalContextSync implements IGlobalContextSync
         {
             var statistics = statisticsProvider.get();
             var updates = globalContext.getUpdates(aiContext, false, statistics, cancellationToken);
-            return syncUpdates(aiContext.getProjectId(), updates, maxDept, statistics, cancellationToken);
+            return syncUpdates(aiContext, false, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -68,7 +67,8 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Boolean> syncUpdates(ProjectId projectId, List<GlobalContextUpdate> updates,
+    public CompletableFuture<Boolean> syncUpdates(AIContext aiContext, boolean isInitial,
+        List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics,
         ICancellationToken cancellationToken)
@@ -85,20 +85,20 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return globalContextService.update(projectId, updates, 10, statistics, cancellationToken)
-                .thenApplyAsync(optionalResult -> {
+            return globalContextService.update(aiContext.getProjectId(), updates, 200, statistics, cancellationToken)
+                .thenCompose(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
-                        return false;
+                        return CompletableFuture.completedFuture(false);
                     }
 
                     var result = optionalResult.get();
                     if (result.isEmpty())
                     {
-                        return true;
+                        return CompletableFuture.completedFuture(true);
                     }
 
-                    return syncUnknown(projectId, result.unknownValues, result.unknownKeys, maxDept,
+                    return syncUnknown(aiContext, isInitial, result.unknownValues, result.unknownKeys, maxDept,
                         cancellationToken);
                 });
         }
@@ -110,15 +110,17 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public boolean syncUnknown(ProjectId projectId, List<EntityValue> unknownValues,
+    public CompletableFuture<Boolean> syncUnknown(AIContext aiContext, boolean isInitial,
+        List<EntityValue> unknownValues,
         List<EntityKey> unknownKeys, int maxDept,
         ICancellationToken cancellationToken)
     {
+        var feature = CompletableFuture.completedFuture(true);
         try
         {
             if (cancellationToken.isCanceled())
             {
-                return false;
+                return CompletableFuture.completedFuture(false);
             }
 
             var statistics = statisticsProvider.get();
@@ -131,7 +133,7 @@ class GlobalContextSync implements IGlobalContextSync
                 var result = optionalResult.get();
                 if (result.isEmpty())
                 {
-                    return true;
+                    return feature;
                 }
 
                 var vals = result.unknownValues;
@@ -167,7 +169,7 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     for (var val : vals)
                     {
-                        var fileUpdate = fileUpdates.computeIfAbsent(val.path, k -> new FileUpdates());
+                        var fileUpdate = fileUpdates.computeIfAbsent(val.path, path -> new FileUpdates(path, val.hash));
                         fileUpdate.hashes.add(val.hash);
                         fileUpdate.fields.add(val.field);
                     }
@@ -177,51 +179,85 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     for (var key : keys)
                     {
-                        var fileUpdate = fileUpdates.computeIfAbsent(key.path, k -> new FileUpdates());
+                        var fileUpdate = fileUpdates.computeIfAbsent(key.path, path -> new FileUpdates(path, null));
                         fileUpdate.fields.add(key.field);
                     }
                 }
 
                 if (fileUpdates.isEmpty())
                 {
-                    return true;
+                    return feature;
                 }
 
-                var allUpdates = new ArrayList<GlobalContextUpdate>();
-                for (var fileUpdate : fileUpdates.entrySet())
+                var updates = new ArrayList<GlobalContextUpdate>();
+                for (var fileUpdate : fileUpdates.values())
                 {
-                    var path = fileUpdate.getKey();
-                    var data = fileUpdate.getValue();
-                    var updates = globalContext.getUpdates(projectId,
-                        path, data.hashes, data.fields, statistics, cancellationToken);
-                    allUpdates.addAll(updates);
-                }
+                    var newUpdates = globalContext.getUpdates(
+                        new AIContext(aiContext.getProjectId(), fileUpdate.filePath, aiContext.getDocument()),
+                        fileUpdate.fileHash, fileUpdate.hashes, fileUpdate.fields, statistics,
+                        cancellationToken);
 
-                if (allUpdates.isEmpty())
-                {
-                    return true;
+                    if (newUpdates.isEmpty())
+                    {
+                        continue;
+                    }
+
+                    synchronized (updates)
+                    {
+                        updates.addAll(newUpdates);
+                    }
+
+                    var currentIsInitial = isInitial;
+                    isInitial = false;
+                    feature = feature.thenCompose(i -> {
+                        ArrayList<GlobalContextUpdate> latestUpdates;
+                        synchronized (updates)
+                        {
+                            latestUpdates = new ArrayList<>(updates);
+                            updates.clear();
+                        }
+
+                        if (cancellationToken.isCanceled() || latestUpdates.isEmpty())
+                        {
+                            return CompletableFuture.completedFuture(true);
+                        }
+
+                        return syncUpdates(aiContext, currentIsInitial, latestUpdates, 5, statistics,
+                            cancellationToken);
+                    });
+
+                    optionalResult =
+                        globalContextService
+                            .update(aiContext.getProjectId(), updates, 10, statistics, cancellationToken)
+                            .get();
                 }
 
                 if (cancellationToken.isCanceled())
                 {
-                    return true;
+                    return feature;
                 }
-
-                optionalResult =
-                    globalContextService.update(projectId, allUpdates, 10, statistics, cancellationToken).get();
             }
         }
         catch (Exception error)
         {
             log.logError(error);
-            return false;
+            return CompletableFuture.completedFuture(false);
         }
 
-        return true;
+        return feature;
     }
 
     private static class FileUpdates
     {
+        private final String filePath;
+        private final String fileHash;
+
+        public FileUpdates(String filePath, String fileHash)
+        {
+            this.filePath = filePath;
+            this.fileHash = fileHash;
+        }
+
         public final HashSet<String> hashes = new HashSet<>();
 
         public final HashSet<String> fields = new HashSet<>();

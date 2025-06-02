@@ -7,13 +7,12 @@ import java.util.HashSet;
 import java.util.List;
 
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 
 public interface IGlobalContext
 {
     List<GlobalContextUpdate> getUpdates(AIContext aiContext, boolean sendInitialState, IStatistics statistics,
         ICancellationToken cancellationToken);
 
-    List<GlobalContextUpdate> getUpdates(ProjectId projectId, String filePath, HashSet<String> hashes,
+    List<GlobalContextUpdate> getUpdates(AIContext aiContext, String fileHash, HashSet<String> hashes,
         HashSet<String> fields, IStatistics statistics, ICancellationToken cancellationToken);
 }

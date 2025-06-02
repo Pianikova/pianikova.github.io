@@ -12,18 +12,18 @@ import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 
 interface IGlobalContextSync
 {
     CompletableFuture<Boolean> sync(AIContext aiContext, int maxDept,
         ICancellationToken cancellationToken);
 
-    CompletableFuture<Boolean> syncUpdates(ProjectId projectId, List<GlobalContextUpdate> updates,
+    CompletableFuture<Boolean> syncUpdates(AIContext aiContext, boolean isInitial, List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics, ICancellationToken cancellationToken);
 
-    boolean syncUnknown(ProjectId projectId, List<EntityValue> unknownValues, List<EntityKey> unknownKeys,
+    CompletableFuture<Boolean> syncUnknown(AIContext aiContext, boolean isInitial, List<EntityValue> unknownValues,
+        List<EntityKey> unknownKeys,
         int maxDept,
         ICancellationToken cancellationToken);
 }

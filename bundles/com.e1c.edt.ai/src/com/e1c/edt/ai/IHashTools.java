@@ -9,11 +9,13 @@ import java.io.UnsupportedEncodingException;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.text.IDocument;
 
 public interface IHashTools
 {
@@ -30,4 +32,6 @@ public interface IHashTools
 
     MessageDigest compute(IFile file, CharBuffer buffer)
         throws UnsupportedEncodingException, IOException, CoreException;
+
+    Optional<MessageDigest> hashOf(IDocument document, IFile file);
 }
