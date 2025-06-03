@@ -17,7 +17,7 @@ class UISettings
     @Override
     public CodeCompletionPolicy getCodeCompletionPolicy()
     {
-        return CodeCompletionPolicy.CREATIVITY;
+        return CodeCompletionPolicy.INTENSVE;
     }
 
     @Override

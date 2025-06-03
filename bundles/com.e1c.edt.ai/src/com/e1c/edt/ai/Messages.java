@@ -15,13 +15,17 @@ public class Messages
 {
     private static final String BUNDLE_NAME = "com.e1c.edt.ai.messages"; //$NON-NLS-1$
     public static String CodeCompletionPolicy_Off;
+    public static String CodeCompletionPolicy_OffShortDescription;
     public static String CodeCompletionPolicy_OffDescription;
-    public static String CodeCompletionPolicy_Focusing;
-    public static String CodeCompletionPolicy_FocusingDescription;
-    public static String CodeCompletionPolicy_Balance;
-    public static String CodeCompletionPolicy_BalanceDescription;
-    public static String CodeCompletionPolicy_Creativity;
-    public static String CodeCompletionPolicy_CreativityDescription;
+    public static String CodeCompletionPolicy_Manual;
+    public static String CodeCompletionPolicy_ManualShortDescription;
+    public static String CodeCompletionPolicy_ManualDescription;
+    public static String CodeCompletionPolicy_Moderate;
+    public static String CodeCompletionPolicy_ModerateShortDescription;
+    public static String CodeCompletionPolicy_ModerateDescription;
+    public static String CodeCompletionPolicy_Intensive;
+    public static String CodeCompletionPolicy_IntensiveShortDescription;
+    public static String CodeCompletionPolicy_IntensiveDescription;
 
     static
     {

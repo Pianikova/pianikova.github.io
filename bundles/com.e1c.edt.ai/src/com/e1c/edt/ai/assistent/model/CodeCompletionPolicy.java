@@ -16,45 +16,61 @@ public enum CodeCompletionPolicy
      */
     @SerializedName(CodeCompletionPolicy.OFF_ID)
     OFF(0, CodeCompletionPolicy.OFF_ID, Messages.CodeCompletionPolicy_Off,
+        Messages.CodeCompletionPolicy_OffShortDescription,
         Messages.CodeCompletionPolicy_OffDescription),
 
     /**
      * Завершение кода работает только по требованию - горячие клавиши, интеграция с context assist выключена.
      */
-    @SerializedName(CodeCompletionPolicy.FOCUSING_ID)
-    FOCUSING(1, CodeCompletionPolicy.FOCUSING_ID, Messages.CodeCompletionPolicy_Focusing,
-        Messages.CodeCompletionPolicy_FocusingDescription),
+    @SerializedName(CodeCompletionPolicy.MANUAL_ID)
+    MANUAL(1, CodeCompletionPolicy.MANUAL_ID, Messages.CodeCompletionPolicy_Manual,
+        Messages.CodeCompletionPolicy_ManualShortDescription,
+        Messages.CodeCompletionPolicy_ManualDescription),
 
     /**
      * Завершение кода работает в режиме баланса. Если предлагается только форматирование, то такие предложения игнорируются. Интеграция с context assist включена.
      */
-    @SerializedName(CodeCompletionPolicy.BALANCE_ID)
-    BALANCE(2, CodeCompletionPolicy.BALANCE_ID, Messages.CodeCompletionPolicy_Balance,
-        Messages.CodeCompletionPolicy_BalanceDescription),
+    @SerializedName(CodeCompletionPolicy.MODERATE_ID)
+    MODERATE(2, CodeCompletionPolicy.MODERATE_ID, Messages.CodeCompletionPolicy_Moderate,
+        Messages.CodeCompletionPolicy_ModerateShortDescription,
+        Messages.CodeCompletionPolicy_ModerateDescription),
 
     /**
      * Завершение кода работает в режиме творчества. Завершение кода работает активнее, уменьшено ожидание пауз при печати пользователем, показываются все предложения. Интеграция с context assist включена.
      */
-    @SerializedName(CodeCompletionPolicy.CREATIVITY_ID)
-    CREATIVITY(3, CodeCompletionPolicy.CREATIVITY_ID, Messages.CodeCompletionPolicy_Creativity,
-        Messages.CodeCompletionPolicy_CreativityDescription);
+    @SerializedName(CodeCompletionPolicy.INTENSVE_ID)
+    INTENSVE(3, CodeCompletionPolicy.INTENSVE_ID, Messages.CodeCompletionPolicy_Intensive,
+        Messages.CodeCompletionPolicy_IntensiveShortDescription,
+        Messages.CodeCompletionPolicy_IntensiveDescription);
 
     private static final String OFF_ID = "off"; //$NON-NLS-1$
-    private static final String FOCUSING_ID = "focusing"; //$NON-NLS-1$
-    private static final String BALANCE_ID = "balance"; //$NON-NLS-1$
-    private static final String CREATIVITY_ID = "creativity"; //$NON-NLS-1$
+    private static final String MANUAL_ID = "manual"; //$NON-NLS-1$
+    private static final String MODERATE_ID = "moderate"; //$NON-NLS-1$
+    private static final String INTENSVE_ID = "intensive"; //$NON-NLS-1$
+    private static final String LONG_NAME_SEPARATOR = " - "; //$NON-NLS-1$
 
     private final int index;
-    private final String id;
-    private final String name;
-    private final String description;
+    private final String id, name, longName, shortDescription, description;
 
-    CodeCompletionPolicy(int index, String id, String name, String description)
+    CodeCompletionPolicy(int index, String id, String name, String shortDescription, String description)
     {
         this.index = index;
         this.id = id;
         this.name = name;
+        this.shortDescription = shortDescription;
         this.description = description;
+        if (shortDescription.isBlank())
+        {
+            longName = name;
+        }
+        else
+        {
+            var longName = new StringBuilder(name.length() + LONG_NAME_SEPARATOR.length() + shortDescription.length());
+            longName.append(name);
+            longName.append(LONG_NAME_SEPARATOR);
+            longName.append(shortDescription);
+            this.longName = longName.toString();
+        }
     }
 
     public int getIndex()
@@ -72,6 +88,16 @@ public enum CodeCompletionPolicy
         return name;
     }
 
+    public String getLongName()
+    {
+        return longName;
+    }
+
+    public String getShortDescription()
+    {
+        return shortDescription;
+    }
+
     public String getDescription()
     {
         return description;
@@ -86,7 +112,7 @@ public enum CodeCompletionPolicy
     {
         if (id == null)
         {
-            return CodeCompletionPolicy.BALANCE;
+            return CodeCompletionPolicy.MODERATE;
         }
 
         switch (id.toLowerCase())
@@ -94,17 +120,17 @@ public enum CodeCompletionPolicy
         case OFF_ID:
             return OFF;
 
-        case FOCUSING_ID:
-            return FOCUSING;
+        case MANUAL_ID:
+            return MANUAL;
 
-        case BALANCE_ID:
-            return BALANCE;
+        case MODERATE_ID:
+            return MODERATE;
 
-        case CREATIVITY_ID:
-            return CREATIVITY;
+        case INTENSVE_ID:
+            return INTENSVE;
 
         default:
-            return BALANCE;
+            return MODERATE;
         }
     }
 }

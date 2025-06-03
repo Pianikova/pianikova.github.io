@@ -231,17 +231,17 @@ class CodeCompletionViewModel
 
     private boolean isEnabled()
     {
-        return CodeCompletionPolicy.FOCUSING.isMeet(uiSettings.getCodeCompletionPolicy());
+        return CodeCompletionPolicy.MANUAL.isMeet(uiSettings.getCodeCompletionPolicy());
     }
 
     private boolean isBalanced()
     {
-        return CodeCompletionPolicy.BALANCE.isMeet(uiSettings.getCodeCompletionPolicy());
+        return CodeCompletionPolicy.MODERATE.isMeet(uiSettings.getCodeCompletionPolicy());
     }
 
     private boolean isCreative()
     {
-        return CodeCompletionPolicy.CREATIVITY.isMeet(uiSettings.getCodeCompletionPolicy());
+        return CodeCompletionPolicy.INTENSVE.isMeet(uiSettings.getCodeCompletionPolicy());
     }
 
     private void reset()
