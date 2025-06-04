@@ -968,6 +968,7 @@ class CodeCompletionViewModel
     @Override
     public void mouseDown(MouseEvent e)
     {
+        reset();
         var offset = textWidget.getOffsetAtPoint(new Point(e.x, e.y));
         if (offset < 0)
         {
