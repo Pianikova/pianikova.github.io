@@ -40,7 +40,7 @@ public class InputDelayStatisticsTest
         when(sample.getSize()).thenAnswer(i -> sampleSize);
         when(sample.getValues()).thenAnswer(i -> sampleValues);
         when(clock.now()).thenAnswer(i -> now);
-        when(uiSettings.getCodeCompletionPolicy()).thenAnswer(i -> CodeCompletionPolicy.CREATIVITY);
+        when(uiSettings.getCodeCompletionPolicy()).thenAnswer(i -> CodeCompletionPolicy.INTENSVE);
     }
 
     @Test

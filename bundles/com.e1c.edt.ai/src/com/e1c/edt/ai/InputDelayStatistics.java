@@ -96,7 +96,7 @@ public class InputDelayStatistics implements IInputDelayStatistics
             }
 
             sample.addValue(value);
-            var confidenceLevel = CodeCompletionPolicy.CREATIVITY.isMeet(uiSettings.getCodeCompletionPolicy())
+            var confidenceLevel = CodeCompletionPolicy.INTENSVE.isMeet(uiSettings.getCodeCompletionPolicy())
                 ? predictCreativeConfidenceLevel : predictConfidenceLevel;
             var predictInterval = math.calculateConfidenceInterval(sample.getValues(), confidenceLevel);
             defaultDelay = Duration.ofMillis((int)predictInterval.getMax());

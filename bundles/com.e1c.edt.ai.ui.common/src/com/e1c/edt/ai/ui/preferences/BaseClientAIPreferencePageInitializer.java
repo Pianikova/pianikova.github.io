@@ -23,7 +23,7 @@ public class BaseClientAIPreferencePageInitializer
     public void initializeDefaultPreferences()
     {
         IPreferenceStore store = BaseActivator.getDefault().getPreferenceStore();
-        store.setDefault(ISettingsStore.CODE_COMPLETION_POLICY, CodeCompletionPolicy.BALANCE.getId());
+        store.setDefault(ISettingsStore.CODE_COMPLETION_POLICY, CodeCompletionPolicy.MODERATE.getId());
         store.setDefault(ISettingsStore.CLIENT_TOKEN, ""); //$NON-NLS-1$
         store.setDefault(ISettingsStore.PARAMETERS, ""); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);

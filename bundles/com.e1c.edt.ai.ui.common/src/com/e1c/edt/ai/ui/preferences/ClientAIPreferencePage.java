@@ -96,7 +96,7 @@ public class ClientAIPreferencePage
         var TokenText = tokenField.getTextControl(getFieldEditorParent());
         TokenText.setEchoChar('*');
 
-        addField(new PolictyComboFieldEditor(parent));
+        addField(new PolicyComboFieldEditor(parent));
 
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
             Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
@@ -183,7 +183,7 @@ public class ClientAIPreferencePage
         return descriptor.createImage();
     }
 
-    private static class PolictyComboFieldEditor
+    private static class PolicyComboFieldEditor
         extends ComboFieldEditor
     {
         private static final String[][] CODE_COMPLETION_POLICIES;
@@ -195,11 +195,11 @@ public class ClientAIPreferencePage
             var index = 0;
             for (var policy : CodeCompletionPolicy.values())
             {
-                CODE_COMPLETION_POLICIES[index++] = new String[] { policy.getName(), policy.getId() };
+                CODE_COMPLETION_POLICIES[index++] = new String[] { policy.getLongName(), policy.getId() };
             }
         }
 
-        public PolictyComboFieldEditor(Composite parent)
+        public PolicyComboFieldEditor(Composite parent)
         {
             super(ISettingsStore.CODE_COMPLETION_POLICY, Messages.ClientAIPreferencePage_CodeCompletionPolicy,
                 CODE_COMPLETION_POLICIES, parent);

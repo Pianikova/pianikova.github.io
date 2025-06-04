@@ -6,19 +6,26 @@ package com.e1c.edt.ai.ui;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CCombo;
 import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.List;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
@@ -47,24 +54,27 @@ public class BaseStatusBarControl
     @Inject
     private IUISettings settings;
 
-    private final String[] policies;
+    private final CodeCompletionPolicy[] policies;
+    private final String[] policyNames;
     private final Image OFFLINE = createImage("icons/obj16/status_offline.png"); //$NON-NLS-1$
     private final Image ONLINE = createImage("icons/obj16/status_online.png"); //$NON-NLS-1$
     private final Image BUSY = createImage("icons/obj16/status_busy.png"); //$NON-NLS-1$
     private Font font;
     private Label iconLabel;
     private Label statusLabel;
-    private Combo policyCombo;
+    private CCombo policyCombo;
+    private DefaultToolTip policyTooltip;
 
     public BaseStatusBarControl()
     {
         BaseActivator.injectMembers(this);
-        policies = new String[CodeCompletionPolicy.values().length];
+        policies = new CodeCompletionPolicy[CodeCompletionPolicy.values().length];
+        policyNames = new String[CodeCompletionPolicy.values().length];
         for (var codeCompletionPolicy : CodeCompletionPolicy.values())
         {
-            policies[codeCompletionPolicy.getIndex()] = codeCompletionPolicy.getName().toLowerCase();
+            policies[codeCompletionPolicy.getIndex()] = codeCompletionPolicy;
+            policyNames[codeCompletionPolicy.getIndex()] = codeCompletionPolicy.getName().toLowerCase();
         }
-
     }
 
     @Override
@@ -95,13 +105,70 @@ public class BaseStatusBarControl
         var statusGridData = new GridData(SWT.CENTER, SWT.CENTER, true, true);
         statusLabel.setLayoutData(statusGridData);
 
-        policyCombo = new Combo(composite, SWT.READ_ONLY);
+        policyCombo = new CCombo(composite, SWT.READ_ONLY);
         policyCombo.setVisible(false);
-        policyCombo.setItems(policies);
+        policyCombo.setItems(policyNames);
         var policy = settings.getCodeCompletionPolicy();
         policyCombo.select(policy.getIndex());
-        policyCombo.setToolTipText(policy.getDescription());
         policyCombo.addSelectionListener(this);
+        policyTooltip = new DefaultToolTip(policyCombo);
+        policyTooltip.setText(policy.getDescription());
+        policyTooltip.setHideOnMouseDown(true);
+        policyTooltip.setPopupDelay(500);
+        policyTooltip.setHideDelay(5000);
+        policyTooltip.activate();
+        try
+        {
+            var listField = policyCombo.getClass().getDeclaredField("list"); //$NON-NLS-1$
+            listField.setAccessible(true);
+            var list = (List)listField.get(policyCombo);
+            list.addMouseMoveListener(new MouseMoveListener()
+            {
+                @SuppressWarnings("nls")
+                @Override
+                public void mouseMove(MouseEvent e)
+                {
+                    int itemHeight = policyCombo.getItemHeight();
+                    if (itemHeight == 0)
+                    {
+                        return;
+                    }
+
+                    Integer index = (e.y - policyCombo.getBounds().y) / itemHeight;
+                    if (index < 0 || index >= policies.length)
+                    {
+                        return;
+                    }
+
+                    policyCombo.select(index);
+                    list.redraw();
+                    if (index.equals(policyTooltip.getData("index")))
+                    {
+                        return;
+                    }
+
+                    var codeCompletionPolicy = policies[index];
+                    policyTooltip.setText(codeCompletionPolicy.getDescription());
+                    policyTooltip.setData("index", index);
+                    var comboBounds = policyCombo.getBounds();
+                    var listBounds = list.getBounds();
+                    policyTooltip.show(new Point(0, -(comboBounds.height + listBounds.height + 90)));
+                }
+            });
+
+            list.getParent().addListener(SWT.Hide, new Listener()
+            {
+                @Override
+                public void handleEvent(Event event)
+                {
+                    policyTooltip.hide();
+                }
+            });
+        }
+        catch (Exception e)
+        {
+            //
+        }
 
         var policyGridData = new GridData(SWT.CENTER, SWT.CENTER, true, true);
         policyCombo.setLayoutData(policyGridData);
@@ -164,7 +231,7 @@ public class BaseStatusBarControl
             var policy = settings.getCodeCompletionPolicy();
             policyCombo.select(policy.getIndex());
             policyCombo.setVisible(true);
-            policyCombo.setToolTipText(policy.getDescription());
+            policyTooltip.setText(policy.getDescription());
             break;
 
         default:
@@ -173,7 +240,7 @@ public class BaseStatusBarControl
             statusLabel.setToolTipText(offlineInfo);
             iconLabel.setImage(OFFLINE);
             policyCombo.setVisible(false);
-            policyCombo.setToolTipText(""); //$NON-NLS-1$
+            policyTooltip.setText(""); //$NON-NLS-1$
             break;
         }
 
@@ -183,16 +250,16 @@ public class BaseStatusBarControl
     @Override
     public void widgetSelected(SelectionEvent e)
     {
+        policyTooltip.hide();
         var index = policyCombo.getSelectionIndex();
-        for (var codeCompletionPolicy : CodeCompletionPolicy.values())
+        if (index < 0 && index >= policies.length)
         {
-            if (codeCompletionPolicy.getIndex() == index)
-            {
-                settings.setCodeCompletionPolicy(codeCompletionPolicy);
-                policyCombo.setToolTipText(codeCompletionPolicy.getDescription());
-                break;
-            }
+            return;
         }
+
+        var codeCompletionPolicy = policies[index];
+        settings.setCodeCompletionPolicy(codeCompletionPolicy);
+        policyTooltip.setText(codeCompletionPolicy.getDescription());
     }
 
     @Override
