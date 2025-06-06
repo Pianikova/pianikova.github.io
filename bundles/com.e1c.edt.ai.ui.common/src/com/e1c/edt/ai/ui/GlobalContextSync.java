@@ -11,6 +11,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.Fields;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
@@ -115,7 +116,7 @@ class GlobalContextSync implements IGlobalContextSync
         ICancellationToken cancellationToken)
     {
         var feature = CompletableFuture.completedFuture(true);
-        if (unknownValues.isEmpty())
+        if (unknownValues == null || unknownValues.isEmpty())
         {
             return feature;
         }
@@ -158,7 +159,16 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     for (var val : vals)
                     {
-                        var fileUpdate = fileUpdates.computeIfAbsent(val.path, path -> new FileUpdates(path, val.hash));
+                        String fileHash = null;
+                        var field = val.field;
+                        if (Fields.LOCAL_FUNCTIONS.equalsIgnoreCase(field) || Fields.FORM.equalsIgnoreCase(field)
+                            || Fields.META.equalsIgnoreCase(field))
+                        {
+                            fileHash = val.hash;
+                        }
+
+                        var hash = fileHash;
+                        var fileUpdate = fileUpdates.computeIfAbsent(val.path, path -> new FileUpdates(path, hash));
                         fileUpdate.hashes.add(val.hash);
                         fileUpdate.fields.add(val.field);
                     }

@@ -7,8 +7,6 @@ import java.nio.CharBuffer;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Optional;
@@ -230,7 +228,6 @@ class EntityInfo
         var registerResources = new ArrayList<RegisterResource>();
         var registerDimensions = new ArrayList<RegisterDimension>();
         var registerRecords = new ArrayList<BasicRegister>();
-        var actions = new ArrayList<Action>();
         var cursorObjects = new EObject[1];
         var owners = new ArrayList<IBmObject>();
         var document = aiContext.getDocument();
@@ -430,10 +427,8 @@ class EntityInfo
                     return false;
                 }
 
-                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
-                    () -> entityFactory.crateObjectEntity(variable, node, false, cancellationToken)
-                        .ifPresent(object -> localContext.relatedObjects.add(object)));
-                actions.add(action);
+                entityFactory.crateObjectEntity(variable, node, false, cancellationToken)
+                    .ifPresent(object -> localContext.relatedObjects.add(object));
                 return false;
             }
 
@@ -446,10 +441,8 @@ class EntityInfo
                     return false;
                 }
 
-                var action = new Action(node, offset, statistics, StatisticsType.RELATED_OBJECTS_DURATUION,
-                    () -> entityFactory.crateObjectEntity(featureAccess, node, false, cancellationToken)
-                        .ifPresent(object -> localContext.relatedObjects.add(object)));
-                actions.add(action);
+                entityFactory.crateObjectEntity(featureAccess, node, false, cancellationToken)
+                    .ifPresent(object -> localContext.relatedObjects.add(object));
                 return false;
             }
 
@@ -462,10 +455,8 @@ class EntityInfo
                     return false;
                 }
 
-                var action = new Action(node, offset, statistics, StatisticsType.RELATED_FUNCTIONS_DURATUION,
-                    () -> entityFactory.createMethodEntity(invocation, node, false, cancellationToken)
-                        .ifPresent(method -> localContext.relatedFunctions.add(method)));
-                actions.add(action);
+                entityFactory.createMethodEntity(invocation, node, false, cancellationToken)
+                    .ifPresent(method -> localContext.relatedFunctions.add(method));
                 return false;
             }
 
@@ -507,16 +498,11 @@ class EntityInfo
 
                 var hashStr = hashTools.format(hash, true);
                 globalContext.localFunctions.put(methodName, hashStr);
-
-                if (actionFilter.test(new FillAction(DataType.DATA, field, hashStr))
-                    || actionFilter.test(new FillAction(DataType.DATA, field, hashStr)))
+                if (actionFilter.test(new FillAction(DataType.DATA, field, hashStr)))
                 {
-                    var action = new Action(node, offset, statistics, StatisticsType.LOCAL_FUNCTIONS_DURATUION,
-                        () -> entityFactory.createMethodEntity(method, node, false, cancellationToken)
-                            .ifPresent(
-                                entity -> globalContext.localFunctionsEntities.put(methodName,
-                                    new HashedValue<>(entity, hash))));
-                    actions.add(action);
+                    entityFactory.createMethodEntity(method, node, false, cancellationToken)
+                        .ifPresent(entity -> globalContext.localFunctionsEntities.put(methodName,
+                            new HashedValue<>(entity, hashStr)));
                 }
 
                 return false;
@@ -566,38 +552,6 @@ class EntityInfo
             entityFactory.getEnvironments(cursorObject).ifPresent(areas -> localContext.cursorEnvironments = areas);
             entityFactory.getAreas(cursorObject).ifPresent(areas -> localContext.cursorAreas = areas);
         }
-
-        Collections.sort(actions, new Comparator<Action>()
-        {
-            @Override
-            public int compare(Action left, Action right)
-            {
-                return left.getPriority() > right.getPriority() ? 1
-                    : (left.getPriority() < right.getPriority()) ? -1 : 0;
-            }
-        });
-
-        var unptocessedItems = actions.size();
-        try
-        {
-            for (int i = 0; i < actions.size(); i++)
-            {
-                var action = actions.get(i);
-                if (cancellationToken.isCanceled())
-                {
-                    break;
-                }
-
-                action.apply();
-                unptocessedItems--;
-            }
-        }
-        catch (Exception error)
-        {
-            log.logError(error);
-        }
-
-        statistics.registerInteger(StatisticsType.UNPROCESSED_ITEMS, unptocessedItems);
 
         if (!owners.isEmpty() && actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
         {

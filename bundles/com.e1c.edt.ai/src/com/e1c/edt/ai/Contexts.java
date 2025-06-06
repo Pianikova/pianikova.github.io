@@ -4,17 +4,13 @@
 package com.e1c.edt.ai;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import com.e1c.edt.ai.assistent.model.GlobalContext;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.LocalContext;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 class Contexts
@@ -27,8 +23,6 @@ class Contexts
     private final IHashTools hashTools;
     private final IUISettings uiSettings;
     private final ISettingsProvider settingsProvider;
-    private final Cache<String, GlobalContextUpdate> enitiesCache =
-        CacheBuilder.newBuilder().maximumSize(1024).expireAfterWrite(15, TimeUnit.MINUTES).build();
 
     @Inject
     public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
@@ -154,26 +148,30 @@ class Contexts
             result.add(request);
         }
 
-        if (globalContext.modulePath != null && globalContext.moduleHash != null)
+        if (globalContext.modulePath != null && globalContext.modulePath.toLowerCase().endsWith(".bsl")) //$NON-NLS-1$
         {
-            request = new GlobalContextUpdate();
-            request.path = globalContext.modulePath;
-            request.field = Fields.LOCAL_FUNCTIONS;
-            request.hash = globalContext.moduleHash;
-            request.value = globalContext.localFunctions;
-            result.add(request);
-        }
-
-        if (globalContext.localFunctionsEntities != null && !globalContext.localFunctionsEntities.isEmpty())
-        {
-            for (var localFunction : globalContext.localFunctionsEntities.entrySet())
+            if (globalContext.moduleHash != null)
             {
                 request = new GlobalContextUpdate();
                 request.path = globalContext.modulePath;
-                request.hash = hashTools.format(localFunction.getValue().Hash, true);
-                request.field = FIELD_PREFIX + localFunction.getKey();
-                request.value = localFunction.getValue().Value;
+                request.field = Fields.LOCAL_FUNCTIONS;
+                request.hash = globalContext.moduleHash;
+                request.value = globalContext.localFunctions;
                 result.add(request);
+            }
+
+            if (globalContext.localFunctionsEntities != null && !globalContext.localFunctionsEntities.isEmpty())
+            {
+                for (var localFunction : globalContext.localFunctionsEntities.entrySet())
+                {
+                    var val = localFunction.getValue();
+                    request = new GlobalContextUpdate();
+                    request.path = globalContext.modulePath;
+                    request.hash = val.Hash;
+                    request.field = FIELD_PREFIX + localFunction.getKey();
+                    request.value = val.Value;
+                    result.add(request);
+                }
             }
         }
 
@@ -185,16 +183,6 @@ class Contexts
         HashSet<String> hashes,
         HashSet<String> fields, IStatistics statistics, ICancellationToken cancellationToken)
     {
-        var existingUpdates = new HashMap<String, GlobalContextUpdate>();
-        for (var hash : hashes)
-        {
-            var obj = enitiesCache.getIfPresent(hash);
-            if (obj != null)
-            {
-                existingUpdates.put(hash, obj);
-            }
-        }
-
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
         globalContext.moduleHash = fileHash;
@@ -209,10 +197,7 @@ class Contexts
 
                 case DATA:
                     var hash = action.getHash();
-                    return hash == null || !existingUpdates.containsKey(hash)
-                        || (action.getField().startsWith(Fields.LOCAL_FUNCTIONS)
-                            && fields.contains(Fields.LOCAL_FUNCTIONS))
-                        || hashes.contains(hash);
+                    return hash == null || fields.contains(Fields.LOCAL_FUNCTIONS) || hashes.contains(hash);
 
                 default:
                     return false;
@@ -225,12 +210,6 @@ class Contexts
             log.logError(error);
         }
 
-        var result = getUpdates(globalContext, false, statistics, cancellationToken);
-        for (var existingUpdate : existingUpdates.values())
-        {
-            result.add(existingUpdate);
-        }
-
-        return result;
+        return getUpdates(globalContext, false, statistics, cancellationToken);
     }
 }

@@ -59,7 +59,7 @@ class GlobalContextManager implements IGlobalContextManager
     @Override
     public void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken)
     {
-        if (completion.unknownValues.isEmpty())
+        if (completion.unknownValues == null || completion.unknownValues.isEmpty())
         {
             return;
         }
