@@ -59,12 +59,16 @@ class GlobalContextManager implements IGlobalContextManager
     @Override
     public void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken)
     {
+        if (completion.unknownValues == null || completion.unknownValues.isEmpty())
+        {
+            return;
+        }
+
         var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
             try
             {
                 globalContextSync
-                    .syncUnknown(aiCtx, false, completion.unknownValues, completion.unknownKeys, 5,
-                        jobCtx.CancellationTokenSource)
+                    .syncUnknown(aiCtx, false, completion.unknownValues, 5, jobCtx.CancellationTokenSource)
                     .join();
             }
             catch (Exception error)

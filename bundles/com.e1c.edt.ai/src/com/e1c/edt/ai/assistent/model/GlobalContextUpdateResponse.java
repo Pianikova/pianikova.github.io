@@ -26,8 +26,6 @@ public class GlobalContextUpdateResponse
 
     public boolean isEmpty()
     {
-        var hasUnknownValues = unknownValues != null && !unknownValues.isEmpty();
-        var hasUnknownKeys = unknownKeys != null && !unknownKeys.isEmpty();
-        return !hasUnknownValues && !hasUnknownKeys;
+        return unknownValues == null || unknownValues.isEmpty();
     }
 }

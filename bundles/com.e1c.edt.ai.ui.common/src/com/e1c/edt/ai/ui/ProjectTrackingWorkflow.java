@@ -145,7 +145,9 @@ class ProjectTrackingWorkflow
             return;
         }
 
-        filesToHash.put(path, new ProjectFile(aiCtx, path, fileOnDisk, LocalDateTime.MIN));
+        var fileToTrack = new ProjectFile(aiCtx, path, fileOnDisk, LocalDateTime.MIN);
+        fileToTrack.update(clock.now(), null, 1);
+        filesToHash.put(path, fileToTrack);
     }
 
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
@@ -365,23 +367,27 @@ class ProjectTrackingWorkflow
             filesToSync.remove(file);
             if (file.aiCtx.getDocument() != null)
             {
+                var documentUpdates = new ArrayList<GlobalContextUpdate>();
+                documentUpdates.add(update);
                 features.add(
-                    globalContextSync.syncUpdates(file.aiCtx, initialStateSent, filesUpdates, 5,
+                    globalContextSync.syncUpdates(file.aiCtx, initialStateSent, documentUpdates, 5,
                         statisticsProvider.get(), cancellationToken));
-
+                initialStateSent = true;
                 continue;
             }
 
             filesUpdates.add(update);
         }
 
-        features.add(
-            globalContextSync.syncUpdates(new AIContext(projectId, "", null), initialStateSent, filesUpdates, 5, //$NON-NLS-1$
-                statisticsProvider.get(), cancellationToken));
+        if (!filesUpdates.isEmpty())
+        {
+            features.add(
+                globalContextSync.syncUpdates(new AIContext(projectId, "", null), initialStateSent, filesUpdates, 5, //$NON-NLS-1$
+                    statisticsProvider.get(), cancellationToken));
+            initialStateSent = true;
+        }
 
         CompletableFuture.allOf(features.toArray(new CompletableFuture[features.size()])).join();
-
-        initialStateSent = true;
         if (!filesToSync.isEmpty())
         {
             return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);

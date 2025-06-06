@@ -3,14 +3,12 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
-import java.security.MessageDigest;
-
 public class HashedValue<T>
 {
     public final T Value;
-    public final MessageDigest Hash;
+    public final String Hash;
 
-    public HashedValue(T value, MessageDigest hash)
+    public HashedValue(T value, String hash)
     {
         Value = value;
         Hash = hash;

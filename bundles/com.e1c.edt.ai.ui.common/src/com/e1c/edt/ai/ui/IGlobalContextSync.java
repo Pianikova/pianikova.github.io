@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 
@@ -23,7 +22,5 @@ interface IGlobalContextSync
         IStatistics statistics, ICancellationToken cancellationToken);
 
     CompletableFuture<Boolean> syncUnknown(AIContext aiContext, boolean isInitial, List<EntityValue> unknownValues,
-        List<EntityKey> unknownKeys,
-        int maxDept,
-        ICancellationToken cancellationToken);
+        int maxDept, ICancellationToken cancellationToken);
 }
