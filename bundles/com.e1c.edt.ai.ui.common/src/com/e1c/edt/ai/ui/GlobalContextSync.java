@@ -17,7 +17,6 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.assistent.IGlobalContextService;
-import com.e1c.edt.ai.assistent.model.EntityKey;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
@@ -98,7 +97,7 @@ class GlobalContextSync implements IGlobalContextSync
                         return CompletableFuture.completedFuture(true);
                     }
 
-                    return syncUnknown(aiContext, isInitial, result.unknownValues, result.unknownKeys, maxDept,
+                    return syncUnknown(aiContext, isInitial, result.unknownValues, maxDept,
                         cancellationToken);
                 });
         }
@@ -112,10 +111,15 @@ class GlobalContextSync implements IGlobalContextSync
     @Override
     public CompletableFuture<Boolean> syncUnknown(AIContext aiContext, boolean isInitial,
         List<EntityValue> unknownValues,
-        List<EntityKey> unknownKeys, int maxDept,
+        int maxDept,
         ICancellationToken cancellationToken)
     {
         var feature = CompletableFuture.completedFuture(true);
+        if (unknownValues.isEmpty())
+        {
+            return feature;
+        }
+
         try
         {
             if (cancellationToken.isCanceled())
@@ -126,7 +130,6 @@ class GlobalContextSync implements IGlobalContextSync
             var statistics = statisticsProvider.get();
             var response = new GlobalContextUpdateResponse();
             response.unknownValues = unknownValues;
-            response.unknownKeys = unknownKeys;
             var optionalResult = Optional.ofNullable(response);
             while (maxDept-- > 0 && optionalResult.isPresent())
             {
@@ -137,9 +140,7 @@ class GlobalContextSync implements IGlobalContextSync
                 }
 
                 var vals = result.unknownValues;
-                var keys = result.unknownKeys;
                 var hasUnknownValues = vals != null && !vals.isEmpty();
-                var hasUnknownKeys = keys != null && !keys.isEmpty();
                 log.debug("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
                     var trace = new StringBuilder();
                     if (hasUnknownValues)
@@ -147,18 +148,6 @@ class GlobalContextSync implements IGlobalContextSync
                         trace.append("Unknown values:"); //$NON-NLS-1$
                         trace.append(System.lineSeparator());
                         trace.append(json.serialize(vals));
-                    }
-
-                    if (hasUnknownKeys)
-                    {
-                        if (trace.length() > 0)
-                        {
-                            trace.append(System.lineSeparator());
-                        }
-
-                        trace.append("Unknown keys:"); //$NON-NLS-1$
-                        trace.append(System.lineSeparator());
-                        trace.append(json.serialize(keys));
                     }
 
                     return trace.toString();
@@ -172,15 +161,6 @@ class GlobalContextSync implements IGlobalContextSync
                         var fileUpdate = fileUpdates.computeIfAbsent(val.path, path -> new FileUpdates(path, val.hash));
                         fileUpdate.hashes.add(val.hash);
                         fileUpdate.fields.add(val.field);
-                    }
-                }
-
-                if (keys != null)
-                {
-                    for (var key : keys)
-                    {
-                        var fileUpdate = fileUpdates.computeIfAbsent(key.path, path -> new FileUpdates(path, null));
-                        fileUpdate.fields.add(key.field);
                     }
                 }
 
