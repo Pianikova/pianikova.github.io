@@ -145,7 +145,9 @@ class ProjectTrackingWorkflow
             return;
         }
 
-        filesToHash.put(path, new ProjectFile(aiCtx, path, fileOnDisk, LocalDateTime.MIN));
+        var fileToTrack = new ProjectFile(aiCtx, path, fileOnDisk, LocalDateTime.MIN);
+        fileToTrack.update(clock.now(), null, 1);
+        filesToHash.put(path, fileToTrack);
     }
 
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
