@@ -54,6 +54,9 @@ public class Chat implements IChat, IChatDialog
     private static final String CHAT_API_WINK_TEMPLATE =
         "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"}, \"%s\", \"%s\")"; //$NON-NLS-1$
     private static final String IDE_API = "ideApi"; //$NON-NLS-1$
+    private static final String EMPTY_STRING = "``"; //$NON-NLS-1$
+    private static final String NULL_VALUE = "null"; //$NON-NLS-1$
+    private static final Character ARGS_SEPARATOR = ',';
 
     private final ILog log;
     private final ISettingsProvider settingsProvider;
@@ -163,30 +166,23 @@ public class Chat implements IChat, IChatDialog
                 var script = new StringBuilder();
                 script.append("window.chatApi.");
                 script.append(topic);
-                script.append("(`");
-                script.append(javaScript.escape(subject));
-                script.append("`, `");
-
-                if (scriptLanguage != null)
-                {
-                    script.append(scriptLanguage);
-                }
-
-                script.append("`, `");
-                if (programingLanguage != null)
-                {
-                    script.append(programingLanguage);
-                }
-
+                script.append('(');
+                script.append(javaScript.escape(subject, EMPTY_STRING));
+                script.append(ARGS_SEPARATOR);
+                script.append(javaScript.escape(scriptLanguage, EMPTY_STRING));
+                script.append(ARGS_SEPARATOR);
+                script.append(javaScript.escape(programingLanguage, EMPTY_STRING));
                 if (details != null)
                 {
-                    script.append("`, `");
-                    script.append(javaScript.escape(details));
+                    script.append(ARGS_SEPARATOR);
+                    script.append(javaScript.escape(details, EMPTY_STRING));
                 }
 
-                // TODO: use optionalSessionId
-
-                script.append("`)");
+                script.append(ARGS_SEPARATOR);
+                script.append(javaScript.escape(ctx.getPath(), NULL_VALUE));
+                script.append(ARGS_SEPARATOR);
+                script.append(javaScript.escape(optionalSessionId.orElse(null), NULL_VALUE));
+                script.append(')');
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
                     log.debug(AI_CHAT, () -> "executing script: " + scriptText);

@@ -34,14 +34,15 @@ class JavaScript implements IJavaScript
     }
 
     @Override
-    public String escape(String text)
+    public String escape(String text, String defaultValue)
     {
-        if (text == null || text.isBlank())
+        if (text == null || text.isEmpty())
         {
-            return text;
+            return defaultValue;
         }
 
-        var str = new StringBuilder();
+        var str = new StringBuilder(2 + text.length() * 4);
+        str.append('`');
         for (var ch : text.chars().toArray())
         {
             if (Character.isLetterOrDigit(ch))
@@ -62,6 +63,7 @@ class JavaScript implements IJavaScript
             }
         }
 
+        str.append('`');
         return str.toString();
     }
 }
