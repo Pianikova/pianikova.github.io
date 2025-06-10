@@ -5,5 +5,5 @@ package com.e1c.edt.ai.ui;
 
 interface IJavaScript
 {
-    String escape(String text);
+    String escape(String text, String defaultValue);
 }
