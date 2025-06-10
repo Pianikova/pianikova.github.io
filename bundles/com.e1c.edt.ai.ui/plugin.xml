@@ -97,6 +97,11 @@
         </command>
         <command
                 categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.addcode.ai"
+                name="%command.name.addcode">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
                 id="com.e1c.edt.ai.ui.commands.feedback.ai"
                 name="%command.name.feedback">
         </command>
@@ -122,7 +127,10 @@
         <key sequence="Alt+I G"
              commandId="com.e1c.edt.ai.ui.commands.generatedoccomments.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
-            <key sequence="Alt+I F"
+        <key sequence="Alt+I A"
+             commandId="com.e1c.edt.ai.ui.commands.addcode.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I F"
              commandId="com.e1c.edt.ai.ui.commands.feedback.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
         <key sequence="Ctrl+Enter"
@@ -159,6 +167,10 @@
         <handler
                 class="com.e1c.edt.ai.ui.handlers.GenerateDocCommentsAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.generatedoccomments.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.AddCodeAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.addcode.ai">
         </handler>     
         <handler
                 class="com.e1c.edt.ai.ui.handlers.FeedbackAIHandler"
@@ -200,6 +212,21 @@
                     label="%command.label.generatedoccomments"
                     style="push">
             </command>
+            <separator
+                  name="com.e1c.edt.ai.ui.separator1"
+                  visible="true">
+            </separator>
+            <command
+                    commandId="com.e1c.edt.ai.ui.commands.addcode.ai"
+                    icon="icons/obj16/addcode.png"
+                    id="com.e1c.edt.ai.ui.commands.addcode.ai.id"
+                    label="%command.label.addcode"
+                    style="push">
+            </command>
+            <separator
+                  name="com.e1c.edt.ai.ui.separator2"
+                  visible="true">
+            </separator>
             <command
                     commandId="com.e1c.edt.ai.ui.commands.feedback.ai"
                     icon="icons/obj16/feedback.png"

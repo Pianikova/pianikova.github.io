@@ -16,4 +16,6 @@ public interface IChat
     void generateDocComments(AIContext ctx, String method);
 
     void askQuestion(AIContext ctx, String userQuestion);
+
+    void addCode(AIContext ctx, String codeSnippet);
 }
