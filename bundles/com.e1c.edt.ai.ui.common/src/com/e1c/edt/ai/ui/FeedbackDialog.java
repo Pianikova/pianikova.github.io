@@ -3,8 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import com.e1c.edt.ai.ISettingsStore;
-import com.e1c.edt.ai.assistent.model.IssueType;
 import org.eclipse.jface.dialogs.IMessageProvider;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.swt.SWT;
@@ -18,6 +16,8 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Shell;
 
+import com.e1c.edt.ai.ISettingsStore;
+import com.e1c.edt.ai.assistent.model.IssueType;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -85,6 +85,8 @@ public class FeedbackDialog
         container.setLayout(layout);
 
         // Attach last code completion
+        @SuppressWarnings("unused")
+        Label attachCodeCompletionLabel = new Label(container, SWT.NONE);
         GridData attachCodeCompletionGrid = new GridData();
         attachCodeCompletionGrid.grabExcessHorizontalSpace = true;
         attachCodeCompletionGrid.horizontalAlignment = GridData.FILL;
