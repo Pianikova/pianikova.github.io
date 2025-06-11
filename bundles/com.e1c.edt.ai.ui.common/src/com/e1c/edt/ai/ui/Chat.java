@@ -15,6 +15,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
+import org.eclipse.jface.text.BadLocationException;
 
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
@@ -140,6 +141,13 @@ public class Chat implements IChat, IChatDialog
         chat("plain_message", userQuestion, null, ctx); //$NON-NLS-1$
     }
 
+    @Override
+    public void addCode(AIContext ctx, String codeSnippet)
+    {
+        Preconditions.checkNotNull(codeSnippet);
+        chat("insert_code", codeSnippet, null, ctx); //$NON-NLS-1$
+    }
+
     @SuppressWarnings("nls")
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
@@ -180,6 +188,29 @@ public class Chat implements IChat, IChatDialog
 
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(ctx.getPath(), NULL_VALUE));
+                if (topic.equals("insert_code"))
+                {
+                    var document = ctx.getDocument();
+                    Integer startLine = null, endLine = null;
+                    if (document != null)
+                    {
+                        try
+                        {
+                            startLine = document.getLineOfOffset(ctx.getStart());
+                            endLine = document.getLineOfOffset(ctx.getFinish());
+                        }
+                        catch (BadLocationException error)
+                        {
+                            log.logError(error);
+                        }
+                    }
+
+                    script.append(ARGS_SEPARATOR);
+                    script.append(startLine != null ? startLine.toString() : NULL_VALUE);
+                    script.append(ARGS_SEPARATOR);
+                    script.append(endLine != null ? endLine.toString() : NULL_VALUE);
+                }
+
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(optionalSessionId.orElse(null), NULL_VALUE));
                 script.append(')');
