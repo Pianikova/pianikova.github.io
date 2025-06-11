@@ -803,7 +803,7 @@ class EntityFactory
         if (method.isExport())
         {
             methodEntity.signatureStructurized.attributes
-                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Экcпорт" : "Export"); //$NON-NLS-1$ //$NON-NLS-2$
+                .add(BslUtil.isRussian(method, v8ProjectManager) ? "Экспорт" : "Export"); //$NON-NLS-1$ //$NON-NLS-2$
         }
 
         for (var param : method.getFormalParams())
