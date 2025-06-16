@@ -210,7 +210,7 @@ class EntitiesWalker
                     var element = (AccountingRegister)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -218,7 +218,7 @@ class EntitiesWalker
 
                     for (var resource : element.getResources())
                     {
-                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        if (visitor.visitResource(root, bmObject, resource))
                         {
                             return true;
                         }
@@ -226,7 +226,7 @@ class EntitiesWalker
 
                     for (var dimension : element.getDimensions())
                     {
-                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        if (visitor.visitDimension(root, bmObject, dimension))
                         {
                             return true;
                         }
@@ -240,7 +240,7 @@ class EntitiesWalker
                     var element = (AccumulationRegister)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -248,7 +248,7 @@ class EntitiesWalker
 
                     for (var resource : element.getResources())
                     {
-                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        if (visitor.visitResource(root, bmObject, resource))
                         {
                             return true;
                         }
@@ -256,7 +256,7 @@ class EntitiesWalker
 
                     for (var dimension : element.getDimensions())
                     {
-                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        if (visitor.visitDimension(root, bmObject, dimension))
                         {
                             return true;
                         }
@@ -270,7 +270,7 @@ class EntitiesWalker
                     var element = (BusinessProcess)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -278,7 +278,7 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        if (visitor.visitTabularSection(root, bmObject, tabularSection))
                         {
                             return true;
                         }
@@ -292,7 +292,7 @@ class EntitiesWalker
                     var element = (CalculationRegister)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -300,7 +300,7 @@ class EntitiesWalker
 
                     for (var resource : element.getResources())
                     {
-                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        if (visitor.visitResource(root, bmObject, resource))
                         {
                             return true;
                         }
@@ -308,7 +308,7 @@ class EntitiesWalker
 
                     for (var dimension : element.getDimensions())
                     {
-                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        if (visitor.visitDimension(root, bmObject, dimension))
                         {
                             return true;
                         }
@@ -322,7 +322,7 @@ class EntitiesWalker
                     var element = (Catalog)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -330,7 +330,7 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        if (visitor.visitTabularSection(root, bmObject, tabularSection))
                         {
                             return true;
                         }
@@ -344,7 +344,7 @@ class EntitiesWalker
                     var element = (ChartOfAccounts)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -352,7 +352,7 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        if (visitor.visitTabularSection(root, bmObject, tabularSection))
                         {
                             return true;
                         }
@@ -366,7 +366,7 @@ class EntitiesWalker
                     var element = (ChartOfCalculationTypes)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -374,7 +374,7 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        if (visitor.visitTabularSection(root, bmObject, tabularSection))
                         {
                             return true;
                         }
@@ -388,7 +388,7 @@ class EntitiesWalker
                     var element = (ChartOfCharacteristicTypes)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -396,7 +396,7 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        if (visitor.visitTabularSection(root, bmObject, tabularSection))
                         {
                             return true;
                         }
@@ -410,7 +410,7 @@ class EntitiesWalker
                     var element = (DataProcessor)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -424,7 +424,7 @@ class EntitiesWalker
                     var element = (DataProcessorTabularSection)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -438,7 +438,7 @@ class EntitiesWalker
                     var element = (DbObjectTabularSection)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -452,7 +452,7 @@ class EntitiesWalker
                     var element = (Document)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -460,7 +460,7 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        visitor.visitOwnerTabularSection(root, bmObject, tabularSection);
+                        visitor.visitTabularSection(root, bmObject, tabularSection);
                     }
 
                     // There's a lot of data here (IDEAI-134):
@@ -480,7 +480,7 @@ class EntitiesWalker
                     var element = (ExchangePlan)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -488,7 +488,7 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        if (visitor.visitTabularSection(root, bmObject, tabularSection))
                         {
                             return true;
                         }
@@ -502,7 +502,7 @@ class EntitiesWalker
                     var element = (ExternalDataProcessor)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -516,7 +516,7 @@ class EntitiesWalker
                     var element = (ExternalReport)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -530,7 +530,7 @@ class EntitiesWalker
                     var element = (InformationRegister)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -538,7 +538,7 @@ class EntitiesWalker
 
                     for (var resource : element.getResources())
                     {
-                        if (visitor.visitOwnerResource(root, bmObject, resource))
+                        if (visitor.visitResource(root, bmObject, resource))
                         {
                             return true;
                         }
@@ -546,7 +546,7 @@ class EntitiesWalker
 
                     for (var dimension : element.getDimensions())
                     {
-                        if (visitor.visitOwnerDimension(root, bmObject, dimension))
+                        if (visitor.visitDimension(root, bmObject, dimension))
                         {
                             return true;
                         }
@@ -560,7 +560,7 @@ class EntitiesWalker
                     var element = (Report)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -574,7 +574,7 @@ class EntitiesWalker
                     var element = (ReportTabularSection)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -588,7 +588,7 @@ class EntitiesWalker
                     var element = (Task)bmObject;
                     for (var attr : element.getAttributes())
                     {
-                        if (visitor.visitOwnerAttribute(root, bmObject, attr))
+                        if (visitor.visitAttribute(root, bmObject, attr))
                         {
                             return true;
                         }
@@ -596,7 +596,21 @@ class EntitiesWalker
 
                     for (var tabularSection : element.getTabularSections())
                     {
-                        if (visitor.visitOwnerTabularSection(root, bmObject, tabularSection))
+                        if (visitor.visitTabularSection(root, bmObject, tabularSection))
+                        {
+                            return true;
+                        }
+                    }
+
+                    continue;
+                }
+
+                if (bmObject instanceof com._1c.g5.v8.dt.metadata.mdclass.Enum)
+                {
+                    var element = (com._1c.g5.v8.dt.metadata.mdclass.Enum)bmObject;
+                    for (var val : element.getEnumValues())
+                    {
+                        if (visitor.visitEnumValue(root, bmObject, val))
                         {
                             return true;
                         }

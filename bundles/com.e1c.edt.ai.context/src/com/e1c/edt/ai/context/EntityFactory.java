@@ -46,6 +46,7 @@ import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.e1c.edt.ai.ICancellationToken;
@@ -54,6 +55,7 @@ import com.e1c.edt.ai.assistent.model.CursorLocation;
 import com.e1c.edt.ai.context.DTO.AttributeEntity;
 import com.e1c.edt.ai.context.DTO.DataType;
 import com.e1c.edt.ai.context.DTO.DynamicListEntity;
+import com.e1c.edt.ai.context.DTO.EnumValueEntity;
 import com.e1c.edt.ai.context.DTO.FieldEntity;
 import com.e1c.edt.ai.context.DTO.FormButtonEntity;
 import com.e1c.edt.ai.context.DTO.FormEntity;
@@ -584,7 +586,7 @@ class EntityFactory
     public Optional<MetaEntity> createMetaEntity(List<BasicFeature> attributes,
         List<DbObjectTabularSection> tabularSections, List<RegisterResource> registerResources,
         List<RegisterDimension> registerDimensions, List<BasicRegister> registerRecords,
-        ICancellationToken cancellationToken)
+        ArrayList<EnumValue> enumValues, ICancellationToken cancellationToken)
     {
         var meta = new MetaEntity();
         if (!attributes.isEmpty())
@@ -676,6 +678,18 @@ class EntityFactory
                         entity.fields.add(createField(field));
                     }
                 }
+            }
+        }
+
+        if (!enumValues.isEmpty())
+        {
+            meta.enumValues = new ArrayList<>();
+            for (var enumValue : enumValues)
+            {
+                var entity = new EnumValueEntity();
+                meta.enumValues.add(entity);
+                entity.name = enumValue.getName();
+                entity.synonym = getMap(enumValue.getSynonym());
             }
         }
 

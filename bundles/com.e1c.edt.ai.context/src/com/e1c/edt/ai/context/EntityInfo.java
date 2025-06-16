@@ -27,6 +27,7 @@ import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.e1c.edt.ai.AIContext;
@@ -223,6 +224,7 @@ class EntityInfo
         var registerResources = new ArrayList<RegisterResource>();
         var registerDimensions = new ArrayList<RegisterDimension>();
         var registerRecords = new ArrayList<BasicRegister>();
+        var enumValues = new ArrayList<EnumValue>();
         var cursorObjects = new EObject[1];
         var owners = new ArrayList<IBmObject>();
         var document = aiContext.getDocument();
@@ -285,7 +287,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
+            public boolean visitAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
             {
                 if (caluclateMetadataHash(root, attribute))
                 {
@@ -301,7 +303,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerTabularSection(BmRoot root, IBmObject owner,
+            public boolean visitTabularSection(BmRoot root, IBmObject owner,
                 DbObjectTabularSection tabularSection)
             {
                 if (caluclateMetadataHash(root, tabularSection))
@@ -318,7 +320,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerResource(BmRoot root, IBmObject owner, RegisterResource resource)
+            public boolean visitResource(BmRoot root, IBmObject owner, RegisterResource resource)
             {
                 if (caluclateMetadataHash(root, resource))
                 {
@@ -334,7 +336,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
+            public boolean visitDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
             {
                 if (caluclateMetadataHash(root, dimension))
                 {
@@ -350,7 +352,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitOwnerRegisterRecord(BmRoot root, IBmObject owner,
+            public boolean visitRegisterRecord(BmRoot root, IBmObject owner,
                 BasicRegister registerRecord)
             {
                 if (caluclateMetadataHash(root, registerRecord))
@@ -361,6 +363,22 @@ class EntityInfo
                 if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
                 {
                     registerRecords.add(registerRecord);
+                }
+
+                return false;
+            }
+
+            @Override
+            public boolean visitEnumValue(BmRoot root, IBmObject bmObject, EnumValue val)
+            {
+                if (caluclateMetadataHash(root, val))
+                {
+                    return true;
+                }
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
+                {
+                    enumValues.add(val);
                 }
 
                 return false;
@@ -548,7 +566,7 @@ class EntityInfo
             {
                 entityFactory
                     .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions,
-                        registerRecords, cancellationToken)
+                        registerRecords, enumValues, cancellationToken)
                     .ifPresent(entity -> globalContext.metaEntity = entity);
             }
             catch (Exception error)

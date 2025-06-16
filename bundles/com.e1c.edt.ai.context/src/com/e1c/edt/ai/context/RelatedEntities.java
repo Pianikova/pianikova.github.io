@@ -26,6 +26,7 @@ import com._1c.g5.v8.dt.mcore.AbstractMethod;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.e1c.edt.ai.ICancellationToken;
@@ -92,6 +93,7 @@ public class RelatedEntities implements IRelatedEntities
         var registerResources = new ArrayList<RegisterResource>();
         var registerDimensions = new ArrayList<RegisterDimension>();
         var registerRecords = new ArrayList<BasicRegister>();
+        var enumValues = new ArrayList<EnumValue>();
         var result =
             entitiesWalker.walk(null, request.path, request.start, request.finish, resourceSetProvider,
                 new EntityVisitor()
@@ -137,14 +139,14 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-                    public boolean visitOwnerAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
+                    public boolean visitAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
             {
                 attributes.add(attribute);
                 return false;
             }
 
             @Override
-                    public boolean visitOwnerTabularSection(BmRoot root, IBmObject owner,
+                    public boolean visitTabularSection(BmRoot root, IBmObject owner,
                 DbObjectTabularSection tabularSection)
             {
                 tabularSections.add(tabularSection);
@@ -152,25 +154,32 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-                    public boolean visitOwnerResource(BmRoot root, IBmObject owner, RegisterResource resource)
+                    public boolean visitResource(BmRoot root, IBmObject owner, RegisterResource resource)
             {
                 registerResources.add(resource);
                 return false;
             }
 
             @Override
-                    public boolean visitOwnerDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
+                    public boolean visitDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
             {
                 registerDimensions.add(dimension);
                 return false;
             }
 
             @Override
-                    public boolean visitOwnerRegisterRecord(BmRoot root, IBmObject owner,
+                    public boolean visitRegisterRecord(BmRoot root, IBmObject owner,
                 BasicRegister registerRecord)
             {
                 registerRecords.add(registerRecord);
                 return false;
+                    }
+
+                    @Override
+                    public boolean visitEnumValue(BmRoot root, IBmObject bmObject, EnumValue val)
+                    {
+                        enumValues.add(val);
+                        return false;
             }
 
             @Override
@@ -246,7 +255,7 @@ public class RelatedEntities implements IRelatedEntities
 
         entityFactory
             .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,
-                cancellationToken)
+                enumValues, cancellationToken)
             .ifPresent(meta -> response.meta = meta);
 
         entitiesWalker.walk(null, request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()

@@ -25,4 +25,7 @@ public class MetaEntity
 
     @SerializedName("register_records")
     public List<RegisterRecordEntity> registerRecords;
+
+    @SerializedName("enum_values")
+    public List<EnumValueEntity> enumValues;
 }

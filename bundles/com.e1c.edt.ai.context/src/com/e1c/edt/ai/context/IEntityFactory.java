@@ -3,14 +3,10 @@
  */
 package com.e1c.edt.ai.context;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.context.DTO.FormEntity;
-import com.e1c.edt.ai.context.DTO.MetaEntity;
-import com.e1c.edt.ai.context.DTO.MethodEntity;
-import com.e1c.edt.ai.context.DTO.ObjectEntity;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 
@@ -22,8 +18,14 @@ import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.context.DTO.FormEntity;
+import com.e1c.edt.ai.context.DTO.MetaEntity;
+import com.e1c.edt.ai.context.DTO.MethodEntity;
+import com.e1c.edt.ai.context.DTO.ObjectEntity;
 
 interface IEntityFactory
 {
@@ -44,7 +46,7 @@ interface IEntityFactory
 
     Optional<MetaEntity> createMetaEntity(List<BasicFeature> attributes, List<DbObjectTabularSection> tabularSections,
         List<RegisterResource> registerResources, List<RegisterDimension> registerDimensions,
-        List<BasicRegister> registerRecords, ICancellationToken cancellationToken);
+        List<BasicRegister> registerRecords, ArrayList<EnumValue> enumValues, ICancellationToken cancellationToken);
 
     Optional<List<String>> getEnvironments(EObject obj);
 

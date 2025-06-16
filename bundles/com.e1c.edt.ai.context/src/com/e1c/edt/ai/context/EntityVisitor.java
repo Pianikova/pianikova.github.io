@@ -16,6 +16,7 @@ import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
@@ -35,7 +36,7 @@ class EntityVisitor
     }
 
     @Override
-    public boolean visitOwnerAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
+    public boolean visitAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
     {
         return false;
     }
@@ -47,26 +48,32 @@ class EntityVisitor
     }
 
     @Override
-    public boolean visitOwnerTabularSection(BmRoot root, IBmObject owner,
+    public boolean visitTabularSection(BmRoot root, IBmObject owner,
         DbObjectTabularSection tabularSection)
     {
         return false;
     }
 
     @Override
-    public boolean visitOwnerResource(BmRoot root, IBmObject owner, RegisterResource resource)
+    public boolean visitResource(BmRoot root, IBmObject owner, RegisterResource resource)
     {
         return false;
     }
 
     @Override
-    public boolean visitOwnerDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
+    public boolean visitDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
     {
         return false;
     }
 
     @Override
-    public boolean visitOwnerRegisterRecord(BmRoot root, IBmObject owner, BasicRegister registerRecord)
+    public boolean visitRegisterRecord(BmRoot root, IBmObject owner, BasicRegister registerRecord)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitEnumValue(BmRoot root, IBmObject bmObject, EnumValue val)
     {
         return false;
     }

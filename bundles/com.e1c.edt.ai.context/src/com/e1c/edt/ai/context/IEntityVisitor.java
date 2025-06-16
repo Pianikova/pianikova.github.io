@@ -16,6 +16,7 @@ import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 
@@ -27,15 +28,15 @@ interface IEntityVisitor
 
     boolean visitBmObject(BmRoot root, IBmObject owner);
 
-    boolean visitOwnerAttribute(BmRoot root, IBmObject owner, BasicFeature attribute);
+    boolean visitAttribute(BmRoot root, IBmObject owner, BasicFeature attribute);
 
-    boolean visitOwnerTabularSection(BmRoot root, IBmObject owner, DbObjectTabularSection tabularSection);
+    boolean visitTabularSection(BmRoot root, IBmObject owner, DbObjectTabularSection tabularSection);
 
-    boolean visitOwnerResource(BmRoot root, IBmObject owner, RegisterResource resource);
+    boolean visitResource(BmRoot root, IBmObject owner, RegisterResource resource);
 
-    boolean visitOwnerDimension(BmRoot root, IBmObject owner, RegisterDimension dimension);
+    boolean visitDimension(BmRoot root, IBmObject owner, RegisterDimension dimension);
 
-    boolean visitOwnerRegisterRecord(BmRoot root, IBmObject owner, BasicRegister registerRecord);
+    boolean visitRegisterRecord(BmRoot root, IBmObject owner, BasicRegister registerRecord);
 
     boolean visitForm(BmRoot root, Form form);
 
@@ -46,4 +47,6 @@ interface IEntityVisitor
     boolean visitVariable(BmRoot root, String nodeId, Variable variable, ICompositeNode node);
 
     boolean visitMethod(BmRoot root, String nodeId, Method method, ICompositeNode node);
+
+    boolean visitEnumValue(BmRoot root, IBmObject bmObject, EnumValue val);
 }
