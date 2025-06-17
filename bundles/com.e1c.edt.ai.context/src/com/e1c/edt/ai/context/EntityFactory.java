@@ -43,7 +43,9 @@ import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeDescription;
 import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
@@ -66,6 +68,7 @@ import com.e1c.edt.ai.context.DTO.MetaEntity;
 import com.e1c.edt.ai.context.DTO.MethodEntity;
 import com.e1c.edt.ai.context.DTO.ObjectEntity;
 import com.e1c.edt.ai.context.DTO.ObjectEntityField;
+import com.e1c.edt.ai.context.DTO.ObjectFormEntity;
 import com.e1c.edt.ai.context.DTO.Parameter;
 import com.e1c.edt.ai.context.DTO.PropertyEntity;
 import com.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
@@ -113,7 +116,7 @@ class EntityFactory
     }
 
     @Override
-    public Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken)
+    public Optional<FormEntity> createFormEntity(AbstractForm form, ICancellationToken cancellationToken)
     {
         var formEntity = new FormEntity();
         var forms = new ArrayList<Form>();
@@ -583,12 +586,24 @@ class EntityFactory
     }
 
     @Override
-    public Optional<MetaEntity> createMetaEntity(List<BasicFeature> attributes,
+    public Optional<MetaEntity> createMetaEntity(List<BasicForm> forms, List<BasicFeature> attributes,
         List<DbObjectTabularSection> tabularSections, List<RegisterResource> registerResources,
         List<RegisterDimension> registerDimensions, List<BasicRegister> registerRecords,
         ArrayList<EnumValue> enumValues, ICancellationToken cancellationToken)
     {
         var meta = new MetaEntity();
+        if (!forms.isEmpty())
+        {
+            meta.objectForms = new ArrayList<>();
+            for (var form : forms)
+            {
+                var entity = new ObjectFormEntity();
+                meta.objectForms.add(entity);
+                entity.name = form.getName();
+                entity.synonym = getMap(form.getSynonym());
+            }
+        }
+
         if (!attributes.isEmpty())
         {
             meta.attributes = new ArrayList<>();

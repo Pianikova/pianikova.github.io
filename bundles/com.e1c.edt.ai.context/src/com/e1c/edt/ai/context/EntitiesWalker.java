@@ -232,6 +232,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -262,6 +267,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -282,6 +292,11 @@ class EntitiesWalker
                         {
                             return true;
                         }
+                    }
+
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
                     }
 
                     continue;
@@ -314,6 +329,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -334,6 +354,11 @@ class EntitiesWalker
                         {
                             return true;
                         }
+                    }
+
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
                     }
 
                     continue;
@@ -358,6 +383,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -378,6 +408,11 @@ class EntitiesWalker
                         {
                             return true;
                         }
+                    }
+
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
                     }
 
                     continue;
@@ -402,6 +437,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -414,6 +454,11 @@ class EntitiesWalker
                         {
                             return true;
                         }
+                    }
+
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
                     }
 
                     continue;
@@ -472,6 +517,11 @@ class EntitiesWalker
                         }
                     }*/
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -494,6 +544,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -508,6 +563,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -520,6 +580,11 @@ class EntitiesWalker
                         {
                             return true;
                         }
+                    }
+
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
                     }
 
                     continue;
@@ -552,6 +617,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -564,6 +634,11 @@ class EntitiesWalker
                         {
                             return true;
                         }
+                    }
+
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
                     }
 
                     continue;
@@ -602,6 +677,11 @@ class EntitiesWalker
                         }
                     }
 
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
+                    }
+
                     continue;
                 }
 
@@ -614,6 +694,11 @@ class EntitiesWalker
                         {
                             return true;
                         }
+                    }
+
+                    for (var form : element.getForms())
+                    {
+                        visitor.visitForm(root, bmObject, form);
                     }
 
                     continue;

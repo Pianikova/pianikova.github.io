@@ -23,8 +23,9 @@ import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
-import com._1c.g5.v8.dt.form.model.Form;
+import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
@@ -219,6 +220,7 @@ class EntityInfo
         globalContext.localFunctions = new HashMap<>();
         globalContext.localFunctionsEntities = new HashMap<>();
         var uuids = new HashSet<String>();
+        var forms = new ArrayList<BasicForm>();
         var attributes = new ArrayList<BasicFeature>();
         var tabularSections = new ArrayList<DbObjectTabularSection>();
         var registerResources = new ArrayList<RegisterResource>();
@@ -283,6 +285,22 @@ class EntityInfo
             public boolean visitBmObject(BmRoot root, IBmObject owner)
             {
                 owners.add(owner);
+                return false;
+            }
+
+            @Override
+            public boolean visitForm(BmRoot root, IBmObject owner, BasicForm form)
+            {
+                if (caluclateMetadataHash(root, form))
+                {
+                    return true;
+                }
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
+                {
+                    forms.add(form);
+                }
+
                 return false;
             }
 
@@ -385,7 +403,7 @@ class EntityInfo
             }
 
             @Override
-            public boolean visitForm(BmRoot root, Form form)
+            public boolean visitForm(BmRoot root, AbstractForm form)
             {
                 try (var measurement = statistics.measureDuration(StatisticsType.FORM_DURATUION))
                 {
@@ -565,7 +583,7 @@ class EntityInfo
             try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
             {
                 entityFactory
-                    .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions,
+                    .createMetaEntity(forms, attributes, tabularSections, registerResources, registerDimensions,
                         registerRecords, enumValues, cancellationToken)
                     .ifPresent(entity -> globalContext.metaEntity = entity);
             }

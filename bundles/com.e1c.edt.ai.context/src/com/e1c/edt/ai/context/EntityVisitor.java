@@ -12,8 +12,9 @@ import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
-import com._1c.g5.v8.dt.form.model.Form;
+import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
@@ -31,6 +32,12 @@ class EntityVisitor
 
     @Override
     public boolean visitNode(BmRoot root, EObject eObject, ICompositeNode node)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean visitForm(BmRoot root, IBmObject owner, BasicForm form)
     {
         return false;
     }
@@ -79,7 +86,7 @@ class EntityVisitor
     }
 
     @Override
-    public boolean visitForm(BmRoot root, Form form)
+    public boolean visitForm(BmRoot root, AbstractForm form)
     {
         return false;
     }

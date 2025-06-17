@@ -21,9 +21,10 @@ import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
-import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.mcore.AbstractMethod;
+import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
@@ -88,6 +89,7 @@ public class RelatedEntities implements IRelatedEntities
         response.relatedFunctions = new ArrayList<>();
         response.localFunctions = new ArrayList<>();
         var entities = new HashSet<Entity>();
+        var forms = new ArrayList<BasicForm>();
         var attributes = new ArrayList<BasicFeature>();
         var tabularSections = new ArrayList<DbObjectTabularSection>();
         var registerResources = new ArrayList<RegisterResource>();
@@ -97,8 +99,8 @@ public class RelatedEntities implements IRelatedEntities
         var result =
             entitiesWalker.walk(null, request.path, request.start, request.finish, resourceSetProvider,
                 new EntityVisitor()
-        {
-            @Override
+                {
+                    @Override
                     public boolean visitModule(BmRoot root, Module module)
             {
                 var project = v8ProjectManager.getProject(module);
@@ -137,6 +139,13 @@ public class RelatedEntities implements IRelatedEntities
 
                 return false;
             }
+
+                    @Override
+                    public boolean visitForm(BmRoot root, IBmObject owner, BasicForm form)
+                    {
+                        forms.add(form);
+                        return false;
+                    }
 
             @Override
                     public boolean visitAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
@@ -183,7 +192,7 @@ public class RelatedEntities implements IRelatedEntities
             }
 
             @Override
-                    public boolean visitForm(BmRoot root, Form form)
+                    public boolean visitForm(BmRoot root, AbstractForm form)
             {
                 entityFactory.createFormEntity(form, cancellationToken).ifPresent(i -> response.form = i);
                 return false;
@@ -254,7 +263,8 @@ public class RelatedEntities implements IRelatedEntities
         }, IStatistics.Empty, cancellationToken);
 
         entityFactory
-            .createMetaEntity(attributes, tabularSections, registerResources, registerDimensions, registerRecords,
+            .createMetaEntity(forms, attributes, tabularSections, registerResources, registerDimensions,
+                registerRecords,
                 enumValues, cancellationToken)
             .ifPresent(meta -> response.meta = meta);
 

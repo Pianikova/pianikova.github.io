@@ -28,4 +28,7 @@ public class MetaEntity
 
     @SerializedName("enum_values")
     public List<EnumValueEntity> enumValues;
+
+    @SerializedName("object_form")
+    public List<ObjectFormEntity> objectForms;
 }
