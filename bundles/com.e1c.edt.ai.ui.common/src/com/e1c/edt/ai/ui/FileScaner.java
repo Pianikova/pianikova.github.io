@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import org.eclipse.core.resources.IFile;
@@ -18,8 +19,15 @@ import com.google.inject.Inject;
 class FileScaner
     implements IFileScaner
 {
-    @SuppressWarnings("nls")
+    private static final HashSet<String> extensions = new HashSet<>();
     private final ILog log;
+
+    static
+    {
+        extensions.add("bsl"); //$NON-NLS-1$
+        extensions.add("mdo"); //$NON-NLS-1$
+        extensions.add("form"); //$NON-NLS-1$
+    }
 
     @Inject
     public FileScaner(ILog log)
@@ -28,7 +36,6 @@ class FileScaner
         this.log = log;
     }
 
-    @SuppressWarnings("nls")
     @Override
     public List<IFile> scan(IProject project)
     {
@@ -51,16 +58,9 @@ class FileScaner
                         return false;
                     }
 
-                    if ("mdo".equalsIgnoreCase(ext))
+                    if (extensions.contains(ext.toLowerCase()))
                     {
                         files.add(file);
-                        return false;
-                    }
-
-                    if ("CommonModules".equalsIgnoreCase(pathSegments[1]) && "bsl".equalsIgnoreCase(ext))
-                    {
-                        files.add(file);
-                        return false;
                     }
 
                     return false;

@@ -376,6 +376,10 @@ class ProjectTrackingWorkflow
                 update.field = Fields.META;
                 break;
 
+            case "form":
+                update.field = Fields.FORM;
+                break;
+
             default:
                 continue;
             }

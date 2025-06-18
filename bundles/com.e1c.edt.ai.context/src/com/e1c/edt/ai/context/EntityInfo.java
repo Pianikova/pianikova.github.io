@@ -23,14 +23,7 @@ import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
-import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
-import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
-import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
-import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
-import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
+import com._1c.g5.v8.dt.form.model.Form;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.DataType;
 import com.e1c.edt.ai.Fields;
@@ -220,15 +213,8 @@ class EntityInfo
         globalContext.localFunctions = new HashMap<>();
         globalContext.localFunctionsEntities = new HashMap<>();
         var uuids = new HashSet<String>();
-        var forms = new ArrayList<BasicForm>();
-        var attributes = new ArrayList<BasicFeature>();
-        var tabularSections = new ArrayList<DbObjectTabularSection>();
-        var registerResources = new ArrayList<RegisterResource>();
-        var registerDimensions = new ArrayList<RegisterDimension>();
-        var registerRecords = new ArrayList<BasicRegister>();
-        var enumValues = new ArrayList<EnumValue>();
         var cursorObjects = new EObject[1];
-        var owners = new ArrayList<IBmObject>();
+        var objects = new ArrayList<IBmObject>();
         var document = aiContext.getDocument();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
         entitiesWalker.walk(document, filePath, start, finish, resourceSetProvider, new EntityVisitor()
@@ -284,126 +270,12 @@ class EntityInfo
             @Override
             public boolean visitBmObject(BmRoot root, IBmObject owner)
             {
-                owners.add(owner);
+                objects.add(owner);
                 return false;
             }
 
             @Override
-            public boolean visitForm(BmRoot root, IBmObject owner, BasicForm form)
-            {
-                if (caluclateMetadataHash(root, form))
-                {
-                    return true;
-                }
-
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
-                {
-                    forms.add(form);
-                }
-
-                return false;
-            }
-
-            @Override
-            public boolean visitAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
-            {
-                if (caluclateMetadataHash(root, attribute))
-                {
-                    return true;
-                }
-
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
-                {
-                    attributes.add(attribute);
-                }
-
-                return false;
-            }
-
-            @Override
-            public boolean visitTabularSection(BmRoot root, IBmObject owner,
-                DbObjectTabularSection tabularSection)
-            {
-                if (caluclateMetadataHash(root, tabularSection))
-                {
-                    return true;
-                }
-
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
-                {
-                    tabularSections.add(tabularSection);
-                }
-
-                return false;
-            }
-
-            @Override
-            public boolean visitResource(BmRoot root, IBmObject owner, RegisterResource resource)
-            {
-                if (caluclateMetadataHash(root, resource))
-                {
-                    return true;
-                }
-
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
-                {
-                    registerResources.add(resource);
-                }
-
-                return false;
-            }
-
-            @Override
-            public boolean visitDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
-            {
-                if (caluclateMetadataHash(root, dimension))
-                {
-                    return true;
-                }
-
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
-                {
-                    registerDimensions.add(dimension);
-                }
-
-                return false;
-            }
-
-            @Override
-            public boolean visitRegisterRecord(BmRoot root, IBmObject owner,
-                BasicRegister registerRecord)
-            {
-                if (caluclateMetadataHash(root, registerRecord))
-                {
-                    return true;
-                }
-
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
-                {
-                    registerRecords.add(registerRecord);
-                }
-
-                return false;
-            }
-
-            @Override
-            public boolean visitEnumValue(BmRoot root, IBmObject bmObject, EnumValue val)
-            {
-                if (caluclateMetadataHash(root, val))
-                {
-                    return true;
-                }
-
-                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, globalContext.metaHash)))
-                {
-                    enumValues.add(val);
-                }
-
-                return false;
-            }
-
-            @Override
-            public boolean visitForm(BmRoot root, AbstractForm form)
+            public boolean visitForm(BmRoot root, Form form)
             {
                 try (var measurement = statistics.measureDuration(StatisticsType.FORM_DURATUION))
                 {
@@ -532,33 +404,6 @@ class EntityInfo
 
                 return false;
             }
-
-            private boolean caluclateMetadataHash(BmRoot root, EObject metadata)
-            {
-                if (globalContext.metaHash == null)
-                {
-                    if (!actionFilter.test(new FillAction(DataType.HASH, Fields.META, null)))
-                    {
-                        return true;
-                    }
-
-                    globalContext.metaHash =
-                        root.getFile(metadata).map(file -> {
-                            globalContext.metaPath = file.getFullPath().makeRelative().toPortableString();
-                            try
-                            {
-                                return hashTools.compute(file, buffer);
-                            }
-                            catch (Exception error)
-                            {
-                                log.logError(error);
-                                return null;
-                            }
-                        }).map(hash -> hashTools.format(hash, true)).orElse(null);
-                }
-
-                return false;
-            }
         }, statistics, cancellationToken);
 
         var cursorObject = cursorObjects[0];
@@ -578,14 +423,11 @@ class EntityInfo
             entityFactory.getAreas(cursorObject).ifPresent(areas -> localContext.cursorAreas = areas);
         }
 
-        if (!owners.isEmpty() && actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
+        if (!objects.isEmpty() && actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
         {
             try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
             {
-                entityFactory
-                    .createMetaEntity(forms, attributes, tabularSections, registerResources, registerDimensions,
-                        registerRecords, enumValues, cancellationToken)
-                    .ifPresent(entity -> globalContext.metaEntity = entity);
+                globalContext.metaEntity = entityFactory.createMetaEntity(objects, cancellationToken);
             }
             catch (Exception error)
             {

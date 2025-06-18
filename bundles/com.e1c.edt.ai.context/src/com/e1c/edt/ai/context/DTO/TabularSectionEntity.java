@@ -14,6 +14,8 @@ public class TabularSectionEntity
 
     public String comment;
 
+    public List<AttributeEntity> attributes;
+
     public List<FieldEntity> fields;
 
     @SerializedName("tool_tip")

@@ -21,15 +21,8 @@ import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.mcore.AbstractMethod;
-import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
-import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
-import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
-import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
-import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
-import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStatistics;
@@ -89,13 +82,7 @@ public class RelatedEntities implements IRelatedEntities
         response.relatedFunctions = new ArrayList<>();
         response.localFunctions = new ArrayList<>();
         var entities = new HashSet<Entity>();
-        var forms = new ArrayList<BasicForm>();
-        var attributes = new ArrayList<BasicFeature>();
-        var tabularSections = new ArrayList<DbObjectTabularSection>();
-        var registerResources = new ArrayList<RegisterResource>();
-        var registerDimensions = new ArrayList<RegisterDimension>();
-        var registerRecords = new ArrayList<BasicRegister>();
-        var enumValues = new ArrayList<EnumValue>();
+        var objects = new ArrayList<IBmObject>();
         var result =
             entitiesWalker.walk(null, request.path, request.start, request.finish, resourceSetProvider,
                 new EntityVisitor()
@@ -141,58 +128,14 @@ public class RelatedEntities implements IRelatedEntities
             }
 
                     @Override
-                    public boolean visitForm(BmRoot root, IBmObject owner, BasicForm form)
+                    public boolean visitBmObject(BmRoot root, IBmObject owner)
                     {
-                        forms.add(form);
+                        objects.add(owner);
                         return false;
                     }
 
             @Override
-                    public boolean visitAttribute(BmRoot root, IBmObject owner, BasicFeature attribute)
-            {
-                attributes.add(attribute);
-                return false;
-            }
-
-            @Override
-                    public boolean visitTabularSection(BmRoot root, IBmObject owner,
-                DbObjectTabularSection tabularSection)
-            {
-                tabularSections.add(tabularSection);
-                return false;
-            }
-
-            @Override
-                    public boolean visitResource(BmRoot root, IBmObject owner, RegisterResource resource)
-            {
-                registerResources.add(resource);
-                return false;
-            }
-
-            @Override
-                    public boolean visitDimension(BmRoot root, IBmObject owner, RegisterDimension dimension)
-            {
-                registerDimensions.add(dimension);
-                return false;
-            }
-
-            @Override
-                    public boolean visitRegisterRecord(BmRoot root, IBmObject owner,
-                BasicRegister registerRecord)
-            {
-                registerRecords.add(registerRecord);
-                return false;
-                    }
-
-                    @Override
-                    public boolean visitEnumValue(BmRoot root, IBmObject bmObject, EnumValue val)
-                    {
-                        enumValues.add(val);
-                        return false;
-            }
-
-            @Override
-                    public boolean visitForm(BmRoot root, AbstractForm form)
+                    public boolean visitForm(BmRoot root, Form form)
             {
                 entityFactory.createFormEntity(form, cancellationToken).ifPresent(i -> response.form = i);
                 return false;
@@ -262,11 +205,7 @@ public class RelatedEntities implements IRelatedEntities
             }
         }, IStatistics.Empty, cancellationToken);
 
-        entityFactory
-            .createMetaEntity(forms, attributes, tabularSections, registerResources, registerDimensions,
-                registerRecords,
-                enumValues, cancellationToken)
-            .ifPresent(meta -> response.meta = meta);
+        response.meta = entityFactory.createMetaEntity(objects, cancellationToken);
 
         entitiesWalker.walk(null, request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()
         {

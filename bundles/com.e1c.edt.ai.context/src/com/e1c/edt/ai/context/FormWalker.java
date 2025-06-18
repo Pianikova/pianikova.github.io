@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Stack;
 
-import com.e1c.edt.ai.ICancellationToken;
 import org.eclipse.emf.ecore.EObject;
 
 import com._1c.g5.v8.dt.form.model.Addition;
@@ -25,6 +24,7 @@ import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.form.model.TableHolder;
 import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.FieldSource;
+import com.e1c.edt.ai.ICancellationToken;
 import com.google.common.base.Preconditions;
 
 class FormWalker

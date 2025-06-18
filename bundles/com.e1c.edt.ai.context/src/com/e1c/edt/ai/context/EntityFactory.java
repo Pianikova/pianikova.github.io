@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Stack;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.eclipse.emf.common.util.EMap;
@@ -16,6 +18,7 @@ import org.eclipse.xtext.EcoreUtil2;
 import org.eclipse.xtext.nodemodel.ICompositeNode;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
 
+import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.bsl.model.BslContextDefMethod;
 import com._1c.g5.v8.dt.bsl.model.FeatureAccess;
 import com._1c.g5.v8.dt.bsl.model.Function;
@@ -32,6 +35,7 @@ import com._1c.g5.v8.dt.form.model.DynamicListExtInfo;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
 import com._1c.g5.v8.dt.form.model.FormField;
+import com._1c.g5.v8.dt.form.model.FormParameter;
 import com._1c.g5.v8.dt.form.model.Group;
 import com._1c.g5.v8.dt.form.model.MultiLanguageDataPath;
 import com._1c.g5.v8.dt.form.model.PropertyInfo;
@@ -39,18 +43,37 @@ import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.form.model.ValueListExtInfo;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.mcore.Field;
+import com._1c.g5.v8.dt.mcore.FieldSource;
 import com._1c.g5.v8.dt.mcore.Property;
 import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeDescription;
 import com._1c.g5.v8.dt.mcore.TypeItem;
-import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
+import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.BusinessProcess;
+import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
+import com._1c.g5.v8.dt.metadata.mdclass.ChartOfAccounts;
+import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCalculationTypes;
+import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCharacteristicTypes;
+import com._1c.g5.v8.dt.metadata.mdclass.DataProcessor;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.Document;
+import com._1c.g5.v8.dt.metadata.mdclass.Enum;
 import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
+import com._1c.g5.v8.dt.metadata.mdclass.ExchangePlan;
+import com._1c.g5.v8.dt.metadata.mdclass.ExternalDataProcessor;
+import com._1c.g5.v8.dt.metadata.mdclass.ExternalReport;
+import com._1c.g5.v8.dt.metadata.mdclass.InformationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
+import com._1c.g5.v8.dt.metadata.mdclass.Report;
+import com._1c.g5.v8.dt.metadata.mdclass.ReportTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.StandardAttribute;
+import com._1c.g5.v8.dt.metadata.mdclass.Task;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.assistent.model.CursorLocation;
@@ -63,6 +86,7 @@ import com.e1c.edt.ai.context.DTO.FormButtonEntity;
 import com.e1c.edt.ai.context.DTO.FormEntity;
 import com.e1c.edt.ai.context.DTO.FormFieldEntity;
 import com.e1c.edt.ai.context.DTO.FormGroupEntity;
+import com.e1c.edt.ai.context.DTO.FormParameterEntity;
 import com.e1c.edt.ai.context.DTO.FormTableEntity;
 import com.e1c.edt.ai.context.DTO.MetaEntity;
 import com.e1c.edt.ai.context.DTO.MethodEntity;
@@ -116,10 +140,31 @@ class EntityFactory
     }
 
     @Override
-    public Optional<FormEntity> createFormEntity(AbstractForm form, ICancellationToken cancellationToken)
+    public Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken)
     {
         var formEntity = new FormEntity();
-        var forms = new ArrayList<Form>();
+        formEntity.title = createMap(form.getTitle());
+        formEntity.parameters = createFormParameters(form.getParameters());
+        var attributes = form.getAttributes();
+        if (attributes != null && !attributes.isEmpty())
+        {
+            if (formEntity.attributes == null)
+            {
+                formEntity.attributes = new ArrayList<>();
+            }
+
+            var hasMainAttribute = false;
+            for (var attribute : attributes)
+            {
+                hasMainAttribute |= attribute.isMain();
+            }
+
+            for (var attribute : attributes)
+            {
+                formEntity.attributes.add(createAttribute(form, attribute, hasMainAttribute));
+            }
+        }
+
         var groups = new HashMap<EObject, FormGroupEntity>();
         groups.put(form, formEntity);
         formWalker.walk(form, new FormVisitor()
@@ -134,32 +179,6 @@ class EntityFactory
             public void visitButton(Optional<EObject> parent, Button button)
             {
                 parent.map(p -> groups.get(p)).ifPresent(group -> addButton(group, createButton(button)));
-            }
-
-            @Override
-            public void visitForm(Optional<EObject> parent, Form form)
-            {
-                forms.add(form);
-                formEntity.title = getMap(form.getTitle());
-                var attributes = form.getAttributes();
-                if (attributes != null && !attributes.isEmpty())
-                {
-                    if (formEntity.attributes == null)
-                    {
-                        formEntity.attributes = new ArrayList<>();
-                    }
-
-                    var hasMainAttribute = false;
-                    for (var attribute : attributes)
-                    {
-                        hasMainAttribute |= attribute.isMain();
-                    }
-
-                    for (var attribute : attributes)
-                    {
-                        formEntity.attributes.add(createAttribute(form, attribute, hasMainAttribute));
-                    }
-                }
             }
 
             @Override
@@ -192,13 +211,26 @@ class EntityFactory
                 });
             }
         }, cancellationToken);
+        return Optional.of(formEntity);
+    }
 
-        if (forms.isEmpty())
+    private List<FormParameterEntity> createFormParameters(List<FormParameter> parameters)
+    {
+        if (parameters == null)
         {
-            return Optional.empty();
+            return null;
         }
 
-        return Optional.of(formEntity);
+        return parameters.stream().map(this::createFormParameter).collect(Collectors.toList());
+    }
+
+    private FormParameterEntity createFormParameter(FormParameter parameter)
+    {
+        var entity = new FormParameterEntity();
+        entity.name = parameter.getName();
+        entity.comment = parameter.getComment();
+        entity.types = createTypes(parameter.getValueType());
+        return entity;
     }
 
     private void addField(FormGroupEntity group, FormFieldEntity field)
@@ -230,31 +262,23 @@ class EntityFactory
             attr.isMain = true;
         }
 
-        attr.title = getMap(attribute.getTitle());
-        var typeDescription = attribute.getValueType();
-        if (typeDescription != null)
-        {
-            var types = typeDescription.getTypes();
-            if (types != null && !types.isEmpty())
-            {
-                attr.types = new ArrayList<>();
-                for(var type: types)
-                {
-                    var dataType = new DataType();
-                    attr.types.add(dataType);
-                    dataType.type = type.getName();
-                    dataType.typeRu = type.getNameRu();
-                }
-            }
-        }
-
+        attr.title = createMap(attribute.getTitle());
+        attr.types = createTypes(attribute.getValueType());
         if (!attribute.isMain())
         {
-            var proprtyInfo = dataSourceInfoAssociationService.findPropertyInfo(form, attribute);
-            if (proprtyInfo != null)
+            try
             {
-                fillProperty(attr, proprtyInfo, hasMainAttribute ? 1 : 2);
+                var proprtyInfo = dataSourceInfoAssociationService.findPropertyInfo(form, attribute);
+                if (proprtyInfo != null)
+                {
+                    fillProperty(attr, proprtyInfo, hasMainAttribute ? 1 : 2);
+                }
             }
+            catch (Exception e)
+            {
+                // ignore
+            }
+
 
             var extInfo = attribute.getExtInfo();
             if (extInfo != null)
@@ -285,7 +309,7 @@ class EntityFactory
                     var info = (ValueListExtInfo)extInfo;
                     var valueList = new ValueListEntity();
                     attr.valueList = valueList;
-                    valueList.itemTypes = getTypes(info.getItemValueType());
+                    valueList.itemTypes = createTypes(info.getItemValueType());
                 }
             }
         }
@@ -295,22 +319,18 @@ class EntityFactory
 
     private List<String> getDataPaths(MultiLanguageDataPath dataPath)
     {
-        if (dataPath != null)
+        if (dataPath == null)
         {
-            var paths = dataPath.getPaths();
-            if (paths != null && !paths.isEmpty())
-            {
-                var result = new ArrayList<String>();
-                for (var path : paths)
-                {
-                    result.add(path.toString());
-                }
-
-                return result;
-            }
+            return null;
         }
 
-        return null;
+        var paths = dataPath.getPaths();
+        if (paths == null || paths.isEmpty())
+        {
+            return null;
+        }
+
+        return paths.stream().map(path -> path.toString()).collect(Collectors.toList());
     }
 
     private void fillProperty(PropertyEntity propery, PropertyInfo propertyInfo, int dept)
@@ -319,7 +339,7 @@ class EntityFactory
         propery.nameRu = propertyInfo.getNameRu();
         propery.description = propertyInfo.getStaticDescription();
         propery.dataPaths = getDataPaths(propertyInfo.getMultyLanguageDataPath());
-        propery.types = getTypes(propertyInfo.getValueType());
+        propery.types = createTypes(propertyInfo.getValueType());
         if (dept <= 0 || "Ref".equals(propery.name)) //$NON-NLS-1$
         {
             return;
@@ -354,7 +374,7 @@ class EntityFactory
     {
         var entity = new FormFieldEntity();
         entity.name = field.getName();
-        entity.toolTip = getMap(field.getToolTip());
+        entity.toolTip = createMap(field.getToolTip());
         var fiedType = field.getType();
         var dataPath = field.getDataPath();
         if (dataPath != null)
@@ -375,8 +395,8 @@ class EntityFactory
         var entity = new FormGroupEntity();
         entity.name = group.getName();
         entity.kind = group.getClass().getSimpleName();
-        entity.title = getMap(group.getTitle());
-        entity.toolTip = getMap(group.getToolTip());
+        entity.title = createMap(group.getTitle());
+        entity.toolTip = createMap(group.getToolTip());
         return entity;
     }
 
@@ -384,15 +404,13 @@ class EntityFactory
     {
         var entity = new FormButtonEntity();
         entity.name = button.getName();
-        entity.title = getMap(button.getTitle());
+        entity.title = createMap(button.getTitle());
         var dataPath = button.getDataPath();
         if (dataPath != null)
         {
             entity.dataPath = dataPath.toString();
         }
 
-        button.getCommandName();
-        // button.getCommandName()
         return entity;
     }
 
@@ -401,29 +419,15 @@ class EntityFactory
         var entity = new FormTableEntity();
         entity.name = table.getName();
         entity.kind = table.getClass().getSimpleName();
-        entity.title = getMap(table.getTitle());
-        entity.toolTip = getMap(table.getToolTip());
+        entity.title = createMap(table.getTitle());
+        entity.toolTip = createMap(table.getToolTip());
         var dataPath = table.getDataPath();
         if (dataPath != null)
         {
             entity.dataPath = dataPath.toString();
         }
 
-        var fields = table.getFields();
-        if (!fields.isEmpty())
-        {
-            entity.fields = new ArrayList<>();
-            for (var field : fields)
-            {
-                if (!isPublishedField(field))
-                {
-                    continue;
-                }
-
-                entity.tableFields.add(createField(field));
-            }
-        }
-
+        entity.tableFields = createFields(table, field -> isPublishedField(field));
         return entity;
     }
 
@@ -586,129 +590,482 @@ class EntityFactory
     }
 
     @Override
-    public Optional<MetaEntity> createMetaEntity(List<BasicForm> forms, List<BasicFeature> attributes,
-        List<DbObjectTabularSection> tabularSections, List<RegisterResource> registerResources,
-        List<RegisterDimension> registerDimensions, List<BasicRegister> registerRecords,
-        ArrayList<EnumValue> enumValues, ICancellationToken cancellationToken)
+    public List<MetaEntity> createMetaEntity(List<IBmObject> objects, ICancellationToken cancellationToken)
+    {
+        var entities = new ArrayList<MetaEntity>();
+        for (var bmObject : objects)
+        {
+            var entity = createMetaEntity(bmObject);
+            if (entity != null)
+            {
+                entities.add(entity);
+            }
+
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+        }
+
+        return entities;
+    }
+
+    private MetaEntity createMetaEntity(IBmObject bmObject)
+    {
+        if (bmObject instanceof AccountingRegister)
+        {
+            return createAccountingRegister((AccountingRegister)bmObject);
+        }
+
+        if (bmObject instanceof AccumulationRegister)
+        {
+            return createAccumulationRegister((AccumulationRegister)bmObject);
+        }
+
+        if (bmObject instanceof BusinessProcess)
+        {
+            return createBusinessProcess((BusinessProcess)bmObject);
+        }
+
+        if (bmObject instanceof CalculationRegister)
+        {
+            return createCalculationRegister((CalculationRegister)bmObject);
+        }
+
+        if (bmObject instanceof Catalog)
+        {
+            return createCatalog((Catalog)bmObject);
+        }
+
+        if (bmObject instanceof ChartOfAccounts)
+        {
+            return createChartOfAccounts((ChartOfAccounts)bmObject);
+        }
+
+        if (bmObject instanceof ChartOfCalculationTypes)
+        {
+            return createChartOfCalculationTypes((ChartOfCalculationTypes)bmObject);
+        }
+
+        if (bmObject instanceof ChartOfCharacteristicTypes)
+        {
+            return createChartOfCharacteristicTypes((ChartOfCharacteristicTypes)bmObject);
+        }
+
+        if (bmObject instanceof DataProcessor)
+        {
+            return createDataProcessor((DataProcessor)bmObject);
+        }
+
+        if (bmObject instanceof Document)
+        {
+            var meta = createDocument((Document)bmObject);
+            return meta;
+        }
+
+        if (bmObject instanceof ExchangePlan)
+        {
+            return createExchangePlan((ExchangePlan)bmObject);
+        }
+
+        if (bmObject instanceof ExternalDataProcessor)
+        {
+            return createExternalDataProcessor((ExternalDataProcessor)bmObject);
+        }
+
+        if (bmObject instanceof ExternalReport)
+        {
+            return createExternalReport((ExternalReport)bmObject);
+        }
+
+        if (bmObject instanceof InformationRegister)
+        {
+            return createInformationRegister((InformationRegister)bmObject);
+        }
+
+        if (bmObject instanceof Report)
+        {
+            return createReport((Report)bmObject);
+        }
+
+        if (bmObject instanceof ReportTabularSection)
+        {
+            return createReportTabularSection((ReportTabularSection)bmObject);
+        }
+
+        if (bmObject instanceof Task)
+        {
+            return createTask((Task)bmObject);
+        }
+
+        if (bmObject instanceof com._1c.g5.v8.dt.metadata.mdclass.Enum)
+        {
+            return createEnum((com._1c.g5.v8.dt.metadata.mdclass.Enum)bmObject);
+        }
+
+        return new MetaEntity();
+    }
+
+    private MetaEntity createEnum(Enum bmObject)
     {
         var meta = new MetaEntity();
-        if (!forms.isEmpty())
+        var enumValues = bmObject.getEnumValues();
+        if (enumValues != null)
         {
-            meta.objectForms = new ArrayList<>();
-            for (var form : forms)
-            {
-                var entity = new ObjectFormEntity();
-                meta.objectForms.add(entity);
-                entity.name = form.getName();
-                entity.synonym = getMap(form.getSynonym());
-            }
+            meta.enumValues = enumValues.stream().map(this::createEnumValue).collect(Collectors.toList());
         }
 
-        if (!attributes.isEmpty())
+        meta.objectForms = createForms(bmObject.getForms());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        return meta;
+    }
+
+    private MetaEntity createTask(Task bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createReportTabularSection(ReportTabularSection bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        return meta;
+    }
+
+    private MetaEntity createReport(Report bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createInformationRegister(InformationRegister bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.registerResources = createRegisterResources(bmObject.getResources());
+        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createExternalReport(ExternalReport bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createExternalDataProcessor(ExternalDataProcessor bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createExchangePlan(ExchangePlan bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createDocument(Document bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.fields = createFields(bmObject, field -> isPublishedField(field));
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.registerRecords = createRegisterRecords(bmObject.getRegisterRecords());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createDataProcessor(DataProcessor bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createChartOfCharacteristicTypes(ChartOfCharacteristicTypes bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createChartOfCalculationTypes(ChartOfCalculationTypes bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createChartOfAccounts(ChartOfAccounts bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createCatalog(Catalog bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createCalculationRegister(CalculationRegister bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.registerResources = createRegisterResources(bmObject.getResources());
+        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createBusinessProcess(BusinessProcess bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createAccumulationRegister(AccumulationRegister bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.registerResources = createRegisterResources(bmObject.getResources());
+        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private MetaEntity createAccountingRegister(AccountingRegister bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.registerResources = createRegisterResources(bmObject.getResources());
+        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
+        meta.objectForms = createForms(bmObject.getForms());
+        return meta;
+    }
+
+    private <T extends BasicFeature> List<AttributeEntity> createAttributes(List<T> attributes)
+    {
+        if (attributes == null || attributes.isEmpty())
         {
-            meta.attributes = new ArrayList<>();
-            for (var attribute : attributes)
-            {
-                var entity = new AttributeEntity();
-                meta.attributes.add(entity);
-                entity.name = attribute.getName();
-                entity.toolTip = getMap(attribute.getToolTip());
-                entity.types = getTypes(attribute.getTypeDescription());
-            }
+            return null;
         }
 
-        if (!tabularSections.isEmpty())
+        return attributes.stream().map(this::createAttribute).collect(Collectors.toList());
+    }
+
+    private <T extends StandardAttribute> List<AttributeEntity> createStandardAttributes(List<T> attributes)
+    {
+        if (attributes == null || attributes.isEmpty())
         {
-            meta.tabularSections = new ArrayList<>();
-            for (var tabularSection : tabularSections)
+            return null;
+        }
+
+        return attributes.stream().map(this::createStandardAttribute).collect(Collectors.toList());
+    }
+
+    private <T extends BasicForm> List<ObjectFormEntity> createForms(List<T> forms)
+    {
+        if (forms == null || forms.isEmpty())
+        {
+            return null;
+        }
+
+        return forms.stream().map(this::createForm).collect(Collectors.toList());
+    }
+
+    private <T extends RegisterResource> List<RegisterResourceEntity> createRegisterResources(List<T> resources)
+    {
+        if (resources == null || resources.isEmpty())
+        {
+            return null;
+        }
+
+        return resources.stream().map(this::createRegisterResource).collect(Collectors.toList());
+    }
+
+    private <T extends RegisterDimension> List<RegisterDimensionEntity> createRegisterDimensions(List<T> dimensions)
+    {
+        if (dimensions == null || dimensions.isEmpty())
+        {
+            return null;
+        }
+
+        return dimensions.stream().map(this::createRegisterDimension).collect(Collectors.toList());
+    }
+
+    private <T extends DbObjectTabularSection> List<TabularSectionEntity> createTabularSections(List<T> tabularSections)
+    {
+        if (tabularSections == null || tabularSections.isEmpty())
+        {
+            return null;
+        }
+
+        return tabularSections.stream().map(this::createTabularSection).collect(Collectors.toList());
+    }
+
+    private <T extends BasicRegister> List<RegisterRecordEntity> createRegisterRecords(List<T> registerRecords)
+    {
+        if (registerRecords == null || registerRecords.isEmpty())
+        {
+            return null;
+        }
+
+        return registerRecords.stream().map(this::createBasicRegister).collect(Collectors.toList());
+    }
+
+    private <T extends Field> List<FieldEntity> createFields(FieldSource fieldSource, Predicate<Field> filter)
+    {
+        if (fieldSource == null)
+        {
+            return null;
+        }
+
+        var result = new ArrayList<FieldEntity>();
+        var sources = new Stack<FieldSource>();
+        sources.push(fieldSource);
+        while (!sources.isEmpty())
+        {
+            var source = sources.pop();
+            var fields = source.getFields();
+            if (fields != null)
             {
-                var entity = new TabularSectionEntity();
-                meta.tabularSections.add(entity);
-                entity.name = tabularSection.getName();
-                entity.comment = tabularSection.getComment();
-                entity.toolTip = getMap(tabularSection.getToolTip());
-                var fields = tabularSection.getFields();
-                if (!fields.isEmpty())
+                for (var field : fields)
                 {
-                    entity.fields = new ArrayList<>();
-                    for (var field : fields)
+                    if (!filter.test(field))
                     {
-                        if (!isPublishedField(field))
-                        {
-                            continue;
-                        }
-
-                        entity.fields.add(createField(field));
+                        continue;
                     }
+
+                    result.add(createField(field));
                 }
             }
+
+            sources.addAll(source.getRefFieldSources());
         }
 
-        if (!registerResources.isEmpty())
-        {
-            meta.registerResources = new ArrayList<>();
-            for (var registerResource : registerResources)
-            {
-                var entity = new RegisterResourceEntity();
-                meta.registerResources.add(entity);
-                entity.name = registerResource.getName();
-                entity.comment = registerResource.getComment();
-                entity.toolTip = getMap(registerResource.getToolTip());
-                entity.synonym = getMap(registerResource.getSynonym());
-                entity.types = getTypes(registerResource.getType());
-            }
-        }
+        // var oterFields = FieldsSourceUtil.INSTANCE.getFields(fieldSource, f -> true);
+        return result;
+    }
 
-        if (!registerDimensions.isEmpty())
-        {
-            meta.registerDimensions = new ArrayList<>();
-            for (var registerDimension : registerDimensions)
-            {
-                var entity = new RegisterDimensionEntity();
-                meta.registerDimensions.add(entity);
-                entity.name = registerDimension.getName();
-                entity.comment = registerDimension.getComment();
-                entity.toolTip = getMap(registerDimension.getToolTip());
-                entity.synonym = getMap(registerDimension.getSynonym());
-                entity.types = getTypes(registerDimension.getType());
-            }
-        }
+    private AttributeEntity createAttribute(BasicFeature attribute)
+    {
+        var entity = new AttributeEntity();
+        entity.name = attribute.getName();
+        entity.toolTip = createMap(attribute.getToolTip());
+        entity.synonym = createMap(attribute.getSynonym());
+        entity.types = createTypes(attribute.getTypeDescription());
+        return entity;
+    }
 
-        if (!registerRecords.isEmpty())
-        {
-            meta.registerRecords = new ArrayList<>();
-            for (var registerRecord : registerRecords)
-            {
-                var entity = new RegisterRecordEntity();
-                meta.registerRecords.add(entity);
-                entity.name = registerRecord.getName();
-                entity.comment = registerRecord.getComment();
-                entity.synonym = getMap(registerRecord.getSynonym());
-                var fields = registerRecord.getFields();
-                if (!fields.isEmpty())
-                {
-                    entity.fields = new ArrayList<>();
-                    for (var field : fields)
-                    {
-                        entity.fields.add(createField(field));
-                    }
-                }
-            }
-        }
+    private AttributeEntity createStandardAttribute(StandardAttribute attribute)
+    {
+        var entity = new AttributeEntity();
+        entity.name = attribute.getName();
+        entity.toolTip = createMap(attribute.getToolTip());
+        entity.synonym = createMap(attribute.getSynonym());
+        return entity;
+    }
 
-        if (!enumValues.isEmpty())
-        {
-            meta.enumValues = new ArrayList<>();
-            for (var enumValue : enumValues)
-            {
-                var entity = new EnumValueEntity();
-                meta.enumValues.add(entity);
-                entity.name = enumValue.getName();
-                entity.synonym = getMap(enumValue.getSynonym());
-            }
-        }
+    private ObjectFormEntity createForm(BasicForm form)
+    {
+        var entity = new ObjectFormEntity();
+        entity.name = form.getName();
+        entity.synonym = createMap(form.getSynonym());
+        return entity;
+    }
 
-        return Optional.of(meta);
+    private TabularSectionEntity createTabularSection(DbObjectTabularSection tabularSection)
+    {
+        var entity = new TabularSectionEntity();
+        entity.name = tabularSection.getName();
+        entity.comment = tabularSection.getComment();
+        entity.toolTip = createMap(tabularSection.getToolTip());
+        entity.attributes = createAttributes(tabularSection.getAttributes());
+        entity.fields = createFields(tabularSection, field -> isPublishedField(field));
+        tabularSection.getRefFieldSources();
+        return entity;
+    }
+
+    private RegisterResourceEntity createRegisterResource(RegisterResource registerResource)
+    {
+        var entity = new RegisterResourceEntity();
+        entity.name = registerResource.getName();
+        entity.comment = registerResource.getComment();
+        entity.toolTip = createMap(registerResource.getToolTip());
+        entity.synonym = createMap(registerResource.getSynonym());
+        entity.types = createTypes(registerResource.getType());
+        return entity;
+    }
+
+    private RegisterDimensionEntity createRegisterDimension(RegisterDimension registerDimension)
+    {
+        var entity = new RegisterDimensionEntity();
+        entity.name = registerDimension.getName();
+        entity.comment = registerDimension.getComment();
+        entity.toolTip = createMap(registerDimension.getToolTip());
+        entity.synonym = createMap(registerDimension.getSynonym());
+        entity.types = createTypes(registerDimension.getType());
+        return entity;
+    }
+
+    private RegisterRecordEntity createBasicRegister(BasicRegister registerRecord)
+    {
+        var entity = new RegisterRecordEntity();
+        entity.name = registerRecord.getName();
+        entity.comment = registerRecord.getComment();
+        entity.synonym = createMap(registerRecord.getSynonym());
+        entity.fields = createFields(registerRecord, field -> isPublishedField(field));
+        return entity;
+    }
+
+    private EnumValueEntity createEnumValue(EnumValue enumValue)
+    {
+        var entity = new EnumValueEntity();
+        entity.name = enumValue.getName();
+        entity.synonym = createMap(enumValue.getSynonym());
+        return entity;
     }
 
     private boolean isPublishedField(Field field)
@@ -717,7 +1074,7 @@ class EntityFactory
         return name != null && !name.equals("Ref") && !name.equals("LineNumber"); //$NON-NLS-1$//$NON-NLS-2$
     }
 
-    private Map<String, String> getMap(EMap<String, String> map)
+    private Map<String, String> createMap(EMap<String, String> map)
     {
         if (map == null || map.isEmpty())
         {
@@ -727,27 +1084,28 @@ class EntityFactory
         return map.map();
     }
 
-    private List<DataType> getTypes(TypeDescription typeDescription)
+    private List<DataType> createTypes(TypeDescription typeDescription)
     {
         if (typeDescription == null)
         {
             return null;
         }
 
-        List<DataType> result = new ArrayList<>();
         var types = typeDescription.getTypes();
-        if (types != null && !types.isEmpty())
+        if (types == null || types.isEmpty())
         {
-            for (var type : types)
-            {
-                var dataType = new DataType();
-                result.add(dataType);
-                dataType.type = type.getName();
-                dataType.typeRu = type.getNameRu();
-            }
+            return null;
         }
 
-        return distinct(result);
+        return types.stream().map(this::createType).collect(Collectors.toList());
+    }
+
+    private DataType createType(TypeItem type)
+    {
+        var dataType = new DataType();
+        dataType.type = type.getName();
+        dataType.typeRu = type.getNameRu();
+        return dataType;
     }
 
     private FieldEntity createField(Field field)
@@ -755,7 +1113,7 @@ class EntityFactory
         var entity = new FieldEntity();
         entity.name = field.getName();
         entity.nameRu = field.getNameRu();
-        entity.types = getTypes(field.getType());
+        entity.types = createTypes(field.getType());
         return entity;
     }
 
