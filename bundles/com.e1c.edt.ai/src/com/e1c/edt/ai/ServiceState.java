@@ -9,6 +9,10 @@ package com.e1c.edt.ai;
  */
 public enum ServiceState
 {
+    TOKEN_FAILED,
+    SERVER_ERROR,
+    SETTINGS_CHANGED,
+    SSL_ERROR,
     OFFLINE,
-    ONLINE
+    ONLINE;
 }

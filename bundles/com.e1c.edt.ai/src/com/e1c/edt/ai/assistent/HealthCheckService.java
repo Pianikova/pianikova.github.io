@@ -8,8 +8,9 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import com.e1c.edt.ai.ServiceState;
+import javax.net.ssl.SSLHandshakeException;
 
+import com.e1c.edt.ai.ServiceState;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -60,6 +61,19 @@ class HealthCheckService
             .thenApplyAsync(response -> log.response(response, null, stopwatch, false))
             .thenApplyAsync(response -> {
                 return response.statusCode() >= 400 ? ServiceState.OFFLINE : ServiceState.ONLINE;
+            })
+            .exceptionally(throwable -> {
+                var cause = throwable.getCause();
+                if (cause instanceof SSLHandshakeException)
+                {
+                    log.error(throwable.getMessage(), "SSL Handshake error "); //$NON-NLS-1$
+                    return ServiceState.SSL_ERROR;
+                }
+                else
+                {
+                    log.error(throwable.getMessage(), "Error during health check"); //$NON-NLS-1$
+                    return ServiceState.OFFLINE;
+                }
             });
     }
 }

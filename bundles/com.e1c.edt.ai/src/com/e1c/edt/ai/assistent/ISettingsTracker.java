@@ -6,4 +6,8 @@ package com.e1c.edt.ai.assistent;
 public interface ISettingsTracker
 {
     boolean register(String owner, Object settings);
+
+    void addListener(IAISettingsListener listener);
+
+    void removeListener(IAISettingsListener listener);
 }

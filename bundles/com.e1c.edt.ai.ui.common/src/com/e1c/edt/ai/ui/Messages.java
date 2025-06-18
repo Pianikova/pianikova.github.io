@@ -37,6 +37,10 @@ public class Messages
     public static String HintHotKey_AcceptAll;
     public static String HintHotKey_AcceptBack;
     public static String HintHotKey_AcceptStop;
+    public static String StatusTokenFailed;
+    public static String StatusSSLFailed;
+    public static String Support;
+    public static String CloseButton;
 
     static
     {

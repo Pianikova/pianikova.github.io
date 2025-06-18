@@ -22,15 +22,18 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IAIStateListener;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
@@ -52,13 +55,17 @@ public class BaseStatusBarControl
     @Inject
     private IVersionProvider versionProvider;
     @Inject
+    private IUINotificationService notificationService;
+    @Inject
     private IUISettings settings;
+
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
     private final Image OFFLINE = createImage("icons/obj16/status_offline.png"); //$NON-NLS-1$
     private final Image ONLINE = createImage("icons/obj16/status_online.png"); //$NON-NLS-1$
     private final Image BUSY = createImage("icons/obj16/status_busy.png"); //$NON-NLS-1$
+    private AIState state;
     private Font font;
     private Label iconLabel;
     private Label statusLabel;
@@ -90,6 +97,7 @@ public class BaseStatusBarControl
         // Icon
         iconLabel = new Label(composite, SWT.NONE);
         iconLabel.setImage(OFFLINE);
+        iconLabel.getShell();
         var iconGridData = new GridData(SWT.CENTER, SWT.CENTER, true, true);
         iconLabel.setLayoutData(iconGridData);
 
@@ -176,6 +184,7 @@ public class BaseStatusBarControl
         parent.getParent().setRedraw(true);
         composite.addDisposeListener(this);
         stateService.addListener(this);
+
         return composite;
     }
 
@@ -213,7 +222,14 @@ public class BaseStatusBarControl
         var version = versionProvider.getPluginVersion().toString();
         switch (state.getServiceState())
         {
+        case SETTINGS_CHANGED:
+            this.state = state;
+            break;
         case ONLINE:
+            if (this.state != null && this.state.getServiceState() == ServiceState.TOKEN_FAILED)
+            {
+                break;
+            }
             var onlineIninfo = version + ' ' + Messages.StatusOnline;
             iconLabel.setToolTipText(onlineIninfo);
             statusLabel.setToolTipText(onlineIninfo);
@@ -233,19 +249,44 @@ public class BaseStatusBarControl
             policyCombo.setVisible(true);
             policyTooltip.setText(policy.getDescription());
             break;
+        case TOKEN_FAILED:
+            Display.getDefault()
+                .asyncExec(() -> notificationService.createNotification(
+                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
+                    Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
+                    this.getClass()));
+            this.state = state;
+            iconLabel.setImage(OFFLINE);
+            break;
+
+        case SSL_ERROR:
+            Display.getDefault()
+                .asyncExec(() -> notificationService.createNotification(
+                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
+                    Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
+                    this.getClass()));
+
+            iconLabel.setImage(OFFLINE);
+            break;
+
+        case SERVER_ERROR:
+            iconLabel.setImage(OFFLINE);
+            break;
 
         default:
+
             var offlineInfo = version + ' ' + Messages.StatusOffline;
             iconLabel.setToolTipText(offlineInfo);
             statusLabel.setToolTipText(offlineInfo);
+
             iconLabel.setImage(OFFLINE);
             policyCombo.setVisible(false);
             policyTooltip.setText(""); //$NON-NLS-1$
             break;
         }
-
         iconLabel.setRedraw(true);
     }
+
 
     @Override
     public void widgetSelected(SelectionEvent e)
@@ -267,4 +308,5 @@ public class BaseStatusBarControl
     {
         //
     }
+
 }

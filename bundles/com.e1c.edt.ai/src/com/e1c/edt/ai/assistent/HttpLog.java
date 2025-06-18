@@ -81,16 +81,9 @@ class HttpLog
     {
         Preconditions.checkNotNull(response);
         var statusCode = response.statusCode();
-        serverAccess.setState(HttpLog.class.getName(),
-            statusCode >= 400 ? ServiceState.OFFLINE : ServiceState.ONLINE);
-
-        if (statusCode >= 300)
+        if (statusCode >= 200 && statusCode < 300)
         {
-            log.logError(createHeader("AI response", response.uri(), ref) + System.lineSeparator()
-                + createTrace(response, stopwatch, statusCode));
-        }
-        else
-        {
+            serverAccess.setState(HttpLog.class.getName(), ServiceState.ONLINE);
             if (detailed)
             {
                 if (stopwatch.elapsed().toMillis() < 1000)
@@ -103,6 +96,29 @@ class HttpLog
                     log.warning(createHeader("AI response", response.uri(), ref),
                         () -> createTrace(response, stopwatch, statusCode));
                 }
+            }
+        }
+        else
+        {
+            log.logError(createHeader("AI response", response.uri(), ref) + System.lineSeparator()
+                + createTrace(response, stopwatch, statusCode));
+
+            switch (statusCode)
+            {
+            case 401:
+            case 403:
+                serverAccess.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
+                break;
+
+            case 500:
+            case 502:
+            case 503:
+                serverAccess.setState(HttpLog.class.getName(), ServiceState.SERVER_ERROR);
+                break;
+
+            default:
+                serverAccess.setState(HttpLog.class.getName(), ServiceState.OFFLINE);
+                break;
             }
         }
 
