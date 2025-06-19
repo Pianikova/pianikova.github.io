@@ -791,6 +791,9 @@ class EntityFactory
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.registerRecords = createRegisterRecords(bmObject.getRegisterRecords());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.posting = bmObject.getPosting().getName();
+        meta.realTimePosting = bmObject.getRealTimePosting().getName();
+        meta.registerRecordsDeletion = bmObject.getRegisterRecordsDeletion().getName();
         return meta;
     }
 

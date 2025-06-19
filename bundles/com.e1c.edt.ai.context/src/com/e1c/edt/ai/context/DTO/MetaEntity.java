@@ -33,4 +33,15 @@ public class MetaEntity
 
     @SerializedName("object_form")
     public List<ObjectFormEntity> objectForms;
+
+    // Движение - проведение
+    public String posting;
+
+    // Движение - оперативное проведение
+    @SerializedName("real_time_posting")
+    public String realTimePosting;
+
+    // Движение - удаление движений
+    @SerializedName("register_records_deletion")
+    public String registerRecordsDeletion;
 }
