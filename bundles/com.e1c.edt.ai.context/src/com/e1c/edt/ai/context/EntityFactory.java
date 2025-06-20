@@ -30,10 +30,12 @@ import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.bsl.util.BslUtil;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.form.model.AccountTypeValue;
 import com._1c.g5.v8.dt.form.model.Button;
 import com._1c.g5.v8.dt.form.model.DynamicListExtInfo;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
+import com._1c.g5.v8.dt.form.model.FormChoiceListDesTimeValue;
 import com._1c.g5.v8.dt.form.model.FormField;
 import com._1c.g5.v8.dt.form.model.FormParameter;
 import com._1c.g5.v8.dt.form.model.Group;
@@ -42,12 +44,36 @@ import com._1c.g5.v8.dt.form.model.PropertyInfo;
 import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.form.model.ValueListExtInfo;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
+import com._1c.g5.v8.dt.mcore.BinaryValue;
+import com._1c.g5.v8.dt.mcore.BooleanValue;
+import com._1c.g5.v8.dt.mcore.Border;
+import com._1c.g5.v8.dt.mcore.BorderValue;
+import com._1c.g5.v8.dt.mcore.Color;
+import com._1c.g5.v8.dt.mcore.ColorValue;
+import com._1c.g5.v8.dt.mcore.DateValue;
 import com._1c.g5.v8.dt.mcore.Field;
 import com._1c.g5.v8.dt.mcore.FieldSource;
+import com._1c.g5.v8.dt.mcore.FixedArrayValue;
+import com._1c.g5.v8.dt.mcore.Font;
+import com._1c.g5.v8.dt.mcore.FontValue;
+import com._1c.g5.v8.dt.mcore.IrresolvableReferenceValue;
+import com._1c.g5.v8.dt.mcore.NullValue;
+import com._1c.g5.v8.dt.mcore.NumberValue;
 import com._1c.g5.v8.dt.mcore.Property;
+import com._1c.g5.v8.dt.mcore.ReferenceValue;
+import com._1c.g5.v8.dt.mcore.StandardPeriod;
+import com._1c.g5.v8.dt.mcore.StandardPeriodValue;
+import com._1c.g5.v8.dt.mcore.StringValue;
+import com._1c.g5.v8.dt.mcore.SysEnumValue;
 import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeDescription;
+import com._1c.g5.v8.dt.mcore.TypeDescriptionValue;
 import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.mcore.UndefinedValue;
+import com._1c.g5.v8.dt.mcore.ValueList;
+import com._1c.g5.v8.dt.metadata.common.AccountType;
+import com._1c.g5.v8.dt.metadata.common.ChartLineType;
+import com._1c.g5.v8.dt.metadata.common.ChartLineTypeValue;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
@@ -56,6 +82,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.BusinessProcess;
 import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
+import com._1c.g5.v8.dt.metadata.mdclass.CatalogPredefinedItem;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfAccounts;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCalculationTypes;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCharacteristicTypes;
@@ -77,11 +104,16 @@ import com._1c.g5.v8.dt.metadata.mdclass.Task;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.assistent.model.CursorLocation;
+import com.e1c.edt.ai.context.DTO.AccountTypeEntity;
 import com.e1c.edt.ai.context.DTO.AttributeEntity;
+import com.e1c.edt.ai.context.DTO.BorderEntity;
+import com.e1c.edt.ai.context.DTO.ChartLineTypeEntity;
+import com.e1c.edt.ai.context.DTO.ColorEntity;
 import com.e1c.edt.ai.context.DTO.DataType;
 import com.e1c.edt.ai.context.DTO.DynamicListEntity;
 import com.e1c.edt.ai.context.DTO.EnumValueEntity;
 import com.e1c.edt.ai.context.DTO.FieldEntity;
+import com.e1c.edt.ai.context.DTO.FontEntity;
 import com.e1c.edt.ai.context.DTO.FormButtonEntity;
 import com.e1c.edt.ai.context.DTO.FormEntity;
 import com.e1c.edt.ai.context.DTO.FormFieldEntity;
@@ -94,13 +126,17 @@ import com.e1c.edt.ai.context.DTO.ObjectEntity;
 import com.e1c.edt.ai.context.DTO.ObjectEntityField;
 import com.e1c.edt.ai.context.DTO.ObjectFormEntity;
 import com.e1c.edt.ai.context.DTO.Parameter;
+import com.e1c.edt.ai.context.DTO.PredefinedEntity;
 import com.e1c.edt.ai.context.DTO.PropertyEntity;
 import com.e1c.edt.ai.context.DTO.RegisterDimensionEntity;
 import com.e1c.edt.ai.context.DTO.RegisterRecordEntity;
 import com.e1c.edt.ai.context.DTO.RegisterResourceEntity;
 import com.e1c.edt.ai.context.DTO.SignatureStructurized;
+import com.e1c.edt.ai.context.DTO.StandardPeriodEntity;
 import com.e1c.edt.ai.context.DTO.TabularSectionEntity;
+import com.e1c.edt.ai.context.DTO.ValueEntity;
 import com.e1c.edt.ai.context.DTO.ValueListEntity;
+import com.e1c.edt.ai.context.DTO.ValueType;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -842,6 +878,8 @@ class EntityFactory
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.predefined =
+            createPredefinedItems(Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
         return meta;
     }
 
@@ -958,6 +996,17 @@ class EntityFactory
         return registerRecords.stream().map(this::createBasicRegister).collect(Collectors.toList());
     }
 
+    private List<PredefinedEntity> createPredefinedItems(List<CatalogPredefinedItem> predefinedItems)
+    {
+        if (predefinedItems == null || predefinedItems.isEmpty())
+        {
+            return null;
+        }
+
+        return predefinedItems.stream().map(this::createPredefined).collect(Collectors.toList());
+    }
+
+
     private <T extends Field> List<FieldEntity> createFields(FieldSource fieldSource, Predicate<Field> filter)
     {
         if (fieldSource == null)
@@ -1068,6 +1117,244 @@ class EntityFactory
         var entity = new EnumValueEntity();
         entity.name = enumValue.getName();
         entity.synonym = createMap(enumValue.getSynonym());
+        return entity;
+    }
+
+    private PredefinedEntity createPredefined(CatalogPredefinedItem predefined)
+    {
+        var entity = new PredefinedEntity();
+        entity.name = predefined.getName();
+        entity.description = predefined.getDescription();
+        entity.value = createValue(predefined.getCode());
+        entity.predefined = createPredefinedItems(predefined.getContent());
+        return entity;
+    }
+
+    private ValueEntity createValue(EObject valueObject)
+    {
+        var entity = new ValueEntity();
+        if (valueObject == null)
+        {
+            entity.type = ValueType.NULL;
+            return entity;
+        }
+
+        if (valueObject instanceof UndefinedValue)
+        {
+            entity.type = ValueType.UNDEFINED;
+            return entity;
+        }
+
+        if (valueObject instanceof NullValue)
+        {
+            entity.type = ValueType.NULL;
+            return entity;
+        }
+
+        if (valueObject instanceof BooleanValue)
+        {
+            entity.type = ValueType.BOOLEAN;
+            entity.value = ((BooleanValue)valueObject).isValue();
+            return entity;
+        }
+
+        if (valueObject instanceof NumberValue)
+        {
+            entity.type = ValueType.DECIMAL;
+            entity.value = ((NumberValue)valueObject).getValue();
+            return entity;
+        }
+
+        if (valueObject instanceof StringValue)
+        {
+            entity.type = ValueType.STRING;
+            entity.value = ((StringValue)valueObject).getValue();
+            return entity;
+        }
+
+        if (valueObject instanceof DateValue)
+        {
+            entity.type = ValueType.DATETIME;
+            entity.value = ((DateValue)valueObject).getValue();
+            return entity;
+        }
+
+        if (valueObject instanceof BinaryValue)
+        {
+            entity.type = ValueType.BINARY;
+            entity.value = ((BinaryValue)valueObject).getValue();
+            return entity;
+        }
+
+        if (valueObject instanceof ReferenceValue)
+        {
+            entity.type = ValueType.REFERENCE;
+            final ReferenceValue refValueObject = (ReferenceValue)valueObject;
+            entity.value = createValue(refValueObject.getValue());
+        }
+
+        if (valueObject instanceof IrresolvableReferenceValue)
+        {
+            entity.type = ValueType.IRRESORVABLE_REFERENCE;
+            final IrresolvableReferenceValue referenceValue = (IrresolvableReferenceValue)valueObject;
+            entity.value = String.format("%s.%s", referenceValue.getRefTypeId().toString(), //$NON-NLS-1$
+                referenceValue.getInstanceId().toString());
+            return entity;
+        }
+
+        if (valueObject instanceof ValueList)
+        {
+            entity.type = ValueType.LIST;
+            entity.value =
+                ((ValueList)valueObject).getValues().stream().map(this::createValue).collect(Collectors.toList());
+            return entity;
+        }
+
+        if (valueObject instanceof FixedArrayValue)
+        {
+            entity.type = ValueType.ARRAY;
+            entity.value =
+                ((FixedArrayValue)valueObject).getValues().stream().map(this::createValue).collect(Collectors.toList());
+            return entity;
+        }
+
+        if (valueObject instanceof TypeDescriptionValue)
+        {
+            entity.type = ValueType.TYPE;
+            TypeDescription value = ((TypeDescriptionValue)valueObject).getValue();
+            entity.value = createTypes(value);
+            return entity;
+        }
+
+        if (valueObject instanceof StandardPeriodValue)
+        {
+            entity.type = ValueType.STANDARD_PERIOD;
+            entity.value = createStandardPeriod(((StandardPeriodValue)valueObject).getValue());
+            return entity;
+        }
+
+        if (valueObject instanceof FormChoiceListDesTimeValue)
+        {
+            entity.type = ValueType.FORM_CHOICE_LIST_DES_TIME;
+            // entity.value = createStandardPeriod(((FormChoiceListDesTimeValue)valueObject).getValue());
+            return entity;
+
+            /*featureWriter.write(writer, (EObject)valueObject,
+                FormPackage.Literals.FORM_CHOICE_LIST_DES_TIME_VALUE__PRESENTATION, writeEmpty, exportContext);
+            featureWriter.write(writer, (EObject)valueObject,
+                FormPackage.Literals.FORM_CHOICE_LIST_DES_TIME_VALUE__VALUE, writeEmpty, exportContext);*/
+        }
+
+        if (valueObject instanceof BorderValue)
+        {
+            entity.type = ValueType.BORDER;
+            entity.value = createBorder(((BorderValue)valueObject).getValue());
+            return entity;
+        }
+
+        if (valueObject instanceof ColorValue)
+        {
+            entity.type = ValueType.COLOR;
+            entity.value = createColor(((ColorValue)valueObject).getValue());
+            return entity;
+        }
+
+        if (valueObject instanceof FontValue)
+        {
+            entity.type = ValueType.FONT;
+            entity.value = createFont(((FontValue)valueObject).getValue());
+            return entity;
+        }
+
+        if (valueObject instanceof AccountTypeValue)
+        {
+            entity.type = ValueType.ACCOUNT_TYPE;
+            entity.value = createAccountType(((AccountTypeValue)valueObject).getValue());
+            return entity;
+        }
+
+        if (valueObject instanceof ChartLineTypeValue)
+        {
+            entity.type = ValueType.CHART_LINE_TYPE;
+            entity.value = createChartLineType(((ChartLineTypeValue)valueObject).getValue());
+            return entity;
+        }
+
+        if (valueObject instanceof EnumValue)
+        {
+            entity.type = ValueType.ENUM;
+            entity.value = createEnumValue((EnumValue)valueObject);
+            return entity;
+        }
+
+        if (valueObject instanceof SysEnumValue)
+        {
+            entity.type = ValueType.SYS_ENUM;
+            SysEnumValue value = (SysEnumValue)valueObject;
+            if (value.getValue() != null && value.getValue().indexOf('.') != -1)
+            {
+                String[] segments = value.getValue().split("\\."); //$NON-NLS-1$
+                entity.value = new String[] { segments[0], segments[1] };
+            }
+        }
+
+        entity.type = ValueType.UNKNOWN;
+        return entity;
+    }
+
+    private ChartLineTypeEntity createChartLineType(ChartLineType value)
+    {
+        var entity = new ChartLineTypeEntity();
+        entity.name = value.getName();
+        entity.literal = value.getLiteral();
+        entity.value = value.getValue();
+        return null;
+    }
+
+    private AccountTypeEntity createAccountType(AccountType value)
+    {
+        var entity = new AccountTypeEntity();
+        entity.name = value.getName();
+        entity.literal = value.getLiteral();
+        entity.value = value.getValue();
+        return entity;
+    }
+
+    private Object createFont(Font value)
+    {
+        var entity = new FontEntity();
+        entity.bold = value.bold();
+        entity.italic = value.italic();
+        entity.underline = value.underline();
+        entity.strikeout = value.strikeout();
+        entity.faceName = value.faceName();
+        entity.scale = value.scale();
+        entity.height = value.height();
+        return entity;
+    }
+
+    private Object createColor(Color value)
+    {
+        var entity = new ColorEntity();
+        entity.red = value.red();
+        entity.green = value.green();
+        entity.blue = value.blue();
+        return entity;
+    }
+
+    private Object createBorder(Border value)
+    {
+        var entity = new BorderEntity();
+        entity.style = value.style().getName();
+        entity.width = value.width();
+        return entity;
+    }
+
+    private Object createStandardPeriod(StandardPeriod value)
+    {
+        var entity = new StandardPeriodEntity();
+        entity.startDate = value.getStartDate();
+        entity.endDate = value.getEndDate();
         return entity;
     }
 

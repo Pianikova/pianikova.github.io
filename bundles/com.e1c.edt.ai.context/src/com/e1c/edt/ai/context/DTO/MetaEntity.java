@@ -44,4 +44,6 @@ public class MetaEntity
     // Движение - удаление движений
     @SerializedName("register_records_deletion")
     public String registerRecordsDeletion;
+
+    public List<PredefinedEntity> predefined;
 }
