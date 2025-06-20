@@ -40,6 +40,9 @@ public class BasePluginStartup
             platformVersion == null ? "Not 1C:EDT Platform" : "1C:EDT version: " + platformVersion.toString(), //$NON-NLS-1$//$NON-NLS-2$
             () -> ""); //$NON-NLS-1$
         activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
+
+        var hasUpdates = PluginUpdateService.isRepositoryConfigured();
+        activator.trace(hasUpdates ? "Updates available" : "No updates available", () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
     }
 
     @Override
