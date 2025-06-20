@@ -26,7 +26,7 @@ class FileScaner
     {
         extensions.add("bsl"); //$NON-NLS-1$
         extensions.add("mdo"); //$NON-NLS-1$
-        extensions.add("form"); //$NON-NLS-1$
+        // extensions.add("form"); //$NON-NLS-1$
     }
 
     @Inject
