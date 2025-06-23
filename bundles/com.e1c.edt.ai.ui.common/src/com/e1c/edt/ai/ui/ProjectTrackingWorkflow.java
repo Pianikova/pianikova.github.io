@@ -36,7 +36,7 @@ import com.google.inject.Provider;
 class ProjectTrackingWorkflow
     implements IProjectTrackingWorkflow
 {
-    private final static Duration LongDelay = Duration.ofSeconds(6);
+    private final static Duration LongDelay = Duration.ofSeconds(4);
     private final static Duration ShortDelay = Duration.ofMillis(10);
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;
@@ -152,7 +152,7 @@ class ProjectTrackingWorkflow
 
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
-        if (iterationCount < 10)
+        if (iterationCount < 5)
         {
             iterationCount++;
             return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
