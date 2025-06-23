@@ -13,6 +13,8 @@ public class AttributeEntity
     @SerializedName("is_main")
     public Boolean isMain;
 
+    public String comment;
+
     public Map<String, String> title;
 
     @SerializedName("tool_tip")
@@ -25,4 +27,10 @@ public class AttributeEntity
 
     @SerializedName("value_list")
     public ValueListEntity valueList;
+
+    @SerializedName("min_value")
+    public ValueEntity minValue;
+
+    @SerializedName("max_value")
+    public ValueEntity maxValue;
 }

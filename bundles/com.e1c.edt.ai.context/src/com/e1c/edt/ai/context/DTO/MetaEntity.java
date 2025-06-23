@@ -46,4 +46,7 @@ public class MetaEntity
     public String registerRecordsDeletion;
 
     public List<PredefinedEntity> predefined;
+
+    @SerializedName("based_on")
+    public List<BasedOnEntity> basedOn;
 }

@@ -95,6 +95,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.ExchangePlan;
 import com._1c.g5.v8.dt.metadata.mdclass.ExternalDataProcessor;
 import com._1c.g5.v8.dt.metadata.mdclass.ExternalReport;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com._1c.g5.v8.dt.metadata.mdclass.Report;
@@ -106,6 +107,7 @@ import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.assistent.model.CursorLocation;
 import com.e1c.edt.ai.context.DTO.AccountTypeEntity;
 import com.e1c.edt.ai.context.DTO.AttributeEntity;
+import com.e1c.edt.ai.context.DTO.BasedOnEntity;
 import com.e1c.edt.ai.context.DTO.BorderEntity;
 import com.e1c.edt.ai.context.DTO.ChartLineTypeEntity;
 import com.e1c.edt.ai.context.DTO.ColorEntity;
@@ -314,7 +316,6 @@ class EntityFactory
             {
                 // ignore
             }
-
 
             var extInfo = attribute.getExtInfo();
             if (extInfo != null)
@@ -763,6 +764,7 @@ class EntityFactory
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -815,6 +817,7 @@ class EntityFactory
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -830,6 +833,7 @@ class EntityFactory
         meta.posting = bmObject.getPosting().getName();
         meta.realTimePosting = bmObject.getRealTimePosting().getName();
         meta.registerRecordsDeletion = bmObject.getRegisterRecordsDeletion().getName();
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -848,6 +852,7 @@ class EntityFactory
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -858,6 +863,7 @@ class EntityFactory
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -868,6 +874,7 @@ class EntityFactory
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -880,6 +887,7 @@ class EntityFactory
         meta.objectForms = createForms(bmObject.getForms());
         meta.predefined =
             createPredefinedItems(Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -901,6 +909,7 @@ class EntityFactory
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
+        meta.basedOn = createBasedOn(bmObject.getBasedOn());
         return meta;
     }
 
@@ -924,6 +933,16 @@ class EntityFactory
         meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
         meta.objectForms = createForms(bmObject.getForms());
         return meta;
+    }
+
+    private List<BasedOnEntity> createBasedOn(List<MdObject> basedOn)
+    {
+        if (basedOn == null || basedOn.isEmpty())
+        {
+            return null;
+        }
+
+        return basedOn.stream().map(this::createBasedOn).collect(Collectors.toList());
     }
 
     private <T extends BasicFeature> List<AttributeEntity> createAttributes(List<T> attributes)
@@ -1037,17 +1056,27 @@ class EntityFactory
             sources.addAll(source.getRefFieldSources());
         }
 
-        // var oterFields = FieldsSourceUtil.INSTANCE.getFields(fieldSource, f -> true);
+        // var otherFields = FieldsSourceUtil.INSTANCE.getFields(fieldSource, f -> true);
         return result;
+    }
+
+    private BasedOnEntity createBasedOn(MdObject basedOn)
+    {
+        var entity = new BasedOnEntity();
+        entity.name = basedOn.getName();
+        return entity;
     }
 
     private AttributeEntity createAttribute(BasicFeature attribute)
     {
         var entity = new AttributeEntity();
         entity.name = attribute.getName();
+        entity.comment = attribute.getComment();
         entity.toolTip = createMap(attribute.getToolTip());
         entity.synonym = createMap(attribute.getSynonym());
         entity.types = createTypes(attribute.getTypeDescription());
+        entity.minValue = createValue(attribute.getMinValue());
+        entity.maxValue = createValue(attribute.getMaxValue());
         return entity;
     }
 
