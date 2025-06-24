@@ -19,4 +19,16 @@ class DefaultSettings
     {
         return "https://code.1c.ai/"; //$NON-NLS-1$
     }
+
+    @Override
+    public String getUpdateUrl()
+    {
+        return "https://code.1c.ai/plugin/"; //$NON-NLS-1$
+    }
+
+    @Override
+    public String getPluginFeature()
+    {
+        return "com.e1c.edt.ai.feature.feature.group"; //$NON-NLS-1$
+    }
 }
