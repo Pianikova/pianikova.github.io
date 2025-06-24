@@ -17,7 +17,9 @@ import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.eclipse.ui.PlatformUI;
 import org.osgi.framework.ServiceReference;
 
+import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettingsProvider;
 import com.google.inject.Inject;
 
 /**
@@ -27,14 +29,16 @@ import com.google.inject.Inject;
 public class PluginUpdateService
     implements IPluginUpdateService
 {
-    private static final String REPOSITORY_URL = "https://code.1c.ai/plugin/"; //$NON-NLS-1$
-
     @Inject
     private IUINotificationService notificationService;
     @Inject
     private ILog log;
     @Inject
     private IDispatcher dispatcher;
+    @Inject
+    ISettingsProvider settingsProvider;
+    @Inject
+    private IDefaultSettings defaultSettings;
 
     @Override
     public void checkForUpdates()
@@ -50,31 +54,36 @@ public class PluginUpdateService
 
             var profiles = (IProfileRegistry)agent.getService(IProfileRegistry.SERVICE_NAME);
             var profile = profiles.getProfile(IProfileRegistry.SELF);
+            if (profile == null)
+            {
+                log.trace("Update service is not available", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                return;
+            }
 
+            var featureQuery = QueryUtil.createIUQuery(defaultSettings.getPluginFeature());
             var installedResult =
-                profile.query(QueryUtil.createIUQuery("com.e1c.edt.ai.feature.feature.group"), monitor); //$NON-NLS-1$
+                profile.query(featureQuery, monitor);
 
             if (installedResult.isEmpty())
             {
-                log.trace("Плагин отсутствует в Установленном ПО", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace("The  plugin is missing from the Installed Software", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
                 return;
             }
-            var currentVersion = installedResult.iterator().next().getVersion();
 
+            var currentVersion = installedResult.iterator().next().getVersion();
             var repositoryManager =
                 (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
-            var repositoryUri = new URI(REPOSITORY_URL);
-
+            var repositoryUri = new URI(settingsProvider.getSettings().getLlmParameters().updateUrl);
             if (!repositoryManager.contains(repositoryUri))
             {
-                log.trace("Репозиторий не найден, добавляем...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace("Repository not found, adding...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
                 repositoryManager.addRepository(repositoryUri);
             }
 
             var repo = repositoryManager.loadRepository(repositoryUri, monitor);
 
             var availableResult =
-                repo.query(QueryUtil.createIUQuery("com.e1c.edt.ai.feature.feature.group"), monitor); //$NON-NLS-1$
+                repo.query(featureQuery, monitor);
 
             IInstallableUnit latestIU = null;
             for (var iu : availableResult)
@@ -89,20 +98,20 @@ public class PluginUpdateService
             {
                 return;
             }
-            var latestVersion = latestIU.getVersion();
 
+            var latestVersion = latestIU.getVersion();
             if (latestVersion.compareTo(currentVersion) > 0)
             {
                 dispatcher.dispatchAsync(() -> notificationService.createNotification(
                         PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateMessage,
-                        Messages.UpdateLink, "https://code.1c.ai/easystart/", //$NON-NLS-1$
+                    Messages.UpdateLink, defaultSettings.getHomePage() + "easystart/", //$NON-NLS-1$
                         this.getClass()));
             }
 
         }
-        catch (Exception e)
+        catch (Exception error)
         {
-            log.logError(e.getMessage());
+            log.logError(error);
         }
     }
 
@@ -118,9 +127,9 @@ public class PluginUpdateService
             agent = agentProvider.createAgent(null);
             return agent;
         }
-        catch (ProvisionException e)
+        catch (ProvisionException error)
         {
-            // empty stub
+            log.logError(error);
         }
 
         return null;

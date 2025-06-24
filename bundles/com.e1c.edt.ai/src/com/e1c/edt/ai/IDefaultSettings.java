@@ -8,4 +8,8 @@ public interface IDefaultSettings
     String getUrl();
 
     String getHomePage();
+
+    String getUpdateUrl();
+
+    String getPluginFeature();
 }

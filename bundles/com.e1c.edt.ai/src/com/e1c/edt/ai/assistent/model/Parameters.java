@@ -23,6 +23,7 @@ public class Parameters
         try
         {
             url = new URL(defaultSettings.getUrl());
+            updateUrl = defaultSettings.getUpdateUrl();
         }
         catch (MalformedURLException e)
         {
@@ -179,6 +180,12 @@ public class Parameters
      */
     @SerializedName("chat_url")
     public URL chatUrl;
+
+    /**
+     * URL для обновлений. Например, "https://code.1c.ai/plugin/".
+     */
+    @SerializedName("update_url")
+    public String updateUrl;
 
     /**
      * Максимальная длина данных локальных функций. Например, 2590.
@@ -443,7 +450,8 @@ public class Parameters
     @Override
     public int hashCode()
     {
-        return Objects.hash(bestOf, url, chatUrl, decoderInputDetails, details, doSample, formLength, frequencyPenalty,
+        return Objects.hash(bestOf, url, chatUrl, updateUrl, decoderInputDetails, details, doSample, formLength,
+            frequencyPenalty,
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
             localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalContext, extendedContext,
@@ -461,7 +469,7 @@ public class Parameters
             return false;
         Parameters other = (Parameters)obj;
         return Objects.equals(bestOf, other.bestOf) && Objects.equals(url, other.url)
-            && Objects.equals(chatUrl, other.chatUrl)
+            && Objects.equals(chatUrl, other.chatUrl) && Objects.equals(updateUrl, other.updateUrl)
             && Objects.equals(decoderInputDetails, other.decoderInputDetails) && Objects.equals(details, other.details)
             && Objects.equals(doSample, other.doSample) && Objects.equals(formLength, other.formLength)
             && Objects.equals(frequencyPenalty, other.frequencyPenalty)

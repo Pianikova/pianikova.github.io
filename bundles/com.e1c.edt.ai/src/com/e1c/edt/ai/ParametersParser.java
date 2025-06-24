@@ -143,6 +143,8 @@ public class ParametersParser
 
         names.remove(parse(properties, "chat_url", validationResult, val -> parameters.chatUrl = parseUrl(val)));
 
+        names.remove(parse(properties, "update_url", validationResult, val -> parameters.updateUrl = val));
+
         names.remove(parse(properties, "local_functions_length", validationResult,
             val -> parameters.localFunctionsLength = Integer.parseInt(val)));
 

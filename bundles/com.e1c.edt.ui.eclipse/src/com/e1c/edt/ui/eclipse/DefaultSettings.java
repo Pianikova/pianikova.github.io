@@ -19,4 +19,16 @@ class DefaultSettings
     {
         return "https://code.1c.ai/"; //$NON-NLS-1$
     }
+
+    @Override
+    public String getUpdateUrl()
+    {
+        return "jar:file:Z:/Transfer/ai_plugin/com.e1c.edt.ui.eclipse.repository.zip/!"; //$NON-NLS-1$
+    }
+
+    @Override
+    public String getPluginFeature()
+    {
+        return "com.e1c.edt.ui.eclipse.feature.feature.group"; //$NON-NLS-1$
+    }
 }
