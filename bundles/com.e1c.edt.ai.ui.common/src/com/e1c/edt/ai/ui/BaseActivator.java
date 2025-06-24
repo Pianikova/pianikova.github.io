@@ -200,7 +200,7 @@ public abstract class BaseActivator
         sb.append(topic);
         sb.append(System.lineSeparator());
         sb.append(details.get());
-        if (sb.length() > 10000)
+        if (settings.getVerbosity().getLevel() < Verbosity.TRACE.getLevel() && sb.length() > 10000)
         {
             sb.setLength(10000);
         }

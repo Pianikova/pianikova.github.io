@@ -5,9 +5,11 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
-interface IClipboard
+import com.e1c.edt.ai.assistent.model.ClipboardInfo;
+
+public interface IClipboard
 {
-    Optional<String> getText();
+    Optional<ClipboardInfo> getClipboardInfo();
 
     boolean isPasting();
 }

@@ -1210,7 +1210,7 @@ class CodeCompletionViewModel
 
             lastRequest.localContext.forced = isForced();
             lastRequest.localContext.contentAssist = isContentAssist();
-            clipboard.getText()
+            clipboard.getClipboardInfo()
                 .ifPresent(clipboardText -> lastRequest.localContext.clipboard = clipboardText);
             return Optional.of(lastRequest);
         }

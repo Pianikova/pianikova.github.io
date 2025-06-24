@@ -11,13 +11,14 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.IExecutionListener;
 import org.eclipse.core.commands.NotHandledException;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.commands.ICommandService;
 
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.model.ClipboardInfo;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -29,8 +30,9 @@ public class ClipboardManager
     private static final HashSet<String> COPY_COMMAND_IDS = new HashSet<>();
     private static final HashSet<String> PASTE_COMMAND_IDS = new HashSet<>();
     private final IDispatcher dispatcher;
-    private final IUISettings settings;
+    private final IUI ui;
     private Optional<String> text = Optional.empty();
+    private Optional<IFile> file = Optional.empty();
     private boolean isPasting;
 
     static
@@ -45,12 +47,12 @@ public class ClipboardManager
     }
 
     @Inject
-    public ClipboardManager(IDispatcher dispatcher, IUISettings settings)
+    public ClipboardManager(IDispatcher dispatcher, IUI ui)
     {
         Preconditions.checkNotNull(dispatcher);
-        Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(ui);
         this.dispatcher = dispatcher;
-        this.settings = settings;
+        this.ui = ui;
     }
 
     @Override
@@ -61,13 +63,8 @@ public class ClipboardManager
     }
 
     @Override
-    public Optional<String> getText()
+    public Optional<ClipboardInfo> getClipboardInfo()
     {
-        if (!settings.sendExtendedContext())
-        {
-            return Optional.empty();
-        }
-
         var currentText = dispatcher.dispatch(() -> getTextFromClipoard()).flatMap(i -> i).orElse(null);
         var eclipseText = text.orElse(null);
         if (!Objects.equals(currentText, eclipseText))
@@ -85,7 +82,10 @@ public class ClipboardManager
             eclipseText = eclipseText.substring(0, MAX_SIZE);
         }
 
-        return Optional.of(eclipseText);
+        var info = new ClipboardInfo();
+        info.text = eclipseText;
+        info.path = file.map(i -> i.getFullPath().makeRelative().toPortableString()).orElse(null);
+        return Optional.of(info);
     }
 
     @Override
@@ -108,6 +108,7 @@ public class ClipboardManager
     {
         if (COPY_COMMAND_IDS.contains(commandId))
         {
+            file = ui.getFile();
             text = getTextFromClipoard();
         }
 
