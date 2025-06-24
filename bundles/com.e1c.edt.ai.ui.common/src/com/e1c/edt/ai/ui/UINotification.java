@@ -49,8 +49,6 @@ public class UINotification
     @Override
     protected Control createDialogArea(Composite parent)
     {
-        Display display = parent.getDisplay();
-
         Color bg = parent.getDisplay().getSystemColor(SWT.COLOR_INFO_BACKGROUND);
         Color fg = parent.getDisplay().getSystemColor(SWT.COLOR_INFO_FOREGROUND);
 

@@ -74,7 +74,7 @@ public class AIUICommonModule
         bind(IGCTools.class).to(GCTools.class).in(Singleton.class);
         bind(IUINotificationService.class).to(UINotificationService.class);
         bind(IFileScaner.class).to(FileScaner.class).in(Singleton.class);
-
+        bind(IPluginUpdateService.class).to(PluginUpdateService.class);
         // @formatter:on
     }
 }
