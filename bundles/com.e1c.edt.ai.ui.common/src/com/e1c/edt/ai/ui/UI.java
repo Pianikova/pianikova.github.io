@@ -163,6 +163,17 @@ class UI
     }
 
     @Override
+    public Optional<IFile> getFile()
+    {
+        return Optional.ofNullable(PlatformUI.getWorkbench())
+            .map(i -> i.getActiveWorkbenchWindow())
+            .map(i -> i.getActivePage())
+            .map(i -> i.getActiveEditor())
+            .map(i -> i.getEditorInput())
+            .map(i -> i.getAdapter(IFile.class));
+    }
+
+    @Override
     public Optional<IFile> getFile(SourceViewer sourceViewer)
     {
         for (var workbench : PlatformUI.getWorkbench().getWorkbenchWindows())

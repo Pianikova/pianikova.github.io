@@ -38,6 +38,12 @@ public class LocalContext
     public boolean forced;
 
     /**
+     * Содержимое буфера обмена, которые попали туда из EDT.
+     * Передается, когда user_parameters.send_context == true.
+     */
+    public ClipboardInfo clipboard;
+
+    /**
      * True если у пользователя открыт контекст-помощник.
      */
     @SerializedName("content_assist")
@@ -102,10 +108,4 @@ public class LocalContext
      */
     @SerializedName("proposals")
     public List<Proposal> proposals;
-
-    /**
-     * Содержимое буфера обмена, которые попали туда из EDT.
-     * Передается, когда user_parameters.send_context == true.
-     */
-    public String clipboard;
 }
