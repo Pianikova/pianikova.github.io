@@ -13,14 +13,24 @@ public class AttributeEntity
     @SerializedName("is_main")
     public Boolean isMain;
 
+    public String comment;
+
     public Map<String, String> title;
 
     @SerializedName("tool_tip")
     public Map<String, String> toolTip;
+
+    public Map<String, String> synonym;
 
     @SerializedName("dynamic_list")
     public DynamicListEntity dynamicList;
 
     @SerializedName("value_list")
     public ValueListEntity valueList;
+
+    @SerializedName("min_value")
+    public ValueEntity minValue;
+
+    @SerializedName("max_value")
+    public ValueEntity maxValue;
 }

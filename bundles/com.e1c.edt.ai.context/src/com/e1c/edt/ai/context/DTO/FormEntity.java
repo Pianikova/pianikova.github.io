@@ -9,4 +9,6 @@ public class FormEntity
     extends FormGroupEntity
 {
     public List<AttributeEntity> attributes;
+
+    public List<FormParameterEntity> parameters;
 }

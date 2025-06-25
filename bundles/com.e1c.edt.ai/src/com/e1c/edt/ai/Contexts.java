@@ -20,24 +20,21 @@ class Contexts
     private final ILog log;
     private final ITextNormilizer textNormilizer;
     private final IContextEntities contextEntities;
-    private final IHashTools hashTools;
     private final IUISettings uiSettings;
     private final ISettingsProvider settingsProvider;
 
     @Inject
-    public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities,
-        IHashTools hashTools, IUISettings uiSettings, ISettingsProvider settingsProvider)
+    public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities, IUISettings uiSettings,
+        ISettingsProvider settingsProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(textNormilizer);
         Preconditions.checkNotNull(contextEntities);
-        Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(settingsProvider);
         this.log = log;
         this.textNormilizer = textNormilizer;
         this.contextEntities = contextEntities;
-        this.hashTools = hashTools;
         this.uiSettings = uiSettings;
         this.settingsProvider = settingsProvider;
     }
@@ -185,8 +182,29 @@ class Contexts
     {
         var localContext = new LocalContext();
         var globalContext = new GlobalContext();
-        globalContext.moduleHash = fileHash;
-        globalContext.modulePath = aiContext.getPath();
+        var path = aiContext.getPath().toLowerCase();
+        if (path.endsWith(".bsl")) //$NON-NLS-1$
+        {
+            globalContext.moduleHash = fileHash;
+            globalContext.modulePath = aiContext.getPath();
+        }
+        else
+        {
+            if (path.endsWith(".mdo")) //$NON-NLS-1$
+            {
+                globalContext.metaHash = fileHash;
+                globalContext.metaPath = aiContext.getPath();
+            }
+            else
+            {
+                if (path.endsWith(".form")) //$NON-NLS-1$
+                {
+                    globalContext.formHash = fileHash;
+                    globalContext.formPath = aiContext.getPath();
+                }
+            }
+        }
+
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_HASHING_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext, action -> {
