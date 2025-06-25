@@ -13,4 +13,7 @@ public interface IUINotificationService
 {
     public void createNotification(Shell parentShell, String message, String linkText, String url,
         Class<?> sourceClass);
+
+    public void createNotificationWithAction(Shell parentShell, String message, Runnable action, Class<?> sourceClass);
 }
+
