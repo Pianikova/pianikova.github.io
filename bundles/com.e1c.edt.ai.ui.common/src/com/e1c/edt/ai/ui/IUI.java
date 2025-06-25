@@ -21,8 +21,6 @@ public interface IUI
 
     Optional<SourceViewer> getSourceViewer(StyledText textWidget);
 
-    Optional<IFile> getFile();
-
     Optional<IFile> getFile(SourceViewer sourceViewer);
 
     Optional<IViewPart> showView(String viewId);
