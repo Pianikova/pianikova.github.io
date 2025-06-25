@@ -11,7 +11,6 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.IExecutionListener;
 import org.eclipse.core.commands.NotHandledException;
-import org.eclipse.core.resources.IFile;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.widgets.Display;
@@ -30,10 +29,10 @@ public class ClipboardManager
     private static final HashSet<String> COPY_COMMAND_IDS = new HashSet<>();
     private static final HashSet<String> PASTE_COMMAND_IDS = new HashSet<>();
     private final IDispatcher dispatcher;
-    private final IUI ui;
     private Optional<String> text = Optional.empty();
-    private Optional<IFile> file = Optional.empty();
+    private Optional<String> path = Optional.empty();
     private boolean isPasting;
+    // private FocusTracker focusTracker;
 
     static
     {
@@ -47,12 +46,11 @@ public class ClipboardManager
     }
 
     @Inject
-    public ClipboardManager(IDispatcher dispatcher, IUI ui)
+    public ClipboardManager(IDispatcher dispatcher)
     {
         Preconditions.checkNotNull(dispatcher);
-        Preconditions.checkNotNull(ui);
         this.dispatcher = dispatcher;
-        this.ui = ui;
+        // focusTracker = new FocusTracker();
     }
 
     @Override
@@ -60,6 +58,7 @@ public class ClipboardManager
     {
         var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
         commandService.addExecutionListener(this);
+        // dispatcher.dispatch(() -> focusTracker.initialize());
     }
 
     @Override
@@ -84,7 +83,8 @@ public class ClipboardManager
 
         var info = new ClipboardInfo();
         info.text = eclipseText;
-        info.path = file.map(i -> i.getFullPath().makeRelative().toPortableString()).orElse(null);
+        info.path = path.orElse(null);
+        // file.map(i -> i.getFullPath().makeRelative().toPortableString()).orElse(null);
         return Optional.of(info);
     }
 
@@ -108,7 +108,8 @@ public class ClipboardManager
     {
         if (COPY_COMMAND_IDS.contains(commandId))
         {
-            file = ui.getFile();
+            // var part = focusTracker.getLastFocusedPart();
+            // file = getFile();
             text = getTextFromClipoard();
         }
 
@@ -158,4 +159,57 @@ public class ClipboardManager
             clipboard.dispose();
         }
     }
+
+    /*private Optional<IFile> getFile()
+    {
+        return Optional.ofNullable(PlatformUI.getWorkbench())
+            .map(i -> i.getActiveWorkbenchWindow())
+            .map(i -> i.getActivePage())
+            .map(i -> {
+                var editor = i.getActiveEditor();
+                var editorControl = editor.getAdapter(Control.class);
+                return editor;
+            })
+            .map(i -> i.getEditorInput())
+            .map(i -> i.getAdapter(IFile.class));
+    }
+
+    private static class FocusTracker
+    {
+        private IWorkbenchPart lastFocusedPart = null;
+
+        public void initialize()
+        {
+            Display.getDefault().addFilter(SWT.FocusIn, event -> {
+                Control control = (Control)event.widget;
+                IWorkbenchPart part = getPartFromControl(control);
+                if (part != null)
+                {
+                    lastFocusedPart = part;
+                }
+            });
+        }
+
+        public IWorkbenchPart getLastFocusedPart()
+        {
+            return lastFocusedPart;
+        }
+
+        private IWorkbenchPart getPartFromControl(Control control)
+        {
+            while (control != null)
+            {
+                Object data = control.getData();
+                if (data != null)
+                {
+                    if (data instanceof IShowInSource)
+                    {
+                        var showInSource = (IShowInSource)data;
+                    }
+                }
+                control = control.getParent();
+            }
+            return null;
+        }
+    }*/
 }
