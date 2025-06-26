@@ -11,6 +11,7 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.IExecutionListener;
 import org.eclipse.core.commands.NotHandledException;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.widgets.Display;
@@ -30,15 +31,17 @@ public class ClipboardManager
     private static final HashSet<String> PASTE_COMMAND_IDS = new HashSet<>();
     private final IDispatcher dispatcher;
     private Optional<String> text = Optional.empty();
-    private Optional<String> path = Optional.empty();
+    private Optional<IFile> file = Optional.empty();
     private boolean isPasting;
-    // private FocusTracker focusTracker;
 
     static
     {
         COPY_COMMAND_IDS.add("org.eclipse.ui.edit.copy");
         COPY_COMMAND_IDS.add("org.eclipse.xtend.ide.copyJavaCode");
         COPY_COMMAND_IDS.add("org.eclipse.jdt.ui.edit.text.java.raw.copy");
+        COPY_COMMAND_IDS.add("org.eclipse.ui.edit.cut");
+        COPY_COMMAND_IDS.add("org.eclipse.xtend.ide.cutJavaCode");
+        COPY_COMMAND_IDS.add("org.eclipse.jdt.ui.edit.text.java.raw.cut");
 
         PASTE_COMMAND_IDS.add("org.eclipse.ui.edit.paste");
         PASTE_COMMAND_IDS.add("org.eclipse.xtend.ide.pasteJavaCode");
@@ -50,7 +53,6 @@ public class ClipboardManager
     {
         Preconditions.checkNotNull(dispatcher);
         this.dispatcher = dispatcher;
-        // focusTracker = new FocusTracker();
     }
 
     @Override
@@ -58,7 +60,6 @@ public class ClipboardManager
     {
         var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
         commandService.addExecutionListener(this);
-        // dispatcher.dispatch(() -> focusTracker.initialize());
     }
 
     @Override
@@ -83,8 +84,7 @@ public class ClipboardManager
 
         var info = new ClipboardInfo();
         info.text = eclipseText;
-        info.path = path.orElse(null);
-        // file.map(i -> i.getFullPath().makeRelative().toPortableString()).orElse(null);
+        info.path = file.map(i -> i.getFullPath().makeRelative().toPortableString()).orElse(null);
         return Optional.of(info);
     }
 
@@ -108,8 +108,7 @@ public class ClipboardManager
     {
         if (COPY_COMMAND_IDS.contains(commandId))
         {
-            // var part = focusTracker.getLastFocusedPart();
-            // file = getFile();
+            file = getFile();
             text = getTextFromClipoard();
         }
 
@@ -160,56 +159,13 @@ public class ClipboardManager
         }
     }
 
-    /*private Optional<IFile> getFile()
+    private Optional<IFile> getFile()
     {
         return Optional.ofNullable(PlatformUI.getWorkbench())
             .map(i -> i.getActiveWorkbenchWindow())
             .map(i -> i.getActivePage())
-            .map(i -> {
-                var editor = i.getActiveEditor();
-                var editorControl = editor.getAdapter(Control.class);
-                return editor;
-            })
+            .map(i -> i.getActiveEditor())
             .map(i -> i.getEditorInput())
             .map(i -> i.getAdapter(IFile.class));
     }
-
-    private static class FocusTracker
-    {
-        private IWorkbenchPart lastFocusedPart = null;
-
-        public void initialize()
-        {
-            Display.getDefault().addFilter(SWT.FocusIn, event -> {
-                Control control = (Control)event.widget;
-                IWorkbenchPart part = getPartFromControl(control);
-                if (part != null)
-                {
-                    lastFocusedPart = part;
-                }
-            });
-        }
-
-        public IWorkbenchPart getLastFocusedPart()
-        {
-            return lastFocusedPart;
-        }
-
-        private IWorkbenchPart getPartFromControl(Control control)
-        {
-            while (control != null)
-            {
-                Object data = control.getData();
-                if (data != null)
-                {
-                    if (data instanceof IShowInSource)
-                    {
-                        var showInSource = (IShowInSource)data;
-                    }
-                }
-                control = control.getParent();
-            }
-            return null;
-        }
-    }*/
 }
