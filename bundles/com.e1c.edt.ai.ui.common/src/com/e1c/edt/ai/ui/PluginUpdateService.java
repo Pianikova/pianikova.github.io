@@ -125,6 +125,7 @@ public class PluginUpdateService
         }
     }
 
+    @SuppressWarnings("nls")
     private void installUpdate(IProvisioningAgent agent, IInstallableUnit latestIU)
     {
         try
@@ -135,7 +136,7 @@ public class PluginUpdateService
 
             if (resolveStatus.getSeverity() == IStatus.ERROR)
             {
-                log.trace("Не удалось разрешить зависимости", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace("Failed to resolve dependencies", () -> "");
                 return;
             }
 
@@ -147,17 +148,17 @@ public class PluginUpdateService
                 {
                     if (event.getResult().isOK())
                     {
-                        log.trace("Обновление установлено", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                        log.trace("The update has been installed", () -> "");
                         dispatcher.dispatchAsync(() -> {
                             notificationService.createNotification(
                                 PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-                                "Обновление установлено", null, null, this.getClass()); //$NON-NLS-1$
+                                Messages.UpdateInstalled, null, null, this.getClass());
                         });
 
                     }
                     else
                     {
-                        log.trace("Ошибка во время установки обновления", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                        log.logError("Error during update installation");
                     }
                 }
             });
