@@ -5,6 +5,7 @@ package com.e1c.edt.ai.ui;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
@@ -58,6 +59,8 @@ public class BaseStatusBarControl
     private IUINotificationService notificationService;
     @Inject
     private IUISettings settings;
+    @Inject
+    private IPluginUpdateService pluginUpdateService;
 
 
     private final CodeCompletionPolicy[] policies;
@@ -291,6 +294,10 @@ public class BaseStatusBarControl
     @Override
     public void widgetSelected(SelectionEvent e)
     {
+        var updateJob =
+            dispatcher.createJob(Messages.UpdateJobMessage, context -> pluginUpdateService.checkForUpdates(), null);
+        updateJob.setPriority(Job.DECORATE);
+        updateJob.schedule();
         policyTooltip.hide();
         var index = policyCombo.getSelectionIndex();
         if (index < 0 && index >= policies.length)

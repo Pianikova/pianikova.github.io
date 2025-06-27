@@ -19,6 +19,7 @@ import org.eclipse.equinox.p2.metadata.IInstallableUnit;
 import org.eclipse.equinox.p2.operations.InstallOperation;
 import org.eclipse.equinox.p2.operations.ProvisioningSession;
 import org.eclipse.equinox.p2.query.QueryUtil;
+import org.eclipse.equinox.p2.repository.artifact.IArtifactRepositoryManager;
 import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.eclipse.ui.PlatformUI;
 import org.osgi.framework.ServiceReference;
@@ -79,16 +80,23 @@ public class PluginUpdateService
             var currentVersion = installedResult.iterator().next().getVersion();
             var repositoryManager =
                 (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
+            var artifactManager = (IArtifactRepositoryManager)agent.getService(IArtifactRepositoryManager.SERVICE_NAME);
 
             var repositoryUri = new URI(settingsProvider.getSettings().getLlmParameters().updateUrl);
-
             if (!repositoryManager.contains(repositoryUri))
             {
-                log.trace("Repository not found, adding...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace("Adding content repository...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
                 repositoryManager.addRepository(repositoryUri);
             }
 
+            if (!artifactManager.contains(repositoryUri))
+            {
+                log.trace("Adding artifacts repository...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                artifactManager.addRepository(repositoryUri);
+            }
+
             var repo = repositoryManager.loadRepository(repositoryUri, monitor);
+            artifactManager.loadRepository(repositoryUri, monitor);
 
             var availableResult =
                 repo.query(featureQuery, monitor);
@@ -108,7 +116,7 @@ public class PluginUpdateService
                 return;
             }
 
-            final var latestVersion = latestIU.getVersion();
+            var latestVersion = latestIU.getVersion();
             if (latestVersion.compareTo(currentVersion) > 0)
             {
                 dispatcher.dispatchAsync(() -> notificationService.createNotificationWithAction(
