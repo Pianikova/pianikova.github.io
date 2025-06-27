@@ -120,7 +120,7 @@ public class UINotification
         if (action != null)
         {
             Button actionButton = new Button(buttonContainer, SWT.PUSH);
-            actionButton.setText("Выполнить"); //$NON-NLS-1$
+            actionButton.setText(Messages.UpdateButton);
             actionButton.setBackground(bg);
             actionButton.setForeground(fg);
             actionButton.setLayoutData(new GridData(SWT.RIGHT, SWT.TOP, false, false));
