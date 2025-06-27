@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IStartup;
 
 import com.e1c.edt.ai.ILog;
@@ -45,10 +46,10 @@ public class BasePluginStartup
             () -> ""); //$NON-NLS-1$
         activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
 
-//        var updateJob =
-//            dispatcher.createJob(Messages.UpdateJobMessage, context -> pluginUpdateService.checkForUpdates(), null);
-//        updateJob.setPriority(Job.DECORATE);
-//        updateJob.schedule();
+        var updateJob =
+            dispatcher.createJob(Messages.UpdateJobMessage, context -> pluginUpdateService.checkForUpdates(), null);
+        updateJob.setPriority(Job.DECORATE);
+        updateJob.schedule();
     }
 
     @Override

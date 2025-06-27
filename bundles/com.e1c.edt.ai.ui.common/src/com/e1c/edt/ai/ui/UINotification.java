@@ -108,11 +108,11 @@ public class UINotification
         }
 
         Composite buttonContainer = new Composite(canvas, SWT.NONE);
-        GridLayout buttonLayout = new GridLayout(1, false);
+        GridLayout buttonLayout = new GridLayout(2, false);
         buttonLayout.marginWidth = 0;
         buttonContainer.setLayout(buttonLayout);
         GridData buttonContainerData = new GridData(SWT.RIGHT, SWT.TOP, true, false);
-        buttonContainerData.horizontalSpan = 2;
+//        buttonContainerData.horizontalSpan = 2;
         buttonContainer.setLayoutData(buttonContainerData);
         buttonContainer.setBackground(bg);
         buttonContainer.setForeground(fg);
@@ -137,8 +137,6 @@ public class UINotification
 
         Button closeButton = new Button(buttonContainer, SWT.PUSH);
         closeButton.setText(Messages.CloseButton);
-        closeButton.setBackground(bg);
-        closeButton.setForeground(fg);
         closeButton.setLayoutData(new GridData(SWT.RIGHT, SWT.TOP, false, false));
         closeButton.addSelectionListener(new SelectionAdapter()
         {
