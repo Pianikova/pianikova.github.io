@@ -40,10 +40,12 @@ public class Messages
     public static String StatusTokenFailed;
     public static String StatusSSLFailed;
     public static String Support;
+    public static String UpdateButton;
     public static String CloseButton;
     public static String UpdateLink;
     public static String UpdateMessage;
     public static String UpdateJobMessage;
+    public static String UpdateInstalled;
 
     static
     {

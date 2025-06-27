@@ -37,6 +37,7 @@ public class UINotification
     private final String url;
     private boolean isMouseOver = false;
     private Runnable timerRunnable;
+    private Runnable action;
 
     public UINotification(Shell parentShell, String message, String linkText, String url)
     {
@@ -44,6 +45,12 @@ public class UINotification
         this.message = message;
         this.linkText = linkText;
         this.url = url;
+    }
+
+    public UINotification(Shell parentShell, String message, String linkText, String url, Runnable action)
+    {
+        this(parentShell, message, linkText, url);
+        this.action = action;
     }
 
     @Override
@@ -73,45 +80,63 @@ public class UINotification
         textLabel.setLayoutData(textData);
 
         // Ссылка
-        Link linkLabel = new Link(canvas, SWT.SINGLE);
-        linkLabel.setText("<a href=\"" + url + "\">" + linkText + "</a>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-        linkLabel.setBackground(bg);
-        linkLabel.setForeground(fg);
-        linkLabel.setToolTipText(url);
-        linkLabel.addSelectionListener(new SelectionAdapter()
+        if (linkText != null && !linkText.isEmpty())
         {
-            @Override
-            public void widgetSelected(SelectionEvent e)
+            Link linkLabel = new Link(canvas, SWT.SINGLE);
+            linkLabel.setText("<a href=\"" + url + "\">" + linkText + "</a>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            linkLabel.setBackground(bg);
+            linkLabel.setForeground(fg);
+            linkLabel.setToolTipText(url);
+            linkLabel.addSelectionListener(new SelectionAdapter()
             {
-                try
+                @Override
+                public void widgetSelected(SelectionEvent e)
                 {
-                    PlatformUI.getWorkbench().getBrowserSupport().getExternalBrowser().openURL(new URL(url));
+                    try
+                    {
+                        PlatformUI.getWorkbench().getBrowserSupport().getExternalBrowser().openURL(new URL(url));
+                    }
+                    catch (Exception ex)
+                    {
+                        ex.printStackTrace();
+                    }
                 }
-                catch (Exception ex)
-                {
-                    ex.printStackTrace();
-                }
-            }
-        });
-        GridData linkData = new GridData(SWT.FILL, SWT.TOP, true, false);
-        linkData.heightHint = linkLabel.computeSize(SWT.DEFAULT, SWT.DEFAULT).y;
-        linkLabel.setLayoutData(linkData);
+            });
+            GridData linkData = new GridData(SWT.FILL, SWT.TOP, true, false);
+            linkData.heightHint = linkLabel.computeSize(SWT.DEFAULT, SWT.DEFAULT).y;
+            linkLabel.setLayoutData(linkData);
+        }
 
         Composite buttonContainer = new Composite(canvas, SWT.NONE);
-        GridLayout buttonLayout = new GridLayout(1, false);
+        GridLayout buttonLayout = new GridLayout(2, false);
         buttonLayout.marginWidth = 0;
         buttonContainer.setLayout(buttonLayout);
         GridData buttonContainerData = new GridData(SWT.RIGHT, SWT.TOP, true, false);
-        buttonContainerData.horizontalSpan = 2;
+//        buttonContainerData.horizontalSpan = 2;
         buttonContainer.setLayoutData(buttonContainerData);
         buttonContainer.setBackground(bg);
         buttonContainer.setForeground(fg);
 
+        if (action != null)
+        {
+            Button actionButton = new Button(buttonContainer, SWT.PUSH);
+            actionButton.setText(Messages.UpdateButton);
+            actionButton.setBackground(bg);
+            actionButton.setForeground(fg);
+            actionButton.setLayoutData(new GridData(SWT.RIGHT, SWT.TOP, false, false));
+            actionButton.addSelectionListener(new SelectionAdapter()
+            {
+                @Override
+                public void widgetSelected(SelectionEvent e)
+                {
+                    action.run();
+                    close();
+                }
+            });
+        }
 
         Button closeButton = new Button(buttonContainer, SWT.PUSH);
         closeButton.setText(Messages.CloseButton);
-        closeButton.setBackground(bg);
-        closeButton.setForeground(fg);
         closeButton.setLayoutData(new GridData(SWT.RIGHT, SWT.TOP, false, false));
         closeButton.addSelectionListener(new SelectionAdapter()
         {
@@ -144,6 +169,7 @@ public class UINotification
 
         return canvas;
     }
+
 
 
     @Override

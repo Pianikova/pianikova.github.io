@@ -49,6 +49,16 @@ public class UINotificationService
         }
     }
 
+    @Override
+    public void createNotificationWithAction(Shell parentShell, String message, Runnable action, Class<?> sourceClass)
+    {
+        String notificationKey = sourceClass.getName();
+        UINotification popup = new UINotification(parentShell, message, null, null, action);
+        popup.setBlockOnOpen(false);
+        popup.open();
+        log.trace("Notification shown: " + notificationKey, () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
     public void resetAllTriggers()
     {
         shownNotifications.clear();
@@ -60,5 +70,6 @@ public class UINotificationService
     {
         resetAllTriggers();
     }
+
 }
 
