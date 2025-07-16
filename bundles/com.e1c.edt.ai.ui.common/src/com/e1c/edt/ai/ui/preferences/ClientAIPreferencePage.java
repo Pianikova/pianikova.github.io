@@ -91,23 +91,36 @@ public class ClientAIPreferencePage
 
         var tokenField =
             new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_Token, parent);
-
-        addField(tokenField);
+        var tokenLabel = tokenField.getLabelControl(parent);
+        tokenLabel.setToolTipText(Messages.ClientAIPreferencePage_Client_Token_Tooltip);
         var TokenText = tokenField.getTextControl(getFieldEditorParent());
         TokenText.setEchoChar('*');
+        addField(tokenField);
 
-        addField(new PolicyComboFieldEditor(parent));
+        var policyCombo = new PolicyComboFieldEditor(parent);
+        var policyComboLabel = policyCombo.getLabelControl(parent);
+        policyComboLabel.setToolTipText(Messages.ClientAIPreferencePage_CodeCompletionPolicy_Tooltip);
+        addField(policyCombo);
 
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
             Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
         codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
+        var codeCompletionLinesCountLabel = codeCompletionLinesCount.getLabelControl(parent);
+        codeCompletionLinesCountLabel
+            .setToolTipText(Messages.ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip);
         addField(codeCompletionLinesCount);
 
-        addField(
-            new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, LANGUAGES, parent));
+        var comboField =
+            new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, LANGUAGES, parent);
+        var comboLabel = comboField.getLabelControl(parent);
+        comboLabel.setToolTipText(Messages.ClientAIPreferencePage_Language_Tooltip);
+        addField(comboField);
 
-        addField(new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
-            Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator));
+        var validatorField = new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
+            Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator);
+        var validatorLabel = validatorField.getLabelControl(parent);
+        validatorLabel.setToolTipText(Messages.ClientAIPreferencePage_Parameters_Tooltip);
+        addField(validatorField);
     }
 
     @Override

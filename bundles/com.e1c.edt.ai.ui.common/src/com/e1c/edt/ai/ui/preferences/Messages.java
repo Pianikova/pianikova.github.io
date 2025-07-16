@@ -29,6 +29,11 @@ public class Messages
     public static String Error_UnableToParse;
     public static String Error_OutOfRange;
     public static String Error_Unknown;
+    public static String ClientAIPreferencePage_Client_Token_Tooltip;
+    public static String ClientAIPreferencePage_CodeCompletionPolicy_Tooltip;
+    public static String ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip;
+    public static String ClientAIPreferencePage_Language_Tooltip;
+    public static String ClientAIPreferencePage_Parameters_Tooltip;
 
     static
     {
