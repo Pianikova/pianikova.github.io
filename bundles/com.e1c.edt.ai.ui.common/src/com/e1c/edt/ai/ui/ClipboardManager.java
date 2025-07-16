@@ -12,9 +12,15 @@ import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.IExecutionListener;
 import org.eclipse.core.commands.NotHandledException;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.jface.text.ITextOperationTarget;
+import org.eclipse.jface.text.source.SourceViewer;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.dnd.Clipboard;
 import org.eclipse.swt.dnd.TextTransfer;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.commands.ICommandService;
 
@@ -24,7 +30,7 @@ import com.google.inject.Inject;
 
 @SuppressWarnings("nls")
 public class ClipboardManager
-    implements IClipboardManager, IClipboard, IExecutionListener
+    implements IClipboardManager, IClipboard, IExecutionListener, Listener
 {
     private static final int MAX_SIZE = 8192;
     private static final HashSet<String> COPY_COMMAND_IDS = new HashSet<>();
@@ -58,6 +64,11 @@ public class ClipboardManager
     @Override
     public void initialize()
     {
+        dispatcher.dispatchAsync(() -> {
+            var display = Display.getDefault();
+            display.addFilter(SWT.FocusIn, this);
+            display.addFilter(SWT.FocusOut, this);
+        });
         var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
         commandService.addExecutionListener(this);
     }
@@ -108,7 +119,6 @@ public class ClipboardManager
     {
         if (COPY_COMMAND_IDS.contains(commandId))
         {
-            file = getFile();
             text = getTextFromClipoard();
         }
 
@@ -159,13 +169,60 @@ public class ClipboardManager
         }
     }
 
-    private Optional<IFile> getFile()
+    @Override
+    public void handleEvent(Event event)
     {
-        return Optional.ofNullable(PlatformUI.getWorkbench())
-            .map(i -> i.getActiveWorkbenchWindow())
-            .map(i -> i.getActivePage())
-            .map(i -> i.getActiveEditor())
-            .map(i -> i.getEditorInput())
-            .map(i -> i.getAdapter(IFile.class));
+        if (event.type == SWT.FocusOut)
+        {
+            file = Optional.empty();
+            return;
+        }
+
+        if (event.widget instanceof StyledText)
+        {
+            if (event.type == SWT.FocusIn)
+            {
+                file = Optional.empty();
+                for (var workbench : PlatformUI.getWorkbench().getWorkbenchWindows())
+                {
+                    for (var page : workbench.getPages())
+                    {
+                        for (var editorRef : page.getEditorReferences())
+                        {
+                            var editor = editorRef.getEditor(false);
+                            if (editor == null)
+                            {
+                                continue;
+                            }
+
+                            var input = editor.getEditorInput();
+                            if (input == null)
+                            {
+                                continue;
+                            }
+
+                            var curSourceViewer = editor.getAdapter(ITextOperationTarget.class);
+                            if (curSourceViewer instanceof SourceViewer)
+                            {
+                                var surceViewer = (SourceViewer)curSourceViewer;
+                                if (surceViewer.getTextWidget() != event.widget)
+                                {
+                                    continue;
+                                }
+                            }
+
+                            var editorFile = input.getAdapter(IFile.class);
+                            if (editorFile == null)
+                            {
+                                continue;
+                            }
+
+                            file = Optional.of(editorFile);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 }
