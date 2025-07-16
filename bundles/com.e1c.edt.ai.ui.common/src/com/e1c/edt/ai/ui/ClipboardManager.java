@@ -68,9 +68,9 @@ public class ClipboardManager
             var display = Display.getDefault();
             display.addFilter(SWT.FocusIn, this);
             display.addFilter(SWT.FocusOut, this);
+            var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
+            commandService.addExecutionListener(this);
         });
-        var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
-        commandService.addExecutionListener(this);
     }
 
     @Override
