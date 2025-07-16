@@ -14,6 +14,7 @@ import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
@@ -106,6 +107,8 @@ class SessionService
         userParameters.tabWidth = uiSettings.getTabWidth();
         userParameters.codeCompletionLinesCount = uiSettings.getCodeCompletionLinesCount();
         userParameters.codeCompletionPolicy = uiSettings.getCodeCompletionPolicy();
+        userParameters.isContinuousCodeCompletion =
+            CodeCompletionPolicy.MODERATE.isMeet(userParameters.codeCompletionPolicy);
         userParameters.minRequestDelayMs = uiSettings.getMinRequestDelay().toMillis();
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();

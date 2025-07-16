@@ -35,12 +35,18 @@ public class UserParameters
     public int codeCompletionLinesCount;
 
     /**
-     * Политика завершения кода off/focusing/balance/creativity. Например, balance.
+     * Политика завершения кода off/focusing/balance/creativity. Например, moderate.
      *
      * @see CodeCompletionPolicy
      */
     @SerializedName("code_completion_policy")
     public CodeCompletionPolicy codeCompletionPolicy;
+
+    /**
+     * Определяет включено ли автоматическое продолжение кода. Например, true.
+     */
+    @SerializedName("is_continuous_code_completion")
+    public Boolean isContinuousCodeCompletion = true;
 
     /**
      * Минимальная задержка запроса для завершения кода.

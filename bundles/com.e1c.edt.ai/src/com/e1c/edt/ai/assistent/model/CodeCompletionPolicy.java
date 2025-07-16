@@ -7,7 +7,7 @@ import com.e1c.edt.ai.Messages;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * Перечисление литик завершения кода.
+ * Перечисление политик завершения кода.
  */
 public enum CodeCompletionPolicy
 {
