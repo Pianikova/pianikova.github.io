@@ -49,4 +49,6 @@ public class MetaEntity
 
     @SerializedName("based_on")
     public List<BasedOnEntity> basedOn;
+
+    public List<SubsystemEntity> subsystems;
 }
