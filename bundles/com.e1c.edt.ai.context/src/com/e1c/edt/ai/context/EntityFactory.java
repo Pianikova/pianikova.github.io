@@ -1091,7 +1091,12 @@ class EntityFactory
         entity.synonym = createMap(subsystem.getSynonym());
         if (level < 16)
         {
-            subsystem.getSubsystems().stream().forEach(s -> entity.subsystems.add(createSubsystem(s, level + 1)));
+            var subsystems = subsystem.getSubsystems();
+            if (subsystems != null && !subsystems.isEmpty())
+            {
+                entity.subsystems =
+                    subsystems.stream().map(s -> createSubsystem(s, level + 1)).collect(Collectors.toList());
+            }
         }
 
         return entity;

@@ -27,7 +27,7 @@ public class Collections
         var partition = new ArrayList<T>(partitionSize);
         var indexInPartition = 0;
         var remaining = size;
-        for (T val : collection)
+        for (T val : new ArrayList<>(collection))
         {
             if (indexInPartition == partitionSize)
             {
