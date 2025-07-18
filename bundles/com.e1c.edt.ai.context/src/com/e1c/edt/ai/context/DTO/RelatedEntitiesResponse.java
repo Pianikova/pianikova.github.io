@@ -22,5 +22,5 @@ public class RelatedEntitiesResponse
 
     public FormEntity form;
 
-    public List<MetaEntity> meta;
+    public MetaEntity meta;
 }

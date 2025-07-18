@@ -205,7 +205,11 @@ public class RelatedEntities implements IRelatedEntities
             }
         }, IStatistics.Empty, cancellationToken);
 
-        response.meta = entityFactory.createMetaEntity(objects, cancellationToken);
+        var meta = entityFactory.createMetaEntity(objects, cancellationToken);
+        if (!meta.isEmpty())
+        {
+            response.meta = meta.get(0);
+        }
 
         entitiesWalker.walk(null, request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()
         {

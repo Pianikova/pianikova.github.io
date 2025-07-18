@@ -14,4 +14,8 @@ public class PredefinedEntity
     public ValueEntity value;
 
     public List<PredefinedEntity> predefined;
+
+    public List<PredefinedEntity> displaced;
+
+    public List<PredefinedEntity> child;
 }

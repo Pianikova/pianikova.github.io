@@ -427,7 +427,11 @@ class EntityInfo
         {
             try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
             {
-                globalContext.metaEntity = entityFactory.createMetaEntity(objects, cancellationToken);
+                var meta = entityFactory.createMetaEntity(objects, cancellationToken);
+                if (!meta.isEmpty())
+                {
+                    globalContext.metaEntity = meta.get(0);
+                }
             }
             catch (Exception error)
             {
