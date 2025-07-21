@@ -139,6 +139,7 @@ class StateService
         }
 
         var state = new AIState(serviceState, actionState);
+        log.debug("StateService", () -> state.toString()); //$NON-NLS-1$
         for (var listener : listeners)
         {
             try

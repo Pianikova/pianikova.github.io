@@ -27,4 +27,11 @@ public class AIState
     {
         return actionState;
     }
+
+    @SuppressWarnings("nls")
+    @Override
+    public String toString()
+    {
+        return "Service State: " + serviceState + ", Action State: " + actionState;
+    }
 }

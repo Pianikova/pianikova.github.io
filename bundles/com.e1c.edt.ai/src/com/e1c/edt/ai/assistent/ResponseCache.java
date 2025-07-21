@@ -9,20 +9,23 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 import com.e1c.edt.ai.AIState;
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ServiceState;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 class ResponseCache<T>
     implements IResponseCache<T>, IAIStateListener
 {
+    private final ILog log;
     private final ConcurrentHashMap<String, CompletableFuture<Optional<T>>> last = new ConcurrentHashMap<>();
 
     @Inject
-    public ResponseCache(IStateService stateService)
+    public ResponseCache(ILog log, IStateService stateService)
     {
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(stateService);
+        this.log = log;
         stateService.addListener(this);
     }
 
@@ -53,11 +56,14 @@ class ResponseCache<T>
         last.remove(key);
     }
 
+    @SuppressWarnings("nls")
     @Override
     public void onStateChange(AIState state)
     {
-        if (state.getServiceState() == ServiceState.OFFLINE)
+        var serverState = state.getServiceState();
+        if (serverState != ServiceState.ONLINE && serverState != ServiceState.SETTINGS_CHANGED)
         {
+            log.debug("ResponseCache", () -> "cleared");
             last.clear();
         }
     }
