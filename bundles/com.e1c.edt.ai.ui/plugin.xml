@@ -243,7 +243,7 @@
         </menuContribution>
         <menuContribution
                 allPopups="false"
-                locationURI="popup:#BslEditorContext?endof=group.open">
+                locationURI="popup:#AbstractTextEditorContext?endof=group.open">
             <menu
                     icon="icons/obj16/ai.png"
                     id="com.e1c.edt.ai.ui.groupMenu"
