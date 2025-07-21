@@ -1162,7 +1162,8 @@ class EntityFactory
 
     private List<SubsystemEntity> createSubsystems(MdObject mdObject)
     {
-        var id = mdObject.getUuid();
+        var bmObject = (IBmObject)mdObject;
+        var bmId = bmObject.bmGetId();
         var config = configurationProvider.getConfiguration(mdObject);
         if (config == null)
         {
@@ -1171,7 +1172,7 @@ class EntityFactory
 
         var result = config.getSubsystems()
             .stream()
-            .filter(subsystem -> subsystem.getContent().stream().anyMatch(i -> i.getUuid().equals(id)))
+            .filter(subsystem -> subsystem.getContent().stream().anyMatch(i -> ((IBmObject)mdObject).bmGetId() == bmId))
             .map(subsystem -> createSubsystem(subsystem, 0))
             .collect(Collectors.toList());
 
