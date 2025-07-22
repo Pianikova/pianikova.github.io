@@ -665,6 +665,15 @@ class EntityFactory
     private MetaEntity createAndFillMetaEntity(IBmObject bmObject, boolean brief)
     {
         var entity = brief ? new MetaEntity() : createMetaEntity(bmObject, brief);
+        for (var metadataInterface : bmObject.getClass().getInterfaces())
+        {
+            if (metadataInterface.getName().startsWith("com._1c.g5.v8.dt.metadata.mdclass.")) //$NON-NLS-1$
+            {
+                entity.type = metadataInterface.getSimpleName();
+                break;
+            }
+        }
+
         var namespace = bmObject.bmGetNamespace();
         if (namespace != null)
         {
