@@ -15,6 +15,8 @@ public class AttributeEntity
 
     public String comment;
 
+    public String type;
+
     public Map<String, String> title;
 
     @SerializedName("tool_tip")

@@ -9,6 +9,8 @@ public class RegisterRecordEntity
 {
     public String name;
 
+    public String type;
+
     public String comment;
 
     public Map<String, String> synonym;

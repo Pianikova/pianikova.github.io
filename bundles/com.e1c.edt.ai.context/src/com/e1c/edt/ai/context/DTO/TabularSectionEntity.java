@@ -12,6 +12,8 @@ public class TabularSectionEntity
 {
     public String name;
 
+    public String type;
+
     public String comment;
 
     public List<AttributeEntity> attributes;

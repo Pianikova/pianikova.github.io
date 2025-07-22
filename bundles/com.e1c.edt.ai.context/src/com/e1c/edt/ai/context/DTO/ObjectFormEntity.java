@@ -9,5 +9,7 @@ public class ObjectFormEntity
 {
     public String name;
 
+    public String type;
+
     public Map<String, String> synonym;
 }

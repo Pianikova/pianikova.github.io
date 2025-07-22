@@ -665,15 +665,7 @@ class EntityFactory
     private MetaEntity createAndFillMetaEntity(IBmObject bmObject, boolean brief)
     {
         var entity = brief ? new MetaEntity() : createMetaEntity(bmObject, brief);
-        for (var metadataInterface : bmObject.getClass().getInterfaces())
-        {
-            if (metadataInterface.getName().startsWith("com._1c.g5.v8.dt.metadata.mdclass.")) //$NON-NLS-1$
-            {
-                entity.type = metadataInterface.getSimpleName();
-                break;
-            }
-        }
-
+        entity.type = getTypeName(bmObject);
         var namespace = bmObject.bmGetNamespace();
         if (namespace != null)
         {
@@ -695,6 +687,19 @@ class EntityFactory
         }
 
         return entity;
+    }
+
+    private String getTypeName(EObject eObject)
+    {
+        for (var metadataInterface : eObject.getClass().getInterfaces())
+        {
+            if (metadataInterface.getName().startsWith("com._1c.g5.v8.dt.metadata.mdclass.")) //$NON-NLS-1$
+            {
+                return metadataInterface.getSimpleName();
+            }
+        }
+
+        return null;
     }
 
     private MetaEntity createMetaEntity(IBmObject bmObject, boolean brief)
@@ -1260,6 +1265,7 @@ class EntityFactory
     {
         var entity = new AttributeEntity();
         entity.name = attribute.getName();
+        entity.type = getTypeName(attribute);
         entity.comment = attribute.getComment();
         entity.toolTip = createMap(attribute.getToolTip());
         entity.synonym = createMap(attribute.getSynonym());
@@ -1273,6 +1279,7 @@ class EntityFactory
     {
         var entity = new AttributeEntity();
         entity.name = attribute.getName();
+        entity.type = getTypeName(attribute);
         entity.toolTip = createMap(attribute.getToolTip());
         entity.synonym = createMap(attribute.getSynonym());
         return entity;
@@ -1282,6 +1289,7 @@ class EntityFactory
     {
         var entity = new ObjectFormEntity();
         entity.name = form.getName();
+        entity.type = getTypeName(form);
         entity.synonym = createMap(form.getSynonym());
         return entity;
     }
@@ -1290,6 +1298,7 @@ class EntityFactory
     {
         var entity = new TabularSectionEntity();
         entity.name = tabularSection.getName();
+        entity.type = getTypeName(tabularSection);
         entity.comment = tabularSection.getComment();
         entity.toolTip = createMap(tabularSection.getToolTip());
         entity.attributes = createAttributes(tabularSection.getAttributes());
@@ -1302,6 +1311,7 @@ class EntityFactory
     {
         var entity = new RegisterResourceEntity();
         entity.name = registerResource.getName();
+        entity.type = getTypeName(registerResource);
         entity.comment = registerResource.getComment();
         entity.toolTip = createMap(registerResource.getToolTip());
         entity.synonym = createMap(registerResource.getSynonym());
@@ -1313,6 +1323,7 @@ class EntityFactory
     {
         var entity = new RegisterDimensionEntity();
         entity.name = registerDimension.getName();
+        entity.type = getTypeName(registerDimension);
         entity.comment = registerDimension.getComment();
         entity.toolTip = createMap(registerDimension.getToolTip());
         entity.synonym = createMap(registerDimension.getSynonym());
@@ -1324,6 +1335,7 @@ class EntityFactory
     {
         var entity = new RegisterRecordEntity();
         entity.name = registerRecord.getName();
+        entity.type = getTypeName(registerRecord);
         entity.comment = registerRecord.getComment();
         entity.synonym = createMap(registerRecord.getSynonym());
         // Too much info:
@@ -1343,6 +1355,7 @@ class EntityFactory
     {
         var entity = new PredefinedEntity();
         entity.name = predefined.getName();
+        entity.type = getTypeName(predefined);
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.predefined = createCatalogPredefinedItems(predefined.getContent());
@@ -1354,6 +1367,7 @@ class EntityFactory
     {
         var entity = new PredefinedEntity();
         entity.name = predefined.getName();
+        entity.type = getTypeName(predefined);
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.predefined = createChartOfCharacteristicTypesPredefinedItems(predefined.getContent());
@@ -1364,6 +1378,7 @@ class EntityFactory
     {
         var entity = new PredefinedEntity();
         entity.name = predefined.getName();
+        entity.type = getTypeName(predefined);
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.displaced = createChartOfCalculationTypesPredefinedItems(predefined.getDisplaced());
@@ -1374,6 +1389,7 @@ class EntityFactory
     {
         var entity = new PredefinedEntity();
         entity.name = predefined.getName();
+        entity.type = getTypeName(predefined);
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.child = createChartOfAccountsPredefinedItems(predefined.getChildItems());
@@ -1384,6 +1400,7 @@ class EntityFactory
     {
         var entity = new TemplateEntity();
         entity.name = template.getName();
+        entity.type = getTypeName(template);
         entity.comment = template.getComment();
         entity.synonym = createMap(template.getSynonym());
         return entity;
