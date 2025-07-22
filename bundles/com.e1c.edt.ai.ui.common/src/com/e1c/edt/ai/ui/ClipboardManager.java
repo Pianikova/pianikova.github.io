@@ -38,6 +38,7 @@ public class ClipboardManager
     private final IDispatcher dispatcher;
     private Optional<String> text = Optional.empty();
     private Optional<IFile> file = Optional.empty();
+    private Optional<IFile> currentFile = Optional.empty();
     private boolean isPasting;
 
     static
@@ -119,6 +120,7 @@ public class ClipboardManager
     {
         if (COPY_COMMAND_IDS.contains(commandId))
         {
+            file = currentFile;
             text = getTextFromClipoard();
         }
 
@@ -174,7 +176,7 @@ public class ClipboardManager
     {
         if (event.type == SWT.FocusOut)
         {
-            file = Optional.empty();
+            currentFile = Optional.empty();
             return;
         }
 
@@ -182,7 +184,7 @@ public class ClipboardManager
         {
             if (event.type == SWT.FocusIn)
             {
-                file = Optional.empty();
+                currentFile = Optional.empty();
                 for (var workbench : PlatformUI.getWorkbench().getWorkbenchWindows())
                 {
                     for (var page : workbench.getPages())
@@ -217,7 +219,7 @@ public class ClipboardManager
                                 continue;
                             }
 
-                            file = Optional.of(editorFile);
+                            currentFile = Optional.of(editorFile);
                             return;
                         }
                     }
