@@ -31,4 +31,10 @@ class DefaultSettings
     {
         return "com.e1c.edt.ai.feature.feature.group"; //$NON-NLS-1$
     }
+
+    @Override
+    public String getChatUrlPath()
+    {
+        return "chat_api/v1/"; //$NON-NLS-1$
+    }
 }

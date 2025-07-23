@@ -16,7 +16,7 @@ public class Messages
     private static final String BUNDLE_NAME = "com.e1c.edt.ai.ui.messages"; //$NON-NLS-1$
     public static String AIName;
     public static String CodeCompletionJobName;
-    public static String CodeCompletionBackgroundJobName;
+    public static String BackgroundJobName;
     public static String CodeCompletionBackgroundScanSubtaskName;
     public static String CodeCompletionBackgroundHashSubtaskName;
     public static String CodeCompletionBackgroundSyncSubtaskName;
@@ -46,6 +46,7 @@ public class Messages
     public static String UpdateMessage;
     public static String UpdateJobMessage;
     public static String UpdateInstalled;
+    public static String CommitMessage;
 
     static
     {

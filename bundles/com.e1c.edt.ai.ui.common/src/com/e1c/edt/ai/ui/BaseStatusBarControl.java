@@ -58,6 +58,8 @@ public class BaseStatusBarControl
     private IUINotificationService notificationService;
     @Inject
     private IUISettings settings;
+    @Inject
+    private IReflection reflection;
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
@@ -126,50 +128,49 @@ public class BaseStatusBarControl
         policyTooltip.activate();
         try
         {
-            var listField = policyCombo.getClass().getDeclaredField("list"); //$NON-NLS-1$
-            listField.setAccessible(true);
-            var list = (List)listField.get(policyCombo);
-            list.addMouseMoveListener(new MouseMoveListener()
-            {
-                @SuppressWarnings("nls")
-                @Override
-                public void mouseMove(MouseEvent e)
+            reflection.getField(CCombo.class, policyCombo, "list", List.class).ifPresent(list -> { //$NON-NLS-1$
+                list.addMouseMoveListener(new MouseMoveListener()
                 {
-                    int itemHeight = policyCombo.getItemHeight();
-                    if (itemHeight == 0)
+                    @SuppressWarnings("nls")
+                    @Override
+                    public void mouseMove(MouseEvent e)
                     {
-                        return;
+                        int itemHeight = policyCombo.getItemHeight();
+                        if (itemHeight == 0)
+                        {
+                            return;
+                        }
+
+                        Integer index = (e.y - policyCombo.getBounds().y) / itemHeight;
+                        if (index < 0 || index >= policies.length)
+                        {
+                            return;
+                        }
+
+                        policyCombo.select(index);
+                        list.redraw();
+                        if (index.equals(policyTooltip.getData("index")))
+                        {
+                            return;
+                        }
+
+                        var codeCompletionPolicy = policies[index];
+                        policyTooltip.setText(codeCompletionPolicy.getDescription());
+                        policyTooltip.setData("index", index);
+                        var comboBounds = policyCombo.getBounds();
+                        var listBounds = list.getBounds();
+                        policyTooltip.show(new Point(0, -(comboBounds.height + listBounds.height + 90)));
                     }
+                });
 
-                    Integer index = (e.y - policyCombo.getBounds().y) / itemHeight;
-                    if (index < 0 || index >= policies.length)
-                    {
-                        return;
-                    }
-
-                    policyCombo.select(index);
-                    list.redraw();
-                    if (index.equals(policyTooltip.getData("index")))
-                    {
-                        return;
-                    }
-
-                    var codeCompletionPolicy = policies[index];
-                    policyTooltip.setText(codeCompletionPolicy.getDescription());
-                    policyTooltip.setData("index", index);
-                    var comboBounds = policyCombo.getBounds();
-                    var listBounds = list.getBounds();
-                    policyTooltip.show(new Point(0, -(comboBounds.height + listBounds.height + 90)));
-                }
-            });
-
-            list.getParent().addListener(SWT.Hide, new Listener()
-            {
-                @Override
-                public void handleEvent(Event event)
+                list.getParent().addListener(SWT.Hide, new Listener()
                 {
-                    policyTooltip.hide();
-                }
+                    @Override
+                    public void handleEvent(Event event)
+                    {
+                        policyTooltip.hide();
+                    }
+                });
             });
         }
         catch (Exception e)

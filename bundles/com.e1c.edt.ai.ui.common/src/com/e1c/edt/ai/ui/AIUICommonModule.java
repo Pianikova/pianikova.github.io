@@ -75,6 +75,14 @@ public class AIUICommonModule
         bind(IUINotificationService.class).to(UINotificationService.class);
         bind(IFileScaner.class).to(FileScaner.class).in(Singleton.class);
         bind(IPluginUpdateService.class).to(PluginUpdateService.class);
+        bind(IReflection.class).to(Reflection.class).in(Singleton.class);
+        bind(IReflection.class).to(Reflection.class).in(Singleton.class);
+        bind(IWidgets.class).to(Widgets.class).in(Singleton.class);
+        bind(IGitTools.class).to(GitTools.class).in(Singleton.class);
+        bind(IGitActions.class).to(GitActions.class).in(Singleton.class);
+        bind(IStagingViewEnhancer.class).to(StagingViewEnhancer.class).in(Singleton.class);
+        bind(IResourceProvider.class).to(ResourceProvider.class).in(Singleton.class);
+        bind(IDialogsInjector.class).to(DialogsEnhancer.class).in(Singleton.class);
         // @formatter:on
     }
 }

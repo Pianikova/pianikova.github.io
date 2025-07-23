@@ -40,7 +40,7 @@ class GlobalContextManager implements IGlobalContextManager
     public void update(AIContext aiCtx, ICancellationToken cancellationToken)
     {
         var job =
-            dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
+            dispatcher.createJob(Messages.BackgroundJobName,
                 jobCtx -> {
                     try
                     {

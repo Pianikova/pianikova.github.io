@@ -49,7 +49,13 @@ public class ModuleProvider
     @Override
     public ProjectId getProjectId(IProject project)
     {
-        return new ProjectId(project.getLocationURI().getPath(), project);
+        var uri = project.getLocationURI();
+        if (uri == null)
+        {
+            return new ProjectId("", project); //$NON-NLS-1$
+        }
+
+        return new ProjectId(uri.getPath(), project);
     }
 
     @Override

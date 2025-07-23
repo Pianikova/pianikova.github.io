@@ -12,4 +12,6 @@ public interface IDefaultSettings
     String getUpdateUrl();
 
     String getPluginFeature();
+
+    String getChatUrlPath();
 }

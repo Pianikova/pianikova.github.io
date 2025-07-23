@@ -16,7 +16,6 @@ import com.e1c.edt.ai.assistent.model.FinalCodeFeedback;
 import com.e1c.edt.ai.assistent.model.IssueFeedback;
 import com.e1c.edt.ai.assistent.model.IssueType;
 import com.e1c.edt.ai.client.AIClientException;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -46,7 +45,7 @@ class FeedbackService
     public CompletableFuture<Void> acceptedCodeAsync(String uuid, String code, Optional<CursorInfo> cursorStartInfo,
         Optional<CursorInfo> cursorEndInfo)
     {
-        var builder = requestBuilder.create("./feedbacks/accepted_code"); //$NON-NLS-1$
+        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./feedbacks/accepted_code"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(null);
@@ -65,7 +64,7 @@ class FeedbackService
     @Override
     public CompletableFuture<Void> finalizeCodeAsync(String uuid, String code)
     {
-        var builder = requestBuilder.create("./feedbacks/final_code"); //$NON-NLS-1$
+        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./feedbacks/final_code"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(null);
@@ -82,7 +81,7 @@ class FeedbackService
     @Override
     public CompletableFuture<Void> issueAsync(String uuid, IssueType type, String description)
     {
-        var builder = requestBuilder.create("./feedbacks/issue"); //$NON-NLS-1$
+        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./feedbacks/issue"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(null);

@@ -31,4 +31,10 @@ class DefaultSettings
     {
         return "com.e1c.edt.ui.eclipse.feature.feature.group"; //$NON-NLS-1$
     }
+
+    @Override
+    public String getChatUrlPath()
+    {
+        return "code_java/chat_api/v1/"; //$NON-NLS-1$
+    }
 }

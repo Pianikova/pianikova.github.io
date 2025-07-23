@@ -86,7 +86,7 @@ class GlobalContextTracker
                     var cancellationToken = CancellationTokens.expiresAt(new CancellationTokenSource(), clock,
                         clock.now().plus(Duration.ofMillis(15000)));
 
-                    job = dispatcher.createJob(Messages.CodeCompletionBackgroundJobName,
+                    job = dispatcher.createJob(Messages.BackgroundJobName,
                         jobCtx -> track(jobCtx, aiCtx, workflow),
                         cancellationToken);
 
