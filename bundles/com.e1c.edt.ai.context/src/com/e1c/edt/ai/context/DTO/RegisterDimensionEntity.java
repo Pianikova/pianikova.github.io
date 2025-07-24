@@ -12,8 +12,6 @@ public class RegisterDimensionEntity
 {
     public String name;
 
-    public String type;
-
     public String comment;
 
     @SerializedName("tool_tip")

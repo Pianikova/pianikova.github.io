@@ -9,7 +9,7 @@ public class PredefinedEntity
 {
     public String name;
 
-    public String type;
+    public List<DataType> types;
 
     public String description;
 

@@ -18,7 +18,7 @@ public class MetaEntity
 
     public String name;
 
-    public String type;
+    public List<DataType> types;
 
     public String comment;
 

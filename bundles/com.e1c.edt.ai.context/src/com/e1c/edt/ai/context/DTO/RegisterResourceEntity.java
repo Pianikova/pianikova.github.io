@@ -12,8 +12,6 @@ public class RegisterResourceEntity
 {
     public String name;
 
-    public String type;
-
     public String comment;
 
     @SerializedName("tool_tip")
