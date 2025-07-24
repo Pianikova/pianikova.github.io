@@ -6,6 +6,8 @@ package com.e1c.edt.ui.eclipse;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.eclipse.jface.preference.IPreferenceStore;
+
 import com.e1c.edt.ai.AIModule;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
@@ -18,8 +20,7 @@ import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.ICodeParser;
-import org.eclipse.jface.preference.IPreferenceStore;
-
+import com.e1c.edt.ai.ui.IModuleNameProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -64,6 +65,7 @@ public class AIUIModule
         });
         bind(IProjectIdProvider.class).to(ProjectIdProvider.class).in(Singleton.class);
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
+        bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -71,6 +71,7 @@ public class Chat implements IChat, IChatDialog
     private final IJavaScript javaScript;
     private final IStateService stateService;
     private final ISessionService sessionService;
+    private final IModuleNameProvider moduleNameProvider;
     private WebView webView;
     private URL lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
@@ -79,7 +80,7 @@ public class Chat implements IChat, IChatDialog
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
         IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
-        ISessionService sessionService)
+        ISessionService sessionService, IModuleNameProvider moduleNameProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -92,6 +93,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(javaScript);
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(sessionService);
+        Preconditions.checkNotNull(moduleNameProvider);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -104,6 +106,7 @@ public class Chat implements IChat, IChatDialog
         this.javaScript = javaScript;
         this.stateService = stateService;
         this.sessionService = sessionService;
+        this.moduleNameProvider = moduleNameProvider;
     }
 
     @Override
@@ -213,6 +216,12 @@ public class Chat implements IChat, IChatDialog
 
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(optionalSessionId.orElse(null), NULL_VALUE));
+
+                var pathFormatted = moduleNameProvider.getModuleName(ctx.getPath()).get();
+                log.debug(AI_CHAT, () -> "pathFormatted: " + pathFormatted);
+                script.append(ARGS_SEPARATOR);
+                script.append(javaScript.escape(pathFormatted, NULL_VALUE));
+
                 script.append(')');
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
