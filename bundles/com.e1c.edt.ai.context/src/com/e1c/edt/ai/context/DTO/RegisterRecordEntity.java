@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.context.DTO;
 
+import java.util.List;
 import java.util.Map;
 
 public class RegisterRecordEntity
@@ -15,4 +16,6 @@ public class RegisterRecordEntity
 
     // Too much info:
     // public List<FieldEntity> fields;
+
+    public List<DataType> types;
 }

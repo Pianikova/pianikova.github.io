@@ -9,6 +9,8 @@ public class PredefinedEntity
 {
     public String name;
 
+    public List<DataType> types;
+
     public String description;
 
     public ValueEntity value;
