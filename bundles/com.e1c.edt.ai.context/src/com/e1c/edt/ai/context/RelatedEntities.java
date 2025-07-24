@@ -208,7 +208,11 @@ public class RelatedEntities implements IRelatedEntities
         var meta = entityFactory.createMetaEntity(objects, cancellationToken);
         if (!meta.isEmpty())
         {
-            response.meta = meta.get(0);
+            response.meta = meta.get(meta.size() - 1);
+        }
+        else
+        {
+            response.meta = null;
         }
 
         entitiesWalker.walk(null, request.path, 0, Integer.MAX_VALUE, resourceSetProvider, new EntityVisitor()

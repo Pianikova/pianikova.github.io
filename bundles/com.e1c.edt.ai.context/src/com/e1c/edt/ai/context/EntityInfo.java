@@ -430,7 +430,11 @@ class EntityInfo
                 var meta = entityFactory.createMetaEntity(objects, cancellationToken);
                 if (!meta.isEmpty())
                 {
-                    globalContext.metaEntity = meta.get(0);
+                    globalContext.metaEntity = meta.get(meta.size() - 1);
+                }
+                else
+                {
+                    globalContext.metaEntity = null;
                 }
             }
             catch (Exception error)
