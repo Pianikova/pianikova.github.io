@@ -214,7 +214,7 @@ class EntityInfo
         globalContext.localFunctionsEntities = new HashMap<>();
         var uuids = new HashSet<String>();
         var cursorObjects = new EObject[1];
-        var objects = new ArrayList<IBmObject>();
+        var bmObjects = new ArrayList<BmObject>();
         var document = aiContext.getDocument();
         programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
         entitiesWalker.walk(document, filePath, start, finish, resourceSetProvider, new EntityVisitor()
@@ -270,7 +270,7 @@ class EntityInfo
             @Override
             public boolean visitBmObject(BmRoot root, IBmObject owner)
             {
-                objects.add(owner);
+                bmObjects.add(new BmObject(root, owner));
                 return false;
             }
 
@@ -423,18 +423,31 @@ class EntityInfo
             entityFactory.getAreas(cursorObject).ifPresent(areas -> localContext.cursorAreas = areas);
         }
 
-        if (!objects.isEmpty() && actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
+        globalContext.metaEntity = null;
+        if (!bmObjects.isEmpty())
         {
             try (var measurement = statistics.measureDuration(StatisticsType.META_DURATUION))
             {
-                var meta = entityFactory.createMetaEntity(objects, cancellationToken);
-                if (!meta.isEmpty())
+                var bmObject = bmObjects.get(bmObjects.size() - 1);
+                if (actionFilter.test(new FillAction(DataType.HASH, Fields.META, null)))
                 {
-                    globalContext.metaEntity = meta.get(meta.size() - 1);
+                    bmObject.root.getFile(bmObject.owner).map(file -> {
+                        globalContext.metaPath = file.getFullPath().makeRelative().toPortableString();
+                        try
+                        {
+                            return hashTools.compute(file, buffer);
+                        }
+                        catch (Exception error)
+                        {
+                            log.logError(error);
+                            return null;
+                        }
+                    }).ifPresent(hash -> globalContext.metaHash = hashTools.format(hash, true));
                 }
-                else
+
+                if (actionFilter.test(new FillAction(DataType.DATA, Fields.META, null)))
                 {
-                    globalContext.metaEntity = null;
+                    globalContext.metaEntity = entityFactory.createMetaEntity(bmObject.owner, cancellationToken);
                 }
             }
             catch (Exception error)
@@ -477,5 +490,17 @@ class EntityInfo
             }
         }, statistics, cancellationToken);
         return null;
+    }
+
+    private static class BmObject
+    {
+        public final BmRoot root;
+        public final IBmObject owner;
+
+        public BmObject(BmRoot root, IBmObject owner)
+        {
+            this.root = root;
+            this.owner = owner;
+        }
     }
 }

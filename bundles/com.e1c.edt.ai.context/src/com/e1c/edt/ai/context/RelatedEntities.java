@@ -191,7 +191,7 @@ public class RelatedEntities implements IRelatedEntities
 
             @Override
                     public boolean visitInvocation(BmRoot root, String nodeId, Invocation invocation,
-                ICompositeNode node)
+                        ICompositeNode node)
             {
                 var entity = createEntity(request.path, nodeId, invocation, node, cancellationToken);
                 if (!entities.add(entity))
@@ -205,10 +205,9 @@ public class RelatedEntities implements IRelatedEntities
             }
         }, IStatistics.Empty, cancellationToken);
 
-        var meta = entityFactory.createMetaEntity(objects, cancellationToken);
-        if (!meta.isEmpty())
+        if (!objects.isEmpty())
         {
-            response.meta = meta.get(meta.size() - 1);
+            response.meta = entityFactory.createMetaEntity(objects.get(objects.size() - 1), cancellationToken);
         }
         else
         {

@@ -37,7 +37,7 @@ interface IEntityFactory
     Optional<MethodEntity> createMethodEntity(Method method, ICompositeNode node, boolean detailed,
         ICancellationToken cancellationToken);
 
-    List<MetaEntity> createMetaEntity(List<IBmObject> objects, ICancellationToken cancellationToken);
+    MetaEntity createMetaEntity(IBmObject bmObject, ICancellationToken cancellationToken);
 
     Optional<List<String>> getEnvironments(EObject obj);
 

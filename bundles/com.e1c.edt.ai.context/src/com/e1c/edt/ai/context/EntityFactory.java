@@ -642,24 +642,9 @@ class EntityFactory
     }
 
     @Override
-    public List<MetaEntity> createMetaEntity(List<IBmObject> objects, ICancellationToken cancellationToken)
+    public MetaEntity createMetaEntity(IBmObject bmObject, ICancellationToken cancellationToken)
     {
-        var entities = new ArrayList<MetaEntity>();
-        for (var bmObject : objects)
-        {
-            var entity = createAndFillMetaEntity(bmObject, false);
-            if (entity != null)
-            {
-                entities.add(entity);
-            }
-
-            if (cancellationToken.isCanceled())
-            {
-                break;
-            }
-        }
-
-        return entities;
+        return createAndFillMetaEntity(bmObject, false);
     }
 
     private MetaEntity createAndFillMetaEntity(IBmObject bmObject, boolean brief)
