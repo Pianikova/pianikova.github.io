@@ -19,7 +19,6 @@ import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.resource.BslResource;
 import com._1c.g5.v8.dt.bsl.ui.editor.BslXtextDocument;
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
-import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com.e1c.edt.ai.ICancellationToken;
@@ -28,28 +27,30 @@ import com.google.inject.Inject;
 
 public class BmPovider implements IBmPovider
 {
-    private final IQualifiedNameFilePathConverter qualifiedNameFilePathConverter;
     private final IResourceLookup resourceLookup;
     private final IBmModelManager modelManager;
     private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
 
     @Inject
-    public BmPovider(IQualifiedNameFilePathConverter qualifiedNameFilePathConverter, IResourceLookup resourceLookup,
+    public BmPovider(IResourceLookup resourceLookup,
         IBmModelManager modelManager, IProjectFileSystemSupportProvider projectFileSystemSupportProvider)
     {
-        this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
-        Preconditions.checkNotNull(qualifiedNameFilePathConverter);
         Preconditions.checkNotNull(resourceLookup);
         Preconditions.checkNotNull(modelManager);
-        this.qualifiedNameFilePathConverter = qualifiedNameFilePathConverter;
+        Preconditions.checkNotNull(projectFileSystemSupportProvider);
         this.resourceLookup = resourceLookup;
         this.modelManager = modelManager;
+        this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
     }
 
-    @SuppressWarnings("nls")
     @Override
     public Optional<BmRoot> getRoot(IDocument document, String filePath, ICancellationToken cancellationToken)
     {
+        if (filePath == null || filePath.isBlank())
+        {
+            return Optional.empty();
+        }
+
         var uri = getURI(filePath);
         var project = resourceLookup.getProject(uri);
         if (project == null)

@@ -163,7 +163,11 @@ class VerticalRulerManager
             if (column instanceof IVerticalRulerInfoExtension)
             {
                 var info = (IVerticalRulerInfoExtension)column;
-                info.getModel().addAnnotationModelListener(modelListener);
+                var model = info.getModel();
+                if (model != null)
+                {
+                    model.addAnnotationModelListener(modelListener);
+                }
             }
 
             var control = column.getControl();

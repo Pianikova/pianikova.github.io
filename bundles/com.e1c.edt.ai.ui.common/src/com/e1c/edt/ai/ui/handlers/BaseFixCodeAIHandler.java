@@ -38,14 +38,14 @@ public class BaseFixCodeAIHandler
     @Override
     public boolean isEnabled()
     {
-        return codeTools.hasTarget();
+        return codeTools.hasTarget(CodeAction.FIX);
     }
 
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         ui.getLastSourceViewer()
-            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer))
+            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer, CodeAction.FIX))
             .ifPresent(ctx -> {
             if (fixDialog.show() == Window.OK)
             {

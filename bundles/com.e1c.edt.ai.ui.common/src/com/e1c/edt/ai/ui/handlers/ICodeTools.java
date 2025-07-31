@@ -11,9 +11,9 @@ import com.e1c.edt.ai.AIContext;
 
 public interface ICodeTools
 {
-    boolean hasTarget();
+    boolean hasTarget(CodeAction action);
 
-    Optional<AIContext> createContextForTarget(SourceViewer sourceViewer);
+    Optional<AIContext> createContextForTarget(SourceViewer sourceViewer, CodeAction action);
 
     Optional<TargetMethod> getTargetMethod();
 

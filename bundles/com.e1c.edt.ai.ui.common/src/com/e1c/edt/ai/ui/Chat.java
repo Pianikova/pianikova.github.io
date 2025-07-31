@@ -15,6 +15,7 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
+import org.eclipse.egit.ui.internal.commit.DiffDocument;
 import org.eclipse.jface.text.BadLocationException;
 
 import com.e1c.edt.ai.AIContext;
@@ -151,7 +152,7 @@ public class Chat implements IChat, IChatDialog
         chat("insert_code", codeSnippet, null, ctx); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
+    @SuppressWarnings({ "nls", "restriction" })
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
@@ -160,12 +161,19 @@ public class Chat implements IChat, IChatDialog
             try {
                 String scriptLanguage = null;
                 String programingLanguage = null;
+                var title = NULL_VALUE;
                 if (ctx != null)
                 {
+                    title = moduleNameProvider.getModuleName(ctx.getPath()).orElse(NULL_VALUE);
                     var chatContext = new ChatContext();
+                    var doc = ctx.getDocument();
                     contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
                     scriptLanguage = chatContext.scriptLanguage;
                     programingLanguage = chatContext.programingLanguage;
+                    if (doc instanceof DiffDocument)
+                    {
+                        programingLanguage = "git diff";
+                    }
                 }
 
                 var script = new StringBuilder();
@@ -211,10 +219,10 @@ public class Chat implements IChat, IChatDialog
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(optionalSessionId.orElse(null), NULL_VALUE));
 
-                var pathFormatted = moduleNameProvider.getModuleName(ctx.getPath()).get();
-                log.debug(AI_CHAT, () -> "pathFormatted: " + pathFormatted);
+                final var curTitle = title;
+                log.debug(AI_CHAT, () -> "title: " + curTitle);
                 script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(pathFormatted, NULL_VALUE));
+                script.append(javaScript.escape(curTitle, NULL_VALUE));
 
                 script.append(')');
                 var scriptText = script.toString();
