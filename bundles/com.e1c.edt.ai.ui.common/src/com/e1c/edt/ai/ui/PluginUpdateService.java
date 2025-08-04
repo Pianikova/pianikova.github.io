@@ -122,7 +122,7 @@ public class PluginUpdateService
                 dispatcher.dispatchAsync(() -> notificationService.createNotificationWithAction(
                     PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateMessage, () -> {
                         installUpdate(agent, latest);
-                    }, this.getClass()));
+                    }, UINotificationType.INFO, this.getClass()));
 
             }
 
@@ -160,7 +160,7 @@ public class PluginUpdateService
                         dispatcher.dispatchAsync(() -> {
                             notificationService.createNotification(
                                 PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-                                Messages.UpdateInstalled, null, null, this.getClass());
+                                Messages.UpdateInstalled, null, null, UINotificationType.INFO, this.getClass());
                         });
 
                     }

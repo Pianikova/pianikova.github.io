@@ -5,13 +5,17 @@ package com.e1c.edt.ai.ui;
 
 import java.net.URL;
 
+import org.eclipse.core.runtime.FileLocator;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.PopupDialog;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseTrackAdapter;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
@@ -25,6 +29,9 @@ import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 
+import com.e1c.edt.ai.ILog;
+import com.google.inject.Inject;
+
 /**
  * @author Bogdan Sushkov
  *
@@ -32,24 +39,30 @@ import org.eclipse.ui.PlatformUI;
 public class UINotification
     extends PopupDialog
 {
+
+    @Inject
+    private static ILog log;
     private final String message;
     private final String linkText;
     private final String url;
+    private final String iconPath;
     private boolean isMouseOver = false;
     private Runnable timerRunnable;
     private Runnable action;
 
-    public UINotification(Shell parentShell, String message, String linkText, String url)
+    public UINotification(Shell parentShell, String message, String iconPath, String linkText, String url)
     {
         super(parentShell, SWT.NO_TRIM | SWT.ON_TOP, false, false, false, false, false, null, null);
         this.message = message;
+        this.iconPath = iconPath;
         this.linkText = linkText;
         this.url = url;
     }
 
-    public UINotification(Shell parentShell, String message, String linkText, String url, Runnable action)
+    public UINotification(Shell parentShell, String message, String iconPath, String linkText, String url,
+        Runnable action)
     {
-        this(parentShell, message, linkText, url);
+        this(parentShell, message, iconPath, linkText, url);
         this.action = action;
     }
 
@@ -65,13 +78,35 @@ public class UINotification
 
         Composite canvas = new Composite(parent, SWT.NONE);
 
-        GridLayout layout = new GridLayout(1, false);
+        GridLayout layout = new GridLayout(2, false);
         layout.marginWidth = 10;
         layout.marginHeight = 10;
         layout.verticalSpacing = 5;
         canvas.setLayout(layout);
 
-        Label textLabel = new Label(canvas, SWT.SINGLE);
+        Label iconLabel = new Label(canvas, SWT.NONE);
+        try
+        {
+            Image icon = createImage(iconPath);
+            iconLabel.setImage(icon);
+            iconLabel.addDisposeListener(e -> icon.dispose());
+        }
+        catch (Exception e)
+        {
+            log.logError(e);
+        }
+        iconLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true));
+        iconLabel.setBackground(bg);
+
+        Composite textContainer = new Composite(canvas, SWT.NONE);
+        textContainer.setBackground(bg);
+        GridLayout textLayout = new GridLayout(1, false);
+        textLayout.marginWidth = 0;
+        textLayout.marginHeight = 0;
+        textContainer.setLayout(textLayout);
+        textContainer.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, true));
+
+        Label textLabel = new Label(textContainer, SWT.SINGLE);
         textLabel.setText(message);
         textLabel.setBackground(bg);
         textLabel.setForeground(fg);
@@ -82,7 +117,7 @@ public class UINotification
         // Ссылка
         if (linkText != null && !linkText.isEmpty())
         {
-            Link linkLabel = new Link(canvas, SWT.SINGLE);
+            Link linkLabel = new Link(textContainer, SWT.SINGLE);
             linkLabel.setText("<a href=\"" + url + "\">" + linkText + "</a>"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             linkLabel.setBackground(bg);
             linkLabel.setForeground(fg);
@@ -107,12 +142,12 @@ public class UINotification
             linkLabel.setLayoutData(linkData);
         }
 
-        Composite buttonContainer = new Composite(canvas, SWT.NONE);
-        GridLayout buttonLayout = new GridLayout(2, false);
+        Composite buttonContainer = new Composite(textContainer, SWT.NONE);
+        GridLayout buttonLayout = new GridLayout(1, false);
         buttonLayout.marginWidth = 0;
         buttonContainer.setLayout(buttonLayout);
         GridData buttonContainerData = new GridData(SWT.RIGHT, SWT.TOP, true, false);
-//        buttonContainerData.horizontalSpan = 2;
+        buttonContainerData.horizontalSpan = 2;
         buttonContainer.setLayoutData(buttonContainerData);
         buttonContainer.setBackground(bg);
         buttonContainer.setForeground(fg);
@@ -169,8 +204,6 @@ public class UINotification
 
         return canvas;
     }
-
-
 
     @Override
     protected void initializeBounds()
@@ -231,6 +264,13 @@ public class UINotification
         {
             Display.getDefault().timerExec(5000, timerRunnable);
         }
+    }
+
+    private static Image createImage(String path)
+    {
+        var descriptor = ImageDescriptor
+            .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
+        return descriptor.createImage();
     }
 
     @Override

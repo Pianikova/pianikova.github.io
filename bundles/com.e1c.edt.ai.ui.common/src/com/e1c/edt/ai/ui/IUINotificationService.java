@@ -12,8 +12,10 @@ import org.eclipse.swt.widgets.Shell;
 public interface IUINotificationService
 {
     public void createNotification(Shell parentShell, String message, String linkText, String url,
+        UINotificationType type,
         Class<?> sourceClass);
 
-    public void createNotificationWithAction(Shell parentShell, String message, Runnable action, Class<?> sourceClass);
+    public void createNotificationWithAction(Shell parentShell, String message, Runnable action,
+        UINotificationType type, Class<?> sourceClass);
 }
 

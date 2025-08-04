@@ -262,7 +262,7 @@ public class BaseStatusBarControl
                     .asyncExec(() -> notificationService.createNotification(
                         PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
                         Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
-                        this.getClass()));
+                        UINotificationType.ERROR, this.getClass()));
                 hintWasShown = true;
                 break;
 
@@ -271,7 +271,7 @@ public class BaseStatusBarControl
                     .asyncExec(() -> notificationService.createNotification(
                         PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
                         Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
-                        this.getClass()));
+                        UINotificationType.ERROR, this.getClass()));
                 hintWasShown = true;
                 break;
             }

@@ -36,12 +36,13 @@ public class UINotificationService
     }
 
     @Override
-    public void createNotification(Shell parentShell, String message, String linkText, String url, Class<?> sourceClass)
+    public void createNotification(Shell parentShell, String message, String linkText, String url,
+        UINotificationType type, Class<?> sourceClass)
     {
         String notificationKey = sourceClass.getName();
         if (!shownNotifications.contains(notificationKey))
         {
-            UINotification popup = new UINotification(parentShell, message, linkText, url);
+            UINotification popup = new UINotification(parentShell, message, type.getIconPath(), linkText, url);
             popup.setBlockOnOpen(false);
             popup.open();
             shownNotifications.add(notificationKey);
@@ -50,10 +51,11 @@ public class UINotificationService
     }
 
     @Override
-    public void createNotificationWithAction(Shell parentShell, String message, Runnable action, Class<?> sourceClass)
+    public void createNotificationWithAction(Shell parentShell, String message, Runnable action,
+        UINotificationType type, Class<?> sourceClass)
     {
         String notificationKey = sourceClass.getName();
-        UINotification popup = new UINotification(parentShell, message, null, null, action);
+        UINotification popup = new UINotification(parentShell, message, type.getIconPath(), null, null, action);
         popup.setBlockOnOpen(false);
         popup.open();
         log.trace("Notification shown: " + notificationKey, () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
