@@ -59,13 +59,12 @@ public class BaseStatusBarControl
     @Inject
     private IUISettings settings;
 
-
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
     private final Image OFFLINE = createImage("icons/obj16/status_offline.png"); //$NON-NLS-1$
     private final Image ONLINE = createImage("icons/obj16/status_online.png"); //$NON-NLS-1$
     private final Image BUSY = createImage("icons/obj16/status_busy.png"); //$NON-NLS-1$
-    private AIState state;
+    private boolean hintWasShown = false;
     private Font font;
     private Label iconLabel;
     private Label statusLabel;
@@ -217,19 +216,13 @@ public class BaseStatusBarControl
         dispatcher.dispatchAsync(() -> changeState(state));
     }
 
+    @SuppressWarnings("incomplete-switch")
     private void changeState(AIState state)
     {
         var version = versionProvider.getPluginVersion().toString();
-        switch (state.getServiceState())
+        if (state.getServiceState() == ServiceState.ONLINE)
         {
-        case SETTINGS_CHANGED:
-            this.state = state;
-            break;
-        case ONLINE:
-            if (this.state != null && this.state.getServiceState() == ServiceState.TOKEN_FAILED)
-            {
-                break;
-            }
+            hintWasShown = false;
             var onlineIninfo = version + ' ' + Messages.StatusOnline;
             iconLabel.setToolTipText(onlineIninfo);
             statusLabel.setToolTipText(onlineIninfo);
@@ -248,33 +241,9 @@ public class BaseStatusBarControl
             policyCombo.select(policy.getIndex());
             policyCombo.setVisible(true);
             policyTooltip.setText(policy.getDescription());
-            break;
-        case TOKEN_FAILED:
-            Display.getDefault()
-                .asyncExec(() -> notificationService.createNotification(
-                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
-                    Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
-                    this.getClass()));
-            this.state = state;
-            iconLabel.setImage(OFFLINE);
-            break;
-
-        case SSL_ERROR:
-            Display.getDefault()
-                .asyncExec(() -> notificationService.createNotification(
-                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
-                    Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
-                    this.getClass()));
-
-            iconLabel.setImage(OFFLINE);
-            break;
-
-        case SERVER_ERROR:
-            iconLabel.setImage(OFFLINE);
-            break;
-
-        default:
-
+        }
+        else
+        {
             var offlineInfo = version + ' ' + Messages.StatusOffline;
             iconLabel.setToolTipText(offlineInfo);
             statusLabel.setToolTipText(offlineInfo);
@@ -282,11 +251,34 @@ public class BaseStatusBarControl
             iconLabel.setImage(OFFLINE);
             policyCombo.setVisible(false);
             policyTooltip.setText(""); //$NON-NLS-1$
-            break;
         }
+
+        if (!hintWasShown)
+        {
+            switch (state.getServiceState())
+            {
+            case TOKEN_FAILED:
+                Display.getDefault()
+                    .asyncExec(() -> notificationService.createNotification(
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
+                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
+                        this.getClass()));
+                hintWasShown = true;
+                break;
+
+            case SSL_ERROR:
+                Display.getDefault()
+                    .asyncExec(() -> notificationService.createNotification(
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
+                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
+                        this.getClass()));
+                hintWasShown = true;
+                break;
+            }
+        }
+
         iconLabel.setRedraw(true);
     }
-
 
     @Override
     public void widgetSelected(SelectionEvent e)
@@ -308,5 +300,4 @@ public class BaseStatusBarControl
     {
         //
     }
-
 }
