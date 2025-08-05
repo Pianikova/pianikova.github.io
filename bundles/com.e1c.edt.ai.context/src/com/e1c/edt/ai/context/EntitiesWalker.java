@@ -54,7 +54,7 @@ class EntitiesWalker
             Optional<BmRoot> optionalRoot;
             try (var measurement = statistics.measureDuration(StatisticsType.LOAD_MODULE_DURATUION))
             {
-                optionalRoot = bmPovider.getRoot(path, cancellationToken);
+                optionalRoot = bmPovider.getRoot(document, path, cancellationToken);
                 if (optionalRoot.isEmpty())
                 {
                     return false;
