@@ -12,6 +12,7 @@ import java.util.Stack;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.EMap;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.xtext.EcoreUtil2;
@@ -30,7 +31,6 @@ import com._1c.g5.v8.dt.bsl.model.SimpleStatement;
 import com._1c.g5.v8.dt.bsl.model.Variable;
 import com._1c.g5.v8.dt.bsl.util.BslUtil;
 import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
-import com._1c.g5.v8.dt.core.platform.IConfigurationProvider;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.AccountTypeValue;
 import com._1c.g5.v8.dt.form.model.Button;
@@ -91,20 +91,27 @@ import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCalculationTypes;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCalculationTypesPredefinedItem;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCharacteristicTypes;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCharacteristicTypesPredefinedItem;
+import com._1c.g5.v8.dt.metadata.mdclass.Column;
+import com._1c.g5.v8.dt.metadata.mdclass.Constant;
 import com._1c.g5.v8.dt.metadata.mdclass.DataProcessor;
 import com._1c.g5.v8.dt.metadata.mdclass.DbObjectTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.Document;
+import com._1c.g5.v8.dt.metadata.mdclass.DocumentJournal;
 import com._1c.g5.v8.dt.metadata.mdclass.Enum;
 import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
+import com._1c.g5.v8.dt.metadata.mdclass.EventSubscription;
 import com._1c.g5.v8.dt.metadata.mdclass.ExchangePlan;
 import com._1c.g5.v8.dt.metadata.mdclass.ExternalDataProcessor;
 import com._1c.g5.v8.dt.metadata.mdclass.ExternalReport;
+import com._1c.g5.v8.dt.metadata.mdclass.FilterCriterion;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.RegisterResource;
 import com._1c.g5.v8.dt.metadata.mdclass.Report;
 import com._1c.g5.v8.dt.metadata.mdclass.ReportTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.ScheduledJob;
+import com._1c.g5.v8.dt.metadata.mdclass.SessionParameter;
 import com._1c.g5.v8.dt.metadata.mdclass.StandardAttribute;
 import com._1c.g5.v8.dt.metadata.mdclass.Subsystem;
 import com._1c.g5.v8.dt.metadata.mdclass.Task;
@@ -117,6 +124,7 @@ import com.e1c.edt.ai.context.DTO.AttributeEntity;
 import com.e1c.edt.ai.context.DTO.BorderEntity;
 import com.e1c.edt.ai.context.DTO.ChartLineTypeEntity;
 import com.e1c.edt.ai.context.DTO.ColorEntity;
+import com.e1c.edt.ai.context.DTO.ColumnEntity;
 import com.e1c.edt.ai.context.DTO.DataType;
 import com.e1c.edt.ai.context.DTO.DynamicListEntity;
 import com.e1c.edt.ai.context.DTO.EnumValueEntity;
@@ -141,7 +149,6 @@ import com.e1c.edt.ai.context.DTO.RegisterRecordEntity;
 import com.e1c.edt.ai.context.DTO.RegisterResourceEntity;
 import com.e1c.edt.ai.context.DTO.SignatureStructurized;
 import com.e1c.edt.ai.context.DTO.StandardPeriodEntity;
-import com.e1c.edt.ai.context.DTO.SubsystemEntity;
 import com.e1c.edt.ai.context.DTO.TabularSectionEntity;
 import com.e1c.edt.ai.context.DTO.TemplateEntity;
 import com.e1c.edt.ai.context.DTO.ValueEntity;
@@ -161,14 +168,13 @@ class EntityFactory
     private final IDataSourceInfoAssociationService dataSourceInfoAssociationService;
     private final IV8ProjectManager v8ProjectManager;
     private final IModuleProvider moduleProvider;
-    private final IConfigurationProvider configurationProvider;
     private final IQualifiedNameFilePathConverter qualifiedNameFilePathConverter;
 
     @Inject
     public EntityFactory(IV8Model v8Model, IIdFactory idFactory, ICommentFactory commentFactory, IFormWalker formWalker,
         ICodePartsProvider codePartsProvider, IDataSourceInfoAssociationService dataSourceInfoAssociationService,
         IV8ProjectManager v8ProjectManager, IModuleProvider moduleProvider,
-        IConfigurationProvider configurationProvider, IQualifiedNameFilePathConverter qualifiedNameFilePathConverter)
+        IQualifiedNameFilePathConverter qualifiedNameFilePathConverter)
     {
         Preconditions.checkNotNull(v8Model);
         Preconditions.checkNotNull(idFactory);
@@ -178,7 +184,6 @@ class EntityFactory
         Preconditions.checkNotNull(dataSourceInfoAssociationService);
         Preconditions.checkNotNull(v8ProjectManager);
         Preconditions.checkNotNull(moduleProvider);
-        Preconditions.checkNotNull(configurationProvider);
         Preconditions.checkNotNull(qualifiedNameFilePathConverter);
         this.v8Model = v8Model;
         this.idFactory = idFactory;
@@ -188,7 +193,6 @@ class EntityFactory
         this.dataSourceInfoAssociationService = dataSourceInfoAssociationService;
         this.v8ProjectManager = v8ProjectManager;
         this.moduleProvider = moduleProvider;
-        this.configurationProvider = configurationProvider;
         this.qualifiedNameFilePathConverter = qualifiedNameFilePathConverter;
     }
 
@@ -650,7 +654,11 @@ class EntityFactory
     private MetaEntity createAndFillMetaEntity(IBmObject bmObject, boolean brief)
     {
         var entity = brief ? new MetaEntity() : createMetaEntity(bmObject, brief);
-        entity.types = combineTypes(null, getDefaultType(bmObject));
+        if (entity.types == null)
+        {
+            entity.types = combineTypes(null, getDefaultType(bmObject));
+        }
+
         var namespace = bmObject.bmGetNamespace();
         if (namespace != null)
         {
@@ -782,7 +790,124 @@ class EntityFactory
             return createEnum((com._1c.g5.v8.dt.metadata.mdclass.Enum)bmObject);
         }
 
+        if (bmObject instanceof Subsystem)
+        {
+            return createSubsystem((Subsystem)bmObject);
+        }
+
+        if (bmObject instanceof Subsystem)
+        {
+            return createSubsystem((Subsystem)bmObject);
+        }
+
+        if (bmObject instanceof SessionParameter)
+        {
+            return createSessionParameter((SessionParameter)bmObject);
+        }
+
+        if (bmObject instanceof Constant)
+        {
+            return createConstant((Constant)bmObject);
+        }
+
+        if (bmObject instanceof DocumentJournal)
+        {
+            return createDocumentJournal((DocumentJournal)bmObject);
+        }
+
+        if (bmObject instanceof FilterCriterion)
+        {
+            return createFilterCriterion((FilterCriterion)bmObject);
+        }
+
+        if (bmObject instanceof EventSubscription)
+        {
+            return createEventSubscription((EventSubscription)bmObject);
+        }
+
+        if (bmObject instanceof ScheduledJob)
+        {
+            return createScheduledJob((ScheduledJob)bmObject);
+        }
+
         return new MetaEntity();
+    }
+
+    private MetaEntity createScheduledJob(ScheduledJob bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.description = bmObject.getDescription();
+        meta.key = bmObject.getKey();
+        meta.methodName = bmObject.getMethodName();
+        return meta;
+    }
+
+    private MetaEntity createEventSubscription(EventSubscription bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.event = bmObject.getEvent();
+        meta.handler = bmObject.getHandler();
+        meta.types = createTypes(bmObject.getSource());
+        return meta;
+    }
+
+    private MetaEntity createFilterCriterion(FilterCriterion bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.objectForms = createForms(bmObject.getForms());
+        meta.types = createTypes(bmObject.getType());
+        return meta;
+    }
+
+    private MetaEntity createDocumentJournal(DocumentJournal bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.fields = createFields(bmObject, field -> isPublishedField(field));
+        meta.objectForms = createForms(bmObject.getForms());
+        meta.columns = createColumns(bmObject.getColumns());
+        meta.templates = createTemplates(bmObject.getTemplates());
+        return meta;
+    }
+
+    private MetaEntity createConstant(Constant bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.types = createTypes(bmObject.getTypeDescription());
+        return meta;
+    }
+
+    private MetaEntity createSessionParameter(SessionParameter bmObject)
+    {
+        var meta = new MetaEntity();
+        meta.types = createTypes(bmObject.getTypeDescription());
+        return meta;
+    }
+
+    private MetaEntity createSubsystem(Subsystem bmObject)
+    {
+        var meta = new MetaEntity();
+        var subsystemObjects = new ArrayList<String>();
+        for (var mdObject : bmObject.getContent())
+        {
+            var type = getDefaultType(mdObject);
+            var name = new StringBuilder();
+            if (type.type != null)
+            {
+                name.append(type.type);
+                name.append('.');
+            }
+
+            name.append(mdObject.getName());
+            subsystemObjects.add(name.toString());
+        }
+
+        if (subsystemObjects != null)
+        {
+            meta.subsystemObjects = subsystemObjects;
+        }
+
+        return meta;
     }
 
     private MetaEntity createEnum(Enum bmObject)
@@ -796,7 +921,6 @@ class EntityFactory
 
         meta.objectForms = createForms(bmObject.getForms());
         meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.subsystems = createSubsystems(bmObject);
         return meta;
     }
 
@@ -808,7 +932,6 @@ class EntityFactory
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -817,7 +940,6 @@ class EntityFactory
     {
         var meta = new MetaEntity();
         meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.subsystems = createSubsystems(bmObject);
         return meta;
     }
 
@@ -826,7 +948,6 @@ class EntityFactory
         var meta = new MetaEntity();
         meta.attributes = createAttributes(bmObject.getAttributes());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -839,7 +960,6 @@ class EntityFactory
         meta.registerResources = createRegisterResources(bmObject.getResources());
         meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -849,7 +969,6 @@ class EntityFactory
         var meta = new MetaEntity();
         meta.attributes = createAttributes(bmObject.getAttributes());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -859,7 +978,6 @@ class EntityFactory
         var meta = new MetaEntity();
         meta.attributes = createAttributes(bmObject.getAttributes());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -872,7 +990,6 @@ class EntityFactory
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -891,7 +1008,6 @@ class EntityFactory
         // meta.realTimePosting = bmObject.getRealTimePosting().getName();
         // meta.registerRecordsDeletion = bmObject.getRegisterRecordsDeletion().getName();
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -901,7 +1017,6 @@ class EntityFactory
         var meta = new MetaEntity();
         meta.attributes = createAttributes(bmObject.getAttributes());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -917,7 +1032,6 @@ class EntityFactory
             createChartOfCharacteristicTypesPredefinedItems(
                 Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -933,7 +1047,6 @@ class EntityFactory
             createChartOfCalculationTypesPredefinedItems(
                 Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -949,7 +1062,6 @@ class EntityFactory
             createChartOfAccountsPredefinedItems(
                 Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -965,7 +1077,6 @@ class EntityFactory
             createCatalogPredefinedItems(
                 Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -978,7 +1089,6 @@ class EntityFactory
         meta.registerResources = createRegisterResources(bmObject.getResources());
         meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -991,7 +1101,6 @@ class EntityFactory
         meta.tabularSections = createTabularSections(bmObject.getTabularSections());
         meta.objectForms = createForms(bmObject.getForms());
         meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -1004,7 +1113,6 @@ class EntityFactory
         meta.registerResources = createRegisterResources(bmObject.getResources());
         meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -1017,7 +1125,6 @@ class EntityFactory
         meta.registerResources = createRegisterResources(bmObject.getResources());
         meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
         meta.objectForms = createForms(bmObject.getForms());
-        meta.subsystems = createSubsystems(bmObject);
         meta.templates = createTemplates(bmObject.getTemplates());
         return meta;
     }
@@ -1161,7 +1268,7 @@ class EntityFactory
         return templates.stream().map(this::createTemplate).collect(Collectors.toList());
     }
 
-    private List<SubsystemEntity> createSubsystems(MdObject mdObject)
+    /*private List<SubsystemEntity> createSubsystems(MdObject mdObject)
     {
         var bmObject = (IBmObject)mdObject;
         var bmId = bmObject.bmGetId();
@@ -1202,7 +1309,7 @@ class EntityFactory
         }
 
         return entity;
-    }
+    }*/
 
     private <T extends Field> List<FieldEntity> createFields(FieldSource fieldSource, Predicate<Field> filter)
     {
@@ -1671,12 +1778,31 @@ class EntityFactory
         return types.stream().map(this::createType).collect(Collectors.toList());
     }
 
+    private List<ColumnEntity> createColumns(EList<Column> columns)
+    {
+        if (columns == null || columns.isEmpty())
+        {
+            return null;
+        }
+
+        return columns.stream().map(this::createColumn).collect(Collectors.toList());
+    }
+
     private DataType createType(TypeItem type)
     {
         var dataType = new DataType();
         dataType.type = type.getName();
         dataType.typeRu = type.getNameRu();
         return dataType;
+    }
+
+    private ColumnEntity createColumn(Column column)
+    {
+        var entity = new ColumnEntity();
+        entity.name = column.getName();
+        entity.comment = column.getComment();
+        entity.synonym = createMap(column.getSynonym());
+        return entity;
     }
 
     private FieldEntity createField(Field field)

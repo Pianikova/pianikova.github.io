@@ -66,7 +66,21 @@ public class MetaEntity
     @SerializedName("based_on")
     public List<MetaEntity> basedOn;
 
-    public List<SubsystemEntity> subsystems;
+    @SerializedName("subsystem_objects")
+    public List<String> subsystemObjects;
 
     public List<TemplateEntity> templates;
+
+    public List<ColumnEntity> columns;
+
+    public String event;
+
+    public String handler;
+
+    public String description;
+
+    public String key;
+
+    @SerializedName("method_name")
+    public String methodName;
 }
