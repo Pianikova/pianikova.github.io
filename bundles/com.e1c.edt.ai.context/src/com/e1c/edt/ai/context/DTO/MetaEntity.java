@@ -10,42 +10,95 @@ import com.google.gson.annotations.SerializedName;
 
 public class MetaEntity
 {
+    /**
+     * Имя пространства имен.
+     */
     public String namespace;
 
+    /**
+     * Полное имя.
+     */
     public String fullQualifiedName;
 
+    /**
+     * Путь к сущности.
+     */
     public String path;
 
+    /**
+     * Название сущности.
+     */
     public String name;
 
+    /**
+     * Тип сущности.
+     */
+    public String type;
+
+    /**
+     * Типы, на которые ссылается сущность, если есть.
+     */
     public List<DataType> types;
 
+    /**
+     * Комментарий.
+     */
     public String comment;
 
+    /**
+     * Синонимы сущности.
+     */
     public Map<String, String> synonym;
 
+    /**
+     * Атрибуты сущности, если есть.
+     */
     public List<AttributeEntity> attributes;
 
+    /**
+     * Стандартные атрибуты сущности, если есть.
+     */
     @SerializedName("standard_attributes")
     public List<AttributeEntity> standardAttributes;
 
+    /**
+     * Поля сущности, если есть.
+     */
     public List<FieldEntity> fields;
 
+    /**
+     * Табличные секции сущности, если есть.
+     */
     @SerializedName("tabular_sections")
     public List<TabularSectionEntity> tabularSections;
 
+    /**
+     * Регистры ресурсов сущности, если есть.
+     */
     @SerializedName("register_resources")
     public List<RegisterResourceEntity> registerResources;
 
+    /**
+     * Регистры измерений сущности, если есть.
+     */
     @SerializedName("register_dimensions")
     public List<RegisterDimensionEntity> registerDimensions;
 
+    /**
+     * Регистры записей сущности, если есть.
+     */
     @SerializedName("register_records")
     public List<RegisterRecordEntity> registerRecords;
 
+    /**
+     * Енумы сущности, если есть.
+     */
     @SerializedName("enum_values")
     public List<EnumValueEntity> enumValues;
 
+    /**
+     * Формы сущности, если есть.
+     */
     @SerializedName("object_form")
     public List<ObjectFormEntity> objectForms;
 

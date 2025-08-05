@@ -654,11 +654,7 @@ class EntityFactory
     private MetaEntity createAndFillMetaEntity(IBmObject bmObject, boolean brief)
     {
         var entity = brief ? new MetaEntity() : createMetaEntity(bmObject, brief);
-        if (entity.types == null)
-        {
-            entity.types = combineTypes(null, getDefaultType(bmObject));
-        }
-
+        entity.type = getEntityType(bmObject);
         var namespace = bmObject.bmGetNamespace();
         if (namespace != null)
         {
@@ -682,15 +678,13 @@ class EntityFactory
         return entity;
     }
 
-    private DataType getDefaultType(EObject eObject)
+    private String getEntityType(EObject eObject)
     {
         for (var metadataInterface : eObject.getClass().getInterfaces())
         {
             if (metadataInterface.getName().startsWith("com._1c.g5.v8.dt.metadata.mdclass.")) //$NON-NLS-1$
             {
-                var dataType = new DataType();
-                dataType.type = metadataInterface.getSimpleName();
-                return dataType;
+                return metadataInterface.getSimpleName();
             }
         }
 
@@ -795,11 +789,6 @@ class EntityFactory
             return createSubsystem((Subsystem)bmObject);
         }
 
-        if (bmObject instanceof Subsystem)
-        {
-            return createSubsystem((Subsystem)bmObject);
-        }
-
         if (bmObject instanceof SessionParameter)
         {
             return createSessionParameter((SessionParameter)bmObject);
@@ -890,11 +879,11 @@ class EntityFactory
         var subsystemObjects = new ArrayList<String>();
         for (var mdObject : bmObject.getContent())
         {
-            var type = getDefaultType(mdObject);
+            var type = getEntityType(mdObject);
             var name = new StringBuilder();
-            if (type.type != null)
+            if (type != null)
             {
-                name.append(type.type);
+                name.append(type);
                 name.append('.');
             }
 
@@ -1404,7 +1393,7 @@ class EntityFactory
         entity.comment = registerResource.getComment();
         entity.toolTip = createMap(registerResource.getToolTip());
         entity.synonym = createMap(registerResource.getSynonym());
-        entity.types = combineTypes(createTypes(registerResource.getType()), getDefaultType(registerResource));
+        entity.types = createTypes(registerResource.getType());
         return entity;
     }
 
@@ -1415,7 +1404,7 @@ class EntityFactory
         entity.comment = registerDimension.getComment();
         entity.toolTip = createMap(registerDimension.getToolTip());
         entity.synonym = createMap(registerDimension.getSynonym());
-        entity.types = combineTypes(createTypes(registerDimension.getType()), getDefaultType(registerDimension));
+        entity.types = createTypes(registerDimension.getType());
         return entity;
     }
 
@@ -1427,7 +1416,6 @@ class EntityFactory
         entity.synonym = createMap(registerRecord.getSynonym());
         // Too much info:
         // entity.fields = createFields(registerRecord, field -> isPublishedField(field));
-        entity.types = combineTypes(null, getDefaultType(registerRecord));
         return entity;
     }
 
@@ -1446,7 +1434,6 @@ class EntityFactory
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.predefined = createCatalogPredefinedItems(predefined.getContent());
-        entity.types = combineTypes(null, getDefaultType(predefined));
         return entity;
     }
 
@@ -1458,7 +1445,7 @@ class EntityFactory
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.predefined = createChartOfCharacteristicTypesPredefinedItems(predefined.getContent());
-        entity.types = combineTypes(createTypes(predefined.getType()), getDefaultType(predefined));
+        entity.types = createTypes(predefined.getType());
         return entity;
     }
 
@@ -1469,7 +1456,6 @@ class EntityFactory
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.displaced = createChartOfCalculationTypesPredefinedItems(predefined.getDisplaced());
-        entity.types = combineTypes(null, getDefaultType(predefined));
         return entity;
     }
 
@@ -1480,7 +1466,6 @@ class EntityFactory
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
         entity.child = createChartOfAccountsPredefinedItems(predefined.getChildItems());
-        entity.types = combineTypes(null, getDefaultType(predefined));
         return entity;
     }
 
@@ -1743,23 +1728,6 @@ class EntityFactory
         }
 
         return map.map();
-    }
-
-    private List<DataType> combineTypes(List<DataType> actualTypes, DataType defaultType)
-    {
-        if (actualTypes != null && !actualTypes.isEmpty())
-        {
-            return actualTypes;
-        }
-
-        if (defaultType == null)
-        {
-            return null;
-        }
-
-        var types = new ArrayList<DataType>();
-        types.add(defaultType);
-        return types;
     }
 
     private List<DataType> createTypes(TypeDescription typeDescription)
