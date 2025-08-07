@@ -19,11 +19,10 @@ import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observables;
-import com.e1c.edt.ai.assistent.IConversations;
-import com.e1c.edt.ai.assistent.model.ConversationAskRequest;
-import com.e1c.edt.ai.assistent.model.ConversationAskResponse;
-import com.e1c.edt.ai.assistent.model.ConversationRequest;
-import com.e1c.edt.ai.assistent.model.ConversationRequestContent;
+import com.e1c.edt.ai.assistent.ITools;
+import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
+import com.e1c.edt.ai.assistent.model.ToolInvokeRequestContent;
+import com.e1c.edt.ai.assistent.model.ToolInvokeResponse;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -35,14 +34,14 @@ public class GitActions implements IGitActions
     private final IUISettings uiSettings;
     private final ISettingsProvider settingsProvider;
     private final IGitTools gitTools;
-    private final IConversations conversations;
+    private final ITools tools;
     private final IResourceProvider resourceProvider;
     private Job currentJob;
 
     @Inject
     public GitActions(ILog log, IDispatcher dispatcher, IProjectIdProvider projectIdProvider, IUISettings uiSettings,
         ISettingsProvider settingsProvider,
-        IGitTools gitTools, IConversations conversations, IResourceProvider resourceProvider)
+        IGitTools gitTools, ITools tools, IResourceProvider resourceProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
@@ -50,7 +49,7 @@ public class GitActions implements IGitActions
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(settingsProvider);
         Preconditions.checkNotNull(gitTools);
-        Preconditions.checkNotNull(conversations);
+        Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(resourceProvider);
         this.log = log;
         this.dispatcher = dispatcher;
@@ -58,7 +57,7 @@ public class GitActions implements IGitActions
         this.uiSettings = uiSettings;
         this.settingsProvider = settingsProvider;
         this.gitTools = gitTools;
-        this.conversations = conversations;
+        this.tools = tools;
         this.resourceProvider = resourceProvider;
     }
 
@@ -109,21 +108,12 @@ public class GitActions implements IGitActions
             {
                 var projectId = optionalProjectId.get();
 
-                var conversationRequest = new ConversationRequest();
-                conversationRequest.toolName = "custom";
-                conversationRequest.uiLanguage = uiSettings.getLanguage();
-                conversationRequest.programmingLanguage = "git diff";
-                var conversationResponse =
-                    conversations.createConversationAsync(projectId, conversationRequest, cancellationToken).get();
-                if (conversationResponse.isEmpty())
-                {
-                    log.warning("Git", () -> "No conversation id found");
-                    continue;
-                }
-
-                var askRequest = new ConversationAskRequest();
-                var content = new ConversationRequestContent();
-                askRequest.content = content;
+                var toolInvokeRequest = new ToolInvokeRequest();
+                toolInvokeRequest.toolName = "custom";
+                toolInvokeRequest.uiLanguage = uiSettings.getLanguage();
+                toolInvokeRequest.programmingLanguage = "git diff";
+                var content = new ToolInvokeRequestContent();
+                toolInvokeRequest.content = content;
                 gitTools.getDiff(repository, settingsProvider.getSettings().getLlmParameters().gitDiffContextLines,
                     gitDiffStream);
                 var gitDiff = gitDiffStream.toString("UTF-8");
@@ -139,12 +129,12 @@ public class GitActions implements IGitActions
 
                 log.debug("Prompt", () -> content.instruction);
 
-                var askSource = conversations.createAskSource(projectId, conversationResponse.get().uuid, askRequest,
-                    cancellationToken);
-                askSource.subscribe(new IObserver<ConversationAskResponse>()
+                var message = new StringBuilder();
+                var invokeSource = tools.createInvokeSource(projectId, toolInvokeRequest, cancellationToken);
+                invokeSource.subscribe(new IObserver<ToolInvokeResponse>()
                 {
                     @Override
-                    public void onNext(ConversationAskResponse value)
+                    public void onNext(ToolInvokeResponse value)
                     {
                         var content = value.content;
                         if (content != null)
@@ -152,10 +142,22 @@ public class GitActions implements IGitActions
                             var text = content.text;
                             if (text != null)
                             {
-                                text = text.trim();
+                                if (value.finished)
+                                {
+                                    text = text.trim();
+                                }
+                                else
+                                {
+                                    synchronized (message)
+                                    {
+                                        message.append(text);
+                                        text = message.toString().trim();
+                                    }
+                                }
+
                                 if (!text.isBlank())
                                 {
-                                    observer.onNext(value.content.text.trim());
+                                    observer.onNext(text);
                                 }
                             }
                         }
