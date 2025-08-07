@@ -10,7 +10,7 @@ import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 
 public interface IGlobalContext
 {
-    List<GlobalContextUpdate> getUpdates(AIContext aiContext, boolean sendInitialState, IStatistics statistics,
+    List<GlobalContextUpdate> getUpdates(AIContext aiContext, IStatistics statistics,
         ICancellationToken cancellationToken);
 
     List<GlobalContextUpdate> getUpdates(AIContext aiContext, String fileHash, HashSet<String> hashes,

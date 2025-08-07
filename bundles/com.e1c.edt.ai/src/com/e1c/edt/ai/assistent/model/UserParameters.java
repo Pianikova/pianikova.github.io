@@ -77,4 +77,10 @@ public class UserParameters
      */
     @SerializedName("language")
     public String language;
+
+    /**
+     * Параметры проекта.
+     */
+    @SerializedName("configuration_parameters")
+    public ConfigurationParameters configurationParameters;
 }

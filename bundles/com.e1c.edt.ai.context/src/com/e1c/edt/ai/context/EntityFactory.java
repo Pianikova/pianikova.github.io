@@ -1257,49 +1257,6 @@ class EntityFactory
         return templates.stream().map(this::createTemplate).collect(Collectors.toList());
     }
 
-    /*private List<SubsystemEntity> createSubsystems(MdObject mdObject)
-    {
-        var bmObject = (IBmObject)mdObject;
-        var bmId = bmObject.bmGetId();
-        var config = configurationProvider.getConfiguration(mdObject);
-        if (config == null)
-        {
-            return null;
-        }
-
-        var result = config.getSubsystems()
-            .stream()
-            .filter(subsystem -> subsystem.getContent().stream().anyMatch(i -> ((IBmObject)mdObject).bmGetId() == bmId))
-            .map(subsystem -> createSubsystem(subsystem, 0))
-            .collect(Collectors.toList());
-
-        if (result.isEmpty())
-        {
-            return null;
-        }
-
-        return result;
-    }
-
-    private SubsystemEntity createSubsystem(Subsystem subsystem, int level)
-    {
-        var entity = new SubsystemEntity();
-        entity.name = subsystem.getName();
-        entity.comment = subsystem.getComment();
-        entity.synonym = createMap(subsystem.getSynonym());
-        if (level < 16)
-        {
-            var subsystems = subsystem.getSubsystems();
-            if (subsystems != null && !subsystems.isEmpty())
-            {
-                entity.subsystems =
-                    subsystems.stream().map(s -> createSubsystem(s, level + 1)).collect(Collectors.toList());
-            }
-        }
-
-        return entity;
-    }*/
-
     private <T extends Field> List<FieldEntity> createFields(FieldSource fieldSource, Predicate<Field> filter)
     {
         if (fieldSource == null)

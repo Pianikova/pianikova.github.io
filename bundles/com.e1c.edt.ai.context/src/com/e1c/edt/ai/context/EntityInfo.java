@@ -21,7 +21,6 @@ import com._1c.g5.v8.dt.bsl.model.Invocation;
 import com._1c.g5.v8.dt.bsl.model.Method;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.bsl.model.Variable;
-import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.Form;
 import com.e1c.edt.ai.AIContext;
@@ -219,41 +218,6 @@ class EntityInfo
         programingLanguage.getFromPath(filePath).ifPresent(lang -> localContext.programingLanguage = lang);
         entitiesWalker.walk(document, filePath, start, finish, resourceSetProvider, new EntityVisitor()
         {
-            @Override
-            public boolean visitModule(BmRoot root, Module module)
-            {
-                if (!actionFilter.test(new FillAction(DataType.HASH, Fields.CONFIGURATION_NAME, null)))
-                {
-                    return false;
-                }
-
-                var file = root.getFile(module).orElse(null);
-                globalContext.moduleHash =
-                    hashTools.hashOf(document, file).map(hash -> hashTools.format(hash, true)).orElse(null);
-
-                var project = v8ProjectManager.getProject(module);
-                if (project != null)
-                {
-                    localContext.scriptLanguage = project.getScriptVariant().getName();
-                    if (actionFilter.test(new FillAction(DataType.DATA, Fields.CONFIGURATION_NAME, ""))) //$NON-NLS-1$
-                    {
-                        if (project instanceof IExtensionProject)
-                        {
-                            var extensionProject = (IExtensionProject)project;
-                            var parentProject = extensionProject.getParentProject();
-                            globalContext.configurationName = parentProject.getName();
-                        }
-
-                        if (globalContext.configurationName == null)
-                        {
-                            globalContext.configurationName = ""; //$NON-NLS-1$
-                        }
-                    }
-                }
-
-                return false;
-            }
-
             @Override
             public boolean visitNode(BmRoot root, EObject eObject, ICompositeNode node)
             {

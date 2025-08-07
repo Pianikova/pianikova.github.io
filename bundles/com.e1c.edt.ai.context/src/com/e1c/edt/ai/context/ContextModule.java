@@ -20,6 +20,7 @@ import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IContextEntities;
+import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.google.inject.Singleton;
 import com.google.inject.name.Names;
 
@@ -49,6 +50,7 @@ class ContextModule
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IBmPovider.class).to(BmPovider.class).in(Singleton.class);
+        bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IExternalPropertyManagerRegistry.class).toService();
         bind(IBmModelManager.class).toService();
         bind(IResourceLookup.class).toService();

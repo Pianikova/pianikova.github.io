@@ -5,10 +5,11 @@ package com.e1c.edt.ui.eclipse;
 
 import java.util.Optional;
 
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import org.eclipse.core.resources.IProject;
 
 class ProjectIdProvider
     implements IProjectIdProvider
@@ -16,13 +17,12 @@ class ProjectIdProvider
     @Override
     public ProjectId getProjectId(IProject project)
     {
-        return new ProjectId(project.getFullPath().toPortableString());
+        return new ProjectId(project.getLocationURI().getPath(), project);
     }
 
     @Override
     public Optional<ProjectId> getProjectId(String filePath, ICancellationToken cancellationToken)
     {
-        return Optional.of(new ProjectId(filePath));
+        return Optional.of(new ProjectId(filePath, null));
     }
-
 }

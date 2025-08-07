@@ -168,12 +168,6 @@ public class Chat implements IChat, IChatDialog
                     programingLanguage = chatContext.programingLanguage;
                 }
 
-                var settingsScriptLanuage = settings.getLlmParameters().scriptLanguage;
-                if (settingsScriptLanuage != null && !settingsScriptLanuage.isBlank())
-                {
-                    scriptLanguage = settingsScriptLanuage;
-                }
-
                 var script = new StringBuilder();
                 script.append("window.chatApi.");
                 script.append(topic);

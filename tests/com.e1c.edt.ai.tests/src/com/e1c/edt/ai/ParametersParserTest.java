@@ -19,7 +19,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mockito;
-import org.osgi.framework.Version;
 
 import com.e1c.edt.ai.assistent.model.TokenHealing;
 import com.e1c.edt.ai.assistent.model.Verbosity;
@@ -149,11 +148,6 @@ public class ParametersParserTest
                 { "verbosity=info", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.INFO; } ) },
                 { "verbosity=trace", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.TRACE; } ) },
                 { "verbosity=debug", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.DEBUG; } ) },
-                { "script_language=Russian", ValidationResult.SUCCESS, createParams(p -> { p.scriptLanguage = "russian"; } ) },
-                { "script_language=enGlish", ValidationResult.SUCCESS, createParams(p -> { p.scriptLanguage = "english"; } ) },
-                { "configuration_name=Abc", ValidationResult.SUCCESS, createParams(p -> { p.configurationName = "Abc"; } ) },
-                { "version=1.2.3", ValidationResult.SUCCESS, createParams(p -> { p.version = Version.parseVersion("1.2.3"); } ) },
-                { "vendor=Abc", ValidationResult.SUCCESS, createParams(p -> { p.vendor = "Abc"; } ) },
             });
         // @formatter:on
     }

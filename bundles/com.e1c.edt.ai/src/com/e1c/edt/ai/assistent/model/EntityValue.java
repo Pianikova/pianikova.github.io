@@ -14,7 +14,7 @@ public class EntityValue
     public String path;
 
     /**
-     * Имя поля "meta"/"form"/"local_functions.method_name"/"related_objects"/"related_functions"/"configuration_name".
+     * Имя поля "meta" или "form" или "local_functions.method_name" или "related_objects" или "related_functions".
      */
     public String field;
 

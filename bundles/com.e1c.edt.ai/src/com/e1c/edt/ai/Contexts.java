@@ -21,22 +21,18 @@ class Contexts
     private final ITextNormilizer textNormilizer;
     private final IContextEntities contextEntities;
     private final IUISettings uiSettings;
-    private final ISettingsProvider settingsProvider;
 
     @Inject
-    public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities, IUISettings uiSettings,
-        ISettingsProvider settingsProvider)
+    public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities, IUISettings uiSettings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(textNormilizer);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(uiSettings);
-        Preconditions.checkNotNull(settingsProvider);
         this.log = log;
         this.textNormilizer = textNormilizer;
         this.contextEntities = contextEntities;
         this.uiSettings = uiSettings;
-        this.settingsProvider = settingsProvider;
     }
 
     @Override
@@ -69,11 +65,11 @@ class Contexts
     }
 
     @Override
-    public List<GlobalContextUpdate> getUpdates(AIContext aiContext, boolean sendInitialState,
-        IStatistics statistics, ICancellationToken cancellationToken)
+    public List<GlobalContextUpdate> getUpdates(AIContext aiContext, IStatistics statistics,
+        ICancellationToken cancellationToken)
     {
         var globalContext = createGlobalContext(aiContext, statistics, cancellationToken);
-        return getUpdates(globalContext, sendInitialState, statistics, cancellationToken);
+        return getUpdates(globalContext, statistics, cancellationToken);
     }
 
     private GlobalContext createGlobalContext(AIContext aiContext, IStatistics statistics,
@@ -85,7 +81,7 @@ class Contexts
         try (var measurement = statistics.measureDuration(StatisticsType.GLOBAL_CONTEXT_DURATUION))
         {
             contextEntities.fill(aiContext, localContext, globalContext,
-                action -> action.getDataType() == DataType.HASH || Fields.CONFIGURATION_NAME.equals(action.getField()),
+                action -> action.getDataType() == DataType.HASH,
                 statistics, cancellationToken);
         }
         catch (Exception error)
@@ -101,30 +97,11 @@ class Contexts
 
     private List<GlobalContextUpdate> getUpdates(
         GlobalContext globalContext,
-        boolean sendInitialState,
         IStatistics statistics,
         ICancellationToken cancellationToken)
     {
         var result = new ArrayList<GlobalContextUpdate>();
         GlobalContextUpdate request;
-        if (sendInitialState && globalContext.configurationName != null)
-        {
-            request = new GlobalContextUpdate();
-            request.field = Fields.CONFIGURATION_NAME;
-            var settings = settingsProvider.getSettings();
-            var settingsConfigurationName = settings.getLlmParameters().configurationName;
-            if (settingsConfigurationName != null && !settingsConfigurationName.isBlank())
-            {
-                request.value = settingsConfigurationName;
-            }
-            else
-            {
-                request.value = globalContext.configurationName;
-            }
-
-            result.add(request);
-        }
-
         if (globalContext.formPath != null && globalContext.formHash != null)
         {
             request = new GlobalContextUpdate();
@@ -228,6 +205,6 @@ class Contexts
             log.logError(error);
         }
 
-        return getUpdates(globalContext, false, statistics, cancellationToken);
+        return getUpdates(globalContext, statistics, cancellationToken);
     }
 }

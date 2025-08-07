@@ -56,7 +56,7 @@ class GlobalContextSync implements IGlobalContextSync
         try
         {
             var statistics = statisticsProvider.get();
-            var updates = globalContext.getUpdates(aiContext, false, statistics, cancellationToken);
+            var updates = globalContext.getUpdates(aiContext, statistics, cancellationToken);
             return syncUpdates(aiContext, false, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)

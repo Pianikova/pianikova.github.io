@@ -16,6 +16,7 @@ import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
+import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ui.BaseActivator;
@@ -66,6 +67,7 @@ public class AIUIModule
         bind(IProjectIdProvider.class).to(ProjectIdProvider.class).in(Singleton.class);
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
+        bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }

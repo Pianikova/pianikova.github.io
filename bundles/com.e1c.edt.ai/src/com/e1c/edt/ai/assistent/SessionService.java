@@ -10,6 +10,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IUISettings;
@@ -39,12 +40,14 @@ class SessionService
     private final IVersionProvider versionProvider;
     private final IUISettings uiSettings;
     private final IEnvironment environment;
+    private final IConfigurationParametersProvider configurationParametersProvider;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker,
         IResponseCache<Session> responseCache, IParametersService parametersService,
-        IVersionProvider versionProvider, IUISettings uiSettings, IEnvironment environment)
+        IVersionProvider versionProvider, IUISettings uiSettings, IEnvironment environment,
+        IConfigurationParametersProvider configurationParametersProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -56,6 +59,7 @@ class SessionService
         Preconditions.checkNotNull(versionProvider);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(environment);
+        Preconditions.checkNotNull(configurationParametersProvider);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clienBuilder = clientBuilder;
@@ -66,6 +70,7 @@ class SessionService
         this.versionProvider = versionProvider;
         this.uiSettings = uiSettings;
         this.environment = environment;
+        this.configurationParametersProvider = configurationParametersProvider;
     }
 
     @Override
@@ -114,6 +119,7 @@ class SessionService
         userParameters.lineSeparator = uiSettings.getLineSeparator();
         userParameters.sendContext = uiSettings.sendExtendedContext();
         userParameters.language = uiSettings.getLanguage();
+        userParameters.configurationParameters = configurationParametersProvider.getParameters(projectId).orElse(null);
 
         var systemInfo = new SystemInfo();
         sessionRequest.systemInfo = systemInfo;

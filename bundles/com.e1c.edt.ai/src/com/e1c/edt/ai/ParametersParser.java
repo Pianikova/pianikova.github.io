@@ -14,8 +14,6 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Consumer;
 
-import org.osgi.framework.Version;
-
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.TokenHealing;
 import com.e1c.edt.ai.assistent.model.Verbosity;
@@ -191,29 +189,6 @@ public class ParametersParser
 
         names.remove(parse(properties, "verbosity", validationResult,
             val -> parameters.verbosity = parseEnum(val, Verbosity.class)));
-
-        names.remove(parse(properties, "script_language", validationResult, val -> {
-            val = val.trim().toLowerCase();
-            switch (val)
-            {
-            case "":
-            case "english":
-            case "russian":
-                parameters.scriptLanguage = val;
-                break;
-
-                default:
-                validationResult.addError(new ValidationError(WellknownError.OutOfRange, "script_language"));
-                break;
-            }
-        }));
-
-        names.remove(parse(properties, "configuration_name", validationResult,
-            val -> parameters.configurationName = val.trim()));
-        names.remove(
-            parse(properties, "version", validationResult, val -> parameters.version = Version.parseVersion(val.trim())));
-        names
-            .remove(parse(properties, "vendor", validationResult, val -> parameters.vendor = val.trim()));
 
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);

@@ -8,8 +8,6 @@ import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 
-import org.osgi.framework.Version;
-
 import com.e1c.edt.ai.IDefaultSettings;
 import com.google.gson.annotations.SerializedName;
 
@@ -228,30 +226,6 @@ public class Parameters
      */
     public Verbosity verbosity = Verbosity.WARNING;
 
-    /**
-     * Переопределяет scriptLanguage для тестирования.
-     */
-    @SerializedName("script_language")
-    public String scriptLanguage = ""; //$NON-NLS-1$
-
-    /**
-     * Переопределяет scriptLanguage для тестирования.
-     */
-    @SerializedName("configuration_name")
-    public String configurationName = ""; //$NON-NLS-1$
-
-    /**
-     * Переопределяет plugin_version для тестирования. Например, "1.0.0".
-     */
-    @SerializedName("version")
-    public Version version = Version.emptyVersion;
-
-    /**
-     * Поставщик.
-     */
-    @SerializedName("vendor")
-    public String vendor = ""; //$NON-NLS-1$
-
     public Parameters merge(Parameters params)
     {
         if (params.prefixLength != null)
@@ -424,26 +398,6 @@ public class Parameters
             verbosity = params.verbosity;
         }
 
-        if (params.scriptLanguage != null)
-        {
-            scriptLanguage = params.scriptLanguage;
-        }
-
-        if (params.configurationName != null)
-        {
-            configurationName = params.configurationName;
-        }
-
-        if (params.version != null)
-        {
-            version = params.version;
-        }
-
-        if (params.vendor != null)
-        {
-            vendor = params.vendor;
-        }
-
         return this;
     }
 
@@ -455,7 +409,7 @@ public class Parameters
             maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
             suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
             localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalContext, extendedContext,
-            verbosity, scriptLanguage, configurationName, version, vendor);
+            verbosity);
     }
 
     @Override
@@ -488,8 +442,6 @@ public class Parameters
             && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
             && Objects.equals(globalContext, other.globalContext)
             && Objects.equals(extendedContext, other.extendedContext)
-            && Objects.equals(verbosity, other.verbosity) && Objects.equals(scriptLanguage, other.scriptLanguage)
-            && Objects.equals(configurationName, other.configurationName) && Objects.equals(version, other.version)
-            && Objects.equals(vendor, other.vendor);
+            && Objects.equals(verbosity, other.verbosity);
     }
 }

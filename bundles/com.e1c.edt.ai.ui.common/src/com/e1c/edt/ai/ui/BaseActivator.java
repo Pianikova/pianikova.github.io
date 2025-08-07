@@ -16,7 +16,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.assistent.model.Verbosity;
@@ -308,13 +307,6 @@ public abstract class BaseActivator
     @Override
     public Version getPluginVersion()
     {
-        var settingsProvider = getInjector().getInstance(ISettingsProvider.class);
-        var settingsVersion = settingsProvider.getSettings().getLlmParameters().version;
-        if (settingsVersion != null && settingsVersion != Version.emptyVersion)
-        {
-            return settingsVersion;
-        }
-
         Bundle bundle = getDefault().getBundle();
         return bundle.getVersion();
     }
