@@ -31,6 +31,11 @@ public class ConfigurationParametersProvider
     @Override
     public Optional<ConfigurationParameters> getParameters(ProjectId projectId)
     {
+        if (projectId.project == null)
+        {
+            return Optional.empty();
+        }
+
         var v8Project = v8ProjectManager.getProject(projectId.project);
         if (v8Project != null)
         {
