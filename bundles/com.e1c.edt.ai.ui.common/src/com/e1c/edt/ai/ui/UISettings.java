@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import java.time.Duration;
+import java.util.Optional;
 
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.e4.ui.css.swt.theme.IThemeEngine;
@@ -14,6 +15,7 @@ import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
@@ -63,13 +65,15 @@ class UISettings
     @Override
     public Duration getMinRequestDelay()
     {
-        return Duration.ofMillis(settingsProvider.getSettings().getLlmParameters().minDelay);
+        return Duration.ofMillis(Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().minDelay)
+            .orElse(ParametersParser.DEFAULT_MIN_DELAY));
     }
 
     @Override
     public Duration getTimeout()
     {
-        return Duration.ofMillis(settingsProvider.getSettings().getLlmParameters().timeout);
+        return Duration.ofMillis(Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().timeout)
+            .orElse(ParametersParser.DEAULT_TIMEOUT));
     }
 
     @Override
@@ -81,25 +85,21 @@ class UISettings
     @Override
     public boolean sendExtendedContext()
     {
-        return settingsProvider.getSettings().getLlmParameters().extendedContext;
+        return Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().extendedContext).orElse(false);
     }
 
     @Override
     public boolean sendGlobalContext()
     {
-        return settingsProvider.getSettings().getLlmParameters().globalContext;
+        return Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().globalContext).orElse(false);
     }
 
+    @SuppressWarnings("nls")
     @Override
     public String getLanguage()
     {
-        var language = settingsStore.getString(ISettingsStore.LANGUAGE);
-        if (language != null && !language.isBlank())
-        {
-            return language;
-        }
-
-        return Platform.getNL().startsWith("ru_") ? "Russian" : "English"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        return Optional.ofNullable(settingsStore.getString(ISettingsStore.LANGUAGE))
+            .orElse(Platform.getNL().startsWith("ru_") ? "Russian" : "English");
     }
 
     @Override
@@ -123,6 +123,7 @@ class UISettings
     @Override
     public Verbosity getVerbosity()
     {
-        return settingsProvider.getSettings().getLlmParameters().verbosity;
+        return Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().verbosity)
+            .orElse(ParametersParser.DEFAULT_VERBOSITY);
     }
 }

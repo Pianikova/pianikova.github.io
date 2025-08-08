@@ -23,6 +23,10 @@ import com.google.inject.Inject;
 public class ParametersParser
     implements IValidator<String>, IParser<String, Parameters>
 {
+    public static final Verbosity DEFAULT_VERBOSITY = Verbosity.WARNING;
+    public static final int DEFAULT_GIT_CONTEXT_LINES = 8;
+    public static final int DEAULT_TIMEOUT = 15000;
+    public static final int DEFAULT_MIN_DELAY = 300;
     private final static String keyValueSeparator = ";"; //$NON-NLS-1$
     private final IDefaultSettings defaultSettings;
 
@@ -152,7 +156,7 @@ public class ParametersParser
         names.remove(
             parse(properties, "min_delay", validationResult,
                 val -> {
-                    parameters.minDelay = Integer.parseInt(val);
+                    parameters.minDelay = val == null || val.isBlank() ? DEFAULT_MIN_DELAY : Integer.parseInt(val);
                     if (parameters.minDelay < 50)
                     {
                         validationResult.addError(new ValidationError(WellknownError.OutOfRange, "min_delay"));
@@ -167,7 +171,7 @@ public class ParametersParser
                 }));
 
         names.remove(parse(properties, "timeout", validationResult, val -> {
-            parameters.timeout = Integer.parseInt(val);
+            parameters.timeout = val == null || val.isBlank() ? DEAULT_TIMEOUT : Integer.parseInt(val);
             if (parameters.timeout < 50)
             {
                 validationResult.addError(new ValidationError(WellknownError.OutOfRange, "timeout"));
@@ -182,18 +186,20 @@ public class ParametersParser
         }));
 
         names.remove(parse(properties, "global_context", validationResult,
-            val -> parameters.globalContext = parseBoolean(val)));
+            val -> parameters.globalContext = val == null || val.isBlank() ? false : parseBoolean(val)));
 
         names.remove(parse(properties, "extended_context", validationResult,
-            val -> parameters.extendedContext = parseBoolean(val)));
+            val -> parameters.extendedContext = val == null || val.isBlank() ? false : parseBoolean(val)));
 
         names.remove(parse(properties, "verbosity", validationResult,
-            val -> parameters.verbosity = parseEnum(val, Verbosity.class)));
+            val -> parameters.verbosity =
+                val == null || val.isBlank() ? DEFAULT_VERBOSITY : parseEnum(val, Verbosity.class)));
 
-        names.remove(parse(properties, "resources", validationResult, val -> parameters.resources = val.trim()));
+        names.remove(parse(properties, "resources", validationResult,
+            val -> parameters.resources = val == null || val.isBlank() ? "" : val.trim()));
 
         names.remove(parse(properties, "git_diff_context_lines", validationResult,
-            val -> parameters.gitDiffContextLines = Integer.parseInt(val)));
+            val -> parameters.gitDiffContextLines = val == null || val.isBlank() ? DEFAULT_GIT_CONTEXT_LINES : Integer.parseInt(val)));
 
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);

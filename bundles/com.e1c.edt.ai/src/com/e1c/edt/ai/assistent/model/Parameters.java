@@ -16,6 +16,11 @@ import com.google.gson.annotations.SerializedName;
  */
 public class Parameters
 {
+    public Parameters()
+    {
+        //
+    }
+
     public Parameters(IDefaultSettings defaultSettings)
     {
         try
@@ -201,45 +206,50 @@ public class Parameters
      * Минимальная задержка миллисекунд. Например, 300.
      */
     @SerializedName("min_delay")
-    public Integer minDelay = 300;
+    public Integer minDelay;
 
     /**
      * Время ожидания ответа миллисекунд. Например, 15000.
      */
     @SerializedName("timeout")
-    public Integer timeout = 15000;
+    public Integer timeout;
 
     /**
      * Определяет передавать ли глобальный контекст. Например, true.
      */
     @SerializedName("global_context")
-    public Boolean globalContext = false;
+    public Boolean globalContext;
 
     /**
      * Определяет передавать ли расширенный контекст. Например, true.
      */
     @SerializedName("extended_context")
-    public Boolean extendedContext = false;
+    public Boolean extendedContext;
 
     /**
      * Уровень детализации логов (error/warning/info/trace/debug). Например, warning.
      */
-    public Verbosity verbosity = Verbosity.WARNING;
+    public Verbosity verbosity;
 
     /**
      * Переопределяет пут к ресурсам. Например, "C:/Users/user/resources".
      */
     @SerializedName("resources")
-    public String resources = ""; //$NON-NLS-1$
+    public String resources;
 
     /**
      * Переопределяет размер контекста для git diff. Например, 16.
      */
     @SerializedName("git_diff_context_lines")
-    public int gitDiffContextLines = 8;
+    public int gitDiffContextLines;
 
     public Parameters merge(Parameters params)
     {
+        if (params == null)
+        {
+            return this;
+        }
+
         if (params.prefixLength != null)
         {
             prefixLength = params.prefixLength;
