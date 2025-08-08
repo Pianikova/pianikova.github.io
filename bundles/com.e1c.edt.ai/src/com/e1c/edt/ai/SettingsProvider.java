@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai;
 
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 import com.e1c.edt.ai.assistent.model.Parameters;
@@ -21,6 +22,7 @@ public class SettingsProvider
     private final IDefaultSettings defaultSettings;
     private final Cache<String, Parameters> parametersCache =
         CacheBuilder.newBuilder().maximumSize(2).build();
+    private Optional<Parameters> userParameters = Optional.empty();
 
     @Inject
     public SettingsProvider(ISettingsStore settingsStore, IParser<String, Parameters> parametersParser,
@@ -57,7 +59,19 @@ public class SettingsProvider
             parameters = new Parameters(defaultSettings);
         }
 
+        if (userParameters.isPresent())
+        {
+            parameters = userParameters.get().merge(parameters);
+        }
+
         var settings = new AISettings(clientToken, idProvider.getId(), parameters);
         return settings;
+    }
+
+    @Override
+    public synchronized void applyUserParameters(Parameters userParameters)
+    {
+        this.userParameters = Optional.ofNullable(userParameters);
+        parametersCache.invalidateAll();
     }
 }

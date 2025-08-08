@@ -10,6 +10,15 @@ import com.google.gson.annotations.SerializedName;
  */
 public class ParametersReponse
 {
+    /**
+     * Параметры влияющие на настройки сервиса.
+     */
     @SerializedName("service_parameters")
     public Parameters serviceParameters;
+
+    /**
+     * Параметры влияющие на настройки пользователя.
+     */
+    @SerializedName("user_parameters")
+    public Parameters userParameters;
 }

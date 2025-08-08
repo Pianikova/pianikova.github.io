@@ -92,6 +92,9 @@ class ParametersService
     private Optional<Parameters> createParameters(String content, Parameters userParams)
     {
         return json.deserialize(content, ParametersReponse.class)
-            .map(response -> response.serviceParameters.merge(userParams));
+            .map(response -> {
+                settingsProvider.applyUserParameters(response.userParameters);
+                return response.serviceParameters.merge(response.userParameters).merge(userParams);
+            });
     }
 }
