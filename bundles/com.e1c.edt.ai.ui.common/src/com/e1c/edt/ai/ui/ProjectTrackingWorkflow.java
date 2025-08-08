@@ -52,7 +52,6 @@ class ProjectTrackingWorkflow
     private ProjectId projectId;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
     private int iterationCount = Integer.MAX_VALUE;
-    private boolean initialStateSent;
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
@@ -84,7 +83,6 @@ class ProjectTrackingWorkflow
         this.project = project;
         projectId = projectIdProvider.getProjectId(project);
         iterationCount = Integer.MAX_VALUE;
-        initialStateSent = true;
         return this;
     }
 
@@ -391,9 +389,8 @@ class ProjectTrackingWorkflow
                 var documentUpdates = new ArrayList<GlobalContextUpdate>();
                 documentUpdates.add(update);
                 features.add(
-                    globalContextSync.syncUpdates(file.aiCtx, initialStateSent, documentUpdates, 5,
-                        statisticsProvider.get(), cancellationToken));
-                initialStateSent = true;
+                    globalContextSync.syncUpdates(file.aiCtx, documentUpdates, 5, statisticsProvider.get(),
+                        cancellationToken));
                 continue;
             }
 
@@ -403,9 +400,8 @@ class ProjectTrackingWorkflow
         if (!filesUpdates.isEmpty())
         {
             features.add(
-                globalContextSync.syncUpdates(new AIContext(projectId, "", null), initialStateSent, filesUpdates, 5, //$NON-NLS-1$
+                globalContextSync.syncUpdates(new AIContext(projectId, "", null), filesUpdates, 5, //$NON-NLS-1$
                     statisticsProvider.get(), cancellationToken));
-            initialStateSent = true;
         }
 
         CompletableFuture.allOf(features.toArray(new CompletableFuture[features.size()])).join();

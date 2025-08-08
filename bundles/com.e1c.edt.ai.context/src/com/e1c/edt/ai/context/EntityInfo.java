@@ -219,6 +219,21 @@ class EntityInfo
         entitiesWalker.walk(document, filePath, start, finish, resourceSetProvider, new EntityVisitor()
         {
             @Override
+            public boolean visitModule(BmRoot root, Module module)
+            {
+                if (!actionFilter.test(new FillAction(DataType.HASH, Fields.LOCAL_FUNCTIONS, null)))
+                {
+                    return false;
+                }
+
+                var file = root.getFile(module).orElse(null);
+                globalContext.moduleHash =
+                    hashTools.hashOf(document, file).map(hash -> hashTools.format(hash, true)).orElse(null);
+
+                return false;
+            }
+
+            @Override
             public boolean visitNode(BmRoot root, EObject eObject, ICompositeNode node)
             {
                 var nodeStart = node.getTotalOffset();
