@@ -57,7 +57,7 @@ class GlobalContextSync implements IGlobalContextSync
         {
             var statistics = statisticsProvider.get();
             var updates = globalContext.getUpdates(aiContext, statistics, cancellationToken);
-            return syncUpdates(aiContext, false, updates, maxDept, statistics, cancellationToken);
+            return syncUpdates(aiContext, updates, maxDept, statistics, cancellationToken);
         }
         catch (Exception error)
         {
@@ -67,8 +67,7 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Boolean> syncUpdates(AIContext aiContext, boolean isInitial,
-        List<GlobalContextUpdate> updates,
+    public CompletableFuture<Boolean> syncUpdates(AIContext aiContext, List<GlobalContextUpdate> updates,
         int maxDept,
         IStatistics statistics,
         ICancellationToken cancellationToken)
@@ -98,7 +97,7 @@ class GlobalContextSync implements IGlobalContextSync
                         return CompletableFuture.completedFuture(true);
                     }
 
-                    return syncUnknown(aiContext, isInitial, result.unknownValues, maxDept,
+                    return syncUnknown(aiContext, result.unknownValues, maxDept,
                         cancellationToken);
                 });
         }
@@ -110,9 +109,7 @@ class GlobalContextSync implements IGlobalContextSync
     }
 
     @Override
-    public CompletableFuture<Boolean> syncUnknown(AIContext aiContext, boolean isInitial,
-        List<EntityValue> unknownValues,
-        int maxDept,
+    public CompletableFuture<Boolean> syncUnknown(AIContext aiContext, List<EntityValue> unknownValues, int maxDept,
         ICancellationToken cancellationToken)
     {
         var feature = CompletableFuture.completedFuture(true);
@@ -197,8 +194,6 @@ class GlobalContextSync implements IGlobalContextSync
                         updates.addAll(newUpdates);
                     }
 
-                    var currentIsInitial = isInitial;
-                    isInitial = false;
                     feature = feature.thenCompose(i -> {
                         ArrayList<GlobalContextUpdate> latestUpdates;
                         synchronized (updates)
@@ -212,7 +207,7 @@ class GlobalContextSync implements IGlobalContextSync
                             return CompletableFuture.completedFuture(true);
                         }
 
-                        return syncUpdates(aiContext, currentIsInitial, latestUpdates, 5, statistics,
+                        return syncUpdates(aiContext, latestUpdates, 5, statistics,
                             cancellationToken);
                     });
 
