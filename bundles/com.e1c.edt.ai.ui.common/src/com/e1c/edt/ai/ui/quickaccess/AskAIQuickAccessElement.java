@@ -13,6 +13,7 @@ import com.e1c.edt.ai.ui.BaseChatView;
 import com.e1c.edt.ai.ui.IAIContextProvider;
 import com.e1c.edt.ai.ui.IChat;
 import com.e1c.edt.ai.ui.IUI;
+import com.e1c.edt.ai.ui.Images;
 import com.google.inject.Inject;
 
 
@@ -81,8 +82,7 @@ public class AskAIQuickAccessElement
     @Override
     public ImageDescriptor getImageDescriptor()
     {
-        ImageDescriptor image =
-            BaseActivator.getImageDescriptor(BaseActivator.getDefault().getPluginId() + "/obj16/ai.png"); //$NON-NLS-1$
+        ImageDescriptor image = BaseActivator.getImageDescriptor(Images.AI);
         return image;
     }
 }

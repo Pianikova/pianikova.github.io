@@ -87,7 +87,7 @@ class SessionService
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
-        var builder = requestBuilder.create("./create_session"); //$NON-NLS-1$
+        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./create_session"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(Optional.empty());

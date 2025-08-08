@@ -190,6 +190,11 @@ public class ParametersParser
         names.remove(parse(properties, "verbosity", validationResult,
             val -> parameters.verbosity = parseEnum(val, Verbosity.class)));
 
+        names.remove(parse(properties, "resources", validationResult, val -> parameters.resources = val.trim()));
+
+        names.remove(parse(properties, "git_diff_context_lines", validationResult,
+            val -> parameters.gitDiffContextLines = Integer.parseInt(val)));
+
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
         for (var unknowName : unknowNames)

@@ -14,7 +14,6 @@ import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ParametersReponse;
 import com.e1c.edt.ai.client.AIClientException;
-
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -58,7 +57,7 @@ class ParametersService
         var settings = settingsProvider.getSettings();
         var reset = settingsTracker.register(ParametersService.class.getName(), settings);
         return responseCache.get("", () -> { //$NON-NLS-1$
-            var builder = requestBuilder.create("./params"); //$NON-NLS-1$
+            var builder = requestBuilder.create(s -> s.getLlmParameters().url, "./params"); //$NON-NLS-1$
             if (builder.isEmpty())
             {
                 return CompletableFuture.completedFuture(Optional.empty());

@@ -5,13 +5,15 @@ package com.e1c.edt.ai.assistent;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.http.HttpRequest;
 import java.util.Optional;
+import java.util.function.Function;
 
 import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.IVersionProvider;
-
+import com.e1c.edt.ai.client.AISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -34,13 +36,13 @@ class RequestBuilder
     }
 
     @Override
-    public Optional<HttpRequest.Builder> create(String relativePath)
+    public Optional<HttpRequest.Builder> create(Function<AISettings, URL> urlSelector, String relativePath)
     {
         var settings = settingsProvider.getSettings();
         URI uri;
         try
         {
-            uri = settings.getLlmParameters().url.toURI().resolve(relativePath);
+            uri = urlSelector.apply(settings).toURI().resolve(relativePath);
         }
         catch (URISyntaxException e)
         {

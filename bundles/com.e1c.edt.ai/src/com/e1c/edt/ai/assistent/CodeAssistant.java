@@ -116,7 +116,7 @@ class CodeAssistant
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
-        var optionalRequest = requestBuilder.create("./complete"); //$NON-NLS-1$
+        var optionalRequest = requestBuilder.create(settings -> settings.getLlmParameters().url, "./complete"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
             observer.onCompleted();
@@ -186,10 +186,10 @@ class CodeAssistant
         var request = requestBuilder.POST(bodyPublisher).build();
         log.request(request, cancellationToken.toString(), requestBody);
 
-        var clien = clientBuilder.create().build();
+        var client = clientBuilder.create().build();
         stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
         var stopwatch = Stopwatch.createStarted();
-        var asyncRequest = clien.sendAsync(request, BodyHandlers.ofLines());
+        var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> {
             stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
             asyncRequest.cancel(true);

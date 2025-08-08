@@ -3,7 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -30,48 +29,29 @@ import com.google.inject.Inject;
 public class ProposalsProvider
     implements IProposalsProvider
 {
-    private static Field contentAssistantField;
     private final ILog log;
     private final IDispatcher dispatcher;
     private final IUISettings uiSettings;
     private final IClock clock;
     private final IProposalExtractor proposalExtractor;
-
-    static
-    {
-        var fields = SourceViewer.class.getDeclaredFields();
-        for (var field : fields)
-        {
-            if ("fContentAssistant".equals(field.getName())) //$NON-NLS-1$
-            {
-                field.setAccessible(true);
-                try
-                {
-                    contentAssistantField = field;
-                    break;
-                }
-                catch (Exception e)
-                {
-                    //
-                }
-            }
-        }
-    }
+    private final IReflection reflection;
 
     @Inject
     public ProposalsProvider(ILog log, IDispatcher dispatcher, IUISettings uiSettings, IClock clock,
-        IProposalExtractor proposalExtractor)
+        IProposalExtractor proposalExtractor, IReflection reflection)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(proposalExtractor);
+        Preconditions.checkNotNull(reflection);
         this.log = log;
         this.dispatcher = dispatcher;
         this.uiSettings = uiSettings;
         this.clock = clock;
         this.proposalExtractor = proposalExtractor;
+        this.reflection = reflection;
     }
 
     @Override
@@ -159,23 +139,7 @@ public class ProposalsProvider
 
     private Optional<IContentAssistant> getContentAssistant(SourceViewer sourceViewer)
     {
-        try
-        {
-            if (contentAssistantField != null)
-            {
-                var contentAssistant = contentAssistantField.get(sourceViewer);
-                if (contentAssistant instanceof IContentAssistant)
-                {
-                    return Optional.ofNullable((IContentAssistant)contentAssistant);
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            //
-        }
-
-        return Optional.empty();
+        return reflection.getField(SourceViewer.class, sourceViewer, "fContentAssistant", IContentAssistant.class); //$NON-NLS-1$
     }
 
     private Optional<String> getPartitionType(AIContext aiCtx, SourceViewer sourceViewer)

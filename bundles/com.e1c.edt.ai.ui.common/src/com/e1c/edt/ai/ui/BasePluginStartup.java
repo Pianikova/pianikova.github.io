@@ -31,6 +31,8 @@ public class BasePluginStartup
     @Inject
     IClipboardManager clipboardManager;
     @Inject
+    IDialogsInjector commitDialogInjector;
+    @Inject
     IPluginUpdateService pluginUpdateService;
     @Inject
     IDispatcher dispatcher;
@@ -57,6 +59,7 @@ public class BasePluginStartup
     {
         accessHolder.startMonitoring(30000, 3000);
         clipboardManager.initialize();
+        commitDialogInjector.initialize();
         ui.initialize();
     }
 }

@@ -8,6 +8,7 @@ import java.util.function.Supplier;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.resource.ResourceLocator;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
@@ -315,6 +316,15 @@ public abstract class BaseActivator
     public String getPlatformVersion()
     {
         return System.getProperty("eclipse.buildId"); //$NON-NLS-1$
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    protected void initializeImageRegistry(ImageRegistry registry)
+    {
+        registry.put(Images.AI, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/ai.png"));
+        registry.put(Images.GENERATE_DOC_COMMENTS,
+            imageDescriptorFromPlugin(getPluginId(), "icons/obj16/generatedoccomments.png"));
     }
 
     public abstract String getPluginId();

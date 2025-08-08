@@ -31,7 +31,7 @@ class GlobalContextService
 {
     private final IHttpLog log;
     private final IRequestBuilder requestBuilder;
-    private final IHttpClientBuilder clienBuilder;
+    private final IHttpClientBuilder clientBuilder;
     private final IJson json;
     private final ISessionService sessionService;
     private final IEnvironment environment;
@@ -50,7 +50,7 @@ class GlobalContextService
         Preconditions.checkNotNull(compressor);
         this.log = log;
         this.requestBuilder = requestBuilder;
-        this.clienBuilder = clientBuilder;
+        this.clientBuilder = clientBuilder;
         this.json = json;
         this.sessionService = sessionService;
         this.environment = environment;
@@ -122,7 +122,7 @@ class GlobalContextService
         Optional<GlobalContextUpdateResponse> results, Session session,
         Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
     {
-        var optionalRequest = requestBuilder.create("./context/update"); //$NON-NLS-1$
+        var optionalRequest = requestBuilder.create(settings -> settings.getLlmParameters().url, "./context/update"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture.completedFuture(results);
@@ -176,7 +176,7 @@ class GlobalContextService
         var request = requestBuilder.POST(bodyPublisher).build();
         log.request(request, cancellationToken.toString(), requestBody);
         var stopwatch = Stopwatch.createStarted();
-        return clienBuilder.create()
+        return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
             .thenApplyAsync(response -> log.response(response, null, stopwatch, true))

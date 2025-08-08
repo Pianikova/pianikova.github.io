@@ -28,16 +28,20 @@ class VerticalRulerManager
     private final IDispatcher dispatcher;
     private final IVerticalRulerPainter painterListener;
     private final IEnvironment environment;
+    private final IReflection reflection;
 
     @Inject
-    public VerticalRulerManager(IDispatcher dispatcher, IVerticalRulerPainter painterListener, IEnvironment environment)
+    public VerticalRulerManager(IDispatcher dispatcher, IVerticalRulerPainter painterListener, IEnvironment environment,
+        IReflection reflection)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(painterListener);
         Preconditions.checkNotNull(environment);
+        Preconditions.checkNotNull(reflection);
         this.dispatcher = dispatcher;
         this.painterListener = painterListener;
         this.environment = environment;
+        this.reflection = reflection;
     }
 
     @Override
@@ -196,16 +200,7 @@ class VerticalRulerManager
 
     private Optional<IVerticalRuler> getVerticalRuler(SourceViewer viewer)
     {
-        try
-        {
-            var method = SourceViewer.class.getDeclaredMethod("getVerticalRuler"); //$NON-NLS-1$
-            method.setAccessible(true);
-            return Optional.ofNullable((IVerticalRuler)method.invoke(viewer));
-        }
-        catch (Exception e)
-        {
-            return Optional.empty();
-        }
+        return reflection.callMethod(SourceViewer.class, viewer, "getVerticalRuler", IVerticalRuler.class); //$NON-NLS-1$
     }
 
     private class AnnotationModelListener

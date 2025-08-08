@@ -226,6 +226,18 @@ public class Parameters
      */
     public Verbosity verbosity = Verbosity.WARNING;
 
+    /**
+     * Переопределяет пут к ресурсам. Например, "C:/Users/user/resources".
+     */
+    @SerializedName("resources")
+    public String resources = ""; //$NON-NLS-1$
+
+    /**
+     * Переопределяет размер контекста для git diff. Например, 16.
+     */
+    @SerializedName("git_diff_context_lines")
+    public int gitDiffContextLines = 8;
+
     public Parameters merge(Parameters params)
     {
         if (params.prefixLength != null)
