@@ -158,7 +158,7 @@ public class Parameters
      * Метод исправления токенов (None/guidance/streaming). Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("token_healing")
-    public TokenHealing tokenHealing;
+    public TokenHealing tokenHealing = TokenHealing.NONE;
 
     /**
      * Возвращать текст построчно. Нужно определить только для изменения стандартных настроек модели.
@@ -360,7 +360,7 @@ public class Parameters
             watermark = params.watermark;
         }
 
-        if (params.tokenHealing != null)
+        if (params.tokenHealing != TokenHealing.NONE)
         {
             tokenHealing = params.tokenHealing;
         }

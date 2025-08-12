@@ -134,7 +134,18 @@ public class ParametersParser
 
         names.remove(
             parse(properties, "token_healing", validationResult,
-                val -> parameters.tokenHealing = parseEnum(val, TokenHealing.class)));
+                val -> {
+                    var healing = parseEnum(val, TokenHealing.class);
+                    switch (healing)
+                    {
+                    case NONE:
+                        parameters.tokenHealing = null;
+                        break;
+                    default:
+                        parameters.tokenHealing = healing;
+                        break;
+                    }
+                }));
 
         names.remove(
             parse(properties, "return_line", validationResult, val -> parameters.returnLine = parseBoolean(val)));

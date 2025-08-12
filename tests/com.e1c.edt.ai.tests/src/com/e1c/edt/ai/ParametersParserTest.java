@@ -96,7 +96,7 @@ public class ParametersParserTest
                 { "watermark=true", ValidationResult.SUCCESS, createParams(p -> { p.watermark = true; } ) },
                 { "token_healing=guidance", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.GUIDANCE; } ) },
                 { "token_healing=streaming", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.STREAMING; } ) },
-                { "token_healing=None", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.NONE; } ) },
+                { "token_healing=None", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = null; } ) },
                 { "return_line=true", ValidationResult.SUCCESS, createParams(p -> { p.returnLine = true; } ) },
                 { "trim_stop=true", ValidationResult.SUCCESS, createParams(p -> { p.trimStop = true; } ) },
                 { "chat_url=http://chat.com/Abc", ValidationResult.SUCCESS, createParams(p -> {
