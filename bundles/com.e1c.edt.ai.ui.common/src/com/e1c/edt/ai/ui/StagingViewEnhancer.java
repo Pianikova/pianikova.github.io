@@ -118,8 +118,9 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
                 var newCancellationToken = new CancellationTokenSource();
                 createCommitMessageCancellationToken.cancel();
                 createCommitMessageCancellationToken = newCancellationToken;
-                var commitMessageSource = gitActions.ceateGitCommitMessageSource(
-                    commitMessageComponent.getCommitMessage(), diffs, newCancellationToken);
+                var baseMessage = commitMessageComponent.getCommitMessage().trim();
+                var commitMessageSource =
+                    gitActions.ceateGitCommitMessageSource(baseMessage, diffs, newCancellationToken);
                 commitMessageSource.subscribe(new IObserver<String>()
                 {
                     @Override
@@ -131,7 +132,13 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
                                 return;
                             }
 
-                            commitMessageComponent.setCommitMessage(value);
+                            var message = value;
+                            if (!baseMessage.isBlank())
+                            {
+                                message = baseMessage + System.lineSeparator() + System.lineSeparator() + message;
+                            }
+
+                            commitMessageComponent.setCommitMessage(message);
                             commitMessageComponent.updateUI();
                         });
                     }
