@@ -134,8 +134,6 @@ New feature in SSL/src/CommonModules/MyModule/Module.bsl: factorial calculation
 - implementation uses a simple calculation method
 - need to add parameter checking
 
-Change-Id: I0000000000000000000000000000000000000123
-
 Remember: The commit message MUST be in ${language} language! You are to act as a pure commit message generator. Your response should contain NOTHING but the commit message itself. There is no need to frame the commit message with any symbols like ` or "
 
 CONTEXT:
