@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
@@ -27,6 +28,7 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
@@ -46,17 +48,19 @@ class ProjectTrackingWorkflow
     private final IGlobalContextSync globalContextSync;
     private final IUISettings settings;
     private final IFileScaner fileScaner;
+    private final ISessionService sessionService;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
     private IProject project;
     private ProjectId projectId;
+    private String sessionId;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
     private int iterationCount = Integer.MAX_VALUE;
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
         IClock clock, IProjectIdProvider projectIdProvider, IGlobalContextSync globalContextSync, IUISettings settings,
-        IFileScaner fileScaner)
+        IFileScaner fileScaner, ISessionService sessionService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
@@ -66,6 +70,7 @@ class ProjectTrackingWorkflow
         Preconditions.checkNotNull(globalContextSync);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(fileScaner);
+        Preconditions.checkNotNull(sessionService);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
@@ -74,6 +79,7 @@ class ProjectTrackingWorkflow
         this.globalContextSync = globalContextSync;
         this.settings = settings;
         this.fileScaner = fileScaner;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -95,6 +101,11 @@ class ProjectTrackingWorkflow
     @Override
     public Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
+        if (checkSessionChanged())
+        {
+            reset();
+        }
+
         Result result = null;
         try
         {
@@ -130,6 +141,35 @@ class ProjectTrackingWorkflow
         }
 
         return LongDelay;
+    }
+
+    private boolean checkSessionChanged()
+    {
+        try
+        {
+            var session = sessionService.getSessionAsync(projectId).get();
+            var curSessionId = session.map(i -> i.sessionId).orElse(""); //$NON-NLS-1$
+            if (!curSessionId.equals(sessionId))
+            {
+                sessionId = curSessionId;
+                return true;
+            }
+        }
+        catch (InterruptedException | ExecutionException error)
+        {
+            log.logError(error);
+        }
+
+        return false;
+    }
+
+    private void reset()
+    {
+        filesToSync.clear();
+        for (var file : filesToHash.values())
+        {
+            file.update(clock.now(), null, 1);
+        }
     }
 
     @Override

@@ -339,7 +339,7 @@ public class Chat implements IChat, IChatDialog
 
             var chatUrl = parameters.get().chatUrl;
             var settings = settingsProvider.getSettings();
-            var reset = settingsTracker.register(IParametersService.class.getName(), settings);
+            var reset = settingsTracker.register(Chat.class.getName(), settings);
             if (lastChatUrl != chatUrl || reset)
             {
                 lastChatUrl = chatUrl;
