@@ -114,7 +114,7 @@ public class Tools
         BodyPublisher bodyPublisher;
         try
         {
-            /*var optionalData = compressor.compress(requestBody);
+            var optionalData = compressor.compress(requestBody);
             if (optionalData.isPresent())
             {
                 try (var data = optionalData.get())
@@ -126,9 +126,7 @@ public class Tools
             else
             {
                 bodyPublisher = BodyPublishers.ofString(requestBody);
-            }*/
-
-            bodyPublisher = BodyPublishers.ofString(requestBody);
+            }
         }
         catch (Exception error)
         {
