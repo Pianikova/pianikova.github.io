@@ -323,8 +323,7 @@ public abstract class BaseActivator
     protected void initializeImageRegistry(ImageRegistry registry)
     {
         registry.put(Images.AI, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/ai.png"));
-        registry.put(Images.GENERATE_DOC_COMMENTS,
-            imageDescriptorFromPlugin(getPluginId(), "icons/obj16/generatedoccomments.png"));
+        registry.put(Images.GIT_MESSAGE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
     }
 
     public abstract String getPluginId();
