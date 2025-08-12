@@ -4,9 +4,9 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.Stack;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -26,11 +26,11 @@ public class Widgets implements IWidgets
     private class ControlIterator
         implements Iterator<Control>
     {
-        private final Stack<Control> controls = new Stack<>();
+        private final LinkedList<Control> controls = new LinkedList<>();
 
         public ControlIterator(Composite target)
         {
-            controls.push(target);
+            controls.addLast(target);
         }
 
         @Override
@@ -42,13 +42,13 @@ public class Widgets implements IWidgets
         @Override
         public Control next()
         {
-            var control = controls.pop();
+            var control = controls.pollFirst();
             if (control instanceof Composite)
             {
                 var nextComposite = (Composite)control;
                 for (var child : nextComposite.getChildren())
                 {
-                    controls.push(child);
+                    controls.addLast(child);
                 }
             }
 
