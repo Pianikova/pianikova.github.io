@@ -99,7 +99,7 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
         }
 
         var createMessageButton = new ToolItem(commitMessageToolBar, SWT.BUTTON1);
-        createMessageButton.setImage(BaseActivator.getImage(Images.GENERATE_DOC_COMMENTS));
+        createMessageButton.setImage(BaseActivator.getImage(Images.GIT_MESSAGE));
         createMessageButton.setToolTipText(Messages.CommitMessage);
         createMessageButton.addSelectionListener(new SelectionAdapter()
         {
