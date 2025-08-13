@@ -9,20 +9,20 @@ package com.e1c.edt.ai.ui;
  */
 public enum UINotificationType
 {
-    INFO("icons/obj16/info.png"), //$NON-NLS-1$
-    WARNING("icons/obj16/warning.png"), //$NON-NLS-1$
-    ERROR("icons/obj16/error.png"); //$NON-NLS-1$
+    INFO(Images.INFO),
+    WARNING(Images.WARNING),
+    ERROR(Images.ERROR);
 
-    private final String iconPath;
+    private final String imageId;
 
-    private UINotificationType(String iconPath)
+    private UINotificationType(String imageId)
     {
-        this.iconPath = iconPath;
+        this.imageId = imageId;
     }
 
-    public String getIconPath()
+    public String getImageId()
     {
-        return iconPath;
+        return imageId;
     }
 
 }

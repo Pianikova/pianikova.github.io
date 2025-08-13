@@ -5,17 +5,13 @@ package com.e1c.edt.ai.ui;
 
 import java.net.URL;
 
-import org.eclipse.core.runtime.FileLocator;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.dialogs.PopupDialog;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseTrackAdapter;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
@@ -45,24 +41,26 @@ public class UINotification
     private final String message;
     private final String linkText;
     private final String url;
-    private final String iconPath;
+    private final UINotificationType type;
     private boolean isMouseOver = false;
     private Runnable timerRunnable;
     private Runnable action;
 
-    public UINotification(Shell parentShell, String message, String iconPath, String linkText, String url)
+    public UINotification(Shell parentShell, String message, UINotificationType type, String linkText,
+        String url)
     {
         super(parentShell, SWT.NO_TRIM | SWT.ON_TOP, false, false, false, false, false, null, null);
         this.message = message;
-        this.iconPath = iconPath;
+        this.type = type;
         this.linkText = linkText;
         this.url = url;
     }
 
-    public UINotification(Shell parentShell, String message, String iconPath, String linkText, String url,
+    public UINotification(Shell parentShell, String message, UINotificationType type, String linkText,
+        String url,
         Runnable action)
     {
-        this(parentShell, message, iconPath, linkText, url);
+        this(parentShell, message, type, linkText, url);
         this.action = action;
     }
 
@@ -85,16 +83,7 @@ public class UINotification
         canvas.setLayout(layout);
 
         Label iconLabel = new Label(canvas, SWT.NONE);
-        try
-        {
-            Image icon = createImage(iconPath);
-            iconLabel.setImage(icon);
-            iconLabel.addDisposeListener(e -> icon.dispose());
-        }
-        catch (Exception e)
-        {
-            log.logError(e);
-        }
+        iconLabel.setImage(BaseActivator.getImage(type.getImageId()));
         iconLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, true));
         iconLabel.setBackground(bg);
 
@@ -264,13 +253,6 @@ public class UINotification
         {
             Display.getDefault().timerExec(5000, timerRunnable);
         }
-    }
-
-    private static Image createImage(String path)
-    {
-        var descriptor = ImageDescriptor
-            .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
-        return descriptor.createImage();
     }
 
     @Override

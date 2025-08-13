@@ -3,9 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import org.eclipse.core.runtime.FileLocator;
-import org.eclipse.core.runtime.Path;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -16,7 +13,6 @@ import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -63,9 +59,6 @@ public class BaseStatusBarControl
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
-    private final Image OFFLINE = createImage("icons/obj16/status_offline.png"); //$NON-NLS-1$
-    private final Image ONLINE = createImage("icons/obj16/status_online.png"); //$NON-NLS-1$
-    private final Image BUSY = createImage("icons/obj16/status_busy.png"); //$NON-NLS-1$
     private boolean hintWasShown = false;
     private Font font;
     private Label iconLabel;
@@ -97,7 +90,7 @@ public class BaseStatusBarControl
 
         // Icon
         iconLabel = new Label(composite, SWT.NONE);
-        iconLabel.setImage(OFFLINE);
+        iconLabel.setImage(BaseActivator.getImage(Images.OFFLINE));
         iconLabel.getShell();
         var iconGridData = new GridData(SWT.CENTER, SWT.CENTER, true, true);
         iconLabel.setLayoutData(iconGridData);
@@ -194,21 +187,11 @@ public class BaseStatusBarControl
         return true;
     }
 
-    private static Image createImage(String path)
-    {
-        var descriptor = ImageDescriptor
-            .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
-        return descriptor.createImage();
-    }
-
     @Override
     public void widgetDisposed(DisposeEvent e)
     {
         stateService.removeListener(this);
         font.dispose();
-        OFFLINE.dispose();
-        ONLINE.dispose();
-        BUSY.dispose();
     }
 
     @Override
@@ -230,11 +213,11 @@ public class BaseStatusBarControl
             switch (state.getActionState())
             {
             case BUSY:
-                iconLabel.setImage(BUSY);
+                iconLabel.setImage(BaseActivator.getImage(Images.BUSY));
                 break;
 
             default:
-                iconLabel.setImage(ONLINE);
+                iconLabel.setImage(BaseActivator.getImage(Images.ONLINE));
                 break;
             }
 
@@ -249,7 +232,7 @@ public class BaseStatusBarControl
             iconLabel.setToolTipText(offlineInfo);
             statusLabel.setToolTipText(offlineInfo);
 
-            iconLabel.setImage(OFFLINE);
+            iconLabel.setImage(BaseActivator.getImage(Images.OFFLINE));
             policyCombo.setVisible(false);
             policyTooltip.setText(""); //$NON-NLS-1$
         }
