@@ -15,6 +15,7 @@ import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProjectId;
@@ -121,15 +122,19 @@ class SessionService
         userParameters.configurationParameters = configurationParametersProvider.getParameters(projectId).orElse(null);
 
         // Move from parameters to user parameters.
-        userParameters.globalContext = sessionRequest.serviceParameters.globalContext;
+        userParameters.globalContext =
+            Optional.ofNullable(sessionRequest.serviceParameters.globalContext).orElse(false);
         sessionRequest.serviceParameters.globalContext = null;
-        userParameters.extendedContext = sessionRequest.serviceParameters.extendedContext;
+        userParameters.extendedContext =
+            Optional.ofNullable(sessionRequest.serviceParameters.extendedContext).orElse(false);
         sessionRequest.serviceParameters.extendedContext = null;
-        userParameters.verbosity = sessionRequest.serviceParameters.verbosity;
+        userParameters.verbosity =
+            Optional.ofNullable(sessionRequest.serviceParameters.verbosity).orElse(ParametersParser.DEFAULT_VERBOSITY);
         sessionRequest.serviceParameters.verbosity = null;
         userParameters.resources = sessionRequest.serviceParameters.resources;
         sessionRequest.serviceParameters.resources = null;
-        userParameters.gitDiffContextLines = sessionRequest.serviceParameters.gitDiffContextLines;
+        userParameters.gitDiffContextLines = Optional.ofNullable(sessionRequest.serviceParameters.gitDiffContextLines)
+            .orElse(ParametersParser.DEFAULT_GIT_CONTEXT_LINES);
         sessionRequest.serviceParameters.gitDiffContextLines = null;
 
         var systemInfo = new SystemInfo();
