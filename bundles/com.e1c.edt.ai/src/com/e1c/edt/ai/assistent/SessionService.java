@@ -117,9 +117,20 @@ class SessionService
         userParameters.minRequestDelayMs = uiSettings.getMinRequestDelay().toMillis();
         userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
         userParameters.lineSeparator = uiSettings.getLineSeparator();
-        userParameters.sendContext = uiSettings.sendExtendedContext();
         userParameters.language = uiSettings.getLanguage();
         userParameters.configurationParameters = configurationParametersProvider.getParameters(projectId).orElse(null);
+
+        // Move from parameters to user parameters.
+        userParameters.globalContext = sessionRequest.serviceParameters.globalContext;
+        sessionRequest.serviceParameters.globalContext = null;
+        userParameters.extendedContext = sessionRequest.serviceParameters.extendedContext;
+        sessionRequest.serviceParameters.extendedContext = null;
+        userParameters.verbosity = sessionRequest.serviceParameters.verbosity;
+        sessionRequest.serviceParameters.verbosity = null;
+        userParameters.resources = sessionRequest.serviceParameters.resources;
+        sessionRequest.serviceParameters.resources = null;
+        userParameters.gitDiffContextLines = sessionRequest.serviceParameters.gitDiffContextLines;
+        sessionRequest.serviceParameters.gitDiffContextLines = null;
 
         var systemInfo = new SystemInfo();
         sessionRequest.systemInfo = systemInfo;

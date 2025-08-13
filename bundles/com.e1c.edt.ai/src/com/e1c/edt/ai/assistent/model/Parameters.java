@@ -241,7 +241,7 @@ public class Parameters
      * Переопределяет размер контекста для git diff. Например, 16.
      */
     @SerializedName("git_diff_context_lines")
-    public int gitDiffContextLines;
+    public Integer gitDiffContextLines;
 
     public Parameters merge(Parameters params)
     {
