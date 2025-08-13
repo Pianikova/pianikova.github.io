@@ -19,6 +19,7 @@ import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettingsProvider;
 import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observables;
+import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.ITools;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequestContent;
@@ -114,7 +115,9 @@ public class GitActions implements IGitActions
                 toolInvokeRequest.programmingLanguage = "git diff";
                 var content = new ToolInvokeRequestContent();
                 toolInvokeRequest.content = content;
-                gitTools.getDiff(repository, settingsProvider.getSettings().getLlmParameters().gitDiffContextLines,
+                gitTools.getDiff(repository,
+                    Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().gitDiffContextLines)
+                        .orElse(ParametersParser.DEFAULT_GIT_CONTEXT_LINES),
                     gitDiffStream);
                 var gitDiff = gitDiffStream.toString("UTF-8");
                 content.instruction = resourceProvider.getTextResource(IResourceProvider.PROMTS_GIT_COMMIT)

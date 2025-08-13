@@ -323,6 +323,12 @@ public abstract class BaseActivator
     protected void initializeImageRegistry(ImageRegistry registry)
     {
         registry.put(Images.AI, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/ai.png"));
+        registry.put(Images.INFO, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/info.png"));
+        registry.put(Images.WARNING, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/warning.png"));
+        registry.put(Images.ERROR, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/error.png"));
+        registry.put(Images.OFFLINE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_offline.png"));
+        registry.put(Images.ONLINE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_online.png"));
+        registry.put(Images.BUSY, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_busy.png"));
         registry.put(Images.GIT_MESSAGE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
     }
 

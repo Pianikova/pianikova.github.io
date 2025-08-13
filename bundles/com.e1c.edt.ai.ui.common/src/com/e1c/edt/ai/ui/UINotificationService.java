@@ -42,7 +42,7 @@ public class UINotificationService
         String notificationKey = sourceClass.getName();
         if (!shownNotifications.contains(notificationKey))
         {
-            UINotification popup = new UINotification(parentShell, message, type.getIconPath(), linkText, url);
+            UINotification popup = new UINotification(parentShell, message, type, linkText, url);
             popup.setBlockOnOpen(false);
             popup.open();
             shownNotifications.add(notificationKey);
@@ -55,7 +55,7 @@ public class UINotificationService
         UINotificationType type, Class<?> sourceClass)
     {
         String notificationKey = sourceClass.getName();
-        UINotification popup = new UINotification(parentShell, message, type.getIconPath(), null, null, action);
+        UINotification popup = new UINotification(parentShell, message, type, null, null, action);
         popup.setBlockOnOpen(false);
         popup.open();
         log.trace("Notification shown: " + notificationKey, () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
