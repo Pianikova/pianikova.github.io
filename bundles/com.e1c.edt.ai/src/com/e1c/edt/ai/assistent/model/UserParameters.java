@@ -67,16 +67,39 @@ public class UserParameters
     public String lineSeparator;
 
     /**
-     * Отправлять ли расширенный контекст. Например, true.
-     */
-    @SerializedName("send_context")
-    public boolean sendContext;
-
-    /**
      * Язык интерфейса. Например, "Russian".
      */
     @SerializedName("language")
     public String language;
+
+    /**
+     * Определяет передавать ли глобальный контекст. Например, true.
+     */
+    @SerializedName("global_context")
+    public Boolean globalContext;
+
+    /**
+     * Определяет передавать ли расширенный контекст. Например, true.
+     */
+    @SerializedName("extended_context")
+    public Boolean extendedContext;
+
+    /**
+     * Уровень детализации логов (error/warning/info/trace/debug). Например, warning.
+     */
+    public Verbosity verbosity;
+
+    /**
+     * Переопределяет пут к ресурсам. Например, "C:/Users/user/resources".
+     */
+    @SerializedName("resources")
+    public String resources;
+
+    /**
+     * Переопределяет размер контекста для git diff. Например, 16.
+     */
+    @SerializedName("git_diff_context_lines")
+    public Integer gitDiffContextLines;
 
     /**
      * Параметры проекта.
