@@ -16,7 +16,9 @@ public class Json
 
     public Json()
     {
-        gson = new GsonBuilder().setPrettyPrinting().create();
+        gson = new GsonBuilder().setPrettyPrinting()
+            .registerTypeAdapterFactory(new CustomTypeAdapterFactory())
+            .create();
     }
 
     @Override
