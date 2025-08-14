@@ -78,16 +78,23 @@ class SessionService
     public CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId)
     {
         return parametersService.getParametersAsync()
-            .thenApplyAsync(parameters -> getSession(projectId, parameters).join());
+            .thenApplyAsync(parameters -> getSessionAsync(projectId, parameters).join());
     }
 
-    private CompletableFuture<Optional<Session>> getSession(ProjectId projectId, Optional<Parameters> parameters)
+    private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, Optional<Parameters> parameters)
     {
         if (parameters.isEmpty())
         {
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
+        var params = parameters.get();
+        var reset = settingsTracker.register(SessionService.class.getName(), params);
+        return responseCache.get(projectId.path, () -> getSessionAsync(projectId, params), reset);
+    }
+
+    private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, Parameters parameters)
+    {
         var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./create_session"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
@@ -95,7 +102,7 @@ class SessionService
         }
 
         var sessionRequest = new SessionRequest();
-        sessionRequest.serviceParameters = parameters.get();
+        sessionRequest.serviceParameters = parameters;
         var userParameters = new UserParameters();
         sessionRequest.userParameters = userParameters;
         var pluginVersion = versionProvider.getPluginVersion();
@@ -147,9 +154,8 @@ class SessionService
         environment.getTotalPhysicalMemorySize().ifPresent(val -> systemInfo.totalPhysicalMemorySize = val);
 
         var requestBody = json.serialize(sessionRequest);
-        var reset = settingsTracker.register(SessionService.class.getName(), requestBody);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
-        return responseCache.get(projectId.path, () -> getSessionAsync(request, requestBody), reset);
+        return getSessionAsync(request, requestBody);
     }
 
     private CompletableFuture<Optional<Session>> getSessionAsync(HttpRequest request, String body)

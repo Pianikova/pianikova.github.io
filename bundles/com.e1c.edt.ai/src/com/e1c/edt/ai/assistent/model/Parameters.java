@@ -426,12 +426,9 @@ public class Parameters
     @Override
     public int hashCode()
     {
-        return Objects.hash(bestOf, url, chatUrl, updateUrl, decoderInputDetails, details, doSample, formLength,
-            frequencyPenalty,
-            maxNewTokens, metaLength, prefixLength, repetitionPenalty, returnFullText, returnLine, seed, stop,
-            suffixLength, temperature, tokenHealing, topK, topNTokens, topP, trimStop, truncate, typicalP, watermark,
-            localFunctionsLength, externalFunctionsLength, minDelay, timeout, globalContext, extendedContext,
-            verbosity);
+        return Objects.hash(bestOf, url, decoderInputDetails, details, doSample, frequencyPenalty, maxNewTokens,
+            repetitionPenalty, returnFullText, returnLine, seed, stop, temperature, tokenHealing, topK, topNTokens,
+            topP, trimStop, truncate, typicalP, watermark);
     }
 
     @Override
@@ -445,25 +442,17 @@ public class Parameters
             return false;
         Parameters other = (Parameters)obj;
         return Objects.equals(bestOf, other.bestOf) && Objects.equals(url, other.url)
-            && Objects.equals(chatUrl, other.chatUrl) && Objects.equals(updateUrl, other.updateUrl)
             && Objects.equals(decoderInputDetails, other.decoderInputDetails) && Objects.equals(details, other.details)
-            && Objects.equals(doSample, other.doSample) && Objects.equals(formLength, other.formLength)
+            && Objects.equals(doSample, other.doSample)
             && Objects.equals(frequencyPenalty, other.frequencyPenalty)
-            && Objects.equals(maxNewTokens, other.maxNewTokens) && Objects.equals(metaLength, other.metaLength)
-            && Objects.equals(prefixLength, other.prefixLength)
+            && Objects.equals(maxNewTokens, other.maxNewTokens)
             && Objects.equals(repetitionPenalty, other.repetitionPenalty)
             && Objects.equals(returnFullText, other.returnFullText) && Objects.equals(returnLine, other.returnLine)
             && Objects.equals(seed, other.seed) && Objects.equals(stop, other.stop)
-            && Objects.equals(suffixLength, other.suffixLength) && Objects.equals(temperature, other.temperature)
+            && Objects.equals(temperature, other.temperature)
             && Objects.equals(tokenHealing, other.tokenHealing) && Objects.equals(topK, other.topK)
             && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
             && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
-            && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
-            && Objects.equals(localFunctionsLength, other.localFunctionsLength)
-            && Objects.equals(externalFunctionsLength, other.externalFunctionsLength)
-            && Objects.equals(minDelay, other.minDelay) && Objects.equals(timeout, other.timeout)
-            && Objects.equals(globalContext, other.globalContext)
-            && Objects.equals(extendedContext, other.extendedContext)
-            && Objects.equals(verbosity, other.verbosity);
+            && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark);
     }
 }
