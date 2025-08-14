@@ -7,7 +7,7 @@ import com.google.gson.annotations.SerializedName;
 
 public enum TokenHealing
 {
-    @SerializedName("None")
+    @SerializedName("none")
     NONE,
 
     @SerializedName("guidance")
