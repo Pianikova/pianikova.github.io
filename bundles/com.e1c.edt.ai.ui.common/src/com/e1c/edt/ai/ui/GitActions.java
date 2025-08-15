@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.jobs.Job;
@@ -21,6 +22,7 @@ import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.ITools;
+import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequestContent;
 import com.e1c.edt.ai.assistent.model.ToolInvokeResponse;
@@ -63,7 +65,7 @@ public class GitActions implements IGitActions
     }
 
     @Override
-    public IObservable<String> ceateGitCommitMessageSource(String baseCommitMessage, List<GitDiff> diffs,
+    public IObservable<CommitMessage> ceateGitCommitMessageSource(String baseCommitMessage, List<GitDiff> diffs,
         ICancellationToken cancellationToken)
     {
         return Observables.create(observer -> {
@@ -85,7 +87,7 @@ public class GitActions implements IGitActions
 
     @SuppressWarnings("nls")
     public void getGitCommitMessage(String baseCommitMessage, List<GitDiff> diffs,
-        IObserver<String> observer, ICancellationToken cancellationToken)
+        IObserver<CommitMessage> observer, ICancellationToken cancellationToken)
     {
         var groupsByRepo = diffs.stream().collect(Collectors.groupingBy(diff -> diff.getRepository()));
         for (var groupByRepo : groupsByRepo.entrySet())
@@ -133,6 +135,7 @@ public class GitActions implements IGitActions
                 log.debug("Prompt", () -> content.instruction);
 
                 var message = new StringBuilder();
+                var uudi = new StringBuilder();
                 var invokeSource = tools.createInvokeSource(projectId, toolInvokeRequest, cancellationToken);
                 invokeSource.subscribe(new IObserver<ToolInvokeResponse>()
                 {
@@ -140,6 +143,12 @@ public class GitActions implements IGitActions
                     public void onNext(ToolInvokeResponse value)
                     {
                         var content = value.content;
+                        if (value.uuid != null)
+                        {
+                            uudi.setLength(0);
+                            uudi.append(value.uuid);
+                        }
+
                         if (content != null)
                         {
                             var text = content.text;
@@ -160,22 +169,23 @@ public class GitActions implements IGitActions
 
                                 if (!text.isBlank())
                                 {
-                                    observer.onNext(text);
+                                    observer.onNext(new CommitMessage(projectId, uudi.toString(), text));
                                 }
                             }
                         }
-
                     }
 
                     @Override
                     public void onError(Throwable error)
                     {
+                        uudi.setLength(0);
                         observer.onError(error);
                     }
 
                     @Override
                     public void onCompleted()
                     {
+                        uudi.setLength(0);
                         observer.onCompleted();
                     }
                 });
@@ -185,6 +195,17 @@ public class GitActions implements IGitActions
                 log.logError(error);
             }
         }
+    }
+
+    @Override
+    public CompletableFuture<Optional<String>> feedbackAsync(CommitMessage commitMessage, String finalText,
+        ICancellationToken cancellationToken)
+    {
+        var request = new ToolFeedbackFinalTextRequest();
+        request.uuid = commitMessage.getUuid();
+        request.finalText = finalText;
+        return tools.feedbackAsync(commitMessage.getProjectId(), request, cancellationToken)
+            .thenApplyAsync(response -> response.map(i -> i.uuid));
     }
 
     private synchronized void runJob(Job job)

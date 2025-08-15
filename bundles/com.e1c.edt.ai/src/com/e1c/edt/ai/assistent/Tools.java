@@ -10,7 +10,9 @@ import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -27,8 +29,11 @@ import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
+import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
+import com.e1c.edt.ai.assistent.model.ToolFeedbackResponse;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
 import com.e1c.edt.ai.assistent.model.ToolInvokeResponse;
+import com.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -96,20 +101,26 @@ public class Tools
         });
     }
 
-
+    @Override
+    public CompletableFuture<Optional<ToolFeedbackResponse>> feedbackAsync(ProjectId projectId,
+        ToolFeedbackFinalTextRequest request, ICancellationToken cancellationToken)
+    {
+        return sessionService.getSessionAsync(projectId)
+            .thenApplyAsync(session -> feedbackAsync(session, request, cancellationToken).join());
+    }
 
     private void invoke(Session session, ToolInvokeRequest conversationRequest, IObserver<ToolInvokeResponse> observer,
         ICancellationToken cancellationToken)
     {
-        var optionalRequest =
+        var optionalRequestBuilder =
             requestBuilder.create(settings -> getUrl(settings.getLlmParameters().url), "tools_api/v1/invoke"); //$NON-NLS-1$
-        if (optionalRequest.isEmpty())
+        if (optionalRequestBuilder.isEmpty())
         {
             observer.onCompleted();
             return;
         }
 
-        var requestBuilder = optionalRequest.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
+        var requestBuilder = optionalRequestBuilder.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
         var requestBody = json.serialize(conversationRequest);
         BodyPublisher bodyPublisher;
         try
@@ -236,6 +247,75 @@ public class Tools
 
         observer.onCompleted();
         return false;
+    }
+
+    private CompletableFuture<Optional<ToolFeedbackResponse>> feedbackAsync(
+        Optional<Session> session, ToolFeedbackFinalTextRequest feedbackRequest, ICancellationToken cancellationToken)
+    {
+        if (session.isEmpty())
+        {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+
+        var optionalRequestBuilder = requestBuilder.create(settings -> getUrl(settings.getLlmParameters().url),
+            "tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
+
+        if (optionalRequestBuilder.isEmpty())
+        {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+
+        var requestBuilder = optionalRequestBuilder.get().header("Session-Id", session.get().sessionId); //$NON-NLS-1$
+        var requestBody = json.serialize(feedbackRequest);
+
+        BodyPublisher bodyPublisher;
+        try
+        {
+            /*var optionalData = compressor.compress(requestBody);
+            if (optionalData.isPresent())
+            {
+                try (var data = optionalData.get())
+                {
+                    bodyPublisher = BodyPublishers.ofByteArray(data.toByteArray());
+                    requestBuilder = requestBuilder.header("Content-Encoding", "gzip"); //$NON-NLS-1$ //$NON-NLS-2$
+                }
+            }
+            else
+            {
+                bodyPublisher = BodyPublishers.ofString(requestBody);
+            }*/
+
+            bodyPublisher = BodyPublishers.ofString(requestBody);
+        }
+        catch (Exception error)
+        {
+            log.error(error, cancellationToken.toString());
+            return CompletableFuture.failedFuture(error);
+        }
+
+        var request = requestBuilder.POST(bodyPublisher).build();
+        log.request(request, null, requestBody);
+        var stopwatch = Stopwatch.createStarted();
+        return clientBuilder.create()
+            .build()
+            .sendAsync(request, BodyHandlers.ofString())
+            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
+            .thenApplyAsync(response -> {
+                var statusCode = response.statusCode();
+                if (statusCode >= 300)
+                {
+                    throw new AIClientException("AI HTTP session response status code is " + statusCode, null); //$NON-NLS-1$
+                }
+
+                return response;
+            })
+            .thenApplyAsync(HttpResponse::body)
+            .thenApplyAsync(this::createToolFeedbackResponse);
+    }
+
+    private Optional<ToolFeedbackResponse> createToolFeedbackResponse(String content)
+    {
+        return json.deserialize(content, ToolFeedbackResponse.class);
     }
 
     private URL getUrl(URL baseURL)
