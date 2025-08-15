@@ -18,6 +18,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
 import org.eclipse.swt.widgets.Tree;
@@ -25,6 +26,7 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.forms.widgets.Section;
 
 import com.e1c.edt.ai.CancellationTokenSource;
+import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IObserver;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -98,6 +100,7 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
             return;
         }
 
+        var commitMessages = new ArrayList<CommitMessageInfo>();
         var createMessageButton = new ToolItem(commitMessageToolBar, SWT.BUTTON1);
         createMessageButton.setImage(BaseActivator.getImage(Images.GIT_MESSAGE));
         createMessageButton.setToolTipText(Messages.CommitMessage);
@@ -106,6 +109,7 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
             @Override
             public void widgetSelected(SelectionEvent e)
             {
+                commitMessages.clear();
                 var stagingEntries = getStagingEntries(stagedViewer.getTree());
                 var diffs = stagingEntries.stream()
                     .collect(Collectors.groupingBy(StagingEntry::getRepository))
@@ -121,10 +125,10 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
                 var baseMessage = commitMessageComponent.getCommitMessage().trim();
                 var commitMessageSource =
                     gitActions.ceateGitCommitMessageSource(baseMessage, diffs, newCancellationToken);
-                commitMessageSource.subscribe(new IObserver<String>()
+                commitMessageSource.subscribe(new IObserver<CommitMessage>()
                 {
                     @Override
-                    public void onNext(String value)
+                    public void onNext(CommitMessage commitMessage)
                     {
                         dispatcher.dispatch(() -> {
                             if (newCancellationToken.isCanceled())
@@ -132,7 +136,7 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
                                 return;
                             }
 
-                            var message = value;
+                            var message = commitMessage.getMessage();
                             if (!baseMessage.isBlank())
                             {
                                 message = baseMessage + System.lineSeparator() + System.lineSeparator() + message;
@@ -140,6 +144,8 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
 
                             commitMessageComponent.setCommitMessage(message);
                             commitMessageComponent.updateUI();
+                            commitMessages.clear();
+                            commitMessages.add(new CommitMessageInfo(commitMessage, newCancellationToken));
                         });
                     }
 
@@ -178,7 +184,40 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
                 });
             });
 
+        reflection.getField(StagingView.class, stagingView, "commitButton", Button.class).ifPresent(button -> {
+            button.addSelectionListener(new SelectionAdapter()
+            {
+                @Override
+                public void widgetSelected(SelectionEvent e)
+                {
+                    commit(commitMessages, commitMessageComponent.getCommitMessage());
+                }
+            });
+        });
+
+        reflection.getField(StagingView.class, stagingView, "commitAndPushButton", Button.class).ifPresent(button -> {
+            button.addSelectionListener(new SelectionAdapter()
+            {
+                @Override
+                public void widgetSelected(SelectionEvent e)
+                {
+                    commit(commitMessages, commitMessageComponent.getCommitMessage());
+                }
+            });
+        });
+
         commitMessageComponent.updateUI();
+    }
+
+    private void commit(ArrayList<CommitMessageInfo> commitMessages, String finalText)
+    {
+        if (commitMessages.isEmpty())
+        {
+            return;
+        }
+
+        var messageInfo = commitMessages.get(0);
+        gitActions.feedbackAsync(messageInfo.message, finalText, messageInfo.cancellationToken);
     }
 
     private List<StagingEntry> getStagingEntries(Tree tree)
@@ -206,5 +245,19 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
         }
 
         return stagingEntries;
+    }
+
+    private static class CommitMessageInfo
+    {
+        private final CommitMessage message;
+        private final ICancellationToken cancellationToken;
+
+        public CommitMessageInfo(CommitMessage message, ICancellationToken cancellationToken)
+        {
+            Preconditions.checkNotNull(message);
+            Preconditions.checkNotNull(cancellationToken);
+            this.message = message;
+            this.cancellationToken = cancellationToken;
+        }
     }
 }

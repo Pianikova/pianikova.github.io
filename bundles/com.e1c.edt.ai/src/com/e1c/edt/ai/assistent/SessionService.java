@@ -33,7 +33,7 @@ class SessionService
 {
     private final IHttpLog log;
     private final IRequestBuilder requestBuilder;
-    private final IHttpClientBuilder clienBuilder;
+    private final IHttpClientBuilder clientBuilder;
     private final IJson json;
     private final ISettingsTracker settingsTracker;
     private final IResponseCache<Session> responseCache;
@@ -63,7 +63,7 @@ class SessionService
         Preconditions.checkNotNull(configurationParametersProvider);
         this.log = log;
         this.requestBuilder = requestBuilder;
-        this.clienBuilder = clientBuilder;
+        this.clientBuilder = clientBuilder;
         this.json = json;
         this.settingsTracker = settingsTracker;
         this.responseCache = responseCache;
@@ -162,7 +162,7 @@ class SessionService
     {
         log.request(request, null, body);
         var stopwatch = Stopwatch.createStarted();
-        return clienBuilder.create()
+        return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
             .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
