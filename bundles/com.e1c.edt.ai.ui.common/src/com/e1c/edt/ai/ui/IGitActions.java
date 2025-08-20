@@ -12,6 +12,8 @@ import com.e1c.edt.ai.IObservable;
 
 public interface IGitActions
 {
+    void reviewGitChanges(List<GitDiff> diffs, ICancellationToken cancellationToken);
+
     IObservable<CommitMessage> ceateGitCommitMessageSource(String baseCommitMessage, List<GitDiff> diffs,
         ICancellationToken cancellationToken);
 

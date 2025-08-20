@@ -3,20 +3,21 @@
  */
 package com.e1c.edt.ai.ui;
 
-import org.eclipse.egit.ui.internal.staging.StagingView;
+import java.util.ArrayList;
+
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IWorkbenchPartReference;
 import org.eclipse.ui.PlatformUI;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Suppliers;
 import com.google.inject.Inject;
 
-@SuppressWarnings("restriction")
 public class DialogsEnhancer
     implements IDialogsInjector, IPartListener2
 {
     private final IDispatcher dispatcher;
-    private final IStagingViewEnhancer stagingViewEnhancer;
+    private final ArrayList<IViewEnhancer> viewEnhancers = new ArrayList<>();
 
     @Inject
     public DialogsEnhancer(IDispatcher dispatcher, IStagingViewEnhancer stagingViewEnhancer)
@@ -24,7 +25,7 @@ public class DialogsEnhancer
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(stagingViewEnhancer);
         this.dispatcher = dispatcher;
-        this.stagingViewEnhancer = stagingViewEnhancer;
+        viewEnhancers.add(stagingViewEnhancer);
     }
 
     @Override
@@ -63,15 +64,21 @@ public class DialogsEnhancer
 
     private void setup(IWorkbenchPartReference partRef)
     {
-        if (stagingViewEnhancer.getViewId().equalsIgnoreCase(partRef.getId()))
+        for (var viewEnhancer : viewEnhancers)
         {
-            var viewPart = partRef.getPart(false);
-            if (viewPart instanceof StagingView)
+            var id = partRef.getId();
+            if (id == null || id.isBlank())
             {
-                stagingViewEnhancer.setup((StagingView)viewPart);
+                continue;
             }
 
-            return;
+            var viewPart = Suppliers.memoize(() -> partRef.getPart(false));
+            viewEnhancer.getViewId().ifPresent(viewId -> {
+                if (id.equals(viewId))
+                {
+                    viewEnhancer.setup(viewPart.get());
+                }
+            });
         }
     }
 }

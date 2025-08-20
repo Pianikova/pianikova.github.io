@@ -330,6 +330,7 @@ public abstract class BaseActivator
         registry.put(Images.ONLINE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_online.png"));
         registry.put(Images.BUSY, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_busy.png"));
         registry.put(Images.GIT_MESSAGE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
+        registry.put(Images.GIT_REVIEW, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitreview.png"));
     }
 
     public abstract String getPluginId();
