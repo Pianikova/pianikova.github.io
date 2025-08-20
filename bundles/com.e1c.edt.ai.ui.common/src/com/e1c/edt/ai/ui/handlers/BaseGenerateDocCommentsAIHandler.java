@@ -35,7 +35,7 @@ public class BaseGenerateDocCommentsAIHandler
     @Override
     public boolean isEnabled()
     {
-        return codeTools.hasTarget();
+        return codeTools.hasTarget(CodeAction.GENERATE_COMMENT);
     }
 
     @Override
@@ -51,7 +51,7 @@ public class BaseGenerateDocCommentsAIHandler
         else
         {
             ui.getLastSourceViewer()
-                .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer))
+                .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer, CodeAction.GENERATE_COMMENT))
                 .ifPresent(ctx -> chat.generateDocComments(ctx, ctx.getText()));
         }
 

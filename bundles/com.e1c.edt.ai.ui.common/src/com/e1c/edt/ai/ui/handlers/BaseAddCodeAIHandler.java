@@ -30,14 +30,14 @@ public class BaseAddCodeAIHandler
     @Override
     public boolean isEnabled()
     {
-        return codeTools.hasTarget();
+        return codeTools.hasTarget(CodeAction.ADD);
     }
 
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         ui.getLastSourceViewer()
-            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer))
+            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer, CodeAction.ADD))
             .ifPresent(ctx -> chat.addCode(ctx, ctx.getText()));
         return null;
     }

@@ -35,14 +35,14 @@ public class BaseExplainAIHandler
     @Override
     public boolean isEnabled()
     {
-        return codeTools.hasTarget();
+        return codeTools.hasTarget(CodeAction.EXLPLAIN);
     }
 
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
         ui.getLastSourceViewer()
-            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer))
+            .flatMap(sourceViewer -> codeTools.createContextForTarget(sourceViewer, CodeAction.EXLPLAIN))
             .ifPresent(ctx -> chat.explainCode(ctx, ctx.getText()));
         return null;
     }

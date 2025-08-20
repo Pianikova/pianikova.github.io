@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui.handlers;
 import java.util.HashSet;
 import java.util.Optional;
 
+import org.eclipse.egit.ui.internal.commit.DiffDocument;
 import org.eclipse.jface.text.source.SourceViewer;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.xtext.nodemodel.util.NodeModelUtils;
@@ -60,18 +61,23 @@ public class CodeTools
     }
 
     @Override
-    public boolean hasTarget()
+    public boolean hasTarget(CodeAction action)
     {
         return ui.getLastSourceViewer()
-            .map(sourceViewer -> !sourceViewer.getTextWidget().getSelectionText().isBlank()
-                || getTargetMethod().isPresent())
+            .map(sourceViewer -> isTarget(action, sourceViewer))
             .orElse(false);
     }
 
     @Override
-    public Optional<AIContext> createContextForTarget(SourceViewer sourceViewer)
+    public Optional<AIContext> createContextForTarget(SourceViewer sourceViewer, CodeAction action)
     {
         var textWidget = sourceViewer.getTextWidget();
+        if (isDiff(sourceViewer))
+        {
+            return aiContextProvider.create(sourceViewer, new AITarget(textWidget, Integer.MAX_VALUE, false),
+                CancellationTokens.NONE);
+        }
+
         if (!textWidget.getSelectionText().isBlank())
         {
             return aiContextProvider.create(sourceViewer, new AITarget(textWidget, Integer.MAX_VALUE, true),
@@ -92,6 +98,46 @@ public class CodeTools
     {
         return ui.getLastSourceViewer()
             .flatMap(sourceViewer -> getTargetMethod(sourceViewer));
+    }
+
+    private boolean isTarget(CodeAction action, SourceViewer sourceViewer)
+    {
+        if (sourceViewer == null)
+        {
+            return false;
+        }
+
+        switch (action)
+        {
+        case ADD:
+            return hasSelection(sourceViewer) || isDiff(sourceViewer) || isCodeEditor(sourceViewer);
+        case CRITICISE:
+            return isDiff(sourceViewer) || isCodeEditor(sourceViewer);
+        case EXLPLAIN:
+            return isDiff(sourceViewer) || isCodeEditor(sourceViewer);
+        case FIX:
+            return (hasSelection(sourceViewer) || isCodeEditor(sourceViewer)) && !isDiff(sourceViewer);
+        case GENERATE_COMMENT:
+            return (hasSelection(sourceViewer) || isCodeEditor(sourceViewer)) && !isDiff(sourceViewer);
+        default:
+            return (hasSelection(sourceViewer) || isCodeEditor(sourceViewer)) && !isDiff(sourceViewer);
+        }
+    }
+
+    @SuppressWarnings("restriction")
+    private boolean isDiff(SourceViewer sourceViewer)
+    {
+        return sourceViewer.getDocument() instanceof DiffDocument;
+    }
+
+    private boolean hasSelection(SourceViewer sourceViewer)
+    {
+        return !sourceViewer.getTextWidget().getSelectionText().isBlank();
+    }
+
+    private boolean isCodeEditor(SourceViewer sourceViewer)
+    {
+        return getTargetMethod().isPresent();
     }
 
     private Optional<Content> getContent(SourceViewer sourceViewer)

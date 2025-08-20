@@ -33,13 +33,13 @@ public class ModuleNameProvider
     @Override
     public Optional<String> getModuleName(String path)
     {
-        var module = moduleProvider.getModule(null, path, CancellationTokens.NONE).get().getModule();
-        Labeler moduleLabel =
-            Labeler.path(module, '→').skipCommonNode().filter(candidate -> {
-                return !(candidate instanceof IProject);
-            });
-        String pathFormatted = moduleLabel.stopAfter(IProject.class).label();
-        return Optional.of(pathFormatted);
+        return moduleProvider.getModule(null, path, CancellationTokens.NONE)
+            .map(module -> module.getModule())
+            .map(module -> Labeler.path(module, '→')
+                .skipCommonNode()
+                .filter(candidate -> !(candidate instanceof IProject)))
+            .map(moduleLabel -> moduleLabel.stopAfter(IProject.class))
+            .map(labeler -> labeler.label());
     }
 
 }

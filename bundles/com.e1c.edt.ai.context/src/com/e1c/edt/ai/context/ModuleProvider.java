@@ -173,6 +173,11 @@ public class ModuleProvider
     public Optional<IProject> getProject(String filePath)
     {
         Preconditions.checkNotNull(filePath);
+        if (filePath.isBlank())
+        {
+            return Optional.empty();
+        }
+
         var moduleUri = getModuleURI(filePath);
         return Optional.ofNullable(resourceLookup.getProject(moduleUri));
     }
