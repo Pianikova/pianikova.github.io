@@ -47,6 +47,7 @@ public class Messages
     public static String UpdateJobMessage;
     public static String UpdateInstalled;
     public static String CommitMessage;
+    public static String GitReview;
 
     static
     {

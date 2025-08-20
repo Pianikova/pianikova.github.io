@@ -4,13 +4,18 @@
 package com.e1c.edt.ai.ui;
 
 import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.jgit.lib.Repository;
 
+import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
@@ -22,6 +27,7 @@ import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.ITools;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequestContent;
@@ -39,12 +45,13 @@ public class GitActions implements IGitActions
     private final IGitTools gitTools;
     private final ITools tools;
     private final IResourceProvider resourceProvider;
+    private final IChat chat;
     private Job currentJob;
 
     @Inject
     public GitActions(ILog log, IDispatcher dispatcher, IProjectIdProvider projectIdProvider, IUISettings uiSettings,
-        ISettingsProvider settingsProvider,
-        IGitTools gitTools, ITools tools, IResourceProvider resourceProvider)
+        ISettingsProvider settingsProvider, IGitTools gitTools, ITools tools, IResourceProvider resourceProvider,
+        IChat chat)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
@@ -54,6 +61,7 @@ public class GitActions implements IGitActions
         Preconditions.checkNotNull(gitTools);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(resourceProvider);
+        Preconditions.checkNotNull(chat);
         this.log = log;
         this.dispatcher = dispatcher;
         this.projectIdProvider = projectIdProvider;
@@ -62,6 +70,7 @@ public class GitActions implements IGitActions
         this.gitTools = gitTools;
         this.tools = tools;
         this.resourceProvider = resourceProvider;
+        this.chat = chat;
     }
 
     @Override
@@ -85,116 +94,49 @@ public class GitActions implements IGitActions
         });
     }
 
-    @SuppressWarnings("nls")
-    public void getGitCommitMessage(String baseCommitMessage, List<GitDiff> diffs,
-        IObserver<CommitMessage> observer, ICancellationToken cancellationToken)
+    @Override
+    public void reviewGitChanges(List<GitDiff> diffs, ICancellationToken cancellationToken)
     {
-        var groupsByRepo = diffs.stream().collect(Collectors.groupingBy(diff -> diff.getRepository()));
-        for (var groupByRepo : groupsByRepo.entrySet())
-        {
-            var optionalProjectId = groupByRepo.getValue()
-                .stream()
-                .flatMap(diff -> diff.getPaths().stream())
-                .map(diff -> projectIdProvider.getProjectId(diff, cancellationToken))
-                .filter(project -> project.isPresent())
-                .map(project -> project.get())
-                .findFirst();
-
-            if (optionalProjectId.isEmpty())
+        var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
+            try
             {
-                log.warning("Git", () -> "No project id found for diffs");
-                continue;
-            }
-
-            var repository = groupByRepo.getKey();
-            try (var gitDiffStream = new ByteArrayOutputStream())
-            {
-                var projectId = optionalProjectId.get();
-
-                var toolInvokeRequest = new ToolInvokeRequest();
-                toolInvokeRequest.toolName = "custom";
-                toolInvokeRequest.uiLanguage = uiSettings.getLanguage();
-                toolInvokeRequest.programmingLanguage = "git diff";
-                var content = new ToolInvokeRequestContent();
-                toolInvokeRequest.content = content;
-                gitTools.getDiff(repository,
-                    Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().gitDiffContextLines)
-                        .orElse(ParametersParser.DEFAULT_GIT_CONTEXT_LINES),
-                    gitDiffStream);
-                var gitDiff = gitDiffStream.toString("UTF-8");
-                content.instruction = resourceProvider.getTextResource(IResourceProvider.PROMTS_GIT_COMMIT)
-                    .orElse("")
-                    .replace("${language}", uiSettings.getLanguage())
-                    .replace("${base_commit_message}",
-                        Optional
-                            .ofNullable(
-                                baseCommitMessage == null || baseCommitMessage.isBlank() ? null : baseCommitMessage)
-                            .orElse("no additional lines"))
-                    .replace("${git_dif}", gitDiff);
-
-                log.debug("Prompt", () -> content.instruction);
-
-                var message = new StringBuilder();
-                var uudi = new StringBuilder();
-                var invokeSource = tools.createInvokeSource(projectId, toolInvokeRequest, cancellationToken);
-                invokeSource.subscribe(new IObserver<ToolInvokeResponse>()
+                var diff = getDiff(diffs, cancellationToken);
+                ProjectId firstProjectId = null;
+                var diffText = new StringBuilder();
+                for (var diffItem : diff.entrySet())
                 {
-                    @Override
-                    public void onNext(ToolInvokeResponse value)
+                    if (cancellationToken.isCanceled())
                     {
-                        var content = value.content;
-                        if (value.uuid != null)
-                        {
-                            uudi.setLength(0);
-                            uudi.append(value.uuid);
-                        }
-
-                        if (content != null)
-                        {
-                            var text = content.text;
-                            if (text != null)
-                            {
-                                if (value.finished)
-                                {
-                                    text = text.trim();
-                                }
-                                else
-                                {
-                                    synchronized (message)
-                                    {
-                                        message.append(text);
-                                        text = message.toString().trim();
-                                    }
-                                }
-
-                                if (!text.isBlank())
-                                {
-                                    observer.onNext(new CommitMessage(projectId, uudi.toString(), text));
-                                }
-                            }
-                        }
+                        break;
                     }
 
-                    @Override
-                    public void onError(Throwable error)
+                    if (firstProjectId == null)
                     {
-                        uudi.setLength(0);
-                        observer.onError(error);
+                        firstProjectId = diffItem.getKey();
+                    }
+                    else
+                    {
+                        diffText.append(System.lineSeparator());
                     }
 
-                    @Override
-                    public void onCompleted()
-                    {
-                        uudi.setLength(0);
-                        observer.onCompleted();
-                    }
-                });
+                    diffText.append(diffItem.getValue());
+                }
+
+                if (firstProjectId != null)
+                {
+                    final var projectId = firstProjectId;
+                    var ctx = new AIContext(projectId, "", null); //$NON-NLS-1$
+                    var diffStr = diffText.toString();
+                    dispatcher.dispatchAsync(() -> chat.reviewCode(ctx, diffStr));
+
+                }
             }
             catch (Exception error)
             {
                 log.logError(error);
             }
-        }
+        }, cancellationToken);
+        runJob(job);
     }
 
     @Override
@@ -206,6 +148,168 @@ public class GitActions implements IGitActions
         request.finalText = finalText;
         return tools.feedbackAsync(commitMessage.getProjectId(), request, cancellationToken)
             .thenApplyAsync(response -> response.map(i -> i.uuid));
+    }
+
+    @SuppressWarnings("nls")
+    private void getGitCommitMessage(String baseCommitMessage, List<GitDiff> diffs,
+        IObserver<CommitMessage> observer, ICancellationToken cancellationToken)
+    {
+        var diff = getDiff(diffs, cancellationToken);
+        ProjectId firstProjectId = null;
+        var diffText = new StringBuilder();
+        for (var diffItem : diff.entrySet())
+        {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
+            if (firstProjectId == null)
+            {
+                firstProjectId = diffItem.getKey();
+            }
+            else
+            {
+                diffText.append(System.lineSeparator());
+            }
+
+            diffText.append(diffItem.getValue());
+        }
+
+        if (firstProjectId == null)
+        {
+            observer.onCompleted();
+            return;
+        }
+
+        final var projectId = firstProjectId;
+        var toolInvokeRequest = new ToolInvokeRequest();
+        toolInvokeRequest.toolName = "custom";
+        toolInvokeRequest.uiLanguage = uiSettings.getLanguage();
+        toolInvokeRequest.programmingLanguage = "git diff";
+        var content = new ToolInvokeRequestContent();
+        toolInvokeRequest.content = content;
+        content.instruction = resourceProvider.getTextResource(IResourceProvider.PROMTS_GIT_COMMIT)
+            .orElse("")
+            .replace("${language}", uiSettings.getLanguage())
+            .replace("${base_commit_message}",
+                Optional.ofNullable(baseCommitMessage == null || baseCommitMessage.isBlank() ? null : baseCommitMessage)
+                    .orElse("no additional lines"))
+            .replace("${git_dif}", diffText.toString());
+
+        log.debug("Prompt", () -> content.instruction);
+        var message = new StringBuilder();
+        var uudi = new StringBuilder();
+        var invokeSource = tools.createInvokeSource(firstProjectId, toolInvokeRequest, cancellationToken);
+        invokeSource.subscribe(new IObserver<ToolInvokeResponse>()
+        {
+            @Override
+            public void onNext(ToolInvokeResponse value)
+            {
+                var content = value.content;
+                if (value.uuid != null)
+                {
+                    uudi.setLength(0);
+                    uudi.append(value.uuid);
+                }
+
+                if (content != null)
+                {
+                    var text = content.text;
+                    if (text != null)
+                    {
+                        if (value.finished)
+                        {
+                            text = text.trim();
+                        }
+                        else
+                        {
+                            synchronized (message)
+                            {
+                                message.append(text);
+                                text = message.toString().trim();
+                            }
+                        }
+
+                        if (!text.isBlank())
+                        {
+                            observer.onNext(new CommitMessage(projectId, uudi.toString(), text));
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onError(Throwable error)
+            {
+                uudi.setLength(0);
+                observer.onError(error);
+            }
+
+            @Override
+            public void onCompleted()
+            {
+                uudi.setLength(0);
+                observer.onCompleted();
+            }
+        });
+
+    }
+
+    @SuppressWarnings("nls")
+    private Map<ProjectId, String> getDiff(List<GitDiff> diffs, ICancellationToken cancellationToken)
+    {
+        var result = new HashMap<ProjectId, String>();
+        var groupsByRepo = groupChangesByRepo(diffs);
+        for (var groupByRepo : groupsByRepo.entrySet())
+        {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
+            var optionalProjectId = getProjectId(cancellationToken, groupByRepo);
+            if (optionalProjectId.isEmpty())
+            {
+                log.warning("Git", () -> "No project id found for diffs");
+                continue;
+            }
+
+            var repository = groupByRepo.getKey();
+            try (var gitDiffStream = new ByteArrayOutputStream())
+            {
+                var projectId = optionalProjectId.get();
+                gitTools.getDiff(repository,
+                    Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().gitDiffContextLines)
+                        .orElse(ParametersParser.DEFAULT_GIT_CONTEXT_LINES),
+                    gitDiffStream);
+                var gitDiff = gitDiffStream.toString("UTF-8");
+                result.put(projectId, gitDiff);
+            }
+            catch (Exception error)
+            {
+                log.logError(error);
+            }
+        }
+
+        return result;
+    }
+
+    private Optional<ProjectId> getProjectId(ICancellationToken cancellationToken,
+        Entry<Repository, List<GitDiff>> groupByRepo)
+    {
+        return groupByRepo.getValue()
+            .stream()
+            .flatMap(diff -> diff.getPaths().stream())
+            .map(diff -> projectIdProvider.getProjectId(diff, cancellationToken))
+            .filter(project -> project.isPresent())
+            .map(project -> project.get())
+            .findFirst();
+    }
+
+    private Map<Repository, List<GitDiff>> groupChangesByRepo(List<GitDiff> diffs)
+    {
+        return diffs.stream().collect(Collectors.groupingBy(diff -> diff.getRepository()));
     }
 
     private synchronized void runJob(Job job)

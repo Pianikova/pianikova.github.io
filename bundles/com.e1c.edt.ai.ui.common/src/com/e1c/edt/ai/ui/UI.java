@@ -220,6 +220,8 @@ class UI
 
     private Optional<IWorkbenchPage> getActivePage()
     {
-        return Optional.ofNullable(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage());
+        return Optional.ofNullable(PlatformUI.getWorkbench())
+            .map(workbench -> workbench.getActiveWorkbenchWindow())
+            .map(window -> window.getActivePage());
     }
 }
