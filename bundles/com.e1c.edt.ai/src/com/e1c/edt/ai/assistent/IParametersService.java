@@ -10,5 +10,5 @@ import com.e1c.edt.ai.assistent.model.Parameters;
 
 public interface IParametersService
 {
-    CompletableFuture<Optional<Parameters>> getParametersAsync();
+    CompletableFuture<Optional<Parameters>> getParametersAsync(boolean useCache);
 }

@@ -77,7 +77,7 @@ class SessionService
     @Override
     public CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId)
     {
-        return parametersService.getParametersAsync()
+        return parametersService.getParametersAsync(true)
             .thenApplyAsync(parameters -> getSessionAsync(projectId, parameters).join());
     }
 
@@ -90,7 +90,15 @@ class SessionService
 
         var params = parameters.get();
         var reset = settingsTracker.register(SessionService.class.getName(), params);
-        return responseCache.get(projectId.path, () -> getSessionAsync(projectId, params), reset);
+        return responseCache.get(projectId.path, () -> {
+            var actualParams = params;
+            if (params.fromCache)
+            {
+                actualParams = parametersService.getParametersAsync(true).join().orElse(params);
+            }
+
+            return getSessionAsync(projectId, actualParams);
+        }, reset);
     }
 
     private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, Parameters parameters)

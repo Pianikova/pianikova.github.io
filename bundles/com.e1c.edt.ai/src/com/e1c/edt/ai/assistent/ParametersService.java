@@ -52,11 +52,11 @@ class ParametersService
     }
 
     @Override
-    public synchronized CompletableFuture<Optional<Parameters>> getParametersAsync()
+    public synchronized CompletableFuture<Optional<Parameters>> getParametersAsync(boolean useCache)
     {
         var settings = settingsProvider.getSettings();
-        var reset = settingsTracker.register(ParametersService.class.getName(), settings);
-        return responseCache.get("", () -> { //$NON-NLS-1$
+        var reset = settingsTracker.register(ParametersService.class.getName(), settings) || !useCache;
+        var parameters = responseCache.get("", () -> { //$NON-NLS-1$
             var builder = requestBuilder.create(s -> s.getLlmParameters().url, "./params"); //$NON-NLS-1$
             if (builder.isEmpty())
             {
@@ -65,7 +65,12 @@ class ParametersService
 
             var request = builder.get().GET().build();
             return getParametersAsync(request, settings.getLlmParameters());
-        }, reset);
+        }, reset).thenApply(params -> {
+            params.ifPresent(data -> data.fromCache = !reset);
+            return params;
+        });
+
+        return parameters;
     }
 
     private CompletableFuture<Optional<Parameters>> getParametersAsync(HttpRequest request, Parameters userParams)

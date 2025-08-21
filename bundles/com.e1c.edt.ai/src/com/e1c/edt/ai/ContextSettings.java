@@ -6,7 +6,6 @@ package com.e1c.edt.ai;
 import java.util.concurrent.ExecutionException;
 
 import com.e1c.edt.ai.assistent.IParametersService;
-
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -27,7 +26,7 @@ class ContextSettings
     @Override
     public int getPrefixLength()
     {
-        var params = parametersService.getParametersAsync();
+        var params = parametersService.getParametersAsync(true);
         if (params.isDone())
         {
             try
@@ -46,7 +45,7 @@ class ContextSettings
     @Override
     public int getSuffixLength()
     {
-        var params = parametersService.getParametersAsync();
+        var params = parametersService.getParametersAsync(true);
         if (params.isDone())
         {
             try

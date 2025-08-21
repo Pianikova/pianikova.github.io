@@ -243,6 +243,8 @@ public class Parameters
     @SerializedName("git_diff_context_lines")
     public Integer gitDiffContextLines;
 
+    public transient boolean fromCache;
+
     public Parameters merge(Parameters params)
     {
         if (params == null)
