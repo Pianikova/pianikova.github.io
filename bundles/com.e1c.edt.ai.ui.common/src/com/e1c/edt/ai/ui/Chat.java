@@ -339,7 +339,7 @@ public class Chat implements IChat, IChatDialog
     {
         try
         {
-            var parameters = parametersService.getParametersAsync().get();
+            var parameters = parametersService.getParametersAsync(true).get();
             if (parameters.isEmpty())
             {
                 return Status.OK_STATUS;

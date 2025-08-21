@@ -7,8 +7,6 @@ import com.google.gson.annotations.SerializedName;
 
 /**
  * Информация о сессии.
- *
- * @author Evgeniy Sysoletin
  */
 public class Session
 {
