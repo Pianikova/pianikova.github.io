@@ -4,11 +4,11 @@
 package com.e1c.edt.ai.context.DTO;
 
 import java.util.List;
-import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 
 public class MetaEntity
+    extends ChildEntity
 {
     /**
      * Имя пространства имен.
@@ -26,11 +26,6 @@ public class MetaEntity
     public String path;
 
     /**
-     * Название сущности.
-     */
-    public String name;
-
-    /**
      * Тип сущности.
      */
     public String type;
@@ -39,16 +34,6 @@ public class MetaEntity
      * Типы, на которые ссылается сущность, если есть.
      */
     public List<DataType> types;
-
-    /**
-     * Комментарий.
-     */
-    public String comment;
-
-    /**
-     * Синонимы сущности.
-     */
-    public Map<String, String> synonym;
 
     /**
      * Атрибуты сущности, если есть.

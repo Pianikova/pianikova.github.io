@@ -123,6 +123,7 @@ import com.e1c.edt.ai.context.DTO.AccountTypeEntity;
 import com.e1c.edt.ai.context.DTO.AttributeEntity;
 import com.e1c.edt.ai.context.DTO.BorderEntity;
 import com.e1c.edt.ai.context.DTO.ChartLineTypeEntity;
+import com.e1c.edt.ai.context.DTO.ChildEntity;
 import com.e1c.edt.ai.context.DTO.ColorEntity;
 import com.e1c.edt.ai.context.DTO.ColumnEntity;
 import com.e1c.edt.ai.context.DTO.DataType;
@@ -655,6 +656,7 @@ class EntityFactory
     {
         var entity = brief ? new MetaEntity() : createMetaEntity(bmObject, brief);
         entity.type = getEntityType(bmObject);
+        entity.id = getId(bmObject);
         var namespace = bmObject.bmGetNamespace();
         if (namespace != null)
         {
@@ -686,6 +688,17 @@ class EntityFactory
             {
                 return metadataInterface.getSimpleName();
             }
+        }
+
+        return null;
+    }
+
+    private String getId(EObject eObject)
+    {
+        if (eObject instanceof MdObject)
+        {
+            var mdObject = (MdObject)eObject;
+            return mdObject.getUuid() != null ? mdObject.getUuid().toString() : null;
         }
 
         return null;
@@ -822,6 +835,23 @@ class EntityFactory
         return new MetaEntity();
     }
 
+    private <T extends ChildEntity> List<T> fillParent(List<T> children, MdObject dbObject, String targetField)
+    {
+        if (dbObject == null || children == null || children.isEmpty())
+        {
+            return children;
+        }
+
+        var parenId = dbObject.getUuid() != null ? dbObject.getUuid().toString() : null;
+        for (var child : children)
+        {
+            child.container = targetField;
+            child.parentId = parenId;
+        }
+
+        return children;
+    }
+
     private MetaEntity createScheduledJob(ScheduledJob bmObject)
     {
         var meta = new MetaEntity();
@@ -840,22 +870,25 @@ class EntityFactory
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createFilterCriterion(FilterCriterion bmObject)
     {
         var meta = new MetaEntity();
-        meta.objectForms = createForms(bmObject.getForms());
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
         meta.types = createTypes(bmObject.getType());
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createDocumentJournal(DocumentJournal bmObject)
     {
         var meta = new MetaEntity();
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.fields = createFields(bmObject, field -> isPublishedField(field));
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.columns = createColumns(bmObject.getColumns());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.fields = fillParent(createFields(bmObject, field -> isPublishedField(field)), bmObject, "fields");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.columns = fillParent(createColumns(bmObject.getColumns()), bmObject, "columns");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
@@ -899,222 +932,276 @@ class EntityFactory
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createEnum(Enum bmObject)
     {
         var meta = new MetaEntity();
         var enumValues = bmObject.getEnumValues();
         if (enumValues != null)
         {
-            meta.enumValues = enumValues.stream().map(this::createEnumValue).collect(Collectors.toList());
+            meta.enumValues =
+                fillParent(enumValues.stream().map(this::createEnumValue).collect(Collectors.toList()), bmObject,
+                    "enum_values");
         }
 
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createTask(Task bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createReportTabularSection(ReportTabularSection bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createReport(Report bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createInformationRegister(InformationRegister bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.registerResources = createRegisterResources(bmObject.getResources());
-        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.registerResources =
+            fillParent(createRegisterResources(bmObject.getResources()), bmObject, "register_resources");
+        meta.registerDimensions =
+            fillParent(createRegisterDimensions(bmObject.getDimensions()), bmObject, "register_dimensions");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createExternalReport(ExternalReport bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createExternalDataProcessor(ExternalDataProcessor bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createExchangePlan(ExchangePlan bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createDocument(Document bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.fields = createFields(bmObject, field -> isPublishedField(field));
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.registerRecords = createRegisterRecords(bmObject.getRegisterRecords());
-        meta.objectForms = createForms(bmObject.getForms());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.fields = fillParent(createFields(bmObject, field -> isPublishedField(field)), bmObject, "fields");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.registerRecords =
+            fillParent(createRegisterRecords(bmObject.getRegisterRecords()), bmObject, "register_records");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
         // Too much info:
         // meta.posting = bmObject.getPosting().getName();
         // meta.realTimePosting = bmObject.getRealTimePosting().getName();
         // meta.registerRecordsDeletion = bmObject.getRegisterRecordsDeletion().getName();
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createDataProcessor(DataProcessor bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createChartOfCharacteristicTypes(ChartOfCharacteristicTypes bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.objectForms = createForms(bmObject.getForms());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
         meta.predefined =
-            createChartOfCharacteristicTypesPredefinedItems(
-                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+            fillParent(createChartOfCharacteristicTypesPredefinedItems(
+                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null)), bmObject,
+                "predefined");
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createChartOfCalculationTypes(ChartOfCalculationTypes bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.objectForms = createForms(bmObject.getForms());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
         meta.predefined =
-            createChartOfCalculationTypesPredefinedItems(
-                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+            fillParent(createChartOfCalculationTypesPredefinedItems(
+                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null)), bmObject,
+                "predefined");
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createChartOfAccounts(ChartOfAccounts bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.objectForms = createForms(bmObject.getForms());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
         meta.predefined =
-            createChartOfAccountsPredefinedItems(
-                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+            fillParent(createChartOfAccountsPredefinedItems(
+                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null)), bmObject,
+                "predefined");
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createCatalog(Catalog bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.objectForms = createForms(bmObject.getForms());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
         meta.predefined =
-            createCatalogPredefinedItems(
-                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null));
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+            fillParent(createCatalogPredefinedItems(
+                Optional.ofNullable(bmObject.getPredefined()).map(i -> i.getItems()).orElse(null)), bmObject,
+                "predefined");
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createCalculationRegister(CalculationRegister bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.registerResources = createRegisterResources(bmObject.getResources());
-        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.registerResources =
+            fillParent(createRegisterResources(bmObject.getResources()), bmObject, "register_resources");
+        meta.registerDimensions =
+            fillParent(createRegisterDimensions(bmObject.getDimensions()), bmObject, "register_dimensions");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createBusinessProcess(BusinessProcess bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.tabularSections = createTabularSections(bmObject.getTabularSections());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.basedOn = createBasedOn(bmObject.getBasedOn());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.tabularSections =
+            fillParent(createTabularSections(bmObject.getTabularSections()), bmObject, "tabular_sections");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.basedOn = fillParent(createBasedOn(bmObject.getBasedOn()), bmObject, "based_on");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createAccumulationRegister(AccumulationRegister bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.registerResources = createRegisterResources(bmObject.getResources());
-        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.registerResources =
+            fillParent(createRegisterResources(bmObject.getResources()), bmObject, "register_resources");
+        meta.registerDimensions =
+            fillParent(createRegisterDimensions(bmObject.getDimensions()), bmObject, "register_dimensions");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
+    @SuppressWarnings("nls")
     private MetaEntity createAccountingRegister(AccountingRegister bmObject)
     {
         var meta = new MetaEntity();
-        meta.attributes = createAttributes(bmObject.getAttributes());
-        meta.standardAttributes = createStandardAttributes(bmObject.getStandardAttributes());
-        meta.registerResources = createRegisterResources(bmObject.getResources());
-        meta.registerDimensions = createRegisterDimensions(bmObject.getDimensions());
-        meta.objectForms = createForms(bmObject.getForms());
-        meta.templates = createTemplates(bmObject.getTemplates());
+        meta.attributes = fillParent(createAttributes(bmObject.getAttributes()), bmObject, "attributes");
+        meta.standardAttributes =
+            fillParent(createStandardAttributes(bmObject.getStandardAttributes()), bmObject, "standard_attributes");
+        meta.registerResources =
+            fillParent(createRegisterResources(bmObject.getResources()), bmObject, "register_resources");
+        meta.registerDimensions =
+            fillParent(createRegisterDimensions(bmObject.getDimensions()), bmObject, "register_dimensions");
+        meta.objectForms = fillParent(createForms(bmObject.getForms()), bmObject, "object_form");
+        meta.templates = fillParent(createTemplates(bmObject.getTemplates()), bmObject, "templates");
         return meta;
     }
 
@@ -1304,6 +1391,7 @@ class EntityFactory
     private AttributeEntity createAttribute(BasicFeature attribute)
     {
         var entity = new AttributeEntity();
+        entity.id = getId(attribute);
         entity.name = attribute.getName();
         entity.comment = attribute.getComment();
         entity.toolTip = createMap(attribute.getToolTip());
@@ -1317,6 +1405,7 @@ class EntityFactory
     private AttributeEntity createStandardAttribute(StandardAttribute attribute)
     {
         var entity = new AttributeEntity();
+        entity.id = getId(attribute);
         entity.name = attribute.getName();
         entity.toolTip = createMap(attribute.getToolTip());
         entity.synonym = createMap(attribute.getSynonym());
@@ -1326,26 +1415,30 @@ class EntityFactory
     private ObjectFormEntity createForm(BasicForm form)
     {
         var entity = new ObjectFormEntity();
+        entity.id = getId(form);
         entity.name = form.getName();
         entity.synonym = createMap(form.getSynonym());
         return entity;
     }
 
+    @SuppressWarnings("nls")
     private TabularSectionEntity createTabularSection(DbObjectTabularSection tabularSection)
     {
         var entity = new TabularSectionEntity();
+        entity.id = getId(tabularSection);
         entity.name = tabularSection.getName();
         entity.comment = tabularSection.getComment();
         entity.toolTip = createMap(tabularSection.getToolTip());
-        entity.attributes = createAttributes(tabularSection.getAttributes());
-        entity.fields = createFields(tabularSection, field -> isPublishedField(field));
-        tabularSection.getRefFieldSources();
+        entity.attributes = fillParent(createAttributes(tabularSection.getAttributes()), tabularSection, "attributes");
+        entity.fields =
+            fillParent(createFields(tabularSection, field -> isPublishedField(field)), tabularSection, "fields");
         return entity;
     }
 
     private RegisterResourceEntity createRegisterResource(RegisterResource registerResource)
     {
         var entity = new RegisterResourceEntity();
+        entity.id = getId(registerResource);
         entity.name = registerResource.getName();
         entity.comment = registerResource.getComment();
         entity.toolTip = createMap(registerResource.getToolTip());
@@ -1357,6 +1450,7 @@ class EntityFactory
     private RegisterDimensionEntity createRegisterDimension(RegisterDimension registerDimension)
     {
         var entity = new RegisterDimensionEntity();
+        entity.id = getId(registerDimension);
         entity.name = registerDimension.getName();
         entity.comment = registerDimension.getComment();
         entity.toolTip = createMap(registerDimension.getToolTip());
@@ -1368,17 +1462,19 @@ class EntityFactory
     private RegisterRecordEntity createBasicRegister(BasicRegister registerRecord)
     {
         var entity = new RegisterRecordEntity();
+        entity.id = getId(registerRecord);
         entity.name = registerRecord.getName();
         entity.comment = registerRecord.getComment();
         entity.synonym = createMap(registerRecord.getSynonym());
         // Too much info:
-        // entity.fields = createFields(registerRecord, field -> isPublishedField(field));
+        // entity.fields = fillParent(createFields(registerRecord, field -> isPublishedField(field)), registerRecord);
         return entity;
     }
 
     private EnumValueEntity createEnumValue(EnumValue enumValue)
     {
         var entity = new EnumValueEntity();
+        entity.id = getId(enumValue);
         entity.name = enumValue.getName();
         entity.synonym = createMap(enumValue.getSynonym());
         return entity;
@@ -1387,6 +1483,7 @@ class EntityFactory
     private PredefinedEntity createCatalogPredefined(CatalogPredefinedItem predefined)
     {
         var entity = new PredefinedEntity();
+        entity.id = getId(predefined);
         entity.name = predefined.getName();
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
@@ -1398,6 +1495,7 @@ class EntityFactory
         ChartOfCharacteristicTypesPredefinedItem predefined)
     {
         var entity = new PredefinedEntity();
+        entity.id = getId(predefined);
         entity.name = predefined.getName();
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
@@ -1409,6 +1507,7 @@ class EntityFactory
     private PredefinedEntity createChartOfCalculationTypesPredefined(ChartOfCalculationTypesPredefinedItem predefined)
     {
         var entity = new PredefinedEntity();
+        entity.id = getId(predefined);
         entity.name = predefined.getName();
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
@@ -1419,6 +1518,7 @@ class EntityFactory
     private PredefinedEntity createChartOfAccountsPredefined(ChartOfAccountsPredefinedItem predefined)
     {
         var entity = new PredefinedEntity();
+        entity.id = getId(predefined);
         entity.name = predefined.getName();
         entity.description = predefined.getDescription();
         entity.value = createValue(predefined.getCode());
@@ -1429,6 +1529,7 @@ class EntityFactory
     private TemplateEntity createTemplate(Template template)
     {
         var entity = new TemplateEntity();
+        entity.id = getId(template);
         entity.name = template.getName();
         entity.comment = template.getComment();
         entity.synonym = createMap(template.getSynonym());
@@ -1438,6 +1539,7 @@ class EntityFactory
     private ValueEntity createValue(EObject valueObject)
     {
         var entity = new ValueEntity();
+        entity.id = getId(valueObject);
         if (valueObject == null)
         {
             entity.type = ValueType.NULL;
@@ -1724,6 +1826,7 @@ class EntityFactory
     private ColumnEntity createColumn(Column column)
     {
         var entity = new ColumnEntity();
+        entity.id = getId(column);
         entity.name = column.getName();
         entity.comment = column.getComment();
         entity.synonym = createMap(column.getSynonym());
@@ -1733,6 +1836,7 @@ class EntityFactory
     private FieldEntity createField(Field field)
     {
         var entity = new FieldEntity();
+        entity.id = getId(field);
         entity.name = field.getName();
         entity.nameRu = field.getNameRu();
         entity.types = createTypes(field.getType());

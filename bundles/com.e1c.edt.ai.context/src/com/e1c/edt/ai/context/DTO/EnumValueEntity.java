@@ -3,11 +3,8 @@
  */
 package com.e1c.edt.ai.context.DTO;
 
-import java.util.Map;
-
 public class EnumValueEntity
+    extends ChildEntity
 {
-    public String name;
-
-    public Map<String, String> synonym;
+    //
 }
