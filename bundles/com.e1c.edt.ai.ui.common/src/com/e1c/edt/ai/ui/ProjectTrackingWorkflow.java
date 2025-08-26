@@ -38,7 +38,7 @@ import com.google.inject.Provider;
 class ProjectTrackingWorkflow
     implements IProjectTrackingWorkflow
 {
-    private final static Duration LongDelay = Duration.ofSeconds(4);
+    private final static Duration LongDelay = Duration.ofSeconds(2);
     private final static Duration ShortDelay = Duration.ofMillis(10);
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;

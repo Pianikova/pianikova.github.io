@@ -192,7 +192,8 @@ public class Chat implements IChat, IChatDialog
                 }
 
                 script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(ctx.getPath(), NULL_VALUE));
+                script
+                    .append(javaScript.escape(Optional.ofNullable(ctx).map(i -> i.getPath()).orElse(null), NULL_VALUE));
                 if (topic.equals("insert_code"))
                 {
                     var document = ctx.getDocument();
