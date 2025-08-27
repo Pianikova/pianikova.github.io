@@ -8,9 +8,8 @@ import java.util.Map;
 import com.google.gson.annotations.SerializedName;
 
 public class FormButtonEntity
+    extends ChildEntity
 {
-    public String name;
-
     public Map<String, String> title;
 
     @SerializedName("data_path")

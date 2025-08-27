@@ -5,6 +5,7 @@ package com.e1c.edt.ai.context;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +40,7 @@ import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
 import com._1c.g5.v8.dt.form.model.FormChoiceListDesTimeValue;
 import com._1c.g5.v8.dt.form.model.FormField;
+import com._1c.g5.v8.dt.form.model.FormItem;
 import com._1c.g5.v8.dt.form.model.FormParameter;
 import com._1c.g5.v8.dt.form.model.Group;
 import com._1c.g5.v8.dt.form.model.MultiLanguageDataPath;
@@ -197,10 +199,12 @@ class EntityFactory
         this.qualifiedNameFilePathConverter = qualifiedNameFilePathConverter;
     }
 
+    @SuppressWarnings("nls")
     @Override
     public Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken)
     {
         var formEntity = new FormEntity();
+        formEntity.id = getId(form);
         formEntity.title = createMap(form.getTitle());
         formEntity.parameters = createFormParameters(form.getParameters());
         var attributes = form.getAttributes();
@@ -222,6 +226,7 @@ class EntityFactory
                 formEntity.attributes.add(createAttribute(form, attribute, hasMainAttribute));
             }
         }
+
 
         var groups = new HashMap<EObject, FormGroupEntity>();
         groups.put(form, formEntity);
@@ -269,6 +274,34 @@ class EntityFactory
                 });
             }
         }, cancellationToken);
+
+        formEntity.ref = form;
+        fillParent(formEntity.parameters, form, "parameters");
+        fillParent(formEntity.attributes, form, "attributes");
+        var grps = new LinkedList<FormGroupEntity>();
+        grps.addLast(formEntity);
+        while (!grps.isEmpty())
+        {
+            var grp = grps.removeFirst();
+            if (grp.groups != null)
+            {
+                for (var nestedGrp : grp.groups)
+                {
+                    grps.addLast(nestedGrp);
+                }
+            }
+
+            var parent = grp.ref;
+            if (grp.ref == null)
+            {
+                continue;
+            }
+
+            fillParent(grp.fields, parent, "fields");
+            fillParent(grp.groups, parent, "groups");
+            fillParent(grp.buttons, parent, "buttons");
+        }
+
         return Optional.of(formEntity);
     }
 
@@ -314,6 +347,7 @@ class EntityFactory
     private AttributeEntity createAttribute(Form form, FormAttribute attribute, boolean hasMainAttribute)
     {
         var attr = new AttributeEntity();
+        attr.id = getId(attribute);
         attr.name = attribute.getName();
         if (attribute.isMain())
         {
@@ -430,6 +464,7 @@ class EntityFactory
     private FormFieldEntity createField(FormField field)
     {
         var entity = new FormFieldEntity();
+        entity.id = getId(field);
         entity.name = field.getName();
         entity.toolTip = createMap(field.getToolTip());
         var fiedType = field.getType();
@@ -450,16 +485,23 @@ class EntityFactory
     private FormGroupEntity createGroup(Group group)
     {
         var entity = new FormGroupEntity();
+        entity.id = getId(group);
         entity.name = group.getName();
         entity.kind = group.getClass().getSimpleName();
         entity.title = createMap(group.getTitle());
         entity.toolTip = createMap(group.getToolTip());
+        if (group instanceof MdObject)
+        {
+            entity.ref = group;
+        }
+
         return entity;
     }
 
     private FormButtonEntity createButton(Button button)
     {
         var entity = new FormButtonEntity();
+        entity.id = getId(button);
         entity.name = button.getName();
         entity.title = createMap(button.getTitle());
         var dataPath = button.getDataPath();
@@ -474,6 +516,7 @@ class EntityFactory
     private FormTableEntity createTable(Table table)
     {
         var entity = new FormTableEntity();
+        entity.id = getId(table);
         entity.name = table.getName();
         entity.kind = table.getClass().getSimpleName();
         entity.title = createMap(table.getTitle());
@@ -701,8 +744,15 @@ class EntityFactory
             return mdObject.getUuid() != null ? mdObject.getUuid().toString() : null;
         }
 
+        if (eObject instanceof FormItem)
+        {
+            var formItem = (FormItem)eObject;
+            return Integer.toString(formItem.getId());
+        }
+
         return null;
     }
+
 
     private MetaEntity createMetaEntity(IBmObject bmObject, boolean brief)
     {
@@ -835,14 +885,14 @@ class EntityFactory
         return new MetaEntity();
     }
 
-    private <T extends ChildEntity> List<T> fillParent(List<T> children, MdObject dbObject, String targetField)
+    private <T extends ChildEntity> List<T> fillParent(List<T> children, EObject eObject, String targetField)
     {
-        if (dbObject == null || children == null || children.isEmpty())
+        if (eObject == null || children == null || children.isEmpty())
         {
             return children;
         }
 
-        var parenId = dbObject.getUuid() != null ? dbObject.getUuid().toString() : null;
+        var parenId = getId(eObject);
         for (var child : children)
         {
             child.container = targetField;

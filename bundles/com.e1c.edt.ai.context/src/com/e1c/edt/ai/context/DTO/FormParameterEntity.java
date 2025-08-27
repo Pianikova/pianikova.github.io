@@ -6,10 +6,7 @@ package com.e1c.edt.ai.context.DTO;
 import java.util.List;
 
 public class FormParameterEntity
+    extends ChildEntity
 {
-    public String name;
-
-    public String comment;
-
     public List<DataType> types;
 }

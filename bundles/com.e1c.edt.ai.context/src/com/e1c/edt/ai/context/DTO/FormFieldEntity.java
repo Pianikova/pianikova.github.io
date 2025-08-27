@@ -8,9 +8,8 @@ import java.util.Map;
 import com.google.gson.annotations.SerializedName;
 
 public class FormFieldEntity
+    extends ChildEntity
 {
-    public String name;
-
     @SerializedName("field_type")
     public String fieldType;
 
