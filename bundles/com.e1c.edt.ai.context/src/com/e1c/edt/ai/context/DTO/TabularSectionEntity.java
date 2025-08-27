@@ -9,11 +9,8 @@ import java.util.Map;
 import com.google.gson.annotations.SerializedName;
 
 public class TabularSectionEntity
+    extends ChildEntity
 {
-    public String name;
-
-    public String comment;
-
     public List<AttributeEntity> attributes;
 
     public List<FieldEntity> fields;

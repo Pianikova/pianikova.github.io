@@ -9,15 +9,10 @@ import java.util.Map;
 import com.google.gson.annotations.SerializedName;
 
 public class RegisterResourceEntity
+    extends ChildEntity
 {
-    public String name;
-
-    public String comment;
-
     @SerializedName("tool_tip")
     public Map<String, String> toolTip;
-
-    public Map<String, String> synonym;
 
     public List<DataType> types;
 }
