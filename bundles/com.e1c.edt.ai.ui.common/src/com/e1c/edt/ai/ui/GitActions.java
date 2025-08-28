@@ -13,6 +13,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jgit.lib.Repository;
 
 import com.e1c.edt.ai.AIContext;
@@ -125,7 +126,7 @@ public class GitActions implements IGitActions
                 if (firstProjectId != null)
                 {
                     final var projectId = firstProjectId;
-                    var ctx = new AIContext(projectId, "", null); //$NON-NLS-1$
+                    var ctx = new AIContext(projectId, "", (IDocument)null); //$NON-NLS-1$
                     var diffStr = diffText.toString();
                     dispatcher.dispatchAsync(() -> chat.reviewCode(ctx, diffStr));
 

@@ -17,6 +17,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentExtension4;
 
 import com.e1c.edt.ai.AIContext;
@@ -218,7 +219,7 @@ class ProjectTrackingWorkflow
         {
             var path = file.getFullPath().makeRelative().toPortableString();
             filesToHash.computeIfAbsent(path,
-                key -> new ProjectFile(new AIContext(projectId, key, null), key, file, now));
+                key -> new ProjectFile(new AIContext(projectId, key, (IDocument)null), key, file, now));
         }
 
         var newFilesToHashCount = 0;
@@ -440,7 +441,7 @@ class ProjectTrackingWorkflow
         if (!filesUpdates.isEmpty())
         {
             features.add(
-                globalContextSync.syncUpdates(new AIContext(projectId, "", null), filesUpdates, 5, //$NON-NLS-1$
+                globalContextSync.syncUpdates(new AIContext(projectId, "", (IDocument)null), filesUpdates, 5, //$NON-NLS-1$
                     statisticsProvider.get(), cancellationToken));
         }
 

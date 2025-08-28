@@ -48,6 +48,9 @@ public class Messages
     public static String UpdateInstalled;
     public static String CommitMessage;
     public static String GitReview;
+    public static String ErrorReadingFile;
+    public static String OnlyTextFilesSupported;
+    public static String UnableToReadFile;
 
     static
     {

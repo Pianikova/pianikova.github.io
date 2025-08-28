@@ -16,7 +16,11 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.egit.ui.internal.commit.DiffDocument;
+import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.FileDialog;
+import org.eclipse.ui.PlatformUI;
 
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
@@ -31,6 +35,7 @@ import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.ISettingsTracker;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.client.AISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -73,15 +78,17 @@ public class Chat implements IChat, IChatDialog
     private final IStateService stateService;
     private final ISessionService sessionService;
     private final IModuleNameProvider moduleNameProvider;
+    private final IFileSystem fileSystem;
     private WebView webView;
     private URL lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
+    private String lastDialogPath;
 
     @Inject
     public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
         IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
         IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
-        ISessionService sessionService, IModuleNameProvider moduleNameProvider)
+        ISessionService sessionService, IModuleNameProvider moduleNameProvider, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsProvider);
@@ -95,6 +102,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(moduleNameProvider);
+        Preconditions.checkNotNull(fileSystem);
         this.log = log;
         this.settingsProvider = settingsProvider;
         this.ui = ui;
@@ -108,6 +116,7 @@ public class Chat implements IChat, IChatDialog
         this.stateService = stateService;
         this.sessionService = sessionService;
         this.moduleNameProvider = moduleNameProvider;
+        this.fileSystem = fileSystem;
     }
 
     @Override
@@ -152,6 +161,39 @@ public class Chat implements IChat, IChatDialog
         chat("insert_code", codeSnippet, null, ctx); //$NON-NLS-1$
     }
 
+    @SuppressWarnings("nls")
+    @Override
+    public void addFile()
+    {
+        var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+        var dialog = new FileDialog(shell, SWT.OPEN);
+        dialog.setFilterPath(lastDialogPath);
+        var file = dialog.open();
+        if (file == null)
+        {
+            return;
+        }
+
+        lastDialogPath = dialog.getFilterPath();
+        var filePath = Path.of(file);
+        if (!fileSystem.isTextFile(filePath))
+        {
+            MessageDialog.openError(shell, Messages.ErrorReadingFile, Messages.OnlyTextFilesSupported);
+            return;
+        }
+
+        var optionalContent = fileSystem.getText(filePath);
+        if (optionalContent.isEmpty())
+        {
+            MessageDialog.openWarning(shell, Messages.ErrorReadingFile, Messages.UnableToReadFile);
+            return;
+        }
+
+        var content = optionalContent.get();
+        var ctx = new AIContext(new ProjectId(lastDialogPath, null), filePath.getFileName().toString(), null);
+        chat("insert_code", content, null, ctx);
+    }
+
     @SuppressWarnings({ "nls", "restriction" })
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
@@ -164,7 +206,7 @@ public class Chat implements IChat, IChatDialog
                 var title = NULL_VALUE;
                 if (ctx != null)
                 {
-                    title = moduleNameProvider.getModuleName(ctx.getPath()).orElse(NULL_VALUE);
+                    title = moduleNameProvider.getModuleName(ctx.getPath()).orElseGet(() -> ctx.getPath());
                     var chatContext = new ChatContext();
                     var doc = ctx.getDocument();
                     contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);

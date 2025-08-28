@@ -18,4 +18,6 @@ public interface IChat
     void askQuestion(AIContext ctx, String userQuestion);
 
     void addCode(AIContext ctx, String codeSnippet);
+
+    public void addFile();
 }

@@ -102,6 +102,11 @@
         </command>
         <command
               categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+              id="com.e1c.edt.ai.ui.commands.addfile.ai"
+              name="%command.name.addfile">
+        </command>
+        <command
+              categoryId="com.e1c.edt.ai.ui.commands.category.ai"
               id="com.e1c.edt.ai.ui.commands.feedback.ai"
               name="%command.name.feedback">
         </command>
@@ -131,6 +136,9 @@
              commandId="com.e1c.edt.ai.ui.commands.addcode.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
         <key sequence="Alt+I F"
+             commandId="com.e1c.edt.ai.ui.commands.addfile.ai"
+             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
+        <key sequence="Alt+I B"
              commandId="com.e1c.edt.ai.ui.commands.feedback.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
         <key sequence="Ctrl+Enter"
@@ -171,7 +179,11 @@
         <handler
                 class="com.e1c.edt.ai.ui.handlers.AddCodeAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.addcode.ai">
-        </handler>     
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.AddFileAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.addfile.ai">
+        </handler>
         <handler
                 class="com.e1c.edt.ai.ui.handlers.FeedbackAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.feedback.ai">
@@ -227,6 +239,14 @@
                   label="%command.label.addcode"
                   style="push"
                   tooltip="%command.tooltip.addcode">
+            </command>
+            <command
+                  commandId="com.e1c.edt.ai.ui.commands.addfile.ai"
+                  icon="icons/obj16/addfile.png"
+                  id="com.e1c.edt.ai.ui.commands.addfile.ai.id"
+                  label="%command.label.addfile"
+                  style="push"
+                  tooltip="%command.tooltip.addfile">
             </command>
             <separator
                   name="com.e1c.edt.ai.ui.separator2"

@@ -83,6 +83,7 @@ public class AIUICommonModule
         bind(IStagingViewEnhancer.class).to(StagingViewEnhancer.class).in(Singleton.class);
         bind(IResourceProvider.class).to(ResourceProvider.class).in(Singleton.class);
         bind(IDialogsInjector.class).to(DialogsEnhancer.class).in(Singleton.class);
+        bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         // @formatter:on
     }
 }
