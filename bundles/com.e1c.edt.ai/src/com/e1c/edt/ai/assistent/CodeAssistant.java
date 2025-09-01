@@ -116,7 +116,7 @@ class CodeAssistant
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
-        var optionalRequest = requestBuilder.create(settings -> settings.getLlmParameters().url, "./complete"); //$NON-NLS-1$
+        var optionalRequest = requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/complete"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
             observer.onCompleted();

@@ -133,7 +133,7 @@ public class Conversations implements IConversations
     {
         var optionalRequest =
             requestBuilder.create(settings -> getChatUrl(settings.getLlmParameters().url),
-                defaultSettings.getChatUrlPath() + "conversations/"); //$NON-NLS-1$
+                "./api/v1/" + defaultSettings.getChatUrlPath() + "conversations/"); //$NON-NLS-1$ //$NON-NLS-2$
         if (optionalRequest.isEmpty())
         {
             return Optional.empty();
@@ -161,7 +161,7 @@ public class Conversations implements IConversations
     {
         var optionalRequest =
             requestBuilder.create(settings -> getChatUrl(settings.getLlmParameters().url),
-                defaultSettings.getChatUrlPath() + "conversations/" + conversationId + "/messages"); //$NON-NLS-1$ //$NON-NLS-2$
+                "./api/v1/" + defaultSettings.getChatUrlPath() + "conversations/" + conversationId + "/messages"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         if (optionalRequest.isEmpty())
         {
             observer.onCompleted();

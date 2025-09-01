@@ -57,7 +57,7 @@ class ParametersService
         var settings = settingsProvider.getSettings();
         var reset = settingsTracker.register(ParametersService.class.getName(), settings) || !useCache;
         var parameters = responseCache.get("", () -> { //$NON-NLS-1$
-            var builder = requestBuilder.create(s -> s.getLlmParameters().url, "./params"); //$NON-NLS-1$
+            var builder = requestBuilder.create(s -> s.getLlmParameters().url, "./api/v1/params"); //$NON-NLS-1$
             if (builder.isEmpty())
             {
                 return CompletableFuture.completedFuture(Optional.empty());

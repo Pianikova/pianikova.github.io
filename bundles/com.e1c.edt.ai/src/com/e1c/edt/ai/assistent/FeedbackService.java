@@ -45,7 +45,8 @@ class FeedbackService
     public CompletableFuture<Void> acceptedCodeAsync(String uuid, String code, Optional<CursorInfo> cursorStartInfo,
         Optional<CursorInfo> cursorEndInfo)
     {
-        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./feedbacks/accepted_code"); //$NON-NLS-1$
+        var builder =
+            requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/feedbacks/accepted_code"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(null);
@@ -64,7 +65,8 @@ class FeedbackService
     @Override
     public CompletableFuture<Void> finalizeCodeAsync(String uuid, String code)
     {
-        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./feedbacks/final_code"); //$NON-NLS-1$
+        var builder =
+            requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/feedbacks/final_code"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(null);
@@ -81,7 +83,7 @@ class FeedbackService
     @Override
     public CompletableFuture<Void> issueAsync(String uuid, IssueType type, String description)
     {
-        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./feedbacks/issue"); //$NON-NLS-1$
+        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/feedbacks/issue"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(null);

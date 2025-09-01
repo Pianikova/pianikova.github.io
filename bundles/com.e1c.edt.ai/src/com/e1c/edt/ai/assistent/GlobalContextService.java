@@ -122,7 +122,8 @@ class GlobalContextService
         Optional<GlobalContextUpdateResponse> results, Session session,
         Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
     {
-        var optionalRequest = requestBuilder.create(settings -> settings.getLlmParameters().url, "./context/update"); //$NON-NLS-1$
+        var optionalRequest =
+            requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/context/update"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture.completedFuture(results);
