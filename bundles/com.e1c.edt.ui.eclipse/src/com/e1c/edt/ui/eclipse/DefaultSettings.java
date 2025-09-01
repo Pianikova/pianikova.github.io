@@ -11,7 +11,7 @@ class DefaultSettings
     @Override
     public String getUrl()
     {
-        return "https://llms.1c.ai/code_java/api/v1/"; //$NON-NLS-1$
+        return "https://llms.1c.ai/code_java/"; //$NON-NLS-1$
     }
 
     @Override

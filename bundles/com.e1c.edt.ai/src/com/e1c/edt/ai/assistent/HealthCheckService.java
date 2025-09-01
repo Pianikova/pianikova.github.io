@@ -42,7 +42,7 @@ class HealthCheckService
     {
         Optional<HttpRequest.Builder> builder = Optional.empty();
         try {
-            builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./health"); //$NON-NLS-1$
+            builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/health"); //$NON-NLS-1$
         } catch (IllegalArgumentException e) {
             log.error(e, "Illegal http request"); //$NON-NLS-1$
             return CompletableFuture.completedFuture(ServiceState.OFFLINE);

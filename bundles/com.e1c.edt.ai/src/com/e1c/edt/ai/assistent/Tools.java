@@ -3,9 +3,6 @@
  */
 package com.e1c.edt.ai.assistent;
 
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
@@ -113,7 +110,7 @@ public class Tools
         ICancellationToken cancellationToken)
     {
         var optionalRequestBuilder =
-            requestBuilder.create(settings -> getUrl(settings.getLlmParameters().url), "tools_api/v1/invoke"); //$NON-NLS-1$
+            requestBuilder.create(settings -> settings.getLlmParameters().url, "./tools_api/v1/invoke"); //$NON-NLS-1$
         if (optionalRequestBuilder.isEmpty())
         {
             observer.onCompleted();
@@ -257,8 +254,9 @@ public class Tools
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
-        var optionalRequestBuilder = requestBuilder.create(settings -> getUrl(settings.getLlmParameters().url),
-            "tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
+        var optionalRequestBuilder =
+            requestBuilder.create(settings -> settings.getLlmParameters().url,
+            "./tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
 
         if (optionalRequestBuilder.isEmpty())
         {
@@ -316,18 +314,6 @@ public class Tools
     private Optional<ToolFeedbackResponse> createToolFeedbackResponse(String content)
     {
         return json.deserialize(content, ToolFeedbackResponse.class);
-    }
-
-    private URL getUrl(URL baseURL)
-    {
-        try
-        {
-            return baseURL.toURI().resolve("/").toURL(); //$NON-NLS-1$
-        }
-        catch (MalformedURLException | URISyntaxException e)
-        {
-            return baseURL;
-        }
     }
 
     private static class ToolInvokeResponsetreamData

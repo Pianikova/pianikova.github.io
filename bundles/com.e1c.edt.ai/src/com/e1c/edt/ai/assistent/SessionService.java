@@ -103,7 +103,7 @@ class SessionService
 
     private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, Parameters parameters)
     {
-        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./create_session"); //$NON-NLS-1$
+        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/create_session"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(Optional.empty());
