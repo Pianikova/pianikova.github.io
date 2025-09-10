@@ -581,6 +581,31 @@ class CodeCompletionViewModel
 
     private Optional<CodeMethod> getCurrentMethod(int offset)
     {
+        var result = getExistingMethod(offset);
+        if (result.isPresent())
+        {
+            return result;
+        }
+
+        var newMethod =
+            codeParser.parse(sourceViewer).flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
+
+        if (newMethod.isPresent())
+        {
+            synchronized (methods)
+            {
+                if (getExistingMethod(offset).isEmpty())
+                {
+                    methods.add(newMethod.get());
+                }
+            }
+        }
+
+        return newMethod;
+    }
+
+    private Optional<CodeMethod> getExistingMethod(int offset)
+    {
         synchronized (methods)
         {
             for (var method : methods)
@@ -590,18 +615,9 @@ class CodeCompletionViewModel
                     return Optional.of(method);
                 }
             }
-
-            var newMethod =
-                codeParser.parse(sourceViewer)
-                    .flatMap(parseResult -> codeProvider.getMethod(parseResult, offset));
-
-            if (newMethod.isPresent())
-            {
-                methods.add(newMethod.get());
-            }
-
-            return newMethod;
         }
+
+        return Optional.empty();
     }
 
     private void cancel()
