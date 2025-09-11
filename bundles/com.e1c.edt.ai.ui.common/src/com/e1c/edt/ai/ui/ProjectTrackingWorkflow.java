@@ -178,7 +178,13 @@ class ProjectTrackingWorkflow
     {
         log.debug("Track", () -> aiCtx.toString()); //$NON-NLS-1$
         var path = aiCtx.getPath();
-        var fileOnDisk = project.getFile(project.getProjectRelativePath().append(path).removeFirstSegments(1));
+        var projectPath = project.getProjectRelativePath().append(path);
+        if (projectPath.segmentCount() <= 1)
+        {
+            return;
+        }
+
+        var fileOnDisk = project.getFile(projectPath.removeFirstSegments(1));
         if (fileOnDisk == null)
         {
             return;
@@ -286,7 +292,10 @@ class ProjectTrackingWorkflow
                 if (fileOnDisk != null && file.aiCtx.getDocument() == null
                     && (!fileOnDisk.exists() || !fileOnDisk.isAccessible()))
                 {
-                    filesToHash.remove(file.path);
+                    if (filesToHash.remove(file.path) == null)
+                    {
+                        continue;
+                    }
                 }
 
                 var prevModificationStamp = file.getModificationStamp();
@@ -294,6 +303,7 @@ class ProjectTrackingWorkflow
                 var prevHash = file.getHash();
                 String newHash;
                 var document = file.aiCtx.getDocument();
+                var isAccessible = true;
                 if (!file.aiCtx.isDisposed() && document != null && document instanceof IDocumentExtension4)
                 {
                     var docExtension = (IDocumentExtension4)document;
@@ -307,28 +317,21 @@ class ProjectTrackingWorkflow
                 else
                 {
                     document = null;
-                    if (!file.file.isAccessible())
-                    {
-                        continue;
-                    }
-
+                    isAccessible = file.file.isAccessible();
                     newModificationStamp = file.file.getModificationStamp();
-                    if (file.getModificationStamp() == newModificationStamp)
+                    if (isAccessible && file.getModificationStamp() == newModificationStamp)
                     {
                         file.update(now, prevHash, newModificationStamp);
                         continue;
                     }
                 }
 
-                newHash = hashTools.hashOf(document, file.file).map(hash -> hashTools.format(hash, true)).orElse(null);
+                newHash = isAccessible
+                    ? hashTools.hashOf(document, file.file).map(hash -> hashTools.format(hash, true)).orElse(null)
+                    : null;
                 file.update(now, newHash, newModificationStamp);
-                if (newHash == null)
-                {
-                    continue;
-                }
-
                 hashed++;
-                if (newHash.equals(prevHash))
+                if (newHash != null && newHash.equals(prevHash))
                 {
                     continue;
                 }
@@ -337,10 +340,15 @@ class ProjectTrackingWorkflow
                 if (filesToSync.add(file))
                 {
                     var modificationStamp = newModificationStamp;
+                    var accessible = isAccessible;
                     log.debug("Sync required", () -> {
                         var message = new StringBuilder();
                         message.append("File: ");
                         message.append(file.path);
+
+                        message.append(System.lineSeparator());
+                        message.append("Is accessible: ");
+                        message.append(accessible);
 
                         message.append(System.lineSeparator());
                         message.append("Prev timestamp: ");
@@ -358,7 +366,7 @@ class ProjectTrackingWorkflow
 
                         message.append(System.lineSeparator());
                         message.append("New hash: ");
-                        message.append(newHash);
+                        message.append(newHash == null ? "empty" : newHash);
                         return message.toString();
                     });
                 }

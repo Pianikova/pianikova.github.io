@@ -33,7 +33,7 @@ public class BuildTrackingParticipant
             return;
         }
 
-        log.trace("Building", () -> "The building was registered for project: " + project.getName());
+        log.trace("Building", () -> "The building was registered for project " + project.getName());
         globalContextTracker.track(project);
     }
 }

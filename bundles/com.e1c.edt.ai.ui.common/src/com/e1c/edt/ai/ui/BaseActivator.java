@@ -300,6 +300,7 @@ public abstract class BaseActivator
             }
         }
 
+        injector.getInstance(IResourceListener.class).initialize();
         return injector;
     }
 

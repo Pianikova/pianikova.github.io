@@ -55,6 +55,11 @@ class AIContextProvider
         }
 
         var textWidget = sourceViewer.getTextWidget();
+        if (textWidget == null)
+        {
+            return Optional.empty();
+        }
+
         var content = contentProvider.get(textWidget, textWidget.getCaretOffset());
         AIContext aiContext;
         if (target.isPreferSelection() && !content.selectionText.isBlank())

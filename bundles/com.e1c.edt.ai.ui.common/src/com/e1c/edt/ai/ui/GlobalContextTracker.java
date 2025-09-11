@@ -5,6 +5,7 @@ package com.e1c.edt.ai.ui;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.jobs.Job;
@@ -73,8 +74,8 @@ class GlobalContextTracker
 
         synchronized (lockObject)
         {
-            projectProvider.getProject(aiCtx.getPath())
-                .map(project -> projectWorkflows.computeIfAbsent(project,
+            var project = aiCtx.getProjectId().project;
+            Optional.ofNullable(projectWorkflows.computeIfAbsent(aiCtx.getProjectId().project,
                     k -> projectTrackingWorkflowProvider.get().initialize(project)))
                 .ifPresent(workflow -> {
                     workflow.track(aiCtx);
