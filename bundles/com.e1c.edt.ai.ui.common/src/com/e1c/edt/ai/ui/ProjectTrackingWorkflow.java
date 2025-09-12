@@ -27,8 +27,8 @@ import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
@@ -47,7 +47,7 @@ class ProjectTrackingWorkflow
     private final IClock clock;
     private final IProjectIdProvider projectIdProvider;
     private final IGlobalContextSync globalContextSync;
-    private final IUISettings settings;
+    private final ISettings settings;
     private final IFileScaner fileScaner;
     private final ISessionService sessionService;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
@@ -60,7 +60,7 @@ class ProjectTrackingWorkflow
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
-        IClock clock, IProjectIdProvider projectIdProvider, IGlobalContextSync globalContextSync, IUISettings settings,
+        IClock clock, IProjectIdProvider projectIdProvider, IGlobalContextSync globalContextSync, ISettings settings,
         IFileScaner fileScaner, ISessionService sessionService)
     {
         Preconditions.checkNotNull(log);
@@ -214,7 +214,7 @@ class ProjectTrackingWorkflow
         throws CoreException
     {
         progressMonitor.subTask(Messages.CodeCompletionBackgroundScanSubtaskName);
-        if (!settings.sendGlobalContext())
+        if (!settings.sendGlobalContext(projectId))
         {
             return new Result(ProjectTrackingWorkflowState.INIT, LongDelay);
         }

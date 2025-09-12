@@ -26,7 +26,7 @@ import org.osgi.framework.ServiceReference;
 
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.ISettingsProvider;
+import com.e1c.edt.ai.ISettings;
 import com.google.inject.Inject;
 
 /**
@@ -43,7 +43,7 @@ public class PluginUpdateService
     @Inject
     private IDispatcher dispatcher;
     @Inject
-    ISettingsProvider settingsProvider;
+    ISettings settings;
     @Inject
     private IDefaultSettings defaultSettings;
 
@@ -82,7 +82,7 @@ public class PluginUpdateService
                 (IMetadataRepositoryManager)agent.getService(IMetadataRepositoryManager.SERVICE_NAME);
             var artifactManager = (IArtifactRepositoryManager)agent.getService(IArtifactRepositoryManager.SERVICE_NAME);
 
-            var repositoryUri = new URI(settingsProvider.getSettings().getLlmParameters().updateUrl);
+            var repositoryUri = new URI(settings.getUpdateUrl());
             if (!repositoryManager.contains(repositoryUri))
             {
                 log.trace("Adding content repository...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$

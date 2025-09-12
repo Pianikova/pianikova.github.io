@@ -3,22 +3,45 @@
  */
 package com.e1c.edt.ai;
 
+import java.net.URL;
 import java.util.Optional;
 
+import com.e1c.edt.ai.assistent.model.TokenHealing;
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 public class Json
     implements IJson
 {
     private final Gson gson;
 
+    @SuppressWarnings({ "unchecked", "unused", "rawtypes" })
     public Json()
     {
+        //  @formatter:off
         gson = new GsonBuilder().setPrettyPrinting()
-            .registerTypeAdapterFactory(new CustomTypeAdapterFactory())
+            .registerTypeAdapterFactory(new <Integer> OptionalTypeAdapterFactory(
+                new TypeToken<Optional<Integer>>() { /**/ },
+                new TypeToken<Integer>() { /**/ }))
+            .registerTypeAdapterFactory(new <Boolean> OptionalTypeAdapterFactory(
+                new TypeToken<Optional<Boolean>>() { /**/ },
+                new TypeToken<Boolean>() { /**/ }))
+            .registerTypeAdapterFactory(new <Double> OptionalTypeAdapterFactory(
+                new TypeToken<Optional<Double>>() { /**/ },
+                new TypeToken<Double>() { /**/ }))
+            .registerTypeAdapterFactory(new <String> OptionalTypeAdapterFactory(
+                new TypeToken<Optional<String>>() { /**/ },
+                new TypeToken<String>() { /**/ }))
+            .registerTypeAdapterFactory(new <URL> OptionalTypeAdapterFactory(
+                new TypeToken<Optional<URL>>() { /**/ },
+                new TypeToken<URL>() { /**/ }))
+            .registerTypeAdapterFactory(new <TokenHealing> OptionalTypeAdapterFactory(
+                new TypeToken<Optional<TokenHealing>>() { /**/ },
+                new TypeToken<TokenHealing>() { /**/ }))
             .create();
+     // @formatter:on
     }
 
     @Override

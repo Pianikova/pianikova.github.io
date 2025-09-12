@@ -17,7 +17,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.inject.Injector;
@@ -43,7 +43,7 @@ public abstract class BaseActivator
     private static BaseActivator plugin;
     private BundleContext bundleContext;
     private Injector injector;
-    private IUISettings settings;
+    private ISettings settings;
 
     /**
      * Получить экземпляр плагина. Через экземпляр плагина можно получать доступ к разнообразным механизмам Eclipse,
@@ -238,7 +238,7 @@ public abstract class BaseActivator
         this.bundleContext = bundleContext;
         plugin = this;
         Platform.setImplicitExit(false);
-        settings = getInjector().getInstance(IUISettings.class);
+        settings = getInjector().getInstance(ISettings.class);
     }
 
     /**

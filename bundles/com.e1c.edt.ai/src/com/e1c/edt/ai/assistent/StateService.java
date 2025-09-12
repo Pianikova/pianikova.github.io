@@ -14,7 +14,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
@@ -30,12 +30,12 @@ class StateService
     private static final ListenerList<IAIStateListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
     private final IHealthCheckService healthCheckService;
     private final ILog log;
-    private final IUISettings settings;
+    private final ISettings settings;
     private ServiceState serviceState;
     private ActionState actionState;
 
     @Inject
-    public StateService(IHealthCheckService healthCheckService, ILog log, IUISettings settings)
+    public StateService(IHealthCheckService healthCheckService, ILog log, ISettings settings)
     {
         Preconditions.checkNotNull(healthCheckService);
         Preconditions.checkNotNull(log);

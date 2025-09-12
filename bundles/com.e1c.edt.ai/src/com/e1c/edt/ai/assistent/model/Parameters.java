@@ -7,6 +7,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 import com.e1c.edt.ai.IDefaultSettings;
 import com.google.gson.annotations.SerializedName;
@@ -26,7 +27,7 @@ public class Parameters
         try
         {
             url = new URL(defaultSettings.getUrl());
-            updateUrl = defaultSettings.getUpdateUrl();
+            updateUrl = Optional.ofNullable(defaultSettings.getUpdateUrl());
         }
         catch (MalformedURLException e)
         {
@@ -38,77 +39,77 @@ public class Parameters
      * Максимальная длина префикса (токенов). Например, 2160.
      */
     @SerializedName("prefix_length")
-    public Integer prefixLength;
+    public Optional<Integer> prefixLength;
 
     /**
      * Максимальная длина суффикса (токенов). Например, 1080.
      */
     @SerializedName("suffix_length")
-    public Integer suffixLength;
+    public Optional<Integer> suffixLength;
 
     /**
      * Общая длина формы (символов). Например, 3240.
      */
     @SerializedName("form_length")
-    public Integer formLength;
+    public Optional<Integer> formLength;
 
     /**
      * Длина метаданных (символов). Например, 2160.
      */
     @SerializedName("meta_length")
-    public Integer metaLength;
+    public Optional<Integer> metaLength;
 
     /**
      * Количество лучших результатов для выбора. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("best_of")
-    public Integer bestOf;
+    public Optional<Integer> bestOf;
 
     /**
      * Включать детали входного декодера. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("decoder_input_details")
-    public Boolean decoderInputDetails;
+    public Optional<Boolean> decoderInputDetails;
 
     /**
      * Включать подробные логи. Нужно определить только для изменения стандартных настроек модели.
      */
-    public Boolean details;
+    public Optional<Boolean> details;
 
     /**
      * Использовать выборку. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("do_sample")
-    public Boolean doSample;
+    public Optional<Boolean> doSample;
 
     /**
      * Максимальное количество новых генерируемых токенов. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("max_new_tokens")
-    public Integer maxNewTokens;
+    public Optional<Integer> maxNewTokens;
 
     /**
      * Штраф за повторения (числовое значение). Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("repetition_penalty")
-    public Double repetitionPenalty;
+    public Optional<Double> repetitionPenalty;
 
     /**
      * Штраф за частотность слов (числовое значение). Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("frequency_penalty")
-    public Double frequencyPenalty;
+    public Optional<Double> frequencyPenalty;
 
     /**
      * Возвращать полный текст или только сгенерированную часть. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("return_full_text")
-    public Boolean returnFullText;
+    public Optional<Boolean> returnFullText;
 
     /**
      * Использовать фиксированное начальное значение для воспроизводимости. Нужно определить только для изменения стандартных настроек модели.
      */
-    public Boolean seed;
+    public Optional<Boolean> seed;
 
     /**
      * Список стоп-слов или фраз для остановки генерации. Нужно определить только для изменения стандартных настроек модели.
@@ -118,59 +119,59 @@ public class Parameters
     /**
      * Температура выборки (от 0 до 1). Нужно определить только для изменения стандартных настроек модели.
      */
-    public Double temperature;
+    public Optional<Double> temperature;
 
     /**
      * Количество наиболее вероятных токенов для выборки. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("top_k")
-    public Integer topK;
+    public Optional<Integer> topK;
 
     /**
      * Количество токенов для выборки. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("top_n_tokens")
-    public Integer topNTokens;
+    public Optional<Integer> topNTokens;
 
     /**
      * Параметр для выборочной генерации (от 0 до 1). Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("top_p")
-    public Double topP;
+    public Optional<Double> topP;
 
     /**
      * Включать усечение. Нужно определить только для изменения стандартных настроек модели.
      */
-    public Boolean truncate;
+    public Optional<Boolean> truncate;
 
     /**
      * Параметр типичности (числовое значение). Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("typical_p")
-    public Double typicalP;
+    public Optional<Double> typicalP;
 
     /**
      * Включать водяные знаки. Нужно определить только для изменения стандартных настроек модели.
      */
-    public Boolean watermark;
+    public Optional<Boolean> watermark;
 
     /**
      * Метод исправления токенов (None/guidance/streaming). Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("token_healing")
-    public TokenHealing tokenHealing = TokenHealing.NONE;
+    public Optional<TokenHealing> tokenHealing;
 
     /**
      * Возвращать текст построчно. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("return_line")
-    public Boolean returnLine;
+    public Optional<Boolean> returnLine;
 
     /**
      * Обрезать текст после стоп-слов. Нужно определить только для изменения стандартных настроек модели.
      */
     @SerializedName("trim_stop")
-    public Boolean trimStop;
+    public Optional<Boolean> trimStop;
 
     /**
      * URL для запросов. Например, "https://code.1c.ai/api/v1/".
@@ -182,49 +183,49 @@ public class Parameters
      * URL для чата. Например, "https://code.1c.ai/chat/".
      */
     @SerializedName("chat_url")
-    public URL chatUrl;
+    public Optional<URL> chatUrl;
 
     /**
      * URL для обновлений. Например, "https://code.1c.ai/plugin/".
      */
     @SerializedName("update_url")
-    public String updateUrl;
+    public Optional<String> updateUrl;
 
     /**
      * Максимальная длина данных локальных функций. Например, 2590.
      */
     @SerializedName("local_functions_length")
-    public Integer localFunctionsLength;
+    public Optional<Integer> localFunctionsLength;
 
     /**
      * Длина внешних функций. Например, 2160.
      */
     @SerializedName("external_functions_length")
-    public Integer externalFunctionsLength;
+    public Optional<Integer> externalFunctionsLength;
 
     /**
      * Минимальная задержка миллисекунд. Например, 300.
      */
     @SerializedName("min_delay")
-    public Integer minDelay;
+    public Optional<Integer> minDelay;
 
     /**
      * Время ожидания ответа миллисекунд. Например, 15000.
      */
     @SerializedName("timeout")
-    public Integer timeout;
+    public Optional<Integer> timeout;
 
     /**
      * Определяет передавать ли глобальный контекст. Например, true.
      */
     @SerializedName("global_context")
-    public Boolean globalContext;
+    public Optional<Boolean> globalContext;
 
     /**
      * Определяет передавать ли расширенный контекст. Например, true.
      */
     @SerializedName("extended_context")
-    public Boolean extendedContext;
+    public Optional<Boolean> extendedContext;
 
     /**
      * Уровень детализации логов (error/warning/info/trace/debug). Например, warning.
@@ -235,13 +236,13 @@ public class Parameters
      * Переопределяет пут к ресурсам. Например, "C:/Users/user/resources".
      */
     @SerializedName("resources")
-    public String resources;
+    public Optional<String> resources;
 
     /**
      * Переопределяет размер контекста для git diff. Например, 16.
      */
     @SerializedName("git_diff_context_lines")
-    public Integer gitDiffContextLines;
+    public Optional<Integer> gitDiffContextLines;
 
     public transient boolean fromCache;
 
@@ -362,7 +363,7 @@ public class Parameters
             watermark = params.watermark;
         }
 
-        if (params.tokenHealing != TokenHealing.NONE)
+        if (params.tokenHealing != null)
         {
             tokenHealing = params.tokenHealing;
         }
@@ -430,7 +431,7 @@ public class Parameters
     {
         return Objects.hash(bestOf, url, decoderInputDetails, details, doSample, frequencyPenalty, maxNewTokens,
             repetitionPenalty, returnFullText, returnLine, seed, stop, temperature, tokenHealing, topK, topNTokens,
-            topP, trimStop, truncate, typicalP, watermark);
+            topP, trimStop, truncate, typicalP, watermark, globalContext, extendedContext);
     }
 
     @Override
@@ -455,6 +456,8 @@ public class Parameters
             && Objects.equals(tokenHealing, other.tokenHealing) && Objects.equals(topK, other.topK)
             && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
             && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
-            && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark);
+            && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
+            && Objects.equals(globalContext, other.globalContext)
+            && Objects.equals(extendedContext, other.extendedContext);
     }
 }

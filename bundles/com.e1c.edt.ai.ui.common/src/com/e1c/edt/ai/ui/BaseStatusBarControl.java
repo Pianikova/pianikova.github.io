@@ -27,7 +27,8 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IAIStateListener;
@@ -53,7 +54,9 @@ public class BaseStatusBarControl
     @Inject
     private IUINotificationService notificationService;
     @Inject
-    private IUISettings settings;
+    private ISettings settings;
+    @Inject
+    private ISettingsSetter settingsSetter;
     @Inject
     private IReflection reflection;
 
@@ -275,7 +278,7 @@ public class BaseStatusBarControl
         }
 
         var codeCompletionPolicy = policies[index];
-        settings.setCodeCompletionPolicy(codeCompletionPolicy);
+        settingsSetter.setCodeCompletionPolicy(codeCompletionPolicy);
         policyTooltip.setText(codeCompletionPolicy.getDescription());
     }
 

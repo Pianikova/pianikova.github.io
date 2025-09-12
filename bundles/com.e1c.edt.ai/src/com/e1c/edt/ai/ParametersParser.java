@@ -27,6 +27,8 @@ public class ParametersParser
     public static final int DEFAULT_GIT_CONTEXT_LINES = 8;
     public static final int DEAULT_TIMEOUT = 15000;
     public static final int DEFAULT_MIN_DELAY = 300;
+    public static final int DEFAULT_PREFIX_LEN = 1000;
+    public static final int DEFAULT_SUFFIX_LEN = 500;
     private final static String keyValueSeparator = ";"; //$NON-NLS-1$
     private final IDefaultSettings defaultSettings;
 
@@ -79,19 +81,19 @@ public class ParametersParser
         var names = new HashSet<>(properties.stringPropertyNames());
 
         names.remove(parse(properties, "prefix_length", validationResult,
-            val -> parameters.prefixLength = Integer.parseInt(val)));
+            val -> parameters.prefixLength = Optional.of(Integer.parseInt(val))));
 
         names.remove(parse(properties, "suffix_length", validationResult,
-            val -> parameters.suffixLength = Integer.parseInt(val)));
+            val -> parameters.suffixLength = Optional.of(Integer.parseInt(val))));
 
         names.remove(parse(properties, "form_length", validationResult,
-            val -> parameters.formLength = Integer.parseInt(val)));
+            val -> parameters.formLength = Optional.of(Integer.parseInt(val))));
 
         names.remove(parse(properties, "meta_length", validationResult,
-            val -> parameters.metaLength = Integer.parseInt(val)));
+            val -> parameters.metaLength = Optional.of(Integer.parseInt(val))));
 
         names.remove(
-            parse(properties, "best_of", validationResult, val -> parameters.bestOf = Integer.parseInt(val)));
+            parse(properties, "best_of", validationResult, val -> parameters.bestOf = Optional.of(Integer.parseInt(val))));
 
         names.remove(parse(properties, "decoder_input_details", validationResult,
             val -> parameters.decoderInputDetails = parseBoolean(val)));
@@ -100,13 +102,13 @@ public class ParametersParser
             parse(properties, "do_sample", validationResult, val -> parameters.doSample = parseBoolean(val)));
 
         names.remove(parse(properties, "max_new_tokens", validationResult,
-            val -> parameters.maxNewTokens = Integer.parseInt(val)));
+            val -> parameters.maxNewTokens = Optional.of(Integer.parseInt(val))));
 
         names.remove(parse(properties, "repetition_penalty", validationResult,
-            val -> parameters.repetitionPenalty = Double.parseDouble(val)));
+            val -> parameters.repetitionPenalty = Optional.of(Double.parseDouble(val))));
 
         names.remove(parse(properties, "frequency_penalty", validationResult,
-            val -> parameters.frequencyPenalty = Double.parseDouble(val)));
+            val -> parameters.frequencyPenalty = Optional.of(Double.parseDouble(val))));
 
         names.remove(parse(properties, "return_full_text", validationResult,
             val -> parameters.returnFullText = parseBoolean(val)));
@@ -114,20 +116,21 @@ public class ParametersParser
         names.remove(parse(properties, "seed", validationResult, val -> parameters.seed = parseBoolean(val)));
 
         names.remove(parse(properties, "temperature", validationResult,
-            val -> parameters.temperature = Double.parseDouble(val)));
+            val -> parameters.temperature = Optional.of(Double.parseDouble(val))));
 
-        names.remove(parse(properties, "top_k", validationResult, val -> parameters.topK = Integer.parseInt(val)));
+        names.remove(parse(properties, "top_k", validationResult, val -> parameters.topK = Optional.of(Integer.parseInt(val))));
 
         names.remove(parse(properties, "top_n_tokens", validationResult,
-            val -> parameters.topNTokens = Integer.parseInt(val)));
+            val -> parameters.topNTokens = Optional.of(Integer.parseInt(val))));
 
-        names.remove(parse(properties, "top_p", validationResult, val -> parameters.topP = Double.parseDouble(val)));
+        names.remove(parse(properties, "top_p", validationResult, val -> parameters.topP = Optional.of(Double.parseDouble(val))));
 
         names
             .remove(parse(properties, "truncate", validationResult, val -> parameters.truncate = parseBoolean(val)));
 
         names.remove(
-            parse(properties, "typical_p", validationResult, val -> parameters.typicalP = Double.parseDouble(val)));
+            parse(properties, "typical_p", validationResult,
+                val -> parameters.typicalP = Optional.of(Double.parseDouble(val))));
 
         names.remove(
             parse(properties, "watermark", validationResult, val -> parameters.watermark = parseBoolean(val)));
@@ -139,10 +142,10 @@ public class ParametersParser
                     switch (healing)
                     {
                     case NONE:
-                        parameters.tokenHealing = null;
+                        parameters.tokenHealing = Optional.empty();
                         break;
                     default:
-                        parameters.tokenHealing = healing;
+                        parameters.tokenHealing = Optional.ofNullable(healing);
                         break;
                     }
                 }));
@@ -154,63 +157,76 @@ public class ParametersParser
 
         names.remove(parse(properties, "url", validationResult, val -> parameters.url = parseUrl(val)));
 
-        names.remove(parse(properties, "chat_url", validationResult, val -> parameters.chatUrl = parseUrl(val)));
+        names.remove(
+            parse(properties, "chat_url", validationResult, val -> parameters.chatUrl = Optional.of(parseUrl(val))));
 
-        names.remove(parse(properties, "update_url", validationResult, val -> parameters.updateUrl = val));
+        names.remove(
+            parse(properties, "update_url", validationResult, val -> parameters.updateUrl = Optional.ofNullable(val)));
 
         names.remove(parse(properties, "local_functions_length", validationResult,
-            val -> parameters.localFunctionsLength = Integer.parseInt(val)));
+            val -> parameters.localFunctionsLength = Optional.of(Integer.parseInt(val))));
 
         names.remove(parse(properties, "external_functions_length", validationResult,
-            val -> parameters.externalFunctionsLength = Integer.parseInt(val)));
+            val -> parameters.externalFunctionsLength = Optional.of(Integer.parseInt(val))));
 
         names.remove(
             parse(properties, "min_delay", validationResult,
                 val -> {
-                    parameters.minDelay = val == null || val.isBlank() ? DEFAULT_MIN_DELAY : Integer.parseInt(val);
-                    if (parameters.minDelay < 50)
+                    if (val != null && !val.isBlank())
                     {
-                        validationResult.addError(new ValidationError(WellknownError.OutOfRange, "min_delay"));
-                        parameters.minDelay = 50;
-                    }
+                        var minDelay = Integer.parseInt(val);
+                        if (minDelay < 50)
+                        {
+                            validationResult.addError(new ValidationError(WellknownError.OutOfRange, "min_delay"));
+                            minDelay = 50;
+                        }
 
-                    if (parameters.minDelay > 1000)
-                    {
-                        validationResult.addError(new ValidationError(WellknownError.OutOfRange, "min_delay"));
-                        parameters.minDelay = 1000;
+                        if (minDelay > 1000)
+                        {
+                            validationResult.addError(new ValidationError(WellknownError.OutOfRange, "min_delay"));
+                            minDelay = 1000;
+                        }
+
+                        parameters.minDelay = Optional.of(minDelay);
                     }
                 }));
 
         names.remove(parse(properties, "timeout", validationResult, val -> {
-            parameters.timeout = val == null || val.isBlank() ? DEAULT_TIMEOUT : Integer.parseInt(val);
-            if (parameters.timeout < 50)
+            if (val != null && !val.isBlank())
             {
-                validationResult.addError(new ValidationError(WellknownError.OutOfRange, "timeout"));
-                parameters.timeout = 50;
-            }
+                var timeout = Integer.parseInt(val);
+                if (timeout < 50)
+                {
+                    validationResult.addError(new ValidationError(WellknownError.OutOfRange, "timeout"));
+                    timeout = 50;
+                }
 
-            if (parameters.timeout > 60000)
-            {
-                validationResult.addError(new ValidationError(WellknownError.OutOfRange, "timeout"));
-                parameters.timeout = 60000;
+                if (timeout > 60000)
+                {
+                    validationResult.addError(new ValidationError(WellknownError.OutOfRange, "timeout"));
+                    timeout = 60000;
+                }
+
+                parameters.timeout = Optional.of(timeout);
             }
         }));
 
         names.remove(parse(properties, "global_context", validationResult,
-            val -> parameters.globalContext = val == null || val.isBlank() ? false : parseBoolean(val)));
+            val -> parameters.globalContext = val == null || val.isBlank() ? null : parseBoolean(val)));
 
         names.remove(parse(properties, "extended_context", validationResult,
-            val -> parameters.extendedContext = val == null || val.isBlank() ? false : parseBoolean(val)));
+            val -> parameters.extendedContext = val == null || val.isBlank() ? null : parseBoolean(val)));
 
         names.remove(parse(properties, "verbosity", validationResult,
             val -> parameters.verbosity =
                 val == null || val.isBlank() ? DEFAULT_VERBOSITY : parseEnum(val, Verbosity.class)));
 
         names.remove(parse(properties, "resources", validationResult,
-            val -> parameters.resources = val == null || val.isBlank() ? "" : val.trim()));
+            val -> parameters.resources = val == null || val.isBlank() ? null : Optional.of(val.trim())));
 
         names.remove(parse(properties, "git_diff_context_lines", validationResult,
-            val -> parameters.gitDiffContextLines = val == null || val.isBlank() ? DEFAULT_GIT_CONTEXT_LINES : Integer.parseInt(val)));
+            val -> parameters.gitDiffContextLines =
+                val == null || val.isBlank() ? null : Optional.of(Integer.parseInt(val))));
 
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
@@ -246,7 +262,7 @@ public class ParametersParser
         return name;
     }
 
-    private Boolean parseBoolean(String text)
+    private Optional<Boolean> parseBoolean(String text)
     {
         if (text == null)
         {
@@ -256,12 +272,12 @@ public class ParametersParser
         text = text.trim();
         if ("true".equalsIgnoreCase(text)) //$NON-NLS-1$
         {
-            return true;
+            return Optional.of(true);
         }
 
         if ("false".equalsIgnoreCase(text)) //$NON-NLS-1$
         {
-            return false;
+            return Optional.of(false);
         }
 
         throw new IllegalArgumentException(text);

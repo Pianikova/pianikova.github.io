@@ -16,7 +16,7 @@ public class InputDelayStatistics implements IInputDelayStatistics
     private final ISample sample;
     private final IClock clock;
     private final IMath math;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final int minSamplesSize;
     private final double minDelay;
     private final double maxDelay;
@@ -25,14 +25,14 @@ public class InputDelayStatistics implements IInputDelayStatistics
     private Duration defaultDelay;
 
     @Inject
-    public InputDelayStatistics(IClock clock, IMath math, IUISettings uiSettings)
+    public InputDelayStatistics(IClock clock, IMath math, ISettings uiSettings)
     {
         this(new Sample(100), clock, math, uiSettings, 10, Duration.ofMillis(50), Duration.ofMillis(1000),
             Duration.ofMillis(700),
             .70, .50, .70);
     }
 
-    public InputDelayStatistics(ISample sample, IClock clock, IMath math, IUISettings uiSettings, int minSamplesSize,
+    public InputDelayStatistics(ISample sample, IClock clock, IMath math, ISettings uiSettings, int minSamplesSize,
         Duration minDelay,
         Duration maxDelay,
         Duration defaultDelay, double inputConfidenceLevel, double predictConfidenceLevel,
@@ -54,7 +54,7 @@ public class InputDelayStatistics implements IInputDelayStatistics
         this.sample = sample;
         this.clock = clock;
         this.math = math;
-        this.uiSettings = uiSettings;
+        this.settings = uiSettings;
         this.minSamplesSize = minSamplesSize;
         this.defaultDelay = defaultDelay;
         this.inputConfidenceLevel = inputConfidenceLevel;
@@ -96,7 +96,7 @@ public class InputDelayStatistics implements IInputDelayStatistics
             }
 
             sample.addValue(value);
-            var confidenceLevel = CodeCompletionPolicy.INTENSVE.isMeet(uiSettings.getCodeCompletionPolicy())
+            var confidenceLevel = CodeCompletionPolicy.INTENSVE.isMeet(settings.getCodeCompletionPolicy())
                 ? predictCreativeConfidenceLevel : predictConfidenceLevel;
             var predictInterval = math.calculateConfidenceInterval(sample.getValues(), confidenceLevel);
             defaultDelay = Duration.ofMillis((int)predictInterval.getMax());

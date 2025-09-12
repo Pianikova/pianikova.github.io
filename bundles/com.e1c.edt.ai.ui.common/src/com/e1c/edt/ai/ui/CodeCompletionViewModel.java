@@ -57,9 +57,9 @@ import com.e1c.edt.ai.IHintHistory;
 import com.e1c.edt.ai.IInputDelayStatistics;
 import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observers;
 import com.e1c.edt.ai.Sources;
 import com.e1c.edt.ai.StatisticsType;
@@ -80,7 +80,7 @@ class CodeCompletionViewModel
     private final Object lockObject = new Object();
     private final Object lastMethodLockObject = new Object();
     private final ILog log;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final ICodeAssistant codeAssistant;
     private final IAIContextProvider aiContextProvider;
     private final IDispatcher dispatcher;
@@ -124,7 +124,7 @@ class CodeCompletionViewModel
     private boolean isTextModifed;
 
     @Inject
-    public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, IUISettings uiSettings,
+    public CodeCompletionViewModel(ILog log, ISettingsStore settingsStore, ISettings settings,
         ICodeAssistant codeAssistant,
         IAIContextProvider aiContextProvider,
         IDispatcher dispatcher, IHintPainter hintPainter, IVerticalRulerPainter verticalRulerPainter,
@@ -141,7 +141,7 @@ class CodeCompletionViewModel
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(codeAssistant);
         Preconditions.checkNotNull(aiContextProvider);
         Preconditions.checkNotNull(dispatcher);
@@ -169,7 +169,7 @@ class CodeCompletionViewModel
         Preconditions.checkNotNull(clipboard);
         this.log = log;
         this.codeAssistant = codeAssistant;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
         this.aiContextProvider = aiContextProvider;
         this.dispatcher = dispatcher;
         this.hintPainter = hintPainter;
@@ -231,17 +231,17 @@ class CodeCompletionViewModel
 
     private boolean isEnabled()
     {
-        return CodeCompletionPolicy.MANUAL.isMeet(uiSettings.getCodeCompletionPolicy());
+        return CodeCompletionPolicy.MANUAL.isMeet(settings.getCodeCompletionPolicy());
     }
 
     private boolean isBalanced()
     {
-        return CodeCompletionPolicy.MODERATE.isMeet(uiSettings.getCodeCompletionPolicy());
+        return CodeCompletionPolicy.MODERATE.isMeet(settings.getCodeCompletionPolicy());
     }
 
     private boolean isCreative()
     {
-        return CodeCompletionPolicy.INTENSVE.isMeet(uiSettings.getCodeCompletionPolicy());
+        return CodeCompletionPolicy.INTENSVE.isMeet(settings.getCodeCompletionPolicy());
     }
 
     private void reset()
@@ -293,16 +293,16 @@ class CodeCompletionViewModel
 
         var delayBeforeShow = inputRateStatistics.registerAndPredictDelay();
         var delay = delayBeforeShow.minus(requestDuration);
-        if (delay.toNanos() < uiSettings.getMinRequestDelay().toNanos())
+        if (delay.toNanos() < settings.getMinRequestDelay().toNanos())
         {
-            delay = uiSettings.getMinRequestDelay();
+            delay = settings.getMinRequestDelay();
         }
 
         log.trace(
             "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
             () -> ""); //$NON-NLS-1$
         reset();
-        askWithDelay(delay, delayBeforeShow, uiSettings.getMinRequestDelay(), uiSettings.getCodeCompletionLinesCount(),
+        askWithDelay(delay, delayBeforeShow, settings.getMinRequestDelay(), settings.getCodeCompletionLinesCount(),
             null, false, false);
     }
 
@@ -339,8 +339,8 @@ class CodeCompletionViewModel
             return;
         }
 
-        askWithDelay(Duration.ZERO, Duration.ZERO, uiSettings.getMinRequestDelay(),
-            uiSettings.getCodeCompletionLinesCount(), null, forced, contentAssist);
+        askWithDelay(Duration.ZERO, Duration.ZERO, settings.getMinRequestDelay(),
+            settings.getCodeCompletionLinesCount(), null, forced, contentAssist);
     }
 
     private void warmup()
@@ -354,7 +354,7 @@ class CodeCompletionViewModel
 
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, uiSettings.getTimeout(), false, false), null);
+                ct -> CreateContextProvider(null, settings.getTimeout(), false, false), null);
         warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
     }
@@ -1106,7 +1106,7 @@ class CodeCompletionViewModel
         {
             reset();
             localContext =
-                new CompletionRequestProvider(uiSettings.getMinRequestDelay(), false, true);
+                new CompletionRequestProvider(settings.getMinRequestDelay(), false, true);
         }
 
         @Override
@@ -1141,7 +1141,7 @@ class CodeCompletionViewModel
             }
 
             lastProposals.add(optionalProposal.get());
-            askWithDelay(Duration.ZERO, uiSettings.getMinRequestDelay(), Duration.ZERO, 1, localContext, false, true);
+            askWithDelay(Duration.ZERO, settings.getMinRequestDelay(), Duration.ZERO, 1, localContext, false, true);
         }
     }
 

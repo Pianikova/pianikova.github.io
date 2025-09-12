@@ -11,7 +11,7 @@ import org.eclipse.swt.graphics.GC;
 
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IHintTextBuilder;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.OS;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -25,7 +25,7 @@ class HintPainter
         SWT.DRAW_TRANSPARENT | SWT.DRAW_DELIMITER | SWT.DRAW_TAB | SWT.DRAW_MNEMONIC;
 
     private final IHintTextBuilder hintTextBuilder;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final IUserActions userActions;
     private final IGCTools gcTools;
     private final IEnvironment environment;
@@ -41,7 +41,7 @@ class HintPainter
     private boolean isSingleWordMode;
 
     @Inject
-    public HintPainter(IHintTextBuilder hintTextBuilder, IUISettings uiSettings, IUserActions userActions,
+    public HintPainter(IHintTextBuilder hintTextBuilder, ISettings uiSettings, IUserActions userActions,
         IGCTools gcTools, IEnvironment environment)
     {
         Preconditions.checkNotNull(hintTextBuilder);
@@ -50,7 +50,7 @@ class HintPainter
         Preconditions.checkNotNull(gcTools);
         Preconditions.checkNotNull(environment);
         this.hintTextBuilder = hintTextBuilder;
-        this.uiSettings = uiSettings;
+        this.settings = uiSettings;
         this.userActions = userActions;
         this.gcTools = gcTools;
         this.environment = environment;
@@ -138,7 +138,7 @@ class HintPainter
 
             if (!isSingleWordMode || hint.length() == 0)
             {
-                hint = hintTextBuilder.build(prefix, hint, uiSettings.getTabWidth()) + CONTINUATION_SIGN;
+                hint = hintTextBuilder.build(prefix, hint, settings.getTabWidth()) + CONTINUATION_SIGN;
             }
 
             displayedHintText = hint;
@@ -172,7 +172,7 @@ class HintPainter
             firstLine = displayedHintText;
         }
 
-        var token = hintTextBuilder.build(prefix, this.nextToken, uiSettings.getTabWidth());
+        var token = hintTextBuilder.build(prefix, this.nextToken, settings.getTabWidth());
         token = firstLine.startsWith(token) ? token : ""; //$NON-NLS-1$
         drawHint(event.gc, textWidget, token, firstLine, otherLines, suffix);
     }

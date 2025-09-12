@@ -3,9 +3,6 @@
  */
 package com.e1c.edt.ai.assistent;
 
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
@@ -23,11 +20,10 @@ import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.IObserver;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.assistent.model.ConversationAskRequest;
 import com.e1c.edt.ai.assistent.model.ConversationAskResponse;
@@ -42,8 +38,7 @@ import com.google.inject.Inject;
 public class Conversations implements IConversations
 {
     private final IHttpLog log;
-    private final IDefaultSettings defaultSettings;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
@@ -52,13 +47,12 @@ public class Conversations implements IConversations
     private final IStateService stateService;
 
     @Inject
-    public Conversations(IHttpLog log, IDefaultSettings defaultSettings, IUISettings uiSettings,
-        IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json, ISessionService sessionService,
-        ICompressor compressor, IStateService stateService)
+    public Conversations(IHttpLog log, ISettings settings, IRequestBuilder requestBuilder,
+        IHttpClientBuilder clientBuilder, IJson json, ISessionService sessionService, ICompressor compressor,
+        IStateService stateService)
     {
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(defaultSettings);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
@@ -66,8 +60,7 @@ public class Conversations implements IConversations
         Preconditions.checkNotNull(compressor);
         Preconditions.checkNotNull(stateService);
         this.log = log;
-        this.defaultSettings = defaultSettings;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
         this.json = json;
@@ -132,8 +125,7 @@ public class Conversations implements IConversations
         throws InterruptedException, ExecutionException
     {
         var optionalRequest =
-            requestBuilder.create(settings -> getChatUrl(settings.getLlmParameters().url),
-                "./api/v1/" + defaultSettings.getChatUrlPath() + "conversations/"); //$NON-NLS-1$ //$NON-NLS-2$
+            requestBuilder.create(settings.getUrl() + "api/v1/conversations/"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
             return Optional.empty();
@@ -148,7 +140,7 @@ public class Conversations implements IConversations
         return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+            .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
             .thenApplyAsync(HttpResponse::body)
             .thenApplyAsync(content -> json.deserialize(content, ConversationResponse.class))
@@ -160,8 +152,7 @@ public class Conversations implements IConversations
         ICancellationToken cancellationToken)
     {
         var optionalRequest =
-            requestBuilder.create(settings -> getChatUrl(settings.getLlmParameters().url),
-                "./api/v1/" + defaultSettings.getChatUrlPath() + "conversations/" + conversationId + "/messages"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            requestBuilder.create(settings.getUrl() + "api/v1/conversations/" + conversationId + "/messages"); //$NON-NLS-1$ //$NON-NLS-2$
         if (optionalRequest.isEmpty())
         {
             observer.onCompleted();
@@ -206,7 +197,7 @@ public class Conversations implements IConversations
             asyncRequest.cancel(true);
         });
         asyncRequest
-            .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+            .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
             .thenApplyAsync(HttpResponse::body)
             .thenAcceptAsync(stream -> processStream(stream, observer, cancellationToken))
@@ -297,18 +288,6 @@ public class Conversations implements IConversations
 
         observer.onCompleted();
         return false;
-    }
-
-    private URL getChatUrl(URL baseURL)
-    {
-        try
-        {
-            return baseURL.toURI().resolve("/").toURL(); //$NON-NLS-1$
-        }
-        catch (MalformedURLException | URISyntaxException e)
-        {
-            return baseURL;
-        }
     }
 
     private static class ConversationAskResponseStreamData

@@ -68,41 +68,42 @@ public class ParametersParserTest
         return Arrays.asList(
             new Object[][] {
                 {"", ValidationResult.SUCCESS, defaultParams },
-                { "best_of=9", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = 9; } ) },
-                { "best_of =  9", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = 9; } ) },
+                { "best_of=9", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = Optional.of(9); } ) },
+                { "best_of =  9", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = Optional.of(9); } ) },
                 { "best_of=Abc", new ValidationResult(UnableToParse("best_of")), defaultParams },
-                { "decoder_input_details=True", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = true; } ) },
-                { "decoder_input_details=true", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = true; } ) },
-                { "decoder_input_details=False", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = false; } ) },
-                { "decoder_input_details=false", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = false; } ) },
+                { "decoder_input_details=True", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = Optional.of(true); } ) },
+                { "decoder_input_details=true", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = Optional.of(true); } ) },
+                { "decoder_input_details=False", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = Optional.of(false); } ) },
+                { "decoder_input_details=false", ValidationResult.SUCCESS, createParams(p -> { p.decoderInputDetails = Optional.of(false); } ) },
                 { "decoder_input_details=Abc", new ValidationResult(UnableToParse("decoder_input_details")), defaultParams },
                 { "decoder_input_details=", new ValidationResult(UnableToParse("decoder_input_details")), defaultParams },
-                { "best_of=9;decoder_input_details=True", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = 9; p.decoderInputDetails = true; } ) },
-                { "best_of = 9 ;  decoder_input_details=True", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = 9; p.decoderInputDetails = true; } ) },
+                { "best_of=9;decoder_input_details=True", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = Optional.of(9); p.decoderInputDetails = Optional.of(true); } ) },
+                { "best_of = 9 ;  decoder_input_details=True", ValidationResult.SUCCESS, createParams(p -> { p.bestOf = Optional.of(9); p.decoderInputDetails = Optional.of(true); } ) },
                 { "xyz=Abc", new ValidationResult(Unknown("xyz")), defaultParams },
                 { "xyz=Abc ; Ddd=ggg", new ValidationResult(Unknown("Ddd"), Unknown("xyz")), defaultParams },
-                { "do_sample=true", ValidationResult.SUCCESS, createParams(p -> { p.doSample = true; } ) },
-                { "max_new_tokens=77", ValidationResult.SUCCESS, createParams(p -> { p.maxNewTokens = 77; } ) },
-                { "repetition_penalty=34.5", ValidationResult.SUCCESS, createParams(p -> { p.repetitionPenalty = 34.5; } ) },
-                { "frequency_penalty=34.5", ValidationResult.SUCCESS, createParams(p -> { p.frequencyPenalty = 34.5; } ) },
-                { "return_full_text=true", ValidationResult.SUCCESS, createParams(p -> { p.returnFullText = true; } ) },
-                { "seed=true", ValidationResult.SUCCESS, createParams(p -> { p.seed = true; } ) },
-                { "temperature=34.5", ValidationResult.SUCCESS, createParams(p -> { p.temperature = 34.5; } ) },
-                { "top_k=34", ValidationResult.SUCCESS, createParams(p -> { p.topK = 34; } ) },
-                { "top_n_tokens=34", ValidationResult.SUCCESS, createParams(p -> { p.topNTokens = 34; } ) },
-                { "top_p=34.5", ValidationResult.SUCCESS, createParams(p -> { p.topP = 34.5; } ) },
-                { "truncate=true", ValidationResult.SUCCESS, createParams(p -> { p.truncate = true; } ) },
-                { "typical_p=34.5", ValidationResult.SUCCESS, createParams(p -> { p.typicalP = 34.5; } ) },
-                { "watermark=true", ValidationResult.SUCCESS, createParams(p -> { p.watermark = true; } ) },
-                { "token_healing=guidance", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.GUIDANCE; } ) },
-                { "token_healing=streaming", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = TokenHealing.STREAMING; } ) },
-                { "token_healing=None", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = null; } ) },
-                { "return_line=true", ValidationResult.SUCCESS, createParams(p -> { p.returnLine = true; } ) },
-                { "trim_stop=true", ValidationResult.SUCCESS, createParams(p -> { p.trimStop = true; } ) },
+                { "do_sample=true", ValidationResult.SUCCESS, createParams(p -> { p.doSample = Optional.of(true); } ) },
+                { "max_new_tokens=77", ValidationResult.SUCCESS, createParams(p -> { p.maxNewTokens = Optional.of(77); } ) },
+                { "repetition_penalty=34.5", ValidationResult.SUCCESS, createParams(p -> { p.repetitionPenalty = Optional.of(34.5); } ) },
+                { "frequency_penalty=34.5", ValidationResult.SUCCESS, createParams(p -> { p.frequencyPenalty = Optional.of(34.5); } ) },
+                { "return_full_text=true", ValidationResult.SUCCESS, createParams(p -> { p.returnFullText = Optional.of(true); } ) },
+                { "seed=true", ValidationResult.SUCCESS, createParams(p -> { p.seed = Optional.of(true); } ) },
+                { "temperature=34.5", ValidationResult.SUCCESS, createParams(p -> { p.temperature = Optional.of(34.5); } ) },
+                { "top_k=34", ValidationResult.SUCCESS, createParams(p -> { p.topK = Optional.of(34); } ) },
+                { "top_n_tokens=34", ValidationResult.SUCCESS, createParams(p -> { p.topNTokens = Optional.of(34); } ) },
+                { "top_p=34.5", ValidationResult.SUCCESS, createParams(p -> { p.topP = Optional.of(34.5); } ) },
+                { "truncate=true", ValidationResult.SUCCESS, createParams(p -> { p.truncate = Optional.of(true); } ) },
+                { "typical_p=34.5", ValidationResult.SUCCESS, createParams(p -> { p.typicalP = Optional.of(34.5); } ) },
+                { "watermark=true", ValidationResult.SUCCESS, createParams(p -> { p.watermark = Optional.of(true); } ) },
+                { "token_healing=guidance", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = Optional.of(TokenHealing.GUIDANCE); } ) },
+                { "token_healing=streaming", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = Optional.of(TokenHealing.STREAMING); } ) },
+                { "token_healing=None", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = Optional.empty(); } ) },
+                { "", ValidationResult.SUCCESS, createParams(p -> { p.tokenHealing = null; } ) },
+                { "return_line=true", ValidationResult.SUCCESS, createParams(p -> { p.returnLine = Optional.of(true); } ) },
+                { "trim_stop=true", ValidationResult.SUCCESS, createParams(p -> { p.trimStop = Optional.of(true); } ) },
                 { "chat_url=http://chat.com/Abc", ValidationResult.SUCCESS, createParams(p -> {
                     try
                     {
-                        p.chatUrl = new URL("http://chat.com/Abc/");
+                        p.chatUrl = Optional.of(new URL("http://chat.com/Abc/"));
                     }
                     catch (MalformedURLException e)
                     {
@@ -112,7 +113,7 @@ public class ParametersParserTest
                 { "chat_url=http://chat.com/Abc/", ValidationResult.SUCCESS, createParams(p -> {
                     try
                     {
-                        p.chatUrl = new URL("http://chat.com/Abc/");
+                        p.chatUrl = Optional.of(new URL("http://chat.com/Abc/"));
                     }
                     catch (MalformedURLException e)
                     {
@@ -139,10 +140,12 @@ public class ParametersParserTest
                         //
                     } } )
                 },
-                { "min_delay=300", ValidationResult.SUCCESS, createParams(p -> { p.minDelay = 300; } ) },
-                { "timeout=15000", ValidationResult.SUCCESS, createParams(p -> { p.timeout = 15000; } ) },
-                { "global_context=true", ValidationResult.SUCCESS, createParams(p -> { p.globalContext = true; } ) },
-                { "extended_context=true", ValidationResult.SUCCESS, createParams(p -> { p.extendedContext = true; } ) },
+                { "min_delay=300", ValidationResult.SUCCESS, createParams(p -> { p.minDelay = Optional.of(300); } ) },
+                { "timeout=15000", ValidationResult.SUCCESS, createParams(p -> { p.timeout = Optional.of(15000); } ) },
+                { "global_context=true", ValidationResult.SUCCESS, createParams(p -> { p.globalContext = Optional.of(true); } ) },
+                { "global_context=false", ValidationResult.SUCCESS, createParams(p -> { p.globalContext = Optional.of(false); } ) },
+                { "extended_context=true", ValidationResult.SUCCESS, createParams(p -> { p.extendedContext = Optional.of(true); } ) },
+                { "extended_context=false", ValidationResult.SUCCESS, createParams(p -> { p.extendedContext = Optional.of(false); } ) },
                 { "verbosity=error", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.ERROR; } ) },
                 { "verbosity=warning", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.WARNING; } ) },
                 { "verbosity=info", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.INFO; } ) },

@@ -15,7 +15,7 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IProjectProvider;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -28,14 +28,14 @@ class GlobalContextTracker
     private final IProjectProvider projectProvider;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
     private final IClock clock;
-    private final IUISettings settings;
+    private final ISettings settings;
     private final Object lockObject = new Object();
     private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
     private Job job;
 
     @Inject
     public GlobalContextTracker(IDispatcher dispatcher, IProjectProvider projectProvider,
-        Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock, IUISettings settings)
+        Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock, ISettings settings)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(projectProvider);

@@ -22,8 +22,8 @@ import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.IObserver;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.Completion;
@@ -46,7 +46,7 @@ class CodeAssistant
     private final ISessionService sessionService;
     private final IResponseStreamProcessor responseStreamProcessor;
     private final Provider<IStatistics> statisticsProvider;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final IEnvironment environment;
     private final ICompressor compressor;
     private final IStateService stateService;
@@ -54,7 +54,7 @@ class CodeAssistant
     @Inject
     public CodeAssistant(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISessionService sessionService, IResponseStreamProcessor responseStreamProcessor,
-        Provider<IStatistics> statisticsProvider, IUISettings uiSettings, IEnvironment environment,
+        Provider<IStatistics> statisticsProvider, ISettings settings, IEnvironment environment,
         ICompressor compressor, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
@@ -64,7 +64,7 @@ class CodeAssistant
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(responseStreamProcessor);
         Preconditions.checkNotNull(statisticsProvider);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(compressor);
         Preconditions.checkNotNull(stateService);
@@ -75,7 +75,7 @@ class CodeAssistant
         this.sessionService = sessionService;
         this.responseStreamProcessor = responseStreamProcessor;
         this.statisticsProvider = statisticsProvider;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
         this.environment = environment;
         this.compressor = compressor;
         this.stateService = stateService;
@@ -116,7 +116,7 @@ class CodeAssistant
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
-        var optionalRequest = requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/complete"); //$NON-NLS-1$
+        var optionalRequest = requestBuilder.create(settings.getUrl() + "api/v1/complete"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
             observer.onCompleted();
@@ -196,7 +196,7 @@ class CodeAssistant
         });
 
         asyncRequest
-            .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+            .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
             .thenApplyAsync(response -> checkResponse(response, observer, cancellationToken))
             .thenApplyAsync(HttpResponse::body)

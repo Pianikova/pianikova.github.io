@@ -25,6 +25,7 @@ public class ContextInitializerTest
 {
     private final IContextSplitter splitter = mock(IContextSplitter.class);
     private final IDocument document = mock(IDocument.class);
+    @SuppressWarnings("unchecked")
     private final Supplier<Boolean> isDisposed = mock(Supplier.class);
 
     @Parameter(0)
@@ -48,15 +49,16 @@ public class ContextInitializerTest
     public void shouldCreateContext()
     {
         // Given
+        var projectId = new ProjectId("path", null);
         var text = prefix + sufix;
         var parts = new ContextParts(new Range(0, prefix.length()), new Range(prefix.length(), sufix.length()));
-        when(splitter.split(text, expectedOffset)).thenReturn(parts);
+        when(splitter.split(projectId, text, expectedOffset)).thenReturn(parts);
         var factory = createInstance();
 
         // When
         var actualContext =
             factory.initialize(
-                new AIContext(new ProjectId("path", null), textOffset + 3, "full_" + text,
+                new AIContext(projectId, textOffset + 3, "full_" + text,
                     textOffset + 3, "", text,
                     textOffset, document, isDisposed));
 

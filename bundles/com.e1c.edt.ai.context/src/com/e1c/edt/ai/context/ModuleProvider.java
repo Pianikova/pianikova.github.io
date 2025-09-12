@@ -23,7 +23,7 @@ import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IProjectProvider;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -32,17 +32,17 @@ public class ModuleProvider
     implements IModuleProvider, IProjectIdProvider, IProjectProvider
 {
     private final IBmModelManager modelManager;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final IResourceLookup resourceLookup;
 
     @Inject
-    public ModuleProvider(IBmModelManager modelManager, IUISettings uiSettings, IResourceLookup resourceLookup)
+    public ModuleProvider(IBmModelManager modelManager, ISettings settings, IResourceLookup resourceLookup)
     {
         Preconditions.checkNotNull(modelManager);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(resourceLookup);
         this.modelManager = modelManager;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
         this.resourceLookup = resourceLookup;
     }
 
@@ -147,7 +147,7 @@ public class ModuleProvider
 
     private Module analyzeModule(Module module, ICancellationToken cancellationToken)
     {
-        if (!uiSettings.sendExtendedContext())
+        if (!settings.sendExtendedContext())
         {
             return module;
         }

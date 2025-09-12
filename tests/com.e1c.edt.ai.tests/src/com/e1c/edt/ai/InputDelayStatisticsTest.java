@@ -30,7 +30,7 @@ public class InputDelayStatisticsTest
     private final ISample sample = mock(ISample.class);
     private final IClock clock = mock(IClock.class);
     private final IMath math = mock(IMath.class);
-    private final IUISettings uiSettings = mock(IUISettings.class);
+    private final ISettings settings = mock(ISettings.class);
     private int sampleSize = 0;
     private double[] sampleValues = new double[0];
     private LocalDateTime now = START_TIME;
@@ -40,7 +40,7 @@ public class InputDelayStatisticsTest
         when(sample.getSize()).thenAnswer(i -> sampleSize);
         when(sample.getValues()).thenAnswer(i -> sampleValues);
         when(clock.now()).thenAnswer(i -> now);
-        when(uiSettings.getCodeCompletionPolicy()).thenAnswer(i -> CodeCompletionPolicy.INTENSVE);
+        when(settings.getCodeCompletionPolicy()).thenAnswer(i -> CodeCompletionPolicy.INTENSVE);
     }
 
     @Test
@@ -170,7 +170,7 @@ public class InputDelayStatisticsTest
 
     private InputDelayStatistics createInstance()
     {
-        return new InputDelayStatistics(sample, clock, math, uiSettings, 2, MIN_DELAY, MAX_DELAY, DEFAULT_DELAY,
+        return new InputDelayStatistics(sample, clock, math, settings, 2, MIN_DELAY, MAX_DELAY, DEFAULT_DELAY,
             INPUT_CONFIDENCE_LEVEL, PREDICT_CONFIDENCE_LEVEL, PREDICT_CONFIDENCE_LEVEL);
     }
 

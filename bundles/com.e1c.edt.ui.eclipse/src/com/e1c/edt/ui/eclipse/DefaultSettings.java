@@ -15,6 +15,12 @@ class DefaultSettings
     }
 
     @Override
+    public String getChatUrl()
+    {
+        return "https://llms.1c.ai/code_java/chat/"; //$NON-NLS-1$
+    }
+
+    @Override
     public String getHomePage()
     {
         return "https://code.1c.ai/"; //$NON-NLS-1$
@@ -30,11 +36,5 @@ class DefaultSettings
     public String getPluginFeature()
     {
         return "com.e1c.edt.ui.eclipse.feature.feature.group"; //$NON-NLS-1$
-    }
-
-    @Override
-    public String getChatUrlPath()
-    {
-        return "code_java/chat_api/v1/"; //$NON-NLS-1$
     }
 }

@@ -21,7 +21,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProposalExtractor;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.Proposal;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -31,13 +31,13 @@ public class ProposalsProvider
 {
     private final ILog log;
     private final IDispatcher dispatcher;
-    private final IUISettings uiSettings;
+    private final ISettings uiSettings;
     private final IClock clock;
     private final IProposalExtractor proposalExtractor;
     private final IReflection reflection;
 
     @Inject
-    public ProposalsProvider(ILog log, IDispatcher dispatcher, IUISettings uiSettings, IClock clock,
+    public ProposalsProvider(ILog log, IDispatcher dispatcher, ISettings uiSettings, IClock clock,
         IProposalExtractor proposalExtractor, IReflection reflection)
     {
         Preconditions.checkNotNull(log);

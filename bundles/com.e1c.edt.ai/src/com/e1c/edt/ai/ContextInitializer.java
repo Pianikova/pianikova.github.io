@@ -47,7 +47,7 @@ public class ContextInitializer
             offset = text.length();
         }
 
-        var parts = contextSplitter.split(text, offset);
+        var parts = contextSplitter.split(ctx.getProjectId(), text, offset);
         var prefix = parts.getPrefix().apply(text);
         var sufix = parts.getSufix().apply(text);
         return Optional

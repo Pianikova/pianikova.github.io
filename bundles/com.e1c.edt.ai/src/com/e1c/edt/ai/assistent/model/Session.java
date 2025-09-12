@@ -15,4 +15,10 @@ public class Session
      */
     @SerializedName("session_id")
     public String sessionId;
+
+    /**
+     * Параметры сервиса.
+     */
+    @SerializedName("user_parameters")
+    public Parameters userParameters;
 }

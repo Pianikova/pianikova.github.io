@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 
-import com.e1c.edt.ai.IUISettings;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,10 +16,12 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.e1c.edt.ai.ISettings;
+
 @RunWith(Parameterized.class)
 public class TextPreprocessorTest
 {
-    private final IUISettings uiSettings = mock(IUISettings.class);
+    private final ISettings settings = mock(ISettings.class);
 
     @Parameter(0)
     public String text;
@@ -33,8 +34,8 @@ public class TextPreprocessorTest
     public void shouldBuild()
     {
         // Given
-        when(uiSettings.getLineSeparator()).thenReturn("|");
-        var preprocessor = new TextPreprocessor(uiSettings);
+        when(settings.getLineSeparator()).thenReturn("|");
+        var preprocessor = new TextPreprocessor(settings);
 
         // When
         var actualText = preprocessor.process(text);

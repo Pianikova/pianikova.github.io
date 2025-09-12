@@ -3,23 +3,24 @@
  */
 package com.e1c.edt.ai;
 
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class ContextSplitter
     implements IContextSplitter
 {
-    private final IContextSettings contextSettings;
+    private final ISettings settings;
 
     @Inject
-    public ContextSplitter(IContextSettings contextSettings)
+    public ContextSplitter(ISettings settings)
     {
-        Preconditions.checkNotNull(contextSettings);
-        this.contextSettings = contextSettings;
+        Preconditions.checkNotNull(settings);
+        this.settings = settings;
     }
 
     @Override
-    public ContextParts split(String text, int offset)
+    public ContextParts split(ProjectId projectId, String text, int offset)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0 && offset <= text.length());
@@ -28,13 +29,13 @@ public class ContextSplitter
             return new ContextParts(Range.EMPTY, Range.EMPTY);
         }
 
-        var maxPrefixLength = contextSettings.getPrefixLength();
+        var maxPrefixLength = settings.getPrefixLength(projectId);
         if (maxPrefixLength < 0)
         {
             maxPrefixLength = 0;
         }
 
-        var maxSuffixLength = contextSettings.getSuffixLength();
+        var maxSuffixLength = settings.getSuffixLength(projectId);
         if (maxSuffixLength < 0)
         {
             maxSuffixLength = 0;

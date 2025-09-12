@@ -16,7 +16,7 @@ import org.junit.Test;
 
 public class CodeCompletionSessionTest
 {
-    private final IUISettings settings = mock(IUISettings.class);
+    private final ISettings settings = mock(ISettings.class);
     private final IHistoricalHint hint = mock(IHistoricalHint.class);
     private final IHintHistory history = mock(IHintHistory.class);
     private final ICodeCompletionContext context = mock(ICodeCompletionContext.class);

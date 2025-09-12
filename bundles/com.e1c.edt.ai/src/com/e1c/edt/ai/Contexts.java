@@ -20,26 +20,26 @@ class Contexts
     private final ILog log;
     private final ITextNormilizer textNormilizer;
     private final IContextEntities contextEntities;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
 
     @Inject
-    public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities, IUISettings uiSettings)
+    public Contexts(ILog log, ITextNormilizer textNormilizer, IContextEntities contextEntities, ISettings settings)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(textNormilizer);
         Preconditions.checkNotNull(contextEntities);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         this.log = log;
         this.textNormilizer = textNormilizer;
         this.contextEntities = contextEntities;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
     }
 
     @Override
     public LocalContext create(AIContext aiContext, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        var sendExtendedContext = uiSettings.sendExtendedContext();
+        var sendExtendedContext = settings.sendExtendedContext();
         var localContext = new LocalContext();
         localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
         localContext.suffix = textNormilizer.normalize(aiContext.getSufix());

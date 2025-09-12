@@ -24,7 +24,6 @@ public class AIModule
         bind(ParametersParser.class).in(Singleton.class);
         bind(new TypeLiteral<IValidator<String>>() { /**/ }).annotatedWith(Names.named(PARAMETERS)).to(ParametersParser.class);
         bind(new TypeLiteral<IParser<String, Parameters>>(){ /**/ }).to(ParametersParser.class);
-        bind(ISettingsProvider.class).to(SettingsProvider.class).in(Singleton.class);
         bind(ICodeCompletionTokenizer.class).to(CodeCompletionTokenizer.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
         bind(new TypeLiteral<IValidator<String>>() { /**/ }).annotatedWith(Names.named(URL)).to(URLValidator.class).in(Singleton.class);
@@ -44,7 +43,6 @@ public class AIModule
         bind(Contexts.class).in(Singleton.class);
         bind(ILocalContext.class).to(Contexts.class);
         bind(IGlobalContext.class).to(Contexts.class);
-        bind(IContextSettings.class).to(ContextSettings.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
         bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);
         bind(IHashTools.class).to(HashTools.class).in(Singleton.class);

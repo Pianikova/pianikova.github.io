@@ -23,7 +23,7 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -34,11 +34,11 @@ class Dispatcher
 {
     private static final StackTraceElement[] EmptyStackTrace = new StackTraceElement[0];
     private final ILog log;
-    private final IUISettings settings;
+    private final ISettings settings;
     private final IClock clock;
 
     @Inject
-    public Dispatcher(ILog log, IUISettings settings, IClock clock)
+    public Dispatcher(ILog log, ISettings settings, IClock clock)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);

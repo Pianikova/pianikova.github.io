@@ -16,6 +16,7 @@ import com.e1c.edt.ai.Collections;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
@@ -30,6 +31,7 @@ class GlobalContextService
     implements IGlobalContextService
 {
     private final IHttpLog log;
+    private final ISettings settings;
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
@@ -38,10 +40,12 @@ class GlobalContextService
     private final ICompressor compressor;
 
     @Inject
-    public GlobalContextService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder,
-        IJson json, ISessionService sessionService, IEnvironment environment, ICompressor compressor)
+    public GlobalContextService(IHttpLog log, ISettings settings, IRequestBuilder requestBuilder,
+        IHttpClientBuilder clientBuilder, IJson json, ISessionService sessionService, IEnvironment environment,
+        ICompressor compressor)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
@@ -49,6 +53,7 @@ class GlobalContextService
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(compressor);
         this.log = log;
+        this.settings = settings;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
         this.json = json;
@@ -123,7 +128,7 @@ class GlobalContextService
         Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
     {
         var optionalRequest =
-            requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/context/update"); //$NON-NLS-1$
+            requestBuilder.create(settings.getUrl() + "api/v1/context/update"); //$NON-NLS-1$
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture.completedFuture(results);

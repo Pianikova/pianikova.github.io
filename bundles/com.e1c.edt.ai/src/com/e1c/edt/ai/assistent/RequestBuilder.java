@@ -5,44 +5,36 @@ package com.e1c.edt.ai.assistent;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.http.HttpRequest;
 import java.util.Optional;
-import java.util.function.Function;
 
-import com.e1c.edt.ai.ISettingsProvider;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVersionProvider;
-import com.e1c.edt.ai.client.AISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 class RequestBuilder
     implements IRequestBuilder
 {
-    private final ISettingsProvider settingsProvider;
+    private final ISettings settings;
     private final IVersionProvider versionProvider;
-    private final IUISettings uiSettings;
 
     @Inject
-    public RequestBuilder(ISettingsProvider settingsProvider, IVersionProvider versionProvider, IUISettings uiSettings)
+    public RequestBuilder(ISettings settings, IVersionProvider versionProvider)
     {
-        Preconditions.checkNotNull(settingsProvider);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(versionProvider);
-        Preconditions.checkNotNull(uiSettings);
+        this.settings = settings;
         this.versionProvider = versionProvider;
-        this.settingsProvider = settingsProvider;
-        this.uiSettings = uiSettings;
     }
 
     @Override
-    public Optional<HttpRequest.Builder> create(Function<AISettings, URL> urlSelector, String relativePath)
+    public Optional<HttpRequest.Builder> create(String uriStr)
     {
-        var settings = settingsProvider.getSettings();
         URI uri;
         try
         {
-            uri = urlSelector.apply(settings).toURI().resolve(relativePath);
+            uri = new URI(uriStr);
         }
         catch (URISyntaxException e)
         {
@@ -51,7 +43,7 @@ class RequestBuilder
 
         var request = HttpRequest.newBuilder()
             .uri(uri)
-            .timeout(uiSettings.getTimeout())
+            .timeout(settings.getTimeout())
             .header("Accept", "application/json") //$NON-NLS-1$//$NON-NLS-2$
             .header("Content-Type", "application/json") //$NON-NLS-1$//$NON-NLS-2$
             .header("Authorization", settings.getClientToken()) //$NON-NLS-1$

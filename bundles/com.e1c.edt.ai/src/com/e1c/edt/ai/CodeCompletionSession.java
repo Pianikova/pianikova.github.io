@@ -9,7 +9,7 @@ import com.google.inject.Inject;
 public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     implements ICodeCompletionSession<TContext>
 {
-    private final IUISettings settings;
+    private final ISettings settings;
     private final IHistoricalHint hint;
     private IHintHistory history;
     private TContext context;
@@ -19,7 +19,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     private CodeMethod method = Sources.UNKNOWN.getMethod();
 
     @Inject
-    public CodeCompletionSession(IUISettings settings, IHistoricalHint hint, IHintHistory history)
+    public CodeCompletionSession(ISettings settings, IHistoricalHint hint, IHintHistory history)
     {
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(hint);

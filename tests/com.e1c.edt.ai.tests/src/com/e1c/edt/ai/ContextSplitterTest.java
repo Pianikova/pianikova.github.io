@@ -16,10 +16,13 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
+import com.e1c.edt.ai.assistent.model.ProjectId;
+
 @RunWith(Parameterized.class)
 public class ContextSplitterTest
 {
-    private final IContextSettings contextSettings = mock(IContextSettings.class);
+    private static final ProjectId projectId = new ProjectId("test", null); //$NON-NLS-1$
+    private final ISettings settings = mock(ISettings.class);
 
     @Parameter(0)
     public String text;
@@ -44,13 +47,13 @@ public class ContextSplitterTest
     public void shouldSplit()
     {
         // Given
-        when(contextSettings.getPrefixLength()).thenReturn(prefixLength);
-        when(contextSettings.getSuffixLength()).thenReturn(suffixLength);
+        when(settings.getPrefixLength(projectId)).thenReturn(prefixLength);
+        when(settings.getSuffixLength(projectId)).thenReturn(suffixLength);
 
-        var splitter = new ContextSplitter(contextSettings);
+        var splitter = new ContextSplitter(settings);
 
         // When
-        var parts = splitter.split(text, offset);
+        var parts = splitter.split(projectId, text, offset);
         var actualPrefix = parts.getPrefix().apply(text);
         var actualSufix = parts.getSufix().apply(text);
 

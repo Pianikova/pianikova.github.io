@@ -22,7 +22,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.IObserver;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
@@ -39,7 +39,7 @@ public class Tools
     implements ITools
 {
     private final IHttpLog log;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
@@ -48,12 +48,12 @@ public class Tools
     private final IStateService stateService;
 
     @Inject
-    public Tools(IHttpLog log, IUISettings uiSettings,
+    public Tools(IHttpLog log, ISettings settings,
         IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json, ISessionService sessionService,
         ICompressor compressor, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
@@ -61,7 +61,7 @@ public class Tools
         Preconditions.checkNotNull(compressor);
         Preconditions.checkNotNull(stateService);
         this.log = log;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
         this.json = json;
@@ -110,7 +110,7 @@ public class Tools
         ICancellationToken cancellationToken)
     {
         var optionalRequestBuilder =
-            requestBuilder.create(settings -> settings.getLlmParameters().url, "./tools_api/v1/invoke"); //$NON-NLS-1$
+            requestBuilder.create(settings.getUrl() + "tools_api/v1/invoke"); //$NON-NLS-1$
         if (optionalRequestBuilder.isEmpty())
         {
             observer.onCompleted();
@@ -153,7 +153,7 @@ public class Tools
             asyncRequest.cancel(true);
         });
         asyncRequest
-            .orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+            .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
             .thenApplyAsync(HttpResponse::body)
             .thenAcceptAsync(stream -> processStream(stream, observer, cancellationToken))
@@ -255,8 +255,7 @@ public class Tools
         }
 
         var optionalRequestBuilder =
-            requestBuilder.create(settings -> settings.getLlmParameters().url,
-            "./tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
+            requestBuilder.create(settings.getUrl() + "tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
 
         if (optionalRequestBuilder.isEmpty())
         {

@@ -23,10 +23,8 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.IProjectIdProvider;
-import com.e1c.edt.ai.ISettingsProvider;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Observables;
-import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.ITools;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
@@ -41,8 +39,7 @@ public class GitActions implements IGitActions
     private final ILog log;
     private final IDispatcher dispatcher;
     private final IProjectIdProvider projectIdProvider;
-    private final IUISettings uiSettings;
-    private final ISettingsProvider settingsProvider;
+    private final ISettings settings;
     private final IGitTools gitTools;
     private final ITools tools;
     private final IResourceProvider resourceProvider;
@@ -50,15 +47,14 @@ public class GitActions implements IGitActions
     private Job currentJob;
 
     @Inject
-    public GitActions(ILog log, IDispatcher dispatcher, IProjectIdProvider projectIdProvider, IUISettings uiSettings,
-        ISettingsProvider settingsProvider, IGitTools gitTools, ITools tools, IResourceProvider resourceProvider,
+    public GitActions(ILog log, IDispatcher dispatcher, IProjectIdProvider projectIdProvider, ISettings settings,
+        IGitTools gitTools, ITools tools, IResourceProvider resourceProvider,
         IChat chat)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(projectIdProvider);
-        Preconditions.checkNotNull(uiSettings);
-        Preconditions.checkNotNull(settingsProvider);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(gitTools);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(resourceProvider);
@@ -66,8 +62,7 @@ public class GitActions implements IGitActions
         this.log = log;
         this.dispatcher = dispatcher;
         this.projectIdProvider = projectIdProvider;
-        this.uiSettings = uiSettings;
-        this.settingsProvider = settingsProvider;
+        this.settings = settings;
         this.gitTools = gitTools;
         this.tools = tools;
         this.resourceProvider = resourceProvider;
@@ -186,13 +181,13 @@ public class GitActions implements IGitActions
         final var projectId = firstProjectId;
         var toolInvokeRequest = new ToolInvokeRequest();
         toolInvokeRequest.toolName = "custom";
-        toolInvokeRequest.uiLanguage = uiSettings.getLanguage();
+        toolInvokeRequest.uiLanguage = settings.getLanguage();
         toolInvokeRequest.programmingLanguage = "git diff";
         var content = new ToolInvokeRequestContent();
         toolInvokeRequest.content = content;
         content.instruction = resourceProvider.getTextResource(IResourceProvider.PROMTS_GIT_COMMIT)
             .orElse("")
-            .replace("${language}", uiSettings.getLanguage())
+            .replace("${language}", settings.getLanguage())
             .replace("${base_commit_message}",
                 Optional.ofNullable(baseCommitMessage == null || baseCommitMessage.isBlank() ? null : baseCommitMessage)
                     .orElse("no additional lines"))
@@ -280,10 +275,7 @@ public class GitActions implements IGitActions
             try (var gitDiffStream = new ByteArrayOutputStream())
             {
                 var projectId = optionalProjectId.get();
-                gitTools.getDiff(repository,
-                    Optional.ofNullable(settingsProvider.getSettings().getLlmParameters().gitDiffContextLines)
-                        .orElse(ParametersParser.DEFAULT_GIT_CONTEXT_LINES),
-                    gitDiffStream);
+                gitTools.getDiff(repository, settings.getGitDiffContextLines(projectId), gitDiffStream);
                 var gitDiff = gitDiffStream.toString("UTF-8");
                 result.put(projectId, gitDiff);
             }

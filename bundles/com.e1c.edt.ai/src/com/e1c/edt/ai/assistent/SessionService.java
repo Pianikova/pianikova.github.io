@@ -13,11 +13,10 @@ import java.util.concurrent.CompletableFuture;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IVersionProvider;
-import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
-import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.assistent.model.SessionRequest;
@@ -37,17 +36,16 @@ class SessionService
     private final IJson json;
     private final ISettingsTracker settingsTracker;
     private final IResponseCache<Session> responseCache;
-    private final IParametersService parametersService;
     private final IVersionProvider versionProvider;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
+    private final ISettingsSetter settingsSetter;
     private final IEnvironment environment;
     private final IConfigurationParametersProvider configurationParametersProvider;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
-        ISettingsTracker settingsTracker,
-        IResponseCache<Session> responseCache, IParametersService parametersService,
-        IVersionProvider versionProvider, IUISettings uiSettings, IEnvironment environment,
+        ISettingsTracker settingsTracker, IResponseCache<Session> responseCache, IVersionProvider versionProvider,
+        ISettings settings, ISettingsSetter settingsSetter, IEnvironment environment,
         IConfigurationParametersProvider configurationParametersProvider)
     {
         Preconditions.checkNotNull(log);
@@ -56,9 +54,9 @@ class SessionService
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(responseCache);
-        Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(versionProvider);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(settingsSetter);
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(configurationParametersProvider);
         this.log = log;
@@ -67,9 +65,9 @@ class SessionService
         this.json = json;
         this.settingsTracker = settingsTracker;
         this.responseCache = responseCache;
-        this.parametersService = parametersService;
         this.versionProvider = versionProvider;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
+        this.settingsSetter = settingsSetter;
         this.environment = environment;
         this.configurationParametersProvider = configurationParametersProvider;
     }
@@ -77,40 +75,21 @@ class SessionService
     @Override
     public CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId)
     {
-        return parametersService.getParametersAsync(true)
-            .thenApplyAsync(parameters -> getSessionAsync(projectId, parameters).join());
+        var reset = settingsTracker.register(SessionService.class.getName(), settings.getUserParameters());
+        return responseCache.get(projectId.path, () -> getSession(projectId), reset);
     }
 
-    private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, Optional<Parameters> parameters)
+    private CompletableFuture<Optional<Session>> getSession(ProjectId projectId)
     {
-        if (parameters.isEmpty())
-        {
-            return CompletableFuture.completedFuture(Optional.empty());
-        }
-
-        var params = parameters.get();
-        var reset = settingsTracker.register(SessionService.class.getName(), params);
-        return responseCache.get(projectId.path, () -> {
-            var actualParams = params;
-            if (params.fromCache)
-            {
-                actualParams = parametersService.getParametersAsync(true).join().orElse(params);
-            }
-
-            return getSessionAsync(projectId, actualParams);
-        }, reset);
-    }
-
-    private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, Parameters parameters)
-    {
-        var builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/create_session"); //$NON-NLS-1$
+        var builder = requestBuilder.create(settings.getUrl() + "api/v1/create_session"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
             return CompletableFuture.completedFuture(Optional.empty());
         }
 
         var sessionRequest = new SessionRequest();
-        sessionRequest.serviceParameters = parameters;
+        var userParams = settings.getUserParameters();
+        sessionRequest.serviceParameters = userParams;
         var userParameters = new UserParameters();
         sessionRequest.userParameters = userParameters;
         var pluginVersion = versionProvider.getPluginVersion();
@@ -125,32 +104,18 @@ class SessionService
             userParameters.edtVersion = platformVersion;
         }
 
-        userParameters.tabWidth = uiSettings.getTabWidth();
-        userParameters.codeCompletionLinesCount = uiSettings.getCodeCompletionLinesCount();
-        userParameters.codeCompletionPolicy = uiSettings.getCodeCompletionPolicy();
+        userParameters.tabWidth = settings.getTabWidth();
+        userParameters.codeCompletionLinesCount = settings.getCodeCompletionLinesCount();
+        userParameters.codeCompletionPolicy = settings.getCodeCompletionPolicy();
         userParameters.isContinuousCodeCompletion =
             CodeCompletionPolicy.MODERATE.isMeet(userParameters.codeCompletionPolicy);
-        userParameters.minRequestDelayMs = uiSettings.getMinRequestDelay().toMillis();
-        userParameters.timeoutMs = uiSettings.getTimeout().toMillis();
-        userParameters.lineSeparator = uiSettings.getLineSeparator();
-        userParameters.language = uiSettings.getLanguage();
+        userParameters.minRequestDelayMs = settings.getMinRequestDelay().toMillis();
+        userParameters.timeoutMs = settings.getTimeout().toMillis();
+        userParameters.lineSeparator = settings.getLineSeparator();
+        userParameters.language = settings.getLanguage();
         userParameters.configurationParameters = configurationParametersProvider.getParameters(projectId).orElse(null);
-
-        // Move from parameters to user parameters.
-        userParameters.globalContext =
-            Optional.ofNullable(sessionRequest.serviceParameters.globalContext).orElse(false);
-        sessionRequest.serviceParameters.globalContext = null;
-        userParameters.extendedContext =
-            Optional.ofNullable(sessionRequest.serviceParameters.extendedContext).orElse(false);
-        sessionRequest.serviceParameters.extendedContext = null;
-        userParameters.verbosity =
-            Optional.ofNullable(sessionRequest.serviceParameters.verbosity).orElse(ParametersParser.DEFAULT_VERBOSITY);
-        sessionRequest.serviceParameters.verbosity = null;
-        userParameters.resources = sessionRequest.serviceParameters.resources;
-        sessionRequest.serviceParameters.resources = null;
-        userParameters.gitDiffContextLines = Optional.ofNullable(sessionRequest.serviceParameters.gitDiffContextLines)
-            .orElse(ParametersParser.DEFAULT_GIT_CONTEXT_LINES);
-        sessionRequest.serviceParameters.gitDiffContextLines = null;
+        userParameters.globalContext = userParams.globalContext;
+        userParameters.extendedContext = userParams.extendedContext;
 
         var systemInfo = new SystemInfo();
         sessionRequest.systemInfo = systemInfo;
@@ -163,10 +128,10 @@ class SessionService
 
         var requestBody = json.serialize(sessionRequest);
         var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
-        return getSessionAsync(request, requestBody);
+        return getSessionAsync(projectId, request, requestBody);
     }
 
-    private CompletableFuture<Optional<Session>> getSessionAsync(HttpRequest request, String body)
+    private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, HttpRequest request, String body)
     {
         log.request(request, null, body);
         var stopwatch = Stopwatch.createStarted();
@@ -184,11 +149,14 @@ class SessionService
                 return response;
             })
             .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(this::createCession);
+            .thenApplyAsync(content -> createCession(projectId, content));
     }
 
-    private Optional<Session> createCession(String content)
+    private Optional<Session> createCession(ProjectId projectId, String content)
     {
-        return json.deserialize(content, Session.class);
+        return json.deserialize(content, Session.class).map(response -> {
+            settingsSetter.applySessionParameters(projectId, response.userParameters);
+            return response;
+        });
     }
 }

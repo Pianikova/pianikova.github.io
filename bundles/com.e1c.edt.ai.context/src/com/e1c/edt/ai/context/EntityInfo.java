@@ -33,8 +33,8 @@ import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProgramingLanguage;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.IUISettings;
 import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.CursorLocation;
@@ -58,7 +58,7 @@ class EntityInfo
     private final IEntitiesWalker entitiesWalker;
     private final IIdFactory idFactory;
     private final IEntityFactory entityFactory;
-    private final IUISettings uiSettings;
+    private final ISettings settings;
     private final IDispatcher dispatcher;
     private final IV8ProjectManager v8ProjectManager;
     private final IProgramingLanguage programingLanguage;
@@ -77,7 +77,7 @@ class EntityInfo
 
     @Inject
     public EntityInfo(ILog log, IEntitiesWalker entitiesWalker, IIdFactory idFactory, IEntityFactory entityFactory,
-        IUISettings uiSettings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager,
+        ISettings settings, IDispatcher dispatcher, IV8ProjectManager v8ProjectManager,
         IProgramingLanguage programingLanguage, Provider<MessageDigest> messageDigestProvider, IHashTools hashTools,
         ICodePartsProvider codePartsProvider, IModuleProvider activeEditorResourceSetProvider,
         @Named("BaseModuleProvider") IModuleProvider baseResourceSetProvider)
@@ -86,7 +86,7 @@ class EntityInfo
         Preconditions.checkNotNull(entitiesWalker);
         Preconditions.checkNotNull(idFactory);
         Preconditions.checkNotNull(entityFactory);
-        Preconditions.checkNotNull(uiSettings);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(v8ProjectManager);
         Preconditions.checkNotNull(programingLanguage);
@@ -99,7 +99,7 @@ class EntityInfo
         this.entitiesWalker = entitiesWalker;
         this.idFactory = idFactory;
         this.entityFactory = entityFactory;
-        this.uiSettings = uiSettings;
+        this.settings = settings;
         this.dispatcher = dispatcher;
         this.v8ProjectManager = v8ProjectManager;
         this.programingLanguage = programingLanguage;
@@ -442,7 +442,7 @@ class EntityInfo
     public void fill(AIContext aiContext, ChatContext context, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        var timeout = uiSettings.getTimeout();
+        var timeout = settings.getTimeout();
         dispatcher.dispatch(() -> fillInternal(aiContext, context, statistics, cancellationToken), timeout);
     }
 

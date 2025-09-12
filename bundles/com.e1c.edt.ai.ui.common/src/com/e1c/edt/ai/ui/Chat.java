@@ -27,16 +27,13 @@ import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.ISettingsProvider;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.IUISettings;
-import com.e1c.edt.ai.assistent.IParametersService;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.ISettingsTracker;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import com.e1c.edt.ai.client.AISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -66,13 +63,11 @@ public class Chat implements IChat, IChatDialog
     private static final Character ARGS_SEPARATOR = ',';
 
     private final ILog log;
-    private final ISettingsProvider settingsProvider;
+    private final ISettings settings;
     private final IUI ui;
     private final IDispatcher dispatcher;
     private final IdeApiHandler handler;
-    private final IParametersService parametersService;
     private final ISettingsTracker settingsTracker;
-    private final IUISettings uiSettings;
     private final IContextEntities contextEntities;
     private final IJavaScript javaScript;
     private final IStateService stateService;
@@ -85,18 +80,16 @@ public class Chat implements IChat, IChatDialog
     private String lastDialogPath;
 
     @Inject
-    public Chat(ILog log, ISettingsProvider settingsProvider, IUI ui, IDispatcher dispatcher,
-        IdeApiHandler handler, IParametersService parametersService, ISettingsTracker settingsTracker,
-        IUISettings uiSettings, IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
-        ISessionService sessionService, IModuleNameProvider moduleNameProvider, IFileSystem fileSystem)
+    public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
+        ISettingsTracker settingsTracker, IContextEntities contextEntities, IJavaScript javaScript,
+        IStateService stateService, ISessionService sessionService, IModuleNameProvider moduleNameProvider,
+        IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(settingsProvider);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(handler);
-        Preconditions.checkNotNull(parametersService);
         Preconditions.checkNotNull(settingsTracker);
-        Preconditions.checkNotNull(uiSettings);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(javaScript);
         Preconditions.checkNotNull(stateService);
@@ -104,13 +97,11 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(moduleNameProvider);
         Preconditions.checkNotNull(fileSystem);
         this.log = log;
-        this.settingsProvider = settingsProvider;
+        this.settings = settings;
         this.ui = ui;
         this.dispatcher = dispatcher;
         this.handler = handler;
-        this.parametersService = parametersService;
         this.settingsTracker = settingsTracker;
-        this.uiSettings = uiSettings;
         this.contextEntities = contextEntities;
         this.javaScript = javaScript;
         this.stateService = stateService;
@@ -198,7 +189,7 @@ public class Chat implements IChat, IChatDialog
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
-        chatInJob(Optional.ofNullable(ctx), (settings, optionalSessionId) -> {
+        chatInJob(Optional.ofNullable(ctx), (optionalSessionId) -> {
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try {
                 String scriptLanguage = null;
@@ -310,7 +301,7 @@ public class Chat implements IChat, IChatDialog
             }
         });
 
-        chatInJob(Optional.empty(), (settings, optionalSessionId) -> {
+        chatInJob(Optional.empty(), optionalSessionId -> {
             /**/ });
     }
 
@@ -382,33 +373,26 @@ public class Chat implements IChat, IChatDialog
     {
         try
         {
-            var parameters = parametersService.getParametersAsync(true).get();
-            if (parameters.isEmpty())
-            {
-                return Status.OK_STATUS;
-            }
-
-            var chatUrl = parameters.get().chatUrl;
-            var settings = settingsProvider.getSettings();
-            var reset = settingsTracker.register(Chat.class.getName(), settings);
-            if (lastChatUrl != chatUrl || reset)
-            {
-                lastChatUrl = chatUrl;
-                initializing = dispatcher.dispatch(() -> {
-                    var webEngine = getEgine();
-                    return initialize(webEngine, settings, () -> webEngine.load(lastChatUrl.toString()));
-                }).get();
-            }
-
-            initializing.get();
-            wink(settings, 32);
             Optional<String> sessionId = Optional.empty();
             if (ctx.isPresent())
             {
                 sessionId = sessionService.getSessionAsync(ctx.get().getProjectId()).get().map(i -> i.sessionId);
             }
 
-            chatAction.run(settings, sessionId);
+            var chatUrl = settings.getChatUrl();
+            var reset = settingsTracker.register(Chat.class.getName(), settings);
+            if (lastChatUrl != chatUrl || reset)
+            {
+                lastChatUrl = chatUrl;
+                initializing = dispatcher.dispatch(() -> {
+                    var webEngine = getEgine();
+                    return initialize(webEngine, () -> webEngine.load(lastChatUrl.toString()));
+                }).get();
+            }
+
+            initializing.get();
+            wink(32);
+            chatAction.run(sessionId);
         }
         catch (Throwable error)
         {
@@ -419,7 +403,7 @@ public class Chat implements IChat, IChatDialog
     }
 
     @SuppressWarnings("nls")
-    private CompletableFuture<Boolean> initialize(WebEngine webEngine, AISettings settings, Runnable loader)
+    private CompletableFuture<Boolean> initialize(WebEngine webEngine, Runnable loader)
     {
         var worker = webEngine.getLoadWorker();
         log.trace(AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
@@ -453,14 +437,14 @@ public class Chat implements IChat, IChatDialog
         listeners.add(stateListener);
         worker.stateProperty().addListener(stateListener);
         loader.run();
-        return result.orTimeout(uiSettings.getTimeout().toNanos(), TimeUnit.NANOSECONDS).exceptionally(error -> {
+        return result.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS).exceptionally(error -> {
             log.logError(error);
             return false;
         });
     }
 
     @SuppressWarnings("nls")
-    private void wink(AISettings settings, int attempts)
+    private void wink(int attempts)
     {
         var webEngine = getEgine();
         while (true)
@@ -474,7 +458,7 @@ public class Chat implements IChat, IChatDialog
                         window.setMember(IDE_API, handler);
                         log.debug(AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
                         var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
-                            settings.getClientUniqueId(), uiSettings.getLanguage(), uiSettings.getTheme());
+                            settings.getClientUniqueId(), settings.getLanguage(), settings.getTheme());
                         log.debug(AI_CHAT, () -> "wink script: " + winkScript);
                         webEngine.executeScript(winkScript);
                         log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
@@ -497,7 +481,7 @@ public class Chat implements IChat, IChatDialog
 
             try
             {
-                Thread.sleep(uiSettings.getMinRequestDelay().toMillis());
+                Thread.sleep(settings.getMinRequestDelay().toMillis());
             }
             catch (Throwable error)
             {
@@ -515,6 +499,6 @@ public class Chat implements IChat, IChatDialog
 
     private interface IChatAction
     {
-        void run(AISettings settings, Optional<String> sessionId);
+        void run(Optional<String> sessionId);
     }
 }

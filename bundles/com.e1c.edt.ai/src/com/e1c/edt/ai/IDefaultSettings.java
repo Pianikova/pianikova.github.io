@@ -7,11 +7,11 @@ public interface IDefaultSettings
 {
     String getUrl();
 
+    String getChatUrl();
+
     String getHomePage();
 
     String getUpdateUrl();
 
     String getPluginFeature();
-
-    String getChatUrlPath();
 }

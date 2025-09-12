@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+import java.util.Optional;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
@@ -76,13 +78,13 @@ public class UserParameters
      * Определяет передавать ли глобальный контекст. Например, true.
      */
     @SerializedName("global_context")
-    public Boolean globalContext;
+    public Optional<Boolean> globalContext;
 
     /**
      * Определяет передавать ли расширенный контекст. Например, true.
      */
     @SerializedName("extended_context")
-    public Boolean extendedContext;
+    public Optional<Boolean> extendedContext;
 
     /**
      * Уровень детализации логов (error/warning/info/trace/debug). Например, warning.

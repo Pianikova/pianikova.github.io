@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.net.ssl.SSLHandshakeException;
 
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ServiceState;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -23,16 +24,20 @@ class HealthCheckService
     implements IHealthCheckService
 {
     private final IHttpLog log;
+    private final ISettings settings;
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
 
     @Inject
-    public HealthCheckService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder)
+    public HealthCheckService(IHttpLog log, ISettings settings, IRequestBuilder requestBuilder,
+        IHttpClientBuilder clientBuilder)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         this.log = log;
+        this.settings = settings;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
     }
@@ -42,7 +47,7 @@ class HealthCheckService
     {
         Optional<HttpRequest.Builder> builder = Optional.empty();
         try {
-            builder = requestBuilder.create(settings -> settings.getLlmParameters().url, "./api/v1/health"); //$NON-NLS-1$
+            builder = requestBuilder.create(settings.getUrl() + "api/v1/health"); //$NON-NLS-1$
         } catch (IllegalArgumentException e) {
             log.error(e, "Illegal http request"); //$NON-NLS-1$
             return CompletableFuture.completedFuture(ServiceState.OFFLINE);

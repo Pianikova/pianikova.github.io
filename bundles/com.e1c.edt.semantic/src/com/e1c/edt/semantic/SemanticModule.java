@@ -3,19 +3,19 @@
  */
 package com.e1c.edt.semantic;
 
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jface.preference.IPreferenceStore;
+
+import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.e1c.edt.ai.HashTools;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProgramingLanguage;
-import com.e1c.edt.ai.IUISettings;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Json;
 import com.e1c.edt.ai.context.IModuleProvider;
 import com.e1c.edt.ai.context.ModuleProvider;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jface.preference.IPreferenceStore;
-
-import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.google.common.base.Preconditions;
 import com.google.inject.Singleton;
 
@@ -43,10 +43,10 @@ public class SemanticModule
         bind(IModuleProvider.class).to(ModuleProvider.class).in(Singleton.class);
         bind(IJson.class).to(Json.class).in(Singleton.class);
         bind(IProgramingLanguage.class).to(ProgramingLanguage.class).in(Singleton.class);
-        bind(IUISettings.class).to(UISettings.class).in(Singleton.class);
         bind(IEndpointViewModel.class).to(EndpointViewModel.class).in(Singleton.class);
         bind(IIDE.class).to(IDE.class).in(Singleton.class);
         bind(IHashTools.class).to(HashTools.class).in(Singleton.class);
+        bind(ISettings.class).to(Settings.class).in(Singleton.class);
         // @formatter:on
     }
 }

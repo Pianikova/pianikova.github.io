@@ -29,16 +29,16 @@ public class SettingsTracker
     {
         Preconditions.checkNotNull(owner);
         Preconditions.checkNotNull(settings);
-        var currentSettnigs = currentSettings.get(owner);
-        if (currentSettnigs == null || currentSettnigs.hashCode() != settings.hashCode()
-            || !currentSettnigs.equals(settings))
+        var currentSettings = this.currentSettings.get(owner);
+        if (currentSettings == null || currentSettings.hashCode() != settings.hashCode()
+            || !currentSettings.equals(settings))
         {
             if (stateService != null)
             {
                 stateService.setState(this.getClass().getName(), ServiceState.SETTINGS_CHANGED);
             }
             notifyListeners();
-            currentSettings.put(owner, settings);
+            this.currentSettings.put(owner, settings);
             return true;
         }
 

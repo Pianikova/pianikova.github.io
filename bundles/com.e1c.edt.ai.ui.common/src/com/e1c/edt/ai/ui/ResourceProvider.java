@@ -14,31 +14,31 @@ import java.util.Optional;
 import org.osgi.framework.FrameworkUtil;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.ISettingsProvider;
+import com.e1c.edt.ai.ISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class ResourceProvider implements IResourceProvider
 {
     private final ILog log;
-    private final ISettingsProvider settingsProvider;
+    private final ISettings settings;
 
     @Inject
-    public ResourceProvider(ILog log, ISettingsProvider settingsProvider)
+    public ResourceProvider(ILog log, ISettings settings)
     {
         Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(settingsProvider);
+        Preconditions.checkNotNull(settings);
         this.log = log;
-        this.settingsProvider = settingsProvider;
+        this.settings = settings;
     }
 
     @Override
     public Optional<String> getTextResource(String filePath)
     {
-        var resources = settingsProvider.getSettings().getLlmParameters().resources;
-        if (resources != null && !resources.isBlank())
+        var optionalResources = settings.getResources();
+        if (optionalResources.isPresent())
         {
-            var path = Paths.get(resources, filePath);
+            var path = Paths.get(optionalResources.get(), filePath);
             if (Files.exists(path))
             {
                 try

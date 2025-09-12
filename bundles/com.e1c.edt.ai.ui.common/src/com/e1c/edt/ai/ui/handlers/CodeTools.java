@@ -112,9 +112,9 @@ public class CodeTools
         case ADD:
             return hasSelection(sourceViewer) || isDiff(sourceViewer) || isCodeEditor(sourceViewer);
         case CRITICISE:
-            return isDiff(sourceViewer) || isCodeEditor(sourceViewer);
+            return isDiff(sourceViewer) || hasSelection(sourceViewer) || isCodeEditor(sourceViewer);
         case EXLPLAIN:
-            return isDiff(sourceViewer) || isCodeEditor(sourceViewer);
+            return isDiff(sourceViewer) || hasSelection(sourceViewer) || isCodeEditor(sourceViewer);
         case FIX:
             return (hasSelection(sourceViewer) || isCodeEditor(sourceViewer)) && !isDiff(sourceViewer);
         case GENERATE_COMMENT:
