@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -200,9 +201,12 @@ public class Chat implements IChat, IChatDialog
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
-        chatInJob(Optional.ofNullable(ctx), (optionalSessionId) -> {
+        chatInJob(Optional.ofNullable(ctx), () -> {
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try {
+                var projectId = ctx.getProjectId();
+                var sessionId = sessionService.getSessionAsync(projectId).get().map(i -> i.sessionId).orElse(null);
+
                 String scriptLanguage = null;
                 String programingLanguage = null;
                 var title = NULL_VALUE;
@@ -262,7 +266,7 @@ public class Chat implements IChat, IChatDialog
                 }
 
                 script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(optionalSessionId.orElse(null), NULL_VALUE));
+                script.append(javaScript.escape(sessionId, NULL_VALUE));
 
                 final var curTitle = title;
                 log.debug(AI_CHAT, () -> "title: " + curTitle);
@@ -289,6 +293,10 @@ public class Chat implements IChat, IChatDialog
                     getEgine().executeScript(scriptText);
                     log.trace(AI_CHAT, () -> "script executed");
                 });
+            }
+            catch (InterruptedException | ExecutionException error)
+            {
+                log.logError(error);
             }
             finally
             {
@@ -325,7 +333,7 @@ public class Chat implements IChat, IChatDialog
             }
         });
 
-        chatInJob(Optional.empty(), optionalSessionId -> {
+        chatInJob(Optional.empty(), () -> {
             /**/ });
     }
 
@@ -397,12 +405,6 @@ public class Chat implements IChat, IChatDialog
     {
         try
         {
-            Optional<String> sessionId = Optional.empty();
-            if (ctx.isPresent())
-            {
-                sessionId = sessionService.getSessionAsync(ctx.get().getProjectId()).get().map(i -> i.sessionId);
-            }
-
             var chatUrl = settings.getChatUrl();
             var reset = settingsTracker.register(Chat.class.getName(), settings);
             if (lastChatUrl != chatUrl || reset)
@@ -416,7 +418,7 @@ public class Chat implements IChat, IChatDialog
 
             initializing.get();
             wink(32);
-            chatAction.run(sessionId);
+            chatAction.run();
         }
         catch (Throwable error)
         {
@@ -523,6 +525,6 @@ public class Chat implements IChat, IChatDialog
 
     private interface IChatAction
     {
-        void run(Optional<String> sessionId);
+        void run();
     }
 }
