@@ -5,6 +5,7 @@ package com.e1c.edt.ai.ui.handlers;
 
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.eclipse.egit.ui.internal.commit.DiffDocument;
 import org.eclipse.jface.text.source.SourceViewer;
@@ -27,8 +28,11 @@ import com.e1c.edt.ai.ui.IContentProvider;
 import com.e1c.edt.ai.ui.ITextWidgetInfoProvider;
 import com.e1c.edt.ai.ui.IUI;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
+@SuppressWarnings("restriction")
 public class CodeTools
     implements ICodeTools
 {
@@ -39,6 +43,8 @@ public class CodeTools
     private final ICodeParser codeParser;
     private final ICodePartsProvider codePartsProvider;
     private final IAIContextProvider aiContextProvider;
+    private final Cache<SourceViewer, Optional<TargetMethod>> targetMethodCache =
+        CacheBuilder.newBuilder().maximumSize(1).expireAfterAccess(50, TimeUnit.MILLISECONDS).build();
 
     @Inject
     public CodeTools(ILog log, IUI ui, ITextWidgetInfoProvider textWidgetInfoProvider, IContentProvider contentProvider,
@@ -87,7 +93,7 @@ public class CodeTools
         var optionalTargetMethod = getTargetMethod();
         if (optionalTargetMethod.isPresent())
         {
-            return Optional.of(optionalTargetMethod.get().ctx);
+            return Optional.ofNullable(optionalTargetMethod.get().ctx);
         }
 
         return Optional.empty();
@@ -148,6 +154,12 @@ public class CodeTools
 
     private Optional<TargetMethod> getTargetMethod(SourceViewer sourceViewer)
     {
+        var result = targetMethodCache.getIfPresent(sourceViewer);
+        if (result != null)
+        {
+            return result;
+        }
+
         if (sourceViewer.getDocument().getLength() > Consts.NORMAL_CODE_SIZE)
         {
             return Optional.empty();
@@ -248,14 +260,40 @@ public class CodeTools
         commentingMethod.sourceViewer = sourceViewer;
         var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
         var lastRange = range;
-        aiContextProvider.create(sourceViewer, target, CancellationTokens.NONE).ifPresent(ctx -> {
-            var methodCtx = new AIContext(ctx.getProjectId(), lastRange.getStart(),
-                ctx.getSource(), lastRange.getStart(), ctx.getPath(), commentingMethod.methodText, 0, "", //$NON-NLS-1$
-                commentingMethod.methodText, lastRange.getStart(), lastRange.getStart() + lastRange.getLength(),
+        var optionalCtx = aiContextProvider.create(sourceViewer, target, CancellationTokens.NONE);
+        if (optionalCtx.isPresent())
+        {
+            var ctx = optionalCtx.get();
+            var start = lastRange.getStart();
+            var sourceOffset = start;
+            var textOffset = 0;
+            var finish = start + lastRange.getLength();
+            var prefix = ""; //$NON-NLS-1$
+            var suffix = commentingMethod.methodText;
+            var optionalMouseOffset = textWidgetInfoProvider.getLastMouseOffset(sourceViewer.getTextWidget());
+            if (optionalMouseOffset.isPresent())
+            {
+                var mouseOffset = optionalMouseOffset.get();
+                if (mouseOffset > start && mouseOffset < finish)
+                {
+                    sourceOffset = mouseOffset;
+                    textOffset = mouseOffset - start;
+                    prefix = suffix.substring(0, textOffset);
+                    suffix = suffix.substring(textOffset, suffix.length());
+                }
+            }
+
+            var methodCtx = new AIContext(ctx.getProjectId(), sourceOffset, ctx.getSource(), sourceOffset,
+                ctx.getPath(),
+                commentingMethod.methodText, textOffset, prefix, suffix, start, finish,
                 sourceViewer.getDocument(), () -> sourceViewer.getTextWidget().isDisposed());
+
             commentingMethod.ctx = methodCtx;
-        });
-        return Optional.of(commentingMethod);
+        }
+
+        result = Optional.of(commentingMethod);
+        targetMethodCache.put(sourceViewer, result);
+        return result;
     }
 
     @Override

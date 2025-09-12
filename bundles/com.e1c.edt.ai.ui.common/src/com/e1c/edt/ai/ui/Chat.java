@@ -26,6 +26,8 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IContextEntities;
+import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
@@ -74,6 +76,9 @@ public class Chat implements IChat, IChatDialog
     private final ISessionService sessionService;
     private final IModuleNameProvider moduleNameProvider;
     private final IFileSystem fileSystem;
+    private final ILocalContext localContext;
+    private final IProposalsProvider proposalsProvider;
+    private final IJson json;
     private WebView webView;
     private URL lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
@@ -83,7 +88,7 @@ public class Chat implements IChat, IChatDialog
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
         ISettingsTracker settingsTracker, IContextEntities contextEntities, IJavaScript javaScript,
         IStateService stateService, ISessionService sessionService, IModuleNameProvider moduleNameProvider,
-        IFileSystem fileSystem)
+        IFileSystem fileSystem, ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -96,6 +101,9 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(moduleNameProvider);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(localContext);
+        Preconditions.checkNotNull(proposalsProvider);
+        Preconditions.checkNotNull(json);
         this.log = log;
         this.settings = settings;
         this.ui = ui;
@@ -108,6 +116,9 @@ public class Chat implements IChat, IChatDialog
         this.sessionService = sessionService;
         this.moduleNameProvider = moduleNameProvider;
         this.fileSystem = fileSystem;
+        this.localContext = localContext;
+        this.proposalsProvider = proposalsProvider;
+        this.json = json;
     }
 
     @Override
@@ -257,6 +268,19 @@ public class Chat implements IChat, IChatDialog
                 log.debug(AI_CHAT, () -> "title: " + curTitle);
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(curTitle, NULL_VALUE));
+
+                var context = localContext.create(ctx, IStatistics.Empty, CancellationTokens.NONE);
+                var sourceViewer = ui.getLastSourceViewer();
+                if (sourceViewer.isPresent())
+                {
+                    context.proposals =
+                        proposalsProvider.getProposals(ctx, sourceViewer.get(), 600, CancellationTokens.NONE)
+                            .orElse(null);
+                }
+
+                var contextJson = json.serialize(context);
+                script.append(ARGS_SEPARATOR);
+                script.append(javaScript.escape(contextJson, NULL_VALUE));
 
                 script.append(')');
                 var scriptText = script.toString();
