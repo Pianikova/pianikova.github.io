@@ -19,7 +19,7 @@ import com.google.inject.Inject;
 class AIContextProvider
     implements IAIContextProvider
 {
-    private static final ProjectId DefaultProjectId = new ProjectId("", null); //$NON-NLS-1$
+    public static final ProjectId DefaultProjectId = new ProjectId("", null); //$NON-NLS-1$
     private final IUI ui;
     private final IContentProvider contentProvider;
     private final IContextInitializer contextInitializer;

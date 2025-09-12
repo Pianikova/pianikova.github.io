@@ -204,8 +204,18 @@ public class Chat implements IChat, IChatDialog
         chatInJob(Optional.ofNullable(ctx), () -> {
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try {
-                var projectId = ctx.getProjectId();
-                var sessionId = sessionService.getSessionAsync(projectId).get().map(i -> i.sessionId).orElse(null);
+                ProjectId projectId = AIContextProvider.DefaultProjectId;
+                if (ctx != null)
+                {
+                    projectId = ctx.getProjectId();
+                }
+
+                var sessionId = sessionService.getSessionAsync(projectId).get().map(i -> i.sessionId);
+                if (sessionId.isEmpty())
+                {
+                    log.warning(AI_CHAT, () -> "Cannot get session id");
+                    return;
+                }
 
                 String scriptLanguage = null;
                 String programingLanguage = null;
@@ -266,7 +276,7 @@ public class Chat implements IChat, IChatDialog
                 }
 
                 script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(sessionId, NULL_VALUE));
+                script.append(javaScript.escape(sessionId.get(), NULL_VALUE));
 
                 final var curTitle = title;
                 log.debug(AI_CHAT, () -> "title: " + curTitle);
