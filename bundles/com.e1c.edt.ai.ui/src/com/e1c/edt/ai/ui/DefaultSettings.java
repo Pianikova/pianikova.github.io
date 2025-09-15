@@ -15,9 +15,9 @@ class DefaultSettings
     }
 
     @Override
-    public String getChatUrl()
+    public String getChatUrlSegments()
     {
-        return "https://code.1c.ai/chat/"; //$NON-NLS-1$
+        return "chat/"; //$NON-NLS-1$
     }
 
     @Override
