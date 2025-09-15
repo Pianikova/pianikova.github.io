@@ -7,8 +7,6 @@ public interface IDefaultSettings
 {
     String getUrl();
 
-    String getChatUrlSegments();
-
     String getHomePage();
 
     String getUpdateUrl();

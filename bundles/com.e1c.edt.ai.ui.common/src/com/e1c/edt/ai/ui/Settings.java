@@ -216,7 +216,7 @@ public class Settings
         return getParameterValue(null, parameters -> parameters.chatUrl, () -> {
             try
             {
-                return new URL(getUrl(), defaultSettings.getChatUrlSegments());
+                return new URL(getUrl(), "chat/"); //$NON-NLS-1$
             }
             catch (MalformedURLException e)
             {
