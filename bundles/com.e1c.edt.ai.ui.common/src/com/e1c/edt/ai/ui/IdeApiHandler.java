@@ -83,4 +83,9 @@ public class IdeApiHandler
     {
         return this.isReady;
     }
+
+    public void reset()
+    {
+        this.isReady = false;
+    }
 }

@@ -506,6 +506,7 @@ public class Chat implements IChat, IChatDialog
                 }
                 catch (Throwable error)
                 {
+                    handler.reset();
                     log.logError(error);
                 }
             });
