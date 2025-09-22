@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -33,7 +34,6 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.assistent.ISessionService;
-import com.e1c.edt.ai.assistent.ISettingsTracker;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.ProjectId;
@@ -54,6 +54,7 @@ import netscape.javascript.JSObject;
  * @author George Suaridze
  *
  */
+@SuppressWarnings("restriction")
 public class Chat implements IChat, IChatDialog
 {
     private static final String AI_CHAT_DIR = "ai.chat"; //$NON-NLS-1$
@@ -70,7 +71,6 @@ public class Chat implements IChat, IChatDialog
     private final IUI ui;
     private final IDispatcher dispatcher;
     private final IdeApiHandler handler;
-    private final ISettingsTracker settingsTracker;
     private final IContextEntities contextEntities;
     private final IJavaScript javaScript;
     private final IStateService stateService;
@@ -87,15 +87,14 @@ public class Chat implements IChat, IChatDialog
 
     @Inject
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
-        ISettingsTracker settingsTracker, IContextEntities contextEntities, IJavaScript javaScript,
-        IStateService stateService, ISessionService sessionService, IModuleNameProvider moduleNameProvider,
+        IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
+        ISessionService sessionService, IModuleNameProvider moduleNameProvider,
         IFileSystem fileSystem, ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(handler);
-        Preconditions.checkNotNull(settingsTracker);
         Preconditions.checkNotNull(contextEntities);
         Preconditions.checkNotNull(javaScript);
         Preconditions.checkNotNull(stateService);
@@ -110,7 +109,6 @@ public class Chat implements IChat, IChatDialog
         this.ui = ui;
         this.dispatcher = dispatcher;
         this.handler = handler;
-        this.settingsTracker = settingsTracker;
         this.contextEntities = contextEntities;
         this.javaScript = javaScript;
         this.stateService = stateService;
@@ -197,7 +195,7 @@ public class Chat implements IChat, IChatDialog
         chat("insert_code", content, null, ctx);
     }
 
-    @SuppressWarnings({ "nls", "restriction" })
+    @SuppressWarnings("nls")
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
@@ -416,8 +414,7 @@ public class Chat implements IChat, IChatDialog
         try
         {
             var chatUrl = settings.getChatUrl();
-            var reset = settingsTracker.register(Chat.class.getName(), settings);
-            if (lastChatUrl != chatUrl || reset)
+            if (!Objects.equals(chatUrl, lastChatUrl))
             {
                 lastChatUrl = chatUrl;
                 initializing = dispatcher.dispatch(() -> {
