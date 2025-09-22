@@ -167,7 +167,7 @@ public class Chat implements IChat, IChatDialog
     public void addFile()
     {
         var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-        var dialog = new FileDialog(shell, SWT.OPEN);
+        var dialog = new FileDialog(shell, SWT.OPEN | SWT.MULTI);
         dialog.setFilterPath(lastDialogPath);
         var file = dialog.open();
         if (file == null)
@@ -176,23 +176,41 @@ public class Chat implements IChat, IChatDialog
         }
 
         lastDialogPath = dialog.getFilterPath();
-        var filePath = Path.of(file);
-        if (!fileSystem.isTextFile(filePath))
+        var onlyTextFilesSupported = new StringBuilder();
+        var errorReadingFile = new StringBuilder();
+        for (var fileName : dialog.getFileNames())
         {
-            MessageDialog.openError(shell, Messages.ErrorReadingFile, Messages.OnlyTextFilesSupported);
-            return;
+            var filePath = lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
+            if (!fileSystem.isTextFile(filePath))
+            {
+                onlyTextFilesSupported.append(filePath);
+                onlyTextFilesSupported.append(System.lineSeparator());
+                continue;
+            }
+
+            var optionalContent = fileSystem.getText(filePath);
+            if (optionalContent.isEmpty())
+            {
+                errorReadingFile.append(filePath);
+                errorReadingFile.append(System.lineSeparator());
+                continue;
+            }
+
+            var content = optionalContent.get();
+            var ctx = new AIContext(new ProjectId(lastDialogPath, null), fileName, null);
+            chat("insert_code", content, null, ctx);
         }
 
-        var optionalContent = fileSystem.getText(filePath);
-        if (optionalContent.isEmpty())
+        if (onlyTextFilesSupported.length() > 0)
         {
-            MessageDialog.openWarning(shell, Messages.ErrorReadingFile, Messages.UnableToReadFile);
-            return;
+            MessageDialog.openError(shell, Messages.ErrorReadingFile,
+                onlyTextFilesSupported + Messages.OnlyTextFilesSupported);
         }
 
-        var content = optionalContent.get();
-        var ctx = new AIContext(new ProjectId(lastDialogPath, null), filePath.getFileName().toString(), null);
-        chat("insert_code", content, null, ctx);
+        if (errorReadingFile.length() > 0)
+        {
+            MessageDialog.openError(shell, Messages.ErrorReadingFile, errorReadingFile + Messages.UnableToReadFile);
+        }
     }
 
     @SuppressWarnings("nls")
