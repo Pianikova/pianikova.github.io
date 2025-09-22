@@ -362,7 +362,8 @@ class CodeCompletionViewModel
     private void updateGlobalContext()
     {
         dispatcher.dispatch(
-            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, 0, false), CancellationTokens.NONE))
+            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, true, false),
+                CancellationTokens.NONE))
             .flatMap(i -> i)
             .ifPresent(aiCtx -> globalContextManager.update(aiCtx, CancellationTokens.NONE));
     }
@@ -1148,7 +1149,7 @@ class CodeCompletionViewModel
     public Optional<AIContext> getAiContext(ICancellationToken cancellationToken)
     {
         return dispatcher.dispatch(
-            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, 0, false), cancellationToken)
+            () -> aiContextProvider.create(sourceViewer, new AITarget(textWidget, true, false), cancellationToken)
                 .orElse(null));
     }
 

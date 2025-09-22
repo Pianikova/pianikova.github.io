@@ -7,5 +7,5 @@ import com.e1c.edt.ai.assistent.model.ProjectId;
 
 public interface IContextSplitter
 {
-    ContextParts split(ProjectId projectId, String text, int offset);
+    ContextParts split(ProjectId projectId, String text, int offset, boolean limitSize);
 }

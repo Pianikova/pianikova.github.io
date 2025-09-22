@@ -57,7 +57,7 @@ public class AskAIQuickAccessElement
     {
         var ctx = ui.getLastSourceViewer()
             .flatMap(sourceViewer -> aiContextProvider.create(sourceViewer,
-                new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true),
+                new AITarget(sourceViewer.getTextWidget(), false, true),
                 CancellationTokens.NONE))
             .orElse(null);
 

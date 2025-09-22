@@ -10,15 +10,14 @@ import com.google.common.base.Preconditions;
 public class AITarget
 {
     private final StyledText textWidget;
-    private final int maxLength;
+    private final boolean limitSize;
     private final boolean preferSelection;
 
-    public AITarget(StyledText textWidget, int maxLength, boolean preferSelection)
+    public AITarget(StyledText textWidget, boolean limitSize, boolean preferSelection)
     {
         Preconditions.checkNotNull(textWidget);
-        Preconditions.checkArgument(maxLength >= 0);
         this.textWidget = textWidget;
-        this.maxLength = maxLength;
+        this.limitSize = limitSize;
         this.preferSelection = preferSelection;
     }
 
@@ -27,9 +26,9 @@ public class AITarget
         return textWidget;
     }
 
-    public int getMaxLength()
+    public boolean getLimitSize()
     {
-        return maxLength;
+        return limitSize;
     }
 
     public boolean isPreferSelection()

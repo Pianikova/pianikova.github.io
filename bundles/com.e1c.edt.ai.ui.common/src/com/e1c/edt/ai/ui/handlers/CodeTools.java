@@ -80,13 +80,13 @@ public class CodeTools
         var textWidget = sourceViewer.getTextWidget();
         if (isDiff(sourceViewer))
         {
-            return aiContextProvider.create(sourceViewer, new AITarget(textWidget, Integer.MAX_VALUE, false),
+            return aiContextProvider.create(sourceViewer, new AITarget(textWidget, false, false),
                 CancellationTokens.NONE);
         }
 
         if (!textWidget.getSelectionText().isBlank())
         {
-            return aiContextProvider.create(sourceViewer, new AITarget(textWidget, Integer.MAX_VALUE, true),
+            return aiContextProvider.create(sourceViewer, new AITarget(textWidget, false, true),
                 CancellationTokens.NONE);
         }
 
@@ -130,7 +130,6 @@ public class CodeTools
         }
     }
 
-    @SuppressWarnings("restriction")
     private boolean isDiff(SourceViewer sourceViewer)
     {
         return sourceViewer.getDocument() instanceof DiffDocument;
@@ -258,7 +257,7 @@ public class CodeTools
         }
 
         commentingMethod.sourceViewer = sourceViewer;
-        var target = new AITarget(sourceViewer.getTextWidget(), Integer.MAX_VALUE, true);
+        var target = new AITarget(sourceViewer.getTextWidget(), false, true);
         var lastRange = range;
         var optionalCtx = aiContextProvider.create(sourceViewer, target, CancellationTokens.NONE);
         if (optionalCtx.isPresent())

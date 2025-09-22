@@ -21,7 +21,7 @@ public class ContextInitializer
     }
 
     @Override
-    public Optional<AIContext> initialize(AIContext ctx)
+    public Optional<AIContext> initialize(AIContext ctx, boolean limitSize)
     {
         Preconditions.checkNotNull(ctx);
         var text = ctx.getText();
@@ -47,7 +47,7 @@ public class ContextInitializer
             offset = text.length();
         }
 
-        var parts = contextSplitter.split(ctx.getProjectId(), text, offset);
+        var parts = contextSplitter.split(ctx.getProjectId(), text, offset, limitSize);
         var prefix = parts.getPrefix().apply(text);
         var sufix = parts.getSufix().apply(text);
         return Optional

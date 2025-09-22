@@ -37,9 +37,12 @@ public class ContextSplitterTest
     public int suffixLength;
 
     @Parameter(4)
-    public String prefix;
+    public Boolean limitSize;
 
     @Parameter(5)
+    public String prefix;
+
+    @Parameter(6)
     public String sufix;
 
     @Test
@@ -53,7 +56,7 @@ public class ContextSplitterTest
         var splitter = new ContextSplitter(settings);
 
         // When
-        var parts = splitter.split(projectId, text, offset);
+        var parts = splitter.split(projectId, text, offset, limitSize);
         var actualPrefix = parts.getPrefix().apply(text);
         var actualSufix = parts.getSufix().apply(text);
 
@@ -69,18 +72,19 @@ public class ContextSplitterTest
         // @formatter:off
         return Arrays.asList(
             new Object[][] {
-                { "0123456789", 5, 2, 10, "34", "56789" },
-                { "0123456789", 10, 2, 10, "89", "" },
-                { "0123456789", 0, 2, 2, "", "01" },
-                { "0123456789", 2, 10, 10, "01", "23456789" },
-                { "0123456789", 0, 10, 10, "", "0123456789" },
-                { "0123456789", 10, 10, 10, "0123456789", "" },
-                { "0123456789", 2, 10, 5, "01", "23456" },
-                { "", 0, 10, 10, "", "" },
-                { "0123456789", 2, 1, 1, "1", "2" },
-                { "0123456789", 2, 0, 0, "", "" },
-                { "0123456789", 2, 0, 1, "", "2" },
-                { "0123456789", 2, 1, 0, "1", "" },
+                { "0123456789", 5, 2, 10, true, "34", "56789" },
+                { "0123456789", 10, 2, 10, true, "89", "" },
+                { "0123456789", 0, 2, 2, true, "", "01" },
+                { "0123456789", 2, 10, 10, true, "01", "23456789" },
+                { "0123456789", 0, 10, 10, true, "", "0123456789" },
+                { "0123456789", 10, 10, 10, true, "0123456789", "" },
+                { "0123456789", 2, 10, 5, true, "01", "23456" },
+                { "", 0, 10, 10, true, "", "" },
+                { "0123456789", 2, 1, 1, true, "1", "2" },
+                { "0123456789", 2, 0, 0, true, "", "" },
+                { "0123456789", 2, 0, 1, true, "", "2" },
+                { "0123456789", 2, 1, 0, true, "1", "" },
+                { "0123456789", 5, 1, 1, false, "01234", "56789" },
             });
         // @formatter:on
     }

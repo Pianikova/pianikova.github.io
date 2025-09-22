@@ -52,7 +52,7 @@ public class ContextInitializerTest
         var projectId = new ProjectId("path", null);
         var text = prefix + sufix;
         var parts = new ContextParts(new Range(0, prefix.length()), new Range(prefix.length(), sufix.length()));
-        when(splitter.split(projectId, text, expectedOffset)).thenReturn(parts);
+        when(splitter.split(projectId, text, expectedOffset, true)).thenReturn(parts);
         var factory = createInstance();
 
         // When
@@ -60,7 +60,8 @@ public class ContextInitializerTest
             factory.initialize(
                 new AIContext(projectId, textOffset + 3, "full_" + text,
                     textOffset + 3, "", text,
-                    textOffset, document, isDisposed));
+                    textOffset, document, isDisposed),
+                true);
 
         // Then
         Assert.assertEquals(success, actualContext.isPresent());

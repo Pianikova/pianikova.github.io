@@ -20,7 +20,7 @@ public class ContextSplitter
     }
 
     @Override
-    public ContextParts split(ProjectId projectId, String text, int offset)
+    public ContextParts split(ProjectId projectId, String text, int offset, boolean limitSize)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0 && offset <= text.length());
@@ -47,8 +47,8 @@ public class ContextSplitter
             return new ContextParts(Range.EMPTY, new Range(0, Integer.min(length, maxSuffixLength)));
         }
 
-        var start = Integer.max(offset - maxPrefixLength, 0);
-        var finish = Integer.min(offset + maxSuffixLength - 1, length - 1);
+        var start = limitSize ? Integer.max(offset - maxPrefixLength, 0) : 0;
+        var finish = limitSize ? Integer.min(offset + maxSuffixLength - 1, length - 1) : length - 1;
         var prefix = new Range(start, offset - start);
         var suffix = new Range(offset, finish - offset + 1);
         return new ContextParts(prefix, suffix);

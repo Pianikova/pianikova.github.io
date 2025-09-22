@@ -88,6 +88,6 @@ class AIContextProvider
                     .orElse(true));
         }
 
-        return contextInitializer.initialize(aiContext);
+        return contextInitializer.initialize(aiContext, target.getLimitSize());
     }
 }
