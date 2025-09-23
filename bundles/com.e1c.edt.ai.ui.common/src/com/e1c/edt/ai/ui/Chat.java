@@ -164,10 +164,11 @@ public class Chat implements IChat, IChatDialog
 
     @SuppressWarnings("nls")
     @Override
-    public void addFile()
+    public void addFiles()
     {
         var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
         var dialog = new FileDialog(shell, SWT.OPEN | SWT.MULTI);
+        dialog.setText(Messages.AddFilesToChatDialogName);
         dialog.setFilterPath(lastDialogPath);
         var file = dialog.open();
         if (file == null)

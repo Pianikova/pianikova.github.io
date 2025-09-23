@@ -201,28 +201,32 @@
                     icon="icons/obj16/explain.png"
                     id="com.e1c.edt.ai.ui.commands.explain.ai.id"
                     label="%command.label.explain"
-                    style="push">
+                    style="push"
+                    tooltip="%command.tooltip.explain">
             </command>
             <command
                     commandId="com.e1c.edt.ai.ui.commands.criticise.ai"
                     icon="icons/obj16/criticise.png"
                     id="com.e1c.edt.ai.ui.commands.criticise.ai.id"
                     label="%command.label.critic"
-                    style="push">
+                    style="push"
+                    tooltip="%command.tooltip.critic">
             </command>
             <command
                     commandId="com.e1c.edt.ai.ui.commands.fixcode.ai"
                     icon="icons/obj16/fixcode.png"
                     id="com.e1c.edt.ai.ui.commands.fixcode.ai.id"
                     label="%command.label.fixcode"
-                    style="push">
+                    style="push"
+                    tooltip="%command.tooltip.fixcode">
             </command>
             <command
                     commandId="com.e1c.edt.ai.ui.commands.generatedoccomments.ai"
                     icon="icons/obj16/generatedoccomments.png"
                     id="com.e1c.edt.ai.ui.commands.generatedoccomments.ai.id"
                     label="%command.label.generatedoccomments"
-                    style="push">
+                    style="push"
+                    tooltip="%command.tooltip.generatedoccomments">
             </command>
             <separator
                   name="com.e1c.edt.ai.ui.separator1"
@@ -233,14 +237,16 @@
                     icon="icons/obj16/addcode.png"
                     id="com.e1c.edt.ai.ui.commands.addcode.ai.id"
                     label="%command.label.addcode"
-                    style="push">
+                    style="push"
+                    tooltip="%command.tooltip.addcode">
             </command>
             <command
                     commandId="com.e1c.edt.ai.ui.commands.addfile.ai"
                     icon="icons/obj16/addfile.png"
                     id="com.e1c.edt.ai.ui.commands.addfile.ai.id"
                     label="%command.label.addfile"
-                    style="push">
+                    style="push"
+                    tooltip="%command.tooltip.addfile">
             </command>
             <separator
                   name="com.e1c.edt.ai.ui.separator2"

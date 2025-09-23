@@ -19,5 +19,5 @@ public interface IChat
 
     void addCode(AIContext ctx, String codeSnippet);
 
-    public void addFile();
+    public void addFiles();
 }

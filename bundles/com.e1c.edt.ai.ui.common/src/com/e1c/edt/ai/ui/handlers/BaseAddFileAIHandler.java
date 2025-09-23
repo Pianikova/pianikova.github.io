@@ -31,7 +31,7 @@ public class BaseAddFileAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        chat.addFile();
+        chat.addFiles();
         return null;
     }
 }

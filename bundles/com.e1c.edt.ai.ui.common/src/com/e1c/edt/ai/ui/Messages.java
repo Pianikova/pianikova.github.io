@@ -51,6 +51,7 @@ public class Messages
     public static String ErrorReadingFile;
     public static String OnlyTextFilesSupported;
     public static String UnableToReadFile;
+    public static String AddFilesToChatDialogName;
 
     static
     {
