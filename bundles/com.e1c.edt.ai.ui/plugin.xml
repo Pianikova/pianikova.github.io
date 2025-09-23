@@ -12,7 +12,7 @@
         <view
                 category="com.e1c.edt.ai.ui"
                 class="com.e1c.edt.ai.ui.ChatView"
-                icon="icons/obj16/chatbot.png"
+                icon="icons/obj16/ai.png"
                 id="com.e1c.edt.ai.ui.views.ChatView"
                 inject="true"
                 name="%view.name">
