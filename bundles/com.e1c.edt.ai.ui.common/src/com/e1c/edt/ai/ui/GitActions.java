@@ -180,7 +180,7 @@ public class GitActions implements IGitActions
 
         final var projectId = firstProjectId;
         var toolInvokeRequest = new ToolInvokeRequest();
-        toolInvokeRequest.toolName = "custom";
+        toolInvokeRequest.toolName = "raw";
         toolInvokeRequest.uiLanguage = settings.getLanguage();
         toolInvokeRequest.programmingLanguage = "git diff";
         var content = new ToolInvokeRequestContent();
