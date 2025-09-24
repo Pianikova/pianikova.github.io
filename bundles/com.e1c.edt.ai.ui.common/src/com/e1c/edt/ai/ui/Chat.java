@@ -221,7 +221,7 @@ public class Chat implements IChat, IChatDialog
         chatInJob(Optional.ofNullable(ctx), () -> {
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try {
-                ProjectId projectId = AIContextProvider.DefaultProjectId;
+                var projectId = ProjectId.Default;
                 if (ctx != null)
                 {
                     projectId = ctx.getProjectId();

@@ -19,8 +19,9 @@ import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
-import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
+import com.e1c.edt.ai.IContextEntities;
+import com.e1c.edt.ai.IVisualContextProvider;
 import com.google.inject.Singleton;
 import com.google.inject.name.Names;
 
@@ -69,6 +70,7 @@ class ContextModule
             }
         });
         bind(IModuleProvider.class).annotatedWith(Names.named("BaseModuleProvider")).to(ModuleProvider.class).in(Singleton.class); //$NON-NLS-1$
+        bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -89,6 +89,8 @@ public class AIUICommonModule
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         bind(IResourceListener.class).to(ResourceListener.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
+        bind(IContextMenuInterceptor.class).to(ContextMenuInterceptor.class).in(Singleton.class);
+        bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -11,6 +11,7 @@ import com.google.common.base.Preconditions;
 
 public class ProjectId
 {
+    public static final ProjectId Default = new ProjectId("", null); //$NON-NLS-1$
     public final String path;
     public final IProject project;
 

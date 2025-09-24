@@ -161,7 +161,7 @@ public class Settings
     {
         return Optional.ofNullable(settingsStore.getString(ISettingsStore.LANGUAGE))
             .map(i -> i.isBlank() ? null : i)
-            .orElse(Platform.getNL().startsWith("ru_") ? "Russian" : "English");
+            .orElse(Platform.getNL().startsWith("ru_") ? ISettings.LANGUAGE_RUSSIAN : ISettings.LANGUAGE_ENGLISH);
     }
 
     @Override

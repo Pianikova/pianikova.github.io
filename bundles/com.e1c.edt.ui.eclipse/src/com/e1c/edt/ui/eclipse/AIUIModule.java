@@ -11,14 +11,15 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import com.e1c.edt.ai.AIModule;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
+import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
-import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.ICodeParser;
 import com.e1c.edt.ai.ui.IModuleNameProvider;
@@ -68,6 +69,7 @@ public class AIUIModule
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
+        bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }

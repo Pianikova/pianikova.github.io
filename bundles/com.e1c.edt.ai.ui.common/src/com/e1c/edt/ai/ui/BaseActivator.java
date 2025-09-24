@@ -301,6 +301,7 @@ public abstract class BaseActivator
         }
 
         injector.getInstance(IResourceListener.class).initialize();
+        injector.getInstance(IContextMenuInterceptor.class).initialize();
         return injector;
     }
 
@@ -332,6 +333,10 @@ public abstract class BaseActivator
         registry.put(Images.BUSY, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_busy.png"));
         registry.put(Images.GIT_MESSAGE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
         registry.put(Images.GIT_REVIEW, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitreview.png"));
+        registry.put(Images.SUGGEST_YOU_OPTION, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
+        registry.put(Images.CORRECT_ERRORS, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
+        registry.put(Images.IN_OTHER_WORDS, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
+        registry.put(Images.IMPROVE_STYLE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
     }
 
     public abstract String getPluginId();

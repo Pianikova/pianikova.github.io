@@ -14,6 +14,9 @@ import com.e1c.edt.ai.assistent.model.Verbosity;
 
 public interface ISettings
 {
+    public static final String LANGUAGE_RUSSIAN = "Russian"; //$NON-NLS-1$
+    public static final String LANGUAGE_ENGLISH = "English"; //$NON-NLS-1$
+
     String getClientToken();
 
     String getClientUniqueId();

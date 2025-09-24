@@ -19,7 +19,6 @@ import com.google.inject.Inject;
 class AIContextProvider
     implements IAIContextProvider
 {
-    public static final ProjectId DefaultProjectId = new ProjectId("", null); //$NON-NLS-1$
     private final IUI ui;
     private final IContentProvider contentProvider;
     private final IContextInitializer contextInitializer;
@@ -47,11 +46,11 @@ class AIContextProvider
         Preconditions.checkNotNull(cancellationToken);
         var file = ui.getFile(sourceViewer);
         String path = ""; //$NON-NLS-1$
-        ProjectId projectId = DefaultProjectId;
+        ProjectId projectId = ProjectId.Default;
         if (file.isPresent())
         {
             path = file.get().getFullPath().makeRelative().toPortableString();
-            projectId = projectIdProvider.getProjectId(path, cancellationToken).orElse(DefaultProjectId);
+            projectId = projectIdProvider.getProjectId(path, cancellationToken).orElse(ProjectId.Default);
         }
 
         var textWidget = sourceViewer.getTextWidget();
