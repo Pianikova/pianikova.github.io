@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.concurrent.TimeUnit;
+
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -56,7 +58,7 @@ public class BasePluginStartup
             protected IStatus run(IProgressMonitor monitor)
             {
                 pluginUpdateService.checkForUpdates();
-                schedule(24 * 60 * 60 * 1000);
+                schedule(TimeUnit.DAYS.toMillis(1));
                 return Status.OK_STATUS;
             }
         };
