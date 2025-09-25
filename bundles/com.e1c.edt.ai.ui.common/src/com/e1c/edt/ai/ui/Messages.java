@@ -41,6 +41,7 @@ public class Messages
     public static String StatusSSLFailed;
     public static String Support;
     public static String UpdateButton;
+    public static String RestartButton;
     public static String CloseButton;
     public static String UpdateLink;
     public static String UpdateMessage;
