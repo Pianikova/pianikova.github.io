@@ -5,12 +5,14 @@ package com.e1c.edt.ai.context;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.forms.widgets.Form;
 import org.eclipse.ui.forms.widgets.Section;
 
+import com._1c.g5.lwt.AbstractLightControl;
 import com._1c.g5.lwt.ILightComposite;
 import com._1c.g5.lwt.controls.LightCheckbox;
 import com._1c.g5.lwt.controls.LightEditorBar;
@@ -113,6 +115,7 @@ public class VisualContextProvider implements IVisualContextProvider
             if (child instanceof LightLabel)
             {
                 var item = (LightLabel)child;
+                visualField.isFocused = isFocused(item);
                 visualField.name = item.getText();
                 continue;
             }
@@ -125,7 +128,7 @@ public class VisualContextProvider implements IVisualContextProvider
                 if (content instanceof LightText)
                 {
                     var item = (LightText)content;
-                    visualField.isFocused = item.isFocused();
+                    visualField.isFocused = isFocused(item);
                     visualField.isMultiline = item.isMultiline();
                     visualField.value = item.getText();
                     currentGroup.fields.add(visualField);
@@ -138,7 +141,7 @@ public class VisualContextProvider implements IVisualContextProvider
             if (child instanceof LightText)
             {
                 var item = (LightText)child;
-                visualField.isFocused = item.isFocused();
+                visualField.isFocused = isFocused(item);
                 visualField.isMultiline = item.isMultiline();
                 visualField.value = item.getText();
                 currentGroup.fields.add(visualField);
@@ -149,7 +152,7 @@ public class VisualContextProvider implements IVisualContextProvider
             if (child instanceof LightCheckbox)
             {
                 var item = (LightCheckbox)child;
-                visualField.isFocused = item.isFocused();
+                visualField.isFocused = isFocused(item);
                 visualField.isMultiline = false;
                 visualField.value = item.isChecked() ? "[X]" : "[ ]"; //$NON-NLS-1$//$NON-NLS-2$
                 currentGroup.fields.add(visualField);
@@ -178,5 +181,18 @@ public class VisualContextProvider implements IVisualContextProvider
                 continue;
             }
         }
+    }
+
+    private boolean isFocused(AbstractLightControl control)
+    {
+        if (control.isFocused())
+        {
+            return true;
+        }
+
+        return Optional.ofNullable(control.getOverlay())
+            .map(i -> i.getSwtControl())
+            .map(i -> i.isFocusControl())
+            .orElse(false);
     }
 }

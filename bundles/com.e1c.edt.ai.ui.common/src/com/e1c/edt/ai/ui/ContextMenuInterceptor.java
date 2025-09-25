@@ -9,6 +9,8 @@ import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -53,7 +55,7 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
             var styledText = (StyledText)event.widget;
             if (isEditable(styledText))
             {
-                initializeMenu(styledText);
+                initialize(styledText);
             }
         }
     }
@@ -63,7 +65,7 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
         return !text.isDisposed() && text.isVisible() && text.isEnabled() && text.getEditable();
     }
 
-    private void initializeMenu(StyledText text)
+    private void initialize(StyledText text)
     {
         var menu = text.getMenu();
         if (menu == null)
@@ -78,6 +80,46 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
                 return;
             }
         }
+
+        text.addMouseListener(new MouseListener()
+        {
+            private boolean isFirstClick = true;
+
+            @Override
+            public void mouseDoubleClick(MouseEvent e)
+            {
+                if (e.button == 2)
+                {
+                    isFirstClick = false;
+                    handle();
+                }
+            }
+
+            @Override
+            public void mouseDown(MouseEvent e)
+            {
+                if (isFirstClick && e.button == 2)
+                {
+                    isFirstClick = false;
+                    handle();
+                }
+            }
+
+            @Override
+            public void mouseUp(MouseEvent e)
+            {
+                //
+            }
+
+            private void handle()
+            {
+                var styledTextListener = new StyledTextListener(text, null, true);
+                text.addFocusListener(styledTextListener);
+                text.addModifyListener(styledTextListener);
+                var action = text.getText().isBlank() ? TextAction.SUGGEST_YOU_OPTION : TextAction.CORRECT_ERRORS;
+                executeAction(text, action, styledTextListener);
+            }
+        });
 
         addMenuItems(menu, text);
     }
@@ -124,45 +166,46 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
         var styledTextListener = new StyledTextListener(text, menuItem, allowForEmptyText);
         text.addFocusListener(styledTextListener);
         text.addModifyListener(styledTextListener);
-        menuItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> {
-            var cancellationTokenSource = new CancellationTokenSource();
-            styledTextListener.cancellationTokenSource = cancellationTokenSource;
-            var context = visualContextProviewr.create(text, cancellationTokenSource);
-            var improvementsSource =
-                textActions.ceateTextImprovementsSource(context, textAction, cancellationTokenSource);
-            improvementsSource.subscribe(new IObserver<TextImprovements>()
-            {
-                @Override
-                public void onNext(TextImprovements textImprovements)
-                {
-                    dispatcher.dispatch(() -> {
-                        styledTextListener.isSuppresed = true;
-                        try
-                        {
-                            text.setText(textImprovements.getText());
-                        }
-                        finally
-                        {
-                            styledTextListener.isSuppresed = false;
-                        }
-                    });
-                }
-
-                @Override
-                public void onError(Throwable error)
-                {
-                    //
-                }
-
-                @Override
-                public void onCompleted()
-                {
-                    //
-                }
-            });
-        }));
-
+        menuItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> executeAction(text, textAction, styledTextListener)));
         return menuItem;
+    }
+
+    private void executeAction(StyledText text, TextAction textAction, StyledTextListener styledTextListener)
+    {
+        var cancellationTokenSource = new CancellationTokenSource();
+        styledTextListener.cancellationTokenSource = cancellationTokenSource;
+        var context = visualContextProviewr.create(text, cancellationTokenSource);
+        var improvementsSource = textActions.ceateTextImprovementsSource(context, textAction, cancellationTokenSource);
+        improvementsSource.subscribe(new IObserver<TextImprovements>()
+        {
+            @Override
+            public void onNext(TextImprovements textImprovements)
+            {
+                dispatcher.dispatch(() -> {
+                    styledTextListener.isSuppresed = true;
+                    try
+                    {
+                        text.setText(textImprovements.getText());
+                    }
+                    finally
+                    {
+                        styledTextListener.isSuppresed = false;
+                    }
+                });
+            }
+
+            @Override
+            public void onError(Throwable error)
+            {
+                //
+            }
+
+            @Override
+            public void onCompleted()
+            {
+                dispatcher.dispatch(() -> text.selectAll());
+            }
+        });
     }
 
     private final class StyledTextListener
@@ -203,7 +246,10 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
 
         private void SetIsEnabled()
         {
-            menuItem.setEnabled(allowForEmptyText || !text.getText().trim().isBlank());
+            if (menuItem != null)
+            {
+                menuItem.setEnabled(allowForEmptyText || !text.getText().trim().isBlank());
+            }
         }
 
         private void cancel()
