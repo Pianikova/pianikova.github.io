@@ -27,6 +27,7 @@ import org.osgi.framework.ServiceReference;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ui.UINotificationService.UINotificationActionType;
 import com.google.inject.Inject;
 
 /**
@@ -122,7 +123,7 @@ public class PluginUpdateService
                 dispatcher.dispatchAsync(() -> notificationService.createNotificationWithAction(
                     PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateMessage, () -> {
                         installUpdate(agent, latest);
-                    }, UINotificationType.INFO, this.getClass()));
+                    }, UINotificationActionType.UPDATE, UINotificationType.INFO, this.getClass()));
 
             }
 
@@ -158,11 +159,17 @@ public class PluginUpdateService
                     {
                         log.trace("The update has been installed", () -> "");
                         dispatcher.dispatchAsync(() -> {
-                            notificationService.createNotification(
-                                PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-                                Messages.UpdateInstalled, null, null, UINotificationType.INFO, this.getClass());
+                            var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+                            notificationService.createNotificationWithAction(shell, Messages.UpdateInstalled,
+                                new Runnable()
+                                {
+                                    @Override
+                                    public void run()
+                                    {
+                                        PlatformUI.getWorkbench().restart();
+                                    }
+                                }, UINotificationActionType.RELOAD, UINotificationType.INFO, this.getClass());
                         });
-
                     }
                     else
                     {

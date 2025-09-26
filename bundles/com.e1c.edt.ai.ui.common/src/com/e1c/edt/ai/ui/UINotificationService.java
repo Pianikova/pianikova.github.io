@@ -52,16 +52,17 @@ public class UINotificationService
 
     @Override
     public void createNotificationWithAction(Shell parentShell, String message, Runnable action,
+        UINotificationActionType actionType,
         UINotificationType type, Class<?> sourceClass)
     {
         String notificationKey = sourceClass.getName();
-        UINotification popup = new UINotification(parentShell, message, type, null, null, action);
+        UINotification popup = new UINotification(parentShell, message, type, null, null, action, actionType);
         popup.setBlockOnOpen(false);
         popup.open();
         log.trace("Notification shown: " + notificationKey, () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
-    public void resetAllTriggers()
+    private void resetAllTriggers()
     {
         shownNotifications.clear();
         log.trace("All notification triggers reset", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
@@ -71,6 +72,24 @@ public class UINotificationService
     public void onSettingsChanged()
     {
         resetAllTriggers();
+    }
+
+    public static enum UINotificationActionType
+    {
+        UPDATE(Messages.UpdateButton),
+        RELOAD(Messages.RestartButton);
+
+        private final String buttonText;
+
+        private UINotificationActionType(String buttonText)
+        {
+            this.buttonText = buttonText;
+        }
+
+        public String getActionText()
+        {
+            return buttonText;
+        }
     }
 
 }

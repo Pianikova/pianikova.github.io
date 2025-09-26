@@ -3,6 +3,11 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.concurrent.TimeUnit;
+
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IStartup;
 
@@ -48,8 +53,16 @@ public class BasePluginStartup
             () -> ""); //$NON-NLS-1$
         activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
 
-        var updateJob =
-            dispatcher.createJob(Messages.UpdateJobMessage, context -> pluginUpdateService.checkForUpdates(), null);
+        var updateJob = new Job(Messages.UpdateJobMessage) {
+            @Override
+            protected IStatus run(IProgressMonitor monitor)
+            {
+                pluginUpdateService.checkForUpdates();
+                schedule(TimeUnit.DAYS.toMillis(1));
+                return Status.OK_STATUS;
+            }
+        };
+
         updateJob.setPriority(Job.DECORATE);
         updateJob.schedule();
     }
