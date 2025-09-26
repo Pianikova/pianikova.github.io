@@ -116,7 +116,7 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
                 var styledTextListener = new StyledTextListener(text, null, true);
                 text.addFocusListener(styledTextListener);
                 text.addModifyListener(styledTextListener);
-                var action = text.getText().isBlank() ? TextAction.SUGGEST_YOU_OPTION : TextAction.CORRECT_ERRORS;
+                var action = text.getText().isBlank() ? TextAction.SUGGEST_YOUR_OPTION : TextAction.CORRECT_ERRORS;
                 executeAction(text, action, styledTextListener);
             }
         });
@@ -151,7 +151,7 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
         }
 
         // Add menu items
-        createMenuItem(menu, text, TextAction.SUGGEST_YOU_OPTION, true);
+        createMenuItem(menu, text, TextAction.SUGGEST_YOUR_OPTION, true);
         createMenuItem(menu, text, TextAction.CORRECT_ERRORS, false);
         createMenuItem(menu, text, TextAction.IN_OTHER_WORDS, false);
         createMenuItem(menu, text, TextAction.IMPROVE_STYLE, false);

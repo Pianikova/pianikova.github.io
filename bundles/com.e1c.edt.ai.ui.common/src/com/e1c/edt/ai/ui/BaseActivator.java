@@ -333,10 +333,11 @@ public abstract class BaseActivator
         registry.put(Images.BUSY, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_busy.png"));
         registry.put(Images.GIT_MESSAGE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
         registry.put(Images.GIT_REVIEW, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitreview.png"));
-        registry.put(Images.SUGGEST_YOU_OPTION, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
-        registry.put(Images.CORRECT_ERRORS, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
-        registry.put(Images.IN_OTHER_WORDS, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
-        registry.put(Images.IMPROVE_STYLE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
+        registry.put(Images.SUGGEST_YOUR_OPTION,
+            imageDescriptorFromPlugin(getPluginId(), "icons/obj16/suggest_your_option.png"));
+        registry.put(Images.CORRECT_ERRORS, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/correct_errors.png"));
+        registry.put(Images.IN_OTHER_WORDS, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/in_other_words.png"));
+        registry.put(Images.IMPROVE_STYLE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/improve_style.png"));
     }
 
     public abstract String getPluginId();

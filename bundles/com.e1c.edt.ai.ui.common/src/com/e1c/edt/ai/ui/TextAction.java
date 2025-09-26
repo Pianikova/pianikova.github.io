@@ -6,7 +6,7 @@ package com.e1c.edt.ai.ui;
 public enum TextAction
 {
     // Suggest your option
-    SUGGEST_YOU_OPTION(Messages.SuggestYouOption, Images.SUGGEST_YOU_OPTION, IResourceProvider.SUGGEST_YOU_OPTION),
+    SUGGEST_YOUR_OPTION(Messages.SuggestYourOption, Images.SUGGEST_YOUR_OPTION, IResourceProvider.SUGGEST_YOUR_OPTION),
 
     // Correct errors
     CORRECT_ERRORS(Messages.CorrectErrors, Images.CORRECT_ERRORS, IResourceProvider.CORRECT_ERRORS),

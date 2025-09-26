@@ -52,7 +52,7 @@ public class Messages
     public static String OnlyTextFilesSupported;
     public static String UnableToReadFile;
     public static String AddFilesToChatDialogName;
-    public static String SuggestYouOption;
+    public static String SuggestYourOption;
     public static String CorrectErrors;
     public static String InOtherWords;
     public static String ImproveStyle;
