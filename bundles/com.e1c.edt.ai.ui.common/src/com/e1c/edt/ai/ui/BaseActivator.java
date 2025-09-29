@@ -301,7 +301,7 @@ public abstract class BaseActivator
         }
 
         injector.getInstance(IResourceListener.class).initialize();
-        // injector.getInstance(IContextMenuInterceptor.class).initialize();
+        injector.getInstance(IContextMenuInterceptor.class).initialize();
         return injector;
     }
 
