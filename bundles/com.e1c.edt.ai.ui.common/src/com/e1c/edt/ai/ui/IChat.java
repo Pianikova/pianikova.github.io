@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.List;
+
 import com.e1c.edt.ai.AIContext;
 
 public interface IChat
@@ -19,5 +21,5 @@ public interface IChat
 
     void addCode(AIContext ctx, String codeSnippet);
 
-    public void addFiles();
+    public void addFiles(List<IContentReader> contents);
 }

@@ -114,6 +114,10 @@
                 id="com.e1c.edt.ai.ui.inlinedAnnotations.ai"
                 name="Аннотации">
         </command>
+        <command
+              id="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
+              name="%command.label.addfilestochat">
+        </command>
     </extension>
 
     <extension point="org.eclipse.ui.bindings">
@@ -187,6 +191,10 @@
         <handler
                 class="com.e1c.edt.ai.ui.handlers.FeedbackAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.feedback.ai">
+        </handler>
+        <handler
+              class="com.e1c.edt.ai.ui.handlers.AddFilesToChatHandler"
+              commandId="com.e1c.edt.ai.ui.commands.addfilestochat.ai">
         </handler>
 
     </extension>
@@ -293,8 +301,16 @@
                   id="com.e1c.edt.ai.ui.status">
             </control>
          </toolbar>
-      </menuContribution>
-        
+        </menuContribution>
+        <menuContribution
+              allPopups="false"
+              locationURI="popup:com._1c.g5.v8.dt.navigator.ui.navigator.popup">
+           <command
+                 commandId="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
+                 label="%command.label.addfilestochat"
+                 style="push">
+           </command>
+        </menuContribution>
     </extension>
     
     <extension

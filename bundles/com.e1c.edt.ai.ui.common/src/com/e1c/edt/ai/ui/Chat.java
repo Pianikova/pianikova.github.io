@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -164,53 +165,50 @@ public class Chat implements IChat, IChatDialog
 
     @SuppressWarnings("nls")
     @Override
-    public void addFiles()
+    public void addFiles(List<IContentReader> contents)
     {
-        var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-        var dialog = new FileDialog(shell, SWT.OPEN | SWT.MULTI);
-        dialog.setText(Messages.AddFilesToChatDialogName);
-        dialog.setFilterPath(lastDialogPath);
-        var file = dialog.open();
-        if (file == null)
+        if (contents == null)
         {
-            return;
-        }
-
-        lastDialogPath = dialog.getFilterPath();
-        var onlyTextFilesSupported = new StringBuilder();
-        var errorReadingFile = new StringBuilder();
-        for (var fileName : dialog.getFileNames())
-        {
-            var filePath = lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
-            if (!fileSystem.isTextFile(filePath))
+            var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+            var dialog = new FileDialog(shell, SWT.OPEN | SWT.MULTI);
+            dialog.setText(Messages.AddFilesToChatDialogName);
+            dialog.setFilterPath(lastDialogPath);
+            var file = dialog.open();
+            if (file == null)
             {
-                onlyTextFilesSupported.append(filePath);
-                onlyTextFilesSupported.append(System.lineSeparator());
-                continue;
+                return;
             }
 
-            var optionalContent = fileSystem.getText(filePath);
+            lastDialogPath = dialog.getFilterPath();
+            contents = new ArrayList<>();
+            for (var fileName : dialog.getFileNames())
+            {
+                var filePath =
+                    lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
+                contents.add(new PathContentReader(filePath));
+            }
+        }
+
+        var errorReadingFile = new StringBuilder();
+        for (var contentReader : contents)
+        {
+            var optionalContent = fileSystem.getText(contentReader);
             if (optionalContent.isEmpty())
             {
-                errorReadingFile.append(filePath);
+                errorReadingFile.append(contentReader.getName());
                 errorReadingFile.append(System.lineSeparator());
                 continue;
             }
 
             var content = optionalContent.get();
-            var ctx = new AIContext(new ProjectId(lastDialogPath, null), fileName, null);
+            var ctx = new AIContext(contentReader.getProjectId(), contentReader.getName(), null);
             chat("insert_code", content, null, ctx);
-        }
-
-        if (onlyTextFilesSupported.length() > 0)
-        {
-            MessageDialog.openError(shell, Messages.ErrorReadingFile,
-                onlyTextFilesSupported + Messages.OnlyTextFilesSupported);
         }
 
         if (errorReadingFile.length() > 0)
         {
-            MessageDialog.openError(shell, Messages.ErrorReadingFile, errorReadingFile + Messages.UnableToReadFile);
+            var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+            MessageDialog.openError(shell, Messages.ErrorReadingTextFile, errorReadingFile + Messages.UnableToReadFile);
         }
     }
 

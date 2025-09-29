@@ -3,101 +3,103 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Optional;
+
+import org.eclipse.core.filebuffers.FileBuffers;
+import org.eclipse.core.filebuffers.LocationKind;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
 
 public class FileSystem implements IFileSystem
 {
     @Override
-    public Optional<String> getText(Path filePath)
+    public Optional<String> getText(IContentReader contentReader)
     {
-        for (var charset : Charset.availableCharsets().values())
+        byte[] bytes;
+        try
         {
-            try
+            bytes = contentReader.getInputStream().readAllBytes();
+            var buffer = ByteBuffer.wrap(bytes);
+            for (var charset : Charset.availableCharsets().values())
             {
-                return Optional.ofNullable(Files.readString(filePath, charset));
+                try
+                {
+                    var text = charset.newDecoder().decode(buffer).toString();
+                    if (isPrintable(text, 85))
+                    {
+                        return Optional.of(text);
+                    }
+                }
+                catch (CharacterCodingException e)
+                {
+                    continue;
+                }
             }
-            catch (IOException error)
-            {
-                //
-            }
+
+        }
+        catch (IOException | CoreException e)
+        {
+            //
         }
 
         return Optional.empty();
     }
 
     @Override
-    public boolean isTextFile(Path filePath)
+    public InputStream getContent(IFile file) throws CoreException
     {
+        var filePath = file.getFullPath();
         try
         {
-            // MIME-type check
-            var mimeType = Files.probeContentType(filePath);
-            if (mimeType != null && mimeType.startsWith("text/")) //$NON-NLS-1$
+            FileBuffers.getTextFileBufferManager().connect(filePath, LocationKind.IFILE, null);
+            var buffer =
+                FileBuffers.getTextFileBufferManager().getTextFileBuffer(filePath, LocationKind.IFILE);
+            if (buffer != null)
             {
-                return true;
+                var doc = buffer.getDocument();
+                String content = doc.get();
+                try
+                {
+                    return new ByteArrayInputStream(content.getBytes(file.getCharset()));
+                }
+                catch (UnsupportedEncodingException | CoreException e)
+                {
+                    //
+                }
             }
-
-            // Content check
-            return isLikelyTextContent(filePath);
         }
-        catch (IOException e)
+        finally
         {
-            return false;
+            FileBuffers.getTextFileBufferManager().disconnect(filePath, LocationKind.IFILE, null);
         }
+
+        return file.getContents();
     }
 
-    private static boolean isLikelyTextContent(Path filePath) throws IOException
+    private static boolean isPrintable(String text, double threshold)
     {
-        try (var stream = new BufferedInputStream(new FileInputStream(filePath.toString())))
+        int printable = 0;
+        for (int i = 0; i < text.length(); i++)
         {
-            var maxBytes = 4096;
-            var buffer = new byte[maxBytes];
-            var length = stream.read(buffer);
-            var textChars = 0;
-            for (int i = 0; i < length; i++)
+            if (isPrintable(text.charAt(i)))
             {
-                byte b = buffer[i];
-                // Allowed characters: printable ASCII + control characters
-                if (b >= 0x09 && b <= 0x0D)
-                    continue; // \t\n\r etc.
-                if (b >= 0x20 && b <= 0x7E)
-                {
-                    // Printable characters
-                    textChars++;
-                    continue;
-                }
-                // UTF-8 Multi-Byte Characters (start)
-                if ((b & 0xE0) == 0xC0 && i + 1 < length)
-                {
-                    i += 1;
-                }
-                else
-                {
-                    if ((b & 0xF0) == 0xE0 && i + 2 < length)
-                    {
-                        i += 2;
-                    }
-                    else
-                    {
-                        if ((b & 0xF8) == 0xF0 && i + 3 < length)
-                        {
-                            i += 3;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                }
+                printable++;
             }
-
-            return (textChars > length * 0.7); // 70% of characters are printable
         }
+
+        return ((double)100) * printable / text.length() >= threshold;
+    }
+
+    private static boolean isPrintable(char c)
+    {
+        var block = Character.UnicodeBlock.of(c);
+        return (!Character.isISOControl(c)) && block != null && block != Character.UnicodeBlock.SPECIALS;
     }
 }

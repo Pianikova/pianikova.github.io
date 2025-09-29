@@ -49,8 +49,7 @@ public class Messages
     public static String UpdateInstalled;
     public static String CommitMessage;
     public static String GitReview;
-    public static String ErrorReadingFile;
-    public static String OnlyTextFilesSupported;
+    public static String ErrorReadingTextFile;
     public static String UnableToReadFile;
     public static String AddFilesToChatDialogName;
     public static String SuggestYourOption;
