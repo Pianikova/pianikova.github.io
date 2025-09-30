@@ -151,6 +151,9 @@ public class ParametersParserTest
                 { "verbosity=info", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.INFO; } ) },
                 { "verbosity=trace", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.TRACE; } ) },
                 { "verbosity=debug", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.DEBUG; } ) },
+                { "resources=c:\\abc", ValidationResult.SUCCESS, createParams(p -> { p.resources = Optional.of("c:\\abc"); } ) },
+                { "instance_type=B", ValidationResult.SUCCESS, createParams(p -> { p.instanceType = Optional.of("B"); } ) },
+                { "instance_type=", ValidationResult.SUCCESS, createParams(p -> { p.instanceType = null; } ) },
             });
         // @formatter:on
     }

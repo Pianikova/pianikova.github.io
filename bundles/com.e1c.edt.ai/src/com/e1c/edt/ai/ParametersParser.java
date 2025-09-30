@@ -228,6 +228,9 @@ public class ParametersParser
             val -> parameters.gitDiffContextLines =
                 val == null || val.isBlank() ? null : Optional.of(Integer.parseInt(val))));
 
+        names.remove(parse(properties, "instance_type", validationResult,
+            val -> parameters.instanceType = val == null || val.isBlank() ? null : Optional.of(val.trim())));
+
         var unknowNames = new ArrayList<>(names);
         unknowNames.sort(null);
         for (var unknowName : unknowNames)

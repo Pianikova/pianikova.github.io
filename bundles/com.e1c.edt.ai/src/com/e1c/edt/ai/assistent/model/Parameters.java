@@ -244,6 +244,12 @@ public class Parameters
     @SerializedName("git_diff_context_lines")
     public Optional<Integer> gitDiffContextLines;
 
+    /**
+     * Переопределяет тип экземпляра. Например, "A".
+     */
+    @SerializedName("instance_type")
+    public Optional<String> instanceType;
+
     public transient boolean fromCache;
 
     public Parameters merge(Parameters params)
@@ -423,6 +429,11 @@ public class Parameters
             verbosity = params.verbosity;
         }
 
+        if (params.instanceType != null)
+        {
+            instanceType = params.instanceType;
+        }
+
         return this;
     }
 
@@ -431,7 +442,7 @@ public class Parameters
     {
         return Objects.hash(bestOf, url, decoderInputDetails, details, doSample, frequencyPenalty, maxNewTokens,
             repetitionPenalty, returnFullText, returnLine, seed, stop, temperature, tokenHealing, topK, topNTokens,
-            topP, trimStop, truncate, typicalP, watermark, globalContext, extendedContext);
+            topP, trimStop, truncate, typicalP, watermark, globalContext, extendedContext, instanceType);
     }
 
     @Override
@@ -458,6 +469,7 @@ public class Parameters
             && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
             && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
             && Objects.equals(globalContext, other.globalContext)
-            && Objects.equals(extendedContext, other.extendedContext);
+            && Objects.equals(extendedContext, other.extendedContext)
+            && Objects.equals(instanceType, other.instanceType);
     }
 }

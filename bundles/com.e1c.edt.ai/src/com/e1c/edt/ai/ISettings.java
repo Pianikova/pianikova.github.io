@@ -21,6 +21,8 @@ public interface ISettings
 
     String getClientUniqueId();
 
+    Optional<String> getInstanceType();
+
     CodeCompletionPolicy getCodeCompletionPolicy();
 
     int getTabWidth();

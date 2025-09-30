@@ -127,8 +127,15 @@ class SessionService
         environment.getTotalPhysicalMemorySize().ifPresent(val -> systemInfo.totalPhysicalMemorySize = val);
 
         var requestBody = json.serialize(sessionRequest);
-        var request = builder.get().POST(BodyPublishers.ofString(requestBody)).build();
-        return getSessionAsync(projectId, request, requestBody);
+        var requestBuilder = builder.get();
+        var instanceType = settings.getInstanceType();
+        if (instanceType.isPresent())
+        {
+            requestBuilder = requestBuilder.header("Instance-Type", instanceType.get()); //$NON-NLS-1$
+        }
+
+        requestBuilder = requestBuilder.POST(BodyPublishers.ofString(requestBody));
+        return getSessionAsync(projectId, requestBuilder.build(), requestBody);
     }
 
     private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, HttpRequest request, String body)

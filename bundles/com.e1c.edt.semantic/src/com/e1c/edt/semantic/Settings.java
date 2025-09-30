@@ -30,6 +30,12 @@ class Settings
     }
 
     @Override
+    public Optional<String> getInstanceType()
+    {
+        return Optional.empty();
+    }
+
+    @Override
     public CodeCompletionPolicy getCodeCompletionPolicy()
     {
         return CodeCompletionPolicy.INTENSVE;
@@ -155,5 +161,4 @@ class Settings
     {
         return new Parameters();
     }
-
 }

@@ -90,6 +90,13 @@ public class Settings
     }
 
     @Override
+    public Optional<String> getInstanceType()
+    {
+        var instanceType = getParameterValue(null, parameters -> parameters.instanceType, () -> null);
+        return (instanceType == null || instanceType.isBlank()) ? Optional.empty() : Optional.of(instanceType);
+    }
+
+    @Override
     public CodeCompletionPolicy getCodeCompletionPolicy()
     {
         var id = settingsStore.getString(ISettingsStore.CODE_COMPLETION_POLICY);
