@@ -17,8 +17,21 @@ import org.eclipse.core.filebuffers.LocationKind;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 
+import com.e1c.edt.ai.ILog;
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 public class FileSystem implements IFileSystem
 {
+    private final ILog log;
+
+    @Inject
+    public FileSystem(ILog log)
+    {
+        Preconditions.checkNotNull(log);
+        this.log = log;
+    }
+
     @Override
     public Optional<String> getText(IContentReader contentReader)
     {
@@ -32,21 +45,24 @@ public class FileSystem implements IFileSystem
                 try
                 {
                     var text = charset.newDecoder().decode(buffer).toString();
-                    if (isPrintable(text, 85))
+                    var isPrintable = isPrintable(text, 85);
+                    if (isPrintable)
                     {
                         return Optional.of(text);
                     }
+
+                    isPrintable = isPrintable(text, 85);
                 }
-                catch (CharacterCodingException e)
+                catch (CharacterCodingException error)
                 {
                     continue;
                 }
             }
 
         }
-        catch (IOException | CoreException e)
+        catch (IOException | CoreException error)
         {
-            //
+            log.logError(error);
         }
 
         return Optional.empty();
@@ -69,9 +85,13 @@ public class FileSystem implements IFileSystem
                 {
                     return new ByteArrayInputStream(content.getBytes(file.getCharset()));
                 }
-                catch (UnsupportedEncodingException | CoreException e)
+                catch (UnsupportedEncodingException error)
                 {
                     //
+                }
+                catch (CoreException error)
+                {
+                    log.logError(error);
                 }
             }
         }
@@ -85,6 +105,11 @@ public class FileSystem implements IFileSystem
 
     private static boolean isPrintable(String text, double threshold)
     {
+        if (text == null || text.isBlank())
+        {
+            return true;
+        }
+
         int printable = 0;
         for (int i = 0; i < text.length(); i++)
         {

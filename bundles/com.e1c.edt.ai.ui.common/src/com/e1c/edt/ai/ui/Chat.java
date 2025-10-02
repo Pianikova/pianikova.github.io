@@ -208,7 +208,8 @@ public class Chat implements IChat, IChatDialog
         if (errorReadingFile.length() > 0)
         {
             var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-            MessageDialog.openError(shell, Messages.ErrorReadingTextFile, errorReadingFile + Messages.UnableToReadFile);
+            MessageDialog.openError(shell, Messages.ErrorReadingTextFile,
+                errorReadingFile + Messages.ErrorReadingTextFile);
         }
     }
 

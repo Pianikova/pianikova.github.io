@@ -17,7 +17,9 @@ Require-Bundle: com.e1c.edt.ai;bundle-version="[1.0.0,2.0.0)",
  org.eclipse.equinox.p2.engine;bundle-version="[2.7.300,3.0.0)",
  org.eclipse.egit.ui;bundle-version="[6.1.0,7.0.0)",
  org.eclipse.ui.forms;bundle-version="[3.11.300,4.0.0)",
- org.eclipse.jgit;bundle-version="[6.1.0,7.0.0)"
+ org.eclipse.jgit;bundle-version="[6.1.0,7.0.0)",
+ org.eclipse.e4.core.commands;bundle-version="[1.0.100,2.0.0)",
+ org.eclipse.core.expressions;bundle-version="[3.8.100,4.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Automatic-Module-Name: com.e1c.edt.ai.ui.common
 Export-Package: com.e1c.edt.ai.ui,

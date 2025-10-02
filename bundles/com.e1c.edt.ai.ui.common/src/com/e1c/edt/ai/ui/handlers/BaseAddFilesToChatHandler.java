@@ -7,13 +7,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Stack;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.e4.core.commands.ExpressionContext;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.handlers.HandlerUtil;
 
@@ -41,6 +44,24 @@ public class BaseAddFilesToChatHandler
         BaseActivator.injectMembers(this);
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
+    public void setEnabled(Object evaluationContext)
+    {
+        if (evaluationContext instanceof ExpressionContext)
+        {
+            var expressionContext = (ExpressionContext)evaluationContext;
+            var elements = expressionContext.getDefaultVariable();
+            if (elements instanceof List)
+            {
+                setBaseEnabled(!getContents((List)elements).isEmpty());
+                return;
+            }
+        }
+
+        setBaseEnabled(false);
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public Object execute(ExecutionEvent event)
@@ -52,15 +73,36 @@ public class BaseAddFilesToChatHandler
         }
 
         var structuredSelection = (IStructuredSelection)HandlerUtil.getCurrentSelection(event);
+        var contents = getContents(structuredSelection.toList());
+        if (!contents.isEmpty())
+        {
+            chat.addFiles(contents);
+        }
+
+        return null;
+    }
+
+    private List<IContentReader> getContents(List<Object> targets)
+    {
         var contents = new Stack<IContentReader>();
+        if (targets == null || targets.isEmpty())
+        {
+            return contents;
+        }
+
         var elements = new LinkedList<>();
-        elements.addAll(structuredSelection.toList());
+        elements.addAll(targets);
         while (elements.size() > 0)
         {
             var element = elements.removeFirst();
             if (element instanceof IFile)
             {
                 var file = ((IFile)element);
+                if (file.isHidden() || file.isVirtual())
+                {
+                    continue;
+                }
+
                 contents.add(new ProjectFileContentReader(file));
                 continue;
             }
@@ -68,6 +110,11 @@ public class BaseAddFilesToChatHandler
             if (element instanceof IContainer)
             {
                 var container = ((IContainer)element);
+                if (container.isHidden() || container.isVirtual() || container instanceof IProject)
+                {
+                    continue;
+                }
+
                 try
                 {
                     for (var member : container.members())
@@ -84,12 +131,7 @@ public class BaseAddFilesToChatHandler
             }
         }
 
-        if (!contents.isEmpty())
-        {
-            chat.addFiles(contents);
-        }
-
-        return null;
+        return contents;
     }
 
     private class ProjectFileContentReader
