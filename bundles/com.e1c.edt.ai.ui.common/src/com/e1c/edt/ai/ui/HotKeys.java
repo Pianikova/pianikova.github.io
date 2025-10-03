@@ -61,7 +61,10 @@ class HotKeys
 
     private boolean isTriggered(String bindingId, KeyEvent event, KeyBinding binding)
     {
-        Preconditions.checkArgument(binding != null, "Cannot find binding " + bindingId); //$NON-NLS-1$
+        if (binding == null)
+        {
+            return false;
+        }
 
         var bindingKeyStrokes = binding.getKeySequence().getKeyStrokes();
         if (bindingKeyStrokes == null)
@@ -81,9 +84,7 @@ class HotKeys
     @Override
     public synchronized KeyBinding getBinding(String bindingId)
     {
-        var binding = _keyBindigs.get(bindingId);
-        Preconditions.checkArgument(binding != null, "Cannot find binding " + bindingId); //$NON-NLS-1$
-        return binding;
+        return _keyBindigs.get(bindingId);
     }
 
     private static List<KeyStroke> generatePossibleKeyStrokes(KeyEvent event)

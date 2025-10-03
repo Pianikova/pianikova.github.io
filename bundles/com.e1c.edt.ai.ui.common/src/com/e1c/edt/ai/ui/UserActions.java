@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.swt.events.VerifyEvent;
@@ -24,6 +25,14 @@ class UserActions
         IHotKeys.ACCEPT_LINE, CodeCompletionAction.ACCEPT_LINE,
         IHotKeys.ACCEPT_PART, CodeCompletionAction.ACCEPT_PART,
         IHotKeys.ACCEPT, CodeCompletionAction.ACCEPT);
+
+    private static final List<String> LABEL_KEYS = List.of(
+        IHotKeys.ACCEPT_PART,
+        IHotKeys.ACCEPT_LINE,
+        IHotKeys.SUGGEST,
+        IHotKeys.FINISH,
+        IHotKeys.ROLLBACK_PART,
+        IHotKeys.ACCEPT);
  // @formatter:on
 
     private final IHotKeys hotKeys;
@@ -39,25 +48,28 @@ class UserActions
     public String getCodeCompletionLabels(char separator)
     {
         var labels = new StringBuilder();
-        labels.append(hotKeys.getBinding(IHotKeys.ACCEPT_PART).getKeySequence().format());
-        labels.append(SEPARATOR);
-        labels.append(Messages.HintHotKey_AcceptBlock);
-        labels.append(separator);
-        labels.append(hotKeys.getBinding(IHotKeys.ACCEPT_LINE).getKeySequence().format());
-        labels.append(SEPARATOR);
-        labels.append(Messages.HintHotKey_AcceptLine);
-        labels.append(separator);
-        labels.append(hotKeys.getBinding(IHotKeys.ACCEPT).getKeySequence().format());
-        labels.append(SEPARATOR);
-        labels.append(Messages.HintHotKey_AcceptAll);
-        labels.append(separator);
-        labels.append(hotKeys.getBinding(IHotKeys.ROLLBACK_PART).getKeySequence().format());
-        labels.append(SEPARATOR);
-        labels.append(Messages.HintHotKey_AcceptBack);
-        labels.append(separator);
-        labels.append(hotKeys.getBinding(IHotKeys.FINISH).getKeySequence().format());
-        labels.append(SEPARATOR);
-        labels.append(Messages.HintHotKey_AcceptStop);
+        for (var key : LABEL_KEYS)
+        {
+            var binding = hotKeys.getBinding(key);
+            if (binding == null)
+            {
+                continue;
+            }
+
+            if (labels.length() > 0)
+            {
+                labels.append(separator);
+            }
+
+            labels.append(binding.getKeySequence().format());
+        }
+
+        if (labels.length() > 0)
+        {
+            labels.append(SEPARATOR);
+            labels.append(Messages.HintHotKey_AcceptStop);
+        }
+
         return labels.toString();
     }
 

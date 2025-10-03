@@ -147,9 +147,6 @@
         <key sequence="Tab"
              commandId="com.e1c.edt.ai.ui.commands.acceptpart.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
-        <key sequence="Backspace"
-             commandId="com.e1c.edt.ai.ui.commands.rollbackpart.ai"
-             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
         <key sequence="Ctrl+Alt+Enter"
              commandId="com.e1c.edt.ai.ui.commands.acceptline.ai"
              schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"/>
