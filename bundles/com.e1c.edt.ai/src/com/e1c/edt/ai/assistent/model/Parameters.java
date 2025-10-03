@@ -204,6 +204,18 @@ public class Parameters
     public Optional<Integer> externalFunctionsLength;
 
     /**
+     * Длина метаданных (символов). Например, 2160.
+     */
+    @SerializedName("global_meta_length")
+    public Optional<Integer> globalMetaLength;
+
+    /**
+     * Длина буфера обмена. Например, 2160
+     */
+    @SerializedName("clipboard_length")
+    public Optional<Integer> clipboardLength;
+
+    /**
      * Минимальная задержка миллисекунд. Например, 300.
      */
     @SerializedName("min_delay")
@@ -404,6 +416,16 @@ public class Parameters
             externalFunctionsLength = params.externalFunctionsLength;
         }
 
+        if (params.globalMetaLength != null)
+        {
+            globalMetaLength = params.globalMetaLength;
+        }
+
+        if (params.clipboardLength != null)
+        {
+            clipboardLength = params.clipboardLength;
+        }
+
         if (params.minDelay != null)
         {
             minDelay = params.minDelay;
@@ -440,9 +462,11 @@ public class Parameters
     @Override
     public int hashCode()
     {
-        return Objects.hash(bestOf, url, decoderInputDetails, details, doSample, frequencyPenalty, maxNewTokens,
-            repetitionPenalty, returnFullText, returnLine, seed, stop, temperature, tokenHealing, topK, topNTokens,
-            topP, trimStop, truncate, typicalP, watermark, globalContext, extendedContext, instanceType);
+        return Objects.hash(prefixLength, suffixLength, formLength, metaLength, bestOf, decoderInputDetails, details,
+            doSample, maxNewTokens, repetitionPenalty, frequencyPenalty, returnFullText, seed, stop, temperature, topK,
+            topNTokens, topP, truncate, typicalP, watermark, tokenHealing, returnLine, trimStop, url, chatUrl,
+            updateUrl, localFunctionsLength, externalFunctionsLength, globalMetaLength, clipboardLength, minDelay,
+            timeout, globalContext, extendedContext, verbosity, resources, gitDiffContextLines, instanceType);
     }
 
     @Override
@@ -455,21 +479,29 @@ public class Parameters
         if (getClass() != obj.getClass())
             return false;
         Parameters other = (Parameters)obj;
-        return Objects.equals(bestOf, other.bestOf) && Objects.equals(url, other.url)
-            && Objects.equals(decoderInputDetails, other.decoderInputDetails) && Objects.equals(details, other.details)
-            && Objects.equals(doSample, other.doSample)
-            && Objects.equals(frequencyPenalty, other.frequencyPenalty)
+        return Objects.equals(prefixLength, other.prefixLength) && Objects.equals(suffixLength, other.suffixLength)
+            && Objects.equals(formLength, other.formLength) && Objects.equals(metaLength, other.metaLength)
+            && Objects.equals(bestOf, other.bestOf) && Objects.equals(decoderInputDetails, other.decoderInputDetails)
+            && Objects.equals(details, other.details) && Objects.equals(doSample, other.doSample)
             && Objects.equals(maxNewTokens, other.maxNewTokens)
             && Objects.equals(repetitionPenalty, other.repetitionPenalty)
-            && Objects.equals(returnFullText, other.returnFullText) && Objects.equals(returnLine, other.returnLine)
-            && Objects.equals(seed, other.seed) && Objects.equals(stop, other.stop)
-            && Objects.equals(temperature, other.temperature)
-            && Objects.equals(tokenHealing, other.tokenHealing) && Objects.equals(topK, other.topK)
-            && Objects.equals(topNTokens, other.topNTokens) && Objects.equals(topP, other.topP)
-            && Objects.equals(trimStop, other.trimStop) && Objects.equals(truncate, other.truncate)
+            && Objects.equals(frequencyPenalty, other.frequencyPenalty)
+            && Objects.equals(returnFullText, other.returnFullText) && Objects.equals(seed, other.seed)
+            && Objects.equals(stop, other.stop) && Objects.equals(temperature, other.temperature)
+            && Objects.equals(topK, other.topK) && Objects.equals(topNTokens, other.topNTokens)
+            && Objects.equals(topP, other.topP) && Objects.equals(truncate, other.truncate)
             && Objects.equals(typicalP, other.typicalP) && Objects.equals(watermark, other.watermark)
-            && Objects.equals(globalContext, other.globalContext)
-            && Objects.equals(extendedContext, other.extendedContext)
+            && Objects.equals(tokenHealing, other.tokenHealing) && Objects.equals(returnLine, other.returnLine)
+            && Objects.equals(trimStop, other.trimStop) && Objects.equals(url, other.url)
+            && Objects.equals(chatUrl, other.chatUrl) && Objects.equals(updateUrl, other.updateUrl)
+            && Objects.equals(localFunctionsLength, other.localFunctionsLength)
+            && Objects.equals(externalFunctionsLength, other.externalFunctionsLength)
+            && Objects.equals(globalMetaLength, other.globalMetaLength)
+            && Objects.equals(clipboardLength, other.clipboardLength) && Objects.equals(minDelay, other.minDelay)
+            && Objects.equals(timeout, other.timeout) && Objects.equals(globalContext, other.globalContext)
+            && Objects.equals(extendedContext, other.extendedContext) && Objects.equals(verbosity, other.verbosity)
+            && Objects.equals(resources, other.resources)
+            && Objects.equals(gitDiffContextLines, other.gitDiffContextLines)
             && Objects.equals(instanceType, other.instanceType);
     }
 }

@@ -169,6 +169,12 @@ public class ParametersParser
         names.remove(parse(properties, "external_functions_length", validationResult,
             val -> parameters.externalFunctionsLength = Optional.of(Integer.parseInt(val))));
 
+        names.remove(parse(properties, "global_meta_length", validationResult,
+            val -> parameters.globalMetaLength = Optional.of(Integer.parseInt(val))));
+
+        names.remove(parse(properties, "clipboard_length", validationResult,
+            val -> parameters.clipboardLength = Optional.of(Integer.parseInt(val))));
+
         names.remove(
             parse(properties, "min_delay", validationResult,
                 val -> {

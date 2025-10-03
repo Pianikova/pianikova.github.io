@@ -151,9 +151,13 @@ public class ParametersParserTest
                 { "verbosity=info", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.INFO; } ) },
                 { "verbosity=trace", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.TRACE; } ) },
                 { "verbosity=debug", ValidationResult.SUCCESS, createParams(p -> { p.verbosity = Verbosity.DEBUG; } ) },
-                { "resources=c:\\abc", ValidationResult.SUCCESS, createParams(p -> { p.resources = Optional.of("c:\\abc"); } ) },
+                { "resources=abc", ValidationResult.SUCCESS, createParams(p -> { p.resources = Optional.of("abc"); } ) },
                 { "instance_type=B", ValidationResult.SUCCESS, createParams(p -> { p.instanceType = Optional.of("B"); } ) },
                 { "instance_type=", ValidationResult.SUCCESS, createParams(p -> { p.instanceType = null; } ) },
+                { "local_functions_length=77", ValidationResult.SUCCESS, createParams(p -> { p.localFunctionsLength = Optional.of(77); } ) },
+                { "external_functions_length=77", ValidationResult.SUCCESS, createParams(p -> { p.externalFunctionsLength = Optional.of(77); } ) },
+                { "global_meta_length=77", ValidationResult.SUCCESS, createParams(p -> { p.globalMetaLength = Optional.of(77); } ) },
+                { "clipboard_length=77", ValidationResult.SUCCESS, createParams(p -> { p.clipboardLength = Optional.of(77); } ) },
             });
         // @formatter:on
     }
