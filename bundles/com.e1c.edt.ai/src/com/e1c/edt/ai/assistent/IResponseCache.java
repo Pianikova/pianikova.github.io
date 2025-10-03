@@ -10,5 +10,5 @@ import java.util.function.Supplier;
 public interface IResponseCache<T>
 {
     CompletableFuture<Optional<T>> get(String key, Supplier<CompletableFuture<Optional<T>>> responseSupplier,
-        boolean reset);
+        boolean reset, boolean cacheErrors);
 }

@@ -30,6 +30,7 @@ import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IValidator;
+import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.ui.AIUICommonModule;
@@ -176,16 +177,9 @@ public class ClientAIPreferencePage
     }
 
     @Override
-    protected void performDefaults()
-    {
-        stateService.refresh();
-        super.performDefaults();
-    }
-
-    @Override
     public boolean performOk()
     {
-        stateService.refresh();
+        stateService.setState(this.getClass().getName(), ServiceState.SETTINGS_CHANGED);
         return super.performOk();
     }
 
