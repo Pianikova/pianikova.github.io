@@ -268,8 +268,9 @@ public class CodeCompletionSessionTest
         var session = createInstance(false);
         when(settings.getLineSeparator()).thenReturn("\r\n");
         when(hint.isEmpty()).thenReturn(false);
-        when(hint.pullChar('\r')).thenReturn(new Text("\r", source));
-        when(hint.pullChar('\n')).thenReturn(new Text("\n", source));
+        when(hint.pullChar(null)).thenReturn(new Text("\r", source))
+            .thenReturn(new Text("\n", source))
+            .thenReturn(new Text("Abc", source));
 
         // When
         var actualAction = session.acceptChar(37, '\r');
@@ -285,9 +286,8 @@ public class CodeCompletionSessionTest
     {
         // Given
         var session = createInstance(false);
-        when(settings.getLineSeparator()).thenReturn("\r");
         when(hint.isEmpty()).thenReturn(false);
-        when(hint.pullChar('\r')).thenReturn(new Text("\r", source));
+        when(hint.pullChar(null)).thenReturn(new Text("\r", source)).thenReturn(new Text("Abc", source));
 
         // When
         var actualAction = session.acceptChar(37, '\r');
@@ -295,6 +295,28 @@ public class CodeCompletionSessionTest
         // Then
         Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
         verify(context).apply(new Text("\r", source), 37);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldAcceptUntilNextNotEmptySymbolWhenCariageReturn()
+    {
+        // Given
+        var session = createInstance(false);
+        when(hint.isEmpty()).thenReturn(false);
+        when(hint.pullChar(null)).thenReturn(new Text("\r", source))
+            .thenReturn(new Text("\n", source))
+            .thenReturn(new Text("\t", source))
+            .thenReturn(new Text(" ", source))
+            .thenReturn(new Text("\t", source))
+            .thenReturn(new Text("Abc", source));
+
+        // When
+        var actualAction = session.acceptChar(37, '\r');
+
+        // Then
+        Assert.assertEquals(CodeCompletionAction.UPDATE, actualAction);
+        verify(context).apply(new Text("\r\n\t \t", source), 37);
     }
 
     @SuppressWarnings("nls")
@@ -311,6 +333,7 @@ public class CodeCompletionSessionTest
         Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
         verify(context, never()).apply(new Text("\b", source), 37);
     }
+
 
     @SuppressWarnings("nls")
     @Test

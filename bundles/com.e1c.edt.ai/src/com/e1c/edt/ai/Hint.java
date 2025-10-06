@@ -159,7 +159,7 @@ public class Hint
 
     @SuppressWarnings("nls")
     @Override
-    public synchronized Text pullChar(char ch)
+    public synchronized Text pullChar(Character ch)
     {
         if (textItems.size() == 0)
         {
@@ -174,7 +174,7 @@ public class Hint
 
         var text = textItem.text;
         var curChar = text.charAt(0);
-        if (curChar != ch)
+        if (ch != null && curChar != ch)
         {
             return new Text("", textItem.source);
         }

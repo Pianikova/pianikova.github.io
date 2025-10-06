@@ -10,7 +10,7 @@ public interface IHistoricalHint
 
     Text pull(HintPart part);
 
-    Text pullChar(char ch);
+    Text pullChar(Character ch);
 
     Text rollback();
 }

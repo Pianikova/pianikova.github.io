@@ -148,22 +148,32 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
 
         case '\r':
         case '\n':
-            var lineSeparator = settings.getLineSeparator();
-            var charText = Text.EMPTY;
-            for (var i = 0; i < lineSeparator.length(); i++)
+            var sb = new StringBuilder();
+            var source = Sources.UNKNOWN;
+            while (true)
             {
-                charText = hint.pullChar(lineSeparator.charAt(i));
+                var charText = hint.pullChar(null);
                 if (charText.isEmpty())
                 {
                     return CodeCompletionAction.ASK_NEW;
                 }
+
+                var text = charText.getText();
+                if (!text.isBlank())
+                {
+                    hint.rollback();
+                    break;
+                }
+
+                source = charText.getSource();
+                sb.append(text);
             }
 
-            apply(new Text(lineSeparator, charText.getSource()), offset);
+            apply(new Text(sb.toString(), source), offset);
             break;
 
         default:
-            charText = hint.pullChar(ch);
+            var charText = hint.pullChar(ch);
             if (charText.isEmpty())
             {
                 return CodeCompletionAction.ASK_NEW;
