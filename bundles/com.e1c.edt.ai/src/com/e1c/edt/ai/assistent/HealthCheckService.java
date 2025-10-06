@@ -63,7 +63,7 @@ class HealthCheckService
         return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch, false))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch, false, true))
             .thenApplyAsync(response -> {
                 return response.statusCode() >= 400 ? ServiceState.OFFLINE : ServiceState.ONLINE;
             })

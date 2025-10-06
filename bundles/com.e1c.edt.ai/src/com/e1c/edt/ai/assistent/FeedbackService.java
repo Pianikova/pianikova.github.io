@@ -110,7 +110,7 @@ class FeedbackService
         return clienBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
+            .thenApplyAsync(response -> log.response(response, null, stopwatch, true, true))
             .thenApplyAsync(response -> {
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)

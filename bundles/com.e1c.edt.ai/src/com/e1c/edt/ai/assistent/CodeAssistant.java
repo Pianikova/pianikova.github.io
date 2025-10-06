@@ -8,14 +8,9 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import com.e1c.edt.ai.ActionState;
-import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEnvironment;
@@ -29,10 +24,8 @@ import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.Completion;
 import com.e1c.edt.ai.assistent.model.CompletionRequest;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -43,42 +36,39 @@ class CodeAssistant
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
-    private final ISessionService sessionService;
     private final IResponseStreamProcessor responseStreamProcessor;
     private final Provider<IStatistics> statisticsProvider;
     private final ISettings settings;
     private final IEnvironment environment;
     private final ICompressor compressor;
-    private final IStateService stateService;
+    private final ISessionCall sessionCall;
 
     @Inject
     public CodeAssistant(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
-        ISessionService sessionService, IResponseStreamProcessor responseStreamProcessor,
+        IResponseStreamProcessor responseStreamProcessor,
         Provider<IStatistics> statisticsProvider, ISettings settings, IEnvironment environment,
-        ICompressor compressor, IStateService stateService)
+        ICompressor compressor, ISessionCall sessionCall)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
-        Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(responseStreamProcessor);
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(compressor);
-        Preconditions.checkNotNull(stateService);
+        Preconditions.checkNotNull(sessionCall);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
         this.json = json;
-        this.sessionService = sessionService;
         this.responseStreamProcessor = responseStreamProcessor;
         this.statisticsProvider = statisticsProvider;
         this.settings = settings;
         this.environment = environment;
         this.compressor = compressor;
-        this.stateService = stateService;
+        this.sessionCall = sessionCall;
     }
 
     @Override
@@ -89,30 +79,12 @@ class CodeAssistant
         Preconditions.checkNotNull(completionRequestProvider);
         Preconditions.checkNotNull(cancellationToken);
         return Observables.create(observer -> {
-            sessionService.getSessionAsync(projectId).whenComplete((session, error) -> {
-                if (error == null)
-                {
-                    if (session != null && session.isPresent())
-                    {
-                        generateText(session.get(), completionRequestProvider, observer, cancellationToken);
-                    }
-                    else
-                    {
-                        observer.onCompleted();
-                    }
-                }
-                else
-                {
-                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-                    observer.onError(error);
-                }
-            });
-
+            generateText(projectId, completionRequestProvider, observer, cancellationToken);
             return Closeables.Empty;
         });
     }
 
-    private void generateText(Session session, ICompletionRequestProvider completionRequestProvider,
+    private void generateText(ProjectId projectId, ICompletionRequestProvider completionRequestProvider,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
@@ -123,7 +95,7 @@ class CodeAssistant
             return;
         }
 
-        var requestBuilder = optionalRequest.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
+        var requestBuilder = optionalRequest.get();
         var statistics = statisticsProvider.get();
         String requestBody;
         BodyPublisher bodyPublisher;
@@ -183,47 +155,25 @@ class CodeAssistant
                 requestBuilder.header(statValue.getStatisticsType().getHeader(), statValue.getValue());
         }
 
-        var request = requestBuilder.POST(bodyPublisher).build();
-        log.request(request, cancellationToken.toString(), requestBody);
-
         var client = clientBuilder.create().build();
-        stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
-        var stopwatch = Stopwatch.createStarted();
-        var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
-        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> {
-            stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-            asyncRequest.cancel(true);
+        var currentRequestBuilder = requestBuilder;
+        var call = sessionCall.call(projectId, cancellationToken, session -> {
+            var request =
+                currentRequestBuilder.header("Session-Id", session.get().sessionId).POST(bodyPublisher).build(); //$NON-NLS-1$
+            log.request(request, cancellationToken.toString(), requestBody);
+            return client.sendAsync(request, BodyHandlers.ofLines());
         });
 
-        asyncRequest
-            .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
+        call.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> checkResponse(response, observer, cancellationToken))
             .thenApplyAsync(HttpResponse::body)
-            .thenAcceptAsync(stream -> processStream(asyncRequest, stream, observer, cancellationToken))
+            .thenAcceptAsync(stream -> processStream(stream, observer, cancellationToken))
             .whenComplete((r, error) -> {
-                try
+                if (error != null)
                 {
-                    if (!isCancellationException(error))
-                    {
-                        log.error(error, cancellationToken.toString());
-                    }
-
-                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-                    attachToken.close();
-                    observer.onCompleted();
-                }
-                catch (Exception ex)
-                {
-                    //
+                    observer.onError(error);
                 }
             });
-    }
-
-    private boolean isCancellationException(Throwable error)
-    {
-        return error instanceof CompletionException
-            && ((CompletionException)error).getCause() instanceof CancellationException;
     }
 
     private HttpResponse<Stream<String>> checkResponse(HttpResponse<Stream<String>> response,
@@ -239,15 +189,9 @@ class CodeAssistant
         return response;
     }
 
-    private void processStream(CompletableFuture<HttpResponse<Stream<String>>> asyncRequest, Stream<String> stream,
-        IObserver<Completion> observer, ICancellationToken cancellationToken)
+    private void processStream(Stream<String> stream, IObserver<Completion> observer, ICancellationToken cancellationToken)
     {
-        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> {
-            stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-            asyncRequest.cancel(true);
-        });
-
-        try (attachToken)
+        try
         {
             responseStreamProcessor.process(stream, observer, cancellationToken);
         }
@@ -255,7 +199,9 @@ class CodeAssistant
         {
             observer.onError(e);
         }
-
-        stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+        finally
+        {
+            observer.onCompleted();
+        }
     }
 }

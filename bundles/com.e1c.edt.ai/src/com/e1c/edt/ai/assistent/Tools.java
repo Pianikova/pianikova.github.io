@@ -8,15 +8,11 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import com.e1c.edt.ai.ActionState;
-import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -25,14 +21,11 @@ import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackResponse;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
 import com.e1c.edt.ai.assistent.model.ToolInvokeResponse;
-import com.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
 public class Tools
@@ -43,70 +36,80 @@ public class Tools
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
-    private final ISessionService sessionService;
     private final ICompressor compressor;
-    private final IStateService stateService;
+    private final ISessionCall sessionCall;
 
     @Inject
-    public Tools(IHttpLog log, ISettings settings,
-        IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json, ISessionService sessionService,
-        ICompressor compressor, IStateService stateService)
+    public Tools(IHttpLog log, ISettings settings, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder,
+        IJson json, ICompressor compressor, ISessionCall sessionCall)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
-        Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(compressor);
-        Preconditions.checkNotNull(stateService);
+        Preconditions.checkNotNull(sessionCall);
         this.log = log;
         this.settings = settings;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
         this.json = json;
-        this.sessionService = sessionService;
         this.compressor = compressor;
-        this.stateService = stateService;
+        this.sessionCall = sessionCall;
     }
 
     @Override
-    public IObservable<ToolInvokeResponse> createInvokeSource(ProjectId projectId, ToolInvokeRequest request,
+    public IObservable<ToolInvokeResponse> createInvokeSource(ProjectId projectId, ToolInvokeRequest toolInvokeRequest,
         ICancellationToken cancellationToken)
     {
         return Observables.create(observer -> {
-            sessionService.getSessionAsync(projectId).whenComplete((session, error) -> {
-                if (error == null)
-                {
-                    if (session != null && session.isPresent())
-                    {
-                        invoke(session.get(), request, observer, cancellationToken);
-                    }
-                    else
-                    {
-                        observer.onCompleted();
-                    }
-                }
-                else
-                {
-                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-                    observer.onError(error);
-                }
-            });
-
+            invoke(projectId, toolInvokeRequest, observer, cancellationToken);
             return Closeables.Empty;
         });
     }
 
     @Override
     public CompletableFuture<Optional<ToolFeedbackResponse>> feedbackAsync(ProjectId projectId,
-        ToolFeedbackFinalTextRequest request, ICancellationToken cancellationToken)
+        ToolFeedbackFinalTextRequest feedbackRequest, ICancellationToken cancellationToken)
     {
-        return sessionService.getSessionAsync(projectId)
-            .thenApplyAsync(session -> feedbackAsync(session, request, cancellationToken).join());
+        var optionalRequestBuilder = requestBuilder.create(settings.getUrl() + "tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
+
+        if (optionalRequestBuilder.isEmpty())
+        {
+            return CompletableFuture.completedFuture(Optional.empty());
+        }
+
+        var requestBuilder = optionalRequestBuilder.get();
+        var requestBody = json.serialize(feedbackRequest);
+
+        BodyPublisher bodyPublisher;
+        try
+        {
+            bodyPublisher = BodyPublishers.ofString(requestBody);
+        }
+        catch (Exception error)
+        {
+            log.error(error, cancellationToken.toString());
+            return CompletableFuture.failedFuture(error);
+        }
+
+        var client = clientBuilder.create().build();
+        var currentRequestBuilder = requestBuilder.POST(bodyPublisher);
+        var call = sessionCall.call(projectId, cancellationToken, session -> {
+            var request =
+                currentRequestBuilder.header("Session-Id", session.get().sessionId).POST(bodyPublisher).build(); //$NON-NLS-1$
+            log.request(request, cancellationToken.toString(), requestBody);
+            return client.sendAsync(request, BodyHandlers.ofString());
+        });
+
+        return call.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+            .thenApplyAsync(HttpResponse::body)
+            .thenApplyAsync(this::createToolFeedbackResponse);
     }
 
-    private void invoke(Session session, ToolInvokeRequest conversationRequest, IObserver<ToolInvokeResponse> observer,
+    private void invoke(ProjectId projectId, ToolInvokeRequest conversationRequest,
+        IObserver<ToolInvokeResponse> observer,
         ICancellationToken cancellationToken)
     {
         var optionalRequestBuilder =
@@ -117,7 +120,7 @@ public class Tools
             return;
         }
 
-        var requestBuilder = optionalRequestBuilder.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
+        var requestBuilder = optionalRequestBuilder.get();
         var requestBody = json.serialize(conversationRequest);
         BodyPublisher bodyPublisher;
         try
@@ -143,43 +146,25 @@ public class Tools
             return;
         }
 
-        var request = requestBuilder.POST(bodyPublisher).build();
-        log.request(request, cancellationToken.toString(), requestBody);
-        var stopwatch = Stopwatch.createStarted();
         var client = clientBuilder.create().build();
-        var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
-        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> {
-            stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-            asyncRequest.cancel(true);
+        var currentRequestBuilder = requestBuilder;
+        var call = sessionCall.call(projectId, cancellationToken, session -> {
+            var request =
+                currentRequestBuilder.header("Session-Id", session.get().sessionId).POST(bodyPublisher).build(); //$NON-NLS-1$
+            log.request(request, cancellationToken.toString(), requestBody);
+            return client.sendAsync(request, BodyHandlers.ofLines());
         });
-        asyncRequest
+
+        call
             .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .thenApplyAsync(response -> log.response(response, cancellationToken.toString(), stopwatch, true))
             .thenApplyAsync(HttpResponse::body)
             .thenAcceptAsync(stream -> processStream(stream, observer, cancellationToken))
             .whenComplete((r, error) -> {
-                try
+                if (error != null)
                 {
-                    if (!isCancellationException(error))
-                    {
-                        log.error(error, cancellationToken.toString());
-                    }
-
-                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-                    attachToken.close();
-                    observer.onCompleted();
-                }
-                catch (Exception ex)
-                {
-                    //
+                    observer.onError(error);
                 }
             });
-    }
-
-    private boolean isCancellationException(Throwable error)
-    {
-        return error instanceof CompletionException
-            && ((CompletionException)error).getCause() instanceof CancellationException;
     }
 
     private void processStream(Stream<String> stream, IObserver<ToolInvokeResponse> observer,
@@ -241,73 +226,12 @@ public class Tools
         {
             observer.onError(error);
         }
+        finally
+        {
+            observer.onCompleted();
+        }
 
-        observer.onCompleted();
         return false;
-    }
-
-    private CompletableFuture<Optional<ToolFeedbackResponse>> feedbackAsync(
-        Optional<Session> session, ToolFeedbackFinalTextRequest feedbackRequest, ICancellationToken cancellationToken)
-    {
-        if (session.isEmpty())
-        {
-            return CompletableFuture.completedFuture(Optional.empty());
-        }
-
-        var optionalRequestBuilder =
-            requestBuilder.create(settings.getUrl() + "tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
-
-        if (optionalRequestBuilder.isEmpty())
-        {
-            return CompletableFuture.completedFuture(Optional.empty());
-        }
-
-        var requestBuilder = optionalRequestBuilder.get().header("Session-Id", session.get().sessionId); //$NON-NLS-1$
-        var requestBody = json.serialize(feedbackRequest);
-
-        BodyPublisher bodyPublisher;
-        try
-        {
-            /*var optionalData = compressor.compress(requestBody);
-            if (optionalData.isPresent())
-            {
-                try (var data = optionalData.get())
-                {
-                    bodyPublisher = BodyPublishers.ofByteArray(data.toByteArray());
-                    requestBuilder = requestBuilder.header("Content-Encoding", "gzip"); //$NON-NLS-1$ //$NON-NLS-2$
-                }
-            }
-            else
-            {
-                bodyPublisher = BodyPublishers.ofString(requestBody);
-            }*/
-
-            bodyPublisher = BodyPublishers.ofString(requestBody);
-        }
-        catch (Exception error)
-        {
-            log.error(error, cancellationToken.toString());
-            return CompletableFuture.failedFuture(error);
-        }
-
-        var request = requestBuilder.POST(bodyPublisher).build();
-        log.request(request, null, requestBody);
-        var stopwatch = Stopwatch.createStarted();
-        return clientBuilder.create()
-            .build()
-            .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
-            .thenApplyAsync(response -> {
-                var statusCode = response.statusCode();
-                if (statusCode >= 300)
-                {
-                    throw new AIClientException("AI HTTP session response status code is " + statusCode, null); //$NON-NLS-1$
-                }
-
-                return response;
-            })
-            .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(this::createToolFeedbackResponse);
     }
 
     private Optional<ToolFeedbackResponse> createToolFeedbackResponse(String content)

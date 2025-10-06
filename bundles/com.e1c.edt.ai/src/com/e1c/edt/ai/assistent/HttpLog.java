@@ -77,7 +77,8 @@ class HttpLog
 
     @SuppressWarnings("nls")
     @Override
-    public <T> HttpResponse<T> response(HttpResponse<T> response, String ref, Stopwatch stopwatch, boolean detailed)
+    public <T> HttpResponse<T> response(HttpResponse<T> response, String ref, Stopwatch stopwatch, boolean detailed,
+        boolean handleError)
     {
         Preconditions.checkNotNull(response);
         var statusCode = response.statusCode();
@@ -103,22 +104,25 @@ class HttpLog
             log.logError(createHeader("AI response", response.uri(), ref) + System.lineSeparator()
                 + createTrace(response, stopwatch, statusCode));
 
-            switch (statusCode)
+            if (handleError)
             {
-            case 401:
-            case 403:
-                serverAccess.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
-                break;
+                switch (statusCode)
+                {
+                case 401:
+                case 403:
+                    serverAccess.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
+                    break;
 
-            case 500:
-            case 502:
-            case 503:
-                serverAccess.setState(HttpLog.class.getName(), ServiceState.SERVER_ERROR);
-                break;
+                case 500:
+                case 502:
+                case 503:
+                    serverAccess.setState(HttpLog.class.getName(), ServiceState.SERVER_ERROR);
+                    break;
 
-            default:
-                serverAccess.setState(HttpLog.class.getName(), ServiceState.OFFLINE);
-                break;
+                default:
+                    serverAccess.setState(HttpLog.class.getName(), ServiceState.OFFLINE);
+                    break;
+                }
             }
         }
 

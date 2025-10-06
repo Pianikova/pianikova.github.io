@@ -16,9 +16,9 @@ import com.e1c.edt.ai.assistent.model.ToolInvokeResponse;
 
 public interface ITools
 {
-    IObservable<ToolInvokeResponse> createInvokeSource(ProjectId projectId, ToolInvokeRequest request,
+    IObservable<ToolInvokeResponse> createInvokeSource(ProjectId projectId, ToolInvokeRequest toolInvokeRequest,
         ICancellationToken cancellationToken);
 
     CompletableFuture<Optional<ToolFeedbackResponse>> feedbackAsync(ProjectId projectId,
-        ToolFeedbackFinalTextRequest request, ICancellationToken cancellationToken);
+        ToolFeedbackFinalTextRequest feedbackRequest, ICancellationToken cancellationToken);
 }

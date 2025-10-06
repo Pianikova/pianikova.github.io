@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.e1c.edt.ai.Collections;
 import com.e1c.edt.ai.ICancellationToken;
@@ -22,9 +23,7 @@ import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 
 class GlobalContextService
@@ -35,13 +34,13 @@ class GlobalContextService
     private final IRequestBuilder requestBuilder;
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
-    private final ISessionService sessionService;
+    private final ISessionCall sessionCall;
     private final IEnvironment environment;
     private final ICompressor compressor;
 
     @Inject
     public GlobalContextService(IHttpLog log, ISettings settings, IRequestBuilder requestBuilder,
-        IHttpClientBuilder clientBuilder, IJson json, ISessionService sessionService, IEnvironment environment,
+        IHttpClientBuilder clientBuilder, IJson json, ISessionCall sessionCall, IEnvironment environment,
         ICompressor compressor)
     {
         Preconditions.checkNotNull(log);
@@ -49,7 +48,7 @@ class GlobalContextService
         Preconditions.checkNotNull(requestBuilder);
         Preconditions.checkNotNull(clientBuilder);
         Preconditions.checkNotNull(json);
-        Preconditions.checkNotNull(sessionService);
+        Preconditions.checkNotNull(sessionCall);
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(compressor);
         this.log = log;
@@ -57,7 +56,7 @@ class GlobalContextService
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
         this.json = json;
-        this.sessionService = sessionService;
+        this.sessionCall = sessionCall;
         this.environment = environment;
         this.compressor = compressor;
     }
@@ -68,36 +67,13 @@ class GlobalContextService
         int partitionSize,
         IStatistics statistics, ICancellationToken cancellationToken)
     {
-        return sessionService.getSessionAsync(projectId).<Optional<GlobalContextUpdateResponse>> thenApply(session -> {
-            if (session.isEmpty())
-            {
-                return Optional.empty();
-            }
-
-            try
-            {
-                return update(session.get(), updates, partitionSize, statistics, cancellationToken).get();
-            }
-            catch (Exception error)
-            {
-                log.error(error, cancellationToken.toString());
-            }
-
-            return Optional.empty();
-            });
-    }
-
-    private CompletableFuture<Optional<GlobalContextUpdateResponse>> update(Session session,
-        Collection<GlobalContextUpdate> updates, int partitionSize, IStatistics statistics,
-        ICancellationToken cancellationToken)
-    {
         CompletableFuture<Optional<GlobalContextUpdateResponse>> feature =
             CompletableFuture.completedFuture(Optional.empty());
 
         for (var updatePart : Collections.split(updates, getPartitionSize(updates, partitionSize)))
         {
             feature = feature.thenCompose(
-                results -> update(results, session, updatePart, statistics, cancellationToken));
+                results -> update(results, projectId, updatePart, statistics, cancellationToken));
         }
 
         return feature;
@@ -124,7 +100,7 @@ class GlobalContextService
     }
 
     private CompletableFuture<Optional<GlobalContextUpdateResponse>> update(
-        Optional<GlobalContextUpdateResponse> results, Session session,
+        Optional<GlobalContextUpdateResponse> results, ProjectId projectId,
         Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
     {
         var optionalRequest =
@@ -134,7 +110,7 @@ class GlobalContextService
             return CompletableFuture.completedFuture(results);
         }
 
-        var requestBuilder = optionalRequest.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
+        var requestBuilder = optionalRequest.get();
         String requestBody;
         BodyPublisher bodyPublisher;
         try (var totalMeasurement = statistics.measureDuration(StatisticsType.TOTAL_DURATUION))
@@ -179,13 +155,17 @@ class GlobalContextService
             requestBuilder = requestBuilder.header(statValue.getStatisticsType().getHeader(), statValue.getValue());
         }
 
-        var request = requestBuilder.POST(bodyPublisher).build();
-        log.request(request, cancellationToken.toString(), requestBody);
-        var stopwatch = Stopwatch.createStarted();
-        return clientBuilder.create()
-            .build()
-            .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
+        var client = clientBuilder.create().build();
+        var currentRequestBuilder = requestBuilder;
+        var call = sessionCall.call(projectId, cancellationToken, session -> {
+            var request =
+                currentRequestBuilder.header("Session-Id", session.get().sessionId).POST(bodyPublisher).build(); //$NON-NLS-1$
+            log.request(request, cancellationToken.toString(), requestBody);
+            return client.sendAsync(request, BodyHandlers.ofString());
+        });
+
+        return call
+            .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(HttpResponse::body)
             .thenApplyAsync(
                 content -> combine(results, init(json.deserialize(content, GlobalContextUpdateResponse.class))));
