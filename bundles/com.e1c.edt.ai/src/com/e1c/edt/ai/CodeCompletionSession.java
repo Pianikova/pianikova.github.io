@@ -122,7 +122,7 @@ public class CodeCompletionSession<TContext extends ICodeCompletionContext>
     {
         if (getHint().isEmpty())
         {
-            return history.isEmpty() ? CodeCompletionAction.SKIP : CodeCompletionAction.HANDLE;
+            return history.isEmpty() ? CodeCompletionAction.RESET : CodeCompletionAction.HANDLE;
         }
 
         var text = hint.pull(part);

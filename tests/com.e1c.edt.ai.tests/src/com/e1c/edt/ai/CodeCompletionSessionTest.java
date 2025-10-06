@@ -141,7 +141,7 @@ public class CodeCompletionSessionTest
     }
 
     @Test
-    public void shouldNotAcceptAndReturnSKIPWhenHintIsEmptyAndHistoryIsEmpty()
+    public void shouldNotAcceptAndReturnRESETWhenHintIsEmptyAndHistoryIsEmpty()
     {
         // Given
         var session = createInstance(false);
@@ -152,7 +152,7 @@ public class CodeCompletionSessionTest
         var actualAction = session.accept(HintPart.TOKEN, 37);
 
         // Then
-        Assert.assertEquals(CodeCompletionAction.SKIP, actualAction);
+        Assert.assertEquals(CodeCompletionAction.RESET, actualAction);
         verify(context, never()).apply(any(), anyInt());
     }
 

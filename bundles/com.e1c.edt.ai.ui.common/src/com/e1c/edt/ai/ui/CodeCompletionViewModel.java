@@ -830,6 +830,12 @@ class CodeCompletionViewModel
             message.append(System.lineSeparator());
             message.append("handle: ");
             message.append(event.doit);
+            message.append(System.lineSeparator());
+            message.append("character code: ");
+            message.append((int)event.character);
+            message.append(System.lineSeparator());
+            message.append("isContinuousCodeCompletion: ");
+            message.append(isContinuousCodeCompletion);
             if (session != null)
             {
                 message.append(System.lineSeparator());
