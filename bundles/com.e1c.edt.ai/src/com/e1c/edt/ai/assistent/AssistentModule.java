@@ -33,7 +33,6 @@ public class AssistentModule
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IGlobalContextService.class).to(GlobalContextService.class).in(Singleton.class);
         bind(ICompressor.class).to(Compressor.class).in(Singleton.class);
-        bind(IConversations.class).to(Conversations.class).in(Singleton.class);
         bind(ITools.class).to(Tools.class).in(Singleton.class);
         // @formatter:on
     }
