@@ -23,7 +23,6 @@ import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.assistent.model.SessionRequest;
 import com.e1c.edt.ai.assistent.model.SystemInfo;
 import com.e1c.edt.ai.assistent.model.UserParameters;
-import com.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;

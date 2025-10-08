@@ -24,7 +24,6 @@ import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.Completion;
 import com.e1c.edt.ai.assistent.model.CompletionRequest;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import com.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
