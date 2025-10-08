@@ -7,8 +7,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.forms.widgets.Form;
 import org.eclipse.ui.forms.widgets.Section;
 
@@ -49,6 +54,12 @@ public class VisualContextProvider implements IVisualContextProvider
                 break;
             }
 
+            if (root instanceof Shell)
+            {
+                rootGroup.title = ((Shell)root).getText();
+                break;
+            }
+
             if (root instanceof Section)
             {
                 rootGroup.title = ((Section)root).getText();
@@ -57,31 +68,33 @@ public class VisualContextProvider implements IVisualContextProvider
             root = root.getParent();
         }
 
-        var target = SwtLightComposite.getSwtLightControl(control);
-        if (target == null)
-        {
-            return ctx;
-        }
-
-        var parent = target.getParent();
-        while (!cancellationToken.isCanceled())
-        {
-            var nextParent = parent.getParent();
-            if (nextParent == null)
-            {
-                break;
-            }
-
-            parent = nextParent;
-        }
-
         if (cancellationToken.isCanceled())
         {
             return ctx;
         }
 
         var groups = new ArrayList<VisualGroup>();
-        findElements(parent, rootGroup, groups, cancellationToken);
+        var target = SwtLightComposite.getSwtLightControl(control);
+        if (target == null)
+        {
+            findElements(root, rootGroup, groups, cancellationToken);
+        }
+        else
+        {
+            var parent = target.getParent();
+            while (!cancellationToken.isCanceled())
+            {
+                var nextParent = parent.getParent();
+                if (nextParent == null)
+                {
+                    break;
+                }
+
+                parent = nextParent;
+            }
+
+            findElements(parent, rootGroup, groups, cancellationToken);
+        }
 
         if (rootGroup.title != null && !rootGroup.title.isBlank())
         {
@@ -99,6 +112,62 @@ public class VisualContextProvider implements IVisualContextProvider
         }
 
         return ctx;
+    }
+
+    private void findElements(Composite composite, VisualGroup currentGroup, ArrayList<VisualGroup> groups,
+        ICancellationToken cancellationToken)
+    {
+        var visualField = new VisualField();
+        for (var child : composite.getChildren())
+        {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
+            if (child instanceof Label)
+            {
+                var item = (Label)child;
+                visualField.isFocused = isFocused(item);
+                var name = visualField.name;
+                visualField.name = ((name == null ? "" : name + " ") + item.getText()).trim(); //$NON-NLS-1$ //$NON-NLS-2$
+                continue;
+            }
+
+            if (child instanceof Text)
+            {
+                var item = (Text)child;
+                visualField.isFocused = isFocused(item);
+                visualField.isMultiline = (item.getStyle() & SWT.MULTI) != 0;
+                visualField.value = item.getText();
+                currentGroup.fields.add(visualField);
+                visualField = new VisualField();
+                continue;
+            }
+
+            if (child instanceof StyledText)
+            {
+                var item = (StyledText)child;
+                visualField.isFocused = isFocused(item);
+                visualField.isMultiline = (item.getStyle() & SWT.MULTI) != 0;
+                visualField.value = item.getText();
+                currentGroup.fields.add(visualField);
+                visualField = new VisualField();
+                continue;
+            }
+
+            if (child instanceof Composite)
+            {
+                var item = (Composite)child;
+                findElements(item, currentGroup, groups, cancellationToken);
+                continue;
+            }
+        }
+    }
+
+    private Boolean isFocused(Control control)
+    {
+        return control.isFocusControl();
     }
 
     private void findElements(ILightComposite composite, VisualGroup currentGroup,
