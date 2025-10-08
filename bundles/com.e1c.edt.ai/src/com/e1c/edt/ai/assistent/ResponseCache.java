@@ -12,18 +12,19 @@ import java.util.function.Supplier;
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
-class ResponseCache<T>
-    implements IResponseCache<T>, IAIStateListener
+class ResponseCache
+    implements IResponseCache, IAIStateListener
 {
     private final ILog log;
-    private final Cache<String, CompletableFuture<Optional<T>>> responseCache =
+    private final Cache<String, CompletableFuture<Optional<Session>>> responseCache =
         CacheBuilder.newBuilder().maximumSize(256).build();
-    private final Cache<String, CompletableFuture<Optional<T>>> errorsCache =
+    private final Cache<String, CompletableFuture<Optional<Session>>> errorsCache =
         CacheBuilder.newBuilder().maximumSize(256).expireAfterWrite(60, TimeUnit.SECONDS).build();
 
     @Inject
@@ -37,12 +38,12 @@ class ResponseCache<T>
 
     @SuppressWarnings("nls")
     @Override
-    public CompletableFuture<Optional<T>> get(String key,
-        Supplier<CompletableFuture<Optional<T>>> responseSupplier,
+    public CompletableFuture<Optional<Session>> get(String key,
+        Supplier<CompletableFuture<Optional<Session>>> taskSupplier,
         boolean reset, boolean cacheErrors)
     {
         Preconditions.checkNotNull(key);
-        Preconditions.checkNotNull(responseSupplier);
+        Preconditions.checkNotNull(taskSupplier);
         try
         {
             synchronized (responseCache)
@@ -58,7 +59,7 @@ class ResponseCache<T>
                 }
 
                 return responseCache.get(key, () -> {
-                    return responseSupplier.get().whenComplete((r, e) -> {
+                    return taskSupplier.get().whenComplete((r, e) -> {
                         if (e != null || r.isEmpty())
                         {
                             if (cacheErrors)

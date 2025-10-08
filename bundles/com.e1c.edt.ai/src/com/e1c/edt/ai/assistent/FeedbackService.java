@@ -16,7 +16,6 @@ import com.e1c.edt.ai.assistent.model.CursorInfo;
 import com.e1c.edt.ai.assistent.model.FinalCodeFeedback;
 import com.e1c.edt.ai.assistent.model.IssueFeedback;
 import com.e1c.edt.ai.assistent.model.IssueType;
-import com.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -110,8 +109,8 @@ class FeedbackService
         return clienBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
-            .thenApplyAsync(response -> {
+            .thenApply(response -> log.response(response, null, stopwatch, true, true))
+            .thenApply(response -> {
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)
                 {

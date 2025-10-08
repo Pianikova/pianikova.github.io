@@ -3,11 +3,8 @@
  */
 package com.e1c.edt.ai.assistent;
 
-import com.e1c.edt.ai.assistent.model.Parameters;
-import com.e1c.edt.ai.assistent.model.Session;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
 
 public class AssistentModule
     extends AbstractModule
@@ -23,9 +20,10 @@ public class AssistentModule
         bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
         bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
         bind(IHealthCheckService.class).to(HealthCheckService.class).in(Singleton.class);
-        bind(new TypeLiteral<IResponseCache<Parameters>>() { /**/ }).to(new TypeLiteral<ResponseCache<Parameters>>() { /**/ });
+        bind(ResponseCache.class).in(Singleton.class);
+        bind(IResponseCache.class).to(ResponseCache.class);
+        bind(IAIStateListener.class).to(ResponseCache.class);
         bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
-        bind(new TypeLiteral<IResponseCache<Session>>() { /**/ }).to(new TypeLiteral<ResponseCache<Session>>() { /**/ });
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
         bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
@@ -33,8 +31,8 @@ public class AssistentModule
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IGlobalContextService.class).to(GlobalContextService.class).in(Singleton.class);
         bind(ICompressor.class).to(Compressor.class).in(Singleton.class);
-        bind(IConversations.class).to(Conversations.class).in(Singleton.class);
         bind(ITools.class).to(Tools.class).in(Singleton.class);
+        bind(ISessionCall.class).to(SessionCall.class).in(Singleton.class);
         // @formatter:on
     }
 }

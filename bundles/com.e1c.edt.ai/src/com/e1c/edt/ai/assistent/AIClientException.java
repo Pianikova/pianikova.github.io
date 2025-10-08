@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.client;
+package com.e1c.edt.ai.assistent;
 
 /**
  * This class specifies exceptions wich can be occured during executing API.

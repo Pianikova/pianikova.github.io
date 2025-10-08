@@ -10,6 +10,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
@@ -22,7 +23,6 @@ import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.assistent.model.SessionRequest;
 import com.e1c.edt.ai.assistent.model.SystemInfo;
 import com.e1c.edt.ai.assistent.model.UserParameters;
-import com.e1c.edt.ai.client.AIClientException;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -35,18 +35,19 @@ class SessionService
     private final IHttpClientBuilder clientBuilder;
     private final IJson json;
     private final ISettingsTracker settingsTracker;
-    private final IResponseCache<Session> responseCache;
+    private final IResponseCache responseCache;
     private final IVersionProvider versionProvider;
     private final ISettings settings;
     private final ISettingsSetter settingsSetter;
     private final IEnvironment environment;
     private final IConfigurationParametersProvider configurationParametersProvider;
+    private final IStateService stateService;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
-        ISettingsTracker settingsTracker, IResponseCache<Session> responseCache, IVersionProvider versionProvider,
+        ISettingsTracker settingsTracker, IResponseCache responseCache, IVersionProvider versionProvider,
         ISettings settings, ISettingsSetter settingsSetter, IEnvironment environment,
-        IConfigurationParametersProvider configurationParametersProvider)
+        IConfigurationParametersProvider configurationParametersProvider, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -59,6 +60,7 @@ class SessionService
         Preconditions.checkNotNull(settingsSetter);
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(configurationParametersProvider);
+        Preconditions.checkNotNull(stateService);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -70,6 +72,7 @@ class SessionService
         this.settingsSetter = settingsSetter;
         this.environment = environment;
         this.configurationParametersProvider = configurationParametersProvider;
+        this.stateService = stateService;
     }
 
     @Override
@@ -145,8 +148,8 @@ class SessionService
         return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch, true))
-            .thenApplyAsync(response -> {
+            .thenApply(response -> log.response(response, null, stopwatch, true, true))
+            .thenApply(response -> {
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)
                 {
@@ -155,8 +158,14 @@ class SessionService
 
                 return response;
             })
-            .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(content -> createCession(projectId, content));
+            .thenApply(HttpResponse::body)
+            .thenApply(content -> createCession(projectId, content))
+            .whenComplete((session, error) -> {
+                if (error != null)
+                {
+                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+                }
+            });
     }
 
     private Optional<Session> createCession(ProjectId projectId, String content)

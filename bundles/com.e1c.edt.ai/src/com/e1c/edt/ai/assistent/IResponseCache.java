@@ -7,8 +7,11 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
-public interface IResponseCache<T>
+import com.e1c.edt.ai.assistent.model.Session;
+
+public interface IResponseCache
 {
-    CompletableFuture<Optional<T>> get(String key, Supplier<CompletableFuture<Optional<T>>> responseSupplier,
+    CompletableFuture<Optional<Session>> get(String key, Supplier<CompletableFuture<Optional<Session>>> taskSupplier,
         boolean reset, boolean cacheErrors);
 }
+
