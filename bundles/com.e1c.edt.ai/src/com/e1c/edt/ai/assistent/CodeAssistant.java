@@ -164,9 +164,9 @@ class CodeAssistant
         });
 
         call.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .thenApplyAsync(response -> checkResponse(response, observer, cancellationToken))
-            .thenApplyAsync(HttpResponse::body)
-            .thenAcceptAsync(stream -> processStream(stream, observer, cancellationToken))
+            .thenApply(response -> checkResponse(response, observer, cancellationToken))
+            .thenApply(HttpResponse::body)
+            .thenAccept(stream -> processStream(stream, observer, cancellationToken))
             .whenComplete((r, error) -> {
                 if (error != null)
                 {

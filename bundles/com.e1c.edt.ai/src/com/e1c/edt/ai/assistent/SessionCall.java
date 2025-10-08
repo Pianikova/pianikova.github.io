@@ -67,7 +67,7 @@ public class SessionCall
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> result.cancel(true));
         var stopwatch = Stopwatch.createStarted();
         stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
-        sessionService.getSessionAsync(projectId).thenComposeAsync(session -> {
+        sessionService.getSessionAsync(projectId).thenCompose(session -> {
             return taskSupplier.apply(session).whenComplete((response, throwable) -> {
                 if (throwable == null)
                 {

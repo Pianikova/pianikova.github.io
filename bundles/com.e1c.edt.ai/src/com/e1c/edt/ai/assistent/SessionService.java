@@ -148,8 +148,8 @@ class SessionService
         return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApplyAsync(response -> log.response(response, null, stopwatch, true, true))
-            .thenApplyAsync(response -> {
+            .thenApply(response -> log.response(response, null, stopwatch, true, true))
+            .thenApply(response -> {
                 var statusCode = response.statusCode();
                 if (statusCode >= 300)
                 {
@@ -158,8 +158,8 @@ class SessionService
 
                 return response;
             })
-            .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(content -> createCession(projectId, content))
+            .thenApply(HttpResponse::body)
+            .thenApply(content -> createCession(projectId, content))
             .whenComplete((session, error) -> {
                 if (error != null)
                 {

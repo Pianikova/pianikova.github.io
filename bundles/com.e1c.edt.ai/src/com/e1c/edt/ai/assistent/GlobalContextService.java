@@ -166,8 +166,8 @@ class GlobalContextService
 
         return call
             .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(
+            .thenApply(HttpResponse::body)
+            .thenApply(
                 content -> combine(results, init(json.deserialize(content, GlobalContextUpdateResponse.class))));
     }
 

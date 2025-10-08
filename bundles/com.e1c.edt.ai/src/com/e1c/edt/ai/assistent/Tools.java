@@ -104,8 +104,8 @@ public class Tools
         });
 
         return call.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .thenApplyAsync(HttpResponse::body)
-            .thenApplyAsync(this::createToolFeedbackResponse);
+            .thenApply(HttpResponse::body)
+            .thenApply(this::createToolFeedbackResponse);
     }
 
     private void invoke(ProjectId projectId, ToolInvokeRequest conversationRequest,
@@ -157,8 +157,8 @@ public class Tools
 
         call
             .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-            .thenApplyAsync(HttpResponse::body)
-            .thenAcceptAsync(stream -> processStream(stream, observer, cancellationToken))
+            .thenApply(HttpResponse::body)
+            .thenAccept(stream -> processStream(stream, observer, cancellationToken))
             .whenComplete((r, error) -> {
                 if (error != null)
                 {
