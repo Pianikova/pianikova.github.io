@@ -14,7 +14,6 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IClock;
-import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.common.base.Preconditions;
@@ -25,7 +24,6 @@ class GlobalContextTracker
     implements IGlobalContextTracker
 {
     private final IDispatcher dispatcher;
-    private final IProjectProvider projectProvider;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
     private final IClock clock;
     private final ISettings settings;
@@ -34,16 +32,14 @@ class GlobalContextTracker
     private Job job;
 
     @Inject
-    public GlobalContextTracker(IDispatcher dispatcher, IProjectProvider projectProvider,
+    public GlobalContextTracker(IDispatcher dispatcher,
         Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock, ISettings settings)
     {
         Preconditions.checkNotNull(dispatcher);
-        Preconditions.checkNotNull(projectProvider);
         Preconditions.checkNotNull(projectTrackingWorkflowProvider);
         Preconditions.checkNotNull(clock);
         Preconditions.checkNotNull(settings);
         this.dispatcher = dispatcher;
-        this.projectProvider = projectProvider;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
         this.clock = clock;
         this.settings = settings;
@@ -75,7 +71,12 @@ class GlobalContextTracker
         synchronized (lockObject)
         {
             var project = aiCtx.getProjectId().project;
-            Optional.ofNullable(projectWorkflows.computeIfAbsent(aiCtx.getProjectId().project,
+            if (project == null)
+            {
+                return;
+            }
+
+            Optional.ofNullable(projectWorkflows.computeIfAbsent(project,
                     k -> projectTrackingWorkflowProvider.get().initialize(project)))
                 .ifPresent(workflow -> {
                     workflow.track(aiCtx);

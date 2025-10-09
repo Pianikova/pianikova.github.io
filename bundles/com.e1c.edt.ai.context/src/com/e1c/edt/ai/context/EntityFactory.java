@@ -387,11 +387,18 @@ class EntityFactory
                         dynamicList.keyTypeName = keyType.getName();
                     }
 
-                    var mainTable = info.getMainTable();
-                    if (mainTable != null)
+                    try
                     {
-                        dynamicList.mainTableName = mainTable.getName();
-                        dynamicList.mainTableNameRu = mainTable.getNameRu();
+                        var mainTable = info.getMainTable();
+                        if (mainTable != null)
+                        {
+                            dynamicList.mainTableName = mainTable.getName();
+                            dynamicList.mainTableNameRu = mainTable.getNameRu();
+                        }
+                    }
+                    catch (AssertionError e)
+                    {
+                        //
                     }
                 }
 

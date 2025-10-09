@@ -173,7 +173,7 @@ public class HashTools
             }
         }
 
-        if (file != null)
+        if (file != null && file.exists())
         {
             try
             {

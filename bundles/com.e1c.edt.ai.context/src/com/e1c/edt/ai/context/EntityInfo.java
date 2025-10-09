@@ -188,10 +188,19 @@ class EntityInfo
         Predicate<FillAction> actionFilter, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        var curResourceSetProvider =
-            aiContext.getDocument() != null ? activeEditorResourceSetProvider : baseResourceSetProvider;
-        return fillInternal(aiContext, localContext, globalContext, curResourceSetProvider, statistics, actionFilter,
-            cancellationToken);
+        try
+        {
+            log.trace("EntityInfo fill", () -> aiContext.toString()); //$NON-NLS-1$
+            var curResourceSetProvider =
+                aiContext.getDocument() != null ? activeEditorResourceSetProvider : baseResourceSetProvider;
+            return fillInternal(aiContext, localContext, globalContext, curResourceSetProvider, statistics,
+                actionFilter, cancellationToken);
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+            return Duration.ofMillis(0);
+        }
     }
 
     private Duration fillInternal(AIContext aiContext, LocalContext localContext, GlobalContext globalContext,
