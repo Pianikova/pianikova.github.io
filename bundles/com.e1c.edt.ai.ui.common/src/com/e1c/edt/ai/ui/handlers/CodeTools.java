@@ -250,7 +250,7 @@ public class CodeTools
         }
 
         commentingMethod.methodText =
-            content.text.substring(range.getStart(), range.getStart() + range.getLength() - 1);
+            content.text.substring(range.getStart(), range.getStart() + range.getLength());
         if (commentingMethod.methodText.isBlank())
         {
             return Optional.empty();
