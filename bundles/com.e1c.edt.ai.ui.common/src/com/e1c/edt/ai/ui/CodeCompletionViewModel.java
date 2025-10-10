@@ -281,6 +281,7 @@ class CodeCompletionViewModel
         hintPainter.setHintAt(hint.getText(HintPart.LINES).getText(), hint.getText(HintPart.TOKEN).getText(),
             hint.getAcceptedTokens());
         verticalRulerPainter.pin(textWidget, hintPainter.getDisplayedHintText());
+        textWidget.showSelection();
         redraw();
     }
 
@@ -486,6 +487,7 @@ class CodeCompletionViewModel
                     isCreative() || (delay.isNegative() || delay == Duration.ZERO),
                     singleWordMode);
                 hintPainter.setHintAt("", "", 0);
+                textWidget.showSelection();
                 redraw();
             });
 

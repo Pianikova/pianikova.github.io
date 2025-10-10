@@ -39,6 +39,7 @@ class HintPainter
     private int pinnedOffset = -1;
     private boolean showBlank;
     private boolean isSingleWordMode;
+    private int vBarMax = 0;
 
     @Inject
     public HintPainter(IHintTextBuilder hintTextBuilder, ISettings uiSettings, IUserActions userActions,
@@ -63,6 +64,11 @@ class HintPainter
         pinnedOffset = offset;
         this.showBlank = showBlank;
         this.isSingleWordMode = isSingleWordMode;
+        if (textWidget != null)
+        {
+            var vBar = textWidget.getVerticalBar();
+            vBarMax = vBar.getMaximum();
+        }
     }
 
     @Override
@@ -100,6 +106,7 @@ class HintPainter
             displayedHintText = "";
             suffix = "";
             prefix = "";
+            vBarMax = 0;
             this.hintText = "";
             this.nextToken = "";
             this.acceptedTokens = 0;
@@ -180,6 +187,18 @@ class HintPainter
     private void drawHint(GC gc, StyledText textWidget, String nextToken, String firstLine, String otherLines,
         String suffix)
     {
+        if (vBarMax > 0)
+        {
+            var currentLine = textWidget.getLineAtOffset(textWidget.getCaretOffset());
+            var totalLines = textWidget.getLineCount();
+            var difLines = currentLine + displayedHintText.lines().count() + 1 - totalLines;
+            if (difLines > 0)
+            {
+                var vBar = textWidget.getVerticalBar();
+                vBar.setMaximum((int)(vBarMax + difLines * textWidget.getLineHeight()));
+            }
+        }
+
         var zeroLocation = textWidget.getLocationAtOffset(0);
         var caretLocation = textWidget.getLocationAtOffset(pinnedOffset);
         var x = caretLocation.x;
