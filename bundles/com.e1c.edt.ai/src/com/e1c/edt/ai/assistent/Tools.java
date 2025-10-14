@@ -164,6 +164,10 @@ public class Tools
                 {
                     observer.onError(error);
                 }
+                else
+                {
+                    observer.onCompleted();
+                }
             });
     }
 
@@ -225,10 +229,6 @@ public class Tools
         catch (Exception error)
         {
             observer.onError(error);
-        }
-        finally
-        {
-            observer.onCompleted();
         }
 
         return false;
