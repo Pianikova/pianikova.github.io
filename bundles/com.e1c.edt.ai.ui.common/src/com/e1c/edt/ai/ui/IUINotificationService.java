@@ -14,10 +14,9 @@ import com.e1c.edt.ai.ui.UINotificationService.UINotificationActionType;
 public interface IUINotificationService
 {
     public void createNotification(Shell parentShell, String message, String linkText, String url,
-        UINotificationType type,
-        Class<?> sourceClass);
+        UINotificationType type);
 
     public void createNotificationWithAction(Shell parentShell, String message, Runnable action,
-        UINotificationActionType actionType, UINotificationType type, Class<?> sourceClass);
+        UINotificationActionType actionType, UINotificationType type);
 }
 

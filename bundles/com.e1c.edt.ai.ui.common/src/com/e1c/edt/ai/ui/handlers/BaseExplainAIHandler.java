@@ -7,6 +7,7 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
 import com.e1c.edt.ai.ui.IUI;
@@ -26,6 +27,8 @@ public class BaseExplainAIHandler
     IChat chat;
     @Inject
     ICodeTools codeTools;
+    @Inject
+    ISettings settings;
 
     public BaseExplainAIHandler()
     {
@@ -35,7 +38,7 @@ public class BaseExplainAIHandler
     @Override
     public boolean isEnabled()
     {
-        return codeTools.hasTarget(CodeAction.EXLPLAIN);
+        return settings.isEnabled() && codeTools.hasTarget(CodeAction.EXLPLAIN);
     }
 
     @Override

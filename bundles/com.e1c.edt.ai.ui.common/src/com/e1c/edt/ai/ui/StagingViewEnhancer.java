@@ -30,34 +30,46 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.forms.widgets.Section;
 
+import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IObserver;
+import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.assistent.IAIStateListener;
+import com.e1c.edt.ai.assistent.IStateService;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 @SuppressWarnings("restriction")
-public class StagingViewEnhancer implements IStagingViewEnhancer
+public class StagingViewEnhancer
+    implements IStagingViewEnhancer
 {
     private final Optional<String> viewId = Optional.of("org.eclipse.egit.ui.StagingView"); //$NON-NLS-1$
     private final IDispatcher dispatcher;
     private final IReflection reflection;
     private final IWidgets widgets;
     private final IGitActions gitActions;
+    private final ISettings settings;
+    private final IStateService stateService;
     private CancellationTokenSource reviewChangesCancellationToken = new CancellationTokenSource();
     private CancellationTokenSource createCommitMessageCancellationToken = new CancellationTokenSource();
 
     @Inject
-    public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions)
+    public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions,
+        ISettings settings, IStateService stateService)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(reflection);
         Preconditions.checkNotNull(widgets);
         Preconditions.checkNotNull(gitActions);
+        Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(stateService);
         this.dispatcher = dispatcher;
         this.reflection = reflection;
         this.widgets = widgets;
         this.gitActions = gitActions;
+        this.settings = settings;
+        this.stateService = stateService;
     }
 
     @Override
@@ -222,12 +234,27 @@ public class StagingViewEnhancer implements IStagingViewEnhancer
     {
         reflection.getField(StagingView.class, stagingView, "unstageAllAction", IAction.class)
             .ifPresent(unstageAllAction -> {
+                stateService.addListener(new IAIStateListener()
+                {
+                    @Override
+                    public void onStateChange(AIState state)
+                    {
+                        enabledHandler.accept(settings.isEnabled() && unstageAllAction.isEnabled());
+                    }
+                });
+
                 enabledHandler.accept(unstageAllAction.isEnabled());
                 unstageAllAction.addPropertyChangeListener(new IPropertyChangeListener()
                 {
                     @Override
                     public void propertyChange(PropertyChangeEvent event)
                     {
+                        if (!settings.isEnabled())
+                        {
+                            enabledHandler.accept(false);
+                            return;
+                        }
+
                         if (event.getProperty().equals("enabled"))
                         {
                             var newVal = event.getNewValue();

@@ -60,7 +60,7 @@ class StateService
     @Override
     public void setState(String className, ServiceState serviceState)
     {
-        if (this.serviceState != serviceState)
+        if (serviceState == ServiceState.SETTINGS_CHANGED || this.serviceState != serviceState)
         {
             this.serviceState = serviceState;
             refresh();
@@ -89,23 +89,18 @@ class StateService
                     healthCheckService.checkAsync()
                         .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
                         .whenComplete((state, error) -> {
-                            if (state != null)
+                            if (error != null)
                             {
-                                setState(this.getName(), state);
-                                schedule(checkPeriodMs);
-                            }
-                            else
-                            {
-                                if (error != null)
-                                {
-                                    log.logError(error);
-                                }
-
+                                log.logError(error);
                                 setState(this.getName(), ServiceState.OFFLINE);
                                 schedule(checkPeriodAfterErrorMs);
                             }
+                            else
+                            {
+                                schedule(checkPeriodMs);
+                            }
                         })
-                        .join();
+                        .get();
                 }
                 catch (Throwable error)
                 {

@@ -18,7 +18,6 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.List;
@@ -59,6 +58,8 @@ public class BaseStatusBarControl
     private ISettingsSetter settingsSetter;
     @Inject
     private IReflection reflection;
+    @Inject
+    private IClientTokenValidator clientTokenValidator;
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
@@ -93,7 +94,7 @@ public class BaseStatusBarControl
 
         // Icon
         iconLabel = new Label(composite, SWT.NONE);
-        iconLabel.setImage(BaseActivator.getImage(Images.OFFLINE));
+        iconLabel.setImage(BaseActivator.getImage(Images.OFF));
         iconLabel.getShell();
         var iconGridData = new GridData(SWT.CENTER, SWT.CENTER, true, true);
         iconLabel.setLayoutData(iconGridData);
@@ -111,7 +112,6 @@ public class BaseStatusBarControl
         statusLabel.setLayoutData(statusGridData);
 
         policyCombo = new CCombo(composite, SWT.READ_ONLY);
-        policyCombo.setVisible(false);
         policyCombo.setItems(policyNames);
         var policy = settings.getCodeCompletionPolicy();
         policyCombo.select(policy.getIndex());
@@ -206,64 +206,98 @@ public class BaseStatusBarControl
     @SuppressWarnings("incomplete-switch")
     private void changeState(AIState state)
     {
-        var version = versionProvider.getPluginVersion().toString();
-        if (state.getServiceState() == ServiceState.ONLINE)
+        var policy = settings.getCodeCompletionPolicy();
+        var info = versionProvider.getPluginVersion().toString();
+        var serviceState = state.getServiceState();
+        if (serviceState == ServiceState.SETTINGS_CHANGED || serviceState == ServiceState.ONLINE)
         {
             hintWasShown = false;
-            var onlineIninfo = version + ' ' + Messages.StatusOnline;
-            iconLabel.setToolTipText(onlineIninfo);
-            statusLabel.setToolTipText(onlineIninfo);
-            switch (state.getActionState())
+        }
+
+        if (!hintWasShown)
+        {
+            var token = settings.getClientToken();
+            switch (serviceState)
             {
-            case BUSY:
-                iconLabel.setImage(BaseActivator.getImage(Images.BUSY));
+            case SETTINGS_CHANGED:
+                if (!settings.isEnabled())
+                {
+                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+                    notificationService.createNotification(
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.NotActivated,
+                        Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
+                        UINotificationType.INFO);
+                    hintWasShown = true;
+                }
+                break;
+
+            case TOKEN_FAILED:
+                if (!clientTokenValidator.isValid(token))
+                {
+                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+                    notificationService.createNotification(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
+                        Messages.NotActivated, Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
+                        UINotificationType.INFO);
+                }
+                else
+                {
+                    notificationService.createNotification(
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
+                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
+                        UINotificationType.ERROR);
+                }
+
+                hintWasShown = true;
+                break;
+
+            case SSL_ERROR:
+                notificationService.createNotification(
+                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
+                    Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
+                    UINotificationType.ERROR);
+                hintWasShown = true;
+                break;
+            }
+        }
+
+        policy = settings.getCodeCompletionPolicy();
+        if (policy == CodeCompletionPolicy.OFF)
+        {
+            iconLabel.setImage(BaseActivator.getImage(Images.OFF));
+        }
+        else
+        {
+            switch (state.getServiceState())
+            {
+            case ONLINE:
+                hintWasShown = false;
+                info = info + ' ' + Messages.StatusOnline;
+                switch (state.getActionState())
+                {
+                case BUSY:
+                    iconLabel.setImage(BaseActivator.getImage(Images.BUSY));
+                    break;
+
+                default:
+                    iconLabel.setImage(BaseActivator.getImage(Images.ONLINE));
+                    break;
+                }
+                break;
+
+            case SETTINGS_CHANGED:
+                iconLabel.setImage(BaseActivator.getImage(Images.OFF));
                 break;
 
             default:
                 iconLabel.setImage(BaseActivator.getImage(Images.ONLINE));
                 break;
             }
-
-            var policy = settings.getCodeCompletionPolicy();
-            policyCombo.select(policy.getIndex());
-            policyCombo.setVisible(true);
-            policyTooltip.setText(policy.getDescription());
-        }
-        else
-        {
-            var offlineInfo = version + ' ' + Messages.StatusOffline;
-            iconLabel.setToolTipText(offlineInfo);
-            statusLabel.setToolTipText(offlineInfo);
-
-            iconLabel.setImage(BaseActivator.getImage(Images.OFFLINE));
-            policyCombo.setVisible(false);
-            policyTooltip.setText(""); //$NON-NLS-1$
         }
 
-        if (!hintWasShown)
-        {
-            switch (state.getServiceState())
-            {
-            case TOKEN_FAILED:
-                Display.getDefault()
-                    .asyncExec(() -> notificationService.createNotification(
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
-                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
-                        UINotificationType.ERROR, this.getClass()));
-                hintWasShown = true;
-                break;
-
-            case SSL_ERROR:
-                Display.getDefault()
-                    .asyncExec(() -> notificationService.createNotification(
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
-                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
-                        UINotificationType.ERROR, this.getClass()));
-                hintWasShown = true;
-                break;
-            }
-        }
-
+        iconLabel.setToolTipText(info);
+        statusLabel.setToolTipText(info);
+        policyCombo.select(policy.getIndex());
+        policyTooltip.setText(policy.getDescription());
         iconLabel.setRedraw(true);
     }
 

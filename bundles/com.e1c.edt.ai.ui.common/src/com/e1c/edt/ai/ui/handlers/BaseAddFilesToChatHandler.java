@@ -21,6 +21,7 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import com.e1c.edt.ai.IProjectIdProvider;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
@@ -38,6 +39,8 @@ public class BaseAddFilesToChatHandler
     IProjectIdProvider projectIdProvider;
     @Inject
     IFileSystem fileSystem;
+    @Inject
+    ISettings settings;
 
     public BaseAddFilesToChatHandler()
     {
@@ -48,6 +51,12 @@ public class BaseAddFilesToChatHandler
     @Override
     public void setEnabled(Object evaluationContext)
     {
+        if (settings.isEnabled())
+        {
+            setBaseEnabled(false);
+            return;
+        }
+
         if (evaluationContext instanceof ExpressionContext)
         {
             var expressionContext = (ExpressionContext)evaluationContext;

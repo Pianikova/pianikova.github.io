@@ -28,6 +28,8 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IValidator;
 import com.e1c.edt.ai.ServiceState;
@@ -35,6 +37,7 @@ import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.ui.AIUICommonModule;
 import com.e1c.edt.ai.ui.BaseActivator;
+import com.e1c.edt.ai.ui.IClientTokenValidator;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
@@ -71,6 +74,12 @@ public class ClientAIPreferencePage
     IDefaultSettings defaultSettings;
     @Inject
     IStateService stateService;
+    @Inject
+    ISettings settings;
+    @Inject
+    ISettingsSetter settingsSetter;
+    @Inject
+    IClientTokenValidator clientTokenValidator;
 
     public ClientAIPreferencePage()
     {
@@ -179,8 +188,15 @@ public class ClientAIPreferencePage
     @Override
     public boolean performOk()
     {
+        var result = super.performOk();
+        var token = settings.getClientToken();
+        if (clientTokenValidator.isValid(token) && settings.getCodeCompletionPolicy() == CodeCompletionPolicy.OFF)
+        {
+            settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.MODERATE);
+        }
+
         stateService.setState(this.getClass().getName(), ServiceState.SETTINGS_CHANGED);
-        return super.performOk();
+        return result;
     }
 
     private static Image createImage(String path)

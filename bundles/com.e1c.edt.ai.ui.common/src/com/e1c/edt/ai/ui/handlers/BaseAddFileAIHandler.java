@@ -7,6 +7,7 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
 import com.google.inject.Inject;
@@ -16,6 +17,8 @@ public class BaseAddFileAIHandler
 {
     @Inject
     IChat chat;
+    @Inject
+    ISettings settings;
 
     public BaseAddFileAIHandler()
     {
@@ -25,7 +28,7 @@ public class BaseAddFileAIHandler
     @Override
     public boolean isEnabled()
     {
-        return true;
+        return settings.isEnabled();
     }
 
     @Override

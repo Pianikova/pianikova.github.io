@@ -44,6 +44,7 @@ public class Settings
     private final IIdProvider idProvider;
     private final IDefaultSettings defaultSettings;
     private final Parameters defaultParameters;
+    private final IClientTokenValidator clientTokenValidator;
     private final Cache<Object, Optional<Parameters>> parametersCache =
         CacheBuilder.newBuilder().maximumSize(128).build();
     private Optional<Parameters> defaultSessionParameters = Optional.empty();
@@ -51,19 +52,27 @@ public class Settings
     @Inject
     public Settings(ILog log, ISettingsStore settingsStore, IParser<String, Parameters> parametersParser,
         IIdProvider idProvider,
-        IDefaultSettings defaultSettings)
+        IDefaultSettings defaultSettings, IClientTokenValidator clientTokenValidator)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settingsStore);
         Preconditions.checkNotNull(parametersParser);
         Preconditions.checkNotNull(idProvider);
         Preconditions.checkNotNull(defaultSettings);
+        Preconditions.checkNotNull(clientTokenValidator);
         this.log = log;
         this.settingsStore = settingsStore;
         this.parametersParser = parametersParser;
         this.idProvider = idProvider;
         this.defaultSettings = defaultSettings;
         defaultParameters = new Parameters(defaultSettings);
+        this.clientTokenValidator = clientTokenValidator;
+    }
+
+    @Override
+    public boolean isEnabled()
+    {
+        return clientTokenValidator.isValid(getClientToken());
     }
 
     @SuppressWarnings("nls")

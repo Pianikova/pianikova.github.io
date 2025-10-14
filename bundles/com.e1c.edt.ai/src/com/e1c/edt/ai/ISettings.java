@@ -17,6 +17,8 @@ public interface ISettings
     public static final String LANGUAGE_RUSSIAN = "Russian"; //$NON-NLS-1$
     public static final String LANGUAGE_ENGLISH = "English"; //$NON-NLS-1$
 
+    boolean isEnabled();
+
     String getClientToken();
 
     String getClientUniqueId();

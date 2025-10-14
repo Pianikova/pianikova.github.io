@@ -123,7 +123,7 @@ public class PluginUpdateService
                 dispatcher.dispatchAsync(() -> notificationService.createNotificationWithAction(
                     PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateMessage, () -> {
                         installUpdate(agent, latest);
-                    }, UINotificationActionType.UPDATE, UINotificationType.INFO, this.getClass()));
+                    }, UINotificationActionType.UPDATE, UINotificationType.INFO));
 
             }
 
@@ -168,7 +168,7 @@ public class PluginUpdateService
                                     {
                                         PlatformUI.getWorkbench().restart();
                                     }
-                                }, UINotificationActionType.RELOAD, UINotificationType.INFO, this.getClass());
+                                }, UINotificationActionType.RELOAD, UINotificationType.INFO);
                         });
                     }
                     else

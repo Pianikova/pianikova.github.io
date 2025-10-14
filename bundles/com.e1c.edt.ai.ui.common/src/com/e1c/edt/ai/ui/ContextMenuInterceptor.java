@@ -22,6 +22,7 @@ import org.eclipse.swt.widgets.Text;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IObserver;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -32,19 +33,22 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
     private final IVisualContextProvider visualContextProviewr;
     private final ITextActions textActions;
     private final IUI ui;
+    private final ISettings settings;
 
     @Inject
     public ContextMenuInterceptor(IDispatcher dispatcher, IVisualContextProvider visualContextProviewr,
-        ITextActions textActions, IUI ui)
+        ITextActions textActions, IUI ui, ISettings settings)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(visualContextProviewr);
         Preconditions.checkNotNull(textActions);
         Preconditions.checkNotNull(ui);
+        Preconditions.checkNotNull(settings);
         this.dispatcher = dispatcher;
         this.visualContextProviewr = visualContextProviewr;
         this.textActions = textActions;
         this.ui = ui;
+        this.settings = settings;
     }
 
     @Override
@@ -264,6 +268,11 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
 
     private void executeAction(IText text, TextAction textAction, TextListener textListener)
     {
+        if (!settings.isEnabled())
+        {
+            return;
+        }
+
         var cancellationTokenSource = new CancellationTokenSource();
         textListener.cancellationTokenSource = cancellationTokenSource;
         var context = visualContextProviewr.create(text.getControl(), cancellationTokenSource);
@@ -353,7 +362,7 @@ public class ContextMenuInterceptor implements IContextMenuInterceptor
         {
             if (menuItem != null)
             {
-                menuItem.setEnabled(allowForEmptyText || !text.getContent().trim().isBlank());
+                menuItem.setEnabled(settings.isEnabled() && (allowForEmptyText || !text.getContent().trim().isBlank()));
             }
         }
 

@@ -18,6 +18,12 @@ class Settings
     implements ISettings
 {
     @Override
+    public boolean isEnabled()
+    {
+        return true;
+    }
+
+    @Override
     public String getClientToken()
     {
         return "semantic"; //$NON-NLS-1$

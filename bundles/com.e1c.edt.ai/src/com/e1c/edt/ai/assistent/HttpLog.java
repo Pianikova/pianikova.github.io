@@ -17,14 +17,15 @@ class HttpLog
     implements IHttpLog
 {
     private final ILog log;
-    private final IStateService serverAccess;
+    private final IStateService stateService;
 
     @Inject
-    public HttpLog(ILog log, IStateService serverAccess)
+    public HttpLog(ILog log, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(stateService);
         this.log = log;
-        this.serverAccess = serverAccess;
+        this.stateService = stateService;
     }
 
     @Override
@@ -84,7 +85,11 @@ class HttpLog
         var statusCode = response.statusCode();
         if (statusCode >= 200 && statusCode < 300)
         {
-            serverAccess.setState(HttpLog.class.getName(), ServiceState.ONLINE);
+            if (handleError)
+            {
+                stateService.setState(HttpLog.class.getName(), ServiceState.ONLINE);
+            }
+
             if (detailed)
             {
                 if (stopwatch.elapsed().toMillis() < 1000)
@@ -110,17 +115,17 @@ class HttpLog
                 {
                 case 401:
                 case 403:
-                    serverAccess.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
+                    stateService.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
                     break;
 
                 case 500:
                 case 502:
                 case 503:
-                    serverAccess.setState(HttpLog.class.getName(), ServiceState.SERVER_ERROR);
+                    stateService.setState(HttpLog.class.getName(), ServiceState.SERVER_ERROR);
                     break;
 
                 default:
-                    serverAccess.setState(HttpLog.class.getName(), ServiceState.OFFLINE);
+                    stateService.setState(HttpLog.class.getName(), ServiceState.OFFLINE);
                     break;
                 }
             }

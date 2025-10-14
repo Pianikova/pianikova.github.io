@@ -50,7 +50,8 @@ public class AIUIModule
         bind(IProjectProvider.class).to(ModuleProvider.class);
         bind(IXtextBuilderParticipant.class).to(BuildTrackingParticipant.class).in(Singleton.class);
         bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);
-        bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);;
+        bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
+        bind(IClientTokenValidator.class).to(ClientTokenValidator.class).in(Singleton.class);
         // @formatter:on
     }
 }
