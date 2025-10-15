@@ -34,7 +34,7 @@ pipeline {
                 env.CODEAI_VERSION = getVersion()
 
                 env.CODEAI_P2_PATH=determineP2RepositoryPath(name: 'codeai', version: "${env.CODEAI_VERSION}")
-                env.CODEAI_P2_SDK_PATH=determineP2RepositoryPath(name: 'codeai', version: "${env.CODEAI_VERSION}", sdk: true)
+                env.CODEAI_JAVA_P2_PATH=determineP2RepositoryPath(name: 'codeai_java', version: "${env.CODEAI_VERSION}")
             }
         }
         
@@ -57,7 +57,7 @@ pipeline {
       when { expression { isDevelopOrReleaseBranch() }}
       steps {
         publishP2Repository(name: 'CodeAI', source: 'repositories/com.e1c.edt.ai.repository/target/repository', target: "${env.CODEAI_P2_PATH}", qualifier: "${env.CODEAI_QUALIFIER}")
-        publishP2Repository(name: 'CodeAISDK', source: 'repositories/com.e1c.edt.ai.repository.sdk/target/repository', target: "${env.CODEAI_P2_SDK_PATH}", qualifier: "${env.CODEAI_QUALIFIER}")
+        publishP2Repository(name: 'CodeAI_JAVA', source: 'repositories/com.e1c.edt.ui.eclipse.repository/target/repository', target: "${env.CODEAI_JAVA_P2_PATH}", qualifier: "${env.CODEAI_QUALIFIER}")
       }
     }
   }
