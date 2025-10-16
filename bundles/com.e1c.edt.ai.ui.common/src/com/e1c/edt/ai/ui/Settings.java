@@ -79,7 +79,7 @@ public class Settings
     @Override
     public String getClientToken()
     {
-        var clientToken = settingsStore.getString(ISettingsStore.CLIENT_TOKEN);
+        var clientToken = settingsStore.getString(ISettingsStore.CLIENT_TOKEN).orElse(null);
         if (clientToken != null)
         {
             clientToken = clientToken.trim();
@@ -108,7 +108,7 @@ public class Settings
     @Override
     public CodeCompletionPolicy getCodeCompletionPolicy()
     {
-        var id = settingsStore.getString(ISettingsStore.CODE_COMPLETION_POLICY);
+        var id = settingsStore.getString(ISettingsStore.CODE_COMPLETION_POLICY).orElse(null);
         return CodeCompletionPolicy.parse(id);
     }
 
@@ -121,7 +121,8 @@ public class Settings
     @Override
     public int getCodeCompletionLinesCount()
     {
-        return settingsStore.getInt(ISettingsStore.CODE_COMPLETION_LINES_COUNT);
+        return settingsStore.getInt(ISettingsStore.CODE_COMPLETION_LINES_COUNT)
+            .orElse(ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
     }
 
     @Override
@@ -175,7 +176,7 @@ public class Settings
     @Override
     public String getLanguage()
     {
-        return Optional.ofNullable(settingsStore.getString(ISettingsStore.LANGUAGE))
+        return settingsStore.getString(ISettingsStore.LANGUAGE)
             .map(i -> i.isBlank() ? null : i)
             .orElse(Platform.getNL().startsWith("ru_") ? ISettings.LANGUAGE_RUSSIAN : ISettings.LANGUAGE_ENGLISH);
     }
@@ -283,7 +284,7 @@ public class Settings
 
     private synchronized Optional<Parameters> getOptionalUserParameters()
     {
-        var parametersStr = settingsStore.getString(ISettingsStore.PARAMETERS);
+        var parametersStr = settingsStore.getString(ISettingsStore.PARAMETERS).orElse(null);
         if (parametersStr == null || parametersStr.isBlank())
         {
             return Optional.empty();

@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.concurrent.ExecutionException;
+
 import org.eclipse.core.runtime.jobs.Job;
 
 import com.e1c.edt.ai.AIContext;
@@ -47,6 +49,10 @@ class GlobalContextManager implements IGlobalContextManager
                         globalContextSync.sync(aiCtx, 5, jobCtx.CancellationTokenSource)
                             .get();
                         globalContextTracker.track(aiCtx);
+                    }
+                    catch (ExecutionException error)
+                    {
+                        log.trace("GlobalContextManager", () -> "Error updating global context: " + error); //$NON-NLS-1$//$NON-NLS-2$
                     }
                     catch (Exception error)
                     {

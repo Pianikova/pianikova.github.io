@@ -27,27 +27,55 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     }
 
     @Override
-    public String getString(String key)
+    public Optional<String> getString(String key)
     {
-        return preferenceStore.getString(key);
+        try
+        {
+            return Optional.ofNullable(preferenceStore.getString(key));
+        }
+        catch (Exception error)
+        {
+            return Optional.empty();
+        }
     }
 
     @Override
     public void setString(String key, String value)
     {
-        preferenceStore.setValue(key, value);
+        try
+        {
+            preferenceStore.setValue(key, value);
+        }
+        catch (Exception error)
+        {
+            //
+        }
     }
 
     @Override
-    public int getInt(String key)
+    public Optional<Integer> getInt(String key)
     {
-        return preferenceStore.getInt(key);
+        try
+        {
+            return Optional.ofNullable(preferenceStore.getInt(key));
+        }
+        catch (Exception error)
+        {
+            return Optional.empty();
+        }
     }
 
     @Override
-    public boolean getBoolean(String key)
+    public Optional<Boolean> getBoolean(String key)
     {
-        return preferenceStore.getBoolean(key);
+        try
+        {
+            return Optional.ofNullable(preferenceStore.getBoolean(key));
+        }
+        catch (Exception error)
+        {
+            return Optional.empty();
+        }
     }
 
     @Override

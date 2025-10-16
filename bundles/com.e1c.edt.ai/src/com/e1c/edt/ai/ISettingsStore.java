@@ -17,13 +17,13 @@ public interface ISettingsStore
     public final static int DEFAULT_CODE_COMPLETION_LINES_COUNT = 5;
     public final static int MAX_CODE_COMPLETION_LINES_COUNT = 64;
 
-    String getString(String key);
+    Optional<String> getString(String key);
 
     void setString(String key, String value);
 
-    int getInt(String key);
+    Optional<Integer> getInt(String key);
 
-    boolean getBoolean(String key);
+    Optional<Boolean> getBoolean(String key);
 
     <T> Optional<T> getValue(String key, Class<T> classOfT);
 
