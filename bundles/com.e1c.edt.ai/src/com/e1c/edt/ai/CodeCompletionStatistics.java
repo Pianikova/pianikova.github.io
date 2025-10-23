@@ -168,14 +168,14 @@ public class CodeCompletionStatistics
         var sourceIds = methods.remove(method);
         if (sourceIds == null || sourceIds.isEmpty())
         {
-            log.debug("Statistics", () -> "Source ids are empty."); //$NON-NLS-1$ //$NON-NLS-2$
+            log.trace(TracingSources.CODE_COMPETION, "Code completion", () -> "Source ids are empty."); //$NON-NLS-1$ //$NON-NLS-2$
             return;
         }
 
         var body = methodBodyProvider.apply(state);
         if (body == null || body.isBlank())
         {
-            log.debug("Statistics", () -> "Method body is empty."); //$NON-NLS-1$ //$NON-NLS-2$
+            log.trace(TracingSources.CODE_COMPETION, "Code completion", () -> "Method body is empty."); //$NON-NLS-1$ //$NON-NLS-2$
             return;
         }
 
@@ -200,7 +200,8 @@ public class CodeCompletionStatistics
 
         if (methods.computeIfAbsent(method, k -> new HashSet<>()).add(sourceId))
         {
-            log.debug("Statistics", () -> "Add " + sourceId + " for " + method.getUniqueName()); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            log.trace(TracingSources.CODE_COMPETION, "Code compleyion", //$NON-NLS-1$
+                () -> "Add " + sourceId + " for " + method.getUniqueName()); //$NON-NLS-1$ //$NON-NLS-2$
         }
     }
 }

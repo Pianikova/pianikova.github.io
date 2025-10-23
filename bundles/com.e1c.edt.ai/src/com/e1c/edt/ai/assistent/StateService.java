@@ -16,6 +16,7 @@ import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -134,7 +135,7 @@ class StateService
         }
 
         var state = new AIState(serviceState, actionState);
-        log.debug("StateService", () -> state.toString()); //$NON-NLS-1$
+        log.trace(TracingSources.API_CALLS, "StateService", () -> state.toString()); //$NON-NLS-1$
         for (var listener : listeners)
         {
             try

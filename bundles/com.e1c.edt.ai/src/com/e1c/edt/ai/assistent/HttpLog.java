@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.TracingSources;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -33,7 +34,7 @@ class HttpLog
     {
         Preconditions.checkNotNull(request);
 
-        log.trace(createHeader("AI request", request.uri(), ref), //$NON-NLS-1$
+        log.trace(TracingSources.API_CALLS, createHeader("AI request", request.uri(), ref), //$NON-NLS-1$
             () -> {
                 var sb = new StringBuilder();
                 sb.append(request);
@@ -94,7 +95,7 @@ class HttpLog
             {
                 if (stopwatch.elapsed().toMillis() < 1000)
                 {
-                    log.trace(createHeader("AI response", response.uri(), ref),
+                    log.trace(TracingSources.API_CALLS, createHeader("AI response", response.uri(), ref),
                         () -> createTrace(response, stopwatch, statusCode));
                 }
                 else

@@ -13,6 +13,7 @@ import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Observables;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITools;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
@@ -86,7 +87,7 @@ public class TextActions implements ITextActions
             .replace("${language}", settings.getLanguage())
             .replace("${context}", contextJson);
 
-        log.debug("Prompt", () -> content.instruction);
+        log.trace(TracingSources.API_CALLS, "Prompt", () -> content.instruction);
         var message = new StringBuilder();
         var uudi = new StringBuilder();
         var invokeSource = tools.createInvokeSource(ProjectId.Default, toolInvokeRequest, cancellationToken);

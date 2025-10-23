@@ -6,6 +6,7 @@ package com.e1c.edt.ai.assistent;
 import java.util.concurrent.CancellationException;
 
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -24,7 +25,7 @@ class ThreadManager
     @Override
     public void cancel()
     {
-        log.trace(Thread.currentThread().getName(), () -> "was canceled"); //$NON-NLS-1$
+        log.trace(TracingSources.COMMON, Thread.currentThread().getName(), () -> "was canceled"); //$NON-NLS-1$
         throw new CancellationException();
     }
 }

@@ -14,6 +14,7 @@ import org.eclipse.xtext.util.concurrent.IUnitOfWork;
 import com._1c.g5.v8.dt.bsl.ui.editor.BslXtextDocument;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -61,7 +62,7 @@ class CodeParser
                 }
             });
 
-            log.debug("Code parser",
+            log.trace(TracingSources.COMMON, "Code parser",
                 () -> "The duration of the parsing is " + Duration.between(startTime, clock.now()));
             return Optional.ofNullable(pareseResult);
         }

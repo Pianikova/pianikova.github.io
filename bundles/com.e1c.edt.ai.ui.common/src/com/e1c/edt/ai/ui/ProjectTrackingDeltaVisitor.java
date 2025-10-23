@@ -8,6 +8,7 @@ import org.eclipse.core.runtime.CoreException;
 
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -55,7 +56,7 @@ class ProjectTrackingDeltaVisitor
 
         var projectId = new ProjectId(project.getName(), project);
         var path = resource.getFullPath().makeRelative().toPortableString();
-        log.trace("ResourceListener", () -> path + " was updated in project " + project.getName());
+        log.trace(TracingSources.SYNC, "ResourceListener", () -> path + " was updated in project " + project.getName());
         var ctx = new AIContext(projectId, path, null);
         globalContextTracker.track(ctx);
     }

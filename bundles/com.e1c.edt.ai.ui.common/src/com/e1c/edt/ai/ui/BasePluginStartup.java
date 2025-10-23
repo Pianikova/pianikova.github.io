@@ -12,6 +12,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IStartup;
 
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.google.inject.Inject;
 
@@ -49,9 +50,11 @@ public class BasePluginStartup
         var pluginVersion = activator.getPluginVersion();
         var platformVersion = activator.getPlatformVersion();
         activator.trace(
+            TracingSources.COMMON,
             platformVersion == null ? "Not 1C:EDT Platform" : "1C:EDT version: " + platformVersion.toString(), //$NON-NLS-1$//$NON-NLS-2$
             () -> ""); //$NON-NLS-1$
-        activator.trace(pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
+        activator.trace(TracingSources.COMMON,
+            pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
 
         var updateJob = new Job(Messages.UpdateJobMessage) {
             @Override

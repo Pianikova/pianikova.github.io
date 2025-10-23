@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: %pluginName Semantic Endpoint
+Bundle-Name: %pluginName
 Bundle-SymbolicName: com.e1c.edt.semantic;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-Activator: com.e1c.edt.semantic.Activator
@@ -29,4 +29,4 @@ Require-Bundle: org.eclipse.ui;bundle-version="[3.0.0,4.0.0)",
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Automatic-Module-Name: com.e1c.edt.semantic
 Bundle-ActivationPolicy: lazy
-Bundle-Vendor: %providerName Semantic Endpoint
+Bundle-Vendor: %providerName

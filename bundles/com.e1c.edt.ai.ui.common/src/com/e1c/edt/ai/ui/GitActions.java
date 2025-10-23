@@ -25,6 +25,7 @@ import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Observables;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITools;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
@@ -193,7 +194,7 @@ public class GitActions implements IGitActions
                     .orElse("no additional lines"))
             .replace("${git_dif}", diffText.toString());
 
-        log.debug("Prompt", () -> content.instruction);
+        log.trace(TracingSources.API_CALLS, "Prompt", () -> content.instruction);
         var message = new StringBuilder();
         var uudi = new StringBuilder();
         var invokeSource = tools.createInvokeSource(firstProjectId, toolInvokeRequest, cancellationToken);

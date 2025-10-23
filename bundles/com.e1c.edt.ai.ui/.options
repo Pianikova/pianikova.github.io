@@ -1,0 +1,8 @@
+# Tracing options for the com.e1c.edt.ai plug-in
+
+# Common issues
+com.e1c.edt.ai/common=false
+com.e1c.edt.ai/api_calls=false
+com.e1c.edt.ai/chat=false
+com.e1c.edt.ai/code_completion=false
+com.e1c.edt.ai/sync=false

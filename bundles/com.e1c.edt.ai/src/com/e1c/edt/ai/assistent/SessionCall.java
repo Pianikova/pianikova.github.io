@@ -16,6 +16,7 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
@@ -76,7 +77,7 @@ public class SessionCall
                     if (statusCode >= 400 && statusCode < 500)
                     {
                         stateListener.onStateChange(STATE_CHANGED);
-                        log.trace("ApiCallRepeater",
+                        log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
                             () -> "Retrying request due to unexpected response status code: " + statusCode);
                         sessionService.getSessionAsync(projectId).thenCompose(newSesssion -> {
                             return taskSupplier.apply(session);

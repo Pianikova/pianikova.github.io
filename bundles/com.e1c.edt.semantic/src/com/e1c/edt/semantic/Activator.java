@@ -1,9 +1,14 @@
 package com.e1c.edt.semantic;
 
+import java.util.Hashtable;
 import java.util.function.Supplier;
 
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.osgi.service.debug.DebugOptions;
+import org.eclipse.osgi.service.debug.DebugOptionsListener;
+import org.eclipse.osgi.service.debug.DebugTrace;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
@@ -17,9 +22,11 @@ import com.google.inject.Injector;
  */
 public class Activator
     extends AbstractUIPlugin
-    implements ILog
+    implements ILog, DebugOptionsListener
 {
+    private static final String TRACE_SOURCE_PREFIX = "com.e1c.edt.ai/"; //$NON-NLS-1$
     private Injector injector;
+    private DebugTrace debugTrace;
 
 	// The plug-in ID
 	public static final String PLUGIN_ID = "com.e1c.edt.semantic"; //$NON-NLS-1$
@@ -35,15 +42,20 @@ public class Activator
     }
 
 	@Override
-	public void start(BundleContext context) throws Exception {
-		super.start(context);
+    public void start(BundleContext bundleContext) throws Exception
+    {
+        super.start(bundleContext);
+        var props = new Hashtable<String, String>();
+        props.put(DebugOptions.LISTENER_SYMBOLICNAME, TRACE_SOURCE_PREFIX);
+        bundleContext.registerService(DebugOptionsListener.class, this, props);
 		plugin = this;
 	}
 
 	@Override
-	public void stop(BundleContext context) throws Exception {
-		plugin = null;
-		super.stop(context);
+    public void stop(BundleContext bundleContext) throws Exception
+    {
+        plugin = null;
+        super.stop(bundleContext);
 	}
 
     private static void log(IStatus status)
@@ -86,30 +98,55 @@ public class Activator
     }
 
     @Override
-    public void trace(String topic, Supplier<String> details)
+    public void optionsChanged(DebugOptions options)
     {
-        traceInternal(topic, details);
+        debugTrace = options.newDebugTrace(TRACE_SOURCE_PREFIX);
     }
 
     @Override
-    public void debug(String topic, Supplier<String> details)
+    public boolean isTracingEnabled(String tracingSource)
     {
-        traceInternal(topic, details);
+        if (debugTrace == null)
+        {
+            return false;
+        }
+
+        return Platform.isRunning()
+            && "true".equalsIgnoreCase(Platform.getDebugOption(TRACE_SOURCE_PREFIX + tracingSource)); //$NON-NLS-1$
     }
 
-    private void traceInternal(String topic, Supplier<String> details)
+    @Override
+    public void trace(String tracingSource, String topic, Supplier<String> details)
+    {
+        if (!isTracingEnabled(tracingSource))
+        {
+            return;
+        }
+
+        var trace = debugTrace;
+        if (trace != null)
+        {
+            var messsage = createMesssage(topic, details);
+            if (messsage != null && messsage.length() > 0)
+            {
+                trace.trace(tracingSource, messsage.toString());
+            }
+        }
+    }
+
+    private StringBuilder createMesssage(String topic, Supplier<String> details)
     {
         if (topic == null || topic.isBlank())
         {
             topic = ""; //$NON-NLS-1$
         }
 
-        var sb = new StringBuilder();
-        sb.append("Semantic server "); //$NON-NLS-1$
-        sb.append(topic);
-        sb.append(System.lineSeparator());
-        sb.append(details.get());
-        log(Status.info(sb.toString()));
+        var message = new StringBuilder();
+        message.append("Semantic server "); //$NON-NLS-1$
+        message.append(topic);
+        message.append(System.lineSeparator());
+        message.append(details.get());
+        return message;
     }
 
     private static IStatus createErrorStatus(String message, Throwable throwable)

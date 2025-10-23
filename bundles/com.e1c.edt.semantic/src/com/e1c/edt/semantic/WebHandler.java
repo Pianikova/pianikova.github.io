@@ -18,6 +18,7 @@ import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.context.IEntityInfo;
 import com.e1c.edt.ai.context.IRelatedEntities;
 import com.e1c.edt.ai.context.DTO.EntityInfoRequest;
@@ -83,7 +84,7 @@ class WebHandler
             }
 
             final var handled = isHandled;
-            log.trace("request", () -> {
+            log.trace(TracingSources.API_CALLS, "request", () -> {
                 var info = new StringBuilder();
                 info.append("target: ");
                 info.append(target);

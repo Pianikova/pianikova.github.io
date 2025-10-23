@@ -7,6 +7,7 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
 
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITextPreprocessor;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -34,7 +35,7 @@ public class IdeApiHandler
     {
         Preconditions.checkNotNull(parameter);
         isReady = true;
-        log.trace(AI_CHAT, () -> "winked: " + parameter); //$NON-NLS-1$
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "winked: " + parameter); //$NON-NLS-1$
     }
 
     public void paste_code(String code)
@@ -76,7 +77,7 @@ public class IdeApiHandler
     public void trace(String message)
     {
         // Chat tracing
-        log.trace(AI_CHAT, () -> message);
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> message);
     }
 
     public boolean isReady()

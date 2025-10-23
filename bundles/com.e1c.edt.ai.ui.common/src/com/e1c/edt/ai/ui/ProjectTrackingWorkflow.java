@@ -29,6 +29,7 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
@@ -176,7 +177,7 @@ class ProjectTrackingWorkflow
     @Override
     public void track(AIContext aiCtx)
     {
-        log.debug("Track", () -> aiCtx.toString()); //$NON-NLS-1$
+        log.trace(TracingSources.SYNC, "Track", () -> aiCtx.toString()); //$NON-NLS-1$
         var path = aiCtx.getPath();
         var projectPath = project.getProjectRelativePath().append(path);
         if (projectPath.segmentCount() <= 1)
@@ -238,7 +239,7 @@ class ProjectTrackingWorkflow
         }
 
         var newFilesToHashCountVal = newFilesToHashCount;
-        log.debug("Scaned", () -> {
+        log.trace(TracingSources.SYNC, "Scaned", () -> {
             var message = new StringBuilder();
             message.append("Files: ");
             message.append(files.size());
@@ -341,7 +342,7 @@ class ProjectTrackingWorkflow
                 {
                     var modificationStamp = newModificationStamp;
                     var accessible = isAccessible;
-                    log.debug("Sync required", () -> {
+                    log.trace(TracingSources.SYNC, "Sync required", () -> {
                         var message = new StringBuilder();
                         message.append("File: ");
                         message.append(file.path);
@@ -384,7 +385,7 @@ class ProjectTrackingWorkflow
         if (hashed > 0)
         {
             var hashedVal = hashed;
-            log.debug("Hashed", () -> hashedVal + " files");
+            log.trace(TracingSources.SYNC, "Hashed", () -> hashedVal + " files");
         }
 
         if (fileToSyncCount > 0)

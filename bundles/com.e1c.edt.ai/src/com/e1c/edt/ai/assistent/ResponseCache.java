@@ -12,6 +12,7 @@ import java.util.function.Supplier;
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
@@ -53,7 +54,7 @@ class ResponseCache
                     var error = errorsCache.getIfPresent(key);
                     if (error != null)
                     {
-                        log.trace("ResponseCache", () -> "Returns an error from the cache.");
+                        log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "Returns an error from the cache.");
                         return error;
                     }
                 }
@@ -108,7 +109,7 @@ class ResponseCache
                 responseCache.invalidateAll();
             }
 
-            log.debug("ResponseCache", () -> "cleared");
+            log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "cleared");
         }
     }
 }

@@ -2,6 +2,16 @@
 <?eclipse version="3.4"?>
 <plugin>
 
+    <extension point="org.eclipse.ui.trace.traceComponents">
+      <component
+            id="com.e1c.edt.ai"
+            label="%traceName">
+         <bundle
+               consumed="true"
+               name="com.e1c.edt.ai.ui" />         
+      </component>
+    </extension>
+
     <extension
             point="org.eclipse.ui.views">
         <category

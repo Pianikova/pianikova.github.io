@@ -17,6 +17,7 @@ import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStatistics;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.IGlobalContextService;
 import com.e1c.edt.ai.assistent.model.EntityValue;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
@@ -139,7 +140,7 @@ class GlobalContextSync implements IGlobalContextSync
 
                 var vals = result.unknownValues;
                 var hasUnknownValues = vals != null && !vals.isEmpty();
-                log.debug("AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
+                log.trace(TracingSources.SYNC, "AI global context is needed " + cancellationToken.toString(), () -> { //$NON-NLS-1$
                     var trace = new StringBuilder();
                     if (hasUnknownValues)
                     {

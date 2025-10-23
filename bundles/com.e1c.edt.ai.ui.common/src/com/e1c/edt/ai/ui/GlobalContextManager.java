@@ -11,6 +11,7 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.Completion;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -52,7 +53,8 @@ class GlobalContextManager implements IGlobalContextManager
                     }
                     catch (ExecutionException error)
                     {
-                        log.trace("GlobalContextManager", () -> "Error updating global context: " + error); //$NON-NLS-1$//$NON-NLS-2$
+                        log.trace(TracingSources.SYNC, "GlobalContextManager", //$NON-NLS-1$
+                            () -> "Error updating global context: " + error); //$NON-NLS-1$
                     }
                     catch (Exception error)
                     {

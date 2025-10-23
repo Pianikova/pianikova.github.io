@@ -2,15 +2,25 @@
 <?eclipse version="3.4"?>
 <plugin>
 
+    <extension point="org.eclipse.ui.trace.traceComponents">
+      <component
+            id="com.e1c.edt.ai"
+            label="%traceName">
+         <bundle
+               consumed="true"
+               name="com.e1c.edt.semantic" />         
+      </component>
+    </extension>
+
    <extension
          point="org.eclipse.ui.commands">
       <category
             id="com.e1c.edt.semantic.commands.category"
-            name="Semantic Endpoint">
+            name="%category.name">
       </category>
       <command
             categoryId="com.e1c.edt.semantic.commands.category"
-            name="Activate/Deactivate"
+            name="%command.name"
             id="com.e1c.edt.semantic.commands.activateCommand">
       </command>
    </extension>
@@ -36,7 +46,7 @@
             locationURI="menu:org.eclipse.ui.main.menu?after=additions">
          <menu
                id="com.e1c.edt.semantic.menus.semanticEndpointMenu"
-               label="Semantic Endpoint"
+               label="%menu.label"
                mnemonic="S">
             <command
                   commandId="com.e1c.edt.semantic.commands.activateCommand"

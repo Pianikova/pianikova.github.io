@@ -64,6 +64,7 @@ import com.e1c.edt.ai.Observers;
 import com.e1c.edt.ai.Sources;
 import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.Text;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ICodeAssistant;
 import com.e1c.edt.ai.assistent.ICompletionRequestProvider;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
@@ -300,6 +301,7 @@ class CodeCompletionViewModel
         }
 
         log.trace(
+            TracingSources.CODE_COMPETION,
             "Predicted hint delay " + delayBeforeShow.toMillis() + " ms, actual delay " + delay.toMillis() + " ms", //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
             () -> ""); //$NON-NLS-1$
         reset();
@@ -472,7 +474,7 @@ class CodeCompletionViewModel
                 lastSession = session;
             }
 
-            log.trace("AI context " + cancellationTokenSource, () -> aiCtx.toString()); //$NON-NLS-1$
+            log.trace(TracingSources.CODE_COMPETION, "AI context " + cancellationTokenSource, () -> aiCtx.toString()); //$NON-NLS-1$
             var delay = calculateDelay(startTime, delayBeforeShow);
             if (cancellationTokenSource.isCanceled())
             {
@@ -544,7 +546,7 @@ class CodeCompletionViewModel
                         lastProposals.clear();
                     }
 
-                    log.trace("AI generated text " + cancellationTokenSource, () -> {
+                    log.trace(TracingSources.CODE_COMPETION, "AI generated text " + cancellationTokenSource, () -> {
                         var message = new StringBuilder();
                         message.append(format(hint.toString()));
 
@@ -824,7 +826,7 @@ class CodeCompletionViewModel
             isTraversed = false;
         }
 
-        log.debug("AI action", () -> {
+        log.trace(TracingSources.CODE_COMPETION, "AI action", () -> {
             var message = new StringBuilder();
             message.append(actionToProcess.toString());
             message.append(" -> ");
@@ -1044,7 +1046,7 @@ class CodeCompletionViewModel
                 commit(session);
             }
 
-            log.debug("Clipboard paste", () -> '[' + event.fText + ']'); //$NON-NLS-1$
+            log.trace(TracingSources.CODE_COMPETION, "Clipboard paste", () -> '[' + event.fText + ']'); //$NON-NLS-1$
             dispatcher.dispatchAsync(() -> askNew());
         }
     }
@@ -1052,7 +1054,7 @@ class CodeCompletionViewModel
     @SuppressWarnings("nls")
     private void methodChanged(CodeMethod prevMethod, CodeMethod newMethod)
     {
-        log.debug("Method was changed",
+        log.trace(TracingSources.CODE_COMPETION, "Method was changed",
             () -> {
                 var message = new StringBuilder();
                 message.append("from: ");

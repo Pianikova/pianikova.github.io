@@ -8,6 +8,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.xtext.builder.IXtextBuilderParticipant;
 
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.google.inject.Inject;
 
 public class BuildTrackingParticipant
@@ -33,7 +34,8 @@ public class BuildTrackingParticipant
             return;
         }
 
-        log.trace("Building", () -> "The building was registered for project " + project.getName());
+        log.trace(TracingSources.COMMON, "Building",
+            () -> "The building was registered for project " + project.getName());
         globalContextTracker.track(project);
     }
 }

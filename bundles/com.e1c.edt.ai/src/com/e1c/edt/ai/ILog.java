@@ -13,7 +13,7 @@ public interface ILog
 
     void warning(String topic, Supplier<String> details);
 
-    void trace(String topic, Supplier<String> details);
+    boolean isTracingEnabled(String tracingSource);
 
-    void debug(String topic, Supplier<String> details);
+    void trace(String tracingSource, String topic, Supplier<String> details);
 }

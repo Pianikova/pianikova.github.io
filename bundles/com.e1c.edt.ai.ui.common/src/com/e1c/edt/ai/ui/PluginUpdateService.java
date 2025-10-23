@@ -27,6 +27,7 @@ import org.osgi.framework.ServiceReference;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.ui.UINotificationService.UINotificationActionType;
 import com.google.inject.Inject;
 
@@ -64,7 +65,7 @@ public class PluginUpdateService
             var profile = profiles.getProfile(IProfileRegistry.SELF);
             if (profile == null)
             {
-                log.trace("Update service is not available", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace(TracingSources.COMMON, "Update service is not available", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
                 return;
             }
 
@@ -74,7 +75,7 @@ public class PluginUpdateService
 
             if (installedResult.isEmpty())
             {
-                log.trace("The plugin is missing from the Installed Software", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace(TracingSources.COMMON, "The plugin is missing from the Installed Software", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
                 return;
             }
 
@@ -86,13 +87,13 @@ public class PluginUpdateService
             var repositoryUri = new URI(settings.getUpdateUrl());
             if (!repositoryManager.contains(repositoryUri))
             {
-                log.trace("Adding content repository...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace(TracingSources.COMMON, "Adding content repository...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
                 repositoryManager.addRepository(repositoryUri);
             }
 
             if (!artifactManager.contains(repositoryUri))
             {
-                log.trace("Adding artifacts repository...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
+                log.trace(TracingSources.COMMON, "Adding artifacts repository...", () -> ""); //$NON-NLS-1$ //$NON-NLS-2$
                 artifactManager.addRepository(repositoryUri);
             }
 
@@ -145,7 +146,7 @@ public class PluginUpdateService
 
             if (resolveStatus.getSeverity() == IStatus.ERROR)
             {
-                log.trace("Failed to resolve dependencies", () -> "");
+                log.trace(TracingSources.COMMON, "Failed to resolve dependencies", () -> "");
                 return;
             }
 
@@ -157,7 +158,7 @@ public class PluginUpdateService
                 {
                     if (event.getResult().isOK())
                     {
-                        log.trace("The update has been installed", () -> "");
+                        log.trace(TracingSources.COMMON, "The update has been installed", () -> "");
                         dispatcher.dispatchAsync(() -> {
                             var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
                             notificationService.createNotificationWithAction(shell, Messages.UpdateInstalled,

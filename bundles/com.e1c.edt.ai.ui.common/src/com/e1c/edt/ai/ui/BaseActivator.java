@@ -3,13 +3,18 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.Hashtable;
 import java.util.function.Supplier;
 
 import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.resource.ImageRegistry;
 import org.eclipse.jface.resource.ResourceLocator;
+import org.eclipse.osgi.service.debug.DebugOptions;
+import org.eclipse.osgi.service.debug.DebugOptionsListener;
+import org.eclipse.osgi.service.debug.DebugTrace;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.Bundle;
@@ -22,7 +27,6 @@ import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.inject.Injector;
 
-import javafx.application.Platform;
 
 /**
  * Данный кла
@@ -34,16 +38,15 @@ import javafx.application.Platform;
  */
 public abstract class BaseActivator
     extends AbstractUIPlugin
-    implements ILog, IVersionProvider
+    implements ILog, IVersionProvider, DebugOptionsListener
 {
-    /**
-    * Путь к картинкам плагина
-    */
+    private static final String TRACE_SOURCE_PREFIX = "com.e1c.edt.ai/"; //$NON-NLS-1$
     private static final String ICONS_PATH = "icons"; //$NON-NLS-1$
     private static BaseActivator plugin;
     private BundleContext bundleContext;
     private Injector injector;
     private ISettings settings;
+    private DebugTrace debugTrace;
 
     /**
      * Получить экземпляр плагина. Через экземпляр плагина можно получать доступ к разнообразным механизмам Eclipse,
@@ -162,50 +165,62 @@ public abstract class BaseActivator
     @Override
     public void warning(String topic, Supplier<String> details)
     {
-        var sb = log(topic, details, Verbosity.WARNING);
-        if (sb != null)
+        var messsage = createMesssage(topic, details, Verbosity.WARNING);
+        if (messsage != null && messsage.length() > 0)
         {
-            log(Status.warning(sb.toString()));
+            log(Status.warning(messsage.toString()));
         }
     }
 
     @Override
-    public void trace(String topic, Supplier<String> details)
+    public void optionsChanged(DebugOptions options)
     {
-        var sb = log(topic, details, Verbosity.TRACE);
-        if (sb != null)
+        debugTrace = options.newDebugTrace(TRACE_SOURCE_PREFIX);
+    }
+
+    @Override
+    public void trace(String tracingSource, String topic, Supplier<String> details)
+    {
+        if (!isTracingEnabled(tracingSource))
         {
-            log(Status.info(sb.toString()));
+            return;
+        }
+
+        var trace = debugTrace;
+        if (trace != null)
+        {
+            var messsage = createMesssage(topic, details, Verbosity.ERROR);
+            if (messsage != null && messsage.length() > 0)
+            {
+                trace.trace(tracingSource, messsage.toString());
+            }
         }
     }
 
     @Override
-    public void debug(String topic, Supplier<String> details)
+    public boolean isTracingEnabled(String tracingSource)
     {
-        var sb = log(topic, details, Verbosity.DEBUG);
-        if (sb != null)
+        if (debugTrace == null)
         {
-            log(Status.info(sb.toString()));
+            return false;
         }
+
+        return Platform.isRunning()
+            && "true".equalsIgnoreCase(Platform.getDebugOption(TRACE_SOURCE_PREFIX + tracingSource)); //$NON-NLS-1$
     }
 
-    private StringBuilder log(String topic, Supplier<String> details, Verbosity verbosity)
+    private StringBuilder createMesssage(String topic, Supplier<String> details, Verbosity verbosity)
     {
         if (settings == null || settings.getVerbosity().getLevel() < verbosity.getLevel())
         {
             return null;
         }
 
-        var sb = new StringBuilder();
-        sb.append(topic);
-        sb.append(System.lineSeparator());
-        sb.append(details.get());
-        if (settings.getVerbosity().getLevel() < Verbosity.TRACE.getLevel() && sb.length() > 10000)
-        {
-            sb.setLength(10000);
-        }
-
-        return sb;
+        var message = new StringBuilder();
+        message.append(topic);
+        message.append(System.lineSeparator());
+        message.append(details.get());
+        return message;
     }
 
     /**
@@ -217,12 +232,12 @@ public abstract class BaseActivator
      */
     private IStatus createErrorStatus(String message, Throwable throwable)
     {
-        return new Status(IStatus.ERROR, getPluginId(), 0, message, throwable);
+        return new Status(IStatus.ERROR, TRACE_SOURCE_PREFIX, 0, message, throwable);
     }
 
     private IStatus createErrorStatus(String message)
     {
-        return new Status(IStatus.ERROR, getPluginId(), 0, message, null);
+        return new Status(IStatus.ERROR, TRACE_SOURCE_PREFIX, 0, message, null);
     }
 
     /**
@@ -236,8 +251,11 @@ public abstract class BaseActivator
     {
         super.start(bundleContext);
         this.bundleContext = bundleContext;
+        var props = new Hashtable<String, String>();
+        props.put(DebugOptions.LISTENER_SYMBOLICNAME, TRACE_SOURCE_PREFIX);
+        bundleContext.registerService(DebugOptionsListener.class, this, props);
         plugin = this;
-        Platform.setImplicitExit(false);
+        javafx.application.Platform.setImplicitExit(false);
         settings = getInjector().getInstance(ISettings.class);
     }
 

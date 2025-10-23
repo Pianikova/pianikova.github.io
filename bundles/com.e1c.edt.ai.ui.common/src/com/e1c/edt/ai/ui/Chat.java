@@ -34,6 +34,7 @@ import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
@@ -295,7 +296,7 @@ public class Chat implements IChat, IChatDialog
                 script.append(javaScript.escape(sessionId.get(), NULL_VALUE));
 
                 final var curTitle = title;
-                log.debug(AI_CHAT, () -> "title: " + curTitle);
+                log.trace(TracingSources.CHAT, AI_CHAT, () -> "title: " + curTitle);
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(curTitle, NULL_VALUE));
 
@@ -315,9 +316,9 @@ public class Chat implements IChat, IChatDialog
                 script.append(')');
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
-                    log.debug(AI_CHAT, () -> "executing script: " + scriptText);
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
                     getEgine().executeScript(scriptText);
-                    log.trace(AI_CHAT, () -> "script executed");
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed");
                 });
             }
             catch (InterruptedException | ExecutionException error)
@@ -399,7 +400,7 @@ public class Chat implements IChat, IChatDialog
             @Override
             public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue)
             {
-                log.debug(AI_CHAT, () -> "is running: " + newValue);
+                log.trace(TracingSources.CHAT, AI_CHAT, () -> "is running: " + newValue);
             }
         });
     }
@@ -457,7 +458,7 @@ public class Chat implements IChat, IChatDialog
     private CompletableFuture<Boolean> initialize(WebEngine webEngine, Runnable loader)
     {
         var worker = webEngine.getLoadWorker();
-        log.trace(AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
         var result = new CompletableFuture<Boolean>();
         var listeners = new ArrayList<ChangeListener<State>>();
         var stateListener = new ChangeListener<State>()
@@ -465,7 +466,7 @@ public class Chat implements IChat, IChatDialog
             @Override
             public void changed(ObservableValue<? extends State> observable, State oldValue, State newValue)
             {
-                log.debug(AI_CHAT, () -> "new state: " + newValue);
+                log.trace(TracingSources.CHAT, AI_CHAT, () -> "new state: " + newValue);
                 switch (newValue)
                 {
                 case SUCCEEDED:
@@ -507,12 +508,14 @@ public class Chat implements IChat, IChatDialog
                     if (window != null)
                     {
                         window.setMember(IDE_API, handler);
-                        log.debug(AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
+                        log.trace(TracingSources.CHAT, AI_CHAT,
+                            () -> "set callback handler " + window.getMember(IDE_API));
                         var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
                             settings.getClientUniqueId(), settings.getLanguage(), settings.getTheme());
-                        log.debug(AI_CHAT, () -> "wink script: " + winkScript);
+                        log.trace(TracingSources.CHAT, AI_CHAT, () -> "wink script: " + winkScript);
                         webEngine.executeScript(winkScript);
-                        log.trace(AI_CHAT, () -> "wink script executed, winked: " + handler.isReady());
+                        log.trace(TracingSources.CHAT, AI_CHAT,
+                            () -> "wink script executed, winked: " + handler.isReady());
                     }
                     else
                     {

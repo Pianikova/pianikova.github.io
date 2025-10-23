@@ -36,6 +36,7 @@ import com.e1c.edt.ai.IProgramingLanguage;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.StatisticsType;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.CursorLocation;
 import com.e1c.edt.ai.assistent.model.GlobalContext;
@@ -190,7 +191,7 @@ class EntityInfo
     {
         try
         {
-            log.trace("EntityInfo fill", () -> aiContext.toString()); //$NON-NLS-1$
+            log.trace(TracingSources.SYNC, "EntityInfo fill", () -> aiContext.toString()); //$NON-NLS-1$
             var curResourceSetProvider =
                 aiContext.getDocument() != null ? activeEditorResourceSetProvider : baseResourceSetProvider;
             return fillInternal(aiContext, localContext, globalContext, curResourceSetProvider, statistics,

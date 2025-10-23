@@ -10,6 +10,7 @@ import org.eclipse.jetty.server.ServerConnector;
 
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -41,7 +42,7 @@ class WebServer
             try
             {
                 server.start();
-                log.trace("start", () -> settings.toString()); //$NON-NLS-1$
+                log.trace(TracingSources.COMMON, "start", () -> settings.toString()); //$NON-NLS-1$
             }
             catch (Exception e)
             {
@@ -57,7 +58,7 @@ class WebServer
         try
         {
             server.stop();
-            log.trace("stop", () -> settings.toString()); //$NON-NLS-1$
+            log.trace(TracingSources.COMMON, "stop", () -> settings.toString()); //$NON-NLS-1$
         }
         catch (Exception e)
         {

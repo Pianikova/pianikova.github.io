@@ -26,6 +26,7 @@ import com._1c.g5.v8.dt.mcore.AbstractMethod;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStatistics;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.context.DTO.Entity;
 import com.e1c.edt.ai.context.DTO.RelatedEntitiesRequest;
 import com.e1c.edt.ai.context.DTO.RelatedEntitiesResponse;
@@ -247,7 +248,7 @@ public class RelatedEntities implements IRelatedEntities
     @SuppressWarnings("nls")
     private void traceEntity(String type, Entity entity, EObject eObject, ICompositeNode node)
     {
-        log.trace(type + ": " + entity, () -> {
+        log.trace(TracingSources.SYNC, type + ": " + entity, () -> {
             var sb = new StringBuilder();
             sb.append("Node type:");
             sb.append(eObject.getClass().getName());
