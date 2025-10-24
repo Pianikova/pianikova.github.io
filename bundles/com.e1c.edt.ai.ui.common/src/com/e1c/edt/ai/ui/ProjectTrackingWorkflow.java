@@ -103,6 +103,11 @@ class ProjectTrackingWorkflow
     @Override
     public Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
+        if (!settings.isEnabled())
+        {
+            return LongDelay;
+        }
+
         if (checkSessionChanged())
         {
             reset();

@@ -214,50 +214,56 @@ public class BaseStatusBarControl
             hintWasShown = false;
         }
 
-        if (!hintWasShown)
+        var token = settings.getClientToken();
+        switch (serviceState)
         {
-            var token = settings.getClientToken();
-            switch (serviceState)
+        case SETTINGS_CHANGED:
+            if (!settings.isEnabled())
             {
-            case SETTINGS_CHANGED:
-                if (!settings.isEnabled())
+                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+                if (!hintWasShown)
                 {
-                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
                     notificationService.createNotification(
                         PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.NotActivated,
                         Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
                         UINotificationType.INFO);
                     hintWasShown = true;
                 }
-                break;
+            }
+            break;
 
-            case TOKEN_FAILED:
-                if (!clientTokenValidator.isValid(token))
-                {
-                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
-                    notificationService.createNotification(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-                        Messages.NotActivated, Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
-                        UINotificationType.INFO);
-                }
-                else
+        case TOKEN_FAILED:
+            if (!clientTokenValidator.isValid(token))
+            {
+                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+                notificationService.createNotification(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
+                    Messages.NotActivated, Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
+                    UINotificationType.INFO);
+            }
+            else
+            {
+                if (!hintWasShown)
                 {
                     notificationService.createNotification(
                         PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
                         Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
                         UINotificationType.ERROR);
+                    hintWasShown = true;
                 }
+            }
 
-                hintWasShown = true;
-                break;
+            break;
 
-            case SSL_ERROR:
+        case SSL_ERROR:
+            if (!hintWasShown)
+            {
                 notificationService.createNotification(
                     PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
                     Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
                     UINotificationType.ERROR);
                 hintWasShown = true;
-                break;
             }
+            break;
         }
 
         policy = settings.getCodeCompletionPolicy();
@@ -289,7 +295,7 @@ public class BaseStatusBarControl
                 break;
 
             default:
-                iconLabel.setImage(BaseActivator.getImage(Images.ONLINE));
+                iconLabel.setImage(BaseActivator.getImage(Images.OFFLINE));
                 break;
             }
         }
