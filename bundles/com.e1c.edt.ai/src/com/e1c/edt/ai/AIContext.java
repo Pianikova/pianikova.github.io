@@ -162,7 +162,15 @@ public class AIContext
         str.append(getFinish());
         str.append(System.lineSeparator());
 
-        var textWithCursor = text.substring(0, textOffset) + "█" + text.substring(textOffset); //$NON-NLS-1$
+        String textWithCursor;
+        if (text.length() > 10000)
+        {
+            textWithCursor = "too big (" + text.length() + " symbols)"; //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        else
+        {
+            textWithCursor = text.substring(0, textOffset) + "█" + text.substring(textOffset); //$NON-NLS-1$
+        }
 
         str.append("text:"); //$NON-NLS-1$
         str.append(format(textWithCursor));
