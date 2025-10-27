@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
@@ -24,6 +26,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.commands.ICommandService;
 
+import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.assistent.model.ClipboardInfo;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -33,12 +36,15 @@ public class ClipboardManager
     implements IClipboardManager, IClipboard, IExecutionListener, Listener
 {
     private static final int MAX_SIZE = 8192;
+    private static final Duration MAX_DURATION = Duration.ofMinutes(2);
     private static final HashSet<String> COPY_COMMAND_IDS = new HashSet<>();
     private static final HashSet<String> PASTE_COMMAND_IDS = new HashSet<>();
     private final IDispatcher dispatcher;
+    private final IClock clock;
     private Optional<String> text = Optional.empty();
     private Optional<IFile> file = Optional.empty();
     private Optional<IFile> currentFile = Optional.empty();
+    private LocalDateTime expirationDate;
     private boolean isPasting;
 
     static
@@ -56,10 +62,12 @@ public class ClipboardManager
     }
 
     @Inject
-    public ClipboardManager(IDispatcher dispatcher)
+    public ClipboardManager(IDispatcher dispatcher, IClock clock)
     {
         Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(clock);
         this.dispatcher = dispatcher;
+        this.clock = clock;
     }
 
     @Override
@@ -77,6 +85,13 @@ public class ClipboardManager
     @Override
     public Optional<ClipboardInfo> getClipboardInfo()
     {
+        var expirationDate = this.expirationDate;
+        if (expirationDate != null && clock.now().isAfter(expirationDate))
+        {
+            return Optional.empty();
+        }
+
+        // copyTime
         var currentText = dispatcher.dispatch(() -> getTextFromClipoard()).flatMap(i -> i).orElse(null);
         var eclipseText = text.orElse(null);
         if (!Objects.equals(currentText, eclipseText))
@@ -122,6 +137,7 @@ public class ClipboardManager
         {
             file = currentFile;
             text = getTextFromClipoard();
+            expirationDate = clock.now().plus(MAX_DURATION);
         }
 
         if (PASTE_COMMAND_IDS.contains(commandId))
