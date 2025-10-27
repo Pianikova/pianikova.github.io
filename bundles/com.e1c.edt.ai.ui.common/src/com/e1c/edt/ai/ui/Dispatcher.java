@@ -195,6 +195,7 @@ class Dispatcher
         Preconditions.checkNotNull(jobName);
         Preconditions.checkNotNull(consumer);
         var resources = new ArrayList<AutoCloseable>();
+        var jobs = new ArrayList<Job>();
         var job = new Job(jobName)
         {
             @Override
@@ -204,7 +205,7 @@ class Dispatcher
                 cancellationTokenSource.attachMonitor(monitor);
                 try
                 {
-                    consumer.accept(new JobContext(monitor, cancellationTokenSource));
+                    consumer.accept(new JobContext(jobs.get(0), monitor, cancellationTokenSource));
                     return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                 }
                 catch (Throwable error)
@@ -231,6 +232,7 @@ class Dispatcher
             }
         };
 
+        jobs.add(job);
         if (cancellationToken != null)
         {
             var attachToken = CancellationTokenSource.attach(cancellationToken, () -> job.cancel());

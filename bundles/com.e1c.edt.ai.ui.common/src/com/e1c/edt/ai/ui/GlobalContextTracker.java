@@ -29,7 +29,6 @@ class GlobalContextTracker
     private final ISettings settings;
     private final Object lockObject = new Object();
     private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
-    private Job job;
 
     @Inject
     public GlobalContextTracker(IDispatcher dispatcher,
@@ -55,8 +54,7 @@ class GlobalContextTracker
 
         synchronized (lockObject)
         {
-            var workflow = projectWorkflows.computeIfAbsent(project, k -> projectTrackingWorkflowProvider.get());
-            workflow.initialize(project);
+            projectWorkflows.computeIfAbsent(project, k -> projectTrackingWorkflowProvider.get()).initialize(project);
         }
     }
 
@@ -80,16 +78,11 @@ class GlobalContextTracker
                     k -> projectTrackingWorkflowProvider.get().initialize(project)))
                 .ifPresent(workflow -> {
                     workflow.track(aiCtx);
-                    if (job != null && job.getState() != Job.NONE)
-                    {
-                        return;
-                    }
-
                     var cancellationToken = CancellationTokens.expiresAt(new CancellationTokenSource(), clock,
                         clock.now().plus(Duration.ofMillis(15000)));
 
-                    job = dispatcher.createJob(Messages.BackgroundJobName,
-                        jobCtx -> track(jobCtx, aiCtx, workflow),
+                    var job = dispatcher.createJob(Messages.BackgroundJobName,
+                        jobCtx -> track(jobCtx, workflow),
                         cancellationToken);
 
                     job.setPriority(Job.DECORATE);
@@ -98,7 +91,7 @@ class GlobalContextTracker
         }
     }
 
-    private void track(JobContext jobCtx, AIContext aiCtx, IProjectTrackingWorkflow workflow)
+    private void track(JobContext jobCtx, IProjectTrackingWorkflow workflow)
     {
         Duration delay = Duration.ofSeconds(5);
         try
@@ -107,16 +100,15 @@ class GlobalContextTracker
         }
         finally
         {
-            if (jobCtx.CancellationTokenSource.isCanceled())
+            synchronized (lockObject)
             {
-                synchronized (lockObject)
+                if (jobCtx.CancellationTokenSource.isCanceled() || !workflow.getProject().exists())
                 {
-                    job = null;
                     return;
                 }
             }
 
-            job.schedule(delay.toMillis());
+            jobCtx.Job.schedule(delay.toMillis());
         }
     }
 }

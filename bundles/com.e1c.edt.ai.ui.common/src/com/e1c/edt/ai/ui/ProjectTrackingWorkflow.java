@@ -95,6 +95,12 @@ class ProjectTrackingWorkflow
     }
 
     @Override
+    public IProject getProject()
+    {
+        return this.project;
+    }
+
+    @Override
     public String getId()
     {
         return projectId.path;
@@ -103,7 +109,7 @@ class ProjectTrackingWorkflow
     @Override
     public Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
-        if (!settings.isEnabled())
+        if (!settings.isEnabled() || !project.exists())
         {
             return LongDelay;
         }
@@ -246,12 +252,17 @@ class ProjectTrackingWorkflow
         var newFilesToHashCountVal = newFilesToHashCount;
         log.trace(TracingSources.SYNC, "Scaned", () -> {
             var message = new StringBuilder();
+            message.append("Project: ");
+            message.append(project.getName());
+
+            message.append(System.lineSeparator());
             message.append("Files: ");
             message.append(files.size());
+
             message.append(System.lineSeparator());
             message.append("New files to hash: ");
             message.append(newFilesToHashCountVal);
-            return files.size() + " files";
+            return message.toString();
         });
 
         if (newFilesToHashCount > 0)
@@ -349,6 +360,10 @@ class ProjectTrackingWorkflow
                     var accessible = isAccessible;
                     log.trace(TracingSources.SYNC, "Sync required", () -> {
                         var message = new StringBuilder();
+                        message.append("Project: ");
+                        message.append(project.getName());
+
+                        message.append(System.lineSeparator());
                         message.append("File: ");
                         message.append(file.path);
 
@@ -390,7 +405,18 @@ class ProjectTrackingWorkflow
         if (hashed > 0)
         {
             var hashedVal = hashed;
-            log.trace(TracingSources.SYNC, "Hashed", () -> hashedVal + " files");
+            log.trace(TracingSources.SYNC, "Hashed", () -> {
+                var message = new StringBuilder();
+                message.append("Project: ");
+                message.append(project.getName());
+
+                message.append(System.lineSeparator());
+                message.append("Hashed: ");
+                message.append(hashedVal);
+                message.append(" files");
+
+                return message.toString();
+            });
         }
 
         if (fileToSyncCount > 0)

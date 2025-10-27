@@ -15,6 +15,8 @@ interface IProjectTrackingWorkflow
 {
     IProjectTrackingWorkflow initialize(IProject project);
 
+    IProject getProject();
+
     String getId();
 
     Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken);
