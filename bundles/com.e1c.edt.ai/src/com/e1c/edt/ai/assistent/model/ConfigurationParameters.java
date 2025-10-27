@@ -36,4 +36,10 @@ public class ConfigurationParameters
      */
     @SerializedName("vendor")
     public String vendor;
+
+    /**
+     * Версия платформы, например 8.3.24.
+     */
+    @SerializedName("compatibility")
+    public String compatibility;
 }

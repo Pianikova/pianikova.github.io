@@ -89,5 +89,10 @@ public class ConfigurationParametersProvider
 
         parameters.vendor = config.getVendor();
         parameters.version = config.getVersion();
+        var compatibilityMode = config.getCompatibilityMode();
+        if (compatibilityMode != null)
+        {
+            parameters.compatibility = compatibilityMode.getLiteral();
+        }
     }
 }
