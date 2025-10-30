@@ -26,6 +26,7 @@ import org.eclipse.swt.widgets.Link;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
+import com.e1c.edt.ai.IClientTokenValidator;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
@@ -37,7 +38,6 @@ import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.ui.AIUICommonModule;
 import com.e1c.edt.ai.ui.BaseActivator;
-import com.e1c.edt.ai.ui.IClientTokenValidator;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 

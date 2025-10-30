@@ -17,6 +17,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.texteditor.AbstractDecoratedTextEditorPreferenceConstants;
 
+import com.e1c.edt.ai.IClientTokenValidator;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.IIdProvider;
 import com.e1c.edt.ai.ILog;

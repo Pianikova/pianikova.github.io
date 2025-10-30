@@ -9,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.e1c.edt.ai.AIModule;
+import com.e1c.edt.ai.IClientTokenValidator;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
@@ -21,7 +22,6 @@ import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.ui.BaseActivator;
-import com.e1c.edt.ai.ui.IClientTokenValidator;
 import com.e1c.edt.ai.ui.ICodeParser;
 import com.e1c.edt.ai.ui.IModuleNameProvider;
 import com.google.common.base.Preconditions;

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.e1c.edt.ai.ui;
+package com.e1c.edt.ai;
 
 public interface IClientTokenValidator
 {

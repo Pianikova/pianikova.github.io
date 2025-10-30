@@ -1,7 +1,7 @@
 /**
  *
  */
-package com.e1c.edt.ai.ui;
+package com.e1c.edt.ai;
 
 public class ClientTokenValidator implements IClientTokenValidator
 {
@@ -21,7 +21,12 @@ public class ClientTokenValidator implements IClientTokenValidator
                 continue;
             }
 
-            if (((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')))
+            if (Character.isLetterOrDigit(c))
+            {
+                continue;
+            }
+
+            if (c == '-' || c == '_')
             {
                 continue;
             }
