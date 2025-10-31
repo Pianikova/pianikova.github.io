@@ -15,7 +15,7 @@ import com.google.common.base.Preconditions;
 
 public class ProjectFile
 {
-    public static final Comparator<ProjectFile> COMPARATOR = new ProjectFileComparator();
+    public static final Comparator<ProjectFile> COMPARATOR = Comparator.comparing(file -> file.updateTime);
     public final String path;
     public final AIContext aiCtx;
     public final IFile file;
@@ -74,15 +74,5 @@ public class ProjectFile
             return false;
         ProjectFile other = (ProjectFile)obj;
         return Objects.equals(path, other.path);
-    }
-
-    private static class ProjectFileComparator
-        implements Comparator<ProjectFile>
-    {
-        @Override
-        public int compare(ProjectFile file1, ProjectFile file2)
-        {
-            return file1.updateTime.compareTo(file2.updateTime);
-        }
     }
 }
