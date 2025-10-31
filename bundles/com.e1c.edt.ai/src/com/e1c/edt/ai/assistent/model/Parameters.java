@@ -12,11 +12,13 @@ import java.util.Optional;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.google.gson.annotations.SerializedName;
 
+// {
 /**
- * Параметры запроса для запроса к модели.
+ * Параметры сессии.
  */
 public class Parameters
 {
+// }
     public Parameters()
     {
         //
@@ -35,6 +37,7 @@ public class Parameters
         }
     }
 
+// {
     /**
      * Максимальная длина префикса (токенов). Например, 2160.
      */
@@ -261,6 +264,7 @@ public class Parameters
      */
     @SerializedName("instance_type")
     public Optional<String> instanceType;
+    // }
 
     public transient boolean fromCache;
 
@@ -503,5 +507,7 @@ public class Parameters
             && Objects.equals(resources, other.resources)
             && Objects.equals(gitDiffContextLines, other.gitDiffContextLines)
             && Objects.equals(instanceType, other.instanceType);
+// {
     }
+// }
 }

@@ -3,8 +3,9 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+// {
 /**
- * Неизвестный ключ при обновлении контекста.
+ * Ключ контекста.
  */
 public class EntityKey
 {
@@ -18,3 +19,4 @@ public class EntityKey
      */
     public String field;
 }
+// }

@@ -3,41 +3,111 @@
    Copyright (C) 2025 1C-Soft LLC
 -->
 <project
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
-  xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <modelVersion>4.0.0</modelVersion>
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+        xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>com.e1c.edt.ai</groupId>
-    <artifactId>bom</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-    <relativePath>./bom/pom.xml</relativePath>
-  </parent>
+    <parent>
+        <groupId>com.e1c.edt.ai</groupId>
+        <artifactId>bom</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>./bom/pom.xml</relativePath>
+    </parent>
 
-  <artifactId>parent</artifactId>
-  <packaging>pom</packaging>
-  <name>Tycho Build</name>
+    <artifactId>parent</artifactId>
+    <packaging>pom</packaging>
+    <name>Tycho Build</name>
 
-  <modules>
-    <module>targets</module>
-    <module>bundles</module>
-    <module>features</module>
-    <module>repositories</module>
-    <module>tests</module>
-  </modules>
+    <modules>
+        <module>targets</module>
+        <module>bundles</module>
+        <module>features</module>
+        <module>repositories</module>
+        <module>tests</module>
+    </modules>
 
-  <build>
-    <pluginManagement>
-      <plugins>
-        <plugin>
-          <groupId>org.eclipse.tycho</groupId>
-          <artifactId>tycho-p2-repository-plugin</artifactId>          
-          <configuration>
-            <repositoryName>${project.name} Repository</repositoryName>
-          </configuration>
-        </plugin>
-      </plugins>
-    </pluginManagement>
-  </build>
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.tycho</groupId>
+                    <artifactId>tycho-p2-repository-plugin</artifactId>
+                    <configuration>
+                        <repositoryName>${project.name} Repository</repositoryName>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.codehaus.gmavenplus</groupId>
+                    <artifactId>gmavenplus-plugin</artifactId>
+                    <version>1.13.1</version>
+                    <executions>
+                        <execution>
+                            <id>generate-readme</id>
+                            <phase>prepare-package</phase>
+                            <goals>
+                                <goal>execute</goal>
+                            </goals>
+                            <configuration>
+                                <scripts>
+                                    <script><![CDATA[
+                                    def template = new File(project.basedir, 'README_TEMPLATE.md')
+                                    def output = new File(project.basedir, 'README.md')
+                                    if (template.exists()) {
+                                        def content = template.getText('UTF-8')
+                                        content = content.replaceAll(/\/\/\/\/!([^\n]+)/) { match ->
+                                            def filePath = match[1].trim()
+                                            def sourceFile = new File(project.basedir, filePath)
+                                            if (sourceFile.exists()) {
+                                                def fileContent = sourceFile.getText('UTF-8')
+
+                                                // Извлекаем все фрагменты между // { и // }
+                                                def fragments = []
+                                                def pattern = ~/(?s)\/\/\s*\{\s*\n(.*?)\/\/\s*\}/
+                                                def matcher = pattern.matcher(fileContent)
+
+                                                while (matcher.find()) {
+                                                    fragments << matcher.group(1).trim()
+                                                }
+
+                                                // Если есть фрагменты, объединяем их
+                                                if (fragments) {
+                                                    return fragments.join('\n\n')
+                                                } else {
+                                                    // Если фрагментов нет, возвращаем всё начиная с "public"
+                                                    def publicIndex = fileContent.indexOf('public')
+                                                    if (publicIndex != -1) {
+                                                        return fileContent.substring(publicIndex)
+                                                    }
+                                                    return fileContent
+                                                }
+                                            } else {
+                                                println "WARNING: File not found: ${filePath}"
+                                                return match[0]
+                                            }
+                                        }
+                                        output.write(content, 'UTF-8')
+                                        println "✓ README.md generated successfully"
+                                    } else {
+                                        println "WARNING: README_TEMPLATE.md not found"
+                                    }
+                                    ]]></script>
+                                </scripts>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.codehaus.groovy</groupId>
+                            <artifactId>groovy-all</artifactId>
+                            <version>3.0.19</version>
+                            <type>pom</type>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+
+            </plugins>
+        </pluginManagement>
+    </build>
 
 </project>

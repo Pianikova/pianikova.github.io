@@ -8,7 +8,7 @@ import java.util.List;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * Описание праметров метода.
+ * Описание параметров метода.
  */
 public class CommentParameters
 {

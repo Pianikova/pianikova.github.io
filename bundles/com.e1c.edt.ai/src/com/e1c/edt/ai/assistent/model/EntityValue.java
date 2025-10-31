@@ -3,8 +3,9 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+// {
 /**
- * Неизвестное значение при обновлении контекста.
+ * Значение контекста.
  */
 public class EntityValue
 {
@@ -23,3 +24,4 @@ public class EntityValue
      */
     public String hash;
 }
+// }

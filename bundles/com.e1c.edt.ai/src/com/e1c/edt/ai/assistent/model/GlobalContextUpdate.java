@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+// {
 /**
  * Обновление глобального контекста.
  */
@@ -24,7 +25,7 @@ public class GlobalContextUpdate
     public String hash;
 
     /**
-     * Значение. Например:
+     * Элемент глобального или локального контекста. Например:
      * {
      *  "РегистрационныеДанныеИндивидуальногоПредпринимателя/0": "MD5:977b0ec2292fe3994c174b2df9581163",
      *  "РегистрационныеДанныеГлавногоБухгалтера/0": "MD5:5d101aaa49f230baf5fe23a5ba42d25e"
@@ -32,3 +33,4 @@ public class GlobalContextUpdate
      */
     public Object value;
 }
+// }

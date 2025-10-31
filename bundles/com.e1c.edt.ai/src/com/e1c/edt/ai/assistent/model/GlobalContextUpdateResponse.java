@@ -7,8 +7,9 @@ import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
+// {
 /**
- * Ответ на запрос обновления глобального контекста.
+ * Ответ на запрос обновления локального и глобального контекста.
  */
 public class GlobalContextUpdateResponse
 {
@@ -23,9 +24,11 @@ public class GlobalContextUpdateResponse
      */
     @SerializedName("unk_keys")
     public List<EntityKey> unknownKeys;
-
+// }
     public boolean isEmpty()
     {
         return unknownValues == null || unknownValues.isEmpty();
     }
+// {
 }
+// }

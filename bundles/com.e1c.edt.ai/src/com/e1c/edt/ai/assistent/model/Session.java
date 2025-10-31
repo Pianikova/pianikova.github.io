@@ -5,6 +5,7 @@ package com.e1c.edt.ai.assistent.model;
 
 import com.google.gson.annotations.SerializedName;
 
+// {
 /**
  * Информация о сессии.
  */
@@ -17,8 +18,9 @@ public class Session
     public String sessionId;
 
     /**
-     * Параметры сервиса.
+     * Параметры пользователя, которые должны быть переопределены.
      */
     @SerializedName("user_parameters")
     public Parameters userParameters;
 }
+// }

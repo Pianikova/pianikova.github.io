@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import com.google.gson.annotations.SerializedName;
 
+// {
 /**
  * Параметры пользователя.
  */
@@ -109,3 +110,4 @@ public class UserParameters
     @SerializedName("configuration_parameters")
     public ConfigurationParameters configurationParameters;
 }
+// }

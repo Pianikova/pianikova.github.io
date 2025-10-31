@@ -1,0 +1,1 @@
+mvn org.codehaus.gmavenplus:gmavenplus-plugin:1.13.1:execute@generate-readme -N

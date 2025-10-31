@@ -36,7 +36,7 @@ public class ClipboardManager
     implements IClipboardManager, IClipboard, IExecutionListener, Listener
 {
     private static final int MAX_SIZE = 8192;
-    private static final Duration MAX_DURATION = Duration.ofMinutes(2);
+    private static final Duration MAX_DURATION = Duration.ofMinutes(15);
     private static final HashSet<String> COPY_COMMAND_IDS = new HashSet<>();
     private static final HashSet<String> PASTE_COMMAND_IDS = new HashSet<>();
     private final IDispatcher dispatcher;

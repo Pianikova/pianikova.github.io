@@ -8,6 +8,9 @@ import java.util.Objects;
 
 import com.google.gson.annotations.SerializedName;
 
+/**
+ * Тип данных.
+ */
 public class DataType
 {
     /**

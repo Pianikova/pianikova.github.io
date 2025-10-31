@@ -8,7 +8,7 @@ import java.util.List;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * Комментарий секции "возвращаемое значение".
+ * Комментарий к возвращаемому значению функции.
  */
 public class CommentReturn
 {

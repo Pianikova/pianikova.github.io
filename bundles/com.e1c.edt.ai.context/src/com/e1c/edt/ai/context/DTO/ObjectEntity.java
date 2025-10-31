@@ -6,7 +6,7 @@ package com.e1c.edt.ai.context.DTO;
 import java.util.List;
 
 /**
- * Оъбект ИИ контеста.
+ * Объект контекста.
  */
 public class ObjectEntity
 {

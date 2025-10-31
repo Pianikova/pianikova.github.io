@@ -6,7 +6,7 @@ package com.e1c.edt.ai.context.DTO;
 import java.util.List;
 
 /**
- * Комментарии параметра.
+ * Комментарии к параметру метода.
  */
 public class CommentParameter
 {

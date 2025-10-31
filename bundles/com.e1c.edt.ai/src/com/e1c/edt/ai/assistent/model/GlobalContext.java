@@ -7,33 +7,49 @@ import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 
+// {
+/**
+ * Элемент глобального или локального контекста.
+ *
+ * @author Dmitriy Marmyshev
+ */
 public class GlobalContext
 {
-    // hash
+    /**
+     * Хэш формы.
+     */
     @SerializedName("form")
     public String formHash;
 
-    public transient String formPath;
-
-    // hash
+    /**
+     * Хэш метаданных.
+     */
     @SerializedName("meta")
     public String metaHash;
 
-    public transient String metaPath;
-
-    // hash
+    /**
+     * Хэш модуля.
+     */
     @SerializedName("module")
     public String moduleHash;
 
-    public transient String modulePath;
-
-    // hashes
+    /**
+     * Словарь локальных методов модуля. Имя метода - хэш метода.
+     */
     @SerializedName("local_functions")
     public Map<String, String> localFunctions;
+    // }
+    public transient String formPath;
+
+    public transient String metaPath;
+
+    public transient String modulePath;
 
     public transient Map<String, HashedValue<Object>> localFunctionsEntities;
 
     public transient Object formEntity;
 
     public transient Object metaEntity;
+// {
 }
+// }

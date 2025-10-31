@@ -5,6 +5,7 @@ package com.e1c.edt.ai.assistent.model;
 
 import com.google.gson.annotations.SerializedName;
 
+// {
 /**
  * Информация о системе пользователя.
  */
@@ -45,3 +46,4 @@ public class SystemInfo
     @SerializedName("total_physical_memory_size")
     public Long totalPhysicalMemorySize;
 }
+// }

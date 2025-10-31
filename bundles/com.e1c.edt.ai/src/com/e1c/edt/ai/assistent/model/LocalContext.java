@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
+// {
 /**
  * Оперативный контекст.
  */
@@ -38,8 +39,8 @@ public class LocalContext
     public boolean forced;
 
     /**
-     * Содержимое буфера обмена, которые попали туда из EDT.
-     * Передается, когда user_parameters.send_context == true.
+     * Содержимое буфера обмена, которое попало туда из среды разработки.
+     * Время жизни буфера обмена ограничено 15 минутами.
      */
     public ClipboardInfo clipboard;
 
@@ -81,7 +82,7 @@ public class LocalContext
 
     /**
      * Cписок связанных с кодом (prefix + suffix) объектов.
-     * Передается, когда user_parameters.send_context == true.
+     * Передается, когда user_parameters.extended_context == true.
      * Например, ["SERVER", "MOBILE_SERVER", "MOBILE_AUTONOMOUS_SERVER", "EXTERNAL_CONN", "CLIENT"],
      */
     @SerializedName("cursor_environments")
@@ -89,7 +90,7 @@ public class LocalContext
 
     /**
      * Список объектов, связанных с кодом (prefix + suffix).
-     * Передается, когда user_parameters.send_context == true.
+     * Передается, когда user_parameters.extended_context == true.
      * Например, ["Справочник.Организации", "Справочник.Организации.СведенияОбОрганизации", "Справочник.Организации.СведенияОбОрганизации.СведенияОбОрганизации"].
      */
     @SerializedName("related_objects")
@@ -97,15 +98,17 @@ public class LocalContext
 
     /**
      * Список связанных с кодом (prefix + suffix) вызовов методов.
-     * Передается, когда user_parameters.send_context == true.
+     * Передается, когда user_parameters.extended_context == true.
      */
     @SerializedName("related_functions")
     public List<Object> relatedFunctions;
 
     /**
      * Список предложений от контекстного ассистента, которые могут быть вставлены в код.
-     * Передается, когда user_parameters.send_context == true.
+     * Передается, когда user_parameters.extended_context == true.
      */
     @SerializedName("proposals")
     public List<Proposal> proposals;
 }
+
+// }

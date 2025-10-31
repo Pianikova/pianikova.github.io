@@ -11,13 +11,13 @@ import com.google.gson.annotations.SerializedName;
 public class Proposal
 {
     /**
-     * Тот к контекстный ассистент отобразил это предложение.
+     * Тот как контекстный ассистент отобразил это предложение.
      */
     @SerializedName("display_string")
     public String displayString;
 
     /**
-     * Приоритет предложения dв списке контекстного ассистента.
+     * Приоритет предложения в списке контекстного ассистента.
      */
     public int priority;
 

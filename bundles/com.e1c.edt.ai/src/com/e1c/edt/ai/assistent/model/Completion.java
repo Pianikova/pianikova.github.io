@@ -8,19 +8,21 @@ import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
+// {
 /**
  * Ответ на запрос продолжения кода.
  */
 public class Completion
 {
     /**
-     * Текст ответа.
+     * Текст ответа. Содержиь часть ответа от LLM.
+     * Для получения полного ответа необходимо склеить значения из всех пакетов.
      */
     @SerializedName("text")
     public String text;
 
     /**
-     * Причина окончания.
+     * Причина окончания. Содержит значение только в последнем пакете.
      */
     @SerializedName("finish_reason")
     public String finishReason;
@@ -32,7 +34,7 @@ public class Completion
     public String uuid;
 
     /**
-     * Неизвестные значения глобалного контекста.
+     * Неизвестные значения глобального контекста.
      */
     @SerializedName("unk_vals")
     public List<EntityValue> unknownValues;
@@ -48,9 +50,11 @@ public class Completion
      */
     @SerializedName("used_keys")
     public List<EntityKey> usedKeys;
-
+// }
     /**
      * Время начала запроса.
      */
     public transient LocalDateTime startTime;
+// {
 }
+// }
