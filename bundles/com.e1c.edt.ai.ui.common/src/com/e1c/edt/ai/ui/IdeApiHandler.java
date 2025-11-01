@@ -6,11 +6,16 @@ package com.e1c.edt.ai.ui;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
 
+import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITextPreprocessor;
+import com.e1c.edt.ai.assistent.model.McpToolCalls;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class IdeApiHandler
 {
@@ -18,17 +23,27 @@ public class IdeApiHandler
     private final ILog log;
     private final IUI ui;
     private final ITextPreprocessor textPreprocessor;
+    private final Provider<IChat> chatProvider;
+    private final IJson json;
+    private final IMcpTools mcpTools;
     private boolean isReady;
 
     @Inject
-    public IdeApiHandler(ILog log, IUI ui, ITextPreprocessor textPreprocessor)
+    public IdeApiHandler(ILog log, IUI ui, ITextPreprocessor textPreprocessor, Provider<IChat> chatProvider, IJson json,
+        IMcpTools mcpTools)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(textPreprocessor);
+        Preconditions.checkNotNull(chatProvider);
+        Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(mcpTools);
         this.log = log;
         this.ui = ui;
         this.textPreprocessor = textPreprocessor;
+        this.chatProvider = chatProvider;
+        this.json = json;
+        this.mcpTools = mcpTools;
     }
 
     public void wink(String parameter)
@@ -71,6 +86,29 @@ public class IdeApiHandler
             }
 
             content.replaceTextRange(textWidget.getCaretOffset(), 0, processedCode);
+        });
+    }
+
+    public void callTools(String chatId, String messageId, String callToolsJson)
+    {
+        var callToolsOptional = json.deserialize(callToolsJson, McpToolCalls.class);
+        if (callToolsOptional.isEmpty())
+        {
+            log.logError("Cannot deserialize calls: " + callToolsJson); //$NON-NLS-1$
+            return;
+        }
+
+        var calls = callToolsOptional.get();
+        mcpTools.callTools(calls, CancellationTokens.NONE).whenComplete((result, error) -> {
+            if (error != null)
+            {
+                log.logError(error);
+                return;
+            }
+
+
+            var chat = chatProvider.get();
+            chat.addToolsResult(chatId, messageId, result);
         });
     }
 
