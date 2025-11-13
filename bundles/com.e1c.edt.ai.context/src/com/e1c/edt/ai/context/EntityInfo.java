@@ -408,8 +408,10 @@ class EntityInfo
                 }
             }
 
-            entityFactory.getEnvironments(cursorObject).ifPresent(areas -> localContext.cursorEnvironments = areas);
-            entityFactory.getAreas(cursorObject).ifPresent(areas -> localContext.cursorAreas = areas);
+            entityFactory.getEnvironments(cursorObject, cancellationToken)
+                .ifPresent(areas -> localContext.cursorEnvironments = areas);
+            entityFactory.getAreas(cursorObject, cancellationToken)
+                .ifPresent(areas -> localContext.cursorAreas = areas);
         }
 
         globalContext.metaEntity = null;

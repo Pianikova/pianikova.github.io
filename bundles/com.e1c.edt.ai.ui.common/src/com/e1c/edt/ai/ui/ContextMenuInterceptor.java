@@ -27,7 +27,8 @@ import com.e1c.edt.ai.IVisualContextProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ContextMenuInterceptor implements IContextMenuInterceptor
+public class ContextMenuInterceptor
+    implements IInitializable
 {
     private final IDispatcher dispatcher;
     private final IVisualContextProvider visualContextProviewr;

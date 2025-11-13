@@ -14,7 +14,7 @@ import com.google.common.base.Suppliers;
 import com.google.inject.Inject;
 
 public class DialogsEnhancer
-    implements IDialogsInjector, IPartListener2
+    implements IInitializable, IPartListener2
 {
     private final IDispatcher dispatcher;
     private final ArrayList<IViewEnhancer> viewEnhancers = new ArrayList<>();

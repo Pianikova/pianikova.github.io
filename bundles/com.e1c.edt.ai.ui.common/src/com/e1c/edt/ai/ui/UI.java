@@ -26,7 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 class UI
-    implements IUIInitializer, IUI, Listener
+    implements IInitializable, IUI, Listener
 {
     private final ILog log;
     private final ICodeCompletionViewModel<CodeCompletionContext> codeCompletionViewModel;

@@ -39,7 +39,7 @@ interface IEntityFactory
 
     MetaEntity createMetaEntity(IBmObject bmObject, ICancellationToken cancellationToken);
 
-    Optional<List<String>> getEnvironments(EObject obj);
+    Optional<List<String>> getEnvironments(EObject obj, ICancellationToken cancellationToken);
 
-    Optional<List<String>> getAreas(EObject obj);
+    Optional<List<String>> getAreas(EObject obj, ICancellationToken cancellationToken);
 }

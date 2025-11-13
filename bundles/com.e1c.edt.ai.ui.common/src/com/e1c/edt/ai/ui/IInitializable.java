@@ -3,7 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
-interface IUIInitializer
+public interface IInitializable
 {
     void initialize();
 }

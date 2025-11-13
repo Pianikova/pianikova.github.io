@@ -33,7 +33,7 @@ import com.google.inject.Inject;
 
 @SuppressWarnings("nls")
 public class ClipboardManager
-    implements IClipboardManager, IClipboard, IExecutionListener, Listener
+    implements IInitializable, IClipboard, IExecutionListener, Listener
 {
     private static final int MAX_SIZE = 8192;
     private static final Duration MAX_DURATION = Duration.ofMinutes(15);

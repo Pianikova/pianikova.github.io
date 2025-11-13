@@ -613,7 +613,7 @@ class EntityFactory
             {
                 var method = (Method)methodAccessFeature;
                 var methodNode = NodeModelUtils.getNode(methodAccessFeature);
-                fillMethod(methodEntity, method, detailed, methodNode, node);
+                fillMethod(methodEntity, method, detailed, methodNode, node, cancellationToken);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
                 hasSignatureStructurized = true;
@@ -637,7 +637,7 @@ class EntityFactory
                     }
                 }
 
-                getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
+                getAreas(method, cancellationToken).ifPresent(areas -> methodEntity.areas = areas);
                 var returnTypes = v8Model.getTypesComputer().compute(invocation, v8Model.getEnvironments(invocation));
                 signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
                 hasSignatureStructurized = true;
@@ -690,7 +690,7 @@ class EntityFactory
         signatureStructurized.preprocess = new ArrayList<>();
         signatureStructurized.parameters = new ArrayList<>();
         signatureStructurized.attributes = new ArrayList<>();
-        fillMethod(methodEntity, method, detailed, node, node);
+        fillMethod(methodEntity, method, detailed, node, node, cancellationToken);
         var returnTypes = v8Model.getTypesComputer().compute(method, v8Model.getEnvironments(method));
         signatureStructurized.returnTypes = createDataTypesFromTypeItemsSafety(returnTypes, true);
         return Optional.of(methodEntity);
@@ -1901,7 +1901,7 @@ class EntityFactory
     }
 
     private void fillMethod(MethodEntity methodEntity, Method method, boolean detailed, ICompositeNode methodNode,
-        ICompositeNode node)
+        ICompositeNode node, ICancellationToken cancellationToken)
     {
         methodEntity.name = method.getName();
         if (detailed)
@@ -1979,14 +1979,14 @@ class EntityFactory
             methodEntity.signatureStructurized.preprocess.add(pragma.getSymbol());
         }
 
-        getEnvironments(method).ifPresent(areas -> methodEntity.environments = areas);
-        getAreas(method).ifPresent(areas -> methodEntity.areas = areas);
+        getEnvironments(method, cancellationToken).ifPresent(areas -> methodEntity.environments = areas);
+        getAreas(method, cancellationToken).ifPresent(areas -> methodEntity.areas = areas);
         methodEntity.comment = v8Model.getComment(method);
         methodEntity.structurizedComment = commentFactory.create(v8Model.getComment(method, true));
     }
 
     @Override
-    public Optional<List<String>> getEnvironments(EObject obj)
+    public Optional<List<String>> getEnvironments(EObject obj, ICancellationToken cancellationToken)
     {
         var environments = v8Model.getEnvironments(obj).toArray();
         if (environments.length == 0)
@@ -1997,6 +1997,11 @@ class EntityFactory
         var result = new ArrayList<String>();
         for (var environment : environments)
         {
+            if (cancellationToken.isCanceled())
+            {
+                return Optional.empty();
+            }
+
             result.add(environment.name());
         }
 
@@ -2004,7 +2009,7 @@ class EntityFactory
     }
 
     @Override
-    public Optional<List<String>> getAreas(EObject obj)
+    public Optional<List<String>> getAreas(EObject obj, ICancellationToken cancellationToken)
     {
         EObject object = obj;
         var areas = new ArrayList<String>();
@@ -2047,9 +2052,9 @@ class EntityFactory
                 break;
             }
         }
-        while (object != null);
+        while (object != null && !cancellationToken.isCanceled());
 
-        if (areas.size() == 0)
+        if (cancellationToken.isCanceled() || areas.size() == 0)
         {
             return Optional.empty();
         }

@@ -3,9 +3,10 @@
  */
 package com.e1c.edt.ai.ui;
 
-import com.e1c.edt.ai.CancellationTokenSource;
 import org.eclipse.core.runtime.IProgressMonitor;
 
+import com.e1c.edt.ai.CancellationTokenSource;
+import com.e1c.edt.ai.CancellationTokens;
 import com.google.common.base.Preconditions;
 
 class JobCancellationTokenSource
@@ -28,7 +29,7 @@ class JobCancellationTokenSource
     {
         synchronized (lock)
         {
-            return (monitor != null && monitor.isCanceled()) || super.isCanceled();
+            return CancellationTokens.isStopped || (monitor != null && monitor.isCanceled()) || super.isCanceled();
         }
     }
 

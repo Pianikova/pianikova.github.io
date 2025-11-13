@@ -9,12 +9,14 @@ import com.google.common.base.Preconditions;
 
 public class CancellationTokens
 {
+    public static boolean isStopped = false;
+
     public final static ICancellationToken NONE = new ICancellationToken()
     {
         @Override
         public Boolean isCanceled()
         {
-            return false;
+            return isStopped;
         }
     };
 
@@ -45,7 +47,7 @@ public class CancellationTokens
         @Override
         public Boolean isCanceled()
         {
-            return cancellationToken.isCanceled() || clock.now().isAfter(expirationDate);
+            return isStopped || cancellationToken.isCanceled() || clock.now().isAfter(expirationDate);
         }
     }
 }

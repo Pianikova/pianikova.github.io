@@ -21,6 +21,7 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 
+import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVersionProvider;
@@ -268,6 +269,7 @@ public abstract class BaseActivator
     @Override
     public void stop(BundleContext bundleContext) throws Exception
     {
+        CancellationTokens.isStopped = true;
         var globalContextTracker = getInjector().getInstance(IGlobalContextTracker.class);
         if (globalContextTracker instanceof AutoCloseable)
         {
@@ -318,8 +320,6 @@ public abstract class BaseActivator
             }
         }
 
-        injector.getInstance(IResourceListener.class).initialize();
-        injector.getInstance(IContextMenuInterceptor.class).initialize();
         return injector;
     }
 

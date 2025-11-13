@@ -72,6 +72,11 @@ class GlobalContextService
 
         for (var updatePart : Collections.split(updates, getPartitionSize(updates, partitionSize)))
         {
+            if (cancellationToken.isCanceled())
+            {
+                break;
+            }
+
             feature = feature.thenCompose(
                 results -> update(results, projectId, updatePart, statistics, cancellationToken));
         }

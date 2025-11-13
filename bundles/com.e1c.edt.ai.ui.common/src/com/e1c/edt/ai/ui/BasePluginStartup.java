@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -29,15 +30,11 @@ public class BasePluginStartup
     implements IStartup
 {
     @Inject
-    IUIInitializer ui;
+    Set<IInitializable> initializables;
     @Inject
     IStateService accessHolder;
     @Inject
     ILog log;
-    @Inject
-    IClipboardManager clipboardManager;
-    @Inject
-    IDialogsInjector commitDialogInjector;
     @Inject
     IPluginUpdateService pluginUpdateService;
     @Inject
@@ -74,8 +71,9 @@ public class BasePluginStartup
     public void earlyStartup()
     {
         accessHolder.startMonitoring(30000, 3000);
-        clipboardManager.initialize();
-        commitDialogInjector.initialize();
-        ui.initialize();
+        for (var initializable : initializables)
+        {
+            initializable.initialize();
+        }
     }
 }

@@ -21,6 +21,7 @@ import com.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.Multibinder;
 
 public class AIUICommonModule
     extends AbstractModule
@@ -33,13 +34,20 @@ public class AIUICommonModule
     {
         // @formatter:off
         install(new AIModule());
+
+        // inirializable
+        var initializableBinder = Multibinder.newSetBinder(binder(), IInitializable.class);
+        initializableBinder.addBinding().to(UI.class);
+        initializableBinder.addBinding().to(ContextMenuInterceptor.class);
+        initializableBinder.addBinding().to(ClipboardManager.class);
+        initializableBinder.addBinding().to(DialogsEnhancer.class);
+        initializableBinder.addBinding().to(ResourceListener.class);
+
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);
         bind(UI.class).in(Singleton.class);
         bind(IUI.class).to(UI.class);
-        bind(IUIInitializer.class).to(UI.class);
         bind(ClipboardManager.class).in(Singleton.class);
-        bind(IClipboardManager.class).to(ClipboardManager.class);
         bind(IClipboard.class).to(ClipboardManager.class);
         bind(IdeApiHandler.class).in(Singleton.class);
         bind(Chat.class).in(Singleton.class);
@@ -85,11 +93,8 @@ public class AIUICommonModule
         bind(IGitActions.class).to(GitActions.class).in(Singleton.class);
         bind(IStagingViewEnhancer.class).to(StagingViewEnhancer.class).in(Singleton.class);
         bind(IResourceProvider.class).to(ResourceProvider.class).in(Singleton.class);
-        bind(IDialogsInjector.class).to(DialogsEnhancer.class).in(Singleton.class);
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
-        bind(IResourceListener.class).to(ResourceListener.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
-        bind(IContextMenuInterceptor.class).to(ContextMenuInterceptor.class).in(Singleton.class);
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
         // @formatter:on
     }

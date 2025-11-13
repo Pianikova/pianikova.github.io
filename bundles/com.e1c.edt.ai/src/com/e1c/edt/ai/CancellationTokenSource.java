@@ -22,7 +22,7 @@ public class CancellationTokenSource
     {
         synchronized (lock)
         {
-            return cancelled;
+            return cancelled || CancellationTokens.isStopped;
         }
     }
 
