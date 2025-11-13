@@ -1932,6 +1932,7 @@ class EntityFactory
         }
 
         var signatureParts = codePartsProvider.getParts(methodNode)
+            .filter(i -> !cancellationToken.isCanceled())
             .filter(i -> i.getLocation() == CursorLocation.FunctionName
                 || i.getLocation() == CursorLocation.FunctionArguments)
             .map(i -> i.getText())

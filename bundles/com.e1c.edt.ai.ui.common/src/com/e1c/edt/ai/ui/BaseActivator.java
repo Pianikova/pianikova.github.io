@@ -16,6 +16,7 @@ import org.eclipse.osgi.service.debug.DebugOptions;
 import org.eclipse.osgi.service.debug.DebugOptionsListener;
 import org.eclipse.osgi.service.debug.DebugTrace;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -258,6 +259,9 @@ public abstract class BaseActivator
         plugin = this;
         javafx.application.Platform.setImplicitExit(false);
         settings = getInjector().getInstance(ISettings.class);
+        Display.getDefault().disposeExec(() -> {
+            CancellationTokens.isStopped = true;
+        });
     }
 
     /**
@@ -269,7 +273,6 @@ public abstract class BaseActivator
     @Override
     public void stop(BundleContext bundleContext) throws Exception
     {
-        CancellationTokens.isStopped = true;
         var globalContextTracker = getInjector().getInstance(IGlobalContextTracker.class);
         if (globalContextTracker instanceof AutoCloseable)
         {
