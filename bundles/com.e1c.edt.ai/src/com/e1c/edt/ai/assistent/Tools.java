@@ -160,13 +160,13 @@ public class Tools
             .thenApply(HttpResponse::body)
             .thenAccept(stream -> processStream(stream, observer, cancellationToken))
             .whenComplete((r, error) -> {
-                if (error != null)
+                if (error == null)
                 {
-                    observer.onError(error);
+                    observer.onCompleted();
                 }
                 else
                 {
-                    observer.onCompleted();
+                    observer.onError(error);
                 }
             });
     }
@@ -201,14 +201,12 @@ public class Tools
             var data = json.deserialize(sb.toString(), ToolInvokeResponsetreamData.class);
             if (data.isEmpty())
             {
-                observer.onCompleted();
                 return false;
             }
 
             var response = data.get().data;
             if (response == null)
             {
-                observer.onCompleted();
                 return false;
             }
 
@@ -223,7 +221,6 @@ public class Tools
                 return true;
             }
 
-            observer.onCompleted();
             return false;
         }
         catch (Exception error)

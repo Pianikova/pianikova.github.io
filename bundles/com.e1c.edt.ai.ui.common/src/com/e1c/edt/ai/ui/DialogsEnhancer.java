@@ -3,7 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.util.ArrayList;
+import java.util.Set;
 
 import org.eclipse.ui.IPartListener2;
 import org.eclipse.ui.IWorkbenchPartReference;
@@ -17,15 +17,15 @@ public class DialogsEnhancer
     implements IInitializable, IPartListener2
 {
     private final IDispatcher dispatcher;
-    private final ArrayList<IViewEnhancer> viewEnhancers = new ArrayList<>();
+    private final Set<IViewEnhancer> viewEnhancers;
 
     @Inject
-    public DialogsEnhancer(IDispatcher dispatcher, IStagingViewEnhancer stagingViewEnhancer)
+    public DialogsEnhancer(IDispatcher dispatcher, Set<IViewEnhancer> viewEnhancers)
     {
         Preconditions.checkNotNull(dispatcher);
-        Preconditions.checkNotNull(stagingViewEnhancer);
+        Preconditions.checkNotNull(viewEnhancers);
+        this.viewEnhancers = viewEnhancers;
         this.dispatcher = dispatcher;
-        viewEnhancers.add(stagingViewEnhancer);
     }
 
     @Override

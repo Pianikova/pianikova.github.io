@@ -42,7 +42,7 @@ import com.google.inject.Inject;
 
 @SuppressWarnings("restriction")
 public class StagingViewEnhancer
-    implements IStagingViewEnhancer
+    implements IViewEnhancer
 {
     private final Optional<String> viewId = Optional.of("org.eclipse.egit.ui.StagingView"); //$NON-NLS-1$
     private final IDispatcher dispatcher;

@@ -180,14 +180,11 @@ public class ContextMenuInterceptor
 
         text.getControl().addMouseListener(new MouseListener()
         {
-            private boolean isFirstClick = true;
-
             @Override
             public void mouseDoubleClick(MouseEvent e)
             {
                 if (e.button == 2)
                 {
-                    isFirstClick = false;
                     handle();
                 }
             }
@@ -195,11 +192,7 @@ public class ContextMenuInterceptor
             @Override
             public void mouseDown(MouseEvent e)
             {
-                if (isFirstClick && e.button == 2)
-                {
-                    isFirstClick = false;
-                    handle();
-                }
+                //
             }
 
             @Override

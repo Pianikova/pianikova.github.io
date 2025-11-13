@@ -35,13 +35,17 @@ public class AIUICommonModule
         // @formatter:off
         install(new AIModule());
 
-        // inirializable
+        // inirializables
         var initializableBinder = Multibinder.newSetBinder(binder(), IInitializable.class);
         initializableBinder.addBinding().to(UI.class);
         initializableBinder.addBinding().to(ContextMenuInterceptor.class);
         initializableBinder.addBinding().to(ClipboardManager.class);
         initializableBinder.addBinding().to(DialogsEnhancer.class);
         initializableBinder.addBinding().to(ResourceListener.class);
+
+        // view enhancers
+        var viewEnhancerBinder = Multibinder.newSetBinder(binder(), IViewEnhancer.class);
+        viewEnhancerBinder.addBinding().to(StagingViewEnhancer.class);
 
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);
@@ -91,7 +95,6 @@ public class AIUICommonModule
         bind(IWidgets.class).to(Widgets.class).in(Singleton.class);
         bind(IGitTools.class).to(GitTools.class).in(Singleton.class);
         bind(IGitActions.class).to(GitActions.class).in(Singleton.class);
-        bind(IStagingViewEnhancer.class).to(StagingViewEnhancer.class).in(Singleton.class);
         bind(IResourceProvider.class).to(ResourceProvider.class).in(Singleton.class);
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
