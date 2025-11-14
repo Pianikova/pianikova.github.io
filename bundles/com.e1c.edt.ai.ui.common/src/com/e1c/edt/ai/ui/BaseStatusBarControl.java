@@ -201,7 +201,7 @@ public class BaseStatusBarControl
     @Override
     public void onStateChange(AIState state)
     {
-        dispatcher.dispatchAsync(() -> changeState(state));
+        dispatcher.dispatch(() -> changeState(state));
     }
 
     @SuppressWarnings("incomplete-switch")
