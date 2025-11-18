@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.Hashtable;
+import java.util.concurrent.CompletionException;
 import java.util.function.Supplier;
 
 import org.eclipse.core.runtime.IStatus;
@@ -26,6 +27,7 @@ import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.assistent.AIClientException;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.inject.Injector;
 
@@ -144,6 +146,18 @@ public abstract class BaseActivator
     {
         if (throwable != null)
         {
+            if (throwable instanceof CompletionException)
+            {
+                var completionException = (CompletionException)throwable;
+                throwable = completionException.getCause();
+            }
+
+            if (throwable instanceof AIClientException)
+            {
+                log(Status.info(throwable.getMessage()));
+                return;
+            }
+
             log(createErrorStatus(throwable.getMessage(), throwable));
         }
     }

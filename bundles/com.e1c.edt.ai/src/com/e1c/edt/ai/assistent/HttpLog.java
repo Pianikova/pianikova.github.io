@@ -107,8 +107,8 @@ class HttpLog
         }
         else
         {
-            log.logError(createHeader("AI response", response.uri(), ref) + System.lineSeparator()
-                + createTrace(response, stopwatch, statusCode));
+            log.logError(new AIClientException(createHeader("AI response", response.uri(), ref) + System.lineSeparator()
+                + createTrace(response, stopwatch, statusCode), null));
 
             if (handleError)
             {
