@@ -15,7 +15,8 @@ import com.google.common.base.Preconditions;
 
 public class ProjectFile
 {
-    public static final Comparator<ProjectFile> COMPARATOR = Comparator.comparing(file -> file.updateTime);
+    public static final Comparator<ProjectFile> COMPARATOR =
+        Comparator.comparing(file -> file.updateTime != null ? file.updateTime : LocalDateTime.MIN);
     public final String path;
     public final AIContext aiCtx;
     public final IFile file;
