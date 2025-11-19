@@ -75,7 +75,7 @@ public class LocalContext
     public String currenMethodName;
 
     /**
-     * Cписок сред (приложений), которые могут выполнять код под курсором. Например, ["ПрограммныйИнтерфейс", "ОрганизацииСервер"].
+     * Cписок вложенных областей для курсора. Например, "ПрограммныйИнтерфейс".
      */
     @SerializedName("cursor_areas")
     public List<String> cursorAreas;
@@ -94,14 +94,14 @@ public class LocalContext
      * Например, ["Справочник.Организации", "Справочник.Организации.СведенияОбОрганизации", "Справочник.Организации.СведенияОбОрганизации.СведенияОбОрганизации"].
      */
     @SerializedName("related_objects")
-    public List<Object> relatedObjects;
+    public List<IContextEntity> relatedObjects;
 
     /**
      * Список связанных с кодом (prefix + suffix) вызовов методов.
      * Передается, когда user_parameters.extended_context == true.
      */
     @SerializedName("related_functions")
-    public List<Object> relatedFunctions;
+    public List<IContextEntity> relatedFunctions;
 
     /**
      * Список предложений от контекстного ассистента, которые могут быть вставлены в код.

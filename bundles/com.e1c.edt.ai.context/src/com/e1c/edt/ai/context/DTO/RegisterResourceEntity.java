@@ -8,6 +8,9 @@ import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 
+/*
+ * Ресурс регистра.
+ */
 public class RegisterResourceEntity
     extends ChildEntity
 {

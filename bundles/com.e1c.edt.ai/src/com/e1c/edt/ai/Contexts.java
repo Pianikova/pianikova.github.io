@@ -4,11 +4,14 @@
 package com.e1c.edt.ai;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 
 import com.e1c.edt.ai.assistent.model.GlobalContext;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
+import com.e1c.edt.ai.assistent.model.IContextEntity;
 import com.e1c.edt.ai.assistent.model.LocalContext;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -130,7 +133,8 @@ class Contexts
                 request.path = globalContext.modulePath;
                 request.field = Fields.LOCAL_FUNCTIONS;
                 request.hash = globalContext.moduleHash;
-                request.value = globalContext.localFunctions;
+                request.value =
+                    globalContext.localFunctions != null ? new ContextEntityMap(globalContext.localFunctions) : null;
                 result.add(request);
             }
 
@@ -206,5 +210,15 @@ class Contexts
         }
 
         return getUpdates(globalContext, statistics, cancellationToken);
+    }
+
+    private class ContextEntityMap
+        extends HashMap<String, String>
+        implements IContextEntity
+    {
+        public ContextEntityMap(Map<? extends String, ? extends String> map)
+        {
+            super(map);
+        }
     }
 }

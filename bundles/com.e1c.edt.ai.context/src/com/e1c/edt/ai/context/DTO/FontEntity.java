@@ -3,7 +3,10 @@
  */
 package com.e1c.edt.ai.context.DTO;
 
+import com.e1c.edt.ai.assistent.model.IContextEntity;
+
 public class FontEntity
+    implements IContextEntity
 {
     public boolean bold;
 

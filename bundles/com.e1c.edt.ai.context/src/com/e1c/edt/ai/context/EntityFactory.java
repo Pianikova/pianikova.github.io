@@ -121,6 +121,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.Template;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.assistent.model.CursorLocation;
+import com.e1c.edt.ai.assistent.model.IContextEntity;
 import com.e1c.edt.ai.context.DTO.AccountTypeEntity;
 import com.e1c.edt.ai.context.DTO.AttributeEntity;
 import com.e1c.edt.ai.context.DTO.BorderEntity;
@@ -1792,7 +1793,7 @@ class EntityFactory
         return entity;
     }
 
-    private Object createFont(Font value)
+    private IContextEntity createFont(Font value)
     {
         var entity = new FontEntity();
         entity.bold = value.bold();
@@ -1805,7 +1806,7 @@ class EntityFactory
         return entity;
     }
 
-    private Object createColor(Color value)
+    private IContextEntity createColor(Color value)
     {
         var entity = new ColorEntity();
         entity.red = value.red();
@@ -1814,7 +1815,7 @@ class EntityFactory
         return entity;
     }
 
-    private Object createBorder(Border value)
+    private IContextEntity createBorder(Border value)
     {
         var entity = new BorderEntity();
         entity.style = value.style().getName();
@@ -1822,7 +1823,7 @@ class EntityFactory
         return entity;
     }
 
-    private Object createStandardPeriod(StandardPeriod value)
+    private IContextEntity createStandardPeriod(StandardPeriod value)
     {
         var entity = new StandardPeriodEntity();
         entity.startDate = value.getStartDate();

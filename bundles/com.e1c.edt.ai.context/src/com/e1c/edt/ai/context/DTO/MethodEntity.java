@@ -5,12 +5,14 @@ package com.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
+import com.e1c.edt.ai.assistent.model.IContextEntity;
 import com.google.gson.annotations.SerializedName;
 
 /**
  * Метод контекста.
  */
 public class MethodEntity
+    implements IContextEntity
 {
     /**
      * Уникальный идентификатор метода. Например, "file:/SSL/src/CommonForms/ФормаОтчета/Module.bsl?start\u003d147942\u0026finish\u003d148876".

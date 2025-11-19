@@ -5,6 +5,9 @@ package com.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
+/*
+ * Запись регистра.
+ */
 public class RegisterRecordEntity
     extends ChildEntity
 {

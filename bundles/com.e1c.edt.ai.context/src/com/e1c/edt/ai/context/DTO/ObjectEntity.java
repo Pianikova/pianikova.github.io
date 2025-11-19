@@ -5,10 +5,13 @@ package com.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
+import com.e1c.edt.ai.assistent.model.IContextEntity;
+
 /**
  * Объект контекста.
  */
 public class ObjectEntity
+    implements IContextEntity
 {
     /**
      * Наименование объекта.

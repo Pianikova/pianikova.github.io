@@ -5,8 +5,11 @@ package com.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
+import com.e1c.edt.ai.assistent.model.IContextEntity;
+
 public class FormEntity
     extends FormGroupEntity
+    implements IContextEntity
 {
     public List<AttributeEntity> attributes;
 

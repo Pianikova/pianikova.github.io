@@ -10,8 +10,6 @@ import com.google.gson.annotations.SerializedName;
 // {
 /**
  * Элемент глобального или локального контекста.
- *
- * @author Dmitriy Marmyshev
  */
 public class GlobalContext
 {
@@ -45,11 +43,11 @@ public class GlobalContext
 
     public transient String modulePath;
 
-    public transient Map<String, HashedValue<Object>> localFunctionsEntities;
+    public transient Map<String, HashedValue<IContextEntity>> localFunctionsEntities;
 
-    public transient Object formEntity;
+    public transient IContextEntity formEntity;
 
-    public transient Object metaEntity;
+    public transient IContextEntity metaEntity;
 // {
 }
 // }

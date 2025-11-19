@@ -5,10 +5,6 @@ package com.e1c.edt.ai.assistent;
 
 import org.eclipse.osgi.util.NLS;
 
-/**
- * @author Nikolay Pyanikov
- *
- */
 public class Messages
     extends NLS
 {

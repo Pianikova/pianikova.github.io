@@ -5,10 +5,12 @@ package com.e1c.edt.ai.context.DTO;
 
 import java.util.List;
 
+import com.e1c.edt.ai.assistent.model.IContextEntity;
 import com.google.gson.annotations.SerializedName;
 
 public class MetaEntity
     extends ChildEntity
+    implements IContextEntity
 {
     /**
      * Имя пространства имен.
@@ -58,19 +60,19 @@ public class MetaEntity
     public List<TabularSectionEntity> tabularSections;
 
     /**
-     * Регистры ресурсов сущности, если есть.
+     * Ресуры регистров, если есть.
      */
     @SerializedName("register_resources")
     public List<RegisterResourceEntity> registerResources;
 
     /**
-     * Регистры измерений сущности, если есть.
+     * Измерения регистров, если есть.
      */
     @SerializedName("register_dimensions")
     public List<RegisterDimensionEntity> registerDimensions;
 
     /**
-     * Регистры записей сущности, если есть.
+     * Записи регистров, если есть.
      */
     @SerializedName("register_records")
     public List<RegisterRecordEntity> registerRecords;

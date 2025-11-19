@@ -9,8 +9,6 @@ import com.google.gson.annotations.SerializedName;
 
 /**
  * Комментарии к типу.
- *
- * @author Evgeniy_Sysoletin
  */
 public class CommentTypeDefinition
 {

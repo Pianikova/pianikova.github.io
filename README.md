@@ -681,7 +681,7 @@ public class LocalContext
     public String currenMethodName;
 
     /**
-     * Cписок сред (приложений), которые могут выполнять код под курсором. Например, ["ПрограммныйИнтерфейс", "ОрганизацииСервер"].
+     * Cписок вложенных областей для курсора. Например, "ПрограммныйИнтерфейс".
      */
     @SerializedName("cursor_areas")
     public List<String> cursorAreas;
@@ -700,14 +700,14 @@ public class LocalContext
      * Например, ["Справочник.Организации", "Справочник.Организации.СведенияОбОрганизации", "Справочник.Организации.СведенияОбОрганизации.СведенияОбОрганизации"].
      */
     @SerializedName("related_objects")
-    public List<Object> relatedObjects;
+    public List<IContextEntity> relatedObjects;
 
     /**
      * Список связанных с кодом (prefix + suffix) вызовов методов.
      * Передается, когда user_parameters.extended_context == true.
      */
     @SerializedName("related_functions")
-    public List<Object> relatedFunctions;
+    public List<IContextEntity> relatedFunctions;
 
     /**
      * Список предложений от контекстного ассистента, которые могут быть вставлены в код.
@@ -725,6 +725,7 @@ public class LocalContext
 
 ```java
 public class ObjectEntity
+    implements IContextEntity
 {
     /**
      * Наименование объекта.
@@ -771,6 +772,7 @@ public class ObjectEntity
 
 ```java
 public class MethodEntity
+    implements IContextEntity
 {
     /**
      * Уникальный идентификатор метода. Например, "file:/SSL/src/CommonForms/ФормаОтчета/Module.bsl?start\u003d147942\u0026finish\u003d148876".
@@ -1435,7 +1437,7 @@ public class GlobalContextUpdate
      *  "РегистрационныеДанныеГлавногоБухгалтера/0": "MD5:5d101aaa49f230baf5fe23a5ba42d25e"
      * }
      */
-    public Object value;
+    public IContextEntity value;
 }
 ```
 
@@ -1457,6 +1459,7 @@ public class GlobalContextUpdate
 
 ```java
 public class ObjectEntity
+    implements IContextEntity
 {
     /**
      * Наименование объекта.
@@ -1504,6 +1507,7 @@ public class ObjectEntity
 ```java
 public class FormEntity
     extends FormGroupEntity
+    implements IContextEntity
 {
     public List<AttributeEntity> attributes;
 
@@ -1519,6 +1523,7 @@ public class FormEntity
 
 ```java
 public class MethodEntity
+    implements IContextEntity
 {
     /**
      * Уникальный идентификатор метода. Например, "file:/SSL/src/CommonForms/ФормаОтчета/Module.bsl?start\u003d147942\u0026finish\u003d148876".

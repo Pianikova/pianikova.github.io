@@ -3,7 +3,9 @@
  */
 package com.e1c.edt.ai.context.DTO;
 
-public class ValueEntity
+import com.e1c.edt.ai.assistent.model.IContextEntity;
+
+public class ValueEntity implements IContextEntity
 {
     /**
      * Идентификатор сущности.

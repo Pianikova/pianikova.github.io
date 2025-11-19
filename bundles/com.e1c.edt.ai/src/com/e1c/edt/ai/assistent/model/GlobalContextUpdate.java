@@ -31,6 +31,6 @@ public class GlobalContextUpdate
      *  "РегистрационныеДанныеГлавногоБухгалтера/0": "MD5:5d101aaa49f230baf5fe23a5ba42d25e"
      * }
      */
-    public Object value;
+    public IContextEntity value;
 }
 // }
