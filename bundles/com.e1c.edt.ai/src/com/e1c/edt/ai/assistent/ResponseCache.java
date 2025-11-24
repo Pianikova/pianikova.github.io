@@ -11,6 +11,7 @@ import java.util.function.Supplier;
 
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.Session;

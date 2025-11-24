@@ -11,11 +11,8 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.jobs.Job;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
-import com.e1c.edt.ai.IClock;
-import com.e1c.edt.ai.ISettings;
-import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
+import com.e1c.edt.ai.ICancellationToken;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -25,33 +22,22 @@ class GlobalContextTracker
 {
     private final IDispatcher dispatcher;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
-    private final IClock clock;
-    private final ISettings settings;
     private final Object lockObject = new Object();
     private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
 
     @Inject
     public GlobalContextTracker(IDispatcher dispatcher,
-        Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider, IClock clock, ISettings settings)
+        Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(projectTrackingWorkflowProvider);
-        Preconditions.checkNotNull(clock);
-        Preconditions.checkNotNull(settings);
         this.dispatcher = dispatcher;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
-        this.clock = clock;
-        this.settings = settings;
     }
 
     @Override
     public void track(IProject project)
     {
-        if (!CodeCompletionPolicy.MANUAL.isMeet(settings.getCodeCompletionPolicy()))
-        {
-            return;
-        }
-
         synchronized (lockObject)
         {
             projectWorkflows.computeIfAbsent(project, k -> projectTrackingWorkflowProvider.get()).initialize(project);
@@ -61,11 +47,6 @@ class GlobalContextTracker
     @Override
     public void track(AIContext aiCtx)
     {
-        if (!CodeCompletionPolicy.MANUAL.isMeet(settings.getCodeCompletionPolicy()))
-        {
-            return;
-        }
-
         synchronized (lockObject)
         {
             var project = aiCtx.getProjectId().project;
@@ -78,22 +59,24 @@ class GlobalContextTracker
                     k -> projectTrackingWorkflowProvider.get().initialize(project)))
                 .ifPresent(workflow -> {
                     workflow.track(aiCtx);
-                    var cancellationToken = CancellationTokens.expiresAt(new CancellationTokenSource(), clock,
-                        clock.now().plus(Duration.ofMillis(15000)));
-
-                    var job = dispatcher.createJob(Messages.BackgroundJobName,
-                        jobCtx -> track(jobCtx, workflow),
-                        cancellationToken);
-
-                    job.setPriority(Job.DECORATE);
-                    job.schedule();
+                    scheduleTracking(workflow, 0);
                 });
         }
     }
 
-    private void track(JobContext jobCtx, IProjectTrackingWorkflow workflow)
+    private void scheduleTracking(IProjectTrackingWorkflow workflow, long delayMs)
     {
-        Duration delay = Duration.ofSeconds(5);
+        var job = dispatcher.createJob(Messages.BackgroundJobName,
+            jobCtx -> track(jobCtx, workflow, jobCtx.CancellationTokenSource), CancellationTokens.NONE);
+
+        job.setSystem(true);
+        job.setPriority(Job.DECORATE);
+        job.schedule(delayMs);
+    }
+
+    private void track(JobContext jobCtx, IProjectTrackingWorkflow workflow, ICancellationToken cancellationToken)
+    {
+        var delay = Duration.ofSeconds(5);
         try
         {
             delay = workflow.nextState(jobCtx.Monitor, jobCtx.CancellationTokenSource);
@@ -108,7 +91,7 @@ class GlobalContextTracker
                 }
             }
 
-            jobCtx.Job.schedule(delay.toMillis());
+            scheduleTracking(workflow, delay.toMillis());
         }
     }
 }

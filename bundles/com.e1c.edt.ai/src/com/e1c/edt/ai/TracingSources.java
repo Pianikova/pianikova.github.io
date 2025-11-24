@@ -10,4 +10,5 @@ public class TracingSources
     public static final String CHAT = "chat"; //$NON-NLS-1$
     public static final String CODE_COMPETION = "code_completion"; //$NON-NLS-1$
     public static final String SYNC = "sync"; //$NON-NLS-1$
+    public static final String JOBS = "jobs"; //$NON-NLS-1$
 }

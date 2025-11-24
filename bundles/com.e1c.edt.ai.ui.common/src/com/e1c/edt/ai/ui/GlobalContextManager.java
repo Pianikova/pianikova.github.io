@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import org.eclipse.core.runtime.jobs.Job;
 
 import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
@@ -47,8 +48,9 @@ class GlobalContextManager implements IGlobalContextManager
                 jobCtx -> {
                     try
                     {
-                        globalContextSync.sync(aiCtx, 5, jobCtx.CancellationTokenSource)
-                            .get();
+                        var syncTask = globalContextSync.sync(aiCtx, 5, jobCtx.CancellationTokenSource);
+                        CancellationTokenSource.attach(jobCtx.CancellationTokenSource, () -> syncTask.cancel(true));
+                        syncTask.get();
                         globalContextTracker.track(aiCtx);
                     }
                     catch (ExecutionException error)
@@ -61,6 +63,7 @@ class GlobalContextManager implements IGlobalContextManager
                         log.logError(error);
                     }
                 }, cancellationToken);
+
         runJob(job);
     }
 
@@ -75,9 +78,10 @@ class GlobalContextManager implements IGlobalContextManager
         var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
             try
             {
-                globalContextSync
-                    .syncUnknown(aiCtx, completion.unknownValues, 5, jobCtx.CancellationTokenSource)
-                    .join();
+                var syncTask =
+                    globalContextSync.syncUnknown(aiCtx, completion.unknownValues, 5, jobCtx.CancellationTokenSource);
+                CancellationTokenSource.attach(jobCtx.CancellationTokenSource, () -> syncTask.cancel(true));
+                syncTask.get();
             }
             catch (Exception error)
             {
@@ -96,6 +100,7 @@ class GlobalContextManager implements IGlobalContextManager
         }
 
         currentJob = job;
+        currentJob.setSystem(true);
         currentJob.setPriority(Job.DECORATE);
         job.schedule();
     }

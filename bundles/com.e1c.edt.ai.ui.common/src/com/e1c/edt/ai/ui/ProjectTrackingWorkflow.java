@@ -31,6 +31,7 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
@@ -40,7 +41,8 @@ import com.google.inject.Provider;
 class ProjectTrackingWorkflow
     implements IProjectTrackingWorkflow
 {
-    private final static Duration LongDelay = Duration.ofSeconds(2);
+    private final static Duration ExtraLongDelay = Duration.ofSeconds(30);
+    private final static Duration LongDelay = Duration.ofSeconds(3);
     private final static Duration ShortDelay = Duration.ofMillis(10);
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;
@@ -109,9 +111,10 @@ class ProjectTrackingWorkflow
     @Override
     public Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
-        if (!settings.isEnabled() || !project.exists())
+        if (!settings.isEnabled() || !CodeCompletionPolicy.MANUAL.isMeet(settings.getCodeCompletionPolicy())
+            || !project.exists())
         {
-            return LongDelay;
+            return ExtraLongDelay;
         }
 
         if (checkSessionChanged())
@@ -238,6 +241,11 @@ class ProjectTrackingWorkflow
             var path = file.getFullPath().makeRelative().toPortableString();
             filesToHash.computeIfAbsent(path,
                 key -> new ProjectFile(new AIContext(projectId, key, (IDocument)null), key, file, now));
+
+            if (cancellationToken.isCanceled())
+            {
+                return new Result(ProjectTrackingWorkflowState.SCAN, ShortDelay);
+            }
         }
 
         var newFilesToHashCount = 0;
@@ -289,6 +297,7 @@ class ProjectTrackingWorkflow
         var hashingFiles =
             filesToHash.values()
                 .stream()
+                .filter(i -> !cancellationToken.isCanceled())
                 .filter(file -> file.getAge(now).compareTo(delay) >= 0)
                 .sorted(ProjectFile.COMPARATOR)
                 .limit(maxFiles)
@@ -431,12 +440,21 @@ class ProjectTrackingWorkflow
     private Result sync(int maxFiles, IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
         var filesToProcess =
-            filesToSync.stream().sorted(ProjectFile.COMPARATOR).limit(maxFiles).collect(Collectors.toList());
+            filesToSync.stream()
+                .filter(file -> !cancellationToken.isCanceled())
+                .sorted(ProjectFile.COMPARATOR)
+                .limit(maxFiles)
+                .collect(Collectors.toList());
 
         var features = new ArrayList<CompletableFuture<Boolean>>();
         var filesUpdates = new ArrayList<GlobalContextUpdate>();
         for (var file : filesToProcess)
         {
+            if (cancellationToken.isCanceled())
+            {
+                return new Result(ProjectTrackingWorkflowState.SYNC, ShortDelay);
+            }
+
             filesToSync.remove(file);
             var update = new GlobalContextUpdate();
             var ext = file.file.getFileExtension();

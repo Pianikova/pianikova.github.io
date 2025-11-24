@@ -16,6 +16,8 @@ import java.util.function.Consumer;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.IJobChangeListener;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.swt.widgets.Display;
 
@@ -24,6 +26,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -194,6 +197,7 @@ class Dispatcher
     {
         Preconditions.checkNotNull(jobName);
         Preconditions.checkNotNull(consumer);
+        Preconditions.checkNotNull(cancellationToken);
         var resources = new ArrayList<AutoCloseable>();
         var jobs = new ArrayList<Job>();
         var job = new Job(jobName)
@@ -205,11 +209,15 @@ class Dispatcher
                 cancellationTokenSource.attachMonitor(monitor);
                 try
                 {
+                    var startTime = clock.now();
                     consumer.accept(new JobContext(jobs.get(0), monitor, cancellationTokenSource));
+                    var duration = Duration.between(startTime, clock.now());
+                    log.trace(TracingSources.JOBS, jobName, () -> "duration: " + duration); //$NON-NLS-1$
                     return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                 }
                 catch (Throwable error)
                 {
+                    log.trace(TracingSources.JOBS, jobName, () -> "error: " + error); //$NON-NLS-1$
                     return Status.error(jobName, error);
                 }
                 finally
@@ -233,16 +241,59 @@ class Dispatcher
         };
 
         jobs.add(job);
-        if (cancellationToken != null)
+        var attachToken = CancellationTokenSource.attach(cancellationToken, () -> job.cancel());
+        synchronized (resources)
         {
-            var attachToken = CancellationTokenSource.attach(cancellationToken, () -> job.cancel());
-            synchronized (resources)
-            {
-                resources.add(attachToken);
-            }
+            resources.add(attachToken);
         }
+        job.addJobChangeListener(new IJobChangeListener()
+        {
 
-        job.setSystem(settings.getVerbosity().getLevel() >= Verbosity.TRACE.getLevel());
+            @Override
+            public void aboutToRun(IJobChangeEvent event)
+            {
+                log.trace(TracingSources.JOBS, jobName, () -> "about to run"); //$NON-NLS-1$
+            }
+
+            @Override
+            public void awake(IJobChangeEvent event)
+            {
+                log.trace(TracingSources.JOBS, jobName, () -> "awake"); //$NON-NLS-1$
+            }
+
+            @Override
+            public void done(IJobChangeEvent event)
+            {
+                try
+                {
+                    attachToken.close();
+                }
+                catch (Exception e)
+                {
+                    //
+                }
+
+                log.trace(TracingSources.JOBS, jobName, () -> "done"); //$NON-NLS-1$
+            }
+
+            @Override
+            public void running(IJobChangeEvent event)
+            {
+                log.trace(TracingSources.JOBS, jobName, () -> "running"); //$NON-NLS-1$
+            }
+
+            @Override
+            public void scheduled(IJobChangeEvent event)
+            {
+                log.trace(TracingSources.JOBS, jobName, () -> "scheduled"); //$NON-NLS-1$
+            }
+
+            @Override
+            public void sleeping(IJobChangeEvent event)
+            {
+                log.trace(TracingSources.JOBS, jobName, () -> "sleeping"); //$NON-NLS-1$
+            }
+        });
         return job;
     }
 

@@ -16,6 +16,7 @@ import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.ProjectId;

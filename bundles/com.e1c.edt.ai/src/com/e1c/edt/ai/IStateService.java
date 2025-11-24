@@ -1,10 +1,9 @@
 /*
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.assistent;
+package com.e1c.edt.ai;
 
-import com.e1c.edt.ai.ActionState;
-import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.assistent.IAIStateListener;
 
 /**
  * @author Bogdan Sushkov

@@ -6,15 +6,13 @@ package com.e1c.edt.ai.ui;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IStartup;
 
+import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.TracingSources;
-import com.e1c.edt.ai.assistent.IStateService;
 import com.google.inject.Inject;
 
 /**
@@ -52,19 +50,19 @@ public class BasePluginStartup
             () -> ""); //$NON-NLS-1$
         activator.trace(TracingSources.COMMON,
             pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
+        scheduleUpdate(0);
+    }
 
-        var updateJob = new Job(Messages.UpdateJobMessage) {
-            @Override
-            protected IStatus run(IProgressMonitor monitor)
-            {
-                pluginUpdateService.checkForUpdates();
-                schedule(TimeUnit.DAYS.toMillis(1));
-                return Status.OK_STATUS;
-            }
-        };
+    private void scheduleUpdate(long delayMs)
+    {
+        var updateJob = dispatcher.createJob(Messages.UpdateJobMessage, jobCtx -> {
+            pluginUpdateService.checkForUpdates(jobCtx.Monitor);
+            scheduleUpdate(TimeUnit.DAYS.toMillis(1));
+        },
+            CancellationTokens.NONE);
 
         updateJob.setPriority(Job.DECORATE);
-        updateJob.schedule();
+        updateJob.schedule(delayMs);
     }
 
     @Override

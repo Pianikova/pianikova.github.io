@@ -1,23 +1,25 @@
 /*
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.assistent;
+package com.e1c.edt.ai.ui;
 
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.ListenerList;
-import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.ActionState;
+import com.e1c.edt.ai.CancellationTokenSource;
+import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
-import com.e1c.edt.ai.assistent.model.Verbosity;
+import com.e1c.edt.ai.assistent.IAIStateListener;
+import com.e1c.edt.ai.assistent.IHealthCheckService;
+import com.e1c.edt.ai.assistent.Messages;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -32,18 +34,21 @@ class StateService
     private final IHealthCheckService healthCheckService;
     private final ILog log;
     private final ISettings settings;
+    private final IDispatcher dispatcher;
     private ServiceState serviceState;
     private ActionState actionState;
 
     @Inject
-    public StateService(IHealthCheckService healthCheckService, ILog log, ISettings settings)
+    public StateService(IHealthCheckService healthCheckService, ILog log, ISettings settings, IDispatcher dispatcher)
     {
         Preconditions.checkNotNull(healthCheckService);
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(dispatcher);
         this.healthCheckService = healthCheckService;
         this.log = log;
         this.settings = settings;
+        this.dispatcher = dispatcher;
     }
 
     @Override
@@ -81,39 +86,7 @@ class StateService
     @Override
     public void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs)
     {
-        var job = new Job(Messages.UpdatingServerStatus)
-        {
-            @Override
-            protected IStatus run(IProgressMonitor monitor) {
-                try
-                {
-                    healthCheckService.checkAsync()
-                        .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
-                        .whenComplete((state, error) -> {
-                            if (error != null)
-                            {
-                                log.logError(error);
-                                setState(this.getName(), ServiceState.OFFLINE);
-                                schedule(checkPeriodAfterErrorMs);
-                            }
-                            else
-                            {
-                                schedule(checkPeriodMs);
-                            }
-                        })
-                        .get();
-                }
-                catch (Throwable error)
-                {
-                    log.logError(error);
-                }
-
-                return Status.OK_STATUS;
-            }
-        };
-        job.setSystem(settings.getVerbosity().getLevel() >= Verbosity.TRACE.getLevel());
-        job.setPriority(Job.DECORATE);
-        job.schedule();
+        startMonitoring(checkPeriodMs, checkPeriodAfterErrorMs, 0);
     };
 
     @Override
@@ -148,4 +121,39 @@ class StateService
             }
         }
     }
+
+    private void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs, int periodMs)
+    {
+        var job = dispatcher.createJob(Messages.UpdatingServerStatus, jobCtx -> {
+            try
+            {
+                var ckectTask = healthCheckService.checkAsync()
+                    .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+                    .whenComplete((state, error) -> {
+                        if (error != null)
+                        {
+                            log.logError(error);
+                            setState(Messages.UpdatingServerStatus, ServiceState.OFFLINE);
+                            startMonitoring(checkPeriodMs, checkPeriodAfterErrorMs, checkPeriodAfterErrorMs);
+                        }
+                        else
+                        {
+                            startMonitoring(checkPeriodMs, checkPeriodAfterErrorMs, checkPeriodMs);
+                        }
+                    });
+
+                CancellationTokenSource.attach(jobCtx.CancellationTokenSource, () -> ckectTask.cancel(true));
+                ckectTask.get();
+            }
+            catch (Throwable error)
+            {
+                log.logError(error);
+            }
+
+        }, CancellationTokens.NONE);
+
+        job.setSystem(true);
+        job.setPriority(Job.DECORATE);
+        job.schedule(periodMs);
+    };
 }

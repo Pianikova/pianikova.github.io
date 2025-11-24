@@ -3,11 +3,13 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+
 /**
  * @author Bogdan Sushkov
  *
  */
 public interface IPluginUpdateService
 {
-    void checkForUpdates();
+    void checkForUpdates(IProgressMonitor monitor);
 }
