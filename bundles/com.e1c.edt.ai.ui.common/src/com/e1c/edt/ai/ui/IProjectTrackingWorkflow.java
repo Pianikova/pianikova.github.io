@@ -17,8 +17,6 @@ interface IProjectTrackingWorkflow
 
     IProject getProject();
 
-    String getId();
-
     Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken);
 
     void track(AIContext aiCtx);

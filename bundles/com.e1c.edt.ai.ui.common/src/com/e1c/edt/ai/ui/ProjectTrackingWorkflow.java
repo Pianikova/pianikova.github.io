@@ -103,12 +103,6 @@ class ProjectTrackingWorkflow
     }
 
     @Override
-    public String getId()
-    {
-        return projectId.path;
-    }
-
-    @Override
     public Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
         if (!settings.isEnabled() || !CodeCompletionPolicy.MANUAL.isMeet(settings.getCodeCompletionPolicy())

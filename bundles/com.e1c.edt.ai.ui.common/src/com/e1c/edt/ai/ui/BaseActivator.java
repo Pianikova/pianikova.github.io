@@ -155,7 +155,7 @@ public abstract class BaseActivator
 
             if (throwable instanceof ExecutionException)
             {
-                var completionException = (CompletionException)throwable;
+                var completionException = (ExecutionException)throwable;
                 throwable = completionException.getCause();
             }
 

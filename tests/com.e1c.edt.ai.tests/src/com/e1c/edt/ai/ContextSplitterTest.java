@@ -21,7 +21,7 @@ import com.e1c.edt.ai.assistent.model.ProjectId;
 @RunWith(Parameterized.class)
 public class ContextSplitterTest
 {
-    private static final ProjectId projectId = new ProjectId("test", null); //$NON-NLS-1$
+    private static final ProjectId projectId = ProjectId.Default;
     private final ISettings settings = mock(ISettings.class);
 
     @Parameter(0)
