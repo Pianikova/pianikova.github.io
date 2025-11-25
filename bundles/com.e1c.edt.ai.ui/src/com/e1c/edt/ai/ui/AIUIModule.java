@@ -7,6 +7,8 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.xtext.builder.IXtextBuilderParticipant;
 
 import com.e1c.edt.ai.AIModule;
+import com.e1c.edt.ai.ClientTokenValidator;
+import com.e1c.edt.ai.IClientTokenValidator;
 import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
@@ -51,6 +53,7 @@ public class AIUIModule
         bind(IXtextBuilderParticipant.class).to(BuildTrackingParticipant.class).in(Singleton.class);
         bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
+        bind(IClientTokenValidator.class).to(ClientTokenValidator.class).in(Singleton.class);
         // @formatter:on
     }
 }
