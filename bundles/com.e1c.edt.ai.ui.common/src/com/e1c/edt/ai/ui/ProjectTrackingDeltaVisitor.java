@@ -54,7 +54,7 @@ class ProjectTrackingDeltaVisitor
             return;
         }
 
-        var projectId = new ProjectId(project.getName(), project);
+        var projectId = new ProjectId(project);
         var path = resource.getFullPath().makeRelative().toPortableString();
         log.trace(TracingSources.SYNC, "ResourceListener", () -> path + " was updated in project " + project.getName());
         var ctx = new AIContext(projectId, path, null);

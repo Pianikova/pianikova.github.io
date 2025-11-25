@@ -13,7 +13,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
@@ -33,10 +32,10 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
-import com.e1c.edt.ai.assistent.IStateService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
@@ -417,14 +416,10 @@ public class Chat implements IChat, IChatDialog
     private void chatInJob(Optional<AIContext> ctx, IChatAction chatAction)
     {
         ensureWebViewExists();
-        new Job(Messages.ChatInteractionJobName)
-        {
-            @Override
-            protected IStatus run(IProgressMonitor monitor)
-            {
-                return chat(ctx, chatAction);
-            }
-        }.schedule();
+        var job = dispatcher.createJob(Messages.ChatInteractionJobName, jobCtx -> chat(ctx, chatAction),
+            CancellationTokens.NONE);
+        job.setPriority(Job.INTERACTIVE);
+        job.schedule();
     }
 
     @SuppressWarnings("nls")

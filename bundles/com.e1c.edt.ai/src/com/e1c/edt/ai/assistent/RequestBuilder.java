@@ -9,6 +9,7 @@ import java.net.http.HttpRequest;
 import java.util.Optional;
 
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ServiceState;
 import com.google.common.base.Preconditions;

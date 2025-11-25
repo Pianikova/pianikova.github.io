@@ -50,9 +50,8 @@ public class PluginUpdateService
     private IDefaultSettings defaultSettings;
 
     @Override
-    public void checkForUpdates()
+    public void checkForUpdates(IProgressMonitor monitor)
     {
-        IProgressMonitor monitor = new NullProgressMonitor();
         try
         {
             var agent = getAgent();

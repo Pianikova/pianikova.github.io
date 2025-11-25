@@ -16,6 +16,7 @@ import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.ProjectId;
@@ -79,7 +80,7 @@ class SessionService
     public CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId)
     {
         var reset = settingsTracker.register(SessionService.class.getName(), settings.getUserParameters());
-        return responseCache.get(projectId.path, () -> getSession(projectId), reset, true);
+        return responseCache.get(projectId, () -> getSession(projectId), reset, true);
     }
 
     private CompletableFuture<Optional<Session>> getSession(ProjectId projectId)

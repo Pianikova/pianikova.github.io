@@ -7,6 +7,7 @@ import java.util.HashMap;
 
 import org.eclipse.core.runtime.ListenerList;
 
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;

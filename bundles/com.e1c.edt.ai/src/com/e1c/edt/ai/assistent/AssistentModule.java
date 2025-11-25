@@ -27,7 +27,6 @@ public class AssistentModule
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
         bind(ITextPreprocessor.class).to(TextPreprocessor.class).in(Singleton.class);
-        bind(IStateService.class).to(StateService.class).in(Singleton.class);
         bind(IThreadManager.class).to(ThreadManager.class).in(Singleton.class);
         bind(IGlobalContextService.class).to(GlobalContextService.class).in(Singleton.class);
         bind(ICompressor.class).to(Compressor.class).in(Singleton.class);

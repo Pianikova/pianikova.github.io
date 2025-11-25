@@ -11,8 +11,10 @@ import java.util.function.Supplier;
 
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
+import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
@@ -23,9 +25,9 @@ class ResponseCache
     implements IResponseCache, IAIStateListener
 {
     private final ILog log;
-    private final Cache<String, CompletableFuture<Optional<Session>>> responseCache =
+    private final Cache<ProjectId, CompletableFuture<Optional<Session>>> responseCache =
         CacheBuilder.newBuilder().maximumSize(256).build();
-    private final Cache<String, CompletableFuture<Optional<Session>>> errorsCache =
+    private final Cache<ProjectId, CompletableFuture<Optional<Session>>> errorsCache =
         CacheBuilder.newBuilder().maximumSize(256).expireAfterWrite(60, TimeUnit.SECONDS).build();
 
     @Inject
@@ -39,11 +41,11 @@ class ResponseCache
 
     @SuppressWarnings("nls")
     @Override
-    public CompletableFuture<Optional<Session>> get(String key,
+    public CompletableFuture<Optional<Session>> get(ProjectId projectId,
         Supplier<CompletableFuture<Optional<Session>>> taskSupplier,
         boolean reset, boolean cacheErrors)
     {
-        Preconditions.checkNotNull(key);
+        Preconditions.checkNotNull(projectId);
         Preconditions.checkNotNull(taskSupplier);
         try
         {
@@ -51,7 +53,7 @@ class ResponseCache
             {
                 if (cacheErrors)
                 {
-                    var error = errorsCache.getIfPresent(key);
+                    var error = errorsCache.getIfPresent(projectId);
                     if (error != null)
                     {
                         log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "Returns an error from the cache.");
@@ -59,20 +61,20 @@ class ResponseCache
                     }
                 }
 
-                return responseCache.get(key, () -> {
+                return responseCache.get(projectId, () -> {
                     return taskSupplier.get().whenComplete((r, e) -> {
                         if (e != null || r.isEmpty())
                         {
                             if (cacheErrors)
                             {
-                                errorsCache.put(key, CompletableFuture.failedFuture(e));
+                                errorsCache.put(projectId, CompletableFuture.failedFuture(e));
                             }
 
-                            responseCache.invalidate(key);
+                            responseCache.invalidate(projectId);
                         }
                         else
                         {
-                            errorsCache.invalidate(key);
+                            errorsCache.invalidate(projectId);
                         }
                     });
                 });

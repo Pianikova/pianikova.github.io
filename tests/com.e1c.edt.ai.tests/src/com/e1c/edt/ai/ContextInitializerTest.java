@@ -49,7 +49,7 @@ public class ContextInitializerTest
     public void shouldCreateContext()
     {
         // Given
-        var projectId = new ProjectId("path", null);
+        var projectId = ProjectId.Default;
         var text = prefix + sufix;
         var parts = new ContextParts(new Range(0, prefix.length()), new Range(prefix.length(), sufix.length()));
         when(splitter.split(projectId, text, expectedOffset, true)).thenReturn(parts);

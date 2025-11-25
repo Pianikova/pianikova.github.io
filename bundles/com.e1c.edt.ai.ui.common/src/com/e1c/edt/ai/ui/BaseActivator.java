@@ -5,6 +5,7 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Hashtable;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
 import org.eclipse.core.runtime.IStatus;
@@ -149,6 +150,12 @@ public abstract class BaseActivator
             if (throwable instanceof CompletionException)
             {
                 var completionException = (CompletionException)throwable;
+                throwable = completionException.getCause();
+            }
+
+            if (throwable instanceof ExecutionException)
+            {
+                var completionException = (ExecutionException)throwable;
                 throwable = completionException.getCause();
             }
 

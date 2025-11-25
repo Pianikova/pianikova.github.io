@@ -7,31 +7,26 @@ import java.util.Objects;
 
 import org.eclipse.core.resources.IProject;
 
-import com.google.common.base.Preconditions;
-
 public class ProjectId
 {
-    public static final ProjectId Default = new ProjectId("", null); //$NON-NLS-1$
-    public final String path;
+    public static final ProjectId Default = new ProjectId(null);
     public final IProject project;
 
-    public ProjectId(String path, IProject project)
+    public ProjectId(IProject project)
     {
-        Preconditions.checkNotNull(path);
-        this.path = path;
         this.project = project;
     }
 
     @Override
     public String toString()
     {
-        return path;
+        return project == null ? "[empty]" : project.getName(); //$NON-NLS-1$
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(path, project);
+        return project == null ? 0 : Objects.hash(project.getName());
     }
 
     @Override
@@ -44,6 +39,6 @@ public class ProjectId
         if (getClass() != obj.getClass())
             return false;
         ProjectId other = (ProjectId)obj;
-        return Objects.equals(path, other.path) && Objects.equals(project, other.project);
+        return Objects.equals(project.getName(), other.project.getName());
     }
 }

@@ -35,8 +35,8 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.assistent.IAIStateListener;
-import com.e1c.edt.ai.assistent.IStateService;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 

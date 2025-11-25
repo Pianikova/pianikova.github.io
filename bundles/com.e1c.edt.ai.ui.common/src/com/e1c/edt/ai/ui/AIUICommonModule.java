@@ -13,6 +13,7 @@ import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.ISettingsStore;
+import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
 import com.e1c.edt.ai.ui.handlers.ICodeTools;
@@ -99,6 +100,7 @@ public class AIUICommonModule
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
+        bind(IStateService.class).to(StateService.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -54,7 +54,6 @@ public class CancellationTokenSource
         }
 
         var cancellationTokenSource = (CancellationTokenSource)cancellationToken;
-
         synchronized (cancellationTokenSource.lock)
         {
             cancellationTokenSource.attached.add(runnable);

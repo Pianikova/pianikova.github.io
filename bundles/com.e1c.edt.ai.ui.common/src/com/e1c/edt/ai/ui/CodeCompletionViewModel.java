@@ -219,6 +219,7 @@ class CodeCompletionViewModel
                 {
                     addListeners(textWidget, sourceViewer);
                     redraw();
+                    updateGlobalContext();
                     warmup();
                     var rulerManagerToken = rulerManager.activate(sourceViewer, () -> reset());
                     var activationToken = Closeables.create(() -> deactivate(textWidget, sourceViewer));
@@ -329,7 +330,8 @@ class CodeCompletionViewModel
                     ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
                         jobCtx.CancellationTokenSource);
                 });
-        }, null);
+        }, CancellationTokens.NONE);
+        job.setSystem(true);
         job.setPriority(Job.INTERACTIVE);
         this.lastJob = job;
         job.schedule(delayBeforeAsk.toMillis());
@@ -353,11 +355,10 @@ class CodeCompletionViewModel
             return;
         }
 
-        updateGlobalContext();
-
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, settings.getTimeout(), false, false), null);
+                ct -> CreateContextProvider(null, settings.getTimeout(), false, false), CancellationTokens.NONE);
+        warmupJob.setSystem(true);
         warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
     }
@@ -864,6 +865,11 @@ class CodeCompletionViewModel
     @Override
     public void caretMoved(CaretEvent event)
     {
+        if (!isEnabled())
+        {
+            return;
+        }
+
         updateMethodAsync();
         synchronized (lockObject)
         {
@@ -888,7 +894,8 @@ class CodeCompletionViewModel
             }
 
             job = dispatcher.createJob(Messages.CodeCompletionJobName,
-                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), null);
+                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), CancellationTokens.NONE);
+            job.setSystem(true);
             job.setPriority(Job.DECORATE);
             this.lastUpdateMethodJob = job;
             job.schedule(1000);
@@ -1094,7 +1101,8 @@ class CodeCompletionViewModel
 
         var job = dispatcher.createJob(Messages.CodeCompletionJobName,
             jobCtx -> session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset()),
-            null);
+            CancellationTokens.NONE);
+        job.setSystem(true);
         job.setPriority(Job.DECORATE);
         this.commitJob = job;
         job.schedule();

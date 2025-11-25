@@ -17,12 +17,12 @@ class ProjectIdProvider
     @Override
     public ProjectId getProjectId(IProject project)
     {
-        return new ProjectId(project.getLocationURI().getPath(), project);
+        return new ProjectId(project);
     }
 
     @Override
     public Optional<ProjectId> getProjectId(String filePath, ICancellationToken cancellationToken)
     {
-        return Optional.of(new ProjectId(filePath, null));
+        return Optional.of(ProjectId.Default);
     }
 }
