@@ -368,12 +368,6 @@ public class Chat implements IChat, IChatDialog
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(contextJson, NULL_VALUE));
 
-                // TODO: add cache
-                var tools = mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
-                var toolsJson = json.serialize(tools);
-                script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(toolsJson, EMPTY_STRING));
-
                 script.append(");");
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
@@ -581,6 +575,12 @@ public class Chat implements IChat, IChatDialog
                         var winkResult = webEngine.executeScript(winkScript);
                         log.trace(TracingSources.CHAT, AI_CHAT,
                             () -> "wink script executed, winked: " + handler.isReady() + ", result: " + winkResult);
+                        var tools =
+                            mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
+                        var toolsJson = json.serialize(tools);
+                        webEngine
+                            .executeScript(
+                                "window.chatApi.set_tools(" + javaScript.escape(toolsJson, EMPTY_STRING) + ");");
                     }
                     else
                     {
