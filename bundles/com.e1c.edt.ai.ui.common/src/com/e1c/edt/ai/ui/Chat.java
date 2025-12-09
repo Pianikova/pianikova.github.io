@@ -188,21 +188,25 @@ public class Chat implements IChat, IChatDialog
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try
             {
+                var resultJson = json.serialize(result);
                 var script = new StringBuilder();
-                script.append("window.chatApi.add_tool_calls_result");
-                script.append('(');
+                script.append("window.chatApi.add_tool_calls_result(");
                 script.append(javaScript.escape(chatId, EMPTY_STRING));
                 script.append(ARGS_SEPARATOR);
 
                 script.append(javaScript.escape(messageId, EMPTY_STRING));
                 script.append(ARGS_SEPARATOR);
 
-                var resultJson = json.serialize(result);
-                script.append(javaScript.escape(resultJson, EMPTY_STRING));
-
-                script.append(");");
+                script.append("window.calls_result);");
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
+                    var webEngine = getEgine();
+                    var window = (JSObject)webEngine.executeScript("window");
+                    if (window != null)
+                    {
+                        window.setMember("calls_result", resultJson);
+                    }
+
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
                     var executeScriptResult = getEgine().executeScript(scriptText);
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);

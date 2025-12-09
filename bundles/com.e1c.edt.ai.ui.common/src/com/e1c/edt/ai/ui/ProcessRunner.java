@@ -14,6 +14,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.assistent.model.ProcessResult;
@@ -37,26 +39,33 @@ public class ProcessRunner
     @Override
     @SuppressWarnings("nls")
     public CompletableFuture<Optional<ProcessResult>> executeProcess(String executable, String workingDirectory,
-        List<String> args)
+        List<String> args, Long timeout, TimeUnit timeUnit)
     {
         Preconditions.checkNotNull(executable);
+        if (timeout == null)
+        {
+            timeout = 15L;
+        }
+
         Process process;
-        try {
+        try
+        {
             // Prepare and start the process
-            var pb = new ProcessBuilder();
-            pb.command().add(executable);
+            var processBuilder = new ProcessBuilder();
+            var command = processBuilder.command();
+            command.add(executable);
 
             if (args != null && !args.isEmpty())
             {
-                pb.command().addAll(args);
+                command.addAll(args);
             }
 
             if (workingDirectory != null)
             {
-                pb.directory(new File(workingDirectory));
+                processBuilder.directory(new File(workingDirectory));
             }
 
-            process = pb.start();
+            process = processBuilder.start();
         }
         catch (IOException e)
         {
@@ -85,21 +94,19 @@ public class ProcessRunner
         }, executor);
 
         // Combine all results: exit code + stdout + stderr
-        return exitCodeFuture
-            .thenCombineAsync(
-                // Combine stdout and stderr first
-                stdOutFuture.thenCombine(stdErrFuture, (stdOut, stdErr) -> {
-                    var result = new ProcessResult();
-                    result.stdOut = stdOut;
-                    result.stdErr = stdErr;
-                    return result;
-                }),
-                // Then combine with exit code to create final result
-                (exitCode, result) -> {
-                    result.exitCode = exitCode;
-                    return Optional.of(result);
-                }, executor)
-            .exceptionally(ex -> {
+        var resultFuture = exitCodeFuture.thenCombineAsync(
+            // Combine stdout and stderr first
+            stdOutFuture.thenCombine(stdErrFuture, (stdOut, stdErr) -> {
+                var result = new ProcessResult();
+                result.stdOut = stdOut;
+                result.stdErr = stdErr;
+                return result;
+            }),
+            // Then combine with exit code to create final result
+            (exitCode, result) -> {
+                result.exitCode = exitCode;
+                return Optional.of(result);
+            }, executor).exceptionally(ex -> {
                 // Unified error handling
                 log.logError(ex);
 
@@ -116,7 +123,27 @@ public class ProcessRunner
                 // Return error result
                 return Optional.empty();
             });
+
+        // Apply timeout
+        return resultFuture.orTimeout(timeout, timeUnit).exceptionally(ex -> {
+            if (ex instanceof TimeoutException)
+            {
+                log.logError(ex);
+
+                // Ensure process termination on timeout
+                if (process.isAlive())
+                {
+                    process.destroyForcibly();
+                }
+
+                // Cancel stream reading tasks
+                stdOutFuture.cancel(true);
+                stdErrFuture.cancel(true);
+            }
+            return Optional.empty();
+        });
     }
+
 
     /**
      * Asynchronously reads content from an input stream

@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEnvironment;
@@ -27,6 +28,12 @@ import com.google.inject.Inject;
 public class ProcessRunnerMcpTool
     implements IMcpTool
 {
+    private static String QuestionExample =
+        "{\"executable\":\"cmd\",\"working_directory\":\"C:\\\\\\\\\",\"args\":[\"/c\",\"whoami\"],\"tiemout\":3000}"; //$NON-NLS-1$
+
+    private static String AnswerExample =
+        "{\"exit_code\":0,\"std_out\":\"john_smith\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
+
     private final IProcessRunner processRunner;
     private final IJson json;
     private final McpToolCallSpecification spec;
@@ -56,35 +63,40 @@ public class ProcessRunnerMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, Arguments.class);
+        var optionalCallArgs = json.deserialize(call.function.arguments, CallArguments.class);
         if (optionalCallArgs.isEmpty())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createMessage(this, call, "Error: \"Cannot deserialize arguments.\""));
+                .completedFuture(messageFactory.createError(this, call,
+                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
         var callArgs = optionalCallArgs.get();
-        var executable = callArgs.get("executable");
-        if (executable == null)
-        {
-            return CompletableFuture
-                .completedFuture(
-                    messageFactory.createMessage(this, call, "Error: \"Missing required argument 'executable'.\""));
-        }
 
-        var workingDirectory = callArgs.get("working_directory");
-        var args = json.deserialize(callArgs.get("args"), ArrayList.class).orElse(null);
-
-        @SuppressWarnings("unchecked")
         CompletableFuture<Optional<ProcessResult>> completableFutureResult =
-            processRunner.executeProcess(executable, workingDirectory, args);
+            processRunner.executeProcess(callArgs.executable, callArgs.working_directory, callArgs.args,
+                callArgs.tiemout, TimeUnit.SECONDS);
 
         return completableFutureResult.thenApply(optResult -> {
             return optResult.map(result -> {
+                result.stdOut = shrink(result.stdOut);
+                result.stdErr = shrink(result.stdErr);
                 var content = json.serialize(result);
                 return messageFactory.createMessage(this, call, content);
-            }).orElseGet(() -> messageFactory.createError(this, call, "Process execution failed - no result."));
+            })
+                .orElseGet(
+                    () -> messageFactory.createError(this, call, "Process execution failed - no result."));
         });
+    }
+
+    private static String shrink(String text)
+    {
+        if (text == null || text.length() < 0x3fff)
+        {
+            return text;
+        }
+
+        return text.substring(0, 0x3fff) + "\n...\nError: \"The answer is too big.\""; //$NON-NLS-1$
     }
 
     @SuppressWarnings("nls")
@@ -96,11 +108,12 @@ public class ProcessRunnerMcpTool
         spec.function = new McpToolCallFunction();
         spec.function.name = "execute_process";
         spec.function.description =
-            "Executes a system process with executable (`executable`), working directory (`working_directory`) and arguments (`args`)."
-            + " Returns JSON in `content`: {\"exit_code\":int,\"std_out\":string,\"std_err\":string} e.g. {\"exit_code\":0,\"std_out\":\"Hello\\\\n\",\"std_err\":\"\"}."
-            + " Please note that the process executes under " + environment.getOSName()
-            + " version " + environment.getOSVersion()
-            + " with the " + environment.getArch() + " architecture.";
+            "Executes a system process."
+            + "\nIMPORTANT: the process executes under " + environment.getOSName() + " version " + environment.getOSVersion() + " with the " + environment.getArch() + " architecture."
+            + "\nIMPORTANT: use only non-interactive mode when executing a process."
+            + "\nFor exapmple:" + QuestionExample
+            + "\n  Q: " + QuestionExample
+            + "\n  A: " + AnswerExample;
 
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
@@ -109,18 +122,23 @@ public class ProcessRunnerMcpTool
 
         var executableProp = new McpToolCallProperty();
         executableProp.type = "string";
-        executableProp.description = "Path to the executable file, use '/' as a directory separator.";
+        executableProp.description = "Path to the executable file.";
         properties.put("executable", executableProp);
 
         var workingDirProp = new McpToolCallProperty();
         workingDirProp.type = "string";
-        workingDirProp.description = "Working directory for the process, use '/' as a directory separator.";
+        workingDirProp.description = "Working directory for the process.";
         properties.put("working_directory", workingDirProp);
 
         var argsProp = new McpToolCallProperty();
         argsProp.type = "string";
-        argsProp.description = "Command-line arguments as a JSON array of strings.";
+        argsProp.description = "Сommand-line arguments as a JSON array of strings.";
         properties.put("args", argsProp);
+
+        var timeoutProp = new McpToolCallProperty();
+        argsProp.type = "integer";
+        argsProp.description = "The timeout for a process to execute, in seconds.";
+        properties.put("timeout", timeoutProp);
 
         parameters.properties = properties;
         parameters.required = Arrays.asList("executable");
@@ -129,8 +147,14 @@ public class ProcessRunnerMcpTool
      // @formatter:on
     }
 
-    private static class Arguments
-        extends HashMap<String, String>
+    private static class CallArguments
     {
+        public String executable;
+
+        public String working_directory;
+
+        public ArrayList<String> args;
+
+        public Long tiemout;
     }
 }
