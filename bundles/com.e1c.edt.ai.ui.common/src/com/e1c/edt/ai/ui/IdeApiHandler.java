@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
 
@@ -22,6 +23,7 @@ public class IdeApiHandler
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
     private final ILog log;
     private final IUI ui;
+    private final IDispatcher dispatcher;
     private final ITextPreprocessor textPreprocessor;
     private final Provider<IChat> chatProvider;
     private final IJson json;
@@ -29,17 +31,20 @@ public class IdeApiHandler
     private boolean isReady;
 
     @Inject
-    public IdeApiHandler(ILog log, IUI ui, ITextPreprocessor textPreprocessor, Provider<IChat> chatProvider, IJson json,
+    public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
+        Provider<IChat> chatProvider, IJson json,
         IMcpTools mcpTools)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
+        Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(textPreprocessor);
         Preconditions.checkNotNull(chatProvider);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
         this.log = log;
         this.ui = ui;
+        this.dispatcher = dispatcher;
         this.textPreprocessor = textPreprocessor;
         this.chatProvider = chatProvider;
         this.json = json;
@@ -91,25 +96,28 @@ public class IdeApiHandler
 
     public void callTools(String chatId, String messageId, String callToolsJson)
     {
-        var callToolsOptional = json.deserialize(callToolsJson, McpToolCalls.class);
-        if (callToolsOptional.isEmpty())
-        {
-            log.logError("Cannot deserialize calls: " + callToolsJson); //$NON-NLS-1$
-            return;
-        }
-
-        var calls = callToolsOptional.get();
-        mcpTools.callTools(calls, CancellationTokens.NONE).whenComplete((result, error) -> {
-            if (error != null)
+        var job = dispatcher.createJob(Messages.ChatInteractionJobName, jobCtx -> {
+            var callToolsOptional = json.deserialize(callToolsJson, McpToolCalls.class);
+            if (callToolsOptional.isEmpty())
             {
-                log.logError(error);
+                log.logError("Cannot deserialize calls: " + callToolsJson); //$NON-NLS-1$
                 return;
             }
 
+            var calls = callToolsOptional.get();
+            mcpTools.callTools(calls, CancellationTokens.NONE).whenComplete((result, error) -> {
+                if (error != null)
+                {
+                    log.logError(error);
+                    return;
+                }
 
-            var chat = chatProvider.get();
-            chat.addToolsResult(chatId, messageId, result);
-        });
+                var chat = chatProvider.get();
+                chat.addToolsResult(chatId, messageId, result);
+            });
+        }, CancellationTokens.NONE);
+        job.setPriority(Job.INTERACTIVE);
+        job.schedule();
     }
 
     public void trace(String message)
