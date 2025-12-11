@@ -107,13 +107,36 @@ public class ProcessRunnerMcpTool
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = "execute_process";
-        spec.function.description =
-            "Executes a system process."
-            + "\nIMPORTANT: the process executes under " + environment.getOSName() + " version " + environment.getOSVersion() + " with the " + environment.getArch() + " architecture."
-            + "\nIMPORTANT: use only non-interactive mode when executing a process."
-            + "\nFor exapmple:" + QuestionExample
-            + "\n  Q: " + QuestionExample
-            + "\n  A: " + AnswerExample;
+
+        var description = new StringBuilder();
+
+        description.append("Executes a system process.");
+
+        description.append("\nIMPORTANT: the process executes under ");
+        description.append(environment.getOSName());
+        description.append(" version ");
+        description.append(environment.getOSVersion());
+        description.append(" with the ");
+        description.append(environment.getArch());
+        description.append(" architecture.");
+
+        description.append("\nIMPORTANT: use only non-interactive mode when executing a process.");
+        description.append("\nNOTE: add a description of what will be done when using this tool.");
+
+        var tempDir = System.getProperty("java.io.tmpdir");
+        if (tempDir != null && !tempDir.isBlank())
+        {
+            description.append("\nNOTE: use scripts to minimize the number of tool calls.");
+            description.append("\nNOTE: to create scripts use the '");
+            description.append(tempDir);
+            description.append("' directory.");
+        }
+
+        description.append("\nFor exapmple:");
+        description.append("\n  Q: "); description.append(QuestionExample);
+        description.append("\n  A: "); description.append(AnswerExample);
+
+        spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
