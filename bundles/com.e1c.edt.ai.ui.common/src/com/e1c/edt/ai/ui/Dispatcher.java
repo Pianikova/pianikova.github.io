@@ -136,11 +136,6 @@ class Dispatcher
         return Optional.ofNullable(vals.get(0));
     }
 
-    /**
-     * TODO JavaDoc
-     *
-     * @return
-     */
     private StackTraceElement[] getStack()
     {
         return settings.getVerbosity().getLevel() >= Verbosity.TRACE.getLevel() ? Thread.currentThread().getStackTrace()
@@ -302,7 +297,7 @@ class Dispatcher
     {
         Preconditions.checkNotNull(supplier);
         Preconditions.checkNotNull(timeout);
-        var executor = Executors.newSingleThreadExecutor();
+        var executor = Executors.newCachedThreadPool();
         try
         {
             var result = executor.submit(() -> supplier.get()).get(timeout.toNanos(), TimeUnit.NANOSECONDS);

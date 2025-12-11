@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -31,14 +32,18 @@ import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IStatistics;
+import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 import javafx.beans.value.ChangeListener;
@@ -81,6 +86,9 @@ public class Chat implements IChat, IChatDialog
     private final ILocalContext localContext;
     private final IProposalsProvider proposalsProvider;
     private final IJson json;
+    private final IMcpTools mcpTools;
+    private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).build();
+
     private WebView webView;
     private URL lastChatUrl;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
@@ -90,7 +98,8 @@ public class Chat implements IChat, IChatDialog
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
         IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
         ISessionService sessionService, IModuleNameProvider moduleNameProvider,
-        IFileSystem fileSystem, ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json)
+        IFileSystem fileSystem, ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json,
+        IMcpTools mcpTools)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -105,6 +114,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(localContext);
         Preconditions.checkNotNull(proposalsProvider);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(mcpTools);
         this.log = log;
         this.settings = settings;
         this.ui = ui;
@@ -119,6 +129,7 @@ public class Chat implements IChat, IChatDialog
         this.localContext = localContext;
         this.proposalsProvider = proposalsProvider;
         this.json = json;
+        this.mcpTools = mcpTools;
     }
 
     @Override
@@ -161,6 +172,55 @@ public class Chat implements IChat, IChatDialog
     {
         Preconditions.checkNotNull(codeSnippet);
         chat("insert_code", codeSnippet, null, ctx); //$NON-NLS-1$
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public void addToolsResult(String chatId, String messageId, List<ToolCallMessage> result)
+    {
+        Optional<AIContext> ctx;
+        synchronized (contexts)
+        {
+            ctx = Optional.ofNullable(contexts.getIfPresent(chatId));
+        }
+
+        chatInJob(ctx, () -> {
+            stateService.setState(Chat.class.getName(), ActionState.BUSY);
+            try
+            {
+                var resultJson = json.serialize(result);
+                var script = new StringBuilder();
+                script.append("window.chatApi.add_tool_calls_result(");
+                script.append(javaScript.escape(chatId, EMPTY_STRING));
+                script.append(ARGS_SEPARATOR);
+
+                script.append(javaScript.escape(messageId, EMPTY_STRING));
+                script.append(ARGS_SEPARATOR);
+
+                script.append("window.calls_result);");
+                var scriptText = script.toString();
+                dispatcher.dispatchAsync(() -> {
+                    var webEngine = getEgine();
+                    var window = (JSObject)webEngine.executeScript("window");
+                    if (window != null)
+                    {
+                        window.setMember("calls_result", resultJson);
+                    }
+
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
+                    var executeScriptResult = getEgine().executeScript(scriptText);
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
+                });
+            }
+            catch (Throwable error)
+            {
+                log.logError(error);
+            }
+            finally
+            {
+                stateService.setState(Chat.class.getName(), ActionState.INACTIVE);
+            }
+        });
     }
 
     @SuppressWarnings("nls")
@@ -312,12 +372,20 @@ public class Chat implements IChat, IChatDialog
                 script.append(ARGS_SEPARATOR);
                 script.append(javaScript.escape(contextJson, NULL_VALUE));
 
-                script.append(')');
+                script.append(");");
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
-                    getEgine().executeScript(scriptText);
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed");
+                    var executeScriptResult = getEgine().executeScript(scriptText);
+                    if (executeScriptResult instanceof String)
+                    {
+                        var chatId = (String)executeScriptResult;
+                        synchronized (contexts)
+                        {
+                            contexts.put(chatId, ctx);
+                        }
+                    }
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
                 });
             }
             catch (InterruptedException | ExecutionException error)
@@ -430,6 +498,7 @@ public class Chat implements IChat, IChatDialog
             var chatUrl = settings.getChatUrl();
             if (!Objects.equals(chatUrl, lastChatUrl))
             {
+                handler.reset();
                 lastChatUrl = chatUrl;
                 initializing = dispatcher.dispatch(() -> {
                     var webEngine = getEgine();
@@ -493,6 +562,14 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void wink(int attempts)
     {
+        if (handler.isReady())
+        {
+            return;
+        }
+
+        var tools = mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
+        var toolsJson = json.serialize(tools);
+
         var webEngine = getEgine();
         while (true)
         {
@@ -508,9 +585,13 @@ public class Chat implements IChat, IChatDialog
                         var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
                             settings.getClientUniqueId(), settings.getLanguage(), settings.getTheme());
                         log.trace(TracingSources.CHAT, AI_CHAT, () -> "wink script: " + winkScript);
-                        webEngine.executeScript(winkScript);
+                        var winkResult = webEngine.executeScript(winkScript);
                         log.trace(TracingSources.CHAT, AI_CHAT,
-                            () -> "wink script executed, winked: " + handler.isReady());
+                            () -> "wink script executed, winked: " + handler.isReady() + ", result: " + winkResult);
+                        webEngine
+                            .executeScript(
+                                "if (typeof window.chatApi['set_tools'] === 'function') { window.chatApi.set_tools("
+                                    + javaScript.escape(toolsJson, EMPTY_STRING) + "); }");
                     }
                     else
                     {

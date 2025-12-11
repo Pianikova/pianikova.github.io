@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui;
 import java.util.List;
 
 import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.ToolCallMessage;
 
 public interface IChat
 {
@@ -22,4 +23,6 @@ public interface IChat
     void addCode(AIContext ctx, String codeSnippet);
 
     public void addFiles(List<IContentReader> contents);
+
+    void addToolsResult(String chatId, String messageId, List<ToolCallMessage> result);
 }
