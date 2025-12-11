@@ -498,6 +498,7 @@ public class Chat implements IChat, IChatDialog
             var chatUrl = settings.getChatUrl();
             if (!Objects.equals(chatUrl, lastChatUrl))
             {
+                handler.reset();
                 lastChatUrl = chatUrl;
                 initializing = dispatcher.dispatch(() -> {
                     var webEngine = getEgine();
@@ -561,6 +562,14 @@ public class Chat implements IChat, IChatDialog
     @SuppressWarnings("nls")
     private void wink(int attempts)
     {
+        if (handler.isReady())
+        {
+            return;
+        }
+
+        var tools = mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
+        var toolsJson = json.serialize(tools);
+
         var webEngine = getEgine();
         while (true)
         {
@@ -579,12 +588,10 @@ public class Chat implements IChat, IChatDialog
                         var winkResult = webEngine.executeScript(winkScript);
                         log.trace(TracingSources.CHAT, AI_CHAT,
                             () -> "wink script executed, winked: " + handler.isReady() + ", result: " + winkResult);
-                        var tools =
-                            mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
-                        var toolsJson = json.serialize(tools);
                         webEngine
                             .executeScript(
-                                "window.chatApi.set_tools(" + javaScript.escape(toolsJson, EMPTY_STRING) + ");");
+                                "if (typeof window.chatApi['set_tools'] === 'function') { window.chatApi.set_tools("
+                                    + javaScript.escape(toolsJson, EMPTY_STRING) + "); }");
                     }
                     else
                     {
