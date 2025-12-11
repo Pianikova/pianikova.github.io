@@ -13,5 +13,5 @@ public interface IMcpTools
 {
     List<McpToolCallSpecification> getSpecifications();
 
-    CompletableFuture<List<ToolCallMessage>> callTools(McpToolCalls calls, ICancellationToken сancellationToken);
+    CompletableFuture<McpCallToolsResult> callTools(McpToolCalls calls, ICancellationToken сancellationToken);
 }

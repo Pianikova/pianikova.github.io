@@ -6,7 +6,7 @@ package com.e1c.edt.ai.ui;
 import java.util.List;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.McpCallToolsResult;
 
 public interface IChat
 {
@@ -24,5 +24,5 @@ public interface IChat
 
     public void addFiles(List<IContentReader> contents);
 
-    void addToolsResult(String chatId, String messageId, List<ToolCallMessage> result);
+    void addToolsResult(String chatId, String messageId, McpCallToolsResult result);
 }

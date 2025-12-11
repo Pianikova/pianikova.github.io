@@ -36,7 +36,7 @@ import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IStatistics;
-import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.McpCallToolsResult;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
@@ -176,7 +176,7 @@ public class Chat implements IChat, IChatDialog
 
     @SuppressWarnings("nls")
     @Override
-    public void addToolsResult(String chatId, String messageId, List<ToolCallMessage> result)
+    public void addToolsResult(String chatId, String messageId, McpCallToolsResult result)
     {
         Optional<AIContext> ctx;
         synchronized (contexts)
@@ -188,7 +188,8 @@ public class Chat implements IChat, IChatDialog
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try
             {
-                var resultJson = json.serialize(result);
+                var messagesJson = json.serialize(result.messages);
+                var unknownCallsJson = json.serialize(result.unknownCalls);
                 var script = new StringBuilder();
                 script.append("window.chatApi.add_tool_calls_result(");
                 script.append(javaScript.escape(chatId, EMPTY_STRING));
@@ -197,14 +198,19 @@ public class Chat implements IChat, IChatDialog
                 script.append(javaScript.escape(messageId, EMPTY_STRING));
                 script.append(ARGS_SEPARATOR);
 
-                script.append("window.calls_result);");
+                script.append("window.calls_messages");
+                script.append(ARGS_SEPARATOR);
+
+                script.append(javaScript.escape(unknownCallsJson, EMPTY_STRING));
+
+                script.append(");");
                 var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
                     var webEngine = getEgine();
                     var window = (JSObject)webEngine.executeScript("window");
                     if (window != null)
                     {
-                        window.setMember("calls_result", resultJson);
+                        window.setMember("calls_messages", messagesJson);
                     }
 
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);

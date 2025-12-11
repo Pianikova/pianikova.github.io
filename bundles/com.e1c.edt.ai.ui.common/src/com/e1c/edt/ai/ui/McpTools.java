@@ -16,6 +16,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.McpCallToolsResult;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
@@ -69,26 +70,17 @@ public class McpTools
     }
 
     @Override
-    public CompletableFuture<List<ToolCallMessage>> callTools(McpToolCalls calls, ICancellationToken cancellationToken)
+    public CompletableFuture<McpCallToolsResult> callTools(McpToolCalls calls, ICancellationToken cancellationToken)
     {
         var futures = new ArrayList<CompletableFuture<ToolCallMessage>>();
+        var unknownCalls = new McpToolCalls();
         for (var call : calls)
         {
-            if (cancellationToken.isCanceled())
-            {
-                var operationcCancelled =
-                    CompletableFuture.completedFuture(messageFactory.createMessage(null, call, "Operation cancelled.")); //$NON-NLS-1$
-                futures.add(operationcCancelled);
-                continue;
-            }
-
             var toolName = call.function.name.toLowerCase();
             var tool = tools.get(toolName);
             if (tool == null)
             {
-                var toolNotFound =
-                    CompletableFuture.completedFuture(messageFactory.createError(null, call, "Tool not found.")); //$NON-NLS-1$
-                futures.add(toolNotFound);
+                unknownCalls.add(call);
                 continue;
             }
 
@@ -99,10 +91,18 @@ public class McpTools
 
         if (futures.isEmpty())
         {
-            return CompletableFuture.completedFuture(Collections.emptyList());
+            var result = new McpCallToolsResult();
+            result.messages = new ArrayList<>();
+            result.unknownCalls = unknownCalls;
+            return CompletableFuture.completedFuture(result);
         }
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-            .thenApply(v -> futures.stream().map(CompletableFuture::join).collect(Collectors.toList()));
+            .thenApply(v -> {
+                var result = new McpCallToolsResult();
+                result.messages = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+                result.unknownCalls = unknownCalls;
+                return result;
+            });
     }
 }
