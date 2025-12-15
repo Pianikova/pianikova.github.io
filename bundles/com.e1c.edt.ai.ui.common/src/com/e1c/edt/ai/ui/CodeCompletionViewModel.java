@@ -233,7 +233,7 @@ class CodeCompletionViewModel
 
     private boolean isEnabled()
     {
-        return CodeCompletionPolicy.MANUAL.isMeet(settings.getCodeCompletionPolicy());
+        return settings.isEnabled();
     }
 
     private boolean isBalanced()

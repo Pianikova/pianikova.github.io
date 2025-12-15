@@ -73,7 +73,7 @@ public class Settings
     @Override
     public boolean isEnabled()
     {
-        return clientTokenValidator.isValid(getClientToken());
+        return CodeCompletionPolicy.MANUAL.isMeet(getCodeCompletionPolicy());
     }
 
     @SuppressWarnings("nls")

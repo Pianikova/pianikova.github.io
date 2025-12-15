@@ -215,56 +215,44 @@ public class BaseStatusBarControl
             hintWasShown = false;
         }
 
-        var token = settings.getClientToken();
-        switch (serviceState)
+        if (settings.isEnabled())
         {
-        case SETTINGS_CHANGED:
-            if (!settings.isEnabled())
+            switch (serviceState)
             {
-                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+            case TOKEN_FAILED:
                 if (!hintWasShown)
                 {
-                    notificationService.createNotification(
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.NotActivated,
-                        Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
-                        UINotificationType.INFO);
+                    if (clientTokenValidator.isValid(settings.getClientToken()))
+                    {
+                        notificationService.createNotification(
+                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
+                            Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
+                            UINotificationType.ERROR);
+                    }
+                    else
+                    {
+                        settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+                        notificationService.createNotification(
+                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.NotActivated,
+                            Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
+                            UINotificationType.INFO);
+                    }
+
                     hintWasShown = true;
                 }
-            }
-            break;
+                break;
 
-        case TOKEN_FAILED:
-            if (!clientTokenValidator.isValid(token))
-            {
-                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
-                notificationService.createNotification(PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-                    Messages.NotActivated, Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
-                    UINotificationType.INFO);
-            }
-            else
-            {
+            case SSL_ERROR:
                 if (!hintWasShown)
                 {
                     notificationService.createNotification(
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
-                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
+                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
                         UINotificationType.ERROR);
                     hintWasShown = true;
                 }
+                break;
             }
-
-            break;
-
-        case SSL_ERROR:
-            if (!hintWasShown)
-            {
-                notificationService.createNotification(
-                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
-                    Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
-                    UINotificationType.ERROR);
-                hintWasShown = true;
-            }
-            break;
         }
 
         policy = settings.getCodeCompletionPolicy();
