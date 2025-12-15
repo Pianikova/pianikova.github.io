@@ -4,7 +4,6 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +15,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.McpCallToolsResult;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
@@ -31,11 +31,17 @@ public class McpTools
     private final IMcpToolsCallMessageFactory messageFactory;
 
     @Inject
-    public McpTools(Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory)
+    public McpTools(ISettings settings, Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory)
     {
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(messageFactory);
         this.messageFactory = messageFactory;
+        if (!settings.isExperimental())
+        {
+            tools = tools.stream().filter(i -> !i.isExperimental()).collect(Collectors.toSet());
+        }
+
         for (IMcpTool tool : tools)
         {
             var spec = tool.getSpecification();
@@ -66,7 +72,7 @@ public class McpTools
     @Override
     public List<McpToolCallSpecification> getSpecifications()
     {
-        return Collections.unmodifiableList(specs);
+        return specs;
     }
 
     @Override

@@ -82,7 +82,7 @@ public class LocalContext
 
     /**
      * Cписок связанных с кодом (prefix + suffix) объектов.
-     * Передается, когда user_parameters.extended_context == true.
+     * Передается, когда user_parameters.experimental == true.
      * Например, ["SERVER", "MOBILE_SERVER", "MOBILE_AUTONOMOUS_SERVER", "EXTERNAL_CONN", "CLIENT"],
      */
     @SerializedName("cursor_environments")
@@ -90,7 +90,7 @@ public class LocalContext
 
     /**
      * Список объектов, связанных с кодом (prefix + suffix).
-     * Передается, когда user_parameters.extended_context == true.
+     * Передается, когда user_parameters.experimental == true.
      * Например, ["Справочник.Организации", "Справочник.Организации.СведенияОбОрганизации", "Справочник.Организации.СведенияОбОрганизации.СведенияОбОрганизации"].
      */
     @SerializedName("related_objects")
@@ -98,14 +98,14 @@ public class LocalContext
 
     /**
      * Список связанных с кодом (prefix + suffix) вызовов методов.
-     * Передается, когда user_parameters.extended_context == true.
+     * Передается, когда user_parameters.experimental == true.
      */
     @SerializedName("related_functions")
     public List<IContextEntity> relatedFunctions;
 
     /**
      * Список предложений от контекстного ассистента, которые могут быть вставлены в код.
-     * Передается, когда user_parameters.extended_context == true.
+     * Передается, когда user_parameters.experimental == true.
      */
     @SerializedName("proposals")
     public List<Proposal> proposals;

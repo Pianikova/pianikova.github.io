@@ -41,7 +41,7 @@ public interface ISettings
 
     int getSuffixLength(ProjectId projectId);
 
-    boolean sendExtendedContext();
+    boolean isExperimental();
 
     boolean sendGlobalContext(ProjectId projectId);
 

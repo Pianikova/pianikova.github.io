@@ -42,7 +42,7 @@ class Contexts
     public LocalContext create(AIContext aiContext, IStatistics statistics,
         ICancellationToken cancellationToken)
     {
-        var sendExtendedContext = settings.sendExtendedContext();
+        var sendExtendedContext = settings.isExperimental();
         var localContext = new LocalContext();
         localContext.prefix = textNormilizer.normalize(aiContext.getPrefix());
         localContext.suffix = textNormilizer.normalize(aiContext.getSufix());

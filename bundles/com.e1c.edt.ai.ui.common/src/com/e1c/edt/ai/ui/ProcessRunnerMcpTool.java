@@ -54,6 +54,12 @@ public class ProcessRunnerMcpTool
     }
 
     @Override
+    public boolean isExperimental()
+    {
+        return true;
+    }
+
+    @Override
     public McpToolCallSpecification getSpecification()
     {
         return spec;

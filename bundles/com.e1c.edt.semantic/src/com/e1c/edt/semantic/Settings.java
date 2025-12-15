@@ -90,7 +90,7 @@ class Settings
     }
 
     @Override
-    public boolean sendExtendedContext()
+    public boolean isExperimental()
     {
         return true;
     }

@@ -237,10 +237,9 @@ public class Parameters
     public Optional<Boolean> globalContext;
 
     /**
-     * Определяет передавать ли расширенный контекст. Например, true.
+     * Определяет использовать ли экспериментальные возможности. Например, true.
      */
-    @SerializedName("extended_context")
-    public Optional<Boolean> extendedContext;
+    public Optional<Boolean> experimental;
 
     /**
      * Уровень детализации логов (error/warning/info/trace/debug). Например, warning.
@@ -445,9 +444,9 @@ public class Parameters
             globalContext = params.globalContext;
         }
 
-        if (params.extendedContext != null)
+        if (params.experimental != null)
         {
-            extendedContext = params.extendedContext;
+            experimental = params.experimental;
         }
 
         if (params.verbosity != null)
@@ -470,7 +469,7 @@ public class Parameters
             doSample, maxNewTokens, repetitionPenalty, frequencyPenalty, returnFullText, seed, stop, temperature, topK,
             topNTokens, topP, truncate, typicalP, watermark, tokenHealing, returnLine, trimStop, url, chatUrl,
             updateUrl, localFunctionsLength, externalFunctionsLength, globalMetaLength, clipboardLength, minDelay,
-            timeout, globalContext, extendedContext, verbosity, resources, gitDiffContextLines, instanceType);
+            timeout, globalContext, experimental, verbosity, resources, gitDiffContextLines, instanceType);
     }
 
     @Override
@@ -503,7 +502,7 @@ public class Parameters
             && Objects.equals(globalMetaLength, other.globalMetaLength)
             && Objects.equals(clipboardLength, other.clipboardLength) && Objects.equals(minDelay, other.minDelay)
             && Objects.equals(timeout, other.timeout) && Objects.equals(globalContext, other.globalContext)
-            && Objects.equals(extendedContext, other.extendedContext) && Objects.equals(verbosity, other.verbosity)
+            && Objects.equals(experimental, other.experimental) && Objects.equals(verbosity, other.verbosity)
             && Objects.equals(resources, other.resources)
             && Objects.equals(gitDiffContextLines, other.gitDiffContextLines)
             && Objects.equals(instanceType, other.instanceType);

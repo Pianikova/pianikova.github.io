@@ -119,7 +119,7 @@ class SessionService
         userParameters.language = settings.getLanguage();
         userParameters.configurationParameters = configurationParametersProvider.getParameters(projectId).orElse(null);
         userParameters.globalContext = userParams.globalContext;
-        userParameters.extendedContext = userParams.extendedContext;
+        userParameters.experimental = userParams.experimental;
 
         var systemInfo = new SystemInfo();
         sessionRequest.systemInfo = systemInfo;

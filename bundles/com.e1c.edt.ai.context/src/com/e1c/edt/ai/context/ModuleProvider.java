@@ -141,7 +141,7 @@ public class ModuleProvider
 
     private Module analyzeModule(Module module, ICancellationToken cancellationToken)
     {
-        if (!settings.sendExtendedContext())
+        if (!settings.isExperimental())
         {
             return module;
         }

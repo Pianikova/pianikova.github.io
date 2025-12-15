@@ -10,6 +10,8 @@ import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 
 public interface IMcpTool
 {
+    boolean isExperimental();
+
     McpToolCallSpecification getSpecification();
 
     CompletableFuture<ToolCallMessage> call(McpToolCall calls, ICancellationToken сancellationToken);

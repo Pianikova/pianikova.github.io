@@ -82,10 +82,9 @@ public class UserParameters
     public Optional<Boolean> globalContext;
 
     /**
-     * Определяет передавать ли расширенный контекст. Например, true.
+     * Определяет использовать ли экспериментальные возможности. Например, true.
      */
-    @SerializedName("extended_context")
-    public Optional<Boolean> extendedContext;
+    public Optional<Boolean> experimental;
 
     /**
      * Уровень детализации логов (error/warning/info/trace/debug). Например, warning.

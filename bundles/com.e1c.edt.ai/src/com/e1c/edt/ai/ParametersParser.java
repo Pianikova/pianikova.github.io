@@ -220,8 +220,8 @@ public class ParametersParser
         names.remove(parse(properties, "global_context", validationResult,
             val -> parameters.globalContext = val == null || val.isBlank() ? null : parseBoolean(val)));
 
-        names.remove(parse(properties, "extended_context", validationResult,
-            val -> parameters.extendedContext = val == null || val.isBlank() ? null : parseBoolean(val)));
+        names.remove(parse(properties, "experimental", validationResult,
+            val -> parameters.experimental = val == null || val.isBlank() ? null : parseBoolean(val)));
 
         names.remove(parse(properties, "verbosity", validationResult,
             val -> parameters.verbosity =

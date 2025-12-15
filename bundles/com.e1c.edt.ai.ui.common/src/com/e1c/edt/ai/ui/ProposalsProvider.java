@@ -96,7 +96,7 @@ public class ProposalsProvider
     public Optional<List<Proposal>> getProposals(AIContext aiCtx, SourceViewer sourceViewer, int minPriority,
         ICancellationToken cancellationToken)
     {
-        if (!uiSettings.sendExtendedContext())
+        if (!uiSettings.isExperimental())
         {
             return Optional.empty();
         }

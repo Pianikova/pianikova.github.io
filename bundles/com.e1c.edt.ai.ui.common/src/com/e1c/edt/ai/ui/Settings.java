@@ -162,9 +162,9 @@ public class Settings
     }
 
     @Override
-    public boolean sendExtendedContext()
+    public boolean isExperimental()
     {
-        return getParameterValue(null, parameters -> parameters.extendedContext, () -> false);
+        return getParameterValue(null, parameters -> parameters.experimental, () -> false);
     }
 
     @Override
