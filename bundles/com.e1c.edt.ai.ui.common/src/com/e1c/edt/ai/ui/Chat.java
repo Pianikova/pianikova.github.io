@@ -90,7 +90,7 @@ public class Chat implements IChat, IChatDialog
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).build();
 
     private WebView webView;
-    private URL lastChatUrl;
+    private ChatKey lastChatKey;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
     private String lastDialogPath;
 
@@ -502,13 +502,14 @@ public class Chat implements IChat, IChatDialog
         try
         {
             var chatUrl = settings.getChatUrl();
-            if (!Objects.equals(chatUrl, lastChatUrl))
+            var newChatKey = new ChatKey(chatUrl, settings.getClientToken());
+            if (!Objects.equals(lastChatKey, newChatKey))
             {
                 handler.reset();
-                lastChatUrl = chatUrl;
+                lastChatKey = newChatKey;
                 initializing = dispatcher.dispatch(() -> {
                     var webEngine = getEgine();
-                    return initialize(webEngine, () -> webEngine.load(lastChatUrl.toString()));
+                    return initialize(webEngine, () -> webEngine.load(chatUrl.toString()));
                 }).get();
             }
 
@@ -637,5 +638,36 @@ public class Chat implements IChat, IChatDialog
     private interface IChatAction
     {
         void run();
+    }
+
+    private static class ChatKey
+    {
+        private final URL url;
+        private final String token;
+
+        public ChatKey(URL url, String token)
+        {
+            this.url = url;
+            this.token = token;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(token, url);
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (this == obj)
+                return true;
+            if (obj == null)
+                return false;
+            if (getClass() != obj.getClass())
+                return false;
+            ChatKey other = (ChatKey)obj;
+            return Objects.equals(token, other.token) && Objects.equals(url, other.url);
+        }
     }
 }
