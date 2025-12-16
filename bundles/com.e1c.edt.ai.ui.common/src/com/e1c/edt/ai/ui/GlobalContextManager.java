@@ -12,6 +12,7 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.Completion;
 import com.google.common.base.Preconditions;
@@ -20,21 +21,25 @@ import com.google.inject.Inject;
 class GlobalContextManager implements IGlobalContextManager
 {
     private final ILog log;
+    private final ISettings settings;
     private final IDispatcher dispatcher;
     private final IGlobalContextSync globalContextSync;
     private final IGlobalContextTracker globalContextTracker;
     private Job currentJob;
 
     @Inject
-    public GlobalContextManager(ILog log, IDispatcher dispatcher, IGlobalContextSync globalContextSync,
+    public GlobalContextManager(ILog log, ISettings settings, IDispatcher dispatcher,
+        IGlobalContextSync globalContextSync,
         IGlobalContextTracker globalContextTracker)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(globalContextSync);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(globalContextTracker);
         this.log = log;
+        this.settings = settings;
         this.dispatcher = dispatcher;
         this.globalContextSync = globalContextSync;
         this.globalContextTracker = globalContextTracker;
@@ -43,6 +48,11 @@ class GlobalContextManager implements IGlobalContextManager
     @Override
     public void update(AIContext aiCtx, ICancellationToken cancellationToken)
     {
+        if (!settings.isEnabled())
+        {
+            return;
+        }
+
         var job =
             dispatcher.createJob(Messages.BackgroundJobName,
                 jobCtx -> {
@@ -51,7 +61,6 @@ class GlobalContextManager implements IGlobalContextManager
                         var syncTask = globalContextSync.sync(aiCtx, 5, jobCtx.CancellationTokenSource);
                         CancellationTokenSource.attach(jobCtx.CancellationTokenSource, () -> syncTask.cancel(true));
                         syncTask.get();
-                        globalContextTracker.track(aiCtx);
                     }
                     catch (ExecutionException error)
                     {
@@ -62,7 +71,11 @@ class GlobalContextManager implements IGlobalContextManager
                     {
                         log.logError(error);
                     }
-                }, cancellationToken);
+                    finally
+                    {
+                        globalContextTracker.track(aiCtx);
+                    }
+                }, false, cancellationToken);
 
         runJob(job);
     }
@@ -70,7 +83,7 @@ class GlobalContextManager implements IGlobalContextManager
     @Override
     public void update(AIContext aiCtx, Completion completion, ICancellationToken cancellationToken)
     {
-        if (completion.unknownValues == null || completion.unknownValues.isEmpty())
+        if (!settings.isEnabled() || completion.unknownValues == null || completion.unknownValues.isEmpty())
         {
             return;
         }
@@ -87,7 +100,7 @@ class GlobalContextManager implements IGlobalContextManager
             {
                 log.logError(error);
             }
-        }, cancellationToken);
+        }, false, cancellationToken);
         runJob(job);
     }
 

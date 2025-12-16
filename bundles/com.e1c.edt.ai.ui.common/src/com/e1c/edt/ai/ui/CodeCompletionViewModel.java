@@ -79,7 +79,6 @@ class CodeCompletionViewModel
     ModifyListener, SelectionListener, ControlListener, MouseListener, IDocumentListener
 {
     private final Object lockObject = new Object();
-    private final Object lastMethodLockObject = new Object();
     private final ILog log;
     private final ISettings settings;
     private final ICodeAssistant codeAssistant;
@@ -249,6 +248,18 @@ class CodeCompletionViewModel
     private void reset()
     {
         cancel();
+        Job localLastUpdateMethodJob;
+        synchronized (lockObject)
+        {
+            localLastUpdateMethodJob = lastUpdateMethodJob;
+            lastUpdateMethodJob = null;
+        }
+
+        if (localLastUpdateMethodJob != null)
+        {
+            localLastUpdateMethodJob.cancel();
+        }
+
         lastProposals.clear();
         history.clear();
         hideHint();
@@ -320,9 +331,10 @@ class CodeCompletionViewModel
         }
 
         cancel();
-        var job = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
-            getAiContext(jobCtx.CancellationTokenSource)
-                .ifPresent(aiCtx -> {
+        synchronized (lockObject)
+        {
+            lastJob = dispatcher.createJob(Messages.CodeCompletionJobName, jobCtx -> {
+                getAiContext(jobCtx.CancellationTokenSource).ifPresent(aiCtx -> {
                     var startTime = clock.now();
                     final var contextProvider =
                         CreateContextProvider(localContextProvider, maxDuration, forced, contentAssist);
@@ -330,11 +342,11 @@ class CodeCompletionViewModel
                     ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
                         jobCtx.CancellationTokenSource);
                 });
-        }, CancellationTokens.NONE);
-        job.setSystem(true);
-        job.setPriority(Job.INTERACTIVE);
-        this.lastJob = job;
-        job.schedule(delayBeforeAsk.toMillis());
+            }, false, CancellationTokens.NONE);
+            lastJob.setSystem(true);
+            lastJob.setPriority(Job.INTERACTIVE);
+            lastJob.schedule(delayBeforeAsk.toMillis());
+        }
     }
 
     private void askWithoutDelay(boolean forced, boolean contentAssist)
@@ -357,7 +369,7 @@ class CodeCompletionViewModel
 
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, settings.getTimeout(), false, false), CancellationTokens.NONE);
+                ct -> CreateContextProvider(null, settings.getTimeout(), false, false), false, CancellationTokens.NONE);
         warmupJob.setSystem(true);
         warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
@@ -629,27 +641,27 @@ class CodeCompletionViewModel
     private void cancel()
     {
         showTimer.purge();
+        Job localLastJob;
+        ICodeCompletionSession<CodeCompletionContext> localLastSession;
         synchronized (lockObject)
         {
-            if (lastUpdateMethodJob != null)
-            {
-                lastUpdateMethodJob.cancel();
-                lastUpdateMethodJob = null;
-            }
+            localLastJob = lastJob;
+            lastJob = null;
+            lastUpdateMethodJob = null;
+            localLastSession = lastSession;
+            lastSession = null;
+            isTraversed = false;
+        }
 
-            if (lastJob != null)
-            {
-                lastJob.cancel();
-                lastJob = null;
-            }
+        if (localLastJob != null)
+        {
+            localLastJob.cancel();
+        }
 
-            if (lastSession != null)
-            {
-                lastSession.getContext().getCancellationTokenSource().cancel();
-                lastSession.reset();
-                lastSession = null;
-                isTraversed = false;
-            }
+        if (localLastSession != null)
+        {
+            localLastSession.getContext().getCancellationTokenSource().cancel();
+            localLastSession.reset();
         }
     }
 
@@ -885,20 +897,25 @@ class CodeCompletionViewModel
 
     private void updateMethodAsync()
     {
-        synchronized (lastMethodLockObject)
+        if (!isEnabled())
         {
-            var job = lastUpdateMethodJob;
-            if (job != null)
-            {
-                job.cancel();
-            }
+            return;
+        }
 
-            job = dispatcher.createJob(Messages.CodeCompletionJobName,
-                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), CancellationTokens.NONE);
-            job.setSystem(true);
-            job.setPriority(Job.DECORATE);
-            this.lastUpdateMethodJob = job;
-            job.schedule(1000);
+        Job localLastUpdateMethodJob;
+        synchronized (lockObject)
+        {
+            localLastUpdateMethodJob = lastUpdateMethodJob;
+            lastUpdateMethodJob = dispatcher.createJob(Messages.CodeCompletionJobName,
+                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), false, CancellationTokens.NONE);
+            lastUpdateMethodJob.setSystem(true);
+            lastUpdateMethodJob.setPriority(Job.DECORATE);
+            lastUpdateMethodJob.schedule(100);
+        }
+
+        if (localLastUpdateMethodJob != null)
+        {
+            localLastUpdateMethodJob.cancel();
         }
     }
 
@@ -1094,6 +1111,11 @@ class CodeCompletionViewModel
             return;
         }
 
+        if (!isEnabled())
+        {
+            return;
+        }
+
         if (commitJob != null)
         {
             commitJob.cancel();
@@ -1101,7 +1123,7 @@ class CodeCompletionViewModel
 
         var job = dispatcher.createJob(Messages.CodeCompletionJobName,
             jobCtx -> session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset()),
-            CancellationTokens.NONE);
+            false, CancellationTokens.NONE);
         job.setSystem(true);
         job.setPriority(Job.DECORATE);
         this.commitJob = job;

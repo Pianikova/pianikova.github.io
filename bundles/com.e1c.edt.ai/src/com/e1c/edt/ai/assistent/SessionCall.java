@@ -108,24 +108,29 @@ public class SessionCall
             });
         })
             .whenComplete((r, error) -> {
-                stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
-                if (!isCancellationException(error))
-                {
-                    httpLog.error(error, cancellationToken.toString());
-                }
-
                 try
                 {
-                    attachToken.close();
-                }
-                catch (Exception ex)
-                {
-                    //
-                }
+                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+                    if (error != null)
+                    {
+                        if (!isCancellationException(error))
+                        {
+                            httpLog.error(error, cancellationToken.toString());
+                        }
 
-                if (error != null)
+                        result.completeExceptionally(error);
+                    }
+                }
+                finally
                 {
-                    result.completeExceptionally(error);
+                    try
+                    {
+                        attachToken.close();
+                    }
+                    catch (Exception ex)
+                    {
+                        //
+                    }
                 }
             });
     }

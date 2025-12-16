@@ -4,6 +4,7 @@
 package com.e1c.edt.ai;
 
 import java.time.LocalDateTime;
+import java.util.function.Supplier;
 
 import com.google.common.base.Preconditions;
 
@@ -29,6 +30,13 @@ public class CancellationTokens
         return new ExpiringCancellationToken(cancellationToken, clock, expirationDate);
     }
 
+    public static ICancellationToken manual(ICancellationToken cancellationToken, Supplier<Boolean> cancellationCheck)
+    {
+        Preconditions.checkNotNull(cancellationToken);
+        Preconditions.checkNotNull(cancellationCheck);
+        return new ManualCancellationToken(cancellationToken, cancellationCheck);
+    }
+
     private static class ExpiringCancellationToken
         implements ICancellationToken
     {
@@ -48,6 +56,25 @@ public class CancellationTokens
         public Boolean isCanceled()
         {
             return isStopped || cancellationToken.isCanceled() || clock.now().isAfter(expirationDate);
+        }
+    }
+
+    private static class ManualCancellationToken
+        implements ICancellationToken
+    {
+        private final ICancellationToken cancellationToken;
+        private final Supplier<Boolean> cancellationCheck;
+
+        public ManualCancellationToken(ICancellationToken cancellationToken, Supplier<Boolean> cancellationCheck)
+        {
+            this.cancellationToken = cancellationToken;
+            this.cancellationCheck = cancellationCheck;
+        }
+
+        @Override
+        public Boolean isCanceled()
+        {
+            return isStopped || cancellationToken.isCanceled() || cancellationCheck.get();
         }
     }
 }

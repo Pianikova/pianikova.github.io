@@ -28,7 +28,7 @@ import com.google.inject.Inject;
  *
  */
 class StateService
-    implements IStateService
+    implements IStateService, IInitializable
 {
     private static final ListenerList<IAIStateListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
     private final IHealthCheckService healthCheckService;
@@ -50,6 +50,12 @@ class StateService
         this.settings = settings;
         this.dispatcher = dispatcher;
     }
+
+    @Override
+    public void initialize()
+    {
+        startMonitoring(30000, 5000, 0);
+    };
 
     @Override
     public void addListener(IAIStateListener newListener)
@@ -82,12 +88,6 @@ class StateService
             refresh();
         }
     }
-
-    @Override
-    public void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs)
-    {
-        startMonitoring(checkPeriodMs, checkPeriodAfterErrorMs, 0);
-    };
 
     @Override
     public void refresh()
@@ -125,6 +125,12 @@ class StateService
     private void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs, int periodMs)
     {
         var job = dispatcher.createJob(Messages.UpdatingServerStatus, jobCtx -> {
+            if (!settings.isEnabled())
+            {
+                startMonitoring(checkPeriodMs, checkPeriodAfterErrorMs, checkPeriodMs);
+                return;
+            }
+
             try
             {
                 var ckectTask = healthCheckService.checkAsync()
@@ -149,11 +155,10 @@ class StateService
             {
                 log.logError(error);
             }
-
-        }, CancellationTokens.NONE);
+        }, true, CancellationTokens.NONE);
 
         job.setSystem(true);
         job.setPriority(Job.DECORATE);
         job.schedule(periodMs);
-    };
+    }
 }

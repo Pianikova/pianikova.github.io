@@ -17,8 +17,6 @@ public interface IStateService
 
     void refresh();
 
-    void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs);
-
     void addListener(IAIStateListener serverAccessListener);
 
     void removeListener(IAIStateListener listener);

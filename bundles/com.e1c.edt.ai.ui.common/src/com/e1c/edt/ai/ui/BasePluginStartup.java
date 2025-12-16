@@ -11,7 +11,7 @@ import org.eclipse.ui.IStartup;
 
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.google.inject.Inject;
 
@@ -30,13 +30,13 @@ public class BasePluginStartup
     @Inject
     Set<IInitializable> initializables;
     @Inject
-    IStateService accessHolder;
-    @Inject
     ILog log;
     @Inject
     IPluginUpdateService pluginUpdateService;
     @Inject
     IDispatcher dispatcher;
+    @Inject
+    ISettings settings;
 
     public BasePluginStartup()
     {
@@ -56,10 +56,13 @@ public class BasePluginStartup
     private void scheduleUpdate(long delayMs)
     {
         var updateJob = dispatcher.createJob(Messages.UpdateJobMessage, jobCtx -> {
-            pluginUpdateService.checkForUpdates(jobCtx.Monitor);
+            if (settings.isEnabled())
+            {
+                pluginUpdateService.checkForUpdates(jobCtx.Monitor);
+            }
+
             scheduleUpdate(TimeUnit.DAYS.toMillis(1));
-        },
-            CancellationTokens.NONE);
+        }, true, CancellationTokens.NONE);
 
         updateJob.setPriority(Job.DECORATE);
         updateJob.schedule(delayMs);
@@ -68,7 +71,6 @@ public class BasePluginStartup
     @Override
     public void earlyStartup()
     {
-        accessHolder.startMonitoring(30000, 3000);
         for (var initializable : initializables)
         {
             initializable.initialize();

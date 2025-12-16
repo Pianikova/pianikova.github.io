@@ -12,7 +12,7 @@ import org.eclipse.core.runtime.jobs.Job;
 
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokens;
-import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.ISettings;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -20,62 +20,85 @@ import com.google.inject.Provider;
 class GlobalContextTracker
     implements IGlobalContextTracker
 {
+    private final ISettings settings;
     private final IDispatcher dispatcher;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
-    private final Object lockObject = new Object();
-    private final HashMap<IProject, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
+    private final HashMap<String, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
 
     @Inject
-    public GlobalContextTracker(IDispatcher dispatcher,
+    public GlobalContextTracker(ISettings settings, IDispatcher dispatcher,
         Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider)
     {
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(projectTrackingWorkflowProvider);
+        this.settings = settings;
         this.dispatcher = dispatcher;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
     }
 
     @Override
-    public void track(IProject project)
+    public Optional<IProjectTrackingWorkflow> track(IProject project)
     {
-        synchronized (lockObject)
+        if (!settings.isEnabled())
         {
-            projectWorkflows.computeIfAbsent(project, k -> projectTrackingWorkflowProvider.get()).initialize(project);
+            return Optional.empty();
+        }
+
+        if (project == null || !project.exists())
+        {
+            return Optional.empty();
+        }
+
+        synchronized (projectWorkflows)
+        {
+            var workflowKey = project.getName();
+            var workflow = projectWorkflows.computeIfAbsent(workflowKey,
+                k -> {
+                    var newWorkflow = projectTrackingWorkflowProvider.get();
+                    newWorkflow.initialize(project);
+                    scheduleTracking(workflowKey, newWorkflow, 0);
+                    return newWorkflow;
+                });
+            return Optional.of(workflow);
         }
     }
 
     @Override
     public void track(AIContext aiCtx)
     {
-        synchronized (lockObject)
-        {
-            var project = aiCtx.getProjectId().project;
-            if (project == null)
-            {
-                return;
-            }
-
-            Optional.ofNullable(projectWorkflows.computeIfAbsent(project,
-                    k -> projectTrackingWorkflowProvider.get().initialize(project)))
-                .ifPresent(workflow -> {
-                    workflow.track(aiCtx);
-                    scheduleTracking(workflow, 0);
-                });
-        }
+        track(aiCtx.getProjectId().project).ifPresent(workflow -> workflow.track(aiCtx));
     }
 
-    private void scheduleTracking(IProjectTrackingWorkflow workflow, long delayMs)
+    private void scheduleTracking(String workflowKey, IProjectTrackingWorkflow workflow, long delayMs)
     {
+        var cancellationToken = CancellationTokens.manual(CancellationTokens.NONE, () -> !settings.isEnabled());
         var job = dispatcher.createJob(Messages.BackgroundJobName,
-            jobCtx -> track(jobCtx, workflow, jobCtx.CancellationTokenSource), CancellationTokens.NONE);
+            jobCtx -> track(jobCtx, workflowKey, workflow), false, cancellationToken);
 
         job.setSystem(true);
         job.setPriority(Job.DECORATE);
         job.schedule(delayMs);
     }
 
-    private void track(JobContext jobCtx, IProjectTrackingWorkflow workflow, ICancellationToken cancellationToken)
+    private void track(JobContext jobCtx, String workflowKey, IProjectTrackingWorkflow workflow)
     {
+        synchronized (projectWorkflows)
+        {
+            // IDE is closing or AI is disabled
+            if (jobCtx.CancellationTokenSource.isCanceled() || !settings.isEnabled())
+            {
+                projectWorkflows.clear();
+                return;
+            }
+
+            if (!workflow.getProject().exists())
+            {
+                projectWorkflows.remove(workflowKey);
+                return;
+            }
+        }
+
         var delay = Duration.ofSeconds(5);
         try
         {
@@ -83,15 +106,7 @@ class GlobalContextTracker
         }
         finally
         {
-            synchronized (lockObject)
-            {
-                if (jobCtx.CancellationTokenSource.isCanceled() || !workflow.getProject().exists())
-                {
-                    return;
-                }
-            }
-
-            scheduleTracking(workflow, delay.toMillis());
+            scheduleTracking(workflowKey, workflow, delay.toMillis());
         }
     }
 }

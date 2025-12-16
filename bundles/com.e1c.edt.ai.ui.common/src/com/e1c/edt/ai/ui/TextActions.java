@@ -66,7 +66,7 @@ public class TextActions implements ITextActions
                     log.logError(error);
                     observer.onError(error);
                 }
-            }, cancellationToken);
+            }, false, cancellationToken);
             runJob(job);
             return Closeables.Empty;
         });

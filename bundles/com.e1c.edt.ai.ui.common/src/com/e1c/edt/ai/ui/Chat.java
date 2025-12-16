@@ -491,7 +491,7 @@ public class Chat implements IChat, IChatDialog
     {
         ensureWebViewExists();
         var job = dispatcher.createJob(Messages.ChatInteractionJobName, jobCtx -> chat(ctx, chatAction),
-            CancellationTokens.NONE);
+            false, CancellationTokens.NONE);
         job.setPriority(Job.INTERACTIVE);
         job.schedule();
     }

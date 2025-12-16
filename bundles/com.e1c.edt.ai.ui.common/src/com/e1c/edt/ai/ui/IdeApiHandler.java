@@ -115,7 +115,7 @@ public class IdeApiHandler
                 var chat = chatProvider.get();
                 chat.addToolsResult(chatId, messageId, result);
             });
-        }, CancellationTokens.NONE);
+        }, true, CancellationTokens.NONE);
         job.setPriority(Job.INTERACTIVE);
         job.schedule();
     }
