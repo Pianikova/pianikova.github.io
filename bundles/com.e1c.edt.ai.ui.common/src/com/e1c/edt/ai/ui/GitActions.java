@@ -85,7 +85,7 @@ public class GitActions implements IGitActions
                     log.logError(error);
                     observer.onError(error);
                 }
-            }, cancellationToken);
+            }, false, cancellationToken);
             runJob(job);
             return Closeables.Empty;
         });
@@ -132,7 +132,7 @@ public class GitActions implements IGitActions
             {
                 log.logError(error);
             }
-        }, cancellationToken);
+        }, false, cancellationToken);
         runJob(job);
     }
 

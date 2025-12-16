@@ -74,7 +74,7 @@ class GlobalContextTracker
     {
         var cancellationToken = CancellationTokens.manual(CancellationTokens.NONE, () -> !settings.isEnabled());
         var job = dispatcher.createJob(Messages.BackgroundJobName,
-            jobCtx -> track(jobCtx, workflowKey, workflow), cancellationToken);
+            jobCtx -> track(jobCtx, workflowKey, workflow), false, cancellationToken);
 
         job.setSystem(true);
         job.setPriority(Job.DECORATE);

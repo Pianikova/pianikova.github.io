@@ -155,8 +155,7 @@ class StateService
             {
                 log.logError(error);
             }
-
-        }, CancellationTokens.NONE);
+        }, true, CancellationTokens.NONE);
 
         job.setSystem(true);
         job.setPriority(Job.DECORATE);

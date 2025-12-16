@@ -75,7 +75,7 @@ class GlobalContextManager implements IGlobalContextManager
                     {
                         globalContextTracker.track(aiCtx);
                     }
-                }, cancellationToken);
+                }, false, cancellationToken);
 
         runJob(job);
     }
@@ -100,7 +100,7 @@ class GlobalContextManager implements IGlobalContextManager
             {
                 log.logError(error);
             }
-        }, cancellationToken);
+        }, false, cancellationToken);
         runJob(job);
     }
 

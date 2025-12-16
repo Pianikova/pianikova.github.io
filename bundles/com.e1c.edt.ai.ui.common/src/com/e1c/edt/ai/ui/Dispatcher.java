@@ -188,13 +188,20 @@ class Dispatcher
         }
     }
 
+    @SuppressWarnings("nls")
     @Override
-    public Job createJob(String jobName, Consumer<JobContext> consumer,
+    public Job createJob(String jobName, Consumer<JobContext> consumer, boolean isInfrastucture,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(jobName);
         Preconditions.checkNotNull(consumer);
         Preconditions.checkNotNull(cancellationToken);
+        if (!settings.isEnabled() && !isInfrastucture)
+        {
+            log.warning(TracingSources.JOBS,
+                () -> "Running non infrastructure job \"" + jobName + "\" while plugin is disabled.");
+        }
+
         var isTracing = log.isTracingEnabled(TracingSources.JOBS);
         var resources = new ArrayList<AutoCloseable>();
         var jobs = new ArrayList<Job>();
@@ -210,12 +217,12 @@ class Dispatcher
                     var startTime = clock.now();
                     consumer.accept(new JobContext(jobs.get(0), monitor, cancellationTokenSource));
                     var duration = Duration.between(startTime, clock.now());
-                    log.trace(TracingSources.JOBS, jobName, () -> "duration: " + duration); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "duration: " + duration);
                     return cancellationTokenSource.isCanceled() ? Status.CANCEL_STATUS : Status.OK_STATUS;
                 }
                 catch (Throwable error)
                 {
-                    log.trace(TracingSources.JOBS, jobName, () -> "error: " + error); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "error: " + error);
                     return Status.error(jobName, error);
                 }
                 finally
@@ -257,13 +264,13 @@ class Dispatcher
                 @Override
                 public void aboutToRun(IJobChangeEvent event)
                 {
-                    log.trace(TracingSources.JOBS, jobName, () -> "about to run" + getJobsInfo()); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "about to run" + getJobsInfo());
                 }
 
                 @Override
                 public void awake(IJobChangeEvent event)
                 {
-                    log.trace(TracingSources.JOBS, jobName, () -> "awake" + getJobsInfo()); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "awake" + getJobsInfo());
                 }
 
                 @Override
@@ -274,25 +281,25 @@ class Dispatcher
                         currentJobs.remove(job);
                     }
 
-                    log.trace(TracingSources.JOBS, jobName, () -> "done" + getJobsInfo()); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "done" + getJobsInfo());
                 }
 
                 @Override
                 public void running(IJobChangeEvent event)
                 {
-                    log.trace(TracingSources.JOBS, jobName, () -> "running" + getJobsInfo()); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "running" + getJobsInfo());
                 }
 
                 @Override
                 public void scheduled(IJobChangeEvent event)
                 {
-                    log.trace(TracingSources.JOBS, jobName, () -> "scheduled" + getJobsInfo()); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "scheduled" + getJobsInfo());
                 }
 
                 @Override
                 public void sleeping(IJobChangeEvent event)
                 {
-                    log.trace(TracingSources.JOBS, jobName, () -> "sleeping" + getJobsInfo()); //$NON-NLS-1$
+                    log.trace(TracingSources.JOBS, jobName, () -> "sleeping" + getJobsInfo());
                 }
             });
         }

@@ -20,7 +20,8 @@ public interface IDispatcher
 
     void dispatchAsync(Runnable runnable);
 
-    Job createJob(String jobName, Consumer<JobContext> consumer, ICancellationToken cancellationToken);
+    Job createJob(String jobName, Consumer<JobContext> consumer, boolean isInfrastucture,
+        ICancellationToken cancellationToken);
 
     <T> Optional<T> dispatch(Supplier<? extends T> supplier, Duration timeout);
 

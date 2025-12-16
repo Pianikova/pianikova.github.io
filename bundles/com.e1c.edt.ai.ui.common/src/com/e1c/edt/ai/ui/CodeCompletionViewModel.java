@@ -342,7 +342,7 @@ class CodeCompletionViewModel
                     ask(aiCtx, contextProvider, newDelayBeforeShow, codeCompletionLinesCount,
                         jobCtx.CancellationTokenSource);
                 });
-            }, CancellationTokens.NONE);
+            }, false, CancellationTokens.NONE);
             lastJob.setSystem(true);
             lastJob.setPriority(Job.INTERACTIVE);
             lastJob.schedule(delayBeforeAsk.toMillis());
@@ -369,7 +369,7 @@ class CodeCompletionViewModel
 
         var warmupJob =
             dispatcher.createJob(Messages.CodeCompletionJobName,
-                ct -> CreateContextProvider(null, settings.getTimeout(), false, false), CancellationTokens.NONE);
+                ct -> CreateContextProvider(null, settings.getTimeout(), false, false), false, CancellationTokens.NONE);
         warmupJob.setSystem(true);
         warmupJob.setPriority(Job.DECORATE);
         warmupJob.schedule();
@@ -907,7 +907,7 @@ class CodeCompletionViewModel
         {
             localLastUpdateMethodJob = lastUpdateMethodJob;
             lastUpdateMethodJob = dispatcher.createJob(Messages.CodeCompletionJobName,
-                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), CancellationTokens.NONE);
+                jobCtx -> updateMethod(jobCtx.CancellationTokenSource), false, CancellationTokens.NONE);
             lastUpdateMethodJob.setSystem(true);
             lastUpdateMethodJob.setPriority(Job.DECORATE);
             lastUpdateMethodJob.schedule(100);
@@ -1123,7 +1123,7 @@ class CodeCompletionViewModel
 
         var job = dispatcher.createJob(Messages.CodeCompletionJobName,
             jobCtx -> session.getContext().commit(session.getId(), session.getContext().getAiContext().getTextOffset()),
-            CancellationTokens.NONE);
+            false, CancellationTokens.NONE);
         job.setSystem(true);
         job.setPriority(Job.DECORATE);
         this.commitJob = job;

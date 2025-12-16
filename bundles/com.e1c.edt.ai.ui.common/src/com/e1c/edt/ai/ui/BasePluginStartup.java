@@ -55,8 +55,7 @@ public class BasePluginStartup
         var updateJob = dispatcher.createJob(Messages.UpdateJobMessage, jobCtx -> {
             pluginUpdateService.checkForUpdates(jobCtx.Monitor);
             scheduleUpdate(TimeUnit.DAYS.toMillis(1));
-        },
-            CancellationTokens.NONE);
+        }, true, CancellationTokens.NONE);
 
         updateJob.setPriority(Job.DECORATE);
         updateJob.schedule(delayMs);
