@@ -253,15 +253,7 @@ public class BaseStatusBarControl
                 }
                 break;
             }
-        }
 
-        policy = settings.getCodeCompletionPolicy();
-        if (policy == CodeCompletionPolicy.OFF)
-        {
-            iconLabel.setImage(BaseActivator.getImage(Images.OFF));
-        }
-        else
-        {
             switch (state.getServiceState())
             {
             case ONLINE:
@@ -288,7 +280,12 @@ public class BaseStatusBarControl
                 break;
             }
         }
+        else
+        {
+            iconLabel.setImage(BaseActivator.getImage(Images.OFF));
+        }
 
+        policy = settings.getCodeCompletionPolicy();
         iconLabel.setToolTipText(info);
         statusLabel.setToolTipText(info);
         policyCombo.select(policy.getIndex());
@@ -309,6 +306,10 @@ public class BaseStatusBarControl
         var codeCompletionPolicy = policies[index];
         settingsSetter.setCodeCompletionPolicy(codeCompletionPolicy);
         policyTooltip.setText(codeCompletionPolicy.getDescription());
+        if (!settings.isEnabled())
+        {
+            iconLabel.setImage(BaseActivator.getImage(Images.OFF));
+        }
     }
 
     @Override

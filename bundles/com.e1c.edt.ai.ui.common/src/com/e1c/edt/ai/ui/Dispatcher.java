@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -39,6 +40,7 @@ class Dispatcher
     private final ILog log;
     private final ISettings settings;
     private final IClock clock;
+    private final ArrayList<Job> currentJobs = new ArrayList<>();
 
     @Inject
     public Dispatcher(ILog log, ISettings settings, IClock clock)
@@ -193,6 +195,7 @@ class Dispatcher
         Preconditions.checkNotNull(jobName);
         Preconditions.checkNotNull(consumer);
         Preconditions.checkNotNull(cancellationToken);
+        var isTracing = log.isTracingEnabled(TracingSources.JOBS);
         var resources = new ArrayList<AutoCloseable>();
         var jobs = new ArrayList<Job>();
         var job = new Job(jobName)
@@ -241,55 +244,70 @@ class Dispatcher
         {
             resources.add(attachToken);
         }
-        job.addJobChangeListener(new IJobChangeListener()
+
+        if (isTracing)
         {
-
-            @Override
-            public void aboutToRun(IJobChangeEvent event)
+            synchronized (currentJobs)
             {
-                log.trace(TracingSources.JOBS, jobName, () -> "about to run"); //$NON-NLS-1$
+                currentJobs.add(job);
             }
 
-            @Override
-            public void awake(IJobChangeEvent event)
+            job.addJobChangeListener(new IJobChangeListener()
             {
-                log.trace(TracingSources.JOBS, jobName, () -> "awake"); //$NON-NLS-1$
-            }
-
-            @Override
-            public void done(IJobChangeEvent event)
-            {
-                try
+                @Override
+                public void aboutToRun(IJobChangeEvent event)
                 {
-                    attachToken.close();
-                }
-                catch (Exception e)
-                {
-                    //
+                    log.trace(TracingSources.JOBS, jobName, () -> "about to run" + getJobsInfo()); //$NON-NLS-1$
                 }
 
-                log.trace(TracingSources.JOBS, jobName, () -> "done"); //$NON-NLS-1$
-            }
+                @Override
+                public void awake(IJobChangeEvent event)
+                {
+                    log.trace(TracingSources.JOBS, jobName, () -> "awake" + getJobsInfo()); //$NON-NLS-1$
+                }
 
-            @Override
-            public void running(IJobChangeEvent event)
-            {
-                log.trace(TracingSources.JOBS, jobName, () -> "running"); //$NON-NLS-1$
-            }
+                @Override
+                public void done(IJobChangeEvent event)
+                {
+                    synchronized (currentJobs)
+                    {
+                        currentJobs.remove(job);
+                    }
 
-            @Override
-            public void scheduled(IJobChangeEvent event)
-            {
-                log.trace(TracingSources.JOBS, jobName, () -> "scheduled"); //$NON-NLS-1$
-            }
+                    log.trace(TracingSources.JOBS, jobName, () -> "done" + getJobsInfo()); //$NON-NLS-1$
+                }
 
-            @Override
-            public void sleeping(IJobChangeEvent event)
-            {
-                log.trace(TracingSources.JOBS, jobName, () -> "sleeping"); //$NON-NLS-1$
-            }
-        });
+                @Override
+                public void running(IJobChangeEvent event)
+                {
+                    log.trace(TracingSources.JOBS, jobName, () -> "running" + getJobsInfo()); //$NON-NLS-1$
+                }
+
+                @Override
+                public void scheduled(IJobChangeEvent event)
+                {
+                    log.trace(TracingSources.JOBS, jobName, () -> "scheduled" + getJobsInfo()); //$NON-NLS-1$
+                }
+
+                @Override
+                public void sleeping(IJobChangeEvent event)
+                {
+                    log.trace(TracingSources.JOBS, jobName, () -> "sleeping" + getJobsInfo()); //$NON-NLS-1$
+                }
+            });
+        }
+
         return job;
+    }
+
+    @SuppressWarnings("nls")
+    private String getJobsInfo()
+    {
+        synchronized (currentJobs)
+        {
+            return " jobs: "
+                + String.join(", ", currentJobs.stream().map(i -> i.getName()).sorted().collect(Collectors.toList()));
+        }
     }
 
     @Override

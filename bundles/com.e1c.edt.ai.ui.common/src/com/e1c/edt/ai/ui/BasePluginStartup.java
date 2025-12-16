@@ -11,7 +11,6 @@ import org.eclipse.ui.IStartup;
 
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.TracingSources;
 import com.google.inject.Inject;
 
@@ -29,8 +28,6 @@ public class BasePluginStartup
 {
     @Inject
     Set<IInitializable> initializables;
-    @Inject
-    IStateService accessHolder;
     @Inject
     ILog log;
     @Inject
@@ -68,7 +65,6 @@ public class BasePluginStartup
     @Override
     public void earlyStartup()
     {
-        accessHolder.startMonitoring(30000, 3000);
         for (var initializable : initializables)
         {
             initializable.initialize();

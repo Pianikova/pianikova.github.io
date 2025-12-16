@@ -45,6 +45,7 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(ClipboardManager.class);
         initializableBinder.addBinding().to(DialogsEnhancer.class);
         initializableBinder.addBinding().to(ResourceListener.class);
+        initializableBinder.addBinding().to(StateService.class);
 
         // view enhancers
         var viewEnhancerBinder = Multibinder.newSetBinder(binder(), IViewEnhancer.class);
@@ -103,7 +104,8 @@ public class AIUICommonModule
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
-        bind(IStateService.class).to(StateService.class).in(Singleton.class);
+        bind(StateService.class).in(Singleton.class);
+        bind(IStateService.class).to(StateService.class);
         // MCP tools
         bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);

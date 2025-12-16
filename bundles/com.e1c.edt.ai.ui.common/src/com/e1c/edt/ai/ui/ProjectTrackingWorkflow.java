@@ -31,7 +31,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
-import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
@@ -105,8 +104,7 @@ class ProjectTrackingWorkflow
     @Override
     public Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
-        if (!settings.isEnabled() || !CodeCompletionPolicy.MANUAL.isMeet(settings.getCodeCompletionPolicy())
-            || !project.exists())
+        if (!settings.isEnabled() || !project.exists())
         {
             return ExtraLongDelay;
         }
