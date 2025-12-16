@@ -26,5 +26,3 @@ Export-Package: com.e1c.edt.ai.ui,
  com.e1c.edt.ai.ui.handlers,
  com.e1c.edt.ai.ui.preferences,
  com.e1c.edt.ai.ui.quickaccess
-Bundle-ClassPath: libs/javafx-swt.jar,
- .
