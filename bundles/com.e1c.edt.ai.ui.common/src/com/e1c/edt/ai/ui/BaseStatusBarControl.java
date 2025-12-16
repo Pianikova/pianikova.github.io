@@ -280,7 +280,8 @@ public class BaseStatusBarControl
                 break;
             }
         }
-        else
+
+        if (!settings.isEnabled())
         {
             iconLabel.setImage(BaseActivator.getImage(Images.OFF));
         }

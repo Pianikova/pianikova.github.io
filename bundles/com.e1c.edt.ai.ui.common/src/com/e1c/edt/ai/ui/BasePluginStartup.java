@@ -11,6 +11,7 @@ import org.eclipse.ui.IStartup;
 
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.google.inject.Inject;
 
@@ -34,6 +35,8 @@ public class BasePluginStartup
     IPluginUpdateService pluginUpdateService;
     @Inject
     IDispatcher dispatcher;
+    @Inject
+    ISettings settings;
 
     public BasePluginStartup()
     {
@@ -53,7 +56,11 @@ public class BasePluginStartup
     private void scheduleUpdate(long delayMs)
     {
         var updateJob = dispatcher.createJob(Messages.UpdateJobMessage, jobCtx -> {
-            pluginUpdateService.checkForUpdates(jobCtx.Monitor);
+            if (settings.isEnabled())
+            {
+                pluginUpdateService.checkForUpdates(jobCtx.Monitor);
+            }
+
             scheduleUpdate(TimeUnit.DAYS.toMillis(1));
         }, true, CancellationTokens.NONE);
 
