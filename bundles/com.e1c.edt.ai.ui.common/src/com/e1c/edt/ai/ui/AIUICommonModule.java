@@ -46,6 +46,7 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(DialogsEnhancer.class);
         initializableBinder.addBinding().to(ResourceListener.class);
         initializableBinder.addBinding().to(StateService.class);
+        initializableBinder.addBinding().to(UpdateService.class);
 
         // view enhancers
         var viewEnhancerBinder = Multibinder.newSetBinder(binder(), IViewEnhancer.class);

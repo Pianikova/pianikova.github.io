@@ -4,14 +4,9 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
-import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.IStartup;
 
-import com.e1c.edt.ai.CancellationTokens;
-import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.google.inject.Inject;
 
@@ -29,14 +24,6 @@ public class BasePluginStartup
 {
     @Inject
     Set<IInitializable> initializables;
-    @Inject
-    ILog log;
-    @Inject
-    IPluginUpdateService pluginUpdateService;
-    @Inject
-    IDispatcher dispatcher;
-    @Inject
-    ISettings settings;
 
     public BasePluginStartup()
     {
@@ -50,22 +37,6 @@ public class BasePluginStartup
             () -> ""); //$NON-NLS-1$
         activator.trace(TracingSources.COMMON,
             pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
-        scheduleUpdate(0);
-    }
-
-    private void scheduleUpdate(long delayMs)
-    {
-        var updateJob = dispatcher.createJob(Messages.UpdateJobMessage, jobCtx -> {
-            if (settings.isEnabled())
-            {
-                pluginUpdateService.checkForUpdates(jobCtx.Monitor);
-            }
-
-            scheduleUpdate(TimeUnit.DAYS.toMillis(1));
-        }, true, CancellationTokens.NONE);
-
-        updateJob.setPriority(Job.DECORATE);
-        updateJob.schedule(delayMs);
     }
 
     @Override
