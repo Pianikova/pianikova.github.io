@@ -14,13 +14,13 @@ import com.google.gson.annotations.SerializedName;
 public class UserParameters
 {
     /**
-     * Версия EDT. Например, 1.0.0.0.
+     * Версия EDT. Например, 2025.6.0.
      */
     @SerializedName("edt_version")
     public String edtVersion;
 
     /**
-     * Версия плагина. Например, 1.0.0.0.
+     * Версия плагина. Например, 1.0.1
      */
     @SerializedName("plugin_version")
     public String pluginVersion;
