@@ -3,5 +3,11 @@
    <feature id="com.e1c.edt.ui.eclipse.feature">
       <category name="com.e1c.edt.ui.eclipse.category"/>
    </feature>
+   <feature id="openjfx.swt.feature">
+      <category name="com.e1c.edt.ui.eclipse.category"/>
+   </feature>
+   <feature id="org.eclipse.fx.runtime.min.feature">
+      <category name="com.e1c.edt.ui.eclipse.category"/>
+   </feature>
    <category-def name="com.e1c.edt.ui.eclipse.category" label="Eclipse AI"/>
 </site>

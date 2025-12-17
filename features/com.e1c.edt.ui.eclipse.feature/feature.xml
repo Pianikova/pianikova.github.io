@@ -25,6 +25,8 @@
       <import plugin="com.google.inject" version="5.0.1" match="greaterOrEqual"/>
       <import plugin="org.eclipse.xtext"/>
       <import plugin="org.eclipse.e4.ui.css.swt.theme" version="0.13.0" match="greaterOrEqual"/>
+      <import feature="openjfx.swt.feature" version="11.0.0.201901231300" match="greaterOrEqual"/>
+      <import feature="org.eclipse.fx.runtime.min.feature" version="3.7.0.202010120720" match="greaterOrEqual"/>
    </requires>
 
    <plugin
