@@ -39,6 +39,11 @@ public class UpdateService
     private void scheduleUpdate(long delayMs)
     {
         var updateJob = dispatcher.createJob(Messages.UpdateJobMessage, jobCtx -> {
+            if (jobCtx.CancellationTokenSource.isCanceled())
+            {
+                return;
+            }
+
             if (settings.isEnabled())
             {
                 pluginUpdateService.checkForUpdates(jobCtx.Monitor);

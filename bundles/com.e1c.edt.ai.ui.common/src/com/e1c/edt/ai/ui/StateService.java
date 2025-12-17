@@ -125,6 +125,11 @@ class StateService
     private void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs, int periodMs)
     {
         var job = dispatcher.createJob(Messages.UpdatingServerStatus, jobCtx -> {
+            if (jobCtx.CancellationTokenSource.isCanceled())
+            {
+                return;
+            }
+
             if (!settings.isEnabled())
             {
                 startMonitoring(checkPeriodMs, checkPeriodAfterErrorMs, checkPeriodMs);
