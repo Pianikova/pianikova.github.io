@@ -11,6 +11,7 @@ import com.e1c.edt.ai.HashTools;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.IProgramingLanguage;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Json;
@@ -47,6 +48,7 @@ public class SemanticModule
         bind(IIDE.class).to(IDE.class).in(Singleton.class);
         bind(IHashTools.class).to(HashTools.class).in(Singleton.class);
         bind(ISettings.class).to(Settings.class).in(Singleton.class);
+        bind(IMcpToolsCallMessageFactory.class).to(McpToolsCallMessageFactory.class).in(Singleton.class);
         // @formatter:on
     }
 }

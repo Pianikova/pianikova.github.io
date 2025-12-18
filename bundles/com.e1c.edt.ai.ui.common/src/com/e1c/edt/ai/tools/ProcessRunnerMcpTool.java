@@ -78,6 +78,11 @@ public class ProcessRunnerMcpTool
         }
 
         var callArgs = optionalCallArgs.get();
+        if (callArgs.executable == null || callArgs.executable.isBlank())
+        {
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call, "'executable' cannot be empty."));
+        }
 
         CompletableFuture<Optional<ProcessResult>> completableFutureResult =
             processRunner.executeProcess(callArgs.executable, callArgs.working_directory, callArgs.args,
@@ -160,7 +165,7 @@ public class ProcessRunnerMcpTool
         properties.put("working_directory", workingDirProp);
 
         var argsProp = new McpToolCallProperty();
-        argsProp.type = "string";
+        argsProp.type = "object";
         argsProp.description = "Сommand-line arguments as a JSON array of strings.";
         properties.put("args", argsProp);
 

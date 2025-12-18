@@ -50,6 +50,7 @@ public class AIModule
         bind(IProposalExtractor.class).to(ProposalExtractor.class).in(Singleton.class);
         bind(IEnvironment.class).to(Environment.class).in(Singleton.class);
         bind(IMcpToolsCallMessageFactory.class).to(McpToolsCallMessageFactory.class).in(Singleton.class);
+        bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
         // @formatter:on
     }
 }

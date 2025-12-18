@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.ui;
+package com.e1c.edt.ai;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,15 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
-import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IMcpTool;
-import com.e1c.edt.ai.IMcpTools;
-import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
-import com.e1c.edt.ai.ISettings;
-import com.e1c.edt.ai.McpCallToolsResult;
-import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
 import com.google.common.base.Preconditions;
@@ -26,16 +20,19 @@ import com.google.inject.Inject;
 public class McpTools
     implements IMcpTools
 {
+    private final ILog log;
     private final Map<String, IMcpTool> tools = new HashMap<>();
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
     private final IMcpToolsCallMessageFactory messageFactory;
 
     @Inject
-    public McpTools(ISettings settings, Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory)
+    public McpTools(ILog log, ISettings settings, Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory)
     {
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(messageFactory);
+        this.log = log;
         this.messageFactory = messageFactory;
         if (!settings.isExperimental())
         {
@@ -75,6 +72,7 @@ public class McpTools
         return specs;
     }
 
+    @SuppressWarnings("nls")
     @Override
     public CompletableFuture<McpCallToolsResult> callTools(McpToolCalls calls, ICancellationToken cancellationToken)
     {
@@ -90,9 +88,21 @@ public class McpTools
                 continue;
             }
 
-            var callFuture = tool.call(call, cancellationToken)
-                .exceptionally(ex -> messageFactory.createError(null, call, ex.getMessage()));
-            futures.add(callFuture);
+            try
+            {
+                var callFuture = tool.call(call, cancellationToken).exceptionally(ex -> {
+                    var message = createErrorMessage(toolName, ex);
+                    log.logError(message);
+                    return messageFactory.createError(null, call, ex.getMessage());
+                });
+                futures.add(callFuture);
+            }
+            catch (Exception ex)
+            {
+                var message = createErrorMessage(toolName, ex);
+                log.logError(message);
+                futures.add(CompletableFuture.completedFuture(messageFactory.createError(tool, call, message)));
+            }
         }
 
         if (futures.isEmpty())
@@ -110,5 +120,13 @@ public class McpTools
                 result.unknownCalls = unknownCalls;
                 return result;
             });
+    }
+
+    @SuppressWarnings("nls")
+    private String createErrorMessage(String toolName, Throwable ex)
+    {
+        var cause = ex instanceof CompletionException ? ex.getCause() : ex;
+        var message = "Failed to call tool \"" + toolName + "\". " + cause.getMessage();
+        return message;
     }
 }

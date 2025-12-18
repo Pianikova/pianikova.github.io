@@ -14,15 +14,19 @@ import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.core.platform.management.IDtHostResourceManager;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
+import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
+import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
 class ContextModule
@@ -52,13 +56,6 @@ class ContextModule
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IBmPovider.class).to(BmPovider.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
-        bind(IExternalPropertyManagerRegistry.class).toService();
-        bind(IBmModelManager.class).toService();
-        bind(IResourceLookup.class).toService();
-        bind(IDataSourceInfoAssociationService.class).toService();
-        bind(IV8ProjectManager.class).toService();
-        bind(IProjectFileSystemSupportProvider.class).toService();
-        bind(IQualifiedNameFilePathConverter.class).toService();
         bind(MessageDigest.class).toProvider(() -> {
             try
             {
@@ -71,6 +68,21 @@ class ContextModule
         });
         bind(IModuleProvider.class).annotatedWith(Names.named("BaseModuleProvider")).to(ModuleProvider.class).in(Singleton.class); //$NON-NLS-1$
         bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
+
+        // MCP tools
+        var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
+        toolBinder.addBinding().to(ConfigurationFindMcpTool.class);
+
+        // Services
+        bind(IExternalPropertyManagerRegistry.class).toService();
+        bind(IBmModelManager.class).toService();
+        bind(IResourceLookup.class).toService();
+        bind(IDataSourceInfoAssociationService.class).toService();
+        bind(IV8ProjectManager.class).toService();
+        bind(IProjectFileSystemSupportProvider.class).toService();
+        bind(IQualifiedNameFilePathConverter.class).toService();
+        bind(IDtHostResourceManager.class).toService();
+        bind(ITextSearchIndexProvider.class).toService();
         // @formatter:on
     }
 }
