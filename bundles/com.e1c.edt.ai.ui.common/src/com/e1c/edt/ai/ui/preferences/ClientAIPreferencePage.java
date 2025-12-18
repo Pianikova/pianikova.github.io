@@ -81,6 +81,8 @@ public class ClientAIPreferencePage
     @Inject
     IClientTokenValidator clientTokenValidator;
 
+    private String prevToken;
+
     public ClientAIPreferencePage()
     {
         super(GRID);
@@ -136,7 +138,7 @@ public class ClientAIPreferencePage
     @Override
     public void init(IWorkbench workbench)
     {
-        // Empty stub
+        this.prevToken = settings.getClientToken();
     }
 
     @SuppressWarnings("nls")
@@ -190,7 +192,8 @@ public class ClientAIPreferencePage
     {
         var result = super.performOk();
         var token = settings.getClientToken();
-        if (clientTokenValidator.isValid(token) && settings.getCodeCompletionPolicy() == CodeCompletionPolicy.OFF)
+        if (clientTokenValidator.isValid(token) && settings.getCodeCompletionPolicy() == CodeCompletionPolicy.OFF
+            && !token.equals(this.prevToken))
         {
             settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.MODERATE);
         }
