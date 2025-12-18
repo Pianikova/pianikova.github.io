@@ -10,12 +10,11 @@ import com.e1c.edt.ai.ICodeCompletionActionHandler;
 import com.e1c.edt.ai.ICodeCompletionSession;
 import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.IGlobalContextManager;
-import com.e1c.edt.ai.IMcpTool;
-import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.tools.MCPToolsModule;
 import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
 import com.e1c.edt.ai.ui.handlers.ICodeTools;
@@ -37,6 +36,7 @@ public class AIUICommonModule
     {
         // @formatter:off
         install(new AIModule());
+        install(new MCPToolsModule());
 
         // inirializables
         var initializableBinder = Multibinder.newSetBinder(binder(), IInitializable.class);
@@ -104,13 +104,8 @@ public class AIUICommonModule
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
-        bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(StateService.class).in(Singleton.class);
         bind(IStateService.class).to(StateService.class);
-        // MCP tools
-        bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
-        var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
-        toolBinder.addBinding().to(ProcessRunnerMcpTool.class);
         // @formatter:on
     }
 }
