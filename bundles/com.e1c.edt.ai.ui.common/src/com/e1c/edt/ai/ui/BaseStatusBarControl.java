@@ -231,15 +231,16 @@ public class BaseStatusBarControl
                     }
                     else
                     {
-                        settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
                         notificationService.createNotification(
                             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.NotActivated,
                             Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
                             UINotificationType.INFO);
                     }
-
-                    hintWasShown = true;
                 }
+
+                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+                hintWasShown = true;
+
                 break;
 
             case SSL_ERROR:
