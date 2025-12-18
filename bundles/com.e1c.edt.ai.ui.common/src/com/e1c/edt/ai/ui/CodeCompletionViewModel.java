@@ -421,7 +421,7 @@ class CodeCompletionViewModel
 
             lastSession = null;
             isTextModifed = false;
-            prevMethod = null;
+            prevMethod = Optional.empty();
         }
     }
 
