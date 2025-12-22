@@ -26,7 +26,6 @@ import com._1c.g5.v8.dt.search.core.SearchScope;
 import com._1c.g5.v8.dt.search.core.SimpleSearchResultCollector;
 import com._1c.g5.v8.dt.search.core.TextSearchScopeSettings;
 import com._1c.g5.v8.dt.search.core.TextSearcher;
-import com._1c.g5.v8.dt.search.core.refs.BmReferenceMatch;
 import com._1c.g5.v8.dt.search.core.refs.BmRelatedObjectMatch;
 import com._1c.g5.v8.dt.search.core.refs.BslReferenceMatch;
 import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
@@ -50,12 +49,14 @@ import com.google.inject.Inject;
 public class ConfigurationFindMcpTool
     implements IMcpTool
 {
+    public static final String TOOL_NAME = "1с_ide_configuration_find"; //$NON-NLS-1$
+
     // @formatter:off
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
         + "  \"search_query\": \"*список?контрактов*\",\n"
-        + "  \"projects\": [\"Проект_1\", \"Проект_2\"],\n"
+        + "  \"project_names\": [\"Проект_1\", \"Проект_2\"],\n"
         + "  \"in\": [\n"
         + "    \"metadata\",\n"
         + "    \"attributes\",\n"
@@ -132,7 +133,7 @@ public class ConfigurationFindMcpTool
         + "  }\n"
         + "]";
 
-    // @formatter:oт
+    // @formatter:on
 
     private final IJson json;
     private final McpToolCallSpecification spec;
@@ -227,7 +228,7 @@ public class ConfigurationFindMcpTool
 
             var monitor = new ProgressMonitor();
             var root = ResourcesPlugin.getWorkspace().getRoot();
-            for(var projectName: callArgs.projects)
+            for(var projectName: callArgs.projectNames)
             {
                 var project = root.getProject(projectName);
                 if (project == null)
@@ -278,14 +279,11 @@ public class ConfigurationFindMcpTool
             var elements = new ArrayList<Element>();
             for (var match : resultCollector.getMatches())
             {
-                // var model = match.getModel();
-                // var engine = model.getEngine();
                 if (match instanceof TextSearchFileMatch)
                 {
                     var src = (TextSearchFileMatch)match;
                     var dst = new TextSearchFile();
                     dst.type = "Text file";
-                    // dst.metadataTopObjectId = src.getMetadataTopObjectId();
                     var file = src.getFile();
                     if (file != null)
                     {
@@ -317,10 +315,8 @@ public class ConfigurationFindMcpTool
                     var dst = new TextSearchModelElement();
                     dst.type = "Text in 1C model";
                     dst.propertyValue = src.getText();
-                    // dst.metadataTopObjectId = src.getMetadataTopObjectId();
                     dst.topObjectId = src.getTopObjectId();
                     dst.objectId = src.getObjectId();
-                    // var srcObject = engine.getObjectById(src.getObjectId());
                     dst.valueOffset = src.getTextOffset();
                     dst.matchLength = src.getTextLength();
                     elements.add(dst);
@@ -343,24 +339,22 @@ public class ConfigurationFindMcpTool
                     elements.add(dst);
                 }
 
-                if (match instanceof BmReferenceMatch)
+                /*if (match instanceof BmReferenceMatch)
                 {
                     var src = (BmReferenceMatch)match;
                     var dst = new BmReferenceElement();
                     dst.type = "1C model reference";
-                    // dst.metadataTopObjectId = src.getMetadataTopObjectId();
                     elements.add(dst);
-                }
+                }*/
 
                 if (match instanceof BmRelatedObjectMatch)
                 {
                     var src = (BmRelatedObjectMatch)match;
                     var dst = new BmRelatedObjectElement();
                     dst.type = "1C reletaed object";
-                    // dst.metadataTopObjectId = src.getMetadataTopObjectId();
                     dst.objectId = src.getObjectId();
                     var optionalTarget = src.getTarget();
-                    if(optionalTarget.isPresent())
+                    if (optionalTarget.isPresent())
                     {
                         var target = optionalTarget.get();
                         dst.targetMetadataTopObjectId = target.getMetadataTopObjectId();
@@ -375,7 +369,6 @@ public class ConfigurationFindMcpTool
                     var src = (BmObjectMatch)match;
                     var dst = new BmObjectElement();
                     dst.type = "1C object";
-                    // dst.metadataTopObjectId = src.getMetadataTopObjectId();
                     dst.objectId = src.getObjectId();
                     elements.add(dst);
                 }
@@ -406,12 +399,13 @@ public class ConfigurationFindMcpTool
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name = "configuration_find";
+        spec.function.name =TOOL_NAME;
 
         var description = new StringBuilder();
 
-        description.append("Finds elements in 1C projects.");
+        description.append("Finds elements (objects, attributes, forms, code, etc) in 1C projects.");
         description.append("\nIMPORTANT: use wildcards (in 'search_query') for a broad search.");
+        description.append("\nIMPORTANT: use " + GetObjectByIdMcpTool.TOOL_NAME + " tool to get an object by its id.");
         description.append("\nNOTE: add a description of what will be done when using this tool.");
 
         description.append("\nFor exapmple:");
@@ -430,10 +424,10 @@ public class ConfigurationFindMcpTool
         searchQueryProp.description = "Search query. Wildcards are supported.";
         properties.put("search_query", searchQueryProp);
 
-        var projectsDirProp = new McpToolCallProperty();
-        projectsDirProp.type = "object";
-        projectsDirProp.description = "1C project names as a JSON array of strings.";
-        properties.put("search_projects", projectsDirProp);
+        var projectNamesProp = new McpToolCallProperty();
+        projectNamesProp.type = "object";
+        projectNamesProp.description = "1C project names as a JSON array of strings.";
+        properties.put("search_project_names", projectNamesProp);
 
         var searchInProp = new McpToolCallProperty();
         searchInProp.type = "object";
@@ -451,7 +445,7 @@ public class ConfigurationFindMcpTool
         properties.put("search_scopes", searchScopesProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("search_query", "search_projects", "search_in", "search_for", "search_scopes");
+        parameters.required = Arrays.asList("search_query", "search_project_names", "search_in", "search_for", "search_scopes");
 
         spec.function.parameters = parameters;
         return spec;
@@ -550,8 +544,8 @@ public class ConfigurationFindMcpTool
         /**
          * Projects to search in
          */
-        @SerializedName("search_projects")
-        public List<String> projects = new ArrayList<>();
+        @SerializedName("search_project_names")
+        public List<String> projectNames = new ArrayList<>();
 
         /**
          * Defines where to search for the search query.
@@ -705,11 +699,11 @@ public class ConfigurationFindMcpTool
      * Represents a base metadata reference element (currently without additional fields)
      * type = "1C model reference"
      */
-    private static class BmReferenceElement
+    /*private static class BmReferenceElement
         extends Element
     {
         // Intentionally empty - used as base for metadata references
-    }
+    }*/
 
     /**
      * Represents a related metadata object in search results

@@ -28,6 +28,8 @@ import com.google.inject.Inject;
 public class ProcessRunnerMcpTool
     implements IMcpTool
 {
+    public static final String TOOL_NAME = "execute_process"; //$NON-NLS-1$
+
     private static String QuestionExample =
         "{\"executable\":\"cmd\",\"working_directory\":\"C:\\\\\\\\\",\"args\":[\"/c\",\"whoami\"],\"timeout\":3000}"; //$NON-NLS-1$
 
@@ -117,7 +119,7 @@ public class ProcessRunnerMcpTool
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name = "execute_process";
+        spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
 

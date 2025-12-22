@@ -72,6 +72,7 @@ class ContextModule
         // MCP tools
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
         toolBinder.addBinding().to(ConfigurationFindMcpTool.class);
+        toolBinder.addBinding().to(GetObjectByIdMcpTool.class);
 
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();

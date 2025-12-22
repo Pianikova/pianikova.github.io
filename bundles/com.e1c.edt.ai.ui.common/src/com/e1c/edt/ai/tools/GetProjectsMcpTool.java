@@ -34,6 +34,8 @@ import com.google.inject.Inject;
 public class GetProjectsMcpTool
     implements IMcpTool
 {
+    public static final String TOOL_NAME = "ide_get_projects"; //$NON-NLS-1$
+
     // @formatter:off
     @SuppressWarnings("nls")
     private static String QuestionExample =
@@ -167,7 +169,7 @@ public class GetProjectsMcpTool
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name = "get_projects";
+        spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
 
