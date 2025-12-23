@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.ui;
+package com.e1c.edt.ai.tools;
 
 import java.io.File;
 import java.io.IOException;

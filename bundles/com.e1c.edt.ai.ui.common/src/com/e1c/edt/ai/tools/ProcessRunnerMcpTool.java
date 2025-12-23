@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2025, 1C
  */
-package com.e1c.edt.ai.ui;
+package com.e1c.edt.ai.tools;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,28 +28,30 @@ import com.google.inject.Inject;
 public class ProcessRunnerMcpTool
     implements IMcpTool
 {
+    public static final String TOOL_NAME = "execute_process"; //$NON-NLS-1$
+
     private static String QuestionExample =
-        "{\"executable\":\"cmd\",\"working_directory\":\"C:\\\\\\\\\",\"args\":[\"/c\",\"whoami\"],\"tiemout\":3000}"; //$NON-NLS-1$
+        "{\"executable\":\"cmd\",\"working_directory\":\"C:\\\\\\\\\",\"args\":[\"/c\",\"whoami\"],\"timeout\":3000}"; //$NON-NLS-1$
 
     private static String AnswerExample =
         "{\"exit_code\":0,\"std_out\":\"john_smith\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
 
-    private final IProcessRunner processRunner;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
+    private final IProcessRunner processRunner;
 
     @Inject
-    public ProcessRunnerMcpTool(IEnvironment environment, IProcessRunner processRunner, IJson json,
-        IMcpToolsCallMessageFactory messageFactory)
+    public ProcessRunnerMcpTool(IEnvironment environment, IJson json, IMcpToolsCallMessageFactory messageFactory,
+        IProcessRunner processRunner)
     {
         Preconditions.checkNotNull(environment);
-        Preconditions.checkNotNull(processRunner);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        this.processRunner = processRunner;
+        Preconditions.checkNotNull(processRunner);
         this.json = json;
         this.messageFactory = messageFactory;
+        this.processRunner = processRunner;
         spec = createSpecification(environment);
     }
 
@@ -78,10 +80,15 @@ public class ProcessRunnerMcpTool
         }
 
         var callArgs = optionalCallArgs.get();
+        if (callArgs.executable == null || callArgs.executable.isBlank())
+        {
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call, "'executable' cannot be empty."));
+        }
 
         CompletableFuture<Optional<ProcessResult>> completableFutureResult =
             processRunner.executeProcess(callArgs.executable, callArgs.working_directory, callArgs.args,
-                callArgs.tiemout, TimeUnit.SECONDS);
+                callArgs.timeout, TimeUnit.SECONDS);
 
         return completableFutureResult.thenApply(optResult -> {
             return optResult.map(result -> {
@@ -112,7 +119,7 @@ public class ProcessRunnerMcpTool
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name = "execute_process";
+        spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
 
@@ -160,7 +167,7 @@ public class ProcessRunnerMcpTool
         properties.put("working_directory", workingDirProp);
 
         var argsProp = new McpToolCallProperty();
-        argsProp.type = "string";
+        argsProp.type = "object";
         argsProp.description = "Сommand-line arguments as a JSON array of strings.";
         properties.put("args", argsProp);
 
@@ -184,6 +191,6 @@ public class ProcessRunnerMcpTool
 
         public ArrayList<String> args;
 
-        public Long tiemout;
+        public Long timeout;
     }
 }
