@@ -222,7 +222,7 @@ public class BaseStatusBarControl
             {
             case TOKEN_FAILED:
 
-                if (!hintWasShown && lastState.getServiceState() == ServiceState.TOKEN_FAILED)
+                if (!hintWasShown && lastState != null && lastState.getServiceState() == ServiceState.TOKEN_FAILED)
                 {
                     if (clientTokenValidator.isValid(settings.getClientToken()))
                     {
