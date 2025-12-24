@@ -20,4 +20,6 @@ public interface IStateService
     void addListener(IAIStateListener serverAccessListener);
 
     void removeListener(IAIStateListener listener);
+
+    String getLastClassOwner();
 }

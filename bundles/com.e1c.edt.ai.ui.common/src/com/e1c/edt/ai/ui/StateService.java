@@ -37,6 +37,7 @@ class StateService
     private final IDispatcher dispatcher;
     private ServiceState serviceState;
     private ActionState actionState;
+    private String lastClassOwner;
 
     @Inject
     public StateService(IHealthCheckService healthCheckService, ILog log, ISettings settings, IDispatcher dispatcher)
@@ -74,6 +75,7 @@ class StateService
     {
         if (serviceState == ServiceState.SETTINGS_CHANGED || this.serviceState != serviceState)
         {
+            this.lastClassOwner = className;
             this.serviceState = serviceState;
             refresh();
         }
@@ -84,6 +86,7 @@ class StateService
     {
         if (this.actionState != actionState)
         {
+            this.lastClassOwner = className;
             this.actionState = actionState;
             refresh();
         }
@@ -120,6 +123,12 @@ class StateService
                 log.logError(error);
             }
         }
+    }
+
+    @Override
+    public String getLastClassOwner()
+    {
+        return lastClassOwner;
     }
 
     private void startMonitoring(int checkPeriodMs, int checkPeriodAfterErrorMs, int periodMs)
