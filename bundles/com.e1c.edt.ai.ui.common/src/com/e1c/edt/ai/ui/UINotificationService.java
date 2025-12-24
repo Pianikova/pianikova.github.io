@@ -3,8 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.util.HashMap;
-
 import org.eclipse.swt.widgets.Shell;
 
 /**
@@ -14,7 +12,7 @@ import org.eclipse.swt.widgets.Shell;
 public class UINotificationService
     implements IUINotificationService
 {
-    private HashMap<String, UINotification> lastPopups = new HashMap<>();
+    private UINotification lastNotification;
 
     @Override
     public void createNotification(Shell parentShell, String message, String linkText, String url,
@@ -22,31 +20,29 @@ public class UINotificationService
     {
         UINotification popup = new UINotification(parentShell, message, type, linkText, url);
         popup.setBlockOnOpen(false);
-        var lastPopup = lastPopups.get(message);
-        if (lastPopup != null)
-        {
-            lastPopup.close();
-        }
-
-        lastPopups.put(message, popup);
+        closeNotificationIfOpen();
+        lastNotification = popup;
         popup.open();
     }
 
     @Override
     public void createNotificationWithAction(Shell parentShell, String message, Runnable action,
-        UINotificationActionType actionType,
-        UINotificationType type)
+        UINotificationActionType actionType, UINotificationType type)
     {
         UINotification popup = new UINotification(parentShell, message, type, null, null, action, actionType);
         popup.setBlockOnOpen(false);
-        var lastPopup = lastPopups.get(message);
-        if (lastPopup != null)
-        {
-            lastPopup.close();
-        }
-
-        lastPopups.put(message, popup);
+        closeNotificationIfOpen();
         popup.open();
+    }
+
+    @Override
+    public void closeNotificationIfOpen()
+    {
+        if (lastNotification != null)
+        {
+            lastNotification.close();
+            lastNotification = null;
+        }
     }
 
     public static enum UINotificationActionType
@@ -66,6 +62,7 @@ public class UINotificationService
             return buttonText;
         }
     }
+
 
 }
 

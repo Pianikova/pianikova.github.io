@@ -18,5 +18,7 @@ public interface IUINotificationService
 
     public void createNotificationWithAction(Shell parentShell, String message, Runnable action,
         UINotificationActionType actionType, UINotificationType type);
+
+    public void closeNotificationIfOpen();
 }
 
