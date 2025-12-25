@@ -42,8 +42,25 @@ public class GetObjectByIdMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"project_name\": \"Проект_1\",\n"
-        + "  \"object_id\": 9876543210\n"
+        + "  \"resoure_uri\": \"platform:/resource/com.example.project/src/main/java/com/example/MyClass.java\",\n"
+        + "  \"fqn\": \"com.example.MyClass\",\n"
+        + "  \"is_top\": true,\n"
+        + "  \"top_object_id\": 17239405821723,\n"
+        + "  \"object_model\": {\n"
+        + "    \"type\": \"JAVA_CLASS\",\n"
+        + "    \"modifiers\": [\"public\"],\n"
+        + "    \"superClass\": \"java.lang.Object\",\n"
+        + "    \"interfaces\": [\"java.io.Serializable\"],\n"
+        + "    \"methods\": [\n"
+        + "      {\n"
+        + "        \"name\": \"main\",\n"
+        + "        \"parameters\": [\"String[] args\"],\n"
+        + "        \"returnType\": \"void\"\n"
+        + "      }\n"
+        + "    ]\n"
+        + "  },\n"
+        + "  \"absolute_file_path\": \"C:/eclipse-workspace/com.example.project/src/main/java/com/example/MyClass.java\",\n"
+        + "  \"file_path\": \"/com.example.project/src/main/java/com/example/MyClass.java\"\n"
         + "}";
 
     @SuppressWarnings("nls")
@@ -164,43 +181,44 @@ public class GetObjectByIdMcpTool
                 return messageFactory.createError(this, call, "Object not found: " + objectId);
             }
 
-            Object obj = null;
-            if (bmObject instanceof Form)
-            {
-                obj = entityFactory.createFormEntity((Form)bmObject, cancellationToken).orElse(null);
-            }
-            else
-            {
-                obj = entityFactory.createMetaEntity(bmObject, cancellationToken);
-            }
-
             var result = new Result();
-            if (obj != null)
+            result.resoureUri = bmObject.bmGetUriAsString();
+            result.fqn = bmObject.bmGetFqn();
+            result.isTop = bmObject.bmIsTop();
+            var topObject = bmObject.bmGetTopObject();
+            if (topObject != null)
             {
-                var fileSystem = projectFileSystemSupportProvider.getProjectFileSystemSupport(project);
-                if (fileSystem != null)
+                result.topObjectId = topObject.bmGetId();
+            }
+
+            var fileSystem = projectFileSystemSupportProvider.getProjectFileSystemSupport(project);
+            if (fileSystem != null)
+            {
+                var file = fileSystem.getFile(bmObject);
+                if (file != null)
                 {
-                    var file = fileSystem.getFile(bmObject);
-                    if (file != null)
+                    var location = file.getRawLocation();
+                    if (location != null)
                     {
-                        var location = file.getRawLocation();
-                        if (location != null)
-                        {
-                            result.absoluteFilePath = location.toOSString();
-                        }
-
-                        var relativePath = file.getProjectRelativePath();
-                        if (relativePath != null)
-                        {
-                            result.projectRelativeFilePath = relativePath.toOSString();
-                        }
-
+                        result.absoluteFilePath = location.toOSString();
                     }
+
+                    var relativePath = file.getProjectRelativePath();
+                    if (relativePath != null)
+                    {
+                        result.filePath = "/" + project.getName() + "/" + relativePath.toPortableString();
+                    }
+
                 }
             }
+
+            if (bmObject instanceof Form)
+            {
+                result.objectModel = entityFactory.createFormEntity((Form)bmObject, cancellationToken).orElse(null);
+            }
             else
             {
-                result.objectModel = "";
+                result.objectModel = entityFactory.createMetaEntity(bmObject, cancellationToken);
             }
 
             return json.serialize(result);
@@ -273,7 +291,6 @@ public class GetObjectByIdMcpTool
 
         /**
          * Defines object id.
-
          */
         @SerializedName("object_id")
         public Long objectId;
@@ -281,13 +298,25 @@ public class GetObjectByIdMcpTool
 
     private static class Result
     {
+        @SerializedName("resoure_uri")
+        public String resoureUri;
+
+        @SerializedName("fqn")
+        public String fqn;
+
+        @SerializedName("is_top")
+        public boolean isTop;
+
+        @SerializedName("top_object_id")
+        public long topObjectId;
+
         @SerializedName("object_model")
         public Object objectModel;
 
-        @SerializedName("absolute_file_path")
-        public Object absoluteFilePath;
+        @SerializedName("filePath")
+        public String filePath;
 
-        @SerializedName("project_relative_file _path")
-        public Object projectRelativeFilePath;
+        @SerializedName("absolute_file_path")
+        public String absoluteFilePath;
     }
 }
