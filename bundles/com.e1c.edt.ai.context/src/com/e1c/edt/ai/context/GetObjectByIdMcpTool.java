@@ -206,6 +206,7 @@ public class GetObjectByIdMcpTool
                     var relativePath = file.getProjectRelativePath();
                     if (relativePath != null)
                     {
+                        result.relativeFilePath = "/" + relativePath.toPortableString();
                         result.filePath = "/" + project.getName() + "/" + relativePath.toPortableString();
                     }
 
@@ -312,6 +313,9 @@ public class GetObjectByIdMcpTool
 
         @SerializedName("object_model")
         public Object objectModel;
+
+        @SerializedName("relative_file_path")
+        public String relativeFilePath;
 
         @SerializedName("filePath")
         public String filePath;

@@ -23,6 +23,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(GetCommandCategoriesMcpTool.class);
         toolBinder.addBinding().to(GetCommandsMcpTool.class);
         // toolBinder.addBinding().to(ExecuteCommandsMcpTool.class);
+        toolBinder.addBinding().to(ReadProjectFileMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
     }
 }

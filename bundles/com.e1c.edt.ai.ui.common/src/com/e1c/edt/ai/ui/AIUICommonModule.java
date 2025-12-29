@@ -106,6 +106,7 @@ public class AIUICommonModule
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
         bind(StateService.class).in(Singleton.class);
         bind(IStateService.class).to(StateService.class);
+        bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }
