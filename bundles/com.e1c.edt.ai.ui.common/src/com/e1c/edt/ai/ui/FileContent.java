@@ -13,7 +13,10 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.text.IDocument;
 
+import com.e1c.edt.ai.assistent.model.ProjectId;
+
 public class FileContent
+    implements IFileContent
 {
     private final IDocument document;
     private final IFile file;
@@ -24,16 +27,13 @@ public class FileContent
         this.file = file;
     }
 
-    public IDocument tryGetDocument()
+    @Override
+    public ProjectId getProjectId()
     {
-        return document;
+        return new ProjectId(file.getProject());
     }
 
-    public IFile getFile()
-    {
-        return file;
-    }
-
+    @Override
     public Charset getCharset()
     {
         try
@@ -46,6 +46,7 @@ public class FileContent
         }
     }
 
+    @Override
     public Optional<InputStream> getInputStream()
     {
         if (document != null)
@@ -68,6 +69,12 @@ public class FileContent
         }
 
         return Optional.empty();
+    }
+
+    @Override
+    public String toString()
+    {
+        return file.getProjectRelativePath().toPortableString();
     }
 
 /*

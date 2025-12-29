@@ -24,6 +24,7 @@ import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IMcpTool;
+import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
@@ -55,6 +56,7 @@ class ContextModule
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IBmPovider.class).to(BmPovider.class).in(Singleton.class);
+        bind(IFiles.class).to(Files.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(MessageDigest.class).toProvider(() -> {
             try

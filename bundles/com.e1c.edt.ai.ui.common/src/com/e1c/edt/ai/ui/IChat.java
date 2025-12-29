@@ -22,7 +22,7 @@ public interface IChat
 
     void addCode(AIContext ctx, String codeSnippet);
 
-    public void addFiles(List<IContentReader> contents);
+    public void addFiles(List<IFileContent> contents);
 
     void addToolsResult(String chatId, String messageId, McpCallToolsResult result);
 }

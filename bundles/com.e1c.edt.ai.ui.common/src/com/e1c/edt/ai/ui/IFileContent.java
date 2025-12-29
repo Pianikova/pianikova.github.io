@@ -3,21 +3,17 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-
-import org.eclipse.core.runtime.CoreException;
+import java.util.Optional;
 
 import com.e1c.edt.ai.assistent.model.ProjectId;
 
-public interface IContentReader
+public interface IFileContent
 {
     ProjectId getProjectId();
 
-    String getName();
-
     Charset getCharset();
 
-    InputStream getInputStream() throws IOException, CoreException;
+    Optional<InputStream> getInputStream();
 }

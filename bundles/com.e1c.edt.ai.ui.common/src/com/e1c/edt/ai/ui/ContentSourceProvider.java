@@ -31,7 +31,12 @@ public class ContentSourceProvider implements IContentSourceProvider
     public Optional<FileContent> getFileContent(IProject project, String relativePath)
     {
         var filePath = normalizeFilePath(project, relativePath);
-        var file = project.getFile(filePath);
+        return getFileContent(project.getFile(filePath));
+    }
+
+    @Override
+    public Optional<FileContent> getFileContent(IFile file)
+    {
         if (file == null)
         {
             return Optional.empty();
