@@ -239,10 +239,9 @@ public class BaseStatusBarControl
                             Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
                             UINotificationType.INFO);
                     }
+                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
                     hintWasShown = true;
                 }
-
-                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
 
                 break;
 
