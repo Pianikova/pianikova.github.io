@@ -3,9 +3,6 @@
  */
 package com.e1c.edt.ai.ui.handlers;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
@@ -17,17 +14,18 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.e4.core.commands.ExpressionContext;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
-import com.e1c.edt.ai.ui.IContentReader;
+import com.e1c.edt.ai.ui.IContentSourceProvider;
+import com.e1c.edt.ai.ui.IFileContent;
 import com.e1c.edt.ai.ui.IFileSystem;
-import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class BaseAddFilesToChatHandler
@@ -41,6 +39,10 @@ public class BaseAddFilesToChatHandler
     IFileSystem fileSystem;
     @Inject
     ISettings settings;
+    @Inject
+    IContentSourceProvider contentSourceProvider;
+    @Inject
+    IFiles files;
 
     public BaseAddFilesToChatHandler()
     {
@@ -51,7 +53,7 @@ public class BaseAddFilesToChatHandler
     @Override
     public void setEnabled(Object evaluationContext)
     {
-        if (settings.isEnabled())
+        if (!settings.isEnabled())
         {
             setBaseEnabled(false);
             return;
@@ -91,9 +93,9 @@ public class BaseAddFilesToChatHandler
         return null;
     }
 
-    private List<IContentReader> getContents(List<Object> targets)
+    private List<IFileContent> getContents(List<Object> targets)
     {
-        var contents = new Stack<IContentReader>();
+        var contents = new Stack<IFileContent>();
         if (targets == null || targets.isEmpty())
         {
             return contents;
@@ -104,15 +106,35 @@ public class BaseAddFilesToChatHandler
         while (elements.size() > 0)
         {
             var element = elements.removeFirst();
+            if (element instanceof EObject)
+            {
+                var file = files.getCodeFile((EObject)element);
+                if (file.isPresent())
+                {
+                    var optionalContent = contentSourceProvider.getFileContent(file.get());
+                    if (optionalContent.isPresent())
+                    {
+                        contents.add(optionalContent.get());
+                    }
+
+                    continue;
+                }
+            }
+
             if (element instanceof IFile)
             {
                 var file = ((IFile)element);
-                if (file.isHidden() || file.isVirtual())
+                if (file.isHidden() || file.isVirtual() || !file.exists())
                 {
                     continue;
                 }
 
-                contents.add(new ProjectFileContentReader(file));
+                var optionalContent = contentSourceProvider.getFileContent(file);
+                if (optionalContent.isPresent())
+                {
+                    contents.add(optionalContent.get());
+                }
+
                 continue;
             }
 
@@ -141,48 +163,5 @@ public class BaseAddFilesToChatHandler
         }
 
         return contents;
-    }
-
-    private class ProjectFileContentReader
-        implements IContentReader
-    {
-        private final IFile file;
-
-        public ProjectFileContentReader(IFile file)
-        {
-            Preconditions.checkNotNull(file);
-            this.file = file;
-        }
-
-        @Override
-        public ProjectId getProjectId()
-        {
-            return projectIdProvider.getProjectId(file.getProject());
-        }
-
-        @Override
-        public String getName()
-        {
-            return file.getProjectRelativePath().toPortableString();
-        }
-
-        @Override
-        public Charset getCharset()
-        {
-            try
-            {
-                return Charset.forName(file.getCharset());
-            }
-            catch (CoreException e)
-            {
-                return Charset.defaultCharset();
-            }
-        }
-
-        @Override
-        public InputStream getInputStream() throws IOException, CoreException
-        {
-            return fileSystem.getContent(file);
-        }
     }
 }

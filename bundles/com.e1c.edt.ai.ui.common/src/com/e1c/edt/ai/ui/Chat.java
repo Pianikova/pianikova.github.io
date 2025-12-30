@@ -231,7 +231,7 @@ public class Chat implements IChat, IChatDialog
 
     @SuppressWarnings("nls")
     @Override
-    public void addFiles(List<IContentReader> contents)
+    public void addFiles(List<IFileContent> contents)
     {
         if (contents == null)
         {
@@ -251,24 +251,23 @@ public class Chat implements IChat, IChatDialog
             {
                 var filePath =
                     lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
-                contents.add(new PathContentReader(filePath));
+                contents.add(new PathContent(filePath));
             }
         }
 
         var errorReadingFile = new StringBuilder();
-        for (var contentReader : contents)
+        for (var content : contents)
         {
-            var optionalContent = fileSystem.getText(contentReader);
+            var optionalContent = fileSystem.getText(content, 0, Integer.MAX_VALUE);
             if (optionalContent.isEmpty())
             {
-                errorReadingFile.append(contentReader.getName());
+                errorReadingFile.append(content.toString());
                 errorReadingFile.append(System.lineSeparator());
                 continue;
             }
 
-            var content = optionalContent.get();
-            var ctx = new AIContext(contentReader.getProjectId(), contentReader.getName(), null);
-            chat("insert_code", content, null, ctx);
+            var ctx = new AIContext(content.getProjectId(), content.toString(), null);
+            chat("insert_code", optionalContent.get(), null, ctx);
         }
 
         if (errorReadingFile.length() > 0)

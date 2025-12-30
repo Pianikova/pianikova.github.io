@@ -8,16 +8,17 @@ import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 
-public class PathContentReader
-    implements IContentReader
+public class PathContent
+    implements IFileContent
 {
     private final Path path;
 
-    public PathContentReader(Path path)
+    public PathContent(Path path)
     {
         Preconditions.checkNotNull(path);
         this.path = path;
@@ -30,21 +31,27 @@ public class PathContentReader
     }
 
     @Override
-    public String getName()
-    {
-        return path.toString();
-    }
-
-    @Override
     public Charset getCharset()
     {
         return Charset.defaultCharset();
     }
 
     @Override
-    public InputStream getInputStream() throws FileNotFoundException
+    public Optional<InputStream> getInputStream()
     {
-        var inputStream = new FileInputStream(path.toString());
-        return inputStream;
+        try
+        {
+            return Optional.ofNullable(new FileInputStream(path.toString()));
+        }
+        catch (FileNotFoundException e)
+        {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public String toString()
+    {
+        return path.toString();
     }
 }

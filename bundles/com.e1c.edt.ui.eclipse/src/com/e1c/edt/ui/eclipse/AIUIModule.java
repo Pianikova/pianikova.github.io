@@ -14,6 +14,7 @@ import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IDefaultSettings;
+import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
@@ -70,6 +71,7 @@ public class AIUIModule
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
+        bind(IFiles.class).to(Files.class).in(Singleton.class);
         // @formatter:on
     }
 }

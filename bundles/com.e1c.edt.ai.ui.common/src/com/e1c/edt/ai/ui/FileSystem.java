@@ -3,19 +3,10 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
+import java.io.InputStreamReader;
 import java.util.Optional;
-
-import org.eclipse.core.filebuffers.FileBuffers;
-import org.eclipse.core.filebuffers.LocationKind;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.runtime.CoreException;
 
 import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
@@ -33,74 +24,93 @@ public class FileSystem implements IFileSystem
     }
 
     @Override
-    public Optional<String> getText(IContentReader contentReader)
+    public Optional<String> getText(IFileContent contentReader, int firstLineNumber, int linesNumber)
     {
-        byte[] bytes;
-        try
+        var optionalInpiutStream = contentReader.getInputStream();
+        try (var is = optionalInpiutStream.get();
+            var isr = new InputStreamReader(is, contentReader.getCharset());
+            var reader = new BufferedReader(isr))
         {
-            bytes = contentReader.getInputStream().readAllBytes();
-            var buffer = ByteBuffer.wrap(bytes);
-            for (var charset : Charset.availableCharsets().values())
+            var targetEndLine = firstLineNumber + linesNumber - 1;
+            var currentLine = 0;
+            int c;
+            var resultContent = new StringBuilder();
+            while ((c = reader.read()) != -1)
             {
-                try
+                // Check if current line is within target range
+                var inTarget = (currentLine >= firstLineNumber && currentLine <= targetEndLine);
+                if (c == '\r')
                 {
-                    var text = charset.newDecoder().decode(buffer).toString();
-                    var isPrintable = isPrintable(text, 85);
-                    if (isPrintable)
+                    // Handle carriage return (possible Windows line ending)
+                    reader.mark(1);
+                    var next = reader.read();
+                    if (next == '\n')
                     {
-                        return Optional.of(text);
+                        // CRLF sequence (Windows)
+                        if (inTarget)
+                        {
+                            resultContent.append((char)c);
+                            resultContent.append((char)next);
+                        }
+
+                        currentLine++;
+                        if (currentLine > targetEndLine)
+                            break;
+                    }
+                    else
+                    {
+                        // Single CR (Mac/old systems)
+                        if (next != -1)
+                            reader.reset(); // Put back non-LF character
+                        if (inTarget)
+                        {
+                            resultContent.append((char)c);
+                        }
+
+                        currentLine++;
+                        if (currentLine > targetEndLine)
+                        {
+                            break;
+                        }
+                    }
+                }
+                else if (c == '\n')
+                {
+                    // LF sequence (Unix/Linux)
+                    if (inTarget)
+                    {
+                        resultContent.append((char)c);
                     }
 
-                    isPrintable = isPrintable(text, 85);
+                    currentLine++;
+                    if (currentLine > targetEndLine)
+                    {
+                        break;
+                    }
                 }
-                catch (CharacterCodingException error)
+                else
                 {
-                    continue;
+                    // Regular character
+                    if (inTarget)
+                    {
+                        resultContent.append((char)c);
+                    }
                 }
             }
 
-        }
-        catch (IOException | CoreException error)
-        {
-            log.logError(error);
-        }
-
-        return Optional.empty();
-    }
-
-    @Override
-    public InputStream getContent(IFile file) throws CoreException
-    {
-        var filePath = file.getFullPath();
-        try
-        {
-            FileBuffers.getTextFileBufferManager().connect(filePath, LocationKind.IFILE, null);
-            var buffer =
-                FileBuffers.getTextFileBufferManager().getTextFileBuffer(filePath, LocationKind.IFILE);
-            if (buffer != null)
+            var text = resultContent.toString();
+            var isPrintable = isPrintable(text, 85);
+            if (!isPrintable)
             {
-                var doc = buffer.getDocument();
-                String content = doc.get();
-                try
-                {
-                    return new ByteArrayInputStream(content.getBytes(file.getCharset()));
-                }
-                catch (UnsupportedEncodingException error)
-                {
-                    //
-                }
-                catch (CoreException error)
-                {
-                    log.logError(error);
-                }
+                return Optional.empty();
             }
-        }
-        finally
-        {
-            FileBuffers.getTextFileBufferManager().disconnect(filePath, LocationKind.IFILE, null);
-        }
 
-        return file.getContents();
+            return Optional.of(text);
+        }
+        catch (IOException e)
+        {
+            return Optional.empty();
+        }
     }
 
     private static boolean isPrintable(String text, double threshold)
