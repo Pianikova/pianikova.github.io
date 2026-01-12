@@ -55,25 +55,29 @@ public class ReadProjectFileMcpTool
         + "  \"charset_name\": \"UTF-8\"\n"
         + "}";
 
-    // @formatter:oт
+    // @formatter:on
 
     private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
+    private final IProgressMonitor monitor;
 
     @Inject
-    public ReadProjectFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory, IContentSourceProvider contentSourceProvider)
+    public ReadProjectFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
+        IContentSourceProvider contentSourceProvider, IProgressMonitor monitor)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
+        Preconditions.checkNotNull(monitor);
         this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
+        this.monitor = monitor;
         spec = createSpecification();
     }
 
@@ -158,7 +162,6 @@ public class ReadProjectFileMcpTool
             {
                 try
                 {
-                    var monitor = new ProgressMonitor();
                     project.open(monitor);
                 }
                 catch (CoreException error)
@@ -316,59 +319,5 @@ public class ReadProjectFileMcpTool
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
-    }
-
-    private static class ProgressMonitor
-        implements IProgressMonitor
-    {
-        @Override
-        public void beginTask(String name, int totalWork)
-        {
-            //
-        }
-
-        @Override
-        public void done()
-        {
-            //
-        }
-
-        @Override
-        public void internalWorked(double work)
-        {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public boolean isCanceled()
-        {
-            return false;
-        }
-
-        @Override
-        public void setCanceled(boolean value)
-        {
-            //
-
-        }
-
-        @Override
-        public void setTaskName(String name)
-        {
-            //
-        }
-
-        @Override
-        public void subTask(String name)
-        {
-            //
-        }
-
-        @Override
-        public void worked(int work)
-        {
-            //
-        }
     }
 }

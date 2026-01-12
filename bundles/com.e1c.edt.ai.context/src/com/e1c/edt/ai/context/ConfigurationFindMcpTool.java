@@ -230,7 +230,7 @@ public class ConfigurationFindMcpTool
 
             var monitor = new ProgressMonitor();
             var root = ResourcesPlugin.getWorkspace().getRoot();
-            for(var projectName: callArgs.projectNames)
+            for (var projectName : callArgs.projectNames)
             {
                 var project = root.getProject(projectName);
                 if (project == null)
