@@ -9,7 +9,6 @@ import java.security.NoSuchAlgorithmException;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.e1c.edt.ai.AIModule;
-import com.e1c.edt.ai.IClientTokenValidator;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
@@ -71,7 +70,6 @@ public class AIUIModule
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
-        bind(IClientTokenValidator.class).to(ClientTokenValidator.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -81,6 +81,7 @@ public class ConfigurationFindMcpTool
         + "    \"type\": \"Text file\",\n"
         + "    \"absolute_file_path\": \"C:/Projects/MyProject/src/CommonModule/Module.bsl\",\n"
         + "    \"project_relative_file_path\": \"src/CommonModule/Module.bsl\",\n"
+        + "    \"file_path\": \"/MyProject/src/CommonModule/Module.bsl\",\n"
         + "    \"text_fragment\": \"Процедура ОбработкаПроведения(Отказ, Режим)\\n    Если Не Режим = РежимПроведения.Проведение Тогда\\n        Возврат;\\n    КонецЕсли;\",\n"
         + "    \"fragment_offset\": 45,\n"
         + "    \"match_length\": 8,\n"
@@ -117,6 +118,7 @@ public class ConfigurationFindMcpTool
         + "    \"type\": \"Text file\",\n"
         + "    \"absolute_file_path\": \"C:/Projects/Accounting/src/Reports/Report.bsl\",\n"
         + "    \"project_relative_file_path\": \"src/Reports/Report.bsl\",\n"
+        + "    \"file_path\": \"/Accounting/src/Reports/Report.bsl\",\n"
         + "    \"text_fragment\": \"Функция ПодготовитьДанные()\\n    Данные = Новый Массив;\\n    Данные.Добавить(Новый Структура(\\\"Наименование, Количество\\\", \\\"Товар А\\\", 100));\",\n"
         + "    \"fragment_offset\": 85,\n"
         + "    \"match_length\": 7,\n"
@@ -296,7 +298,8 @@ public class ConfigurationFindMcpTool
                         var relativePath = file.getProjectRelativePath();
                         if (relativePath != null)
                         {
-                            dst.projectRelativeFilePath = relativePath.toOSString();
+                            dst.projectRelativeFilePath = relativePath.toPortableString();
+                            dst.filePath = "/" + file.getProject().getName() + "/" + relativePath.toPortableString();
                         }
                     }
 
@@ -605,6 +608,12 @@ public class ConfigurationFindMcpTool
          */
         @SerializedName("project_relative_file_path")
         public String projectRelativeFilePath;
+
+        /**
+         * Relative path to the file
+         */
+        @SerializedName("file_path")
+        public String filePath;
 
         /**
          * Text fragment containing the search match

@@ -5,15 +5,12 @@ package com.e1c.edt.ai.tools;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.ui.PartInitException;
+import org.eclipse.core.commands.common.NotDefinedException;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.commands.ICommandService;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -21,20 +18,20 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.assistent.model.CommandCategory;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
-import com.e1c.edt.ai.assistent.model.ProjectInfo;
-import com.e1c.edt.ai.assistent.model.ProjectsInfo;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 
-public class GetProjectsMcpTool
+public class GetCommandCategoriesMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_get_projects"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "ide_get_command_categories"; //$NON-NLS-1$
+    public static final CommandCategory Uncategorized = new CommandCategory();
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -43,24 +40,26 @@ public class GetProjectsMcpTool
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "{\n"
-        + "  \"projects\": [\n"
-        + "    {\n"
-        + "      \"name\": \"Управление торговлей 11.5\",\n"
-        + "      \"absolute_path\": \"C:\\\\1C_Projects\\\\УТ115\\\\Configuration.cf\",\n"
-        + "      \"is_open\": true,\n"
-        + "      \"exists\": true,\n"
-        + "      \"is_current\": false\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"Бухгалтерия предприятия 3.0\",\n"
-        + "      \"absolute_path\": \"D:\\\\Конфигурации\\\\БП30\\\\Configuration.cfe\",\n"
-        + "      \"is_open\": true,\n"
-        + "      \"exists\": true,\n"
-        + "      \"is_current\": true\n"
-        + "    }\n"
-        + "  ]\n"
-        + "}";
+        "[\n"
+        + "  {\n"
+        + "    \"category_id\": \"system\",\n"
+        + "    \"category_name\": \"System Commands\",\n"
+        + "    \"category_description\": \"Commands for system management and control\"\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"category_id\": \"network\",\n"
+        + "    \"category_description\": \"Commands related to network configuration and diagnostics\"\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"category_id\": \"security\",\n"
+        + "    \"category_name\": \"Security Tools\",\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"category_id\": \"data\",\n"
+        + "    \"category_name\": \"Data Processing\",\n"
+        + "    \"category_description\": \"Commands for data manipulation and analysis\"\n"
+        + "  }\n"
+        + "]";
 
     // @formatter:oт
 
@@ -69,8 +68,14 @@ public class GetProjectsMcpTool
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
 
+    static {
+        Uncategorized.id = "uncategorized"; //$NON-NLS-1$
+        Uncategorized.name = "Uncategorized"; //$NON-NLS-1$
+        Uncategorized.name = "Contains commands that do not fit into any category."; //$NON-NLS-1$
+    }
+
     @Inject
-    public GetProjectsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory)
+    public GetCommandCategoriesMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
@@ -105,56 +110,35 @@ public class GetProjectsMcpTool
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
-            var currentProjects = new HashSet<IProject>();
-            var workbench = PlatformUI.getWorkbench();
-            for (var window : workbench.getWorkbenchWindows())
+            var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
+            var categories = new ArrayList<CommandCategory>();
+            for(var src: commandService.getDefinedCategories())
             {
-                for (var page : window.getPages())
+                var dst = new CommandCategory();
+                dst.id = src.getId();
+                try
                 {
-                    for (var editorRef : page.getEditorReferences())
-                    {
-                        try
-                        {
-                            var input = editorRef.getEditorInput();
-                            var file = input.getAdapter(IFile.class);
-                            if (file != null && file.exists())
-                            {
-                                currentProjects.add(file.getProject());
-                            }
-                        }
-                        catch (PartInitException error)
-                        {
-                            log.logError(error);
-                        }
-                    }
+                    dst.name = src.getName();
                 }
-            }
-
-
-            var root = ResourcesPlugin.getWorkspace().getRoot();
-            var projects = root.getProjects();
-            var projectsInfo = new ProjectsInfo();
-            projectsInfo.projects = new ArrayList<>();
-            for (var project : projects)
-            {
-                // Check for cancellation periodically inside the loop.
-                if (cancellationToken.isCanceled())
+                catch (NotDefinedException e)
                 {
-                    return messageFactory.createError(this, call, "Operation was cancelled during execution.");
+                    //
                 }
 
-                var projectInfo = new ProjectInfo();
-                projectInfo.name = project.getName();
-                var location = project.getRawLocation();
-                projectInfo.absolutePath = location != null ? location.toOSString() : null;
-                projectInfo.isOpen = project.isOpen();
-                projectInfo.exists = project.exists();
-                projectInfo.isOpen = project.isOpen();
-                projectInfo.isCurrent = currentProjects.contains(project);
-                projectsInfo.projects.add(projectInfo);
+                try
+                {
+                    dst.description = src.getDescription();
+                }
+                catch (NotDefinedException e)
+                {
+                    //
+                }
+
+                categories.add(dst);
             }
 
-            var content = json.serialize(projectsInfo);
+            categories.add(Uncategorized);
+            var content = json.serialize(categories);
             return messageFactory.createMessage(this, call, content);
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
@@ -173,7 +157,7 @@ public class GetProjectsMcpTool
 
         var description = new StringBuilder();
 
-        description.append("Provides information about projects in the IDE: name, absolute path, state (exists, open, current), etc.");
+        description.append("Provides command categories in the IDE: id, name, description.");
         description.append("\nNOTE: add a description of what will be done when using this tool.");
 
         description.append("\nFor exapmple:");

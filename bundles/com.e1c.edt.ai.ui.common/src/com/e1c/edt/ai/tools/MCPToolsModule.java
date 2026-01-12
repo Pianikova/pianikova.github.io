@@ -20,7 +20,9 @@ public class MCPToolsModule
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
         toolBinder.addBinding().to(ProcessRunnerMcpTool.class);
         toolBinder.addBinding().to(GetProjectsMcpTool.class);
-
+        toolBinder.addBinding().to(GetCommandCategoriesMcpTool.class);
+        toolBinder.addBinding().to(GetCommandsMcpTool.class);
+        // toolBinder.addBinding().to(ExecuteCommandsMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
     }
 }

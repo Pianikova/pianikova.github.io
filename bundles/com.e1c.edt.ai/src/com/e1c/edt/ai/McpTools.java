@@ -72,7 +72,6 @@ public class McpTools
         return specs;
     }
 
-    @SuppressWarnings("nls")
     @Override
     public CompletableFuture<McpCallToolsResult> callTools(McpToolCalls calls, ICancellationToken cancellationToken)
     {
