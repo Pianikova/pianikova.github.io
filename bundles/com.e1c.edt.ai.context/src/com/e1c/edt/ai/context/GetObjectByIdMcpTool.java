@@ -59,8 +59,9 @@ public class GetObjectByIdMcpTool
         + "      }\n"
         + "    ]\n"
         + "  },\n"
+        + "  \"relative_file_path\": \"src/main/java/com/example/MyClass.java\",\n"
         + "  \"absolute_file_path\": \"C:/eclipse-workspace/com.example.project/src/main/java/com/example/MyClass.java\",\n"
-        + "  \"file_path\": \"/com.example.project/src/main/java/com/example/MyClass.java\"\n"
+        + "  \"file_path\": \"com.example.project/src/main/java/com/example/MyClass.java\"\n"
         + "}";
 
     @SuppressWarnings("nls")
@@ -206,7 +207,7 @@ public class GetObjectByIdMcpTool
                     var relativePath = file.getProjectRelativePath();
                     if (relativePath != null)
                     {
-                        result.relativeFilePath = "/" + relativePath.toPortableString();
+                        result.relativeFilePath = relativePath.toPortableString();
                         result.filePath = "/" + project.getName() + "/" + relativePath.toPortableString();
                     }
 

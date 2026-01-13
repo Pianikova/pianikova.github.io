@@ -29,6 +29,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(ReadFileMcpTool.class);
         toolBinder.addBinding().to(FindFileMcpTool.class);
         toolBinder.addBinding().to(WriteFileMcpTool.class);
+        toolBinder.addBinding().to(EditFileMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(IProgressMonitor.class).to(NullProgressMonitor.class).in(Singleton.class);
     }

@@ -61,7 +61,7 @@ public class FindFileMcpTool
         "[\n"
         + "  {\n"
         + "    \"project_name\": \"core-api\",\n"
-        + "    \"relative_file_path\": \"/src/services/TestUserService.bsl\",\n"
+        + "    \"relative_file_path\": \"src/services/TestUserService.bsl\",\n"
         + "    \"absolute_file_path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
         + "    \"offset\": 243,\n"
         + "    \"length\": 16,\n"
@@ -72,7 +72,7 @@ public class FindFileMcpTool
         + "  },\n"
         + "  {\n"
         + "    \"project_name\": \"backend\",\n"
-        + "    \"relative_file_path\": \"/modules/TestPaymentService.mdo\",\n"
+        + "    \"relative_file_path\": \"modules/TestPaymentService.mdo\",\n"
         + "    \"absolute_file_path\": \"/home/user/workspace/projects/backend/modules/TestPaymentService.mdo\",\n"
         + "    \"offset\": 187,\n"
         + "    \"length\": 19,\n"
@@ -271,7 +271,7 @@ public class FindFileMcpTool
                                         var relativePath = file.getProjectRelativePath();
                                         if (relativePath != null)
                                         {
-                                            element.relativeFilePath = "/" + relativePath.toPortableString();
+                                            element.relativeFilePath = relativePath.toPortableString();
                                         }
 
                                     }

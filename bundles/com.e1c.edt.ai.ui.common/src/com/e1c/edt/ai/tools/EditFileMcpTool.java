@@ -3,16 +3,11 @@
  */
 package com.e1c.edt.ai.tools;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.eclipse.core.resources.IFolder;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -23,21 +18,21 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.assistent.model.EditFileContentRequest;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
-import com.e1c.edt.ai.assistent.model.WriteFileContentRequest;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class WriteFileMcpTool
+public class EditFileMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_write_file"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "ide_edit_file"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -45,12 +40,14 @@ public class WriteFileMcpTool
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
         + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
-        + "  \"contents\": \"Процедура Тест()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\"\n"
+        + "  \"origin_contents\": \"Сообщить(\\\"Привет, мир!\\\");\",\n"
+        + "  \"new_contents\": \"Сообщить(\\\"Hello, world!\\\");\",\n"
+        + "  \"replace_all\": false\n"
         + "}";
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "File written: \"src/MainModule.bsl\"";
+        "File updated: \"src/MainModule.bsl\"";
     // @formatter:on
 
     private final ILog log;
@@ -62,7 +59,7 @@ public class WriteFileMcpTool
     private final IFileSystem fileSystem;
 
     @Inject
-    public WriteFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public EditFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider, IProgressMonitor monitor, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(log);
@@ -96,7 +93,7 @@ public class WriteFileMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, WriteFileContentRequest.class);
+        var optionalCallArgs = json.deserialize(call.function.arguments, EditFileContentRequest.class);
         if (optionalCallArgs.isEmpty())
         {
             return CompletableFuture
@@ -121,24 +118,18 @@ public class WriteFileMcpTool
                     "'relative_file_path' is required."));
         }
 
-        var contents = callArgs.contents;
-        if (contents == null)
+        var originContents = callArgs.originContents;
+        if (originContents == null)
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "'contents' is required."));
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call, "'origin_contents' is required."));
         }
 
-        var charsetName =
-            callArgs.charsetName != null && !callArgs.charsetName.isBlank() ? callArgs.charsetName : "UTF-8";
-
-        byte[] data;
-        try
+        var newContents = callArgs.newContents;
+        if (newContents == null)
         {
-            data = contents.getBytes(charsetName);
-        }
-        catch (UnsupportedEncodingException error)
-        {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Unsupported charset: \"" + charsetName + "\". " + error.getMessage()));
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call, "'new_contents' is required."));
         }
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
@@ -183,59 +174,13 @@ public class WriteFileMcpTool
             if (!optionalFileContent.isEmpty())
             {
                 return messageFactory.createError(this, call,
-                    "The file \"" + relativeFilePath + "\" already exists. Use the '" + EditFileMcpTool.TOOL_NAME
-                        + "' tool to modify this file.");
-            }
-
-            try (ByteArrayInputStream source = new ByteArrayInputStream(data))
-            {
-                if (!projectFile.exists())
-                {
-                    var parent = projectFile.getParent();
-                    if (parent instanceof IFolder && !parent.exists())
-                    {
-                        ((IFolder)parent).create(true, true, null);
-                    }
-
-                    projectFile.create(source, true, monitor);
-                    projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, null);
-                }
-                else
-                {
-                    return messageFactory.createError(this, call,
-                        "The file \"" + relativeFilePath + "\" already exists. Use the '" + EditFileMcpTool.TOOL_NAME
-                            + "' tool to update this file.");
-                }
-            }
-            catch (CoreException | IOException error)
-            {
-                return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
+                    "The file \"" + relativeFilePath + "\" does not exist. Use the '" + WriteFileMcpTool.TOOL_NAME
+                        + "' tool to create a new file.");
             }
 
             var result = new StringBuilder();
             var projectRelativePath = projectFile.getProjectRelativePath();
-            result.append("File written: \"").append(projectRelativePath.toPortableString()).append("\".\n");
-            var fileExt = projectFile.getFileExtension().toLowerCase();
-            switch (fileExt)
-            {
-            case "bsl":
-                result.append("ACTION REQUIRED: check that coresponding \"")
-                    .append(projectRelativePath.removeFileExtension().addFileExtension("mdo").toPortableString())
-                    .append("\" file exists or create it.\n");
-                break;
-            }
-
-            switch (fileExt)
-            {
-            case "bsl":
-            case "mdo":
-            case "form":
-                result.append(
-                    "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use '"
-                        + EditFileMcpTool.TOOL_NAME + "' tool.");
-                break;
-            }
-
+            result.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
             return messageFactory.createMessage(this, call, result.toString());
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
@@ -254,10 +199,7 @@ public class WriteFileMcpTool
 
         var description = new StringBuilder();
 
-        description.append("Writes the contents of a project file. Creates a new file.");
-        description.append("\nIMPORTANT: analyze the project structure: directories, other files before writing a file.");
-        description.append("\nNOTE: some files require additional files to be processed correctly. For example, .bsl files require an .mdo file in the corresponding directory.");
-        description.append("\nNOTE: To edit or update an existing file, use the '" + EditFileMcpTool.TOOL_NAME + "' tool.");
+        description.append("Edits/updates/modifies the contents of an existing project file.");
         description.append("\nFor exapmple:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
@@ -279,18 +221,23 @@ public class WriteFileMcpTool
         relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
 
-        var contentsProp = new McpToolCallProperty();
-        contentsProp.type = "string";
-        contentsProp.description = "Contents to write to file.";
-        properties.put("contents", contentsProp);
+        var originContentsProp = new McpToolCallProperty();
+        originContentsProp.type = "string";
+        originContentsProp.description = "The fragment of the file content that will be replaced.";
+        properties.put("origin_contents", originContentsProp);
 
-        var charsetNameProp = new McpToolCallProperty();
-        charsetNameProp.type = "string";
-        charsetNameProp.description = "File encoding, for example, \"UTF-8\", \"windows-1251\", \"KOI8-R\", \"UTF-16\", \"UTF-32\", etc. By default, \"UTF-8\".";
-        properties.put("charset_name", charsetNameProp);
+        var newContentsProp = new McpToolCallProperty();
+        newContentsProp.type = "string";
+        newContentsProp.description = "The content fragment that will replace the original ('origin_contents').";
+        properties.put("new_contents", newContentsProp);
+
+        var replaceAllProp = new McpToolCallProperty();
+        replaceAllProp.type = "boolean";
+        replaceAllProp.description = "If true, all occurrences of the 'origin_contents' fragment will be replaced. If false, only the single occurrence will be replaced. If no fragments are found, or more than one is found, the request will fail. False by default.";
+        properties.put("replace_all", newContentsProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path", "contents");
+        parameters.required = Arrays.asList("project_name", "relative_file_path", "origin_contents", "new_contents");
 
         spec.function.parameters = parameters;
         return spec;

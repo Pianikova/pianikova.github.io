@@ -44,7 +44,7 @@ public class ReadFileMcpTool
     private static String QuestionExample =
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
-        + "  \"relative_file_path\": \"/src/MainModule.bsl\",\n"
+        + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
         + "  \"first_line_number\": 50,\n"
         + "  \"lines_number\": 100\n"
         + "}";
@@ -284,7 +284,7 @@ public class ReadFileMcpTool
 
         var description = new StringBuilder();
 
-        description.append("Reads the contents of a text file in the project.");
+        description.append("Reads the contents of a project file.");
 
         description.append("\nFor exapmple:");
         description.append("\n  Q: "); description.append(QuestionExample);
@@ -304,7 +304,7 @@ public class ReadFileMcpTool
 
         var relativeFilePathProp = new McpToolCallProperty();
         relativeFilePathProp.type = "string";
-        relativeFilePathProp.description = "Project relative path to the file. For example, \"/src/MyModule.bsl\".";
+        relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
 
         var firsLlineNumberProp = new McpToolCallProperty();
