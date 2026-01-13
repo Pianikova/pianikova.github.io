@@ -7,11 +7,17 @@ import com.google.gson.annotations.SerializedName;
 
 public class FoundElement
 {
+    /**
+     * Name of the project
+     */
+    @SerializedName("project_name")
+    public String projectName;
+
+    /**
+     * Project relative path to the file.
+     */
     @SerializedName("relative_file_path")
     public String relativeFilePath;
-
-    @SerializedName("filePath")
-    public String filePath;
 
     @SerializedName("absolute_file_path")
     public String absoluteFilePath;

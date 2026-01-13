@@ -79,6 +79,7 @@ public class ConfigurationFindMcpTool
         "[\n"
         + "  {\n"
         + "    \"type\": \"Text file\",\n"
+        + "    \"project_name\": \"MyProject\",\n"
         + "    \"absolute_file_path\": \"C:/Projects/MyProject/src/CommonModule/Module.bsl\",\n"
         + "    \"project_relative_file_path\": \"src/CommonModule/Module.bsl\",\n"
         + "    \"file_path\": \"/MyProject/src/CommonModule/Module.bsl\",\n"
@@ -90,6 +91,7 @@ public class ConfigurationFindMcpTool
         + "  },\n"
         + "  {\n"
         + "    \"type\": \"Text in 1C model\",\n"
+        + "    \"project_name\": \"MyProject\",\n"
         + "    \"property_value\": \"Сумма: 15000 руб.\",\n"
         + "    \"top_object_id\": 1000001,\n"
         + "    \"object_id\": 2000001,\n"
@@ -98,6 +100,7 @@ public class ConfigurationFindMcpTool
         + "  },\n"
         + "  {\n"
         + "    \"type\": \"Reference to 1C code\",\n"
+        + "    \"project_name\": \"MyProject\",\n"
         + "    \"target_top_object_id\": 5000001,\n"
         + "    \"target_object_id\": 6000001\n"
         + "  },\n"
@@ -106,16 +109,19 @@ public class ConfigurationFindMcpTool
         + "  },\n"
         + "  {\n"
         + "    \"type\": \"1C reletaed object\",\n"
+        + "    \"project_name\": \"MyProject\",\n"
         + "    \"object_id\": 3000001,\n"
         + "    \"target_top_object_id\": 4000001,\n"
         + "    \"target_object_id\": 5000002\n"
         + "  },\n"
         + "  {\n"
         + "    \"type\": \"1C object\",\n"
+        + "    \"project_name\": \"MyProject\",\n"
         + "    \"object_id\": 7000001\n"
         + "  },\n"
         + "  {\n"
         + "    \"type\": \"Text file\",\n"
+        + "    \"project_name\": \"Accounting\",\n"
         + "    \"absolute_file_path\": \"C:/Projects/Accounting/src/Reports/Report.bsl\",\n"
         + "    \"project_relative_file_path\": \"src/Reports/Report.bsl\",\n"
         + "    \"file_path\": \"/Accounting/src/Reports/Report.bsl\",\n"
@@ -127,6 +133,7 @@ public class ConfigurationFindMcpTool
         + "  },\n"
         + "  {\n"
         + "    \"type\": \"Text in 1C model\",\n"
+        + "    \"project_name\": \"Accounting\",\n"
         + "    \"property_value\": \"ВидДвижения: Приход\",\n"
         + "    \"top_object_id\": 1000002,\n"
         + "    \"object_id\": 2000002,\n"
@@ -144,11 +151,13 @@ public class ConfigurationFindMcpTool
     private final ITextSearchIndexProvider textSearchIndexProvider;
     private final IExternalPropertyManagerRegistry externalPropertyManagerRegistry;
     private final IDtHostResourceManager hostResourceManager;
+    private final IBmModelManager modelManager;
 
     @Inject
     public ConfigurationFindMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IBmModelManager bmModelManager, ITextSearchIndexProvider textSearchIndexProvider,
-        IExternalPropertyManagerRegistry externalPropertyManagerRegistry, IDtHostResourceManager hostResourceManager)
+        IExternalPropertyManagerRegistry externalPropertyManagerRegistry, IDtHostResourceManager hostResourceManager,
+        IBmModelManager modelManager)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -156,12 +165,14 @@ public class ConfigurationFindMcpTool
         Preconditions.checkNotNull(textSearchIndexProvider);
         Preconditions.checkNotNull(externalPropertyManagerRegistry);
         Preconditions.checkNotNull(hostResourceManager);
+        Preconditions.checkNotNull(modelManager);
         this.json = json;
         this.messageFactory = messageFactory;
         this.bmModelManager = bmModelManager;
         this.textSearchIndexProvider = textSearchIndexProvider;
         this.externalPropertyManagerRegistry = externalPropertyManagerRegistry;
         this.hostResourceManager = hostResourceManager;
+        this.modelManager = modelManager;
         spec = createSpecification();
     }
 
@@ -265,9 +276,7 @@ public class ConfigurationFindMcpTool
 
             var resultCollector = new SimpleSearchResultCollector();
             var searcher = new TextSearcher(callArgs.searchQuery, callArgs.matchCase, searchSettings, resultCollector, bmModelManager,
-                textSearchIndexProvider,
-                externalPropertyManagerRegistry,
-                hostResourceManager);
+                textSearchIndexProvider, externalPropertyManagerRegistry, hostResourceManager);
 
             try
             {
@@ -281,11 +290,14 @@ public class ConfigurationFindMcpTool
             var elements = new ArrayList<Element>();
             for (var match : resultCollector.getMatches())
             {
+                var model = match.getModel();
+                var project = modelManager.getProject(model);
                 if (match instanceof TextSearchFileMatch)
                 {
                     var src = (TextSearchFileMatch)match;
                     var dst = new TextSearchFile();
                     dst.type = "Text file";
+                    dst.projectName = project.getName();
                     var file = src.getFile();
                     if (file != null)
                     {
@@ -299,7 +311,6 @@ public class ConfigurationFindMcpTool
                         if (relativePath != null)
                         {
                             dst.projectRelativeFilePath = relativePath.toPortableString();
-                            dst.filePath = "/" + file.getProject().getName() + "/" + relativePath.toPortableString();
                         }
                     }
 
@@ -317,6 +328,7 @@ public class ConfigurationFindMcpTool
                     var src = (TextSearchModelMatch)match;
                     var dst = new TextSearchModelElement();
                     dst.type = "Text in 1C model";
+                    dst.projectName = project.getName();
                     dst.propertyValue = src.getText();
                     dst.topObjectId = src.getTopObjectId();
                     dst.objectId = src.getObjectId();
@@ -330,6 +342,7 @@ public class ConfigurationFindMcpTool
                     var src = (BslReferenceMatch)match;
                     var dst = new BslReferenceElement();
                     dst.type = "Reference to 1C code";
+                    dst.projectName = project.getName();
                     // dst.metadataTopObjectId = src.getMetadataTopObjectId();
                     var optionalTarget = src.getTarget();
                     if(optionalTarget.isPresent())
@@ -355,6 +368,7 @@ public class ConfigurationFindMcpTool
                     var src = (BmRelatedObjectMatch)match;
                     var dst = new BmRelatedObjectElement();
                     dst.type = "1C reletaed object";
+                    dst.projectName = project.getName();
                     dst.objectId = src.getObjectId();
                     var optionalTarget = src.getTarget();
                     if (optionalTarget.isPresent())
@@ -372,6 +386,7 @@ public class ConfigurationFindMcpTool
                     var src = (BmObjectMatch)match;
                     var dst = new BmObjectElement();
                     dst.type = "1C object";
+                    dst.projectName = project.getName();
                     dst.objectId = src.getObjectId();
                     elements.add(dst);
                 }
@@ -588,6 +603,12 @@ public class ConfigurationFindMcpTool
          */
         @SerializedName("type")
         public String type;
+
+        /**
+         * Name of the project
+         */
+        @SerializedName("project_name")
+        public String projectName;
     }
 
     /**
@@ -608,12 +629,6 @@ public class ConfigurationFindMcpTool
          */
         @SerializedName("project_relative_file_path")
         public String projectRelativeFilePath;
-
-        /**
-         * Relative path to the file
-         */
-        @SerializedName("file_path")
-        public String filePath;
 
         /**
          * Text fragment containing the search match

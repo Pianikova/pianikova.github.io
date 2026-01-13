@@ -28,7 +28,7 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
-import com.e1c.edt.ai.assistent.model.FileFindRequest;
+import com.e1c.edt.ai.assistent.model.FindFileRequest;
 import com.e1c.edt.ai.assistent.model.FoundElement;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
@@ -39,10 +39,10 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 
-public class FileFindMcpTool
+public class FindFileMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_file_find"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "ide_find_file"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -60,8 +60,8 @@ public class FileFindMcpTool
     private static String AnswerExample =
         "[\n"
         + "  {\n"
-        + "    \"relative_file_path\": \"core-api/src/services/TestUserService.bsl\",\n"
-        + "    \"filePath\": \"/projects/core-api/src/services/TestUserService.bsl\",\n"
+        + "    \"project_name\": \"core-api\",\n"
+        + "    \"relative_file_path\": \"/src/services/TestUserService.bsl\",\n"
         + "    \"absolute_file_path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
         + "    \"offset\": 243,\n"
         + "    \"length\": 16,\n"
@@ -71,8 +71,8 @@ public class FileFindMcpTool
         + "    \"line_contents\": \"function TestUserService()\"\n"
         + "  },\n"
         + "  {\n"
-        + "    \"relative_file_path\": \"backend/modules/TestPaymentService.mdo\",\n"
-        + "    \"filePath\": \"/projects/backend/modules/TestPaymentService.mdo\",\n"
+        + "    \"project_name\": \"backend\",\n"
+        + "    \"relative_file_path\": \"/modules/TestPaymentService.mdo\",\n"
         + "    \"absolute_file_path\": \"/home/user/workspace/projects/backend/modules/TestPaymentService.mdo\",\n"
         + "    \"offset\": 187,\n"
         + "    \"length\": 19,\n"
@@ -91,7 +91,7 @@ public class FileFindMcpTool
     private final IProgressMonitor monitor;
 
     @Inject
-    public FileFindMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IProgressMonitor monitor)
+    public FindFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IProgressMonitor monitor)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -118,7 +118,7 @@ public class FileFindMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, FileFindRequest.class);
+        var optionalCallArgs = json.deserialize(call.function.arguments, FindFileRequest.class);
         if (optionalCallArgs.isEmpty())
         {
             return CompletableFuture
@@ -261,6 +261,7 @@ public class FileFindMcpTool
                                     var file = (IFile)el;
                                     if (file != null)
                                     {
+                                        element.projectName = file.getProject().getName();
                                         var location = file.getRawLocation();
                                         if (location != null)
                                         {
@@ -271,8 +272,6 @@ public class FileFindMcpTool
                                         if (relativePath != null)
                                         {
                                             element.relativeFilePath = "/" + relativePath.toPortableString();
-                                            element.filePath = "/" + file.getProject().getName() + "/"
-                                                + relativePath.toPortableString();
                                         }
 
                                     }

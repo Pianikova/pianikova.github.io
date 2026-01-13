@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+import java.util.List;
+
 import com.google.gson.annotations.SerializedName;
 
 public class ProjectInfo
@@ -21,4 +23,10 @@ public class ProjectInfo
 
     @SerializedName("is_current")
     public Boolean isCurrent;
+
+    /**
+     * List of directories in the project.
+     */
+    @SerializedName("directories")
+    public List<String> directories;
 }

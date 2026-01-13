@@ -8,6 +8,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Optional;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -21,6 +24,14 @@ public class FileSystem implements IFileSystem
     {
         Preconditions.checkNotNull(log);
         this.log = log;
+    }
+
+    @Override
+    public IFile getProjectFile(IProject project, String relativePath)
+    {
+        var filePath = normalizeFilePath(project, relativePath);
+        var file = project.getFile(filePath);
+        return file;
     }
 
     @Override
@@ -136,5 +147,27 @@ public class FileSystem implements IFileSystem
     {
         var block = Character.UnicodeBlock.of(c);
         return (!Character.isISOControl(c)) && block != null && block != Character.UnicodeBlock.SPECIALS;
+    }
+
+    @SuppressWarnings("nls")
+    private static String normalizeFilePath(IProject project, String filePath)
+    {
+        if (filePath == null | filePath.isBlank())
+        {
+            return filePath;
+        }
+
+        if (!filePath.startsWith("/"))
+        {
+            filePath = "/" + filePath;
+        }
+
+        var projectName = project.getName();
+        if (filePath.startsWith("/" + projectName))
+        {
+            filePath = filePath.substring(1 + projectName.length());
+        }
+
+        return filePath;
     }
 }

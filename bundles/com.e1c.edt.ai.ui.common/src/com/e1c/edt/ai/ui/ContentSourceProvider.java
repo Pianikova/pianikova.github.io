@@ -6,7 +6,6 @@ package com.e1c.edt.ai.ui;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextViewer;
@@ -25,13 +24,6 @@ public class ContentSourceProvider implements IContentSourceProvider
     {
         Preconditions.checkNotNull(log);
         this.log = log;
-    }
-
-    @Override
-    public Optional<FileContent> getFileContent(IProject project, String relativePath)
-    {
-        var filePath = normalizeFilePath(project, relativePath);
-        return getFileContent(project.getFile(filePath));
     }
 
     @Override
@@ -102,27 +94,5 @@ public class ContentSourceProvider implements IContentSourceProvider
         }
 
         return null;
-    }
-
-    @SuppressWarnings("nls")
-    private static String normalizeFilePath(IProject project, String filePath)
-    {
-        if (filePath == null | filePath.isBlank())
-        {
-            return filePath;
-        }
-
-        if (!filePath.startsWith("/"))
-        {
-            filePath = "/" + filePath;
-        }
-
-        var projectName = project.getName();
-        if (filePath.startsWith("/" + projectName))
-        {
-            filePath = filePath.substring(1 + projectName.length());
-        }
-
-        return filePath;
     }
 }

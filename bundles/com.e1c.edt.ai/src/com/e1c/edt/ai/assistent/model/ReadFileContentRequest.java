@@ -14,7 +14,7 @@ public class ReadFileContentRequest
     public String projectName;
 
     /**
-     * Relative path to the file. Must start with the project name, for example, "/MyProject/src/MyModule.bsl".
+     * Relative path to the file. For example, "/src/MyModule.bsl".
      */
     @SerializedName("relative_file_path")
     public String relativeFilePath;

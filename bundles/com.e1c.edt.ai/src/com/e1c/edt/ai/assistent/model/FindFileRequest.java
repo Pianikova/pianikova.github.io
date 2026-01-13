@@ -7,7 +7,7 @@ import java.util.List;
 
 import com.google.gson.annotations.SerializedName;
 
-public class FileFindRequest
+public class FindFileRequest
 {
     /**
      * Text or regular expression to search . The search text represents a regular expression or a pattern using '*' and '?' as wildcards. The empty search text signals a file name search.

@@ -3,14 +3,16 @@
  */
 package com.e1c.edt.ai.tools;
 
-import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -26,17 +28,17 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
-import com.e1c.edt.ai.assistent.model.ReadFileContentRequest;
-import com.e1c.edt.ai.assistent.model.ReadFileContentResponse;
+import com.e1c.edt.ai.assistent.model.WriteFileContentRequest;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
+import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 
-public class ReadProjectFileMcpTool
+public class WriteFileMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_read_project_file"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "ide_write_file"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -44,17 +46,12 @@ public class ReadProjectFileMcpTool
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
         + "  \"relative_file_path\": \"/src/MainModule.bsl\",\n"
-        + "  \"first_line_number\": 50,\n"
-        + "  \"lines_number\": 100\n"
+        + "  \"contents\": \"Процедура Тест()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\"\n"
         + "}";
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "{\n"
-        + "  \"content\": \"Процедура Пример()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\",\n"
-        + "  \"charset_name\": \"UTF-8\"\n"
-        + "}";
-
+        "Success";
     // @formatter:on
 
     private final ILog log;
@@ -63,21 +60,24 @@ public class ReadProjectFileMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
     private final IProgressMonitor monitor;
+    private final IFileSystem fileSystem;
 
     @Inject
-    public ReadProjectFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IProgressMonitor monitor)
+    public WriteFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
+        IContentSourceProvider contentSourceProvider, IProgressMonitor monitor, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(monitor);
+        Preconditions.checkNotNull(fileSystem);
         this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.monitor = monitor;
+        this.fileSystem = fileSystem;
         spec = createSpecification();
     }
 
@@ -97,7 +97,7 @@ public class ReadProjectFileMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, ReadFileContentRequest.class);
+        var optionalCallArgs = json.deserialize(call.function.arguments, WriteFileContentRequest.class);
         if (optionalCallArgs.isEmpty())
         {
             return CompletableFuture
@@ -111,32 +111,36 @@ public class ReadProjectFileMcpTool
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "project_name is required."));
+                    "'project_name' is required."));
         }
 
-        var filePath = callArgs.relativeFilePath;
-        if (filePath == null || filePath.isBlank())
+        var relativeFilePath = callArgs.relativeFilePath;
+        if (relativeFilePath == null || relativeFilePath.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "relative_file_path is required."));
+                    "'relative_file_path' is required."));
         }
 
-        var firstLineNumber = callArgs.firstLineNumber;
-        if (firstLineNumber == null)
+        var contents = callArgs.contents;
+        if (contents == null)
         {
-            firstLineNumber = 0;
+            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "'contents' is required."));
         }
 
-        var actualFirstLineNumber = firstLineNumber;
+        var charsetName =
+            callArgs.charsetName != null && !callArgs.charsetName.isBlank() ? callArgs.charsetName : "UTF-8";
 
-        var linesNumber = callArgs.linesNumber;
-        if (linesNumber == null)
+        byte[] data;
+        try
         {
-            linesNumber = 2000;
+            data = contents.getBytes(charsetName);
         }
-
-        var actualLinesNumber = linesNumber;
+        catch (UnsupportedEncodingException error)
+        {
+            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
+                "Unsupported charset: \"" + charsetName + "\". " + error.getMessage()));
+        }
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -175,94 +179,64 @@ public class ReadProjectFileMcpTool
                 return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". ");
             }
 
-            var optionalFileContent = contentSourceProvider.getFileContent(project, filePath);
-            if (optionalFileContent.isEmpty())
+            var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
+            var optionalFileContent = contentSourceProvider.getFileContent(projectFile);
+            if (!optionalFileContent.isEmpty())
             {
-                return messageFactory.createError(this, call, "The file \"" + filePath + "\" does not exist.");
+                return messageFactory.createError(this, call,
+                    "The file \" + filePath + \" already exists. Use the 'ide_edit_file' tool to modify this file.");
             }
 
-            var fileContent = optionalFileContent.get();
-
-            var resultContent = new StringBuilder();
-            int targetEndLine = actualFirstLineNumber + actualLinesNumber - 1;
-            int currentLine = 0;
-            var optionalInpiutStream = fileContent.getInputStream();
-            if (optionalInpiutStream.isEmpty())
+            try (ByteArrayInputStream source = new ByteArrayInputStream(data))
             {
-                return messageFactory.createError(this, call, "Cannot read the file \"" + filePath + "\".");
-            }
-
-            try (var is = optionalInpiutStream.get();
-                 var isr = new InputStreamReader(is, fileContent.getCharset());
-                 var reader = new BufferedReader(isr)) {
-                int c;
-                while ((c = reader.read()) != -1)
+                if (!projectFile.exists())
                 {
-                    // Check if current line is within target range
-                    var inTarget = (currentLine >= actualFirstLineNumber && currentLine <= targetEndLine);
-                    if (c == '\r')
+                    var parent = projectFile.getParent();
+                    if (parent instanceof IFolder && !parent.exists())
                     {
-                        // Handle carriage return (possible Windows line ending)
-                        reader.mark(1);
-                        var next = reader.read();
-                        if (next == '\n')
-                        {
-                            // CRLF sequence (Windows)
-                            if (inTarget)
-                            {
-                                resultContent.append((char) c);
-                                resultContent.append((char) next);
-                            }
-
-                            currentLine++;
-                            if (currentLine > targetEndLine) break;
-                        }
-                        else
-                        {
-                            // Single CR (Mac/old systems)
-                            if (next != -1) reader.reset();  // Put back non-LF character
-                            if (inTarget)
-                            {
-                                resultContent.append((char) c);
-                            }
-
-                            currentLine++;
-                            if (currentLine > targetEndLine)
-                            {
-                                break;
-                            }
-                        }
+                        ((IFolder)parent).create(true, true, null);
                     }
-                    else
-                        if (c == '\n')
-                        {
-                            // LF sequence (Unix/Linux)
-                            if (inTarget)
-                            {
-                                resultContent.append((char) c);
-                            }
 
-                            currentLine++;
-                            if (currentLine > targetEndLine) {
-                                break; }
-                    } else {
-                        // Regular character
-                        if (inTarget) {
-                            resultContent.append((char) c);
-                        }
-                    }
+                    projectFile.create(source, true, monitor);
+                    projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, null);
+                }
+                else
+                {
+                    return messageFactory.createError(this, call,
+                        "The file \" + filePath + \" already exists. Use the 'ide_edit_file' tool to modify this file.");
                 }
             }
-            catch (IOException e) {
-                return messageFactory.createError(this, call, "Failed to get file content. " + e.getMessage());
+            catch (CoreException | IOException error)
+            {
+                return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
             }
 
-            var result = new ReadFileContentResponse();
-            result.content = resultContent.toString();
+            var result = new StringBuilder();
+            var projectRelativePath = projectFile.getProjectRelativePath();
+            result.append("File written: \"")
+                .append(projectRelativePath.toPortableString())
+                .append("\".\n");
+            var fileExt = projectFile.getFileExtension().toLowerCase();
+            switch (fileExt)
+            {
+            case "bsl":
+                result.append("ACTION REQUIRED: check that coresponding \"")
+                    .append(projectRelativePath.removeFileExtension().addFileExtension("mdo").toPortableString())
+                    .append("\" file exists or create it.\n");
+                break;
+            }
 
-            result.charsetName = fileContent.getCharset().name();
-            var content = json.serialize(result);
-            return messageFactory.createMessage(this, call, content);
+            switch (fileExt)
+            {
+            case "bsl":
+            case "mdo":
+            case "form":
+                result.append(
+                    "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item.");
+                break;
+            }
+
+            return messageFactory.createMessage(this, call, result.toString());
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
             return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
@@ -281,7 +255,9 @@ public class ReadProjectFileMcpTool
         var description = new StringBuilder();
 
         description.append("Reads the contents of a text file in the project.");
-
+        description.append("\nIMPORTANT: analyze the project structure: directories, other files before writing a file.");
+        description.append("\nNOTE: some files require additional files to be processed correctly. For example, .bsl files require an .mdo file in the corresponding directory.");
+        description.append("\nNOTE: To edit or update an existing file, use the 'ide_edit_file' tool.");
         description.append("\nFor exapmple:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
@@ -295,7 +271,7 @@ public class ReadProjectFileMcpTool
 
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
-        projectNameProp.description = "Project name in IDE.";
+        projectNameProp.description = "Project name in IDE. For example, \"MyProject\".";
         properties.put("project_name", projectNameProp);
 
         var relativeFilePathProp = new McpToolCallProperty();
@@ -303,18 +279,18 @@ public class ReadProjectFileMcpTool
         relativeFilePathProp.description = "Project relative path to the file. For example, \"/src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
 
-        var firsLlineNumberProp = new McpToolCallProperty();
-        firsLlineNumberProp.type = "integer";
-        firsLlineNumberProp.description = "Number of the first line of the file to be read. Numbering starts at 0. The default is 0.";
-        properties.put("first_line_number", relativeFilePathProp);
+        var contentsProp = new McpToolCallProperty();
+        contentsProp.type = "string";
+        contentsProp.description = "Contents to write to file.";
+        properties.put("contents", contentsProp);
 
-        var linesNumberProp = new McpToolCallProperty();
-        linesNumberProp.type = "integer";
-        linesNumberProp.description = "Number of lines to read. By default, reads up to 2000 lines.";
-        properties.put("lines_number", relativeFilePathProp);
+        var charsetNameProp = new McpToolCallProperty();
+        charsetNameProp.type = "string";
+        charsetNameProp.description = "File encoding, for example, \"UTF-8\", \"windows-1251\", \"KOI8-R\", \"UTF-16\", \"UTF-32\", etc. By default, \"UTF-8\".";
+        properties.put("charset_name", charsetNameProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path");
+        parameters.required = Arrays.asList("project_name", "relative_file_path", "contents");
 
         spec.function.parameters = parameters;
         return spec;

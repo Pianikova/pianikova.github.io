@@ -6,12 +6,15 @@ package com.e1c.edt.ai.tools;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 
@@ -50,14 +53,22 @@ public class GetProjectsMcpTool
         + "      \"absolute_path\": \"C:\\\\1C_Projects\\\\УТ115\\\\Configuration.cf\",\n"
         + "      \"is_open\": true,\n"
         + "      \"exists\": true,\n"
-        + "      \"is_current\": false\n"
-        + "    },\n"
-        + "    {\n"
-        + "      \"name\": \"Бухгалтерия предприятия 3.0\",\n"
-        + "      \"absolute_path\": \"D:\\\\Конфигурации\\\\БП30\\\\Configuration.cfe\",\n"
-        + "      \"is_open\": true,\n"
-        + "      \"exists\": true,\n"
-        + "      \"is_current\": true\n"
+        + "      \"is_current\": false,\n"
+        + "      \"structure\": [\n"
+        + "        {\n"
+        + "          \"name\": \"src\",\n"
+        + "          \"relative_path\": \"src\",\n"
+        + "          \"children\": [\n"
+        + "            {\"name\": \"main\", \"relative_path\": \"src/main\", \"children\": []},\n"
+        + "            {\"name\": \"test\", \"relative_path\": \"src/test\", \"children\": []}\n"
+        + "          ]\n"
+        + "        },\n"
+        + "        {\n"
+        + "          \"name\": \"lib\",\n"
+        + "          \"relative_path\": \"lib\",\n"
+        + "          \"children\": []\n"
+        + "        }\n"
+        + "      ]\n"
         + "    }\n"
         + "  ]\n"
         + "}";
@@ -144,14 +155,31 @@ public class GetProjectsMcpTool
                 }
 
                 var projectInfo = new ProjectInfo();
+                projectsInfo.projects.add(projectInfo);
                 projectInfo.name = project.getName();
-                var location = project.getRawLocation();
+                var location = project.getLocation();
                 projectInfo.absolutePath = location != null ? location.toOSString() : null;
                 projectInfo.isOpen = project.isOpen();
                 projectInfo.exists = project.exists();
                 projectInfo.isOpen = project.isOpen();
                 projectInfo.isCurrent = currentProjects.contains(project);
-                projectsInfo.projects.add(projectInfo);
+                if (project.isOpen() && project.exists())
+                {
+                    try
+                    {
+                        projectInfo.directories = new ArrayList<>();
+                        collectDirectories(project, projectInfo.directories);
+                    }
+                    catch (CoreException e)
+                    {
+                        log.logError(e);
+                        projectInfo.directories = null;
+                    }
+                }
+                else
+                {
+                    projectInfo.directories = null;
+                }
             }
 
             var content = json.serialize(projectsInfo);
@@ -160,6 +188,17 @@ public class GetProjectsMcpTool
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
             return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
         });
+    }
+
+    private void collectDirectories(IContainer container, List<String> directories) throws CoreException {
+        for (var resource : container.members()) {
+            if (resource instanceof IContainer && resource.exists()) {
+                var dir = (IContainer) resource;
+                var relativePath = dir.getProjectRelativePath().toString();
+                directories.add(relativePath);
+                collectDirectories(dir, directories);
+            }
+        }
     }
 
     @SuppressWarnings("nls")
