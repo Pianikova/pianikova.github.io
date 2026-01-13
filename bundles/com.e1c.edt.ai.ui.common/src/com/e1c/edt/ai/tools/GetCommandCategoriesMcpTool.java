@@ -142,7 +142,7 @@ public class GetCommandCategoriesMcpTool
             return messageFactory.createMessage(this, call, content);
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
+            return messageFactory.createError(this, call, "Failed to get command categories. " + cause.getMessage());
         });
     }
 

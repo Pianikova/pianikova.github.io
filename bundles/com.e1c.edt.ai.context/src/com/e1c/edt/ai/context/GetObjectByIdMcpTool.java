@@ -229,7 +229,7 @@ public class GetObjectByIdMcpTool
             {
                 // Handle exceptions from the async block
                 String errorMessage = ex.getCause() instanceof CoreException || ex.getCause() instanceof OperationCanceledException
-                    ? "Cannot search. " + ex.getMessage()
+                    ? "Cannot get object by id. " + ex.getMessage()
                     : ex.getMessage();
 
                 return messageFactory.createError(this, call, errorMessage);

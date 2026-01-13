@@ -269,7 +269,7 @@ public class ReadFileMcpTool
             return messageFactory.createMessage(this, call, content);
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
+            return messageFactory.createError(this, call, "Failed to read file content. " + cause.getMessage());
         });
     }
 

@@ -239,7 +239,7 @@ public class WriteFileMcpTool
             return messageFactory.createMessage(this, call, result.toString());
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
+            return messageFactory.createError(this, call, "Failed to write file. " + cause.getMessage());
         });
     }
 

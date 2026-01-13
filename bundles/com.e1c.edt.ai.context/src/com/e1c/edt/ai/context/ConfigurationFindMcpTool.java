@@ -398,7 +398,7 @@ public class ConfigurationFindMcpTool
             {
                 // Handle exceptions from the async block
                 String errorMessage = ex.getCause() instanceof CoreException || ex.getCause() instanceof OperationCanceledException
-                    ? "Cannot search. " + ex.getMessage()
+                    ? "Cannot find object in the project. " + ex.getMessage()
                     : ex.getMessage();
 
                 return messageFactory.createError(this, call, errorMessage);

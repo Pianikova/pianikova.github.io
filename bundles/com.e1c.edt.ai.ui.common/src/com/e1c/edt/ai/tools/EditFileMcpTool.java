@@ -3,8 +3,10 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -132,6 +134,8 @@ public class EditFileMcpTool
                 .completedFuture(messageFactory.createError(this, call, "'new_contents' is required."));
         }
 
+        var replaceAll = callArgs.replaceAll != null ? callArgs.replaceAll : false;
+
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
             // Check for cancellation before starting the work.
@@ -171,11 +175,72 @@ public class EditFileMcpTool
 
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
             var optionalFileContent = contentSourceProvider.getFileContent(projectFile);
-            if (!optionalFileContent.isEmpty())
+            if (optionalFileContent.isEmpty())
             {
                 return messageFactory.createError(this, call,
                     "The file \"" + relativeFilePath + "\" does not exist. Use the '" + WriteFileMcpTool.TOOL_NAME
                         + "' tool to create a new file.");
+            }
+
+            var fileContent = optionalFileContent.get();
+
+            // Read current file content
+            String currentContent;
+            try (var input = fileContent.getInputStream().orElseThrow())
+            {
+                currentContent = new String(input.readAllBytes(), fileContent.getCharset());
+            }
+            catch (IOException | NoSuchElementException e)
+            {
+                return messageFactory.createError(this, call, "Failed to read file content: " + e.getMessage());
+            }
+
+            // Perform content replacement
+            String updatedContent;
+            if (replaceAll)
+            {
+                // Replace all occurrences
+                updatedContent = currentContent.replace(callArgs.originContents, callArgs.newContents);
+
+                // Verify replacement occurred
+                if (updatedContent.equals(currentContent))
+                {
+                    return messageFactory.createError(this, call,
+                        "Original content not found in file. Verify the 'origin_contents'.");
+                }
+            }
+            else
+            {
+                // Replace single occurrence with validation
+                int firstIndex = currentContent.indexOf(callArgs.originContents);
+                if (firstIndex == -1)
+                {
+                    return messageFactory.createError(this, call,
+                        "Original content not found in file. Verify the 'origin_contents'.");
+                }
+
+                // Check for multiple occurrences
+                int secondIndex =
+                    currentContent.indexOf(callArgs.originContents, firstIndex + callArgs.originContents.length());
+
+                if (secondIndex != -1)
+                {
+                    return messageFactory.createError(this, call,
+                        "Multiple matches found for original content. Change the 'origin_contents' to avoid multiple matches.");
+                }
+
+                updatedContent = currentContent.substring(0, firstIndex) + callArgs.newContents
+                    + currentContent.substring(firstIndex + callArgs.originContents.length());
+            }
+
+            // Write updated content
+            try (var output = fileContent.getOutputStream().orElseThrow())
+            {
+                output.write(updatedContent.getBytes(fileContent.getCharset()));
+            }
+            catch (IOException | NoSuchElementException e)
+            {
+                return messageFactory.createError(this, call, "Failed to write file content: " + e.getMessage());
             }
 
             var result = new StringBuilder();
@@ -184,7 +249,7 @@ public class EditFileMcpTool
             return messageFactory.createMessage(this, call, result.toString());
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
+            return messageFactory.createError(this, call, "Failed to update file. " + cause.getMessage());
         });
     }
 

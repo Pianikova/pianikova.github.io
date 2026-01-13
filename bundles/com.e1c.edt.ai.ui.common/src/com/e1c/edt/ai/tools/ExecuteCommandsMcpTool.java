@@ -224,7 +224,7 @@ public class ExecuteCommandsMcpTool
             return dispatcher.dispatch(() -> executeCommand(handlerService, call, parameterizedCommand)).orElseGet(() -> messageFactory.createError(this, call, "Cannot execute the command."));
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
+            return messageFactory.createError(this, call, "Failed to execute the command. " + cause.getMessage());
         });
     }
 
