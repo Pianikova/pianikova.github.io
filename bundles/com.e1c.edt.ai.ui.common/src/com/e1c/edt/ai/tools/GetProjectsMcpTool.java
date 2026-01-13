@@ -28,9 +28,8 @@ import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
-import com.e1c.edt.ai.assistent.model.ProjectInfo;
-import com.e1c.edt.ai.assistent.model.ProjectsInfo;
 import com.google.common.base.Preconditions;
+import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
 
@@ -46,32 +45,21 @@ public class GetProjectsMcpTool
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "{\n"
-        + "  \"projects\": [\n"
-        + "    {\n"
-        + "      \"name\": \"Управление торговлей 11.5\",\n"
-        + "      \"absolute_path\": \"C:\\\\1C_Projects\\\\УТ115\\\\Configuration.cf\",\n"
-        + "      \"is_open\": true,\n"
-        + "      \"exists\": true,\n"
-        + "      \"is_current\": false,\n"
-        + "      \"structure\": [\n"
-        + "        {\n"
-        + "          \"name\": \"src\",\n"
-        + "          \"relative_path\": \"src\",\n"
-        + "          \"children\": [\n"
-        + "            {\"name\": \"main\", \"relative_path\": \"src/main\", \"children\": []},\n"
-        + "            {\"name\": \"test\", \"relative_path\": \"src/test\", \"children\": []}\n"
-        + "          ]\n"
-        + "        },\n"
-        + "        {\n"
-        + "          \"name\": \"lib\",\n"
-        + "          \"relative_path\": \"lib\",\n"
-        + "          \"children\": []\n"
-        + "        }\n"
-        + "      ]\n"
-        + "    }\n"
-        + "  ]\n"
-        + "}";
+    "[\n"
+    + "  {\n"
+    + "    \"name\": \"Управление торговлей 11.5\",\n"
+    + "    \"absolute_path\": \"C:\\\\1C_Projects\\\\УТ115\",\n"
+    + "    \"is_open\": true,\n"
+    + "    \"exists\": true,\n"
+    + "    \"is_current\": false,\n"
+    + "    \"directories\": [\n"
+    + "      \"src\",\n"
+    + "      \"src/main\",\n"
+    + "      \"src/test\",\n"
+    + "      \"lib\"\n"
+    + "    ]\n"
+    + "  }\n"
+    + "]";
 
     // @formatter:oт
 
@@ -144,8 +132,7 @@ public class GetProjectsMcpTool
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var projects = root.getProjects();
-            var projectsInfo = new ProjectsInfo();
-            projectsInfo.projects = new ArrayList<>();
+            var response = new ArrayList<Project>();
             for (var project : projects)
             {
                 // Check for cancellation periodically inside the loop.
@@ -154,8 +141,8 @@ public class GetProjectsMcpTool
                     return messageFactory.createError(this, call, "Operation was cancelled during execution.");
                 }
 
-                var projectInfo = new ProjectInfo();
-                projectsInfo.projects.add(projectInfo);
+                var projectInfo = new Project();
+                response.add(projectInfo);
                 projectInfo.name = project.getName();
                 var location = project.getLocation();
                 projectInfo.absolutePath = location != null ? location.toOSString() : null;
@@ -182,7 +169,7 @@ public class GetProjectsMcpTool
                 }
             }
 
-            var content = json.serialize(projectsInfo);
+            var content = json.serialize(response);
             return messageFactory.createMessage(this, call, content);
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
@@ -215,7 +202,7 @@ public class GetProjectsMcpTool
         description.append("Provides information about projects in the IDE: name, absolute path, state (exists, open, current), etc.");
         description.append("\nNOTE: add a description of what will be done when using this tool.");
 
-        description.append("\nFor exapmple:");
+        description.append("\nFor example:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
 
@@ -228,5 +215,29 @@ public class GetProjectsMcpTool
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
+    }
+
+    private static class Project
+    {
+        @SerializedName("name")
+        public String name;
+
+        @SerializedName("absolute_path")
+        public String absolutePath;
+
+        @SerializedName("is_open")
+        public Boolean isOpen;
+
+        @SerializedName("exists")
+        public Boolean exists;
+
+        @SerializedName("is_current")
+        public Boolean isCurrent;
+
+        /**
+         * List of directories in the project.
+         */
+        @SerializedName("directories")
+        public List<String> directories;
     }
 }

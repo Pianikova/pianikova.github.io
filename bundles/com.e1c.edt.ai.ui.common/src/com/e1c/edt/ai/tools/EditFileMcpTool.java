@@ -1,8 +1,7 @@
 /**
- * Copyright (C) 2025, 1C
- */
+* Copyright (C) 2025, 1C
+*/
 package com.e1c.edt.ai.tools;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -16,11 +15,9 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
-import com.e1c.edt.ai.assistent.model.EditFileContentRequest;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -29,8 +26,8 @@ import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
+import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
-
 public class EditFileMcpTool
     implements IMcpTool
 {
@@ -46,13 +43,11 @@ public class EditFileMcpTool
         + "  \"new_contents\": \"Сообщить(\\\"Hello, world!\\\");\",\n"
         + "  \"replace_all\": false\n"
         + "}";
-
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "File updated: \"src/MainModule.bsl\"";
     // @formatter:on
 
-    private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
@@ -61,21 +56,21 @@ public class EditFileMcpTool
     private final IFileSystem fileSystem;
 
     @Inject
-    public EditFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public EditFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider, IProgressMonitor monitor, IFileSystem fileSystem)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(monitor);
         Preconditions.checkNotNull(fileSystem);
-        this.log = log;
+
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.monitor = monitor;
         this.fileSystem = fileSystem;
+
         spec = createSpecification();
     }
 
@@ -95,16 +90,17 @@ public class EditFileMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, EditFileContentRequest.class);
-        if (optionalCallArgs.isEmpty())
+        var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
-        var callArgs = optionalCallArgs.get();
-        var projectName = callArgs.projectName;
+        var request = optionalRequest.get();
+
+        var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
@@ -112,7 +108,7 @@ public class EditFileMcpTool
                     "'project_name' is required."));
         }
 
-        var relativeFilePath = callArgs.relativeFilePath;
+        var relativeFilePath = request.relativeFilePath;
         if (relativeFilePath == null || relativeFilePath.isBlank())
         {
             return CompletableFuture
@@ -120,21 +116,21 @@ public class EditFileMcpTool
                     "'relative_file_path' is required."));
         }
 
-        var originContents = callArgs.originContents;
-        if (originContents == null)
+        var originContents = request.originContents;
+        if (originContents == null || originContents.isEmpty())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "'origin_contents' is required."));
+                .completedFuture(messageFactory.createError(this, call, "'origin_contents' must not be empty."));
         }
 
-        var newContents = callArgs.newContents;
+        var newContents = request.newContents;
         if (newContents == null)
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "'new_contents' is required."));
         }
 
-        var replaceAll = callArgs.replaceAll != null ? callArgs.replaceAll : false;
+        var replaceAll = request.replaceAll != null ? request.replaceAll : false;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -146,12 +142,7 @@ public class EditFileMcpTool
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var project = root.getProject(projectName);
-            if (project == null)
-            {
-                return messageFactory.createError(this, call, "Cannot get the project \"" + projectName + "\".");
-            }
-
-            if (!project.exists())
+            if (project == null || !project.exists())
             {
                 return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
             }
@@ -164,13 +155,9 @@ public class EditFileMcpTool
                 }
                 catch (CoreException error)
                 {
-                    return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                    return messageFactory.createError(this, call,
+                        "Cannot open the project \"" + projectName + "\". " + error.getMessage());
                 }
-            }
-
-            if (!project.isOpen())
-            {
-                return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". ");
             }
 
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
@@ -199,10 +186,10 @@ public class EditFileMcpTool
             String updatedContent;
             if (replaceAll)
             {
-                // Replace all occurrences
-                updatedContent = currentContent.replace(callArgs.originContents, callArgs.newContents);
+                updatedContent = currentContent.replace(
+                    java.util.regex.Matcher.quoteReplacement(originContents),
+                    java.util.regex.Matcher.quoteReplacement(newContents));
 
-                // Verify replacement occurred
                 if (updatedContent.equals(currentContent))
                 {
                     return messageFactory.createError(this, call,
@@ -211,26 +198,22 @@ public class EditFileMcpTool
             }
             else
             {
-                // Replace single occurrence with validation
-                int firstIndex = currentContent.indexOf(callArgs.originContents);
+                int firstIndex = currentContent.indexOf(originContents);
                 if (firstIndex == -1)
                 {
                     return messageFactory.createError(this, call,
                         "Original content not found in file. Verify the 'origin_contents'.");
                 }
 
-                // Check for multiple occurrences
-                int secondIndex =
-                    currentContent.indexOf(callArgs.originContents, firstIndex + callArgs.originContents.length());
-
+                int secondIndex = currentContent.indexOf(originContents, firstIndex + originContents.length());
                 if (secondIndex != -1)
                 {
                     return messageFactory.createError(this, call,
                         "Multiple matches found for original content. Change the 'origin_contents' to avoid multiple matches.");
                 }
 
-                updatedContent = currentContent.substring(0, firstIndex) + callArgs.newContents
-                    + currentContent.substring(firstIndex + callArgs.originContents.length());
+                updatedContent = currentContent.substring(0, firstIndex) + newContents
+                    + currentContent.substring(firstIndex + originContents.length());
             }
 
             // Write updated content
@@ -243,10 +226,11 @@ public class EditFileMcpTool
                 return messageFactory.createError(this, call, "Failed to write file content: " + e.getMessage());
             }
 
-            var result = new StringBuilder();
+            var response = new StringBuilder();
             var projectRelativePath = projectFile.getProjectRelativePath();
-            result.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
-            return messageFactory.createMessage(this, call, result.toString());
+            response.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
+
+            return messageFactory.createMessage(this, call, response.toString());
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
             return messageFactory.createError(this, call, "Failed to update file. " + cause.getMessage());
@@ -260,15 +244,13 @@ public class EditFileMcpTool
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name =TOOL_NAME;
+        spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-
         description.append("Edits/updates/modifies the contents of an existing project file.");
-        description.append("\nFor exapmple:");
+        description.append("\nFor example:"); // Исправлено: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
-
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
@@ -298,8 +280,10 @@ public class EditFileMcpTool
 
         var replaceAllProp = new McpToolCallProperty();
         replaceAllProp.type = "boolean";
-        replaceAllProp.description = "If true, all occurrences of the 'origin_contents' fragment will be replaced. If false, only the single occurrence will be replaced. If no fragments are found, or more than one is found, the request will fail. False by default.";
-        properties.put("replace_all", newContentsProp);
+        replaceAllProp.description = "If true, all occurrences of the 'origin_contents' fragment will be replaced. "
+            + "If false, only the single occurrence will be replaced. "
+            + "If no fragments are found, or more than one is found, the request will fail. False by default.";
+        properties.put("replace_all", replaceAllProp); // Исправлено: newContentsProp -> replaceAllProp
 
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name", "relative_file_path", "origin_contents", "new_contents");
@@ -308,4 +292,40 @@ public class EditFileMcpTool
         return spec;
      // @formatter:on
     }
+
+    private static class Request
+    {
+        /**
+         * Project name in IDE.
+         */
+        @SerializedName("project_name")
+        public String projectName;
+
+        /**
+         * Relative path to the file which contents should be replaced. Must start with the project name, for example, "src/MyModule.bsl".
+         */
+        @SerializedName("relative_file_path")
+        public String relativeFilePath;
+
+        /**
+         * The fragment of the file content that will be replaced.
+         */
+        @SerializedName("origin_contents")
+        public String originContents;
+
+        /**
+         * The content fragment that will replace the original ('origin_contents').
+         */
+        @SerializedName("new_contents")
+        public String newContents;
+
+        /**
+         * If true, all occurrences of the 'origin_contents' fragment will be replaced.
+         * If false, only the single occurrence will be replaced. If no fragments are found, or more than one is found, the request will fail.
+         * False by default.
+         */
+        @SerializedName("replace_all")
+        public Boolean replaceAll;
+    }
+
 }

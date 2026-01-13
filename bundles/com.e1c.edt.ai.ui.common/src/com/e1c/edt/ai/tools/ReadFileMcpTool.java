@@ -1,6 +1,6 @@
 /**
- * Copyright (C) 2025, 1C
- */
+* Copyright (C) 2025, 1C
+*/
 package com.e1c.edt.ai.tools;
 
 import java.io.BufferedReader;
@@ -17,7 +17,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
@@ -26,18 +25,17 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
-import com.e1c.edt.ai.assistent.model.ReadFileContentRequest;
-import com.e1c.edt.ai.assistent.model.ReadFileContentResponse;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
+import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
-
 
 public class ReadFileMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "ide_read_file"; //$NON-NLS-1$
+    private static final int MAX_LINES = 5000; // Maximum lines to read
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -48,17 +46,14 @@ public class ReadFileMcpTool
         + "  \"first_line_number\": 50,\n"
         + "  \"lines_number\": 100\n"
         + "}";
-
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "{\n"
         + "  \"content\": \"Процедура Пример()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\",\n"
         + "  \"charset_name\": \"UTF-8\"\n"
         + "}";
-
     // @formatter:on
 
-    private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
@@ -67,21 +62,21 @@ public class ReadFileMcpTool
     private final IFileSystem fileSystem;
 
     @Inject
-    public ReadFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public ReadFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider, IProgressMonitor monitor, IFileSystem fileSystem)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(monitor);
         Preconditions.checkNotNull(fileSystem);
-        this.log = log;
+
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.monitor = monitor;
         this.fileSystem = fileSystem;
+
         spec = createSpecification();
     }
 
@@ -101,16 +96,17 @@ public class ReadFileMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, ReadFileContentRequest.class);
-        if (optionalCallArgs.isEmpty())
+        var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
-        var callArgs = optionalCallArgs.get();
-        var projectName = callArgs.projectName;
+        var request = optionalRequest.get();
+
+        var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
@@ -118,7 +114,7 @@ public class ReadFileMcpTool
                     "'project_name' is required."));
         }
 
-        var relativeFilePath = callArgs.relativeFilePath;
+        var relativeFilePath = request.relativeFilePath;
         if (relativeFilePath == null || relativeFilePath.isBlank())
         {
             return CompletableFuture
@@ -126,21 +122,19 @@ public class ReadFileMcpTool
                     "'relative_file_path' is required."));
         }
 
-        var firstLineNumber = callArgs.firstLineNumber;
-        if (firstLineNumber == null)
+        // Validate and set default values for line parameters
+        int firstLineNumber =
+            request.firstLineNumber != null && request.firstLineNumber >= 0 ? request.firstLineNumber : 0;
+
+        int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : 2000;
+
+        // Apply maximum lines limit
+        if (linesNumber > MAX_LINES)
         {
-            firstLineNumber = 0;
+            linesNumber = MAX_LINES;
         }
 
-        var actualFirstLineNumber = firstLineNumber;
-
-        var linesNumber = callArgs.linesNumber;
-        if (linesNumber == null)
-        {
-            linesNumber = 2000;
-        }
-
-        var actualLinesNumber = linesNumber;
+        var curLinesNumber = linesNumber;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -152,12 +146,9 @@ public class ReadFileMcpTool
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var project = root.getProject(projectName);
-            if (project == null)
-            {
-                return messageFactory.createError(this, call, "Cannot get the project \"" + projectName + "\".");
-            }
 
-            if (!project.exists())
+            // Validate project existence and accessibility
+            if (project == null || !project.exists())
             {
                 return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
             }
@@ -170,13 +161,9 @@ public class ReadFileMcpTool
                 }
                 catch (CoreException error)
                 {
-                    return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                    return messageFactory.createError(this, call,
+                        "Cannot open the project \"" + projectName + "\". " + error.getMessage());
                 }
-            }
-
-            if (!project.isOpen())
-            {
-                return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". ");
             }
 
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
@@ -187,85 +174,47 @@ public class ReadFileMcpTool
             }
 
             var fileContent = optionalFileContent.get();
-
             var resultContent = new StringBuilder();
-            int targetEndLine = actualFirstLineNumber + actualLinesNumber - 1;
-            int currentLine = 0;
-            var optionalInpiutStream = fileContent.getInputStream();
-            if (optionalInpiutStream.isEmpty())
+            var charset = fileContent.getCharset();
+
+            try (var inputStream = fileContent.getInputStream().orElse(null);
+                var reader = new BufferedReader(new InputStreamReader(inputStream, charset)))
             {
-                return messageFactory.createError(this, call, "Cannot read the file \"" + relativeFilePath + "\".");
-            }
+                String line;
+                int currentLine = 0;
+                int linesToRead = 0;
+                int endLine = firstLineNumber + curLinesNumber;
 
-            try (var is = optionalInpiutStream.get();
-                 var isr = new InputStreamReader(is, fileContent.getCharset());
-                 var reader = new BufferedReader(isr)) {
-                int c;
-                while ((c = reader.read()) != -1)
+                // Skip lines until we reach the starting line
+                while (currentLine < firstLineNumber && reader.readLine() != null)
                 {
-                    // Check if current line is within target range
-                    var inTarget = (currentLine >= actualFirstLineNumber && currentLine <= targetEndLine);
-                    if (c == '\r')
+                    currentLine++;
+                }
+
+                // Read the requested number of lines
+                while (currentLine < endLine && (line = reader.readLine()) != null)
+                {
+                    if (linesToRead > 0)
                     {
-                        // Handle carriage return (possible Windows line ending)
-                        reader.mark(1);
-                        var next = reader.read();
-                        if (next == '\n')
-                        {
-                            // CRLF sequence (Windows)
-                            if (inTarget)
-                            {
-                                resultContent.append((char) c);
-                                resultContent.append((char) next);
-                            }
-
-                            currentLine++;
-                            if (currentLine > targetEndLine) break;
-                        }
-                        else
-                        {
-                            // Single CR (Mac/old systems)
-                            if (next != -1) reader.reset();  // Put back non-LF character
-                            if (inTarget)
-                            {
-                                resultContent.append((char) c);
-                            }
-
-                            currentLine++;
-                            if (currentLine > targetEndLine)
-                            {
-                                break;
-                            }
-                        }
+                        resultContent.append('\n'); // Add newline between lines
                     }
-                    else
-                        if (c == '\n')
-                        {
-                            // LF sequence (Unix/Linux)
-                            if (inTarget)
-                            {
-                                resultContent.append((char) c);
-                            }
 
-                            currentLine++;
-                            if (currentLine > targetEndLine) {
-                                break; }
-                    } else {
-                        // Regular character
-                        if (inTarget) {
-                            resultContent.append((char) c);
-                        }
-                    }
+                    resultContent.append(line);
+                    currentLine++;
+                    linesToRead++;
                 }
             }
-            catch (IOException e) {
-                return messageFactory.createError(this, call, "Failed to get file content. " + e.getMessage());
+            catch (IOException | NullPointerException e)
+            {
+                return messageFactory.createError(this, call, "Failed to read file content. " + e.getMessage());
             }
 
-            var result = new ReadFileContentResponse();
-            result.contents = resultContent.toString();
-            result.charsetName = fileContent.getCharset().name();
-            var content = json.serialize(result);
+            // Prepare response
+            var response = new Response();
+            response.contents = resultContent.toString();
+            response.charsetName = charset.name();
+
+            var content = json.serialize(response);
             return messageFactory.createMessage(this, call, content);
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
@@ -280,16 +229,13 @@ public class ReadFileMcpTool
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name =TOOL_NAME;
+        spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-
         description.append("Reads the contents of a project file.");
-
-        description.append("\nFor exapmple:");
+        description.append("\nFor example:"); // Fixed typo: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
-
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
@@ -307,15 +253,16 @@ public class ReadFileMcpTool
         relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
 
-        var firsLlineNumberProp = new McpToolCallProperty();
-        firsLlineNumberProp.type = "integer";
-        firsLlineNumberProp.description = "Number of the first line of the file to be read. Numbering starts at 0. The default is 0.";
-        properties.put("first_line_number", relativeFilePathProp);
+        // Fixed property assignments
+        var firstLineNumberProp = new McpToolCallProperty();
+        firstLineNumberProp.type = "integer";
+        firstLineNumberProp.description = "Number of the first line to read (0-based index). Default is 0.";
+        properties.put("first_line_number", firstLineNumberProp);
 
         var linesNumberProp = new McpToolCallProperty();
         linesNumberProp.type = "integer";
-        linesNumberProp.description = "Number of lines to read. By default, reads up to 2000 lines.";
-        properties.put("lines_number", relativeFilePathProp);
+        linesNumberProp.description = "Number of lines to read. Default is 2000, maximum is " + MAX_LINES + ".";
+        properties.put("lines_number", linesNumberProp);
 
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name", "relative_file_path");
@@ -323,5 +270,47 @@ public class ReadFileMcpTool
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
+    }
+
+    private static class Request
+    {
+        /**
+         * Project name in IDE.
+         */
+        @SerializedName("project_name")
+        public String projectName;
+
+        /**
+         * Relative path to the file. For example, "/src/MyModule.bsl".
+         */
+        @SerializedName("relative_file_path")
+        public String relativeFilePath;
+
+        /**
+         * Number of the first line of the file to be read. Numbering starts at 0. The default is 0.
+         */
+        @SerializedName("first_line_number")
+        public Integer firstLineNumber;
+
+        /**
+         * Number of lines to read. By default, reads up to 2000 lines.
+         */
+        @SerializedName("lines_number")
+        public Integer linesNumber;
+    }
+
+    private static class Response
+    {
+        /**
+         * File contents.
+         */
+        @SerializedName("contents")
+        public String contents;
+
+        /**
+         * File encoding, for example, "UTF-8", "windows-1251", "KOI8-R", "UTF-16", "UTF-32", etc.
+         */
+        @SerializedName("charset_name")
+        public String charsetName;
     }
 }

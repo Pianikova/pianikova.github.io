@@ -1,8 +1,7 @@
 /**
- * Copyright (C) 2025, 1C
- */
+* Copyright (C) 2025, 1C
+*/
 package com.e1c.edt.ai.tools;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -11,6 +10,8 @@ import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.eclipse.core.resources.IContainer;
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -19,7 +20,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
@@ -28,12 +28,10 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
-import com.e1c.edt.ai.assistent.model.WriteFileContentRequest;
-import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
+import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
-
 public class WriteFileMcpTool
     implements IMcpTool
 {
@@ -47,36 +45,31 @@ public class WriteFileMcpTool
         + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
         + "  \"contents\": \"Процедура Тест()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\"\n"
         + "}";
-
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "File written: \"src/MainModule.bsl\"";
     // @formatter:on
 
-    private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
-    private final IContentSourceProvider contentSourceProvider;
     private final IProgressMonitor monitor;
     private final IFileSystem fileSystem;
 
     @Inject
-    public WriteFileMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IProgressMonitor monitor, IFileSystem fileSystem)
+    public WriteFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+        IProgressMonitor monitor, IFileSystem fileSystem)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(monitor);
         Preconditions.checkNotNull(fileSystem);
-        this.log = log;
+
         this.json = json;
         this.messageFactory = messageFactory;
-        this.contentSourceProvider = contentSourceProvider;
         this.monitor = monitor;
         this.fileSystem = fileSystem;
+
         spec = createSpecification();
     }
 
@@ -96,16 +89,17 @@ public class WriteFileMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, WriteFileContentRequest.class);
-        if (optionalCallArgs.isEmpty())
+        var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
-        var callArgs = optionalCallArgs.get();
-        var projectName = callArgs.projectName;
+        var request = optionalRequest.get();
+
+        var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
@@ -113,7 +107,7 @@ public class WriteFileMcpTool
                     "'project_name' is required."));
         }
 
-        var relativeFilePath = callArgs.relativeFilePath;
+        var relativeFilePath = request.relativeFilePath;
         if (relativeFilePath == null || relativeFilePath.isBlank())
         {
             return CompletableFuture
@@ -121,15 +115,14 @@ public class WriteFileMcpTool
                     "'relative_file_path' is required."));
         }
 
-        var contents = callArgs.contents;
+        var contents = request.contents;
         if (contents == null)
         {
             return CompletableFuture.completedFuture(messageFactory.createError(this, call, "'contents' is required."));
         }
 
         var charsetName =
-            callArgs.charsetName != null && !callArgs.charsetName.isBlank() ? callArgs.charsetName : "UTF-8";
-
+            request.charsetName != null && !request.charsetName.isBlank() ? request.charsetName : "UTF-8";
         byte[] data;
         try
         {
@@ -151,12 +144,7 @@ public class WriteFileMcpTool
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var project = root.getProject(projectName);
-            if (project == null)
-            {
-                return messageFactory.createError(this, call, "Cannot get the project \"" + projectName + "\".");
-            }
-
-            if (!project.exists())
+            if (project == null || !project.exists())
             {
                 return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
             }
@@ -169,42 +157,30 @@ public class WriteFileMcpTool
                 }
                 catch (CoreException error)
                 {
-                    return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                    return messageFactory.createError(this, call,
+                        "Cannot open the project \"" + projectName + "\". " + error.getMessage());
                 }
             }
 
-            if (!project.isOpen())
-            {
-                return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". ");
-            }
-
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
-            var optionalFileContent = contentSourceProvider.getFileContent(projectFile);
-            if (!optionalFileContent.isEmpty())
+            if (projectFile.exists())
             {
                 return messageFactory.createError(this, call,
                     "The file \"" + relativeFilePath + "\" already exists. Use the '" + EditFileMcpTool.TOOL_NAME
                         + "' tool to modify this file.");
             }
 
-            try (ByteArrayInputStream source = new ByteArrayInputStream(data))
+            try
             {
-                if (!projectFile.exists())
+                createParentFolders(projectFile, monitor);
+                try (ByteArrayInputStream source = new ByteArrayInputStream(data))
                 {
-                    var parent = projectFile.getParent();
-                    if (parent instanceof IFolder && !parent.exists())
-                    {
-                        ((IFolder)parent).create(true, true, null);
-                    }
-
                     projectFile.create(source, true, monitor);
-                    projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, null);
-                }
-                else
-                {
-                    return messageFactory.createError(this, call,
-                        "The file \"" + relativeFilePath + "\" already exists. Use the '" + EditFileMcpTool.TOOL_NAME
-                            + "' tool to update this file.");
+                    projectFile.refreshLocal(IResource.DEPTH_ZERO, monitor);
+                    if (projectFile.getParent() != null)
+                    {
+                        projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
+                    }
                 }
             }
             catch (CoreException | IOException error)
@@ -212,35 +188,63 @@ public class WriteFileMcpTool
                 return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
             }
 
-            var result = new StringBuilder();
+            var response = new StringBuilder();
             var projectRelativePath = projectFile.getProjectRelativePath();
-            result.append("File written: \"").append(projectRelativePath.toPortableString()).append("\".\n");
-            var fileExt = projectFile.getFileExtension().toLowerCase();
-            switch (fileExt)
+            response.append("File written: \"").append(projectRelativePath.toPortableString()).append("\".\n");
+
+            var fileExt = projectFile.getFileExtension();
+            if (fileExt != null)
             {
-            case "bsl":
-                result.append("ACTION REQUIRED: check that coresponding \"")
-                    .append(projectRelativePath.removeFileExtension().addFileExtension("mdo").toPortableString())
-                    .append("\" file exists or create it.\n");
-                break;
+                fileExt = fileExt.toLowerCase();
+                switch (fileExt)
+                {
+                case "bsl":
+                    response.append("ACTION REQUIRED: check that corresponding \"")
+                        .append(projectRelativePath.removeFileExtension().addFileExtension("mdo").toPortableString())
+                        .append("\" file exists or create it.\n");
+                    break;
+                case "mdo":
+                case "form":
+                    response.append(
+                        "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use '"
+                            + EditFileMcpTool.TOOL_NAME + "' tool.");
+                    break;
+                }
             }
 
-            switch (fileExt)
-            {
-            case "bsl":
-            case "mdo":
-            case "form":
-                result.append(
-                    "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use '"
-                        + EditFileMcpTool.TOOL_NAME + "' tool.");
-                break;
-            }
-
-            return messageFactory.createMessage(this, call, result.toString());
+            return messageFactory.createMessage(this, call, response.toString());
         }).exceptionally(ex -> {
             var cause = ex instanceof CompletionException ? ex.getCause() : ex;
             return messageFactory.createError(this, call, "Failed to write file. " + cause.getMessage());
         });
+    }
+
+    private void createParentFolders(IFile file, IProgressMonitor monitor) throws CoreException
+    {
+        IContainer container = file.getParent();
+        if (container instanceof IFolder && !container.exists())
+        {
+            createFolderRecursive((IFolder)container, monitor);
+        }
+    }
+
+    private void createFolderRecursive(IFolder folder, IProgressMonitor monitor) throws CoreException
+    {
+        if (folder == null || folder.exists())
+        {
+            return;
+        }
+
+        IContainer parent = folder.getParent();
+        if (parent instanceof IFolder)
+        {
+            createFolderRecursive((IFolder)parent, monitor);
+        }
+
+        if (!folder.exists())
+        {
+            folder.create(true, true, monitor);
+        }
     }
 
     @SuppressWarnings("nls")
@@ -250,18 +254,16 @@ public class WriteFileMcpTool
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name =TOOL_NAME;
+        spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-
         description.append("Writes the contents of a project file. Creates a new file.");
         description.append("\nIMPORTANT: analyze the project structure: directories, other files before writing a file.");
         description.append("\nNOTE: some files require additional files to be processed correctly. For example, .bsl files require an .mdo file in the corresponding directory.");
         description.append("\nNOTE: To edit or update an existing file, use the '" + EditFileMcpTool.TOOL_NAME + "' tool.");
-        description.append("\nFor exapmple:");
+        description.append("\nFor example:"); // Исправлено: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
-
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
@@ -296,4 +298,32 @@ public class WriteFileMcpTool
         return spec;
      // @formatter:on
     }
+
+    private static class Request
+    {
+        /**
+         * Project name in IDE.
+         */
+        @SerializedName("project_name")
+        public String projectName;
+
+        /**
+         * Relative path to the file. Must start with the project name, for example, "src/MyModule.bsl".
+         */
+        @SerializedName("relative_file_path")
+        public String relativeFilePath;
+
+        /**
+         * Contents to write to file.
+         */
+        @SerializedName("contents")
+        public String contents;
+
+        /**
+         * File encoding, for example, "UTF-8", "windows-1251", "KOI8-R", "UTF-16", "UTF-32", etc. By default, UTF-8.
+         */
+        @SerializedName("charset_name")
+        public String charsetName;
+    }
+
 }

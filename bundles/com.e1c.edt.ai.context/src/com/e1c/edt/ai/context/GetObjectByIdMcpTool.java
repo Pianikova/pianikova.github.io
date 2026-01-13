@@ -1,16 +1,15 @@
 /**
- * Copyright (C) 2025, 1C
- */
+* Copyright (C) 2025, 1C
+*/
 package com.e1c.edt.ai.context;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.core.runtime.Path;
 
 import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.bm.core.IBmTransaction;
@@ -32,7 +31,6 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
-
 public class GetObjectByIdMcpTool
     implements IMcpTool
 {
@@ -42,32 +40,18 @@ public class GetObjectByIdMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"resoure_uri\": \"platform:/resource/com.example.project/src/main/java/com/example/MyClass.java\",\n"
-        + "  \"fqn\": \"com.example.MyClass\",\n"
-        + "  \"is_top\": true,\n"
-        + "  \"top_object_id\": 17239405821723,\n"
-        + "  \"object_model\": {\n"
-        + "    \"type\": \"JAVA_CLASS\",\n"
-        + "    \"modifiers\": [\"public\"],\n"
-        + "    \"superClass\": \"java.lang.Object\",\n"
-        + "    \"interfaces\": [\"java.io.Serializable\"],\n"
-        + "    \"methods\": [\n"
-        + "      {\n"
-        + "        \"name\": \"main\",\n"
-        + "        \"parameters\": [\"String[] args\"],\n"
-        + "        \"returnType\": \"void\"\n"
-        + "      }\n"
-        + "    ]\n"
-        + "  },\n"
-        + "  \"relative_file_path\": \"src/main/java/com/example/MyClass.java\",\n"
-        + "  \"absolute_file_path\": \"C:/eclipse-workspace/com.example.project/src/main/java/com/example/MyClass.java\",\n"
-        + "  \"file_path\": \"com.example.project/src/main/java/com/example/MyClass.java\"\n"
+        + "  \"project_name\": \"MyProject\",\n"
+        + "  \"object_id\": 17239405821723\n"
         + "}";
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "JSON object";
-
+        "{\n"
+        + "  \"resoure_uri\": \"bm:...\",\n"
+        + "  \"fqn\": \"Catalog.MyCatalog\",\n"
+        + "  \"is_top\": true,\n"
+        + "  \"relative_file_path\": \"Catalogs/MyCatalog/Forms/ItemForm/Ext/Module.bsl\"\n"
+        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -86,11 +70,13 @@ public class GetObjectByIdMcpTool
         Preconditions.checkNotNull(modelManager);
         Preconditions.checkNotNull(entityFactory);
         Preconditions.checkNotNull(projectFileSystemSupportProvider);
+
         this.json = json;
         this.messageFactory = messageFactory;
         this.modelManager = modelManager;
         this.entityFactory = entityFactory;
         this.projectFileSystemSupportProvider = projectFileSystemSupportProvider;
+
         spec = createSpecification();
     }
 
@@ -110,22 +96,22 @@ public class GetObjectByIdMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, CallArguments.class);
-        if (optionalCallArgs.isEmpty())
+        var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
-        var callArgs = optionalCallArgs.get();
-        var projectName = callArgs.projectName;
-        var objectId = callArgs.objectId;
+        var request = optionalRequest.get();
+        var projectName = request.projectName;
+        var objectId = request.objectId;
 
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Project is required."));
+                .completedFuture(messageFactory.createError(this, call, "Project name is required."));
         }
 
         if (objectId == null)
@@ -134,9 +120,7 @@ public class GetObjectByIdMcpTool
                 .completedFuture(messageFactory.createError(this, call, "Object id is required."));
         }
 
-        // Return a CompletableFuture that will be completed asynchronously
         return CompletableFuture.supplyAsync(() -> {
-            // Check for cancellation before starting the heavy operation
             if (cancellationToken.isCanceled())
             {
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
@@ -144,120 +128,139 @@ public class GetObjectByIdMcpTool
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var project = root.getProject(projectName);
-            if (project == null)
+
+            if (project == null || !project.exists())
             {
                 return messageFactory.createError(this, call, "Project not found: " + projectName);
             }
 
             var model = modelManager.getModel(project);
-            var bmObject = model.executeReadonlyTask(new IBmTask<IBmObject>()
+            if (model == null)
             {
-                @Override
-                public IBmObject execute(IBmTransaction arg0, IProgressMonitor arg1)
-                {
-                    return arg0.getObjectById(objectId);
-                }
-
-                @Override
-                public Object getId()
-                {
-                    return call.id;
-                }
-
-                @Override
-                public String getName()
-                {
-                    return call.id;
-                }
-
-                @Override
-                public Object getServiceId()
-                {
-                    return "GetObjectByIdMcpTool";
-                }
-            });
-
-            if (bmObject == null)
-            {
-                return messageFactory.createError(this, call, "Object not found: " + objectId);
+                return messageFactory.createError(this, call, "Model not available for project: " + projectName);
             }
 
-            var result = new Result();
-            result.resoureUri = bmObject.bmGetUriAsString();
-            result.fqn = bmObject.bmGetFqn();
-            result.isTop = bmObject.bmIsTop();
-            var topObject = bmObject.bmGetTopObject();
-            if (topObject != null)
+            try
             {
-                result.topObjectId = topObject.bmGetId();
-            }
-
-            var fileSystem = projectFileSystemSupportProvider.getProjectFileSystemSupport(project);
-            if (fileSystem != null)
-            {
-                var file = fileSystem.getFile(bmObject);
-                if (file != null)
+                var bmObject = model.executeReadonlyTask(new IBmTask<IBmObject>()
                 {
-                    var location = file.getRawLocation();
-                    if (location != null)
+                    @Override
+                    public IBmObject execute(IBmTransaction transaction, IProgressMonitor progressMonitor)
                     {
-                        result.absoluteFilePath = location.toOSString();
+                        // Check cancellation inside BM task
+                        if (cancellationToken.isCanceled())
+                        {
+                            throw new OperationCanceledException("Operation cancelled during BM task execution");
+                        }
+                        return transaction.getObjectById(objectId);
                     }
 
-                    var relativePath = file.getProjectRelativePath();
-                    if (relativePath != null)
+                    @Override
+                    public Object getId()
                     {
-                        result.relativeFilePath = relativePath.toPortableString();
-                        result.filePath = "/" + project.getName() + "/" + relativePath.toPortableString();
+                        return "GetObjectByIdMcpTool/" + objectId;
                     }
 
+                    @Override
+                    public String getName()
+                    {
+                        return "Get object by id: " + objectId;
+                    }
+
+                    @Override
+                    public Object getServiceId()
+                    {
+                        return "GetObjectByIdMcpTool";
+                    }
+                });
+
+                if (bmObject == null)
+                {
+                    return messageFactory.createError(this, call, "Object not found: " + objectId);
                 }
-            }
 
-            if (bmObject instanceof Form)
-            {
-                result.objectModel = entityFactory.createFormEntity((Form)bmObject, cancellationToken).orElse(null);
-            }
-            else
-            {
-                result.objectModel = entityFactory.createMetaEntity(bmObject, cancellationToken);
-            }
+                var response = new Response();
+                response.resoureUri = bmObject.bmGetUriAsString();
+                response.fqn = bmObject.bmGetFqn();
+                response.isTop = bmObject.bmIsTop();
 
-            return json.serialize(result);
+                var topObject = bmObject.bmGetTopObject();
+                if (topObject != null)
+                {
+                    response.topObjectId = topObject.bmGetId();
+                }
+
+                var fileSystem = projectFileSystemSupportProvider.getProjectFileSystemSupport(project);
+                if (fileSystem != null)
+                {
+                    var file = fileSystem.getFile(bmObject);
+                    if (file != null)
+                    {
+                        var location = file.getRawLocation();
+                        if (location != null)
+                        {
+                            response.absoluteFilePath = location.toOSString();
+                        }
+
+                        var relativePath = file.getProjectRelativePath();
+                        if (relativePath != null)
+                        {
+                            response.relativeFilePath = relativePath.toPortableString();
+
+                            // Build filePath safely without double slashes
+                            var filePath = new Path(project.getName()).append(relativePath);
+                            response.filePath = filePath.toPortableString();
+                        }
+                    }
+                }
+
+                if (cancellationToken.isCanceled())
+                {
+                    return messageFactory.createError(this, call, "Operation was cancelled during entity creation.");
+                }
+
+                if (bmObject instanceof Form)
+                {
+                    response.objectModel = entityFactory.createFormEntity((Form)bmObject, cancellationToken).orElse(null);
+                }
+                else
+                {
+                    response.objectModel = entityFactory.createMetaEntity(bmObject, cancellationToken);
+                }
+
+                return json.serialize(response);
+            }
+            catch (OperationCanceledException e)
+            {
+                return messageFactory.createError(this, call, "Cannot get object by id: " + e.getMessage());
+            }
         }).handle((result, ex) -> {
             if (ex != null)
             {
-                // Handle exceptions from the async block
-                String errorMessage = ex.getCause() instanceof CoreException || ex.getCause() instanceof OperationCanceledException
-                    ? "Cannot get object by id. " + ex.getMessage()
-                    : ex.getMessage();
-
+                String errorMessage = "Internal error: " + ex.getMessage();
+                if (ex.getCause() != null) {
+                    errorMessage += " (cause: " + ex.getCause().getMessage() + ")";
+                }
                 return messageFactory.createError(this, call, errorMessage);
             }
-
-            // Handle successful result
-            var content = json.serialize(result);
-            return messageFactory.createMessage(this, call, content);
+            return (ToolCallMessage) result;
         });
     }
 
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
-     // @formatter:off
+        // @formatter:off
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-
-        description.append("Returns 1C object by its id.");
-
-        description.append("\nFor exapmple:");
+        description.append("Returns 1C configuration object by its unique ID.");
+        description.append("\nFor example:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
-
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
@@ -265,25 +268,25 @@ public class GetObjectByIdMcpTool
 
         var properties = new HashMap<String, McpToolCallProperty>();
 
-        var searchQueryProp = new McpToolCallProperty();
-        searchQueryProp.type = "string";
-        searchQueryProp.description = "1C project name.";
-        properties.put("project_name", searchQueryProp);
+        var projectNameProp = new McpToolCallProperty();
+        projectNameProp.type = "string";
+        projectNameProp.description = "1C project name where the object is located.";
+        properties.put("project_name", projectNameProp);
 
-        var projectsDirProp = new McpToolCallProperty();
-        projectsDirProp.type = "number";
-        projectsDirProp.description = "1C object id.";
-        properties.put("object_id", projectsDirProp);
+        var objectIdProp = new McpToolCallProperty();
+        objectIdProp.type = "number";
+        objectIdProp.description = "Unique identifier of the 1C configuration object.";
+        properties.put("object_id", objectIdProp);
 
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name", "object_id");
 
         spec.function.parameters = parameters;
         return spec;
-     // @formatter:on
+        // @formatter:on
     }
 
-    private static class CallArguments
+    private static class Request
     {
         /**
          * Defines project name.
@@ -298,7 +301,7 @@ public class GetObjectByIdMcpTool
         public Long objectId;
     }
 
-    private static class Result
+    private static class Response
     {
         @SerializedName("resoure_uri")
         public String resoureUri;
@@ -310,7 +313,7 @@ public class GetObjectByIdMcpTool
         public boolean isTop;
 
         @SerializedName("top_object_id")
-        public long topObjectId;
+        public Long topObjectId; // Changed to Long to support null
 
         @SerializedName("object_model")
         public Object objectModel;
@@ -318,8 +321,8 @@ public class GetObjectByIdMcpTool
         @SerializedName("relative_file_path")
         public String relativeFilePath;
 
-        @SerializedName("filePath")
-        public String filePath;
+        @SerializedName("file_path")
+        public String filePath; // Fixed serialization name
 
         @SerializedName("absolute_file_path")
         public String absoluteFilePath;

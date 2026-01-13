@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.assistent.model.ProcessResult;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
