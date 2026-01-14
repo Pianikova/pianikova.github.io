@@ -31,6 +31,7 @@ import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 public class WriteFileMcpTool
     implements IMcpTool
 {
@@ -52,21 +53,21 @@ public class WriteFileMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
-    private final IProgressMonitor monitor;
+    private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
 
     @Inject
     public WriteFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IProgressMonitor monitor, IFileSystem fileSystem)
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(monitor);
+        Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
 
         this.json = json;
         this.messageFactory = messageFactory;
-        this.monitor = monitor;
+        this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
 
         spec = createSpecification();
@@ -148,6 +149,8 @@ public class WriteFileMcpTool
                 return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
             }
 
+            var monitor = cancellationProgressMonitor.get();
+            monitor.setCancellationToken(cancellationToken);
             if (!project.isOpen())
             {
                 try

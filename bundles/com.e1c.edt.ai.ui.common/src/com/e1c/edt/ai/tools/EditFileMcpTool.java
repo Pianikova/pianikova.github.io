@@ -10,7 +10,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -27,6 +26,7 @@ import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 public class EditFileMcpTool
     implements IMcpTool
 {
@@ -51,23 +51,24 @@ public class EditFileMcpTool
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
-    private final IProgressMonitor monitor;
+    private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
 
     @Inject
     public EditFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IProgressMonitor monitor, IFileSystem fileSystem)
+        IContentSourceProvider contentSourceProvider,
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
-        Preconditions.checkNotNull(monitor);
+        Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
-        this.monitor = monitor;
+        this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
 
         spec = createSpecification();
@@ -150,6 +151,8 @@ public class EditFileMcpTool
             {
                 try
                 {
+                    var monitor = cancellationProgressMonitor.get();
+                    monitor.setCancellationToken(cancellationToken);
                     project.open(monitor);
                 }
                 catch (CoreException error)

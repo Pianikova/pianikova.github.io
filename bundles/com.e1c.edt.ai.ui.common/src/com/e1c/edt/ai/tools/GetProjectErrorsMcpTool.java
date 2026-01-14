@@ -2,12 +2,14 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.IMarker;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -64,14 +66,17 @@ public class GetProjectErrorsMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
+    private final IBuildWaiter buildWaiter;
 
     @Inject
-    public GetProjectErrorsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory)
+    public GetProjectErrorsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBuildWaiter buildWaiter)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
+        Preconditions.checkNotNull(buildWaiter);
         this.json = json;
         this.messageFactory = messageFactory;
+        this.buildWaiter = buildWaiter;
         this.spec = createSpecification();
     }
 
@@ -91,12 +96,14 @@ public class GetProjectErrorsMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        // Deserialize request parameters
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture.completedFuture(messageFactory.createError(this, call,
                 "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
+
         var request = optionalRequest.get();
         var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
@@ -104,97 +111,136 @@ public class GetProjectErrorsMcpTool
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "Project name is required."));
         }
-        return CompletableFuture.supplyAsync(() -> {
+
+        // Synchronous project validation: Check if project exists and is open
+        var root = ResourcesPlugin.getWorkspace().getRoot();
+        var project = root.getProject(projectName);
+        if (project == null || !project.exists())
+        {
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call, "Project not found: " + projectName));
+        }
+        if (!project.isOpen())
+        {
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call, "Project is closed: " + projectName));
+        }
+
+        return buildWaiter.waitForBuilds(cancellationToken).thenCompose(voidResult -> {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                return CompletableFuture
+                    .completedFuture(messageFactory.createError(this, call, "Operation cancelled after build wait"));
             }
-            var root = ResourcesPlugin.getWorkspace().getRoot();
-            var project = root.getProject(projectName);
-            if (project == null || !project.exists())
+
+            return CompletableFuture.supplyAsync(() -> createResponse(project, call, cancellationToken));
+        }).exceptionally(e -> {
+            Throwable cause = e.getCause();
+            if (cause instanceof OperationCanceledException)
             {
-                return messageFactory.createError(this, call, "Project not found: " + projectName);
+                return messageFactory.createError(this, call, "Build waiting cancelled");
             }
-            if (!project.isOpen())
+
+            if (cause instanceof InterruptedException)
             {
-                return messageFactory.createError(this, call, "Project is closed: " + projectName);
+                Thread.currentThread().interrupt();
+                return messageFactory.createError(this, call, "Build waiting interrupted");
             }
-            try
+
+            return messageFactory.createError(this, call, "Error during build waiting: " + e.getMessage());
+        });
+    }
+
+    @SuppressWarnings("nls")
+    private ToolCallMessage createResponse(IProject project, McpToolCall call, ICancellationToken cancellationToken)
+    {
+        try
+        {
+            // Early cancellation check
+            if (cancellationToken.isCanceled())
             {
+                return messageFactory.createError(this, call, "Operation cancelled during error collection");
+            }
+
+            // Retrieve all problem markers in the project
+            var markers = project.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE);
+            var response = new ArrayList<ErrorInfo>();
+
+            // Process each marker
+            for (var marker : markers)
+            {
+                // Check cancellation during marker processing
                 if (cancellationToken.isCanceled())
                 {
-                    return messageFactory.createError(this, call, "Operation cancelled during error collection");
+                    return messageFactory.createError(this, call, "Operation cancelled during marker processing");
                 }
 
-                var markers = project.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE);
-                var response = new ArrayList<ErrorInfo>();
-                for (var marker : markers)
+                // Map marker severity to string representation
+                String severity;
+                int severityValue = marker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO);
+                switch (severityValue)
                 {
-                    if (cancellationToken.isCanceled())
-                    {
-                        return messageFactory.createError(this, call, "Operation cancelled during marker processing");
-                    }
-
-                    String severity;
-                    int severityValue = marker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO);
-                    switch (severityValue)
-                    {
-                    case IMarker.SEVERITY_ERROR:
-                        severity = "error";
-                        break;
-                    case IMarker.SEVERITY_WARNING:
-                        severity = "warning";
-                        break;
-                    default:
-                        severity = "info";
-                    }
-
-                    int priorityValue = marker.getAttribute(IMarker.PRIORITY, IMarker.PRIORITY_NORMAL);
-                    String priority;
-                    switch (priorityValue)
-                    {
-                    case IMarker.PRIORITY_HIGH:
-                        priority = "high";
-                        break;
-
-                    case IMarker.PRIORITY_NORMAL:
-                        priority = "normal";
-                        break;
-
-                    case IMarker.PRIORITY_LOW:
-                        priority = "low";
-                        break;
-
-                    default:
-                        priority = "unknown";
-                    }
-
-                    var resource = marker.getResource();
-                    var location = resource.getLocation();
-                    var relativePath = resource.getProjectRelativePath().toPortableString();
-
-                    ErrorInfo errorInfo = new ErrorInfo();
-                    errorInfo.absolutePath = location != null ? location.toFile().getAbsolutePath() : "";
-                    errorInfo.relativePath = relativePath;
-                    errorInfo.line = marker.getAttribute(IMarker.LINE_NUMBER, -1);
-                    errorInfo.message = marker.getAttribute(IMarker.MESSAGE, "");
-                    errorInfo.severity = severity;
-                    errorInfo.priority = priority;
-                    response.add(errorInfo);
+                case IMarker.SEVERITY_ERROR:
+                    severity = "error";
+                    break;
+                case IMarker.SEVERITY_WARNING:
+                    severity = "warning";
+                    break;
+                default:
+                    severity = "info";
                 }
 
-                var content = json.serialize(response);
-                return messageFactory.createMessage(this, call, content);
+                // Map marker priority to string representation
+                int priorityValue = marker.getAttribute(IMarker.PRIORITY, IMarker.PRIORITY_NORMAL);
+                String priority;
+                switch (priorityValue)
+                {
+                case IMarker.PRIORITY_HIGH:
+                    priority = "high";
+                    break;
+                case IMarker.PRIORITY_NORMAL:
+                    priority = "normal";
+                    break;
+                case IMarker.PRIORITY_LOW:
+                    priority = "low";
+                    break;
+                default:
+                    priority = "unknown";
+                }
+
+                var resource = marker.getResource();
+                var location = resource.getLocation();
+                var relativePath = resource.getProjectRelativePath().toPortableString();
+
+                ErrorInfo errorInfo = new ErrorInfo();
+                errorInfo.absolutePath = location != null ? location.toFile().getAbsolutePath() : "";
+                errorInfo.relativePath = relativePath;
+                errorInfo.line = marker.getAttribute(IMarker.LINE_NUMBER, -1);
+                errorInfo.message = marker.getAttribute(IMarker.MESSAGE, "");
+                errorInfo.severity = severity;
+                errorInfo.priority = priority;
+
+                response.add(errorInfo);
             }
-            catch (CoreException e)
+
+            var content = json.serialize(response);
+            return messageFactory.createMessage(this, call, content);
+        }
+        catch (CoreException | OperationCanceledException error)
+        {
+            if (error instanceof CoreException)
             {
-                return messageFactory.createError(this, call, "Error retrieving project markers: " + e.getMessage());
+                return messageFactory.createError(this, call,
+                    "Error retrieving project markers: " + error.getMessage());
             }
-            catch (OperationCanceledException e)
+
+            if (error instanceof OperationCanceledException)
             {
-                return messageFactory.createError(this, call, "Operation cancelled: " + e.getMessage());
+                return messageFactory.createError(this, call, "Operation cancelled: " + error.getMessage());
             }
-        });
+
+            return messageFactory.createError(this, call, "Unexpected error: " + error.getMessage());
+        }
     }
 
     @SuppressWarnings("nls")
@@ -218,6 +264,8 @@ public class GetProjectErrorsMcpTool
         description.append("\nExample response:");
         description.append("\n").append(AnswerExample);
         spec.function.description = description.toString();
+
+        // Define function parameters
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
         var properties = new HashMap<String, McpToolCallProperty>();
@@ -228,15 +276,18 @@ public class GetProjectErrorsMcpTool
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name");
         spec.function.parameters = parameters;
+
         return spec;
     }
 
+    // Request DTO for JSON deserialization
     private static class Request
     {
         @SerializedName("project_name")
         public String projectName;
     }
 
+    // Error information DTO for JSON serialization
     private static class ErrorInfo
     {
         @SerializedName("absolute_path")

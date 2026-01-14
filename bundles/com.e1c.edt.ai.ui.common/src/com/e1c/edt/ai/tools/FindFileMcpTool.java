@@ -11,7 +11,6 @@ import java.util.concurrent.CompletableFuture;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.search.internal.ui.text.FileMatch;
 import org.eclipse.search.ui.ISearchQuery;
@@ -35,6 +34,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class FindFileMcpTool
     implements IMcpTool
@@ -73,17 +73,18 @@ public class FindFileMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
-    private final IProgressMonitor monitor;
+    private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
 
     @Inject
-    public FindFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IProgressMonitor monitor)
+    public FindFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(monitor);
+        Preconditions.checkNotNull(cancellationProgressMonitor);
         this.json = json;
         this.messageFactory = messageFactory;
-        this.monitor = monitor;
+        this.cancellationProgressMonitor = cancellationProgressMonitor;
         spec = createSpecification();
     }
 
@@ -135,6 +136,8 @@ public class FindFileMcpTool
 
             List<IResource> roots = new ArrayList<>();
             var root = ResourcesPlugin.getWorkspace().getRoot();
+            var monitor = cancellationProgressMonitor.get();
+            monitor.setCancellationToken(cancellationToken);
 
             if (!projectNames.isEmpty())
             {
