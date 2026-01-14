@@ -211,6 +211,8 @@ public class WriteFileMcpTool
                 }
             }
 
+            response.append("ACTION REQUIRED: verify project errors and warnings. Use '"
+                + GetProjectErrorsMcpTool.TOOL_NAME + "' tool.");
             return messageFactory.createMessage(this, call, response.toString());
         });
     }

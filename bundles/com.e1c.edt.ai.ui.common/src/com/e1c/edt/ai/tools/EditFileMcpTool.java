@@ -225,11 +225,12 @@ public class EditFileMcpTool
                 return messageFactory.createError(this, call, "Failed to write file content: " + e.getMessage());
             }
 
-            var content = new StringBuilder();
+            var response = new StringBuilder();
             var projectRelativePath = projectFile.getProjectRelativePath();
-            content.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
-
-            return messageFactory.createMessage(this, call, content.toString());
+            response.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
+            response.append("ACTION REQUIRED: verify project errors and warnings. Use '"
+                + GetProjectErrorsMcpTool.TOOL_NAME + "' tool.");
+            return messageFactory.createMessage(this, call, response.toString());
         });
     }
 
