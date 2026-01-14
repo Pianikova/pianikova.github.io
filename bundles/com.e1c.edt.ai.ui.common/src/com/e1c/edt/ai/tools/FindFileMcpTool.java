@@ -286,29 +286,8 @@ public class FindFileMcpTool
                 query.getSearchResult().removeListener(listener);
             }
 
-            return elements;
-        }).handle((result, ex) -> {
-            if (ex != null)
-            {
-                String errorMessage =
-                    ex instanceof OperationCanceledException ? "Search cancelled" : "Search error: " + ex.getMessage();
-                return messageFactory.createError(this, call, errorMessage);
-            }
-
-            if (result instanceof ToolCallMessage)
-            {
-                return (ToolCallMessage)result;
-            }
-
-            try
-            {
-                var content = json.serialize(result);
-                return messageFactory.createMessage(this, call, content);
-            }
-            catch (Exception e)
-            {
-                return messageFactory.createError(this, call, "Failed to serialize results: " + e.getMessage());
-            }
+            var content = json.serialize(elements);
+            return messageFactory.createMessage(this, call, content);
         });
     }
 

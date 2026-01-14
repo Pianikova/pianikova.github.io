@@ -1,7 +1,7 @@
 /**
 * Copyright (C) 2025, 1C
 */
-package com.e1c.edt.ai.context;
+package com.e1c.edt.ai.context.tools;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -246,33 +246,13 @@ public class FindMcpTool
                     return messageFactory.createError(this, call, "Operation was cancelled during search.");
                 }
 
-                return createResponse(resultCollector);
+                var response = createResponse(resultCollector);
+                var content = json.serialize(response);
+                return messageFactory.createMessage(this, call, content);
             }
             catch (OperationCanceledException | CoreException error)
             {
                 return messageFactory.createError(this, call, "Search failed: " + error.getMessage());
-            }
-        }).handle((result, ex) -> {
-            if (ex != null)
-            {
-                String errorMessage = ex instanceof OperationCanceledException ? "Search was cancelled"
-                    : "Search error: " + ex.getMessage();
-                return messageFactory.createError(this, call, errorMessage);
-            }
-
-            if (result instanceof ToolCallMessage)
-            {
-                return (ToolCallMessage)result;
-            }
-
-            try
-            {
-                var content = json.serialize(result);
-                return messageFactory.createMessage(this, call, content);
-            }
-            catch (Exception e)
-            {
-                return messageFactory.createError(this, call, "Failed to serialize search results: " + e.getMessage());
             }
         });
     }

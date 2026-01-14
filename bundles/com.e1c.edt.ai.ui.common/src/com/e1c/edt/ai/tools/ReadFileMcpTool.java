@@ -9,7 +9,6 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -216,9 +215,6 @@ public class ReadFileMcpTool
 
             var content = json.serialize(response);
             return messageFactory.createMessage(this, call, content);
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to read file content. " + cause.getMessage());
         });
     }
 

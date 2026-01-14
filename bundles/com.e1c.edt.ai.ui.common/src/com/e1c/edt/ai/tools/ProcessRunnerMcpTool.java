@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
@@ -100,8 +99,7 @@ public class ProcessRunnerMcpTool
         var futureResult = processRunner.executeProcess(request.executable,
             request.working_directory, request.args, timeout, TimeUnit.SECONDS);
 
-        // Handle cancellation
-        var resultFuture = futureResult.thenApply(optResult -> {
+        return futureResult.thenApply(optResult -> {
             if (cancellationToken.isCanceled())
             {
                 return messageFactory.createError(this, call, "Operation was cancelled during process execution.");
@@ -112,16 +110,8 @@ public class ProcessRunnerMcpTool
                 response.stdErr = truncateOutput(response.stdErr);
                 var content = json.serialize(response);
                 return messageFactory.createMessage(this, call, content);
-            })
-                .orElseGet(() -> messageFactory.createError(this, call, "Process execution failed - no result."));
+            }).orElseGet(() -> messageFactory.createError(this, call, "Process execution failed - no result."));
         });
-
-        // Add cancellation handling
-        CancellationTokenSource.attach(cancellationToken, () -> {
-            futureResult.cancel(true);
-        });
-
-        return resultFuture;
     }
 
     @SuppressWarnings("nls")

@@ -26,6 +26,8 @@ import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IVisualContextProvider;
+import com.e1c.edt.ai.context.tools.FindMcpTool;
+import com.e1c.edt.ai.context.tools.GetObjectByIdMcpTool;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;

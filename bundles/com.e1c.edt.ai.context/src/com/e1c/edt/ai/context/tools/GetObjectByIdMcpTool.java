@@ -1,7 +1,7 @@
 /**
 * Copyright (C) 2025, 1C
 */
-package com.e1c.edt.ai.context;
+package com.e1c.edt.ai.context.tools;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -27,6 +27,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.context.IEntityFactory;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -228,22 +229,13 @@ public class GetObjectByIdMcpTool
                     response.objectModel = entityFactory.createMetaEntity(bmObject, cancellationToken);
                 }
 
-                return json.serialize(response);
+                var content = json.serialize(response);
+                return messageFactory.createMessage(this, call, content);
             }
             catch (OperationCanceledException e)
             {
                 return messageFactory.createError(this, call, "Cannot get object by id: " + e.getMessage());
             }
-        }).handle((result, ex) -> {
-            if (ex != null)
-            {
-                String errorMessage = "Internal error: " + ex.getMessage();
-                if (ex.getCause() != null) {
-                    errorMessage += " (cause: " + ex.getCause().getMessage() + ")";
-                }
-                return messageFactory.createError(this, call, errorMessage);
-            }
-            return (ToolCallMessage) result;
         });
     }
 

@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
@@ -158,10 +157,6 @@ public class GetProjectsMcpTool
             // Serialize and return the response
             var content = json.serialize(response);
             return messageFactory.createMessage(this, call, content);
-        }).exceptionally(ex -> {
-            // Handle exceptions from the async operation
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get projects: " + cause.getMessage());
         });
     }
 

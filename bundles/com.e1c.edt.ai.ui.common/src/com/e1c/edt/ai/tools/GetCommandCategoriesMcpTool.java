@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.commands.common.NotDefinedException;
 import org.eclipse.ui.PlatformUI;
@@ -136,16 +135,14 @@ public class GetCommandCategoriesMcpTool
                     categories.add(UNCategorized);
                 }
 
-                return messageFactory.createMessage(this, call, json.serialize(categories));
+                var content = json.serialize(categories);
+                return messageFactory.createMessage(this, call, content);
             }
             catch (Exception e)
             {
                 return messageFactory.createError(this, call,
                     "Failed to retrieve command categories: " + e.getMessage());
             }
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Internal error: " + cause.getMessage());
         });
     }
 

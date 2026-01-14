@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -226,14 +225,11 @@ public class EditFileMcpTool
                 return messageFactory.createError(this, call, "Failed to write file content: " + e.getMessage());
             }
 
-            var response = new StringBuilder();
+            var content = new StringBuilder();
             var projectRelativePath = projectFile.getProjectRelativePath();
-            response.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
+            content.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
 
-            return messageFactory.createMessage(this, call, response.toString());
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to update file. " + cause.getMessage());
+            return messageFactory.createMessage(this, call, content.toString());
         });
     }
 

@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.commands.ParameterValuesException;
@@ -287,9 +286,6 @@ public class GetCommandsMcpTool
 
             var content = json.serialize(commands.stream().sorted(COMPARATOR).collect(Collectors.toList()));
             return messageFactory.createMessage(this, call, content);
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get commands. " + cause.getMessage());
         });
     }
 

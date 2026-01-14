@@ -8,7 +8,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
@@ -213,9 +212,6 @@ public class WriteFileMcpTool
             }
 
             return messageFactory.createMessage(this, call, response.toString());
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to write file. " + cause.getMessage());
         });
     }
 

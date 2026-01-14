@@ -6,7 +6,6 @@ package com.e1c.edt.ai.tools;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
@@ -218,9 +217,6 @@ public class ExecuteCommandsMcpTool
             var handlerService = PlatformUI.getWorkbench().getService(IHandlerService.class);
             return dispatcher.dispatch(() -> executeCommand(handlerService, call, parameterizedCommand))
                 .orElseGet(() -> messageFactory.createError(this, call, "Cannot execute the command."));
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to execute the command. " + cause.getMessage());
         });
     }
 
