@@ -31,12 +31,14 @@ public class GetProjectErrorsMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "ide_get_project_errors"; //$NON-NLS-1$
+
     // @formatter:off
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
         + "  \"project_name\": \"MyProject\"\n"
         + "}";
+
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "[\n"
@@ -58,9 +60,11 @@ public class GetProjectErrorsMcpTool
         + "  }\n"
         + "]";
     // @formatter:on
+
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
+
     @Inject
     public GetProjectErrorsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory)
     {
@@ -70,16 +74,19 @@ public class GetProjectErrorsMcpTool
         this.messageFactory = messageFactory;
         this.spec = createSpecification();
     }
+
     @Override
     public boolean isExperimental()
     {
         return true;
     }
+
     @Override
     public McpToolCallSpecification getSpecification()
     {
         return spec;
     }
+
     @SuppressWarnings({ "nls" })
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
