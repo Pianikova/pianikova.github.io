@@ -1,13 +1,7 @@
-/**
- * Copyright (C) 2025, 1C
- */
-package com.e1c.edt.ai.assistent.model;
+package com.e1c.edt.ai.tools;
 
 import com.google.gson.annotations.SerializedName;
 
-/**
- * DTO class for storing the results of process execution
- */
 public class ProcessResult
 {
     @SerializedName("exit_code")

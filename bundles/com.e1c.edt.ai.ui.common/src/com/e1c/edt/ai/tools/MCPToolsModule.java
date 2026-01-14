@@ -3,8 +3,6 @@
  */
 package com.e1c.edt.ai.tools;
 
-import org.eclipse.core.runtime.IProgressMonitor;
-
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.McpTools;
@@ -25,9 +23,14 @@ public class MCPToolsModule
         toolBinder.addBinding().to(GetCommandCategoriesMcpTool.class);
         toolBinder.addBinding().to(GetCommandsMcpTool.class);
         // toolBinder.addBinding().to(ExecuteCommandsMcpTool.class);
-        toolBinder.addBinding().to(ReadProjectFileMcpTool.class);
-        toolBinder.addBinding().to(FileFindMcpTool.class);
+        toolBinder.addBinding().to(ReadFileMcpTool.class);
+        toolBinder.addBinding().to(FindFileMcpTool.class);
+        toolBinder.addBinding().to(WriteFileMcpTool.class);
+        toolBinder.addBinding().to(EditFileMcpTool.class);
+        toolBinder.addBinding().to(GetProjectErrorsMcpTool.class);
+        toolBinder.addBinding().to(SetMarkersMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
-        bind(IProgressMonitor.class).to(ToolProgressMonitor.class).in(Singleton.class);
+        bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
+        bind(IBuildWaiter.class).to(BuildWaiter.class).in(Singleton.class);
     }
 }

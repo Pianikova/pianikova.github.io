@@ -21,7 +21,7 @@ import com.e1c.edt.ai.context.DTO.MetaEntity;
 import com.e1c.edt.ai.context.DTO.MethodEntity;
 import com.e1c.edt.ai.context.DTO.ObjectEntity;
 
-interface IEntityFactory
+public interface IEntityFactory
 {
     Optional<FormEntity> createFormEntity(Form form, ICancellationToken cancellationToken);
 

@@ -94,6 +94,7 @@ public class McpTools
                     log.logError(message);
                     return messageFactory.createError(null, call, ex.getMessage());
                 });
+
                 futures.add(callFuture);
             }
             catch (Exception ex)
@@ -112,13 +113,20 @@ public class McpTools
             return CompletableFuture.completedFuture(result);
         }
 
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+        var futureResult = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
             .thenApply(v -> {
                 var result = new McpCallToolsResult();
                 result.messages = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
                 result.unknownCalls = unknownCalls;
                 return result;
             });
+
+        // Add cancellation handling
+        CancellationTokenSource.attach(cancellationToken, () -> {
+            futureResult.cancel(true);
+        });
+
+        return futureResult;
     }
 
     @SuppressWarnings("nls")

@@ -26,6 +26,8 @@ import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IVisualContextProvider;
+import com.e1c.edt.ai.context.tools.FindMcpTool;
+import com.e1c.edt.ai.context.tools.GetObjectByIdMcpTool;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -73,7 +75,7 @@ class ContextModule
 
         // MCP tools
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
-        toolBinder.addBinding().to(ConfigurationFindMcpTool.class);
+        toolBinder.addBinding().to(FindMcpTool.class);
         toolBinder.addBinding().to(GetObjectByIdMcpTool.class);
 
         // Services

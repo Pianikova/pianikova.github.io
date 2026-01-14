@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.e1c.edt.ai.assistent.model.ProcessResult;
-
 public interface IProcessRunner
 {
     CompletableFuture<Optional<ProcessResult>> executeProcess(String executable, String workingDirectory,

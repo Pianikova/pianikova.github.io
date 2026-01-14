@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.commands.ParameterValuesException;
@@ -19,13 +18,9 @@ import org.eclipse.ui.keys.IBindingService;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
-import com.e1c.edt.ai.assistent.model.CommandCategory;
-import com.e1c.edt.ai.assistent.model.CommandDescription;
-import com.e1c.edt.ai.assistent.model.CommandParameter;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -125,18 +120,15 @@ public class GetCommandsMcpTool
 
     // @formatter:on
 
-    private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
 
     @Inject
-    public GetCommandsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory)
+    public GetCommandsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
         spec = createSpecification();
@@ -158,16 +150,16 @@ public class GetCommandsMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, CommandCategory.class);
-        if (optionalCallArgs.isEmpty())
+        var optionalRequest = json.deserialize(call.function.arguments, CommandCategory.class);
+        if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
-        var callArgs = optionalCallArgs.get();
-        var categoryId = callArgs.id;
+        var request = optionalRequest.get();
+        var categoryId = request.id;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -195,7 +187,7 @@ public class GetCommandsMcpTool
                     continue;
                 }
 
-                if (!categoryId.equalsIgnoreCase(GetCommandCategoriesMcpTool.Uncategorized.id))
+                if (!categoryId.equalsIgnoreCase(GetCommandCategoriesMcpTool.UNCategorized.id))
                 {
                     try
                     {
@@ -294,9 +286,6 @@ public class GetCommandsMcpTool
 
             var content = json.serialize(commands.stream().sorted(COMPARATOR).collect(Collectors.toList()));
             return messageFactory.createMessage(this, call, content);
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
         });
     }
 
@@ -315,7 +304,7 @@ public class GetCommandsMcpTool
         description.append("\nIMPORTANT: use " + GetCommandCategoriesMcpTool.TOOL_NAME + " tool to get categories.");
         description.append("\nNOTE: add a description of what will be done when using this tool.");
 
-        description.append("\nFor exapmple:");
+        description.append("\nFor example:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
 

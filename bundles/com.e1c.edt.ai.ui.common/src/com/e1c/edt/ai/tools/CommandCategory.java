@@ -1,7 +1,7 @@
 /**
  *
  */
-package com.e1c.edt.ai.assistent.model;
+package com.e1c.edt.ai.tools;
 
 import com.google.gson.annotations.SerializedName;
 

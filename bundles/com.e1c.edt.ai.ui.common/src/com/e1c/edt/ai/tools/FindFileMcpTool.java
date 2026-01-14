@@ -1,48 +1,46 @@
 /**
- * Copyright (C) 2025, 1C
- */
+* Copyright (C) 2025, 1C
+*/
 package com.e1c.edt.ai.tools;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.search.internal.ui.text.FileMatch;
 import org.eclipse.search.ui.ISearchQuery;
 import org.eclipse.search.ui.ISearchResultListener;
 import org.eclipse.search.ui.SearchResultEvent;
 import org.eclipse.search.ui.text.FileTextSearchScope;
+import org.eclipse.search.ui.text.Match;
 import org.eclipse.search.ui.text.MatchEvent;
 import org.eclipse.search.ui.text.TextSearchQueryProvider;
-import org.eclipse.search.ui.text.TextSearchQueryProvider.TextSearchInput;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
-import com.e1c.edt.ai.assistent.model.FileFindRequest;
-import com.e1c.edt.ai.assistent.model.FoundElement;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.google.common.base.Preconditions;
+import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
-
-public class FileFindMcpTool
+public class FindFileMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_file_find"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "ide_find_file"; //$NON-NLS-1$
+    private static final int MAX_RESULTS = 100;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -55,13 +53,12 @@ public class FileFindMcpTool
         + "  \"file_name_patterns\": [\"*.bsl\", \"*.mdo\"],\n"
         + "  \"include_derived\": false\n"
         + "}";
-
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "[\n"
         + "  {\n"
-        + "    \"relative_file_path\": \"core-api/src/services/TestUserService.bsl\",\n"
-        + "    \"filePath\": \"/projects/core-api/src/services/TestUserService.bsl\",\n"
+        + "    \"project_name\": \"core-api\",\n"
+        + "    \"relative_file_path\": \"src/services/TestUserService.bsl\",\n"
         + "    \"absolute_file_path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
         + "    \"offset\": 243,\n"
         + "    \"length\": 16,\n"
@@ -69,36 +66,25 @@ public class FileFindMcpTool
         + "    \"line_length\": 16,\n"
         + "    \"line_number\": 12,\n"
         + "    \"line_contents\": \"function TestUserService()\"\n"
-        + "  },\n"
-        + "  {\n"
-        + "    \"relative_file_path\": \"backend/modules/TestPaymentService.mdo\",\n"
-        + "    \"filePath\": \"/projects/backend/modules/TestPaymentService.mdo\",\n"
-        + "    \"absolute_file_path\": \"/home/user/workspace/projects/backend/modules/TestPaymentService.mdo\",\n"
-        + "    \"offset\": 187,\n"
-        + "    \"length\": 19,\n"
-        + "    \"line_offset\": 8,\n"
-        + "    \"line_length\": 19,\n"
-        + "    \"line_number\": 7,\n"
-        + "    \"line_contents\": \"  var TestPaymentService =\"\n"
-        + "  }"
+        + "  }\n"
         + "]";
-
     // @formatter:on
 
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
-    private final IProgressMonitor monitor;
+    private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
 
     @Inject
-    public FileFindMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IProgressMonitor monitor)
+    public FindFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(monitor);
+        Preconditions.checkNotNull(cancellationProgressMonitor);
         this.json = json;
         this.messageFactory = messageFactory;
-        this.monitor = monitor;
+        this.cancellationProgressMonitor = cancellationProgressMonitor;
         spec = createSpecification();
     }
 
@@ -118,51 +104,47 @@ public class FileFindMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, FileFindRequest.class);
-        if (optionalCallArgs.isEmpty())
+        var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
-        var callArgs = optionalCallArgs.get();
-        if (callArgs.searchQuery == null || callArgs.searchQuery.isBlank())
+        var request = optionalRequest.get();
+        if (request.searchQuery == null || request.searchQuery.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "'search_query' cannot be empty."));
         }
 
-        var searchQuery = callArgs.searchQuery;
-        var isCaseSensitiveSearch = callArgs.isCaseSensitiveSearch != null ? callArgs.isCaseSensitiveSearch : false;
-        var isReqularExpressionSearch =
-            callArgs.isReqularExpressionSearch != null ? callArgs.isReqularExpressionSearch : false;
-        var fileNamePatterns = callArgs.fileNamePatterns != null && !callArgs.fileNamePatterns.isEmpty()
-            ? callArgs.fileNamePatterns.toArray(new String[0]) : null;
-        var includeDerived = callArgs.includeDerived != null ? callArgs.includeDerived : true;
+        var searchQuery = request.searchQuery;
+        var isCaseSensitiveSearch = request.isCaseSensitiveSearch != null ? request.isCaseSensitiveSearch : false;
+        var isRegularExpressionSearch =
+            request.isRegularExpressionSearch != null ? request.isRegularExpressionSearch : false;
+        var fileNamePatterns = request.fileNamePatterns != null && !request.fileNamePatterns.isEmpty()
+            ? request.fileNamePatterns.toArray(new String[0]) : null;
+        var includeDerived = request.includeDerived != null ? request.includeDerived : true;
+        List<String> projectNames = request.projectNames != null ? request.projectNames : List.of();
 
-        // Return a CompletableFuture that will be completed asynchronously
         return CompletableFuture.supplyAsync(() -> {
-            // Check for cancellation before starting the heavy operation
             if (cancellationToken.isCanceled())
             {
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
-            var roots = new ArrayList<IResource>();
+            List<IResource> roots = new ArrayList<>();
             var root = ResourcesPlugin.getWorkspace().getRoot();
-            if (callArgs.projectNames != null)
+            var monitor = cancellationProgressMonitor.get();
+            monitor.setCancellationToken(cancellationToken);
+
+            if (!projectNames.isEmpty())
             {
-                for (var projectName : callArgs.projectNames)
+                for (var projectName : projectNames)
                 {
                     var project = root.getProject(projectName);
-                    if (project == null)
-                    {
-                        return messageFactory.createError(this, call,
-                            "Cannot get the project \"" + projectName + "\".");
-                    }
-
-                    if (!project.exists())
+                    if (project == null || !project.exists())
                     {
                         return messageFactory.createError(this, call,
                             "The project \"" + projectName + "\" does not exist.");
@@ -180,18 +162,10 @@ public class FileFindMcpTool
                                 "Cannot open the project \"" + projectName + "\". " + error.getMessage());
                         }
                     }
-
-                    if (!project.isOpen())
-                    {
-                        return messageFactory.createError(this, call,
-                            "Cannot open the project \"" + projectName + "\". ");
-                    }
-
                     roots.add(project);
                 }
             }
-
-            if (roots.isEmpty())
+            else
             {
                 roots.add(root);
             }
@@ -202,7 +176,7 @@ public class FileFindMcpTool
             ISearchQuery query;
             try
             {
-                query = TextSearchQueryProvider.getPreferred().createQuery(new TextSearchInput()
+                query = TextSearchQueryProvider.getPreferred().createQuery(new TextSearchQueryProvider.TextSearchInput()
                 {
                     @Override
                     public String getSearchText()
@@ -213,7 +187,7 @@ public class FileFindMcpTool
                     @Override
                     public boolean isRegExSearch()
                     {
-                        return isReqularExpressionSearch;
+                        return isRegularExpressionSearch;
                     }
 
                     @Override
@@ -235,32 +209,37 @@ public class FileFindMcpTool
                 return messageFactory.createError(this, call, "Cannot create search query. " + error.getMessage());
             }
 
-            var result = query.getSearchResult();
-            var elements = new ArrayList<>();
-            result.addListener(new ISearchResultListener()
-            {
+            final List<Element> elements = new ArrayList<>();
+            final Object lock = new Object();
 
+            ISearchResultListener listener = new ISearchResultListener()
+            {
                 @SuppressWarnings("restriction")
                 @Override
                 public void searchResultChanged(SearchResultEvent e)
                 {
                     if (e instanceof MatchEvent)
                     {
-                        var matchEvent = (MatchEvent)e;
-                        var matches = matchEvent.getMatches();
-                        if (matches != null)
+                        MatchEvent matchEvent = (MatchEvent)e;
+                        synchronized (lock)
                         {
-                            for (var match : matches)
+                            for (Match match : matchEvent.getMatches())
                             {
-                                var element = new FoundElement();
-                                element.offset = match.getOffset();
-                                element.length = match.getLength();
-                                var el = match.getElement();
-                                if (el instanceof IFile)
+                                if (elements.size() >= MAX_RESULTS)
+                                    return;
+
+                                if (match instanceof FileMatch)
                                 {
-                                    var file = (IFile)el;
+                                    FileMatch fileMatch = (FileMatch)match;
+                                    var file = fileMatch.getFile();
+
+                                    var element = new Element();
+                                    element.offset = fileMatch.getOffset();
+                                    element.length = fileMatch.getLength();
+
                                     if (file != null)
                                     {
+                                        element.projectName = file.getProject().getName();
                                         var location = file.getRawLocation();
                                         if (location != null)
                                         {
@@ -270,49 +249,47 @@ public class FileFindMcpTool
                                         var relativePath = file.getProjectRelativePath();
                                         if (relativePath != null)
                                         {
-                                            element.relativeFilePath = "/" + relativePath.toPortableString();
-                                            element.filePath = "/" + file.getProject().getName() + "/"
-                                                + relativePath.toPortableString();
+                                            element.relativeFilePath = relativePath.toPortableString();
                                         }
 
+                                        var line = fileMatch.getLineElement();
+                                        if (line != null)
+                                        {
+                                            element.lineOffset = line.getOffset();
+                                            element.lineLength = line.getLength();
+                                            element.lineNumber = line.getLine();
+                                            element.lineContents = line.getContents();
+                                        }
+
+                                        elements.add(element);
                                     }
                                 }
-
-                                if (match instanceof FileMatch)
-                                {
-                                    var fileMatch = (FileMatch)match;
-                                    var line = fileMatch.getLineElement();
-                                    if (line != null)
-                                    {
-                                        element.lineOffset = line.getOffset();
-                                        element.lineLength = line.getLength();
-                                        element.lineNumber = line.getLine();
-                                        element.lineContents = line.getContents();
-                                    }
-                                }
-
-                                elements.add(element);
                             }
                         }
                     }
                 }
-            });
+            };
 
-            query.run(monitor);
-            return elements;
-        }).handle((result, ex) -> {
-            if (ex != null)
+            query.getSearchResult().addListener(listener);
+
+            try
             {
-                // Handle exceptions from the async block
-                String errorMessage = ex.getCause() instanceof CoreException || ex.getCause() instanceof OperationCanceledException
-                    ? "Cannot search. " + ex.getMessage()
-                    : ex.getMessage();
-
-                return messageFactory.createError(this, call, errorMessage);
+                query.run(monitor);
+            }
+            catch (OperationCanceledException e)
+            {
+                return messageFactory.createError(this, call, "Search was cancelled.");
+            }
+            catch (Exception e)
+            {
+                return messageFactory.createError(this, call, "Search failed: " + e.getMessage());
+            }
+            finally
+            {
+                query.getSearchResult().removeListener(listener);
             }
 
-            // Handle successful result
-            var content = json.serialize(result);
+            var content = json.serialize(elements);
             return messageFactory.createMessage(this, call, content);
         });
     }
@@ -320,21 +297,17 @@ public class FileFindMcpTool
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
-     // @formatter:off
+        // @formatter:off
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
-        spec.function.name =TOOL_NAME;
+        spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-
-        description.append("Finds files in IDE.");
-        description.append("\nNOTE: add a description of what will be done when using this tool.");
-
-        description.append("\nFor exapmple:");
+        description.append("Finds files in IDE based on content patterns.");
+        description.append("\nFor example:"); // Исправлено: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
-
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
@@ -344,32 +317,32 @@ public class FileFindMcpTool
 
         var searchQueryProp = new McpToolCallProperty();
         searchQueryProp.type = "string";
-        searchQueryProp.description = "Text or regular expression to search . The search text represents a regular expression or a pattern using '*' and '?' as wildcards. The empty search text signals a file name search.";
+        searchQueryProp.description = "Text or regular expression to search. Supports wildcards (*, ?) when not using regex.";
         properties.put("search_query", searchQueryProp);
 
         var isCaseSensitiveSearchProp = new McpToolCallProperty();
         isCaseSensitiveSearchProp.type = "boolean";
-        isCaseSensitiveSearchProp.description = "Specifies whether the pattern should be case-sensitive. Defaults to false.";
+        isCaseSensitiveSearchProp.description = "Case-sensitive search. Default: false";
         properties.put("is_case_sensitive_search", isCaseSensitiveSearchProp);
 
-        var isReqularExpressionSearchProp = new McpToolCallProperty();
-        isReqularExpressionSearchProp.type = "boolean";
-        isReqularExpressionSearchProp.description = "Specifies whether the search text contains a regular expression or not. Defaults to false.";
-        properties.put("is_case_sensitive_search", isReqularExpressionSearchProp);
+        var isRegularExpressionSearchProp = new McpToolCallProperty();
+        isRegularExpressionSearchProp.type = "boolean";
+        isRegularExpressionSearchProp.description = "Treat search query as regular expression. Default: false";
+        properties.put("is_regular_expression_search", isRegularExpressionSearchProp);
 
         var projectNamesProp = new McpToolCallProperty();
-        projectNamesProp.type = "object";
-        projectNamesProp.description = "IDE project names. If not specified, all projects will be searched.";
+        projectNamesProp.type = "array";
+        projectNamesProp.description = "Project names to search in. Searches all projects if empty.";
         properties.put("search_project_names", projectNamesProp);
 
         var fileNamePatternsProp = new McpToolCallProperty();
-        fileNamePatternsProp.type = "object";
-        fileNamePatternsProp.description = "Filename patterns that all files must match. If not specified, then all file names must be included.";
+        fileNamePatternsProp.type = "array";
+        fileNamePatternsProp.description = "File name patterns (e.g., [\"*.bsl\", \"*.mdo\"])";
         properties.put("file_name_patterns", fileNamePatternsProp);
 
         var includeDerivedProp = new McpToolCallProperty();
         includeDerivedProp.type = "boolean";
-        includeDerivedProp.description = "True means including derived files and files inside derived containers. False means excluding them. The default value is True.";
+        includeDerivedProp.description = "Include derived resources. Default: true";
         properties.put("include_derived", includeDerivedProp);
 
         parameters.properties = properties;
@@ -377,6 +350,80 @@ public class FileFindMcpTool
 
         spec.function.parameters = parameters;
         return spec;
-     // @formatter:on
+        // @formatter:on
     }
+
+    private static class Request
+    {
+        /**
+         * Text or regular expression to search . The search text represents a regular expression or a pattern using '*' and '?' as wildcards. The empty search text signals a file name search.
+         */
+        @SerializedName("search_query")
+        public String searchQuery;
+
+        /**
+         * Specifies whether the pattern should be case-sensitive. Defaults to false.
+         */
+        @SerializedName("is_case_sensitive_search")
+        public Boolean isCaseSensitiveSearch;
+
+        /**
+         * Specifies whether the search text contains a regular expression or not. Defaults to false.
+         */
+        @SerializedName("is_regular_expression_search")
+        public Boolean isRegularExpressionSearch;
+
+        /**
+         * IDE project names. If not specified, all projects will be searched.
+         */
+        @SerializedName("search_project_names")
+        public List<String> projectNames;
+
+        /**
+         * Filename patterns that all files must match. If not specified, then all file names must be included.
+         */
+        @SerializedName("file_name_patterns")
+        public List<String> fileNamePatterns;
+
+        /**
+         * True means including derived files and files inside derived containers. False means excluding them. The default value is True.
+         */
+        @SerializedName("include_derived")
+        public Boolean includeDerived;
+    }
+
+    private static class Element
+    {
+        /**
+         * Name of the project
+         */
+        @SerializedName("project_name")
+        public String projectName;
+
+        /**
+         * Project relative path to the file.
+         */
+        @SerializedName("relative_file_path")
+        public String relativeFilePath;
+
+        @SerializedName("absolute_file_path")
+        public String absoluteFilePath;
+
+        public int offset;
+
+        public int length;
+
+        @SerializedName("line_offset")
+        public int lineOffset;
+
+        @SerializedName("line_length")
+        public int lineLength;
+
+        @SerializedName("line_number")
+        public int lineNumber;
+
+        @SerializedName("line_contents")
+        public String lineContents;
+    }
+
 }

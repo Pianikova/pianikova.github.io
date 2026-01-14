@@ -1,12 +1,11 @@
 /**
- * Copyright (C) 2025, 1C
- */
+* Copyright (C) 2025, 1C
+*/
 package com.e1c.edt.ai.tools;
-
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.commands.common.NotDefinedException;
 import org.eclipse.ui.PlatformUI;
@@ -14,11 +13,9 @@ import org.eclipse.ui.commands.ICommandService;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
-import com.e1c.edt.ai.assistent.model.CommandCategory;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -26,61 +23,51 @@ import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-
 public class GetCommandCategoriesMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "ide_get_command_categories"; //$NON-NLS-1$
-    public static final CommandCategory Uncategorized = new CommandCategory();
+    public static final CommandCategory UNCategorized = createUncategorizedCategory();
 
     // @formatter:off
     @SuppressWarnings("nls")
-    private static String QuestionExample =
-        "{ }";
+    private static String QuestionExample = "{}";
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "[\n"
         + "  {\n"
-        + "    \"category_id\": \"system\",\n"
-        + "    \"category_name\": \"System Commands\",\n"
-        + "    \"category_description\": \"Commands for system management and control\"\n"
+        + "    \"id\": \"system\",\n"
+        + "    \"name\": \"System Commands\",\n"
+        + "    \"description\": \"Commands for system management and control\"\n"
         + "  },\n"
         + "  {\n"
-        + "    \"category_id\": \"network\",\n"
-        + "    \"category_description\": \"Commands related to network configuration and diagnostics\"\n"
+        + "    \"id\": \"network\",\n"
+        + "    \"name\": \"Network\",\n"
+        + "    \"description\": \"Commands related to network configuration\"\n"
         + "  },\n"
         + "  {\n"
-        + "    \"category_id\": \"security\",\n"
-        + "    \"category_name\": \"Security Tools\",\n"
+        + "    \"id\": \"security\",\n"
+        + "    \"name\": \"Security Tools\",\n"
+        + "    \"description\": \"Security-related commands\"\n"
         + "  },\n"
         + "  {\n"
-        + "    \"category_id\": \"data\",\n"
-        + "    \"category_name\": \"Data Processing\",\n"
-        + "    \"category_description\": \"Commands for data manipulation and analysis\"\n"
+        + "    \"id\": \"uncategorized\",\n"
+        + "    \"name\": \"Uncategorized\",\n"
+        + "    \"description\": \"Commands without category\"\n"
         + "  }\n"
         + "]";
+    // @formatter:on
 
-    // @formatter:oт
-
-    private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
 
-    static {
-        Uncategorized.id = "uncategorized"; //$NON-NLS-1$
-        Uncategorized.name = "Uncategorized"; //$NON-NLS-1$
-        Uncategorized.name = "Contains commands that do not fit into any category."; //$NON-NLS-1$
-    }
-
     @Inject
-    public GetCommandCategoriesMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory)
+    public GetCommandCategoriesMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
         spec = createSpecification();
@@ -102,76 +89,97 @@ public class GetCommandCategoriesMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
-            // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
-            var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
-            var categories = new ArrayList<CommandCategory>();
-            for(var src: commandService.getDefinedCategories())
+            try
             {
-                var dst = new CommandCategory();
-                dst.id = src.getId();
-                try
+                var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
+                var definedCategories = commandService.getDefinedCategories();
+                var categories = new ArrayList<CommandCategory>(definedCategories.length + 1);
+
+                for (var src : definedCategories)
                 {
-                    dst.name = src.getName();
-                }
-                catch (NotDefinedException e)
-                {
-                    //
+                    var dst = new CommandCategory();
+                    dst.id = src.getId();
+
+                    try
+                    {
+                        dst.name = src.getName();
+                    }
+                    catch (NotDefinedException e)
+                    {
+                        dst.name = "Undefined name";
+                    }
+
+                    try
+                    {
+                        dst.description = src.getDescription();
+                    }
+                    catch (NotDefinedException e)
+                    {
+                        dst.description = "No description available";
+                    }
+
+                    categories.add(dst);
                 }
 
-                try
+                // Добавляем uncategorized только если он еще не существует
+                boolean hasUncategorized = categories.stream().anyMatch(c -> "uncategorized".equalsIgnoreCase(c.id));
+
+                if (!hasUncategorized)
                 {
-                    dst.description = src.getDescription();
-                }
-                catch (NotDefinedException e)
-                {
-                    //
+                    categories.add(UNCategorized);
                 }
 
-                categories.add(dst);
+                var content = json.serialize(categories);
+                return messageFactory.createMessage(this, call, content);
             }
-
-            categories.add(Uncategorized);
-            var content = json.serialize(categories);
-            return messageFactory.createMessage(this, call, content);
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
+            catch (Exception e)
+            {
+                return messageFactory.createError(this, call,
+                    "Failed to retrieve command categories: " + e.getMessage());
+            }
         });
+    }
+
+    @SuppressWarnings("nls")
+    private static CommandCategory createUncategorizedCategory()
+    {
+        var category = new CommandCategory();
+        category.id = "uncategorized";
+        category.name = "Uncategorized";
+        category.description = "Commands without specific category";
+        return category;
     }
 
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
-     // @formatter:off
+        // @formatter:off
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-
-        description.append("Provides command categories in the IDE: id, name, description.");
-        description.append("\nNOTE: add a description of what will be done when using this tool.");
-
-        description.append("\nFor exapmple:");
+        description.append("Retrieves all available command categories in the IDE.");
+        description.append("\nReturns list of categories with id, name and description.");
+        description.append("\nFor example:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
-
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
         parameters.properties = new HashMap<>();
-        parameters.required = new ArrayList<>();
+        parameters.required = Collections.emptyList();
+
         spec.function.parameters = parameters;
         return spec;
-     // @formatter:on
+        // @formatter:on
     }
 }

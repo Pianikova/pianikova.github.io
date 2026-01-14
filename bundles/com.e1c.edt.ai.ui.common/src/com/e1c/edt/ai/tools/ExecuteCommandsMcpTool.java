@@ -6,7 +6,6 @@ package com.e1c.edt.ai.tools;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.commands.NotEnabledException;
@@ -20,11 +19,9 @@ import org.eclipse.ui.handlers.IHandlerService;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
-import com.e1c.edt.ai.assistent.model.CommandDescription;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -62,21 +59,18 @@ public class ExecuteCommandsMcpTool
 
     // @formatter:on
 
-    private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IDispatcher dispatcher;
 
     @Inject
-    public ExecuteCommandsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public ExecuteCommandsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IDispatcher dispatcher)
     {
-        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(dispatcher);
-        this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
         this.dispatcher = dispatcher;
@@ -99,16 +93,16 @@ public class ExecuteCommandsMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
-        var optionalCallArgs = json.deserialize(call.function.arguments, CommandDescription.class);
-        if (optionalCallArgs.isEmpty())
+        var optionalRequest = json.deserialize(call.function.arguments, CommandDescription.class);
+        if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
-        var callArgs = optionalCallArgs.get();
-        var commandId = callArgs.id;
+        var request = optionalRequest.get();
+        var commandId = request.id;
         if (commandId == null || commandId.isBlank())
         {
             return CompletableFuture
@@ -116,7 +110,7 @@ public class ExecuteCommandsMcpTool
                     "The command_id cannot be empty."));
         }
 
-        var params = callArgs.parameters;
+        var params = request.parameters;
         var paramsMap = new HashMap<String, Object>();
         if (params != null)
         {
@@ -152,10 +146,10 @@ public class ExecuteCommandsMcpTool
                 if (commandParameters != null)
                 {
                     var paramsError = new StringBuilder();
-                    for (var commandParameter: commandParameters)
+                    for (var commandParameter : commandParameters)
                     {
                         var id = commandParameter.getId();
-                        if(id == null || id.isBlank())
+                        if (id == null || id.isBlank())
                         {
                             paramsError.append("Missing required parameter id.");
                             continue;
@@ -221,15 +215,14 @@ public class ExecuteCommandsMcpTool
             }
 
             var handlerService = PlatformUI.getWorkbench().getService(IHandlerService.class);
-            return dispatcher.dispatch(() -> executeCommand(handlerService, call, parameterizedCommand)).orElseGet(() -> messageFactory.createError(this, call, "Cannot execute the command."));
-        }).exceptionally(ex -> {
-            var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-            return messageFactory.createError(this, call, "Failed to get. " + cause.getMessage());
+            return dispatcher.dispatch(() -> executeCommand(handlerService, call, parameterizedCommand))
+                .orElseGet(() -> messageFactory.createError(this, call, "Cannot execute the command."));
         });
     }
 
     @SuppressWarnings("nls")
-    private ToolCallMessage executeCommand(IHandlerService handlerService, McpToolCall call, ParameterizedCommand parameterizedCommand)
+    private ToolCallMessage executeCommand(IHandlerService handlerService, McpToolCall call,
+        ParameterizedCommand parameterizedCommand)
     {
         Object result = null;
         try
@@ -237,7 +230,7 @@ public class ExecuteCommandsMcpTool
             result = handlerService.executeCommand(parameterizedCommand, null);
             if (result == null)
             {
-               result = "The command was executed successfully.";
+                result = "The command was executed successfully.";
             }
 
             var content = json.serialize(result.toString());
@@ -277,7 +270,7 @@ public class ExecuteCommandsMcpTool
         description.append("\nIMPORTANT: uses parameters to execute commands.");
         description.append("\nNOTE: add a description of what will be done when using this tool.");
 
-        description.append("\nFor exapmple:");
+        description.append("\nFor example:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
 

@@ -2,6 +2,36 @@
 <?eclipse version="3.4"?>
 <plugin>
 
+    <extension point="org.eclipse.core.resources.markers" id="com.e1c.edt.ai.marker">
+        <super type="org.eclipse.core.resources.problemmarker"/>
+        <marker
+            type="com.e1c.edt.ai.marker"
+            name="AI Marker"
+            persistent="true">
+        </marker>
+    </extension>
+    
+    <extension point="org.eclipse.ui.editors.annotationTypes">
+        <type
+            name="com.e1c.edt.ai.marker"
+            markerType="com.e1c.edt.ai.marker"
+            markerSeverity="1"> <!-- Info severity by default -->
+        </type>
+    </extension>
+    
+    <extension point="org.eclipse.ui.editors.markerAnnotationSpecification">
+        <specification
+            annotationType="com.e1c.edt.ai.marker"
+            label="AI Suggestion"
+            colorPreferenceValue="255,215,0"> <!-- Gold color -->
+            <visibility
+                verticalRuler="true"
+                overviewRuler="true"
+                text="true">
+            </visibility>
+        </specification>
+    </extension>
+
     <extension point="org.eclipse.ui.trace.traceComponents">
       <component
             id="com.e1c.edt.ai"

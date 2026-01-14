@@ -4,7 +4,10 @@
 package com.e1c.edt.ai.ui;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.Optional;
 
@@ -12,6 +15,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.swt.widgets.Display;
 
 import com.e1c.edt.ai.assistent.model.ProjectId;
 
@@ -77,10 +81,100 @@ public class FileContent
         return file.getProjectRelativePath().toPortableString();
     }
 
-/*
-if("org.eclipse.core.runtime.text".equals(file.getContentDescription().getContentType().getId()))
 
-{
-// Это текстовый файл
-}*/
+    @Override
+    public Optional<OutputStream> getOutputStream()
+    {
+        if (document != null)
+        {
+            return Optional.of(new DocumentOutputStream(document, getCharset()));
+        }
+
+        if (file != null)
+        {
+            return Optional.of(new FileOutputStream(file));
+        }
+
+        return Optional.empty();
+    }
+
+    private static class DocumentOutputStream
+        extends OutputStream
+    {
+        private final IDocument document;
+        private final Charset charset;
+        private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+        DocumentOutputStream(IDocument document, Charset charset)
+        {
+            this.document = document;
+            this.charset = charset;
+        }
+
+        @Override
+        public void write(int b) throws IOException
+        {
+            buffer.write(b);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException
+        {
+            buffer.write(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+            byte[] bytes = buffer.toByteArray();
+            final String text = new String(bytes, charset);
+            Display.getDefault().asyncExec(() -> document.set(text));
+            buffer.close();
+        }
+    }
+
+    private static class FileOutputStream
+        extends OutputStream
+    {
+        private final IFile file;
+        private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+        FileOutputStream(IFile file)
+        {
+            this.file = file;
+        }
+
+        @Override
+        public void write(int b) throws IOException
+        {
+            buffer.write(b);
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException
+        {
+            buffer.write(b, off, len);
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+            try
+            {
+                byte[] bytes = buffer.toByteArray();
+                file.setContents(new ByteArrayInputStream(bytes), true, // force update
+                    true, // keep history
+                    null // no progress monitor
+                );
+            }
+            catch (CoreException e)
+            {
+                throw new IOException(e);
+            }
+            finally
+            {
+                buffer.close();
+            }
+        }
+    }
 }

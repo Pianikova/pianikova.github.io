@@ -3,11 +3,23 @@
  */
 package com.e1c.edt.ai.tools;
 
-import org.eclipse.core.runtime.IProgressMonitor;
+import com.e1c.edt.ai.ICancellationToken;
 
-public class ToolProgressMonitor
-    implements IProgressMonitor
+/**
+ * Progress monitor that checks for cancellation
+ */
+public class CancellationProgressMonitor
+    implements ICancellationProgressMonitor
 {
+    private ICancellationToken cancellationToken;
+    private boolean isCanceled = false;
+
+    @Override
+    public void setCancellationToken(ICancellationToken cancellationToken)
+    {
+        this.cancellationToken = cancellationToken;
+    }
+
     @Override
     public void beginTask(String name, int totalWork)
     {
@@ -23,21 +35,19 @@ public class ToolProgressMonitor
     @Override
     public void internalWorked(double work)
     {
-        // TODO Auto-generated method stub
-
+        //
     }
 
     @Override
     public boolean isCanceled()
     {
-        return false;
+        return isCanceled || cancellationToken.isCanceled();
     }
 
     @Override
     public void setCanceled(boolean value)
     {
-        //
-
+        isCanceled = value;
     }
 
     @Override
