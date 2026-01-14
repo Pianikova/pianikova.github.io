@@ -1,7 +1,9 @@
 /**
-* Copyright (C) 2025, 1C
-*/
+ * Copyright (C) 2025, 1C
+ */
 package com.e1c.edt.ai.tools;
+
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -9,6 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
@@ -18,6 +23,10 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -42,12 +51,15 @@ public class GetProjectsMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample = "{}";
 
-    // Example of output structure
+    // Updated example output with all fields
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "[\n" + "  {\n" + "    \"name\": \"Управление торговлей 11.5\",\n"
             + "    \"absolute_path\": \"C:\\\\1C_Projects\\\\УТ115\",\n" + "    \"is_open\": true,\n"
-            + "    \"exists\": true,\n" + "    \"is_current\": false,\n" + "    \"open_files\": [\n"
+            + "    \"exists\": true,\n" + "    \"is_current\": false,\n"
+            + "    \"description\": \"Project for developing Trade Management configuration\",\n"
+            + "    \"build_commands\": [\"org.eclipse.xtext.ui.shared.xtextBuilder\"],\n"
+            + "    \"natures\": [\"com._1c.g5.v8.dt.core.V8ConfigurationNature\"],\n" + "    \"open_files\": [\n"
             + "      \"src/main/MainModule.bsl\",\n" + "      \"src/test/TestModule.bsl\"\n" + "    ],\n"
             + "    \"directories\": [\n" + "      \"src\",\n" + "      \"src/main\",\n" + "      \"src/test\",\n"
             + "      \"lib\"\n" + "    ]\n" + "  }\n" + "]";
@@ -95,7 +107,6 @@ public class GetProjectsMcpTool
 
             // Collect information about currently open files in all projects
             Map<IProject, Set<IPath>> projectOpenFiles = collectOpenFiles();
-
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var projects = root.getProjects();
             var response = new ArrayList<Project>();
@@ -112,45 +123,44 @@ public class GetProjectsMcpTool
                 var projectInfo = new Project();
                 response.add(projectInfo);
 
-                // Basic project information
                 projectInfo.name = project.getName();
                 var location = project.getLocation();
                 projectInfo.absolutePath = location != null ? location.toOSString() : null;
                 projectInfo.isOpen = project.isOpen();
                 projectInfo.exists = project.exists();
 
-                // Check if project has open files
-                Set<IPath> openFiles = projectOpenFiles.get(project);
+                var openFiles = projectOpenFiles.get(project);
                 projectInfo.isCurrent = openFiles != null && !openFiles.isEmpty();
 
-                // Store open file paths
+                projectInfo.buildCommands = new ArrayList<>();
+                projectInfo.natures = new ArrayList<>();
                 projectInfo.openFiles = new ArrayList<>();
-                if (openFiles != null)
-                {
-                    for (IPath path : openFiles)
-                    {
-                        // Convert to relative path string
-                        projectInfo.openFiles.add(path.toString());
-                    }
-                }
+                projectInfo.directories = new ArrayList<>();
 
-                // Collect directory structure if project is open
+                // Read metadata only for open and existing projects
                 if (project.isOpen() && project.exists())
                 {
+                    // Read project metadata from .project file
+                    readProjectMetadata(project, projectInfo);
+
+                    // Collect open files
+                    if (openFiles != null)
+                    {
+                        for (IPath path : openFiles)
+                        {
+                            projectInfo.openFiles.add(path.toString());
+                        }
+                    }
+
+                    // Collect directory structure
                     try
                     {
-                        projectInfo.directories = new ArrayList<>();
                         collectDirectories(project, projectInfo.directories);
                     }
                     catch (CoreException error)
                     {
                         log.logError(error);
-                        projectInfo.directories = new ArrayList<>();
                     }
-                }
-                else
-                {
-                    projectInfo.directories = new ArrayList<>();
                 }
             }
 
@@ -167,7 +177,7 @@ public class GetProjectsMcpTool
      */
     private Map<IProject, Set<IPath>> collectOpenFiles()
     {
-        Map<IProject, Set<IPath>> projectOpenFiles = new HashMap<>();
+        var projectOpenFiles = new HashMap<IProject, Set<IPath>>();
         var workbench = PlatformUI.getWorkbench();
 
         // Iterate through all workbench windows
@@ -222,6 +232,70 @@ public class GetProjectsMcpTool
         }
     }
 
+    /**
+     * Reads project metadata from .project file
+     *
+     * @param project Eclipse project instance
+     * @param projectInfo Project info object to populate
+     */
+    @SuppressWarnings("nls")
+    private void readProjectMetadata(IProject project, Project projectInfo)
+    {
+        try
+        {
+            // Locate .project file in project root
+            var projectFile = project.getFile(".project");
+            if (projectFile == null || !projectFile.exists())
+            {
+                return;
+            }
+
+            // Parse XML content of .project file
+            try (InputStream input = projectFile.getContents())
+            {
+                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder builder = factory.newDocumentBuilder();
+                Document doc = builder.parse(input);
+
+                // Extract description from <comment> element
+                NodeList comments = doc.getElementsByTagName("comment");
+                if (comments.getLength() > 0)
+                {
+                    projectInfo.description = comments.item(0).getTextContent().trim();
+                }
+
+                // Extract build commands
+                var buildCommands = doc.getElementsByTagName("buildCommand");
+                for (int i = 0; i < buildCommands.getLength(); i++)
+                {
+                    var commandNode = buildCommands.item(i);
+                    if (commandNode.getNodeType() == Node.ELEMENT_NODE)
+                    {
+                        var commandElement = (Element)commandNode;
+                        var names = commandElement.getElementsByTagName("name");
+                        if (names.getLength() > 0)
+                        {
+                            String commandName = names.item(0).getTextContent().trim();
+                            projectInfo.buildCommands.add(commandName);
+                        }
+                    }
+                }
+
+                // Extract project natures
+                var natures = doc.getElementsByTagName("nature");
+                for (int i = 0; i < natures.getLength(); i++)
+                {
+                    var nature = natures.item(i).getTextContent().trim();
+                    projectInfo.natures.add(nature);
+                }
+            }
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+        }
+    }
+
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
@@ -231,17 +305,21 @@ public class GetProjectsMcpTool
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
 
-        // Detailed tool description
+        // Detailed tool description with all fields
         var description = new StringBuilder();
         description.append("Provides comprehensive information about IDE projects including:");
         description.append("\n- Project name and absolute file system path");
+        description.append("\n- Project description (from .project file's <comment> element)");
         description.append("\n- Status indicators (exists, is open)");
         description.append("\n- 'is_current' flag indicating if project has open files");
+        description.append("\n- Build commands (list of builder names from .project file)");
+        description.append("\n- Project natures (list of project types from .project file)");
         description.append("\n- List of currently open files (project-relative paths)");
         description.append("\n- Recursive list of all directories in the project");
         description.append("\n\nExample usage:");
         description.append("\n  Q: ").append(QuestionExample);
         description.append("\n  A: ").append(AnswerExample);
+
         spec.function.description = description.toString();
 
         // Input parameters (none required)
@@ -249,8 +327,8 @@ public class GetProjectsMcpTool
         parameters.type = "object";
         parameters.properties = new HashMap<>();
         parameters.required = new ArrayList<>();
-
         spec.function.parameters = parameters;
+
         return spec;
     }
 
@@ -273,6 +351,15 @@ public class GetProjectsMcpTool
 
         @SerializedName("is_current")
         public Boolean isCurrent;
+
+        @SerializedName("description")
+        public String description;
+
+        @SerializedName("build_commands")
+        public List<String> buildCommands;
+
+        @SerializedName("natures")
+        public List<String> natures;
 
         @SerializedName("open_files")
         public List<String> openFiles;
