@@ -42,10 +42,11 @@ import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
+
 public class GetProjectsMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_get_projects"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "GetProjects"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -380,9 +381,9 @@ public class GetProjectsMcpTool
         var description = new StringBuilder();
         description.append("Provides comprehensive information about IDE projects including:");
         description.append("\n- Project name and absolute file system path");
-        description.append("\n- Project description (from .project file's <comment> element)");
+        description.append("\n- Project description (from .project file`s <comment> element)");
         description.append("\n- Status indicators (exists, is open)");
-        description.append("\n- 'is_current' flag indicating if project has open files");
+        description.append("\n- `is_current` flag indicating if project has open files");
         description.append("\n- Build commands (list of builder names from .project file)");
         description.append("\n- Project natures (list of project types from .project file)");
         description.append("\n- List of currently open files with cursor position and selection information:");
@@ -393,6 +394,8 @@ public class GetProjectsMcpTool
         description.append("\n  - selection_start_line_offset: Start offset in selection line");
         description.append("\n  - selection_end_line: End line of selection (if any)");
         description.append("\n  - selection_end_line_offset: End offset in selection line");
+        description.append(
+            "\nIMPORTANT: If the scope of code review, error detection, refactoring, etc. is not specified, use this list of currently open files.");
         description.append("\n- Recursive list of all directories in the project");
         description.append("\n\nExample usage:");
         description.append("\n  Q: ").append(QuestionExample);

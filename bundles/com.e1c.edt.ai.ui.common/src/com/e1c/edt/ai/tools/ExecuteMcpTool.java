@@ -23,10 +23,10 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
-public class ProcessRunnerMcpTool
+public class ExecuteMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "execute_process"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "Execute"; //$NON-NLS-1$
     private static final int MAX_OUTPUT_LENGTH = 16384; // 16KB
 
     private static String QuestionExample =
@@ -42,7 +42,7 @@ public class ProcessRunnerMcpTool
     private final IEnvironment environment;
 
     @Inject
-    public ProcessRunnerMcpTool(IEnvironment environment, IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public ExecuteMcpTool(IEnvironment environment, IJson json, IMcpToolsCallMessageFactory messageFactory,
         IProcessRunner processRunner)
     {
         Preconditions.checkNotNull(environment);
@@ -85,7 +85,7 @@ public class ProcessRunnerMcpTool
         if (request.executable == null || request.executable.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "'executable' cannot be empty."));
+                .completedFuture(messageFactory.createError(this, call, "`executable` cannot be empty."));
         }
 
         // Set default timeout if not provided
@@ -138,13 +138,10 @@ public class ProcessRunnerMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Executes a system process with limited capabilities.");
+        description.append("Executes a system process.");
         description.append("\nIMPORTANT: Runs under ").append(environment.getOSName())
                    .append(" ").append(environment.getOSVersion())
                    .append(" (").append(environment.getArch()).append(")");
-        description.append("\nSECURITY: Only basic commands allowed (cmd, powershell, bash, .bat, .sh)");
-        description.append("\nWARNING: Processes run with limited permissions and time (max 5 minutes)");
-        description.append("\nNOTE: Use for simple system commands only");
         description.append("\n\nExample:");
         description.append("\n  Q: ").append(QuestionExample);
         description.append("\n  A: ").append(AnswerExample);
@@ -157,7 +154,7 @@ public class ProcessRunnerMcpTool
 
         var executableProp = new McpToolCallProperty();
         executableProp.type = "string";
-        executableProp.description = "Executable name or path (allowed: cmd, powershell, bash, .bat, .sh)";
+        executableProp.description = "Executable name or path.";
         properties.put("executable", executableProp);
 
         var workingDirProp = new McpToolCallProperty();

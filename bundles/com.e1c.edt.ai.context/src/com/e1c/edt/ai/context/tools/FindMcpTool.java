@@ -49,7 +49,7 @@ import com.google.inject.Inject;
 public class FindMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "1с_ide_find"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "1C_Find"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -155,14 +155,14 @@ public class FindMcpTool
 
         if (request.searchQuery == null || request.searchQuery.isBlank())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "'search_query' cannot be empty."));
+            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "`search_query` cannot be empty."));
         }
 
         // Validate project names
         if (request.projectNames == null || request.projectNames.isEmpty())
         {
             return CompletableFuture.completedFuture(
-                messageFactory.createError(this, call, "At least one project must be specified in 'project_names'."));
+                messageFactory.createError(this, call, "At least one project must be specified in `project_names`."));
         }
 
         // Convert enums with proper error handling
@@ -367,7 +367,7 @@ public class FindMcpTool
 
         var description = new StringBuilder();
         description.append("Finds elements (objects, attributes, forms, code, etc) in 1C projects.");
-        description.append("\nIMPORTANT: use wildcards (in 'search_query') for a broad search.");
+        description.append("\nIMPORTANT: use wildcards (in `search_query`) for a broad search.");
         description.append("\nIMPORTANT: use " + GetObjectByIdMcpTool.TOOL_NAME + " tool to get an object by its id.");
         description.append("\nFor example:");
         description.append("\n  Q: "); description.append(QuestionExample);
@@ -444,7 +444,7 @@ public class FindMcpTool
 
         if (!invalidValues.isEmpty())
         {
-            String errorMsg = String.format("Invalid values for parameter '%s': %s. Valid values: %s.", paramName,
+            String errorMsg = String.format("Invalid values for parameter `%s`: %s. Valid values: %s.", paramName,
                 String.join(", ", invalidValues), getEnumNames(targetType));
             return new EnumConversionResult<>(Collections.emptyList(), errorMsg);
         }

@@ -32,7 +32,7 @@ import com.google.inject.Inject;
 public class GetErrorsMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_get_errors"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "GeErrors"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -257,8 +257,8 @@ public class GetErrorsMcpTool
         description.append("\n- relative_path: Project-relative path");
         description.append("\n- line: Line number (-1 if unknown)");
         description.append("\n- message: Error description");
-        description.append("\n- severity: 'error', 'warning' or 'info'");
-        description.append("\n- priority: Priority level as string ('high', 'normal', 'low')");
+        description.append("\n- severity: `error`, `warning` or `info`");
+        description.append("\n- priority: Priority level as string (`high`, `normal`, `low`)");
         description.append("\nExample request:");
         description.append("\n").append(QuestionExample);
         description.append("\nExample response:");

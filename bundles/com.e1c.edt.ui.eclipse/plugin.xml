@@ -7,7 +7,7 @@
         <marker
             type="com.e1c.edt.ai.marker"
             name="AI Marker"
-            persistent="true">
+            persistent="false">
         </marker>
     </extension>
     

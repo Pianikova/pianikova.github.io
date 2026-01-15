@@ -36,10 +36,10 @@ import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-public class FindFileMcpTool
+public class FindMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_find_file"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "Find"; //$NON-NLS-1$
     private static final int MAX_RESULTS = 100;
 
     // @formatter:off
@@ -65,7 +65,7 @@ public class FindFileMcpTool
         + "    \"line_offset\": 15,\n"
         + "    \"line_length\": 16,\n"
         + "    \"line_number\": 12,\n"
-        + "    \"line_contents\": \"function TestUserService()\"\n"
+        + "    \"line_content\": \"function TestUserService()\"\n"
         + "  }\n"
         + "]";
     // @formatter:on
@@ -76,7 +76,7 @@ public class FindFileMcpTool
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
 
     @Inject
-    public FindFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public FindMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor)
     {
         Preconditions.checkNotNull(json);
@@ -116,7 +116,7 @@ public class FindFileMcpTool
         if (request.searchQuery == null || request.searchQuery.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "'search_query' cannot be empty."));
+                .completedFuture(messageFactory.createError(this, call, "`search_query` cannot be empty."));
         }
 
         var searchQuery = request.searchQuery;
@@ -258,7 +258,7 @@ public class FindFileMcpTool
                                             element.lineOffset = line.getOffset();
                                             element.lineLength = line.getLength();
                                             element.lineNumber = line.getLine();
-                                            element.lineContents = line.getContents();
+                                            element.lineContent = line.getContents();
                                         }
 
                                         elements.add(element);
@@ -356,7 +356,7 @@ public class FindFileMcpTool
     private static class Request
     {
         /**
-         * Text or regular expression to search . The search text represents a regular expression or a pattern using '*' and '?' as wildcards. The empty search text signals a file name search.
+         * Text or regular expression to search . The search text represents a regular expression or a pattern using `*` and `?` as wildcards. The empty search text signals a file name search.
          */
         @SerializedName("search_query")
         public String searchQuery;
@@ -422,8 +422,8 @@ public class FindFileMcpTool
         @SerializedName("line_number")
         public int lineNumber;
 
-        @SerializedName("line_contents")
-        public String lineContents;
+        @SerializedName("line_content")
+        public String lineContent;
     }
 
 }

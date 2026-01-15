@@ -10,7 +10,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -18,6 +17,7 @@ import org.eclipse.core.runtime.Path;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
@@ -33,7 +33,8 @@ import com.google.inject.Inject;
 public class SetMarkersMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_set_markers"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "SetMarkers"; //$NON-NLS-1$
+
     // Fully qualified marker type
     public static final String AI_MARKER_TYPE = "com.e1c.edt.ai.marker"; //$NON-NLS-1$
 
@@ -63,17 +64,22 @@ public class SetMarkersMcpTool
     private static String AnswerExample = "Success";
     // @formatter:on
 
+    private final ILog log;
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
 
     @Inject
-    public SetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory)
+    public SetMarkersMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory)
     {
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
+
+        this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
+
         this.spec = createSpecification();
     }
 
@@ -126,16 +132,6 @@ public class SetMarkersMcpTool
             if (!project.isOpen())
             {
                 return messageFactory.createError(this, call, "Project is closed: " + projectName);
-            }
-
-            // Clear existing AI markers before adding new ones
-            try
-            {
-                project.deleteMarkers(AI_MARKER_TYPE, true, IResource.DEPTH_INFINITE);
-            }
-            catch (CoreException e)
-            {
-                // Log if needed, but continue execution
             }
 
             // Process each marker request
@@ -247,8 +243,8 @@ public class SetMarkersMcpTool
         description.append("\n- relative_file_path: File path relative to project root (required)");
         description.append("\n- line: Line number (required)");
         description.append("\n- message: Marker description (required)");
-        description.append("\n- severity: 'error', 'warning', or 'info' (required)");
-        description.append("\n- priority: 'high', 'normal', or 'low' (optional)");
+        description.append("\n- severity: `error`, `warning`, or `info` (required)");
+        description.append("\n- priority: `high`, `normal`, or `low` (optional)");
         description.append("\n\nExample request:");
         description.append("\n").append(QuestionExample);
         description.append("\n\nExample response:");

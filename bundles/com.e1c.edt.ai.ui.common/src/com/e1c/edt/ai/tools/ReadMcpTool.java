@@ -2,10 +2,12 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -27,10 +29,12 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-public class EditFileMcpTool
+
+public class ReadMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_edit_file"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
+    private static final int MAX_LINES = 5000; // Maximum lines to read
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -38,13 +42,16 @@ public class EditFileMcpTool
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
         + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
-        + "  \"origin_contents\": \"Сообщить(\\\"Привет, мир!\\\");\",\n"
-        + "  \"new_contents\": \"Сообщить(\\\"Hello, world!\\\");\",\n"
-        + "  \"replace_all\": false\n"
+        + "  \"first_line_number\": 50,\n"
+        + "  \"lines_number\": 100\n"
         + "}";
+
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "File updated: \"src/MainModule.bsl\"";
+        "{\n"
+        + "  \"content\": \"Процедура Пример()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\",\n"
+        + "  \"charset_name\": \"UTF-8\"\n"
+        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -55,7 +62,7 @@ public class EditFileMcpTool
     private final IFileSystem fileSystem;
 
     @Inject
-    public EditFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public ReadMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem)
     {
@@ -105,7 +112,7 @@ public class EditFileMcpTool
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "'project_name' is required."));
+                    "`project_name` is required."));
         }
 
         var relativeFilePath = request.relativeFilePath;
@@ -113,24 +120,22 @@ public class EditFileMcpTool
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "'relative_file_path' is required."));
+                    "`relative_file_path` is required."));
         }
 
-        var originContents = request.originContents;
-        if (originContents == null || originContents.isEmpty())
+        // Validate and set default values for line parameters
+        int firstLineNumber =
+            request.firstLineNumber != null && request.firstLineNumber >= 0 ? request.firstLineNumber : 0;
+
+        int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : 2000;
+
+        // Apply maximum lines limit
+        if (linesNumber > MAX_LINES)
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "'origin_contents' must not be empty."));
+            linesNumber = MAX_LINES;
         }
 
-        var newContents = request.newContents;
-        if (newContents == null)
-        {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "'new_contents' is required."));
-        }
-
-        var replaceAll = request.replaceAll != null ? request.replaceAll : false;
+        var curLinesNumber = linesNumber;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -142,6 +147,8 @@ public class EditFileMcpTool
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var project = root.getProject(projectName);
+
+            // Validate project existence and accessibility
             if (project == null || !project.exists())
             {
                 return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
@@ -166,74 +173,52 @@ public class EditFileMcpTool
             var optionalFileContent = contentSourceProvider.getFileContent(projectFile);
             if (optionalFileContent.isEmpty())
             {
-                return messageFactory.createError(this, call,
-                    "The file \"" + relativeFilePath + "\" does not exist. Use the '" + WriteFileMcpTool.TOOL_NAME
-                        + "' tool to create a new file.");
+                return messageFactory.createError(this, call, "The file \"" + relativeFilePath + "\" does not exist.");
             }
 
             var fileContent = optionalFileContent.get();
+            var resultContent = new StringBuilder();
+            var charset = fileContent.getCharset();
 
-            // Read current file content
-            String currentContent;
-            try (var input = fileContent.getInputStream().orElseThrow())
+            try (var inputStream = fileContent.getInputStream().orElse(null);
+                var reader = new BufferedReader(new InputStreamReader(inputStream, charset)))
             {
-                currentContent = new String(input.readAllBytes(), fileContent.getCharset());
-            }
-            catch (IOException | NoSuchElementException e)
-            {
-                return messageFactory.createError(this, call, "Failed to read file content: " + e.getMessage());
-            }
+                String line;
+                int currentLine = 0;
+                int linesToRead = 0;
+                int endLine = firstLineNumber + curLinesNumber;
 
-            // Perform content replacement
-            String updatedContent;
-            if (replaceAll)
-            {
-                updatedContent = currentContent.replace(
-                    java.util.regex.Matcher.quoteReplacement(originContents),
-                    java.util.regex.Matcher.quoteReplacement(newContents));
-
-                if (updatedContent.equals(currentContent))
+                // Skip lines until we reach the starting line
+                while (currentLine < firstLineNumber && reader.readLine() != null)
                 {
-                    return messageFactory.createError(this, call,
-                        "Original content not found in file. Verify the 'origin_contents'.");
-                }
-            }
-            else
-            {
-                int firstIndex = currentContent.indexOf(originContents);
-                if (firstIndex == -1)
-                {
-                    return messageFactory.createError(this, call,
-                        "Original content not found in file. Verify the 'origin_contents'.");
+                    currentLine++;
                 }
 
-                int secondIndex = currentContent.indexOf(originContents, firstIndex + originContents.length());
-                if (secondIndex != -1)
+                // Read the requested number of lines
+                while (currentLine < endLine && (line = reader.readLine()) != null)
                 {
-                    return messageFactory.createError(this, call,
-                        "Multiple matches found for original content. Change the 'origin_contents' to avoid multiple matches.");
+                    if (linesToRead > 0)
+                    {
+                        resultContent.append('\n'); // Add newline between lines
+                    }
+
+                    resultContent.append(line);
+                    currentLine++;
+                    linesToRead++;
                 }
-
-                updatedContent = currentContent.substring(0, firstIndex) + newContents
-                    + currentContent.substring(firstIndex + originContents.length());
             }
-
-            // Write updated content
-            try (var output = fileContent.getOutputStream().orElseThrow())
+            catch (IOException | NullPointerException e)
             {
-                output.write(updatedContent.getBytes(fileContent.getCharset()));
-            }
-            catch (IOException | NoSuchElementException e)
-            {
-                return messageFactory.createError(this, call, "Failed to write file content: " + e.getMessage());
+                return messageFactory.createError(this, call, "Failed to read file content. " + e.getMessage());
             }
 
-            var response = new StringBuilder();
-            var projectRelativePath = projectFile.getProjectRelativePath();
-            response.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
-            response.append("ACTION REQUIRED: verify project errors and warnings. Use '"
-                + GetErrorsMcpTool.TOOL_NAME + "' tool.");
-            return messageFactory.createMessage(this, call, response.toString());
+            // Prepare response
+            var response = new Response();
+            response.content = resultContent.toString();
+            response.charsetName = charset.name();
+
+            var content = json.serialize(response);
+            return messageFactory.createMessage(this, call, content);
         });
     }
 
@@ -247,8 +232,18 @@ public class EditFileMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Edits/updates/modifies the contents of an existing project file.");
-        description.append("\nFor example:"); // Исправлено: exapmple -> example
+        description.append("Reads the content of a project file. It is okay to read a file that does not exist; an error will be returned.");
+        description.append("\n\nUsage:");
+        description.append("\n- The file_path parameter must be a project relative path, not an absolute path.");
+        description.append("\n- By default, it reads up to 2000 lines starting from the beginning of the file.");
+        description.append("\n- You can optionally specify a line offset and limit (especially handy for long files), but it's recommended to read the whole file by not providing these parameters.");
+        description.append("\n- Any lines longer than " + MAX_LINES + " characters will be truncated.");
+        description.append("\n- The edit will FAIL if `origin_content` is not unique in the file. ");
+        description.append("Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `origin_content`.");
+        description.append("\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.");
+
+
+        description.append("\nFor example:"); // Fixed typo: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
@@ -268,25 +263,19 @@ public class EditFileMcpTool
         relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
 
-        var originContentsProp = new McpToolCallProperty();
-        originContentsProp.type = "string";
-        originContentsProp.description = "The fragment of the file content that will be replaced.";
-        properties.put("origin_contents", originContentsProp);
+        // Fixed property assignments
+        var firstLineNumberProp = new McpToolCallProperty();
+        firstLineNumberProp.type = "integer";
+        firstLineNumberProp.description = "Number of the first line to read (0-based index). Default is 0.";
+        properties.put("first_line_number", firstLineNumberProp);
 
-        var newContentsProp = new McpToolCallProperty();
-        newContentsProp.type = "string";
-        newContentsProp.description = "The content fragment that will replace the original ('origin_contents').";
-        properties.put("new_contents", newContentsProp);
-
-        var replaceAllProp = new McpToolCallProperty();
-        replaceAllProp.type = "boolean";
-        replaceAllProp.description = "If true, all occurrences of the 'origin_contents' fragment will be replaced. "
-            + "If false, only the single occurrence will be replaced. "
-            + "If no fragments are found, or more than one is found, the request will fail. False by default.";
-        properties.put("replace_all", replaceAllProp); // Исправлено: newContentsProp -> replaceAllProp
+        var linesNumberProp = new McpToolCallProperty();
+        linesNumberProp.type = "integer";
+        linesNumberProp.description = "Number of lines to read. Default is 2000, maximum is " + MAX_LINES + ".";
+        properties.put("lines_number", linesNumberProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path", "origin_contents", "new_contents");
+        parameters.required = Arrays.asList("project_name", "relative_file_path");
 
         spec.function.parameters = parameters;
         return spec;
@@ -302,30 +291,36 @@ public class EditFileMcpTool
         public String projectName;
 
         /**
-         * Relative path to the file which contents should be replaced. Must start with the project name, for example, "src/MyModule.bsl".
+         * Relative path to the file. For example, "/src/MyModule.bsl".
          */
         @SerializedName("relative_file_path")
         public String relativeFilePath;
 
         /**
-         * The fragment of the file content that will be replaced.
+         * Number of the first line of the file to be read. Numbering starts at 0. The default is 0.
          */
-        @SerializedName("origin_contents")
-        public String originContents;
+        @SerializedName("first_line_number")
+        public Integer firstLineNumber;
 
         /**
-         * The content fragment that will replace the original ('origin_contents').
+         * Number of lines to read. By default, reads up to 2000 lines.
          */
-        @SerializedName("new_contents")
-        public String newContents;
-
-        /**
-         * If true, all occurrences of the 'origin_contents' fragment will be replaced.
-         * If false, only the single occurrence will be replaced. If no fragments are found, or more than one is found, the request will fail.
-         * False by default.
-         */
-        @SerializedName("replace_all")
-        public Boolean replaceAll;
+        @SerializedName("lines_number")
+        public Integer linesNumber;
     }
 
+    private static class Response
+    {
+        /**
+         * File content.
+         */
+        @SerializedName("content")
+        public String content;
+
+        /**
+         * File encoding, for example, "UTF-8", "windows-1251", "KOI8-R", "UTF-16", "UTF-32", etc.
+         */
+        @SerializedName("charset_name")
+        public String charsetName;
+    }
 }

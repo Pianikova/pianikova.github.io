@@ -32,10 +32,10 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 
-public class ExecuteCommandsMcpTool
+public class ExecuteCommandMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_execute_command"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "ExecuteCommand"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -65,7 +65,7 @@ public class ExecuteCommandsMcpTool
     private final IDispatcher dispatcher;
 
     @Inject
-    public ExecuteCommandsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public ExecuteCommandMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IDispatcher dispatcher)
     {
         Preconditions.checkNotNull(json);

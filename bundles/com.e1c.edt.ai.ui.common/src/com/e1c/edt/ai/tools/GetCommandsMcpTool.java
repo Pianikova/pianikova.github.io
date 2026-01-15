@@ -33,7 +33,7 @@ import com.google.inject.Inject;
 public class GetCommandsMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_get_commands"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "GetCommands"; //$NON-NLS-1$
     public static final Comparator<CommandDescription> COMPARATOR =
         Comparator.comparing((CommandDescription i) -> {
             if (i.parameters == null || i.parameters.size() == 0)
