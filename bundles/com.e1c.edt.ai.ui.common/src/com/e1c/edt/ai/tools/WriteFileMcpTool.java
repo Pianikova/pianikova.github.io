@@ -2,6 +2,7 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -32,6 +33,7 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+
 public class WriteFileMcpTool
     implements IMcpTool
 {
@@ -92,9 +94,8 @@ public class WriteFileMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
+                "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
         var request = optionalRequest.get();
@@ -103,16 +104,14 @@ public class WriteFileMcpTool
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "'project_name' is required."));
+                .completedFuture(messageFactory.createError(this, call, "'project_name' is required."));
         }
 
         var relativeFilePath = request.relativeFilePath;
         if (relativeFilePath == null || relativeFilePath.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "'relative_file_path' is required."));
+                .completedFuture(messageFactory.createError(this, call, "'relative_file_path' is required."));
         }
 
         var contents = request.contents;
@@ -121,8 +120,7 @@ public class WriteFileMcpTool
             return CompletableFuture.completedFuture(messageFactory.createError(this, call, "'contents' is required."));
         }
 
-        var charsetName =
-            request.charsetName != null && !request.charsetName.isBlank() ? request.charsetName : "UTF-8";
+        var charsetName = request.charsetName != null && !request.charsetName.isBlank() ? request.charsetName : "UTF-8";
         byte[] data;
         try
         {
@@ -167,9 +165,8 @@ public class WriteFileMcpTool
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
             if (projectFile.exists())
             {
-                return messageFactory.createError(this, call,
-                    "The file \"" + relativeFilePath + "\" already exists. Use the '" + EditFileMcpTool.TOOL_NAME
-                        + "' tool to modify this file.");
+                return messageFactory.createError(this, call, "The file \"" + relativeFilePath
+                    + "\" already exists. Use the '" + EditFileMcpTool.TOOL_NAME + "' tool to modify this file.");
             }
 
             try
@@ -214,8 +211,8 @@ public class WriteFileMcpTool
                 }
             }
 
-            response.append("ACTION REQUIRED: verify project errors and warnings. Use '"
-                + GetProjectErrorsMcpTool.TOOL_NAME + "' tool.");
+            response.append(
+                "ACTION REQUIRED: verify project errors and warnings. Use '" + GetErrorsMcpTool.TOOL_NAME + "' tool.");
             return messageFactory.createMessage(this, call, response.toString());
         });
     }

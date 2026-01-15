@@ -232,7 +232,7 @@ public class EditFileMcpTool
             var projectRelativePath = projectFile.getProjectRelativePath();
             response.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
             response.append("ACTION REQUIRED: verify project errors and warnings. Use '"
-                + GetProjectErrorsMcpTool.TOOL_NAME + "' tool.");
+                + GetErrorsMcpTool.TOOL_NAME + "' tool.");
             return messageFactory.createMessage(this, call, response.toString());
         });
     }

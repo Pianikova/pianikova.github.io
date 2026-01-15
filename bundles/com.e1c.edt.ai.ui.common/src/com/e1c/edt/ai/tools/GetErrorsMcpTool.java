@@ -29,10 +29,10 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
-public class GetProjectErrorsMcpTool
+public class GetErrorsMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_get_project_errors"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "ide_get_errors"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -69,7 +69,7 @@ public class GetProjectErrorsMcpTool
     private final IBuildWaiter buildWaiter;
 
     @Inject
-    public GetProjectErrorsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBuildWaiter buildWaiter)
+    public GetErrorsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBuildWaiter buildWaiter)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);

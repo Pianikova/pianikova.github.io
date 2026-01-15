@@ -27,7 +27,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(FindFileMcpTool.class);
         toolBinder.addBinding().to(WriteFileMcpTool.class);
         toolBinder.addBinding().to(EditFileMcpTool.class);
-        toolBinder.addBinding().to(GetProjectErrorsMcpTool.class);
+        toolBinder.addBinding().to(GetErrorsMcpTool.class);
         toolBinder.addBinding().to(SetMarkersMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
