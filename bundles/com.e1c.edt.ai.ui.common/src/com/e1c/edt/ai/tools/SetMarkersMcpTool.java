@@ -2,7 +2,6 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
-
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +32,9 @@ public class SetMarkersMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "SetMarkers"; //$NON-NLS-1$
+    public static final String ACTION_DETAILS_ATTRIBUTE = "action_details"; //$NON-NLS-1$
+    public static final String QUICK_FIX_ID = "com.e1c.edt.ai.ui.commands.applyprompt.ai"; //$NON-NLS-1$
+    public static final String QUICK_FIX_ATTRIBUTE = "org.eclipse.ui.workbench.texteditor.quickFixId"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -60,7 +62,7 @@ public class SetMarkersMcpTool
         + "      \"type\": \"problem\",\n"
         + "      \"relative_file_path\": \"CommonModules/AnotherModule/Module.bsl\",\n"
         + "      \"line\": 42,\n"
-        + "      \"极message\": \"Syntax error\",\n"
+        + "      \"message\": \"Syntax error\",\n"
         + "      \"severity\": \"error\"\n"
         + "    },\n"
         + "    {\n"
@@ -76,11 +78,13 @@ public class SetMarkersMcpTool
         + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
         + "      \"line\": 30,\n"
         + "      \"message\": \"AI suggestion\",\n"
-        + "      \"severity\": \"info\"\n"
+        + "      \"severity\": \"info\",\n"
+        + "      \"action_prompt\": \"Please refactor this code to use modern patterns\",\n"
+        + "      \"action_title\": \"Refactor code\",\n"
+        + "      \"action_description\": \"Update code to use modern design patterns\"\n"
         + "    }\n"
         + "  ]\n"
         + "}";
-
     @SuppressWarnings("nls")
     private static String AnswerExample = "Successfully created 5 markers";
     // @formatter:on
@@ -136,7 +140,6 @@ public class SetMarkersMcpTool
         return CompletableFuture.supplyAsync(() -> {
             IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
             IProject project = root.getProject(request.projectName);
-
             if (!project.exists())
             {
                 return messageFactory.createError(this, call, "Project not found: " + request.projectName);
@@ -147,9 +150,8 @@ public class SetMarkersMcpTool
                 return messageFactory.createError(this, call, "Project is closed: " + request.projectName);
             }
 
-            int markersSet = 0;
-            StringBuilder errors = new StringBuilder();
-
+            var markersSet = 0;
+            var errors = new StringBuilder();
             for (int i = 0; i < request.markers.size(); i++)
             {
                 if (cancellationToken.isCanceled())
@@ -189,25 +191,45 @@ public class SetMarkersMcpTool
         {
             throw new IllegalArgumentException("relative_file_path is required");
         }
+
         if (markerReq.message == null || markerReq.message.isBlank())
         {
             throw new IllegalArgumentException("message is required");
         }
+
         if (markerReq.type == null || markerReq.type.isBlank())
         {
             throw new IllegalArgumentException("type is required");
         }
 
+        // Validate action_prompt for ai_marker
+        if ("ai_marker".equalsIgnoreCase(markerReq.type))
+        {
+            if (markerReq.actionPrompt == null || markerReq.actionPrompt.isBlank())
+            {
+                throw new IllegalArgumentException("action_prompt is required for ai_marker");
+            }
+
+            if (markerReq.actionTitle == null || markerReq.actionTitle.isBlank())
+            {
+                throw new IllegalArgumentException("action_title is required for ai_marker");
+            }
+
+            if (markerReq.actionDescription == null || markerReq.actionDescription.isBlank())
+            {
+                throw new IllegalArgumentException("action_description is required for ai_marker");
+            }
+        }
+
         var relativePath = new Path(markerReq.relativeFilePath);
         var file = project.getFile(relativePath);
-
         if (!file.exists())
         {
             throw new IllegalArgumentException("File not found: " + relativePath);
         }
 
         // Convert request type to MarkerType enum
-        MarkerType markerType = MarkerType.fromDisplayName(markerReq.type);
+        var markerType = MarkerType.fromDisplayName(markerReq.type);
         if (markerType == null)
         {
             throw new IllegalArgumentException("Unknown marker type: " + markerReq.type);
@@ -222,7 +244,6 @@ public class SetMarkersMcpTool
     {
         // Common attributes for all marker types
         marker.setAttribute(IMarker.MESSAGE, markerReq.message);
-
         if (markerReq.line > 0)
         {
             marker.setAttribute(IMarker.LINE_NUMBER, markerReq.line);
@@ -231,12 +252,18 @@ public class SetMarkersMcpTool
         // Location (generate if not provided)
         String location = markerReq.location != null ? markerReq.location : "Line " + markerReq.line; //$NON-NLS-1$
         marker.setAttribute(IMarker.LOCATION, location);
-
         // Character positions
         if (markerReq.charStart != null && markerReq.charEnd != null)
         {
             marker.setAttribute(IMarker.CHAR_START, markerReq.charStart);
             marker.setAttribute(IMarker.CHAR_END, markerReq.charEnd);
+        }
+
+        // Action attributes - only for AI markers
+        if (markerType == MarkerType.AI_MARKER && markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank())
+        {
+            marker.setAttribute(ACTION_DETAILS_ATTRIBUTE, markerReq);
+            marker.setAttribute(QUICK_FIX_ATTRIBUTE, QUICK_FIX_ID);
         }
 
         // Type-specific attributes
@@ -246,23 +273,19 @@ public class SetMarkersMcpTool
             setBooleanAttribute(marker, IMarker.DONE, markerReq.done);
             setBooleanAttribute(marker, IMarker.TRANSIENT, markerReq.transientFlag);
             setBooleanAttribute(marker, IMarker.USER_EDITABLE, markerReq.userEditable);
-
             if (markerReq.sourceId != null)
             {
                 marker.setAttribute(IMarker.SOURCE_ID, markerReq.sourceId);
             }
             break;
-
         case TASK:
             setBooleanAttribute(marker, IMarker.DONE, markerReq.done);
             setBooleanAttribute(marker, IMarker.USER_EDITABLE, markerReq.userEditable);
-
             if (markerReq.priority != null)
             {
                 marker.setAttribute(IMarker.PRIORITY, convertPriority(markerReq.priority));
             }
             break;
-
         case PROBLEM:
         case AI_MARKER:
             if (markerReq.severity != null)
@@ -274,7 +297,6 @@ public class SetMarkersMcpTool
                 marker.setAttribute(IMarker.PRIORITY, convertPriority(markerReq.priority));
             }
             break;
-
         default:
             // No additional attributes for other types
             break;
@@ -294,7 +316,6 @@ public class SetMarkersMcpTool
     {
         if (severity == null)
             return IMarker.SEVERITY_INFO;
-
         switch (severity.toLowerCase())
         {
         case "error":
@@ -311,7 +332,6 @@ public class SetMarkersMcpTool
     {
         if (priority == null)
             return IMarker.PRIORITY_NORMAL;
-
         switch (priority.toLowerCase())
         {
         case "high":
@@ -330,7 +350,6 @@ public class SetMarkersMcpTool
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
-
         var description = new StringBuilder();
         description.append("Creates various types of markers in project files. ");
         description.append("\n\nUsage:");
@@ -347,7 +366,6 @@ public class SetMarkersMcpTool
         {
             description.append("\n- ").append(type.getDisplayName()).append(": ").append(type.getDescription());
         }
-
         description.append("\n\nCommon properties for all markers:");
         description.append("\n- type: Marker type (required)");
         description.append("\n- relative_file_path: File path relative to project root (required)");
@@ -355,48 +373,47 @@ public class SetMarkersMcpTool
         description.append(
             "\n- line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative.");
         description.append(
-            "\n- location: Human-readable location string (optional).  The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
+            "\n- location: Human-readable location string (optional). The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
         description.append(
             "\n- char_start: Character start offset (optional). An integer value indicating where a marker starts. It is zero-relative and inclusive.");
         description.append(
             "\n- char_end: Character end offset (optional). An integer value indicating where a marker ends. It is zero-relative and exclusive.");
-
+        description.append(
+            "\n- action_prompt: AI prompt to execute when marker is activated (required for ai_marker)");
+        description.append(
+            "\n- action_title: Short title for the quick fix action (required for ai_marker)");
+        description.append(
+            "\n- action_description: Detailed description of the quick fix action (required for ai_marker)");
         description.append("\n\nType-specific properties:");
         description.append("\n- bookmark: done, transient, user_editable, source_id");
         description.append("\n- task: done, user_editable, priority");
         description.append("\n- problem: severity, priority");
         description.append("\n- ai_marker: severity, priority");
-
+        description.append("\n\nQuick fix actions:");
+        description
+            .append("\n- For `ai_marker` with `action_prompt`: adds quick fix action prompt");
         description.append("\n\nExample request:\n").append(QuestionExample);
         description.append("\nExample response:\n").append(AnswerExample);
-
         spec.function.description = description.toString();
-
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
-
         var properties = new HashMap<String, McpToolCallProperty>();
-
         // Project name
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
         projectNameProp.description = "Target project name";
         properties.put("project_name", projectNameProp);
-
         // Markers array
         var markersProp = new McpToolCallProperty();
         markersProp.type = "array";
         markersProp.description = "List of markers to create";
         properties.put("markers", markersProp);
-
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name", "markers");
         spec.function.parameters = parameters;
-
         return spec;
     }
 
-    // Request DTO for JSON deserialization
     private static class Request
     {
         @SerializedName("project_name")
@@ -406,7 +423,7 @@ public class SetMarkersMcpTool
         public List<MarkerRequest> markers;
     }
 
-    private static class MarkerRequest
+    public class MarkerRequest
     {
         @SerializedName("type")
         public String type;
@@ -446,5 +463,14 @@ public class SetMarkersMcpTool
 
         @SerializedName("source_id")
         public String sourceId;
+
+        @SerializedName("action_prompt")
+        public String actionPrompt;
+
+        @SerializedName("action_title")
+        public String actionTitle;
+
+        @SerializedName("action_description")
+        public String actionDescription;
     }
 }

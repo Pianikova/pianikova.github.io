@@ -21,9 +21,9 @@
     
     <extension point="org.eclipse.ui.editors.markerAnnotationSpecification">
         <specification
-            annotationType="com.e1c.edt.ai.marker"
-            label="AI Suggestion"
-            colorPreferenceValue="255,215,0"> <!-- Gold color -->
+              annotationType="com.e1c.edt.ai.marker"
+              colorPreferenceValue="255,215,0"
+              label="AI Suggestion"> <!-- Gold color -->
             <visibility
                 verticalRuler="true"
                 overviewRuler="true"
@@ -158,6 +158,10 @@
               id="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
               name="%command.label.addfilestochat">
         </command>
+        <command
+              id="com.e1c.edt.ai.ui.commands.applyprompt.ai"
+              name="Apply">
+        </command>
     </extension>
 
     <extension point="org.eclipse.ui.bindings">
@@ -232,6 +236,10 @@
         <handler
               class="com.e1c.edt.ai.ui.handlers.AddFilesToChatHandler"
               commandId="com.e1c.edt.ai.ui.commands.addfilestochat.ai">
+        </handler>
+        <handler
+              class="com.e1c.edt.ai.ui.handlers.MarkerPromptHandler"
+              commandId="com.e1c.edt.ai.ui.commands.applyprompt.ai">
         </handler>
 
     </extension>
