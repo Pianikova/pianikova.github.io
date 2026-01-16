@@ -2,6 +2,7 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,11 +14,9 @@ import java.util.concurrent.ExecutionException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
@@ -56,8 +55,8 @@ public class GetProjectsMcpTool
     private static String AnswerExample =
         "[\n" +
         "  {\n" +
-        "    \"name\": \"Управление торговлей 11.5\",\n" +
-        "    \"absolute_path\": \"C:\\\\1C_Projects\\\\УТ115\",\n" +
+        "    \"name\": \"Trade Management 11.5\",\n" +
+        "    \"absolute_path\": \"C:\\\\1C_Projects\\\\UT115\",\n" +
         "    \"is_open\": true,\n" +
         "    \"exists\": true,\n" +
         "    \"is_current\": false,\n" +
@@ -75,17 +74,11 @@ public class GetProjectsMcpTool
         "        \"relative_file_path\": \"src/test/TestModule.bsl\",\n" +
         "        \"cursor_line\": 20,\n" +
         "        \"cursor_line_offset\": 3,\n" +
-        "        \"selection_start_line\": 15,\n" +
+        "        \"selection_start极line\": 15,\n" +
         "        \"selection_start_line_offset\": 10,\n" +
         "        \"selection_end_line\": 20,\n" +
         "        \"selection_end_line_offset\": 3\n" +
         "      }\n" +
-        "    ],\n" +
-        "    \"directories\": [\n" +
-        "      \"src\",\n" +
-        "      \"src/main\",\n" +
-        "      \"src/test\",\n" +
-        "      \"lib\"\n" +
         "    ]\n" +
         "  }\n" +
         "]";
@@ -137,6 +130,7 @@ public class GetProjectsMcpTool
             {
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
+
             // Collect information about currently open files in all projects
             var projectOpenFiles = collectOpenFiles();
             var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -173,15 +167,6 @@ public class GetProjectsMcpTool
                     if (openFilesList != null)
                     {
                         projectInfo.openFiles.addAll(openFilesList);
-                    }
-                    // Collect directory structure
-                    try
-                    {
-                        collectDirectories(project, projectInfo.directories);
-                    }
-                    catch (CoreException error)
-                    {
-                        log.logError(error);
                     }
                 }
 
@@ -284,26 +269,8 @@ public class GetProjectsMcpTool
                 }
             }
         }
-        return projectOpenFiles;
-    }
 
-    /**
-     * Recursively collects all directories in a container
-     *
-     * @param container Root container to scan
-     * @param directories List to accumulate directory paths
-     */
-    private void collectDirectories(IContainer container, List<String> directories) throws CoreException {
-        for (var resource : container.members()) {
-            if (resource instanceof IContainer && resource.exists()) {
-                var dir = (IContainer) resource;
-                // Get relative path as string
-                var relativePath = dir.getProjectRelativePath().toString();
-                directories.add(relativePath);
-                // Recurse into subdirectories
-                collectDirectories(dir, directories);
-            }
-        }
+        return projectOpenFiles;
     }
 
     /**
@@ -330,6 +297,7 @@ public class GetProjectsMcpTool
                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                 DocumentBuilder builder = factory.newDocumentBuilder();
                 Document doc = builder.parse(input);
+
                 // Extract description from <comment> element
                 NodeList comments = doc.getElementsByTagName("comment");
                 if (comments.getLength() > 0)
@@ -377,6 +345,7 @@ public class GetProjectsMcpTool
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
+
         // Detailed tool description with all fields
         var description = new StringBuilder();
         description.append("Provides comprehensive information about IDE projects including:");
@@ -396,7 +365,7 @@ public class GetProjectsMcpTool
         description.append("\n  - selection_end_line_offset: End offset in selection line");
         description.append(
             "\nIMPORTANT: If the scope of code review, error detection, refactoring, etc. is not specified, use this list of currently open files.");
-        description.append("\n- Recursive list of all directories in the project");
+
         description.append("\n\nUsage:");
         description
             .append(
@@ -404,13 +373,16 @@ public class GetProjectsMcpTool
         description.append("\n\nExample usage:");
         description.append("\n  Q: ").append(QuestionExample);
         description.append("\n  A: ").append(AnswerExample);
+
         spec.function.description = description.toString();
+
         // Input parameters (none required)
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
         parameters.properties = new HashMap<>();
         parameters.required = new ArrayList<>();
         spec.function.parameters = parameters;
+
         return spec;
     }
 
