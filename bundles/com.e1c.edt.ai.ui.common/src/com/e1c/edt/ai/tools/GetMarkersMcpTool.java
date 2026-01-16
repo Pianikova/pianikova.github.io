@@ -29,10 +29,10 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
-public class GetErrorsMcpTool
+public class GetMarkersMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "GeErrors"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "GetMarkers"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -69,7 +69,7 @@ public class GetErrorsMcpTool
     private final IBuildWaiter buildWaiter;
 
     @Inject
-    public GetErrorsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBuildWaiter buildWaiter)
+    public GetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBuildWaiter buildWaiter)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -103,7 +103,6 @@ public class GetErrorsMcpTool
             return CompletableFuture.completedFuture(messageFactory.createError(this, call,
                 "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
-
         var request = optionalRequest.get();
         var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
@@ -132,7 +131,6 @@ public class GetErrorsMcpTool
                 return CompletableFuture
                     .completedFuture(messageFactory.createError(this, call, "Operation cancelled after build wait"));
             }
-
             return CompletableFuture.supplyAsync(() -> createResponse(project, call, cancellationToken));
         }).exceptionally(e -> {
             Throwable cause = e.getCause();
@@ -140,13 +138,11 @@ public class GetErrorsMcpTool
             {
                 return messageFactory.createError(this, call, "Build waiting cancelled");
             }
-
             if (cause instanceof InterruptedException)
             {
                 Thread.currentThread().interrupt();
                 return messageFactory.createError(this, call, "Build waiting interrupted");
             }
-
             return messageFactory.createError(this, call, "Error during build waiting: " + e.getMessage());
         });
     }
@@ -162,12 +158,20 @@ public class GetErrorsMcpTool
                 return messageFactory.createError(this, call, "Operation cancelled during error collection");
             }
 
-            // Retrieve all problem markers in the project
-            var markers = project.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE);
-            var response = new ArrayList<ErrorInfo>();
+            // Retrieve all problem, bookmark and AI markers in the project
+            var problemMarkers = project.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE);
+            var bookmarkMarkers = project.findMarkers(IMarker.BOOKMARK, true, IResource.DEPTH_INFINITE);
+            var aiMarkers = project.findMarkers(SetMarkersMcpTool.AI_MARKER_TYPE, true, IResource.DEPTH_INFINITE);
+
+            var allMarkers = new ArrayList<IMarker>();
+            allMarkers.addAll(Arrays.asList(problemMarkers));
+            allMarkers.addAll(Arrays.asList(bookmarkMarkers));
+            allMarkers.addAll(Arrays.asList(aiMarkers));
+
+            var response = new ArrayList<MarkerInfo>();
 
             // Process each marker
-            for (var marker : markers)
+            for (var marker : allMarkers)
             {
                 // Check cancellation during marker processing
                 if (cancellationToken.isCanceled())
@@ -175,52 +179,75 @@ public class GetErrorsMcpTool
                     return messageFactory.createError(this, call, "Operation cancelled during marker processing");
                 }
 
-                // Map marker severity to string representation
                 String severity;
-                int severityValue = marker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO);
-                switch (severityValue)
-                {
-                case IMarker.SEVERITY_ERROR:
-                    severity = "error";
-                    break;
-                case IMarker.SEVERITY_WARNING:
-                    severity = "warning";
-                    break;
-                default:
-                    severity = "info";
-                }
-
-                // Map marker priority to string representation
-                int priorityValue = marker.getAttribute(IMarker.PRIORITY, IMarker.PRIORITY_NORMAL);
                 String priority;
-                switch (priorityValue)
+
+                // Determine marker type
+                String markerType = marker.getType();
+                if (markerType.equals(IMarker.PROBLEM))
                 {
-                case IMarker.PRIORITY_HIGH:
-                    priority = "high";
-                    break;
-                case IMarker.PRIORITY_NORMAL:
-                    priority = "normal";
-                    break;
-                case IMarker.PRIORITY_LOW:
-                    priority = "low";
-                    break;
-                default:
-                    priority = "unknown";
+                    // Map marker severity to string representation
+                    int severityValue = marker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO);
+                    switch (severityValue)
+                    {
+                    case IMarker.SEVERITY_ERROR:
+                        severity = "error";
+                        break;
+                    case IMarker.SEVERITY_WARNING:
+                        severity = "warning";
+                        break;
+                    default:
+                        severity = "info";
+                    }
+
+                    // Map marker priority to string representation
+                    int priorityValue = marker.getAttribute(IMarker.PRIORITY, IMarker.PRIORITY_NORMAL);
+                    switch (priorityValue)
+                    {
+                    case IMarker.PRIORITY_HIGH:
+                        priority = "high";
+                        break;
+                    case IMarker.PRIORITY_NORMAL:
+                        priority = "normal";
+                        break;
+                    case IMarker.PRIORITY_LOW:
+                        priority = "low";
+                        break;
+                    default:
+                        priority = "unknown";
+                    }
+                }
+                else if (markerType.equals(IMarker.BOOKMARK))
+                {
+                    // Bookmark specific values
+                    severity = "bookmark";
+                    priority = "none";
+                }
+                else if (markerType.equals(SetMarkersMcpTool.AI_MARKER_TYPE))
+                {
+                    // AI marker specific values
+                    severity = "ai_marker";
+                    priority = "none";
+                }
+                else
+                {
+                    // Skip other marker types
+                    continue;
                 }
 
                 var resource = marker.getResource();
                 var location = resource.getLocation();
                 var relativePath = resource.getProjectRelativePath().toPortableString();
 
-                ErrorInfo errorInfo = new ErrorInfo();
-                errorInfo.absolutePath = location != null ? location.toFile().getAbsolutePath() : "";
-                errorInfo.relativePath = relativePath;
-                errorInfo.line = marker.getAttribute(IMarker.LINE_NUMBER, -1);
-                errorInfo.message = marker.getAttribute(IMarker.MESSAGE, "");
-                errorInfo.severity = severity;
-                errorInfo.priority = priority;
+                MarkerInfo markerInfo = new MarkerInfo();
+                markerInfo.absolutePath = location != null ? location.toFile().getAbsolutePath() : "";
+                markerInfo.relativePath = relativePath;
+                markerInfo.line = marker.getAttribute(IMarker.LINE_NUMBER, -1);
+                markerInfo.message = marker.getAttribute(IMarker.MESSAGE, "");
+                markerInfo.severity = severity;
+                markerInfo.priority = priority;
 
-                response.add(errorInfo);
+                response.add(markerInfo);
             }
 
             var content = json.serialize(response);
@@ -233,12 +260,10 @@ public class GetErrorsMcpTool
                 return messageFactory.createError(this, call,
                     "Error retrieving project markers: " + error.getMessage());
             }
-
             if (error instanceof OperationCanceledException)
             {
                 return messageFactory.createError(this, call, "Operation cancelled: " + error.getMessage());
             }
-
             return messageFactory.createError(this, call, "Unexpected error: " + error.getMessage());
         }
     }
@@ -250,29 +275,33 @@ public class GetErrorsMcpTool
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
+
         var description = new StringBuilder();
-        description.append("Returns all errors and warnings in the specified IDE project.");
+        description.append("Returns all errors, warnings, bookmarks and AI markers in the specified IDE project.");
         description.append("\nResponse contains:");
         description.append("\n- absolute_path: Absolute file system path (OS-dependent format)");
         description.append("\n- relative_path: Project-relative path");
         description.append("\n- line: Line number (-1 if unknown)");
         description.append("\n- message: Error description");
-        description.append("\n- severity: `error`, `warning` or `info`");
-        description.append("\n- priority: Priority level as string (`high`, `normal`, `low`)");
+        description.append("\n- severity: `error`, `warning`, `info`, `bookmark` or `ai_marker`");
+        description.append("\n- priority: Priority level as string (`high`, `normal`, `low`, `none`)");
         description.append("\nExample request:");
         description.append("\n").append(QuestionExample);
         description.append("\nExample response:");
         description.append("\n").append(AnswerExample);
+
         spec.function.description = description.toString();
 
         // Define function parameters
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
+
         var properties = new HashMap<String, McpToolCallProperty>();
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
         projectNameProp.description = "Name of the IDE project to analyze for errors";
         properties.put("project_name", projectNameProp);
+
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name");
         spec.function.parameters = parameters;
@@ -287,8 +316,8 @@ public class GetErrorsMcpTool
         public String projectName;
     }
 
-    // Error information DTO for JSON serialization
-    private static class ErrorInfo
+    // Marker information DTO for JSON serialization
+    private static class MarkerInfo
     {
         @SerializedName("absolute_path")
         public String absolutePath;

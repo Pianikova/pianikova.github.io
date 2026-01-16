@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -37,6 +38,7 @@ public class ClearMarkersMcpTool
         + "  \"project_name\": \"MyProject\"\n"
         + "  // \"relative_file_path\": \"optional/file/path.bsl\"\n"
         + "}";
+
     @SuppressWarnings("nls")
     private static String AnswerExample = "Success";
     // @formatter:on
@@ -119,13 +121,17 @@ public class ClearMarkersMcpTool
                     }
 
                     resource.deleteMarkers(SetMarkersMcpTool.AI_MARKER_TYPE, true, IResource.DEPTH_ZERO);
-                    return messageFactory.createMessage(this, call, "AI markers cleared for file: " + filePath);
+                    resource.deleteMarkers(IMarker.BOOKMARK, true, IResource.DEPTH_ZERO);
+                    return messageFactory.createMessage(this, call,
+                        "AI markers and bookmarks cleared for file: " + filePath);
                 }
                 else
                 {
                     // Clear all markers in project
                     project.deleteMarkers(SetMarkersMcpTool.AI_MARKER_TYPE, true, IResource.DEPTH_INFINITE);
-                    return messageFactory.createMessage(this, call, "AI markers cleared for entire project");
+                    project.deleteMarkers(IMarker.BOOKMARK, true, IResource.DEPTH_ZERO);
+                    return messageFactory.createMessage(this, call,
+                        "AI markers and bookmarks cleared for entire project");
                 }
             }
             catch (CoreException error)

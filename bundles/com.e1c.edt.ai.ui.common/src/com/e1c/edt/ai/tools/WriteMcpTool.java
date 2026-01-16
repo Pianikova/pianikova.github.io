@@ -212,7 +212,7 @@ public class WriteMcpTool
             }
 
             response.append(
-                "ACTION REQUIRED: verify project errors and warnings. Use `" + GetErrorsMcpTool.TOOL_NAME + "` tool.");
+                "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
             return messageFactory.createMessage(this, call, response.toString());
         });
     }
