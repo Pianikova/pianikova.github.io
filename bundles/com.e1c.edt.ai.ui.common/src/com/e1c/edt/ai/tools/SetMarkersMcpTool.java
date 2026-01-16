@@ -33,7 +33,6 @@ public class SetMarkersMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "SetMarkers"; //$NON-NLS-1$
-    public static final String AI_MARKER_TYPE = "com.e1c.edt.ai.marker"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -42,7 +41,7 @@ public class SetMarkersMcpTool
         + "  \"project_name\": \"MyProject\",\n"
         + "  \"markers\": [\n"
         + "    {\n"
-        + "      \"severity\": \"bookmark\",\n"
+        + "      \"type\": \"bookmark\",\n"
         + "      \"relative_file_path\": \"Forms/MyForm/Module.bsl\",\n"
         + "      \"line\": 10,\n"
         + "      \"message\": \"Important code section\",\n"
@@ -51,18 +50,39 @@ public class SetMarkersMcpTool
         + "      \"char_end\": 150\n"
         + "    },\n"
         + "    {\n"
-        + "      \"severity\": \"info\",\n"
+        + "      \"type\": \"task\",\n"
         + "      \"relative_file_path\": \"CommonModules/MyModule/Module.bsl\",\n"
         + "      \"line\": 25,\n"
-        + "      \"message\": \"AI: Unused variable detected\",\n"
-        + "      \"priority\": \"low\"\n"
+        + "      \"message\": \"TODO: Refactor this code\",\n"
+        + "      \"priority\": \"normal\"\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"type\": \"problem\",\n"
+        + "      \"relative_file_path\": \"CommonModules/AnotherModule/Module.bsl\",\n"
+        + "      \"line\": 42,\n"
+        + "      \"极message\": \"Syntax error\",\n"
+        + "      \"severity\": \"error\"\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"type\": \"text\",\n"
+        + "      \"relative_file_path\": \"CommonModules/TextModule/Module.bsl\",\n"
+        + "      \"line\": 15,\n"
+        + "      \"message\": \"Important text note\",\n"
+        + "      \"char_start\": 50,\n"
+        + "      \"char_end\": 100\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"type\": \"ai_marker\",\n"
+        + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "      \"line\": 30,\n"
+        + "      \"message\": \"AI suggestion\",\n"
+        + "      \"severity\": \"info\"\n"
         + "    }\n"
         + "  ]\n"
         + "}";
 
     @SuppressWarnings("nls")
-    private static String AnswerExample =
-        "{\"success\": true, \"markers_set\": 2, \"bookmarks\": 1, \"ai_markers\": 1}";
+    private static String AnswerExample = "Successfully created 5 markers";
     // @formatter:on
 
     private final IJson json;
@@ -128,8 +148,6 @@ public class SetMarkersMcpTool
             }
 
             int markersSet = 0;
-            int bookmarksSet = 0;
-            int aiMarkersSet = 0;
             StringBuilder errors = new StringBuilder();
 
             for (int i = 0; i < request.markers.size(); i++)
@@ -143,17 +161,8 @@ public class SetMarkersMcpTool
                 var markerReq = request.markers.get(i);
                 try
                 {
-                    String markerType = createMarker(project, markerReq);
+                    createMarker(project, markerReq);
                     markersSet++;
-
-                    if (IMarker.BOOKMARK.equals(markerType))
-                    {
-                        bookmarksSet++;
-                    }
-                    else if (AI_MARKER_TYPE.equals(markerType))
-                    {
-                        aiMarkersSet++;
-                    }
                 }
                 catch (CoreException | IllegalArgumentException e)
                 {
@@ -167,18 +176,12 @@ public class SetMarkersMcpTool
                     "Completed with errors: " + errors + ". Markers set: " + markersSet);
             }
 
-            var response = new Response();
-            response.success = true;
-            response.markersSet = markersSet;
-            response.bookmarksSet = bookmarksSet;
-            response.aiMarkersSet = aiMarkersSet;
-
-            return messageFactory.createMessage(this, call, json.serialize(response));
+            return messageFactory.createMessage(this, call, "Successfully created " + markersSet + " markers");
         });
     }
 
     @SuppressWarnings("nls")
-    private String createMarker(IProject project, MarkerRequest markerReq)
+    private void createMarker(IProject project, MarkerRequest markerReq)
         throws CoreException, IllegalArgumentException
     {
         // Validate required fields
@@ -190,9 +193,9 @@ public class SetMarkersMcpTool
         {
             throw new IllegalArgumentException("message is required");
         }
-        if (markerReq.severity == null || markerReq.severity.isBlank())
+        if (markerReq.type == null || markerReq.type.isBlank())
         {
-            throw new IllegalArgumentException("severity is required");
+            throw new IllegalArgumentException("type is required");
         }
 
         var relativePath = new Path(markerReq.relativeFilePath);
@@ -203,23 +206,19 @@ public class SetMarkersMcpTool
             throw new IllegalArgumentException("File not found: " + relativePath);
         }
 
-        // Determine marker type based on severity
-        String markerType;
-        if ("bookmark".equalsIgnoreCase(markerReq.severity))
+        // Convert request type to MarkerType enum
+        MarkerType markerType = MarkerType.fromDisplayName(markerReq.type);
+        if (markerType == null)
         {
-            markerType = IMarker.BOOKMARK;
-        }
-        else
-        {
-            markerType = AI_MARKER_TYPE;
+            throw new IllegalArgumentException("Unknown marker type: " + markerReq.type);
         }
 
-        var marker = file.createMarker(markerType);
+        var marker = file.createMarker(markerType.getTypeId());
         setMarkerAttributes(marker, markerReq, markerType);
-        return markerType;
     }
 
-    private void setMarkerAttributes(IMarker marker, MarkerRequest markerReq, String markerType) throws CoreException
+    private void setMarkerAttributes(IMarker marker, MarkerRequest markerReq, MarkerType markerType)
+        throws CoreException
     {
         // Common attributes for all marker types
         marker.setAttribute(IMarker.MESSAGE, markerReq.message);
@@ -230,7 +229,7 @@ public class SetMarkersMcpTool
         }
 
         // Location (generate if not provided)
-        var location = markerReq.location != null ? markerReq.location : "Line " + markerReq.line; //$NON-NLS-1$
+        String location = markerReq.location != null ? markerReq.location : "Line " + markerReq.line; //$NON-NLS-1$
         marker.setAttribute(IMarker.LOCATION, location);
 
         // Character positions
@@ -240,9 +239,10 @@ public class SetMarkersMcpTool
             marker.setAttribute(IMarker.CHAR_END, markerReq.charEnd);
         }
 
-        // Bookmark specific attributes
-        if (markerType.equals(IMarker.BOOKMARK))
+        // Type-specific attributes
+        switch (markerType)
         {
+        case BOOKMARK:
             setBooleanAttribute(marker, IMarker.DONE, markerReq.done);
             setBooleanAttribute(marker, IMarker.TRANSIENT, markerReq.transientFlag);
             setBooleanAttribute(marker, IMarker.USER_EDITABLE, markerReq.userEditable);
@@ -251,17 +251,33 @@ public class SetMarkersMcpTool
             {
                 marker.setAttribute(IMarker.SOURCE_ID, markerReq.sourceId);
             }
-        }
-        // AI marker specific attributes
-        else
-        {
-            // Severity and priority are required for AI markers
-            marker.setAttribute(IMarker.SEVERITY, convertSeverity(markerReq.severity));
+            break;
+
+        case TASK:
+            setBooleanAttribute(marker, IMarker.DONE, markerReq.done);
+            setBooleanAttribute(marker, IMarker.USER_EDITABLE, markerReq.userEditable);
 
             if (markerReq.priority != null)
             {
                 marker.setAttribute(IMarker.PRIORITY, convertPriority(markerReq.priority));
             }
+            break;
+
+        case PROBLEM:
+        case AI_MARKER:
+            if (markerReq.severity != null)
+            {
+                marker.setAttribute(IMarker.SEVERITY, convertSeverity(markerReq.severity));
+            }
+            if (markerReq.priority != null)
+            {
+                marker.setAttribute(IMarker.PRIORITY, convertPriority(markerReq.priority));
+            }
+            break;
+
+        default:
+            // No additional attributes for other types
+            break;
         }
     }
 
@@ -316,31 +332,41 @@ public class SetMarkersMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Creates markers and bookmarks in project files");
+        description.append("Creates various types of markers in project files. ");
         description.append("\n\nUsage:");
-        description.append("\n- Use the `GetMarkers` tool to get current markers.");
-        description.append("\n- Use the `ClearMarkers` tool to clean current markers.");
-        description.append("\n\nParameters:");
-        description.append("\n- project_name: Target project name (required)");
-        description.append("\n- markers: List of markers to create (required)\n");
-        description.append("\nCommon marker properties:");
+        description.append(
+            "\n- ALWAYS use `" + MarkerType.AI_MARKER.getDisplayName()
+                + "` to show any issues, problems, errors, warnings, etc.");
+        description.append(
+            "\n- ALWAYS use `" + MarkerType.TASK.getDisplayName()
+                + "` for plans, schedules, proposals, tasks, TODO, etc.");
+        description.append("\n- ALWAYS use `" + MarkerType.BOOKMARK.getDisplayName() + "` for summaries, reports.");
+        description.append("\n\nSupported marker types:");
+        // Generate supported types from MarkerType enum
+        for (MarkerType type : MarkerType.values())
+        {
+            description.append("\n- ").append(type.getDisplayName()).append(": ").append(type.getDescription());
+        }
+
+        description.append("\n\nCommon properties for all markers:");
+        description.append("\n- type: Marker type (required)");
         description.append("\n- relative_file_path: File path relative to project root (required)");
         description.append("\n- message: Marker description (required)");
-        description.append("\n- severity: Determines marker type (required)");
-        description.append("\n- line: Line number (1-based, recommended)");
-        description.append("\n- location: Human-readable location string (optional)");
-        description.append("\n- char_start: Character start offset (optional, 0-based)");
-        description.append("\n- char_end: Character end offset (optional, 0-based)");
-        description.append("\n\nSeverity values:");
-        description.append("\n- 'bookmark': Creates a standard bookmark");
-        description.append("\n- 'error', 'warning', 'info': Creates AI marker with specified severity");
-        description.append("\n\nAI Marker specific properties:");
-        description.append("\n- priority: `high`, `normal`, or `low` (optional)");
-        description.append("\n\nBookmark specific properties:");
-        description.append("\n- done: Completion status (optional)");
-        description.append("\n- transient: Persistence flag (optional)");
-        description.append("\n- user_editable: Edit permission (optional)");
-        description.append("\n- source_id: Marker source identifier (optional)");
+        description.append(
+            "\n- line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative.");
+        description.append(
+            "\n- location: Human-readable location string (optional).  The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
+        description.append(
+            "\n- char_start: Character start offset (optional). An integer value indicating where a marker starts. It is zero-relative and inclusive.");
+        description.append(
+            "\n- char_end: Character end offset (optional). An integer value indicating where a marker ends. It is zero-relative and exclusive.");
+
+        description.append("\n\nType-specific properties:");
+        description.append("\n- bookmark: done, transient, user_editable, source_id");
+        description.append("\n- task: done, user_editable, priority");
+        description.append("\n- problem: severity, priority");
+        description.append("\n- ai_marker: severity, priority");
+
         description.append("\n\nExample request:\n").append(QuestionExample);
         description.append("\nExample response:\n").append(AnswerExample);
 
@@ -382,17 +408,20 @@ public class SetMarkersMcpTool
 
     private static class MarkerRequest
     {
+        @SerializedName("type")
+        public String type;
+
         @SerializedName("relative_file_path")
         public String relativeFilePath;
 
         @SerializedName("message")
         public String message;
 
-        @SerializedName("severity")
-        public String severity;
-
         @SerializedName("line")
         public int line;
+
+        @SerializedName("severity")
+        public String severity;
 
         @SerializedName("priority")
         public String priority;
@@ -417,20 +446,5 @@ public class SetMarkersMcpTool
 
         @SerializedName("source_id")
         public String sourceId;
-    }
-
-    private static class Response
-    {
-        @SerializedName("success")
-        public boolean success;
-
-        @SerializedName("markers_set")
-        public int markersSet;
-
-        @SerializedName("bookmarks")
-        public int bookmarksSet;
-
-        @SerializedName("ai_markers")
-        public int aiMarkersSet;
     }
 }

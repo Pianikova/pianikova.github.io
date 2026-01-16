@@ -250,11 +250,12 @@ public class EditMcpTool
         var description = new StringBuilder();
         description.append("Performs exact string replacements in project files.");
         description.append("\n\nUsage:");
-        description.append("\n- You must use your `" + ReadMcpTool.TOOL_NAME + "` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file.");
+        description.append("\n- You must use `" + ReadMcpTool.TOOL_NAME + "` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file.");
         description.append("\n- When editing text from `" + ReadMcpTool.TOOL_NAME + "` tool output, ensure you preserve the exact indentation (tabs/spaces).");
         description.append("\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.");
         description.append("\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.");
         description.append("\n- The edit will FAIL if `origin_content` is not unique in the file. ");
+        description.append("\n- You must use `" + ClearMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
         description.append("Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `origin_content`.");
         description.append("\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.");
 

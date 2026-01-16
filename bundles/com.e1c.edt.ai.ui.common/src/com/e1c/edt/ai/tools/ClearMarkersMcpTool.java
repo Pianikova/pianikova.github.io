@@ -1,12 +1,12 @@
 /**
-* Copyright (C) 2025, 1C
+* Copyright (C) 极2025, 1C
 */
 package com.e1c.edt.ai.tools;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
-import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -35,12 +35,13 @@ public class ClearMarkersMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"project_name\": \"MyProject\"\n"
+        + "  \"project_name\": \"MyProject\",\n"
+        + "  // \"marker_type\": \"ai_marker\", // Optional: bookmark, task, text, ai_marker\n"
         + "  // \"relative_file_path\": \"optional/file/path.bsl\"\n"
         + "}";
 
     @SuppressWarnings("nls")
-    private static String AnswerExample = "Success";
+    private static String AnswerExample = "Markers cleared successfully";
     // @formatter:on
 
     private final ILog log;
@@ -83,7 +84,6 @@ public class ClearMarkersMcpTool
             return CompletableFuture.completedFuture(messageFactory.createError(this, call,
                 "Cannot deserialize arguments. Use example: " + QuestionExample));
         }
-
         var request = optionalRequest.get();
         var projectName = request.projectName;
 
@@ -110,36 +110,69 @@ public class ClearMarkersMcpTool
 
             try
             {
-                var filePath = request.relativeFilePath;
-                if (filePath != null && !filePath.isBlank())
+                var markerType = getMarkerType(request.markerType);
+                if (request.relativeFilePath != null && !request.relativeFilePath.isBlank())
                 {
                     // Clear markers for specific file
-                    var resource = project.findMember(filePath);
+                    var resource = project.findMember(request.relativeFilePath);
                     if (resource == null || !resource.exists())
                     {
-                        return messageFactory.createError(this, call, "File not found in project: " + filePath);
+                        return messageFactory.createError(this, call,
+                            "File not found in project: " + request.relativeFilePath);
                     }
 
-                    resource.deleteMarkers(SetMarkersMcpTool.AI_MARKER_TYPE, true, IResource.DEPTH_ZERO);
-                    resource.deleteMarkers(IMarker.BOOKMARK, true, IResource.DEPTH_ZERO);
-                    return messageFactory.createMessage(this, call,
-                        "AI markers and bookmarks cleared for file: " + filePath);
+                    deleteMarkers(resource, markerType);
                 }
                 else
                 {
-                    // Clear all markers in project
-                    project.deleteMarkers(SetMarkersMcpTool.AI_MARKER_TYPE, true, IResource.DEPTH_INFINITE);
-                    project.deleteMarkers(IMarker.BOOKMARK, true, IResource.DEPTH_ZERO);
-                    return messageFactory.createMessage(this, call,
-                        "AI markers and bookmarks cleared for entire project");
+                    // Clear markers for entire project
+                    deleteMarkers(project, markerType);
                 }
+
+                return messageFactory.createMessage(this, call, "Markers cleared successfully");
             }
-            catch (CoreException error)
+            catch (CoreException | IllegalArgumentException error)
             {
                 log.logError(error);
-                return messageFactory.createError(this, call, "Failed to clear AI markers: " + error.getMessage());
+                return messageFactory.createError(this, call, "Failed to clear markers: " + error.getMessage());
             }
         });
+    }
+
+    private void deleteMarkers(IResource resource, MarkerType markerType) throws CoreException
+    {
+        if (markerType != null)
+        {
+            // Delete specific marker type
+            resource.deleteMarkers(markerType.getTypeId(), true, IResource.DEPTH_INFINITE);
+        }
+        else
+        {
+            // Delete all non-problem markers (default behavior)
+            for (MarkerType type : MarkerType.values())
+            {
+                if (type != MarkerType.PROBLEM)
+                {
+                    resource.deleteMarkers(type.getTypeId(), true, IResource.DEPTH_INFINITE);
+                }
+            }
+        }
+    }
+
+    private MarkerType getMarkerType(String markerType) throws IllegalArgumentException
+    {
+        if (markerType == null || markerType.isBlank())
+        {
+            return null;
+        }
+
+        MarkerType type = MarkerType.fromDisplayName(markerType);
+        if (type == null)
+        {
+            throw new IllegalArgumentException("Unknown marker type: " + markerType); //$NON-NLS-1$
+        }
+
+        return type;
     }
 
     @SuppressWarnings("nls")
@@ -152,21 +185,38 @@ public class ClearMarkersMcpTool
 
         // Tool description
         var description = new StringBuilder();
-        description.append("Removes AI-generated markers. ");
-        description.append("If `relative_file_path` is provided, clears markers only for that file. ");
-        description.append("Otherwise clears markers for entire project.\n\n");
+        description.append("Removes markers from project or specific file. ");
+        description.append("By default, removes all non-problem markers. ");
+        description.append("You can specify marker type to remove only specific markers.\n\n");
+
         description.append("Parameters:\n");
         description.append("- project_name: Name of target project (required)\n");
-        description.append("- relative_file_path: Relative path to file (optional)\n\n");
-        description.append("Example request without file path:\n").append(QuestionExample);
+        description.append("- marker_type: Optional type of markers to remove:\n");
+
+        // Generate supported types from MarkerType enum
+        for (MarkerType type : MarkerType.values())
+        {
+            if (type != MarkerType.PROBLEM)
+            {
+                description.append("  • ").append(type.getDisplayName()).append("\n");
+            }
+        }
+
+        description.append("- relative_file_path: Optional relative path to file\n\n");
+
+        description.append("Example requests:\n");
+        description.append("- Clear all non-problem markers in project:\n").append(QuestionExample);
+        description.append("- Clear AI markers in specific file:\n");
         description.append(
-            "\nExample request with file path:\n{\"project_name\":\"MyProject\",\"relative_file_path\":\"src/Module.bsl\"}");
+            "  {\"project_name\":\"MyProject\",\"marker_type\":\"ai_marker\",\"relative_file_path\":\"src/Module.bsl\"}");
         description.append("\n\nExample response:\n").append(AnswerExample);
+
         spec.function.description = description.toString();
 
         // Parameters schema
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
+
         var properties = new HashMap<String, McpToolCallProperty>();
 
         // Property: project_name
@@ -174,6 +224,12 @@ public class ClearMarkersMcpTool
         projectNameProp.type = "string";
         projectNameProp.description = "Name of the target project";
         properties.put("project_name", projectNameProp);
+
+        // Property: marker_type (optional)
+        var markerTypeProp = new McpToolCallProperty();
+        markerTypeProp.type = "string";
+        markerTypeProp.description = "Type of markers to remove";
+        properties.put("marker_type", markerTypeProp);
 
         // Property: relative_file_path (optional)
         var filePathProp = new McpToolCallProperty();
@@ -195,6 +251,9 @@ public class ClearMarkersMcpTool
     {
         @SerializedName("project_name")
         public String projectName;
+
+        @SerializedName("marker_type")
+        public String markerType;
 
         @SerializedName("relative_file_path")
         public String relativeFilePath;

@@ -397,6 +397,10 @@ public class GetProjectsMcpTool
         description.append(
             "\nIMPORTANT: If the scope of code review, error detection, refactoring, etc. is not specified, use this list of currently open files.");
         description.append("\n- Recursive list of all directories in the project");
+        description.append("\n\nUsage:");
+        description
+            .append(
+                "\n- To get errors, warnings, bookmarks, etc., use the `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
         description.append("\n\nExample usage:");
         description.append("\n  Q: ").append(QuestionExample);
         description.append("\n  A: ").append(AnswerExample);

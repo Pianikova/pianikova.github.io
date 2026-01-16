@@ -29,8 +29,7 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
-public class GetMarkersMcpTool
-    implements IMcpTool
+public class GetMarkersMcpTool implements IMcpTool
 {
     public static final String TOOL_NAME = "GetMarkers"; //$NON-NLS-1$
 
@@ -49,6 +48,7 @@ public class GetMarkersMcpTool
         + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
         + "    \"line\": 5,\n"
         + "    \"message\": \"Syntax error: missing semicolon\",\n"
+        + "    \"type\": \"problem\",\n"
         + "    \"severity\": \"error\",\n"
         + "    \"priority\": \"high\"\n"
         + "  },\n"
@@ -57,8 +57,26 @@ public class GetMarkersMcpTool
         + "    \"relative_path\": \"CommonModules/MyModule/Module.bsl\",\n"
         + "    \"line\": 12,\n"
         + "    \"message\": \"Unused variable: myVar\",\n"
+        + "    \"type\": \"problem\",\n"
         + "    \"severity\": \"warning\",\n"
         + "    \"priority\": \"normal\"\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
+        + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
+        + "    \"line\": 10,\n"
+        + "    \"message\": \"Important code section\",\n"
+        + "    \"type\": \"bookmark\",\n"
+        + "    \"done\": false\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/TextModule/Module.bsl\",\n"
+        + "    \"relative_path\": \"CommonModules/TextModule/Module.bsl\",\n"
+        + "    \"line\": 15,\n"
+        + "    \"message\": \"Important text note\",\n"
+        + "    \"type\": \"text\",\n"
+        + "    \"char_start\": 50,\n"
+        + "    \"char_end\": 100\n"
         + "  }\n"
         + "]";
     // @formatter:on
@@ -155,23 +173,15 @@ public class GetMarkersMcpTool
             // Early cancellation check
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation cancelled during error collection");
+                return messageFactory.createError(this, call, "Operation cancelled during marker collection");
             }
 
-            // Retrieve all problem, bookmark and AI markers in the project
-            var problemMarkers = project.findMarkers(IMarker.PROBLEM, true, IResource.DEPTH_INFINITE);
-            var bookmarkMarkers = project.findMarkers(IMarker.BOOKMARK, true, IResource.DEPTH_INFINITE);
-            var aiMarkers = project.findMarkers(SetMarkersMcpTool.AI_MARKER_TYPE, true, IResource.DEPTH_INFINITE);
-
-            var allMarkers = new ArrayList<IMarker>();
-            allMarkers.addAll(Arrays.asList(problemMarkers));
-            allMarkers.addAll(Arrays.asList(bookmarkMarkers));
-            allMarkers.addAll(Arrays.asList(aiMarkers));
-
+            // Retrieve all markers in the project
+            var markers = project.findMarkers(null, true, IResource.DEPTH_INFINITE);
             var response = new ArrayList<MarkerInfo>();
 
             // Process each marker
-            for (var marker : allMarkers)
+            for (var marker : markers)
             {
                 // Check cancellation during marker processing
                 if (cancellationToken.isCanceled())
@@ -179,61 +189,10 @@ public class GetMarkersMcpTool
                     return messageFactory.createError(this, call, "Operation cancelled during marker processing");
                 }
 
-                String severity;
-                String priority;
-
-                // Determine marker type
-                String markerType = marker.getType();
-                if (markerType.equals(IMarker.PROBLEM))
-                {
-                    // Map marker severity to string representation
-                    int severityValue = marker.getAttribute(IMarker.SEVERITY, IMarker.SEVERITY_INFO);
-                    switch (severityValue)
-                    {
-                    case IMarker.SEVERITY_ERROR:
-                        severity = "error";
-                        break;
-                    case IMarker.SEVERITY_WARNING:
-                        severity = "warning";
-                        break;
-                    default:
-                        severity = "info";
-                    }
-
-                    // Map marker priority to string representation
-                    int priorityValue = marker.getAttribute(IMarker.PRIORITY, IMarker.PRIORITY_NORMAL);
-                    switch (priorityValue)
-                    {
-                    case IMarker.PRIORITY_HIGH:
-                        priority = "high";
-                        break;
-                    case IMarker.PRIORITY_NORMAL:
-                        priority = "normal";
-                        break;
-                    case IMarker.PRIORITY_LOW:
-                        priority = "low";
-                        break;
-                    default:
-                        priority = "unknown";
-                    }
-                }
-                else if (markerType.equals(IMarker.BOOKMARK))
-                {
-                    // Bookmark specific values
-                    severity = "bookmark";
-                    priority = "none";
-                }
-                else if (markerType.equals(SetMarkersMcpTool.AI_MARKER_TYPE))
-                {
-                    // AI marker specific values
-                    severity = "ai_marker";
-                    priority = "none";
-                }
-                else
-                {
-                    // Skip other marker types
-                    continue;
-                }
+                // Determine marker type using enum
+                MarkerType markerType = MarkerType.fromTypeId(marker.getType());
+                if (markerType == null)
+                    continue; // Skip unknown types
 
                 var resource = marker.getResource();
                 var location = resource.getLocation();
@@ -244,8 +203,10 @@ public class GetMarkersMcpTool
                 markerInfo.relativePath = relativePath;
                 markerInfo.line = marker.getAttribute(IMarker.LINE_NUMBER, -1);
                 markerInfo.message = marker.getAttribute(IMarker.MESSAGE, "");
-                markerInfo.severity = severity;
-                markerInfo.priority = priority;
+                markerInfo.type = markerType.getDisplayName();
+
+                // Set common and type-specific attributes
+                setMarkerAttributes(marker, markerInfo, markerType);
 
                 response.add(markerInfo);
             }
@@ -268,6 +229,99 @@ public class GetMarkersMcpTool
         }
     }
 
+    private void setMarkerAttributes(IMarker marker, MarkerInfo markerInfo, MarkerType markerType) throws CoreException
+    {
+        // Common attributes for all marker types
+        markerInfo.location = marker.getAttribute(IMarker.LOCATION, null);
+
+        // Character positions
+        Object charStart = marker.getAttribute(IMarker.CHAR_START);
+        if (charStart instanceof Integer)
+        {
+            markerInfo.charStart = (Integer)charStart;
+        }
+
+        Object charEnd = marker.getAttribute(IMarker.CHAR_END);
+        if (charEnd instanceof Integer)
+        {
+            markerInfo.charEnd = (Integer)charEnd;
+        }
+
+        // Type-specific attributes
+        switch (markerType)
+        {
+        case BOOKMARK:
+            Object doneBookmark = marker.getAttribute(IMarker.DONE);
+            if (doneBookmark instanceof Boolean)
+            {
+                markerInfo.done = (Boolean)doneBookmark;
+                }
+
+            Object sourceId = marker.getAttribute(IMarker.SOURCE_ID);
+            if (sourceId instanceof String)
+            {
+                markerInfo.sourceId = (String)sourceId;
+                }
+                break;
+
+            case TASK:
+                Object doneTask = marker.getAttribute(IMarker.DONE);
+                if (doneTask instanceof Boolean)
+                {
+                    markerInfo.done = (Boolean)doneTask;
+                }
+
+                Object priorityObj = marker.getAttribute(IMarker.PRIORITY);
+                if (priorityObj instanceof Integer)
+                {
+                    int priority = (Integer)priorityObj;
+                    markerInfo.priority = convertPriorityToString(priority);
+                }
+                break;
+
+            case PROBLEM:
+            case AI_MARKER:
+                Object severityObj = marker.getAttribute(IMarker.SEVERITY);
+                if (severityObj instanceof Integer)
+                {
+                    int severity = (Integer)severityObj;
+                    markerInfo.severity = convertSeverityToString(severity);
+                }
+
+                Object priorityProblem = marker.getAttribute(IMarker.PRIORITY);
+                if (priorityProblem instanceof Integer)
+                {
+                    int priority = (Integer)priorityProblem;
+                    markerInfo.priority = convertPriorityToString(priority);
+                }
+                break;
+
+            default:
+                // No additional attributes for other types
+                break;
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private String convertSeverityToString(int severity)
+    {
+        switch (severity) {
+            case IMarker.SEVERITY_ERROR: return "error";
+            case IMarker.SEVERITY_WARNING: return "warning";
+            default: return "info";
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private String convertPriorityToString(int priority)
+    {
+        switch (priority) {
+            case IMarker.PRIORITY_HIGH: return "high";
+            case IMarker.PRIORITY_LOW: return "low";
+            default: return "normal";
+        }
+    }
+
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
@@ -277,15 +331,42 @@ public class GetMarkersMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Returns all errors, warnings, bookmarks and AI markers in the specified IDE project.");
-        description.append("\nResponse contains:");
+        description.append(
+            "Returns markers (errors, warnings, info, bookmarks, tasks, etc.) in the specified IDE project, including:");
+
+        // Generate supported types from MarkerType enum
+        for (MarkerType type : MarkerType.values())
+        {
+            description.append("\n- ").append(type.getDisplayName()).append(": ").append(type.getDescription());
+        }
+
+        description.append("\n\nResponse contains:");
         description.append("\n- absolute_path: Absolute file system path (OS-dependent format)");
         description.append("\n- relative_path: Project-relative path");
-        description.append("\n- line: Line number (-1 if unknown)");
-        description.append("\n- message: Error description");
-        description.append("\n- severity: `error`, `warning`, `info`, `bookmark` or `ai_marker`");
-        description.append("\n- priority: Priority level as string (`high`, `normal`, `low`, `none`)");
-        description.append("\nExample request:");
+        description.append(
+            "\n- line: Line number (-1 if unknown). An integer value indicating the line number for a marker. It is 1-relative.");
+        description.append("\n- message: Marker description");
+        description.append("\n- type: Marker type (");
+        boolean first = true;
+        for (var type : MarkerType.values())
+        {
+            if (!first)
+            {
+                description.append(", ");
+            }
+
+            description.append(type.getDisplayName());
+            first = false;
+        }
+        description.append(")");
+        description.append("\n- severity: For problems and AI markers (error, warning, info)");
+        description.append("\n- priority: For problems, tasks and AI markers (high, normal, low)");
+        description.append("\n- done: For bookmarks and tasks (true/false)");
+        description.append("\n- location: Human-readable location string. The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
+        description.append("\n- char_start: Character start offset. An integer value indicating where a marker starts. It is zero-relative and inclusive.");
+        description.append("\n- char_end: Character end offset. An integer value indicating where a marker ends. It is zero-relative and exclusive.");
+        description.append("\n- source_id: Source identifier for bookmarks");
+        description.append("\n\nExample request:");
         description.append("\n").append(QuestionExample);
         description.append("\nExample response:");
         description.append("\n").append(AnswerExample);
@@ -299,7 +380,7 @@ public class GetMarkersMcpTool
         var properties = new HashMap<String, McpToolCallProperty>();
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
-        projectNameProp.description = "Name of the IDE project to analyze for errors";
+        projectNameProp.description = "Name of the IDE project to retrieve markers from";
         properties.put("project_name", projectNameProp);
 
         parameters.properties = properties;
@@ -331,10 +412,28 @@ public class GetMarkersMcpTool
         @SerializedName("message")
         public String message;
 
+        @SerializedName("type")
+        public String type;
+
         @SerializedName("severity")
         public String severity;
 
         @SerializedName("priority")
         public String priority;
+
+        @SerializedName("done")
+        public Boolean done;
+
+        @SerializedName("location")
+        public String location;
+
+        @SerializedName("char_start")
+        public Integer charStart;
+
+        @SerializedName("char_end")
+        public Integer charEnd;
+
+        @SerializedName("source_id")
+        public String sourceId;
     }
 }
