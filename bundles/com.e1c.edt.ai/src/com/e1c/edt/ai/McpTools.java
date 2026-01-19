@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
@@ -20,6 +21,9 @@ import com.google.inject.Inject;
 public class McpTools
     implements IMcpTools
 {
+    private static final int MAX_CONTENT_LINES = 5000;
+    private static final Pattern LINE_SEPARATOR = Pattern.compile("\\r\\n|\\r|\\n"); //$NON-NLS-1$
+
     private final ILog log;
     private final Map<String, IMcpTool> tools = new HashMap<>();
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
@@ -113,10 +117,25 @@ public class McpTools
             return CompletableFuture.completedFuture(result);
         }
 
+        @SuppressWarnings("nls")
         var futureResult = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
             .thenApply(v -> {
                 var result = new McpCallToolsResult();
-                result.messages = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+                var messages = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+
+                // Validate content size for each message
+                for (var message : messages)
+                {
+                    if (message.content != null && exceedsMaxContentLines(message.content))
+                    {
+                        // Replace content with error message if it exceeds limit
+                        message.content = "Error: Content exceeds maximum allowed lines (" + MAX_CONTENT_LINES + ").";
+                        log.logError("Tool response content exceeds maximum allowed lines for tool call: "
+                            + (message.call != null ? message.call.function.name : "unknown"));
+                    }
+                }
+
+                result.messages = messages;
                 result.unknownCalls = unknownCalls;
                 return result;
             });
@@ -135,5 +154,16 @@ public class McpTools
         var cause = ex instanceof CompletionException ? ex.getCause() : ex;
         var message = "Failed to call tool \"" + toolName + "\". " + cause.getMessage();
         return message;
+    }
+
+    private boolean exceedsMaxContentLines(String content)
+    {
+        if (content == null || content.isEmpty())
+        {
+            return false;
+        }
+
+        var lines = LINE_SEPARATOR.split(content);
+        return lines.length > MAX_CONTENT_LINES;
     }
 }

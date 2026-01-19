@@ -34,7 +34,7 @@ public class ReadMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
-    private static final int MAX_LINES = 5000; // Maximum lines to read
+    private static final int MAX_LINES = 4000; // Maximum lines to read
 
     // @formatter:off
     @SuppressWarnings("nls")
