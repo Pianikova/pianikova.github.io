@@ -50,6 +50,7 @@ public class FindMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "1C_Find"; //$NON-NLS-1$
+    private static final int MAX_ELEMENTS = 64;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -247,7 +248,21 @@ public class FindMcpTool
                 }
 
                 var response = createResponse(resultCollector);
+                var maxElements = false;
+                if (response.size() > MAX_ELEMENTS)
+                {
+                    maxElements = true;
+                    for (int i = MAX_ELEMENTS; i < response.size(); i++)
+                    {
+                        response.remove(i);
+                    }
+                }
+
                 var content = json.serialize(response);
+                if (maxElements)
+                {
+                    content += "\n\n max elements + (" + MAX_ELEMENTS + ") reached.";
+                }
                 return messageFactory.createMessage(this, call, content);
             }
             catch (OperationCanceledException | CoreException error)

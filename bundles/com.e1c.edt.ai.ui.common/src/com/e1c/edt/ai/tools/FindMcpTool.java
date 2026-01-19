@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -40,7 +41,7 @@ public class FindMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "Find"; //$NON-NLS-1$
-    private static final int MAX_RESULTS = 100;
+    private static final int MAX_ELEMENTS = 64;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -211,7 +212,7 @@ public class FindMcpTool
 
             final List<Element> elements = new ArrayList<>();
             final Object lock = new Object();
-
+            var maxElements = new AtomicBoolean(false);
             ISearchResultListener listener = new ISearchResultListener()
             {
                 @SuppressWarnings("restriction")
@@ -225,8 +226,11 @@ public class FindMcpTool
                         {
                             for (Match match : matchEvent.getMatches())
                             {
-                                if (elements.size() >= MAX_RESULTS)
+                                if (elements.size() >= MAX_ELEMENTS)
+                                {
+                                    maxElements.set(true);
                                     return;
+                                }
 
                                 if (match instanceof FileMatch)
                                 {
@@ -290,6 +294,11 @@ public class FindMcpTool
             }
 
             var content = json.serialize(elements);
+            if (maxElements.get())
+            {
+                content += "\n\n max elements + (" + MAX_ELEMENTS + ") reached.";
+            }
+
             return messageFactory.createMessage(this, call, content);
         });
     }
