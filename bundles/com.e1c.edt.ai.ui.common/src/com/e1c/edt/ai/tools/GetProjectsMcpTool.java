@@ -38,6 +38,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ProjectId;
+import com.e1c.edt.ai.ui.IDispatcher;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -88,20 +89,23 @@ public class GetProjectsMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
+    private final IDispatcher dispatcher;
     private final ISessionService sessionService;
 
     @Inject
     public GetProjectsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
-        ISessionService sessionService)
+        IDispatcher dispatcher, ISessionService sessionService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
+        Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(sessionService);
 
         this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
+        this.dispatcher = dispatcher;
         this.sessionService = sessionService;
 
         spec = createSpecification();
@@ -132,7 +136,9 @@ public class GetProjectsMcpTool
             }
 
             // Collect information about currently open files in all projects
-            var projectOpenFiles = collectOpenFiles();
+            var projectOpenFiles =
+                dispatcher.dispatch(() -> collectOpenFiles())
+                    .orElseGet(() -> new HashMap<>());
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var projects = root.getProjects();
             var response = new ArrayList<Project>();
