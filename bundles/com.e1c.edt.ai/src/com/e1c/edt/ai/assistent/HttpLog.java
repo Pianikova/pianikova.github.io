@@ -7,10 +7,12 @@ import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
+import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
+import com.e1c.edt.ai.assistent.model.SessionErrorResponse;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -19,13 +21,16 @@ class HttpLog
     implements IHttpLog
 {
     private final ILog log;
+    private final IJson json;
     private final IStateService stateService;
 
     @Inject
-    public HttpLog(ILog log, IStateService stateService)
+    public HttpLog(ILog log, IStateService stateService, IJson json)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(stateService);
+        Preconditions.checkNotNull(json);
+        this.json = json;
         this.log = log;
         this.stateService = stateService;
     }
@@ -117,7 +122,13 @@ class HttpLog
                 {
                 case 401:
                 case 403:
-                    stateService.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
+                    var errorResponseOpt = json.deserialize(response.body().toString(), SessionErrorResponse.class);
+                    if (errorResponseOpt.isPresent()) {
+                        var errorResponse = errorResponseOpt.get();
+                        if (errorResponse.errorType != null && errorResponse.errorType.equals("token_not_found")) {
+                            stateService.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
+                        }
+                    }
                     break;
 
                 case 500:

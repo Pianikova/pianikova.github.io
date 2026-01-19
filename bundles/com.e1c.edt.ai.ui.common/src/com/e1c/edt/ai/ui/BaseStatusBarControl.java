@@ -65,6 +65,7 @@ public class BaseStatusBarControl
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
     private boolean hintWasShown = false;
+    private AIState lastState;
     private Font font;
     private Label iconLabel;
     private Label statusLabel;
@@ -220,10 +221,12 @@ public class BaseStatusBarControl
             switch (serviceState)
             {
             case TOKEN_FAILED:
+
                 if (!hintWasShown)
                 {
                     if (clientTokenValidator.isValid(settings.getClientToken()))
                     {
+
                         notificationService.createNotification(
                             PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
                             Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
@@ -236,10 +239,9 @@ public class BaseStatusBarControl
                             Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
                             UINotificationType.INFO);
                     }
+                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
+                    hintWasShown = true;
                 }
-
-                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
-                hintWasShown = true;
 
                 break;
 
@@ -259,6 +261,7 @@ public class BaseStatusBarControl
             {
             case ONLINE:
                 hintWasShown = false;
+                notificationService.closeNotificationIfOpen();
                 info = info + ' ' + Messages.StatusOnline;
                 switch (state.getActionState())
                 {
@@ -280,6 +283,8 @@ public class BaseStatusBarControl
                 iconLabel.setImage(BaseActivator.getImage(Images.OFFLINE));
                 break;
             }
+
+            this.lastState = state;
         }
 
         if (!settings.isEnabled())
