@@ -396,4 +396,12 @@
        </participant>
     </extension>
 
+   <extension
+         point="org.eclipse.ui.ide.markerResolution">
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.AIMarkerResolutionGenerator"
+            markerType="com.e1c.edt.ai.marker">
+      </markerResolutionGenerator>
+   </extension>
+
 </plugin>

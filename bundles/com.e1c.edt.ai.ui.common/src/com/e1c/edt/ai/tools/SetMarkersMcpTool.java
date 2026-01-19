@@ -32,6 +32,7 @@ public class SetMarkersMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "SetMarkers"; //$NON-NLS-1$
+    public static final String ACTION_CALL_ATTRIBUTE = "action_call"; //$NON-NLS-1$
     public static final String ACTION_DETAILS_ATTRIBUTE = "action_details"; //$NON-NLS-1$
     public static final String QUICK_FIX_ID = "com.e1c.edt.ai.ui.commands.applyprompt.ai"; //$NON-NLS-1$
     public static final String QUICK_FIX_ATTRIBUTE = "org.eclipse.ui.workbench.texteditor.quickFixId"; //$NON-NLS-1$
@@ -161,9 +162,10 @@ public class SetMarkersMcpTool
                 }
 
                 var markerReq = request.markers.get(i);
+                markerReq.projectName = project.getName();
                 try
                 {
-                    createMarker(project, markerReq);
+                    createMarker(project, call, markerReq);
                     markersSet++;
                 }
                 catch (CoreException | IllegalArgumentException e)
@@ -183,7 +185,7 @@ public class SetMarkersMcpTool
     }
 
     @SuppressWarnings("nls")
-    private void createMarker(IProject project, MarkerRequest markerReq)
+    private void createMarker(IProject project, McpToolCall call, MarkerRequest markerReq)
         throws CoreException, IllegalArgumentException
     {
         // Validate required fields
@@ -236,10 +238,10 @@ public class SetMarkersMcpTool
         }
 
         var marker = file.createMarker(markerType.getTypeId());
-        setMarkerAttributes(marker, markerReq, markerType);
+        setMarkerAttributes(marker, call, markerReq, markerType);
     }
 
-    private void setMarkerAttributes(IMarker marker, MarkerRequest markerReq, MarkerType markerType)
+    private void setMarkerAttributes(IMarker marker, McpToolCall call, MarkerRequest markerReq, MarkerType markerType)
         throws CoreException
     {
         // Common attributes for all marker types
@@ -262,6 +264,7 @@ public class SetMarkersMcpTool
         // Action attributes - only for AI markers
         if (markerType == MarkerType.AI_MARKER && markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank())
         {
+            marker.setAttribute(ACTION_CALL_ATTRIBUTE, call);
             marker.setAttribute(ACTION_DETAILS_ATTRIBUTE, markerReq);
             marker.setAttribute(QUICK_FIX_ATTRIBUTE, QUICK_FIX_ID);
         }
@@ -427,6 +430,9 @@ public class SetMarkersMcpTool
     {
         @SerializedName("type")
         public String type;
+
+        @SerializedName("project_name")
+        public String projectName;
 
         @SerializedName("relative_file_path")
         public String relativeFilePath;

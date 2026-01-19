@@ -105,6 +105,12 @@ public class IdeApiHandler
             }
 
             var calls = callToolsOptional.get();
+            for (var call : calls)
+            {
+                call.sourceChatId = chatId;
+                call.sourceMessageId = messageId;
+            }
+
             mcpTools.callTools(calls, CancellationTokens.NONE).whenComplete((result, error) -> {
                 if (error != null)
                 {

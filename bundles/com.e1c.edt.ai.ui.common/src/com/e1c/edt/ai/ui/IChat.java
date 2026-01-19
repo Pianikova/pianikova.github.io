@@ -25,4 +25,6 @@ public interface IChat
     public void addFiles(List<IFileContent> contents);
 
     void addToolsResult(String chatId, String messageId, McpCallToolsResult result);
+
+    void continueChat(String chatId, String text);
 }

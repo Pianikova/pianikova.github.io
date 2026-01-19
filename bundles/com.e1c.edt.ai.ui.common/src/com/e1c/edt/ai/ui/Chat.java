@@ -188,8 +188,12 @@ public class Chat implements IChat, IChatDialog
             stateService.setState(Chat.class.getName(), ActionState.BUSY);
             try
             {
-                var messagesJson = json.serialize(result.messages);
-                var unknownCallsJson = json.serialize(result.unknownCalls);
+                var messagesJson = result.messages != null
+                    ? json.serialize(result.messages) : null;
+
+                var unknownCallsJson = result.unknownCalls != null
+                    ? json.serialize(result.unknownCalls) : null;
+
                 var script = new StringBuilder();
                 script.append("window.chatApi.add_tool_calls_result(");
                 script.append(javaScript.escape(chatId, EMPTY_STRING));
@@ -201,7 +205,7 @@ public class Chat implements IChat, IChatDialog
                 script.append("window.calls_messages");
                 script.append(ARGS_SEPARATOR);
 
-                script.append(javaScript.escape(unknownCallsJson, EMPTY_STRING));
+                script.append("window.unknown_messages");
 
                 script.append(");");
                 var scriptText = script.toString();
@@ -211,8 +215,48 @@ public class Chat implements IChat, IChatDialog
                     if (window != null)
                     {
                         window.setMember("calls_messages", messagesJson);
+                        window.setMember("unknown_messages", unknownCallsJson);
                     }
 
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
+                    var executeScriptResult = getEgine().executeScript(scriptText);
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
+                });
+            }
+            catch (Throwable error)
+            {
+                log.logError(error);
+            }
+            finally
+            {
+                stateService.setState(Chat.class.getName(), ActionState.INACTIVE);
+            }
+        });
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public void continueChat(String chatId, String text)
+    {
+        Optional<AIContext> ctx;
+        synchronized (contexts)
+        {
+            ctx = Optional.ofNullable(contexts.getIfPresent(chatId));
+        }
+
+        chatInJob(ctx, () -> {
+            stateService.setState(Chat.class.getName(), ActionState.BUSY);
+            try
+            {
+                var script = new StringBuilder();
+                script.append("window.chatApi.continue_chat(");
+                script.append(javaScript.escape(text, EMPTY_STRING));
+                script.append(ARGS_SEPARATOR);
+
+                script.append(javaScript.escape(chatId, NULL_VALUE));
+                script.append(");");
+                var scriptText = script.toString();
+                dispatcher.dispatchAsync(() -> {
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
                     var executeScriptResult = getEgine().executeScript(scriptText);
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
