@@ -154,10 +154,6 @@
                 id="com.e1c.edt.ai.ui.inlinedAnnotations.ai"
                 name="Аннотации">
         </command>
-        <command
-                id="com.e1c.edt.ai.ui.commands.applyprompt.ai"
-                name="Apply">
-        </command>
     </extension>
 
     <extension point="org.eclipse.ui.bindings">
@@ -228,10 +224,6 @@
         <handler
                 class="com.e1c.edt.ui.eclipse.handlers.FeedbackAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.feedback.ai">
-        </handler>
-        <handler
-              class="com.e1c.edt.ui.eclipse.handlers.MarkerPromptHandler"
-              commandId="com.e1c.edt.ai.ui.commands.applyprompt.ai">
         </handler>
 
     </extension>
