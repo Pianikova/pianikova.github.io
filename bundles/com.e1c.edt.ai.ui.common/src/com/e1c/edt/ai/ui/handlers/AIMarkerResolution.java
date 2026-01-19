@@ -50,7 +50,8 @@ public class AIMarkerResolution
         prompt.append(markerRequest.actionPrompt);
         prompt.append("\n\nDetails:\n");
         prompt.append(json.serialize(markerRequest));
-        prompt.append("\n\nDo ONLY what is asked."); //$NON-NLS-1$
+        prompt.append("\n\nDo ONLY what is asked.");
+        prompt.append("\nUpdate marker `" + markerRequest.location + "` after fix.");
         chat.continueChat(call.sourceChatId, prompt.toString());
     }
 
