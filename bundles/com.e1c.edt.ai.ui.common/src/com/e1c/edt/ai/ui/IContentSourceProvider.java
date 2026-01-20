@@ -9,5 +9,5 @@ import org.eclipse.core.resources.IFile;
 
 public interface IContentSourceProvider
 {
-    Optional<FileContent> getFileContent(IFile file);
+    Optional<FileDocument> getFileDocument(IFile file);
 }

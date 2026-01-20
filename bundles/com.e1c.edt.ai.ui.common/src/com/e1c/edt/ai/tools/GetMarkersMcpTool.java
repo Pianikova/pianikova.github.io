@@ -8,12 +8,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.OperationCanceledException;
+import org.eclipse.jface.text.BadLocationException;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -25,6 +27,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -47,40 +50,42 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"id\": 1001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
         + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
-        + "    \"line\": 5,\n"
+        + "    \"start_line\": 5,\n"
         + "    \"message\": \"Syntax error: missing semicolon\",\n"
         + "    \"type\": \"problem\",\n"
         + "    \"severity\": \"error\",\n"
-        + "    \"priority\": \"high\"\n"
+        + "    \"priority\": \"high\",\n"
+        + "    \"target_content\": \"a = 1 / 0;\"\n"
         + "  },\n"
         + "  {\n"
         + "    \"id\": 1002,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/MyModule/Module.bsl\",\n"
         + "    \"relative_path\": \"CommonModules/MyModule/Module.bsl\",\n"
-        + "    \"line\": 12,\n"
+        + "    \"start_line\": 12,\n"
         + "    \"message\": \"Unused variable: myVar\",\n"
         + "    \"type\": \"problem\",\n"
         + "    \"severity\": \"warning\",\n"
-        + "    \"priority\": \"normal\"\n"
+        + "    \"priority\": \"normal\",\n"
+        + "    \"target_content\": \"myVar = 0;\"\n"
         + "  },\n"
         + "  {\n"
         + "    \"id\": 2001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
         + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
-        + "    \"line\": 10,\n"
+        + "    \"start_line\": 10,\n"
         + "    \"message\": \"Important code section\",\n"
         + "    \"type\": \"bookmark\",\n"
-        + "    \"done\": false\n"
+        + "    \"done\": false,\n"
+        + "    \"target_content\": \"Important code section\"\n"
         + "  },\n"
         + "  {\n"
         + "    \"id\": 3001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/TextModule/Module.bsl\",\n"
-        + "    \"relative_path\": \"CommonModules/TextModule/Module.bsl\",\n"
-        + "    \"line\": 15,\n"
+        + "    \"relative_path\": \"CommonModules/TextModule/Module.bs极l\",\n"
+        + "    \"start_line\": 15,\n"
         + "    \"message\": \"Important text note\",\n"
         + "    \"type\": \"text\",\n"
-        + "    \"char_start\": 50,\n"
-        + "    \"char_end\": 100\n"
+        + "    \"target_content\": \"Important text note\"\n"
         + "  }\n"
         + "]";
     // @formatter:on
@@ -88,16 +93,20 @@ public class GetMarkersMcpTool implements IMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
+    private final IContentSourceProvider contentSourceProvider;
     private final IBuildWaiter buildWaiter;
 
     @Inject
-    public GetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBuildWaiter buildWaiter)
+    public GetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+        IContentSourceProvider contentSourceProvider, IBuildWaiter buildWaiter)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
+        Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(buildWaiter);
         this.json = json;
         this.messageFactory = messageFactory;
+        this.contentSourceProvider = contentSourceProvider;
         this.buildWaiter = buildWaiter;
         this.spec = createSpecification();
     }
@@ -203,15 +212,15 @@ public class GetMarkersMcpTool implements IMcpTool
                 var relativePath = resource.getProjectRelativePath().toPortableString();
 
                 MarkerInfo markerInfo = new MarkerInfo();
-                markerInfo.id = marker.getId(); // Added marker ID
+                markerInfo.id = marker.getId();
                 markerInfo.absolutePath = location != null ? location.toFile().getAbsolutePath() : "";
                 markerInfo.relativePath = relativePath;
-                markerInfo.line = marker.getAttribute(IMarker.LINE_NUMBER, -1);
+                markerInfo.startLine = marker.getAttribute(IMarker.LINE_NUMBER, -1);
                 markerInfo.message = marker.getAttribute(IMarker.MESSAGE, "");
                 markerInfo.type = markerType.getDisplayName();
 
                 // Set common and type-specific attributes
-                setMarkerAttributes(marker, markerInfo, markerType);
+                setMarkerAttributes(project, marker, markerInfo, markerType, cancellationToken);
                 response.add(markerInfo);
             }
 
@@ -233,21 +242,42 @@ public class GetMarkersMcpTool implements IMcpTool
         }
     }
 
-    private void setMarkerAttributes(IMarker marker, MarkerInfo markerInfo, MarkerType markerType) throws CoreException
+    private void setMarkerAttributes(IProject project, IMarker marker, MarkerInfo markerInfo, MarkerType markerType,
+        ICancellationToken cancellationToken) throws CoreException
     {
         // Common attributes for all marker types
         markerInfo.location = marker.getAttribute(IMarker.LOCATION, null);
 
-        // Character positions
-        var charStart = marker.getAttribute(IMarker.CHAR_START);
-        if (charStart instanceof Integer)
+        // Get char positions
+        Integer charStart = null;
+        Integer charEnd = null;
+        var charStartObj = marker.getAttribute(IMarker.CHAR_START);
+        if (charStartObj instanceof Integer)
         {
-            markerInfo.charStart = (Integer)charStart;
+            charStart = (Integer)charStartObj;
         }
-        var charEnd = marker.getAttribute(IMarker.CHAR_END);
-        if (charEnd instanceof Integer)
+
+        var charEndObj = marker.getAttribute(IMarker.CHAR_END);
+        if (charEndObj instanceof Integer)
         {
-            markerInfo.charEnd = (Integer)charEnd;
+            charEnd = (Integer)charEndObj;
+        }
+
+        // Read target content if positions are available
+        if (charStart != null && charEnd != null && charEnd > charStart)
+        {
+            try
+            {
+                IFile file = (IFile)marker.getResource();
+                if (file.exists())
+                {
+                    markerInfo.targetContent = readContentFromFile(file, charStart, charEnd - charStart);
+                }
+            }
+            catch (Exception e)
+            {
+                // Ignore errors and leave targetContent empty
+            }
         }
 
         // Type-specific attributes
@@ -302,6 +332,18 @@ public class GetMarkersMcpTool implements IMcpTool
         }
     }
 
+    private String readContentFromFile(IFile file, int charStart, int length) throws BadLocationException
+    {
+        var optionalDocument = contentSourceProvider.getFileDocument(file);
+        if (optionalDocument.isEmpty())
+        {
+            return null;
+        }
+
+        var document = optionalDocument.get();
+        return document.getDocument().get(charStart, length);
+    }
+
     @SuppressWarnings("nls")
     private String convertSeverityToString(int severity)
     {
@@ -353,7 +395,7 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- absolute_path: Absolute file system path (OS-dependent format)");
         description.append("\n- relative_path: Project-relative path");
         description.append(
-            "\n- line: Line number (-1 if unknown). An integer value indicating the line number for a marker. It is 1-relative.");
+            "\n- start_line: Line number (-1 if unknown). An integer value indicating the line number for a marker. It is 1-relative.");
         description.append("\n- message: Marker description");
         description.append("\n- type: Marker type (");
         boolean first = true;
@@ -372,10 +414,8 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- done: For bookmarks and tasks (true/false)");
         description.append(
             "\n- location: Human-readable location string. The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
-        description.append(
-            "\n- char_start: Character start offset. An integer value indicating where a marker starts. It is zero-relative and inclusive.");
-        description.append(
-            "\n- char_end: Character end offset. An integer value indicating where a marker ends. It is zero-relative and exclusive.");
+        description
+            .append("\n- target_content: The content of the marker (substring of the file at the marker's position)");
         description.append("\n- source_id: Source identifier for bookmarks");
         description.append("\n\nExample request:");
         description.append("\n").append(QuestionExample);
@@ -420,8 +460,8 @@ public class GetMarkersMcpTool implements IMcpTool
         @SerializedName("relative_path")
         public String relativePath;
 
-        @SerializedName("line")
-        public int line;
+        @SerializedName("start_line")
+        public int startLine;
 
         @SerializedName("message")
         public String message;
@@ -441,11 +481,8 @@ public class GetMarkersMcpTool implements IMcpTool
         @SerializedName("location")
         public String location;
 
-        @SerializedName("char_start")
-        public Integer charStart;
-
-        @SerializedName("char_end")
-        public Integer charEnd;
+        @SerializedName("target_content")
+        public String targetContent;
 
         @SerializedName("source_id")
         public String sourceId;

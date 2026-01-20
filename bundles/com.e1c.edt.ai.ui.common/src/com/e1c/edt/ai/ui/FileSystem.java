@@ -3,29 +3,15 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.Optional;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
-
-import com.e1c.edt.ai.ILog;
-import com.google.common.base.Preconditions;
-import com.google.inject.Inject;
+import org.eclipse.jface.text.BadLocationException;
 
 public class FileSystem implements IFileSystem
 {
-    private final ILog log;
-
-    @Inject
-    public FileSystem(ILog log)
-    {
-        Preconditions.checkNotNull(log);
-        this.log = log;
-    }
-
     @Override
     public IFile getProjectFile(IProject project, String relativePath)
     {
@@ -35,96 +21,13 @@ public class FileSystem implements IFileSystem
     }
 
     @Override
-    public Optional<String> getText(IFileContent contentReader, int firstLineNumber, int linesNumber)
+    public Iterable<String> getLines(IFileDocument fileDocument, int firstLineNumber, int linesNumber)
     {
-        var optionalInpiutStream = contentReader.getInputStream();
-        try (var is = optionalInpiutStream.get();
-            var isr = new InputStreamReader(is, contentReader.getCharset());
-            var reader = new BufferedReader(isr))
-        {
-            var targetEndLine = firstLineNumber + linesNumber - 1;
-            var currentLine = 0;
-            int c;
-            var resultContent = new StringBuilder();
-            while ((c = reader.read()) != -1)
-            {
-                // Check if current line is within target range
-                var inTarget = (currentLine >= firstLineNumber && currentLine <= targetEndLine);
-                if (c == '\r')
-                {
-                    // Handle carriage return (possible Windows line ending)
-                    reader.mark(1);
-                    var next = reader.read();
-                    if (next == '\n')
-                    {
-                        // CRLF sequence (Windows)
-                        if (inTarget)
-                        {
-                            resultContent.append((char)c);
-                            resultContent.append((char)next);
-                        }
-
-                        currentLine++;
-                        if (currentLine > targetEndLine)
-                            break;
-                    }
-                    else
-                    {
-                        // Single CR (Mac/old systems)
-                        if (next != -1)
-                            reader.reset(); // Put back non-LF character
-                        if (inTarget)
-                        {
-                            resultContent.append((char)c);
-                        }
-
-                        currentLine++;
-                        if (currentLine > targetEndLine)
-                        {
-                            break;
-                        }
-                    }
-                }
-                else if (c == '\n')
-                {
-                    // LF sequence (Unix/Linux)
-                    if (inTarget)
-                    {
-                        resultContent.append((char)c);
-                    }
-
-                    currentLine++;
-                    if (currentLine > targetEndLine)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    // Regular character
-                    if (inTarget)
-                    {
-                        resultContent.append((char)c);
-                    }
-                }
-            }
-
-            var text = resultContent.toString();
-            var isPrintable = isPrintable(text, 85);
-            if (!isPrintable)
-            {
-                return Optional.empty();
-            }
-
-            return Optional.of(text);
-        }
-        catch (IOException e)
-        {
-            return Optional.empty();
-        }
+        return () -> new LineIterator(fileDocument, firstLineNumber, linesNumber);
     }
 
-    private static boolean isPrintable(String text, double threshold)
+    @Override
+    public boolean isPrintable(String text, double threshold)
     {
         if (text == null || text.isBlank())
         {
@@ -169,5 +72,48 @@ public class FileSystem implements IFileSystem
         }
 
         return filePath;
+    }
+
+    private static class LineIterator
+        implements Iterator<String>
+    {
+        private final IFileDocument fileDocument;
+        private final int endLine;
+        private int currentLine;
+
+        public LineIterator(IFileDocument fileDocument, int firstLineNumber, int linesNumber)
+        {
+            this.fileDocument = fileDocument;
+            var doc = fileDocument.getDocument();
+            int totalLines = doc.getNumberOfLines();
+            this.currentLine = firstLineNumber;
+            this.endLine = Math.min(firstLineNumber + linesNumber, totalLines);
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            return currentLine < endLine;
+        }
+
+        @Override
+        public String next()
+        {
+            if (!hasNext())
+            {
+                throw new NoSuchElementException();
+            }
+            try
+            {
+                var doc = fileDocument.getDocument();
+                var line = doc.get(doc.getLineOffset(currentLine), doc.getLineLength(currentLine));
+                currentLine++;
+                return line;
+            }
+            catch (BadLocationException e)
+            {
+                throw new RuntimeException("Error reading line: " + currentLine, e); //$NON-NLS-1$
+            }
+        }
     }
 }

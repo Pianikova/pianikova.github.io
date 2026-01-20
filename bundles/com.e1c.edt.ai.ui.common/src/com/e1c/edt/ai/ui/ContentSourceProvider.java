@@ -3,9 +3,12 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextViewer;
@@ -27,30 +30,20 @@ public class ContentSourceProvider implements IContentSourceProvider
     }
 
     @Override
-    public Optional<FileContent> getFileContent(IFile file)
+    public Optional<FileDocument> getFileDocument(IFile file)
     {
         if (file == null)
         {
             return Optional.empty();
         }
 
-        var document = getContentFromOpenEditorDocument(file);
-        if (document != null || file.exists())
-        {
-            return Optional.of(new FileContent(document, file));
-        }
-
-        return Optional.empty();
-    }
-
-    private IDocument getContentFromOpenEditorDocument(IFile file)
-    {
+        IDocument document = null;
         for (var window : PlatformUI.getWorkbench().getWorkbenchWindows())
         {
             var page = window.getActivePage();
             if (page == null)
             {
-                return null;
+                continue;
             }
 
             for (var editorRef : page.getEditorReferences())
@@ -83,7 +76,8 @@ public class ContentSourceProvider implements IContentSourceProvider
                     var textOperationTarget = editor.getAdapter(ITextOperationTarget.class);
                     if (textOperationTarget instanceof TextViewer)
                     {
-                        return ((TextViewer)textOperationTarget).getDocument();
+                        document = ((TextViewer)textOperationTarget).getDocument();
+                        break;
                     }
                 }
                 catch (Exception error)
@@ -91,8 +85,33 @@ public class ContentSourceProvider implements IContentSourceProvider
                     log.logError(error);
                 }
             }
+
+            if (document != null)
+            {
+                break;
+            }
         }
 
-        return null;
+        if (document != null)
+        {
+            return Optional.of(new FileDocument(document, file, true));
+        }
+
+        if (file.exists())
+        {
+            try
+            {
+                var bytes = file.getContents().readAllBytes();
+                var content = new String(bytes, file.getCharset());
+                document = new Document(content);
+                return Optional.of(new FileDocument(document, file, false));
+            }
+            catch (IOException | CoreException e)
+            {
+                return Optional.empty();
+            }
+        }
+
+        return Optional.empty();
     }
 }

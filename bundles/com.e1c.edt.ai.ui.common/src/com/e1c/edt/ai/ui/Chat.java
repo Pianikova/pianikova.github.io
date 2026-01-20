@@ -3,7 +3,10 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -275,9 +278,10 @@ public class Chat implements IChat, IChatDialog
 
     @SuppressWarnings("nls")
     @Override
-    public void addFiles(List<IFileContent> contents)
+    public void addFiles(List<IFileDocument> documents)
     {
-        if (contents == null)
+        var errorReadingFile = new StringBuilder();
+        if (documents == null)
         {
             var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
             var dialog = new FileDialog(shell, SWT.OPEN | SWT.MULTI);
@@ -290,28 +294,31 @@ public class Chat implements IChat, IChatDialog
             }
 
             lastDialogPath = dialog.getFilterPath();
-            contents = new ArrayList<>();
+            documents = new ArrayList<>();
             for (var fileName : dialog.getFileNames())
             {
                 var filePath =
                     lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
-                contents.add(new PathContent(filePath));
+                try
+                {
+                    var bytes = Files.readAllBytes(filePath);
+                    var content = new String(bytes, StandardCharsets.UTF_8);
+                    var ctx = new AIContext(ProjectId.Default, fileName, null);
+                    chat("insert_code", content, null, ctx);
+                }
+                catch (IOException e)
+                {
+                    errorReadingFile.append("Error reading file ");
+                    errorReadingFile.append(fileName);
+                    errorReadingFile.append(System.lineSeparator());
+                }
             }
         }
 
-        var errorReadingFile = new StringBuilder();
-        for (var content : contents)
+        for (var document : documents)
         {
-            var optionalContent = fileSystem.getText(content, 0, Integer.MAX_VALUE);
-            if (optionalContent.isEmpty())
-            {
-                errorReadingFile.append(content.toString());
-                errorReadingFile.append(System.lineSeparator());
-                continue;
-            }
-
-            var ctx = new AIContext(content.getProjectId(), content.toString(), null);
-            chat("insert_code", optionalContent.get(), null, ctx);
+            var ctx = new AIContext(document.getProjectId(), document.getFile().getLocation().toPortableString(), null);
+            chat("insert_code", document.getDocument().get(), null, ctx);
         }
 
         if (errorReadingFile.length() > 0)

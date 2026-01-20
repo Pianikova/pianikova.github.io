@@ -2,10 +2,8 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -164,26 +162,18 @@ public class EditMcpTool
             }
 
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
-            var optionalFileContent = contentSourceProvider.getFileContent(projectFile);
-            if (optionalFileContent.isEmpty())
+            var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
+            if (optionalDocument.isEmpty())
             {
                 return messageFactory.createError(this, call,
                     "The file \"" + relativeFilePath + "\" does not exist. Use the `" + WriteMcpTool.TOOL_NAME
                         + "` tool to create a new file.");
             }
 
-            var fileContent = optionalFileContent.get();
+            var document = optionalDocument.get();
 
             // Read current file content
-            String currentContent;
-            try (var input = fileContent.getInputStream().orElseThrow())
-            {
-                currentContent = new String(input.readAllBytes(), fileContent.getCharset());
-            }
-            catch (IOException | NoSuchElementException e)
-            {
-                return messageFactory.createError(this, call, "Failed to read file content: " + e.getMessage());
-            }
+            var currentContent = document.getDocument().get();
 
             // Perform content replacement
             String updatedContent;
@@ -220,14 +210,7 @@ public class EditMcpTool
             }
 
             // Write updated content
-            try (var output = fileContent.getOutputStream().orElseThrow())
-            {
-                output.write(updatedContent.getBytes(fileContent.getCharset()));
-            }
-            catch (IOException | NoSuchElementException e)
-            {
-                return messageFactory.createError(this, call, "Failed to write file content: " + e.getMessage());
-            }
+            document.getDocument().set(updatedContent);
 
             var response = new StringBuilder();
             var projectRelativePath = projectFile.getProjectRelativePath();

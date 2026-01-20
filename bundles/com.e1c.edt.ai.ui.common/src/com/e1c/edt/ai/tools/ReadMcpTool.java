@@ -3,9 +3,6 @@
  */
 package com.e1c.edt.ai.tools;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -120,7 +117,7 @@ public class ReadMcpTool
 
         // Validate and set default values for line parameters
         int firstLineNumber =
-            request.firstLineNumber != null && request.firstLineNumber >= 0 ? request.firstLineNumber : 0;
+            request.firstLineNumber != null && request.firstLineNumber > 0 ? request.firstLineNumber : 1;
         int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : 2000;
 
         // Apply maximum lines limit
@@ -162,50 +159,26 @@ public class ReadMcpTool
             }
 
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
-            var optionalFileContent = contentSourceProvider.getFileContent(projectFile);
-            if (optionalFileContent.isEmpty())
+            var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
+            if (optionalDocument.isEmpty())
             {
                 return messageFactory.createError(this, call, "The file \"" + relativeFilePath + "\" does not exist.");
             }
 
-            var fileContent = optionalFileContent.get();
+            var document = optionalDocument.get();
             var resultContent = new StringBuilder();
-            var charset = fileContent.getCharset();
-
-            try (var inputStream = fileContent.getInputStream().orElse(null);
-                var reader = new BufferedReader(new InputStreamReader(inputStream, charset)))
+            var lineNumber = firstLineNumber;
+            for (var line : fileSystem.getLines(document, firstLineNumber - 1, curLinesNumber))
             {
-                int currentLine = 0;
-                int linesRead = 0;
-                String line;
-
-                // Skip lines until we reach the starting line
-                while (currentLine < firstLineNumber && (line = reader.readLine()) != null)
-                {
-                    currentLine++;
-                }
-
-                // Read the requested number of lines
-                while (linesRead < curLinesNumber && (line = reader.readLine()) != null)
-                {
-                    int lineNumber = firstLineNumber + linesRead + 1; // 1-based line number
-
-                    // Format line number as fixed-width prefix with colon (8 characters total)
-                    String linePrefix = String.format("%7d:", lineNumber);
-                    resultContent.append(linePrefix).append(line).append("\n");
-
-                    linesRead++;
-                }
-            }
-            catch (IOException | NullPointerException e)
-            {
-                return messageFactory.createError(this, call, "Failed to read file content. " + e.getMessage());
+                var prefix = String.format("%7d:", lineNumber);
+                resultContent.append(prefix).append(line);
+                lineNumber++;
             }
 
             // Prepare response
             var response = new Response();
             response.content = resultContent.toString();
-            response.charsetName = charset.name();
+            response.charsetName = document.getCharset().name();
             var content = json.serialize(response);
             return messageFactory.createMessage(this, call, content);
         });
@@ -255,7 +228,7 @@ public class ReadMcpTool
 
         var firstLineNumberProp = new McpToolCallProperty();
         firstLineNumberProp.type = "integer";
-        firstLineNumberProp.description = "Number of the first line to read (0-based index). Default is 0.";
+        firstLineNumberProp.description = "Number of the first line of the file to be read. It is 1-relative. The default is 1";
         properties.put("first_line_number", firstLineNumberProp);
 
         var linesNumberProp = new McpToolCallProperty();
@@ -286,7 +259,7 @@ public class ReadMcpTool
         public String relativeFilePath;
 
         /**
-         * Number of the first line of the file to be read. Numbering starts at 0. The default is 0.
+         * Number of the first line of the file to be read. It is 1-relative. The default is 1.
          */
         @SerializedName("first_line_number")
         public Integer firstLineNumber;

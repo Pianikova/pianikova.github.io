@@ -51,7 +51,8 @@ public class AIMarkerResolution
         prompt.append("\n\nDetails:\n```\\n");
         prompt.append(json.serialize(markerRequest));
         prompt.append("\n```\nDo ONLY what is asked.");
-        prompt.append("\nUpdate marker with id=`" + markerRequest.id + "` after fix.");
+        prompt.append(
+            "\nDelete markers with a specific ID if they have been fixed, for example `" + markerRequest.id + "`.");
         chat.continueChat(call.sourceChatId, prompt.toString());
     }
 
