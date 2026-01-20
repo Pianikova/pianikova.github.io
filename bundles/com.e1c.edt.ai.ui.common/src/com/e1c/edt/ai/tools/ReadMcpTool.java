@@ -1,13 +1,13 @@
 /**
-* Copyright (C) 2025, 1C
-*/
+ * Copyright (C) 2025, 1C
+ */
 package com.e1c.edt.ai.tools;
 
-import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -35,6 +35,7 @@ public class ReadMcpTool
 {
     public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
     private static final int MAX_LINES = 4000; // Maximum lines to read
+
     // @formatter:off
     @SuppressWarnings("nls")
     private static String QuestionExample =
@@ -44,13 +45,15 @@ public class ReadMcpTool
         + "  \"first_line_number\": 50,\n"
         + "  \"lines_number\": 100\n"
         + "}";
+
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "{\n"
-        + "  \"content\": \"Процедура Пример()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\",\n"
+        + "  \"content\": \"     51: Процедура Пример()\\n     52:     Сообщить(\\\"Привет, мир!\\\");\\n     53: КонецПроцедуры\",\n"
         + "  \"charset_name\": \"UTF-8\"\n"
         + "}";
     // @formatter:on
+
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
@@ -134,6 +137,7 @@ public class ReadMcpTool
             {
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
+
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var project = root.getProject(projectName);
 
@@ -163,30 +167,33 @@ public class ReadMcpTool
             {
                 return messageFactory.createError(this, call, "The file \"" + relativeFilePath + "\" does not exist.");
             }
+
             var fileContent = optionalFileContent.get();
             var resultContent = new StringBuilder();
             var charset = fileContent.getCharset();
 
             try (var inputStream = fileContent.getInputStream().orElse(null);
-                var scanner = new Scanner(new BufferedInputStream(inputStream), charset.name()))
+                var reader = new BufferedReader(new InputStreamReader(inputStream, charset)))
             {
-                // Use custom delimiter to preserve original line separators
-                scanner.useDelimiter("(?<=(\r\n|\n|\r))");
-
                 int currentLine = 0;
+                int linesRead = 0;
+                String line;
+
                 // Skip lines until we reach the starting line
-                while (currentLine < firstLineNumber && scanner.hasNext())
+                while (currentLine < firstLineNumber && (line = reader.readLine()) != null)
                 {
-                    scanner.next();
                     currentLine++;
                 }
 
-                // Read the requested number of lines preserving separators
-                int linesRead = 0;
-                while (linesRead < curLinesNumber && scanner.hasNext())
+                // Read the requested number of lines
+                while (linesRead < curLinesNumber && (line = reader.readLine()) != null)
                 {
-                    String lineWithSeparator = scanner.next();
-                    resultContent.append(lineWithSeparator);
+                    int lineNumber = firstLineNumber + linesRead + 1; // 1-based line number
+
+                    // Format line number as fixed-width prefix with colon (8 characters total)
+                    String linePrefix = String.format("%7d:", lineNumber);
+                    resultContent.append(linePrefix).append(line).append("\n");
+
                     linesRead++;
                 }
             }
@@ -207,51 +214,61 @@ public class ReadMcpTool
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
-     // @formatter:off
+        // @formatter:off
         var spec = new McpToolCallSpecification();
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
+
         var description = new StringBuilder();
         description.append("Reads the content of a project file. It is okay to read a file that does not exist; an error will be returned.");
         description.append("\n\nUsage:");
         description.append("\n- The file_path parameter must be a project relative path, not an absolute path.");
         description.append("\n- By default, it reads up to 2000 lines starting from the beginning of the file.");
         description.append("\n- You can optionally specify a line offset and limit (especially handy for long files), but it's recommended to read the whole file by not providing these parameters.");
-        description.append("\n- Any lines longer than " + MAX_LINES + " characters will be truncated.");
+        description.append("\n- Only the first " + MAX_LINES + " lines will be read (or fewer if the file is shorter).");
+        description.append("\n- Each line is prefixed with an 8-character line number header that is not part of the original content.");
+        description.append("\n  Format: [7-digit number] + colon (e.g., '    123:')");
         description.append("\n- The edit will FAIL if `origin_content` is not unique in the file. ");
         description.append("Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `origin_content`.");
         description.append("\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.");
         description.append("\n- You must use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
-        description.append("\nFor example:"); // Fixed typo: exapmple -> example
+        description.append("\nFor example:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
+
         spec.function.description = description.toString();
+
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
         var properties = new HashMap<String, McpToolCallProperty>();
+
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
         projectNameProp.description = "Project name in IDE. For example, \"MyProject\".";
         properties.put("project_name", projectNameProp);
+
         var relativeFilePathProp = new McpToolCallProperty();
         relativeFilePathProp.type = "string";
         relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
-        // Fixed property assignments
+
         var firstLineNumberProp = new McpToolCallProperty();
         firstLineNumberProp.type = "integer";
         firstLineNumberProp.description = "Number of the first line to read (0-based index). Default is 0.";
         properties.put("first_line_number", firstLineNumberProp);
+
         var linesNumberProp = new McpToolCallProperty();
         linesNumberProp.type = "integer";
         linesNumberProp.description = "Number of lines to read. Default is 2000, maximum is " + MAX_LINES + ".";
         properties.put("lines_number", linesNumberProp);
+
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name", "relative_file_path");
         spec.function.parameters = parameters;
+
         return spec;
-     // @formatter:on
+        // @formatter:on
     }
 
     private static class Request
@@ -284,7 +301,7 @@ public class ReadMcpTool
     private static class Response
     {
         /**
-         * File content.
+         * File content with line number prefixes (8-character header with colon).
          */
         @SerializedName("content")
         public String content;

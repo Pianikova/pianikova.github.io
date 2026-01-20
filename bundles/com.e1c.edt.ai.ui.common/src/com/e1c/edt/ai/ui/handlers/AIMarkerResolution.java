@@ -51,7 +51,7 @@ public class AIMarkerResolution
         prompt.append("\n\nDetails:\n```\\n");
         prompt.append(json.serialize(markerRequest));
         prompt.append("\n```\nDo ONLY what is asked.");
-        prompt.append("\nUpdate marker `" + markerRequest.location + "` after fix.");
+        prompt.append("\nUpdate marker with id=`" + markerRequest.id + "` after fix.");
         chat.continueChat(call.sourceChatId, prompt.toString());
     }
 

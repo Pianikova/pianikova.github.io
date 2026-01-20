@@ -48,7 +48,6 @@ public class SetMarkersMcpTool
         + "      \"relative_file_path\": \"Forms/MyForm/Module.bsl\",\n"
         + "      \"line\": 10,\n"
         + "      \"message\": \"Important code section\",\n"
-        + "      \"location\": \"Form Module\",\n"
         + "      \"char_start\": 100,\n"
         + "      \"char_end\": 150\n"
         + "    },\n"
@@ -238,28 +237,40 @@ public class SetMarkersMcpTool
         }
 
         var marker = file.createMarker(markerType.getTypeId());
+        markerReq.id = marker.getId();
         setMarkerAttributes(marker, call, markerReq, markerType);
     }
 
+    @SuppressWarnings("nls")
     private void setMarkerAttributes(IMarker marker, McpToolCall call, MarkerRequest markerReq, MarkerType markerType)
         throws CoreException
     {
         // Common attributes for all marker types
         marker.setAttribute(IMarker.MESSAGE, markerReq.message);
         marker.setAttribute(IMarker.TRANSIENT, true);
+        var location = new StringBuilder();
         if (markerReq.line != null && markerReq.line > 0)
         {
             marker.setAttribute(IMarker.LINE_NUMBER, markerReq.line);
+
+            location.append("Line ");
+            location.append((int)markerReq.line);
         }
 
-        // Location (generate if not provided)
-        var location = markerReq.location != null ? markerReq.location : "Line " + markerReq.line; //$NON-NLS-1$
-        marker.setAttribute(IMarker.LOCATION, location);
-        // Character positions
         if (markerReq.charStart != null && markerReq.charEnd != null)
         {
-            marker.setAttribute(IMarker.CHAR_START, markerReq.charStart);
-            marker.setAttribute(IMarker.CHAR_END, markerReq.charEnd);
+            marker.setAttribute(IMarker.CHAR_START, (int)markerReq.charStart);
+            marker.setAttribute(IMarker.CHAR_END, (int)markerReq.charEnd);
+
+            location.append(" ");
+            location.append(markerReq.charStart);
+            location.append("-");
+            location.append(markerReq.charEnd);
+        }
+
+        if (location.length() > 0)
+        {
+            marker.setAttribute(IMarker.LOCATION, location.toString());
         }
 
         // Action attributes - only for AI markers
@@ -275,16 +286,11 @@ public class SetMarkersMcpTool
         {
         case BOOKMARK:
             setBooleanAttribute(marker, IMarker.DONE, markerReq.done);
-            setBooleanAttribute(marker, IMarker.TRANSIENT, markerReq.transientFlag);
-            setBooleanAttribute(marker, IMarker.USER_EDITABLE, markerReq.userEditable);
-            if (markerReq.sourceId != null)
-            {
-                marker.setAttribute(IMarker.SOURCE_ID, markerReq.sourceId);
-            }
+            setBooleanAttribute(marker, IMarker.USER_EDITABLE, true);
             break;
         case TASK:
             setBooleanAttribute(marker, IMarker.DONE, markerReq.done);
-            setBooleanAttribute(marker, IMarker.USER_EDITABLE, markerReq.userEditable);
+            setBooleanAttribute(marker, IMarker.USER_EDITABLE, true);
             if (markerReq.priority != null)
             {
                 marker.setAttribute(IMarker.PRIORITY, convertPriority(markerReq.priority));
@@ -375,9 +381,8 @@ public class SetMarkersMcpTool
         description.append("\n- relative_file_path: File path relative to project root (required)");
         description.append("\n- message: Marker description (required)");
         description.append(
-            "\n- line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative.");
-        description.append(
-            "\n- location: Human-readable location string (optional). The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
+            "\n- line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative. Take the line number from the line prefix using the `"
+                + ReadMcpTool.TOOL_NAME + "` tool");
         description.append(
             "\n- char_start: Character start offset (required). An integer value indicating where a marker starts. It is zero-relative and inclusive.");
         description.append(
@@ -389,8 +394,8 @@ public class SetMarkersMcpTool
         description.append(
             "\n- action_description: Detailed description of the quick fix action (required for ai_marker)");
         description.append("\n\nType-specific properties:");
-        description.append("\n- bookmark: done, transient, user_editable, source_id");
-        description.append("\n- task: done, user_editable, priority");
+        description.append("\n- bookmark: done");
+        description.append("\n- task: done, priority");
         description.append("\n- problem: severity, priority");
         description.append("\n- ai_marker: severity, priority");
         description.append("\n\nQuick fix actions:");
@@ -429,6 +434,8 @@ public class SetMarkersMcpTool
 
     public class MarkerRequest
     {
+        public transient long id;
+
         @SerializedName("type")
         public String type;
 
@@ -456,20 +463,8 @@ public class SetMarkersMcpTool
         @SerializedName("char_end")
         public Integer charEnd;
 
-        @SerializedName("location")
-        public String location;
-
         @SerializedName("done")
         public Boolean done;
-
-        @SerializedName("transient")
-        public Boolean transientFlag;
-
-        @SerializedName("user_editable")
-        public Boolean userEditable;
-
-        @SerializedName("source_id")
-        public String sourceId;
 
         @SerializedName("action_prompt")
         public String actionPrompt;
