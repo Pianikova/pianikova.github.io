@@ -1,12 +1,14 @@
 /**
-* Copyright (C) 极2025, 1C
-*/
+ * Copyright (C) 极2025, 1C
+ */
 package com.e1c.edt.ai.tools;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
+import org.eclipse.core.resources.IMarker;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
@@ -26,10 +28,10 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
-public class ClearMarkersMcpTool
+public class DeleteMarkersMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ClearMarkers"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "DeleteMarkers"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -37,7 +39,8 @@ public class ClearMarkersMcpTool
         "{\n"
         + "  \"project_name\": \"MyProject\",\n"
         + "  // \"marker_type\": \"ai_marker\", // Optional: bookmark, task, text, ai_marker\n"
-        + "  // \"relative_file_path\": \"optional/file/path.bsl\"\n"
+        + "  // \"relative_file_path\": \"optional/file/path.bsl\",\n"
+        + "  // \"id\": 12345 // Optional: specific marker ID\n"
         + "}";
 
     @SuppressWarnings("nls")
@@ -50,7 +53,7 @@ public class ClearMarkersMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
 
     @Inject
-    public ClearMarkersMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory)
+    public DeleteMarkersMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
@@ -110,6 +113,12 @@ public class ClearMarkersMcpTool
 
             try
             {
+                // Handle deletion by marker ID
+                if (request.id != null)
+                {
+                    return deleteMarkerById(project, request.id, call);
+                }
+
                 var markerType = getMarkerType(request.markerType);
                 if (request.relativeFilePath != null && !request.relativeFilePath.isBlank())
                 {
@@ -120,7 +129,6 @@ public class ClearMarkersMcpTool
                         return messageFactory.createError(this, call,
                             "File not found in project: " + request.relativeFilePath);
                     }
-
                     deleteMarkers(resource, markerType);
                 }
                 else
@@ -128,7 +136,6 @@ public class ClearMarkersMcpTool
                     // Clear markers for entire project
                     deleteMarkers(project, markerType);
                 }
-
                 return messageFactory.createMessage(this, call, "Markers cleared successfully");
             }
             catch (CoreException | IllegalArgumentException error)
@@ -137,6 +144,39 @@ public class ClearMarkersMcpTool
                 return messageFactory.createError(this, call, "Failed to clear markers: " + error.getMessage());
             }
         });
+    }
+
+    @SuppressWarnings("nls")
+    private ToolCallMessage deleteMarkerById(IProject project, long markerId, McpToolCall call)
+    {
+        try
+        {
+            IMarker marker = findMarkerById(project, markerId);
+            if (marker == null)
+            {
+                return messageFactory.createError(this, call, "Marker not found with id: " + markerId);
+            }
+            marker.delete();
+            return messageFactory.createMessage(this, call, "Marker with id " + markerId + " deleted successfully");
+        }
+        catch (CoreException e)
+        {
+            log.logError(e);
+            return messageFactory.createError(this, call, "Failed to delete marker: " + e.getMessage());
+        }
+    }
+
+    private IMarker findMarkerById(IProject project, long markerId) throws CoreException
+    {
+        IMarker[] markers = project.findMarkers(null, true, IResource.DEPTH_INFINITE);
+        for (IMarker marker : markers)
+        {
+            if (marker.getId() == markerId)
+            {
+                return marker;
+            }
+        }
+        return null;
     }
 
     private void deleteMarkers(IResource resource, MarkerType markerType) throws CoreException
@@ -149,7 +189,7 @@ public class ClearMarkersMcpTool
         else
         {
             // Delete all non-problem markers (default behavior)
-            for (MarkerType type : MarkerType.values())
+            for (var type : MarkerType.values())
             {
                 if (type != MarkerType.PROBLEM)
                 {
@@ -165,13 +205,11 @@ public class ClearMarkersMcpTool
         {
             return null;
         }
-
         MarkerType type = MarkerType.fromDisplayName(markerType);
         if (type == null)
         {
             throw new IllegalArgumentException("Unknown marker type: " + markerType); //$NON-NLS-1$
         }
-
         return type;
     }
 
@@ -187,8 +225,8 @@ public class ClearMarkersMcpTool
         var description = new StringBuilder();
         description.append("Removes markers from project or specific file. ");
         description.append("By default, removes all non-problem markers. ");
-        description.append("You can specify marker type to remove only specific markers.\n\n");
-
+        description.append("You can specify marker type to remove only specific markers, ");
+        description.append("or delete a single marker by its ID.\n\n");
         description.append("Parameters:\n");
         description.append("- project_name: Name of target project (required)\n");
         description.append("- marker_type: Optional type of markers to remove:\n");
@@ -201,14 +239,15 @@ public class ClearMarkersMcpTool
                 description.append("  • ").append(type.getDisplayName()).append("\n");
             }
         }
-
-        description.append("- relative_file_path: Optional relative path to file\n\n");
-
+        description.append("- relative_file_path: Optional relative path to file\n");
+        description.append("- id: Optional ID of specific marker to delete\n\n");
         description.append("Example requests:\n");
         description.append("- Clear all non-problem markers in project:\n").append(QuestionExample);
         description.append("- Clear AI markers in specific file:\n");
         description.append(
             "  {\"project_name\":\"MyProject\",\"marker_type\":\"ai_marker\",\"relative_file_path\":\"src/Module.bsl\"}");
+        description.append("\n- Delete specific marker by ID:\n");
+        description.append("  {\"project_name\":\"MyProject\",\"id\":12345}");
         description.append("\n\nExample response:\n").append(AnswerExample);
 
         spec.function.description = description.toString();
@@ -216,7 +255,6 @@ public class ClearMarkersMcpTool
         // Parameters schema
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
-
         var properties = new HashMap<String, McpToolCallProperty>();
 
         // Property: project_name
@@ -236,6 +274,12 @@ public class ClearMarkersMcpTool
         filePathProp.type = "string";
         filePathProp.description = "Relative path to target file from project root";
         properties.put("relative_file_path", filePathProp);
+
+        // Property: id (optional)
+        var idProp = new McpToolCallProperty();
+        idProp.type = "number";
+        idProp.description = "ID of specific marker to delete";
+        properties.put("id", idProp);
 
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name");
@@ -257,5 +301,8 @@ public class ClearMarkersMcpTool
 
         @SerializedName("relative_file_path")
         public String relativeFilePath;
+
+        @SerializedName("id")
+        public Long id;
     }
 }

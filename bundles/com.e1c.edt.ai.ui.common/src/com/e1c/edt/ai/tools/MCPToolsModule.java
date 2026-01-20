@@ -29,7 +29,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(EditMcpTool.class);
         toolBinder.addBinding().to(GetMarkersMcpTool.class);
         toolBinder.addBinding().to(SetMarkersMcpTool.class);
-        toolBinder.addBinding().to(ClearMarkersMcpTool.class);
+        toolBinder.addBinding().to(DeleteMarkersMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
         bind(IBuildWaiter.class).to(BuildWaiter.class).in(Singleton.class);

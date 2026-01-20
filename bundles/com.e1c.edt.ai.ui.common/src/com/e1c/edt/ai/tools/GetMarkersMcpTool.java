@@ -1,6 +1,6 @@
 /**
-* Copyright (C) 2025, 1C
-*/
+ * Copyright (C) 2025, 1C
+ */
 package com.e1c.edt.ai.tools;
 
 import java.util.ArrayList;
@@ -44,6 +44,7 @@ public class GetMarkersMcpTool implements IMcpTool
     private static String AnswerExample =
         "[\n"
         + "  {\n"
+        + "    \"id\": 1001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
         + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
         + "    \"line\": 5,\n"
@@ -53,6 +54,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"priority\": \"high\"\n"
         + "  },\n"
         + "  {\n"
+        + "    \"id\": 1002,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/MyModule/Module.bsl\",\n"
         + "    \"relative_path\": \"CommonModules/MyModule/Module.bsl\",\n"
         + "    \"line\": 12,\n"
@@ -62,6 +64,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"priority\": \"normal\"\n"
         + "  },\n"
         + "  {\n"
+        + "    \"id\": 2001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
         + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
         + "    \"line\": 10,\n"
@@ -70,6 +73,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"done\": false\n"
         + "  },\n"
         + "  {\n"
+        + "    \"id\": 3001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/TextModule/Module.bsl\",\n"
         + "    \"relative_path\": \"CommonModules/TextModule/Module.bsl\",\n"
         + "    \"line\": 15,\n"
@@ -199,6 +203,7 @@ public class GetMarkersMcpTool implements IMcpTool
                 var relativePath = resource.getProjectRelativePath().toPortableString();
 
                 MarkerInfo markerInfo = new MarkerInfo();
+                markerInfo.id = marker.getId(); // Added marker ID
                 markerInfo.absolutePath = location != null ? location.toFile().getAbsolutePath() : "";
                 markerInfo.relativePath = relativePath;
                 markerInfo.line = marker.getAttribute(IMarker.LINE_NUMBER, -1);
@@ -207,7 +212,6 @@ public class GetMarkersMcpTool implements IMcpTool
 
                 // Set common and type-specific attributes
                 setMarkerAttributes(marker, markerInfo, markerType);
-
                 response.add(markerInfo);
             }
 
@@ -240,7 +244,6 @@ public class GetMarkersMcpTool implements IMcpTool
         {
             markerInfo.charStart = (Integer)charStart;
         }
-
         var charEnd = marker.getAttribute(IMarker.CHAR_END);
         if (charEnd instanceof Integer)
         {
@@ -256,11 +259,10 @@ public class GetMarkersMcpTool implements IMcpTool
             {
                 markerInfo.done = (Boolean)doneBookmark;
                 }
-
                 var sourceId = marker.getAttribute(IMarker.SOURCE_ID);
-            if (sourceId instanceof String)
-            {
-                markerInfo.sourceId = (String)sourceId;
+                if (sourceId instanceof String)
+                {
+                    markerInfo.sourceId = (String)sourceId;
                 }
                 break;
 
@@ -270,7 +272,6 @@ public class GetMarkersMcpTool implements IMcpTool
                 {
                     markerInfo.done = (Boolean)doneTask;
                 }
-
                 var priorityObj = marker.getAttribute(IMarker.PRIORITY);
                 if (priorityObj instanceof Integer)
                 {
@@ -287,7 +288,6 @@ public class GetMarkersMcpTool implements IMcpTool
                     int severity = (Integer)severityObj;
                     markerInfo.severity = convertSeverityToString(severity);
                 }
-
                 var priorityProblem = marker.getAttribute(IMarker.PRIORITY);
                 if (priorityProblem instanceof Integer)
                 {
@@ -305,20 +305,28 @@ public class GetMarkersMcpTool implements IMcpTool
     @SuppressWarnings("nls")
     private String convertSeverityToString(int severity)
     {
-        switch (severity) {
-            case IMarker.SEVERITY_ERROR: return "error";
-            case IMarker.SEVERITY_WARNING: return "warning";
-            default: return "info";
+        switch (severity)
+        {
+        case IMarker.SEVERITY_ERROR:
+            return "error";
+        case IMarker.SEVERITY_WARNING:
+            return "warning";
+        default:
+            return "info";
         }
     }
 
     @SuppressWarnings("nls")
     private String convertPriorityToString(int priority)
     {
-        switch (priority) {
-            case IMarker.PRIORITY_HIGH: return "high";
-            case IMarker.PRIORITY_LOW: return "low";
-            default: return "normal";
+        switch (priority)
+        {
+        case IMarker.PRIORITY_HIGH:
+            return "high";
+        case IMarker.PRIORITY_LOW:
+            return "low";
+        default:
+            return "normal";
         }
     }
 
@@ -341,6 +349,7 @@ public class GetMarkersMcpTool implements IMcpTool
         }
 
         description.append("\n\nResponse contains:");
+        description.append("\n- id: Unique marker identifier (long number)");
         description.append("\n- absolute_path: Absolute file system path (OS-dependent format)");
         description.append("\n- relative_path: Project-relative path");
         description.append(
@@ -354,7 +363,6 @@ public class GetMarkersMcpTool implements IMcpTool
             {
                 description.append(", ");
             }
-
             description.append(type.getDisplayName());
             first = false;
         }
@@ -362,9 +370,12 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- severity: For problems and AI markers (error, warning, info)");
         description.append("\n- priority: For problems, tasks and AI markers (high, normal, low)");
         description.append("\n- done: For bookmarks and tasks (true/false)");
-        description.append("\n- location: Human-readable location string. The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
-        description.append("\n- char_start: Character start offset. An integer value indicating where a marker starts. It is zero-relative and inclusive.");
-        description.append("\n- char_end: Character end offset. An integer value indicating where a marker ends. It is zero-relative and exclusive.");
+        description.append(
+            "\n- location: Human-readable location string. The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
+        description.append(
+            "\n- char_start: Character start offset. An integer value indicating where a marker starts. It is zero-relative and inclusive.");
+        description.append(
+            "\n- char_end: Character end offset. An integer value indicating where a marker ends. It is zero-relative and exclusive.");
         description.append("\n- source_id: Source identifier for bookmarks");
         description.append("\n\nExample request:");
         description.append("\n").append(QuestionExample);
@@ -376,8 +387,8 @@ public class GetMarkersMcpTool implements IMcpTool
         // Define function parameters
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
-
         var properties = new HashMap<String, McpToolCallProperty>();
+
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
         projectNameProp.description = "Name of the IDE project to retrieve markers from";
@@ -400,6 +411,9 @@ public class GetMarkersMcpTool implements IMcpTool
     // Marker information DTO for JSON serialization
     private static class MarkerInfo
     {
+        @SerializedName("id")
+        public long id;
+
         @SerializedName("absolute_path")
         public String absolutePath;
 

@@ -246,7 +246,8 @@ public class SetMarkersMcpTool
     {
         // Common attributes for all marker types
         marker.setAttribute(IMarker.MESSAGE, markerReq.message);
-        if (markerReq.line > 0)
+        marker.setAttribute(IMarker.TRANSIENT, true);
+        if (markerReq.line != null && markerReq.line > 0)
         {
             marker.setAttribute(IMarker.LINE_NUMBER, markerReq.line);
         }
@@ -378,9 +379,9 @@ public class SetMarkersMcpTool
         description.append(
             "\n- location: Human-readable location string (optional). The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
         description.append(
-            "\n- char_start: Character start offset (optional). An integer value indicating where a marker starts. It is zero-relative and inclusive.");
+            "\n- char_start: Character start offset (required). An integer value indicating where a marker starts. It is zero-relative and inclusive.");
         description.append(
-            "\n- char_end: Character end offset (optional). An integer value indicating where a marker ends. It is zero-relative and exclusive.");
+            "\n- char_end: Character end offset (required). An integer value indicating where a marker ends. It is zero-relative and exclusive.");
         description.append(
             "\n- action_prompt: AI prompt to execute when marker is activated (required for ai_marker)");
         description.append(
@@ -441,7 +442,7 @@ public class SetMarkersMcpTool
         public String message;
 
         @SerializedName("line")
-        public int line;
+        public Integer line;
 
         @SerializedName("severity")
         public String severity;

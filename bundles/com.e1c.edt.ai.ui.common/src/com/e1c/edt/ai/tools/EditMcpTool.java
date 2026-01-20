@@ -255,7 +255,7 @@ public class EditMcpTool
         description.append("\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.");
         description.append("\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.");
         description.append("\n- The edit will FAIL if `origin_content` is not unique in the file. ");
-        description.append("\n- You must use `" + ClearMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
+        description.append("\n- You must use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
         description.append("Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `origin_content`.");
         description.append("\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.");
 

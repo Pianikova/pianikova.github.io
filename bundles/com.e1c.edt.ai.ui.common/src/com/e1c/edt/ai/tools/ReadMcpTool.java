@@ -3,11 +3,11 @@
 */
 package com.e1c.edt.ai.tools;
 
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -35,7 +35,6 @@ public class ReadMcpTool
 {
     public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
     private static final int MAX_LINES = 4000; // Maximum lines to read
-
     // @formatter:off
     @SuppressWarnings("nls")
     private static String QuestionExample =
@@ -45,7 +44,6 @@ public class ReadMcpTool
         + "  \"first_line_number\": 50,\n"
         + "  \"lines_number\": 100\n"
         + "}";
-
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "{\n"
@@ -53,7 +51,6 @@ public class ReadMcpTool
         + "  \"charset_name\": \"UTF-8\"\n"
         + "}";
     // @formatter:on
-
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
@@ -71,13 +68,11 @@ public class ReadMcpTool
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
-
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
-
         spec = createSpecification();
     }
 
@@ -104,9 +99,7 @@ public class ReadMcpTool
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
-
         var request = optionalRequest.get();
-
         var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
         {
@@ -114,7 +107,6 @@ public class ReadMcpTool
                 .completedFuture(messageFactory.createError(this, call,
                     "`project_name` is required."));
         }
-
         var relativeFilePath = request.relativeFilePath;
         if (relativeFilePath == null || relativeFilePath.isBlank())
         {
@@ -126,7 +118,6 @@ public class ReadMcpTool
         // Validate and set default values for line parameters
         int firstLineNumber =
             request.firstLineNumber != null && request.firstLineNumber >= 0 ? request.firstLineNumber : 0;
-
         int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : 2000;
 
         // Apply maximum lines limit
@@ -134,7 +125,6 @@ public class ReadMcpTool
         {
             linesNumber = MAX_LINES;
         }
-
         var curLinesNumber = linesNumber;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
@@ -144,7 +134,6 @@ public class ReadMcpTool
             {
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
-
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var project = root.getProject(projectName);
 
@@ -153,7 +142,6 @@ public class ReadMcpTool
             {
                 return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
             }
-
             if (!project.isOpen())
             {
                 try
@@ -175,36 +163,31 @@ public class ReadMcpTool
             {
                 return messageFactory.createError(this, call, "The file \"" + relativeFilePath + "\" does not exist.");
             }
-
             var fileContent = optionalFileContent.get();
             var resultContent = new StringBuilder();
             var charset = fileContent.getCharset();
 
             try (var inputStream = fileContent.getInputStream().orElse(null);
-                var reader = new BufferedReader(new InputStreamReader(inputStream, charset)))
+                var scanner = new Scanner(new BufferedInputStream(inputStream), charset.name()))
             {
-                String line;
-                int currentLine = 0;
-                int linesToRead = 0;
-                int endLine = firstLineNumber + curLinesNumber;
+                // Use custom delimiter to preserve original line separators
+                scanner.useDelimiter("(?<=(\r\n|\n|\r))");
 
+                int currentLine = 0;
                 // Skip lines until we reach the starting line
-                while (currentLine < firstLineNumber && reader.readLine() != null)
+                while (currentLine < firstLineNumber && scanner.hasNext())
                 {
+                    scanner.next();
                     currentLine++;
                 }
 
-                // Read the requested number of lines
-                while (currentLine < endLine && (line = reader.readLine()) != null)
+                // Read the requested number of lines preserving separators
+                int linesRead = 0;
+                while (linesRead < curLinesNumber && scanner.hasNext())
                 {
-                    if (linesToRead > 0)
-                    {
-                        resultContent.append('\n'); // Add newline between lines
-                    }
-
-                    resultContent.append(line);
-                    currentLine++;
-                    linesToRead++;
+                    String lineWithSeparator = scanner.next();
+                    resultContent.append(lineWithSeparator);
+                    linesRead++;
                 }
             }
             catch (IOException | NullPointerException e)
@@ -216,7 +199,6 @@ public class ReadMcpTool
             var response = new Response();
             response.content = resultContent.toString();
             response.charsetName = charset.name();
-
             var content = json.serialize(response);
             return messageFactory.createMessage(this, call, content);
         });
@@ -230,7 +212,6 @@ public class ReadMcpTool
         spec.type = "function";
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
-
         var description = new StringBuilder();
         description.append("Reads the content of a project file. It is okay to read a file that does not exist; an error will be returned.");
         description.append("\n\nUsage:");
@@ -241,42 +222,33 @@ public class ReadMcpTool
         description.append("\n- The edit will FAIL if `origin_content` is not unique in the file. ");
         description.append("Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `origin_content`.");
         description.append("\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.");
-        description.append("\n- You must use `" + ClearMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
-
+        description.append("\n- You must use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
         description.append("\nFor example:"); // Fixed typo: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
-
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
-
         var properties = new HashMap<String, McpToolCallProperty>();
-
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
         projectNameProp.description = "Project name in IDE. For example, \"MyProject\".";
         properties.put("project_name", projectNameProp);
-
         var relativeFilePathProp = new McpToolCallProperty();
         relativeFilePathProp.type = "string";
         relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
-
         // Fixed property assignments
         var firstLineNumberProp = new McpToolCallProperty();
         firstLineNumberProp.type = "integer";
         firstLineNumberProp.description = "Number of the first line to read (0-based index). Default is 0.";
         properties.put("first_line_number", firstLineNumberProp);
-
         var linesNumberProp = new McpToolCallProperty();
         linesNumberProp.type = "integer";
         linesNumberProp.description = "Number of lines to read. Default is 2000, maximum is " + MAX_LINES + ".";
         properties.put("lines_number", linesNumberProp);
-
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name", "relative_file_path");
-
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
