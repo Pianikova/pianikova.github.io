@@ -235,13 +235,13 @@ public class GetMarkersMcpTool implements IMcpTool
         markerInfo.location = marker.getAttribute(IMarker.LOCATION, null);
 
         // Character positions
-        Object charStart = marker.getAttribute(IMarker.CHAR_START);
+        var charStart = marker.getAttribute(IMarker.CHAR_START);
         if (charStart instanceof Integer)
         {
             markerInfo.charStart = (Integer)charStart;
         }
 
-        Object charEnd = marker.getAttribute(IMarker.CHAR_END);
+        var charEnd = marker.getAttribute(IMarker.CHAR_END);
         if (charEnd instanceof Integer)
         {
             markerInfo.charEnd = (Integer)charEnd;
@@ -251,13 +251,13 @@ public class GetMarkersMcpTool implements IMcpTool
         switch (markerType)
         {
         case BOOKMARK:
-            Object doneBookmark = marker.getAttribute(IMarker.DONE);
+            var doneBookmark = marker.getAttribute(IMarker.DONE);
             if (doneBookmark instanceof Boolean)
             {
                 markerInfo.done = (Boolean)doneBookmark;
                 }
 
-            Object sourceId = marker.getAttribute(IMarker.SOURCE_ID);
+                var sourceId = marker.getAttribute(IMarker.SOURCE_ID);
             if (sourceId instanceof String)
             {
                 markerInfo.sourceId = (String)sourceId;
@@ -265,13 +265,13 @@ public class GetMarkersMcpTool implements IMcpTool
                 break;
 
             case TASK:
-                Object doneTask = marker.getAttribute(IMarker.DONE);
+                var doneTask = marker.getAttribute(IMarker.DONE);
                 if (doneTask instanceof Boolean)
                 {
                     markerInfo.done = (Boolean)doneTask;
                 }
 
-                Object priorityObj = marker.getAttribute(IMarker.PRIORITY);
+                var priorityObj = marker.getAttribute(IMarker.PRIORITY);
                 if (priorityObj instanceof Integer)
                 {
                     int priority = (Integer)priorityObj;
@@ -281,14 +281,14 @@ public class GetMarkersMcpTool implements IMcpTool
 
             case PROBLEM:
             case AI_MARKER:
-                Object severityObj = marker.getAttribute(IMarker.SEVERITY);
+                var severityObj = marker.getAttribute(IMarker.SEVERITY);
                 if (severityObj instanceof Integer)
                 {
                     int severity = (Integer)severityObj;
                     markerInfo.severity = convertSeverityToString(severity);
                 }
 
-                Object priorityProblem = marker.getAttribute(IMarker.PRIORITY);
+                var priorityProblem = marker.getAttribute(IMarker.PRIORITY);
                 if (priorityProblem instanceof Integer)
                 {
                     int priority = (Integer)priorityProblem;

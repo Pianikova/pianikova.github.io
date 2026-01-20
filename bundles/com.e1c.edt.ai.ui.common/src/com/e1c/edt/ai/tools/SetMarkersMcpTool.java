@@ -252,7 +252,7 @@ public class SetMarkersMcpTool
         }
 
         // Location (generate if not provided)
-        String location = markerReq.location != null ? markerReq.location : "Line " + markerReq.line; //$NON-NLS-1$
+        var location = markerReq.location != null ? markerReq.location : "Line " + markerReq.line; //$NON-NLS-1$
         marker.setAttribute(IMarker.LOCATION, location);
         // Character positions
         if (markerReq.charStart != null && markerReq.charEnd != null)

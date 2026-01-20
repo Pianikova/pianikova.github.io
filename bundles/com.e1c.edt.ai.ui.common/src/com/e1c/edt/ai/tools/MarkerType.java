@@ -118,7 +118,8 @@ public enum MarkerType
                 return type;
             }
         }
-        return null;
+
+        return MarkerType.PROBLEM;
     }
 
     /**
