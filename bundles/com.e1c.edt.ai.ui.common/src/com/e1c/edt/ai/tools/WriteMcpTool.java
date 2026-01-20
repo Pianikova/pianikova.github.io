@@ -2,6 +2,7 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -32,10 +33,11 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-public class WriteFileMcpTool
+
+public class WriteMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_write_file"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "Write"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -43,7 +45,7 @@ public class WriteFileMcpTool
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
         + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
-        + "  \"contents\": \"Процедура Тест()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\"\n"
+        + "  \"content\": \"Процедура Тест()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\"\n"
         + "}";
     @SuppressWarnings("nls")
     private static String AnswerExample =
@@ -57,7 +59,7 @@ public class WriteFileMcpTool
     private final IFileSystem fileSystem;
 
     @Inject
-    public WriteFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public WriteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(json);
@@ -92,9 +94,8 @@ public class WriteFileMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
+                "Cannot deserialize arguments. Use this example: " + QuestionExample));
         }
 
         var request = optionalRequest.get();
@@ -103,30 +104,27 @@ public class WriteFileMcpTool
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "'project_name' is required."));
+                .completedFuture(messageFactory.createError(this, call, "`project_name` is required."));
         }
 
         var relativeFilePath = request.relativeFilePath;
         if (relativeFilePath == null || relativeFilePath.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "'relative_file_path' is required."));
+                .completedFuture(messageFactory.createError(this, call, "`relative_file_path` is required."));
         }
 
-        var contents = request.contents;
-        if (contents == null)
+        var content = request.content;
+        if (content == null)
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "'contents' is required."));
+            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "`content` is required."));
         }
 
-        var charsetName =
-            request.charsetName != null && !request.charsetName.isBlank() ? request.charsetName : "UTF-8";
+        var charsetName = request.charsetName != null && !request.charsetName.isBlank() ? request.charsetName : "UTF-8";
         byte[] data;
         try
         {
-            data = contents.getBytes(charsetName);
+            data = content.getBytes(charsetName);
         }
         catch (UnsupportedEncodingException error)
         {
@@ -167,9 +165,8 @@ public class WriteFileMcpTool
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
             if (projectFile.exists())
             {
-                return messageFactory.createError(this, call,
-                    "The file \"" + relativeFilePath + "\" already exists. Use the '" + EditFileMcpTool.TOOL_NAME
-                        + "' tool to modify this file.");
+                return messageFactory.createError(this, call, "The file \"" + relativeFilePath
+                    + "\" already exists. Use the `" + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
             }
 
             try
@@ -208,14 +205,14 @@ public class WriteFileMcpTool
                 case "mdo":
                 case "form":
                     response.append(
-                        "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use '"
-                            + EditFileMcpTool.TOOL_NAME + "' tool.");
+                        "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use `"
+                            + EditMcpTool.TOOL_NAME + "` tool.");
                     break;
                 }
             }
 
-            response.append("ACTION REQUIRED: verify project errors and warnings. Use '"
-                + GetProjectErrorsMcpTool.TOOL_NAME + "' tool.");
+            response.append(
+                "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
             return messageFactory.createMessage(this, call, response.toString());
         });
     }
@@ -258,10 +255,15 @@ public class WriteFileMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Writes the contents of a project file. Creates a new file.");
-        description.append("\nIMPORTANT: analyze the project structure: directories, other files before writing a file.");
-        description.append("\nNOTE: some files require additional files to be processed correctly. For example, .bsl files require an .mdo file in the corresponding directory.");
-        description.append("\nNOTE: To edit or update an existing file, use the '" + EditFileMcpTool.TOOL_NAME + "' tool.");
+        description.append("Writes a project file.");
+        description.append("\n\nUsage:");
+        description.append("\n- This tool will FAIL if the file is located at the specified path.");
+        description.append("\n- Analyze the project structure: directories, other files before writing a file.");
+        description.append("\n- Some files require additional files to be processed correctly. For example, .bsl files require an .mdo file in the corresponding directory.");
+        description.append("\n- To edit or update an existing file, use the `" + EditMcpTool.TOOL_NAME + "` tool.");
+        description.append("\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.");
+        description.append("\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.");
+        description.append("\n- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.");
         description.append("\nFor example:"); // Исправлено: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
@@ -282,10 +284,10 @@ public class WriteFileMcpTool
         relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
 
-        var contentsProp = new McpToolCallProperty();
-        contentsProp.type = "string";
-        contentsProp.description = "Contents to write to file.";
-        properties.put("contents", contentsProp);
+        var contentProp = new McpToolCallProperty();
+        contentProp.type = "string";
+        contentProp.description = "Content to write to file.";
+        properties.put("content", contentProp);
 
         var charsetNameProp = new McpToolCallProperty();
         charsetNameProp.type = "string";
@@ -293,7 +295,7 @@ public class WriteFileMcpTool
         properties.put("charset_name", charsetNameProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path", "contents");
+        parameters.required = Arrays.asList("project_name", "relative_file_path", "content");
 
         spec.function.parameters = parameters;
         return spec;
@@ -315,10 +317,10 @@ public class WriteFileMcpTool
         public String relativeFilePath;
 
         /**
-         * Contents to write to file.
+         * Content to write to file.
          */
-        @SerializedName("contents")
-        public String contents;
+        @SerializedName("content")
+        public String content;
 
         /**
          * File encoding, for example, "UTF-8", "windows-1251", "KOI8-R", "UTF-16", "UTF-32", etc. By default, UTF-8.

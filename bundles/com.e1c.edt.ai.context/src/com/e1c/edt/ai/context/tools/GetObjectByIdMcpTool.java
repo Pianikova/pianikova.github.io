@@ -35,7 +35,7 @@ import com.google.inject.Inject;
 public class GetObjectByIdMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "1с_ide_get_object_by_id"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "1C_GetObjectById"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")

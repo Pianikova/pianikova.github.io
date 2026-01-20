@@ -24,7 +24,7 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
-import com.e1c.edt.ai.ui.IFileContent;
+import com.e1c.edt.ai.ui.IFileDocument;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.inject.Inject;
 
@@ -93,9 +93,9 @@ public class BaseAddFilesToChatHandler
         return null;
     }
 
-    private List<IFileContent> getContents(List<Object> targets)
+    private List<IFileDocument> getContents(List<Object> targets)
     {
-        var contents = new Stack<IFileContent>();
+        var contents = new Stack<IFileDocument>();
         if (targets == null || targets.isEmpty())
         {
             return contents;
@@ -111,7 +111,7 @@ public class BaseAddFilesToChatHandler
                 var file = files.getCodeFile((EObject)element);
                 if (file.isPresent())
                 {
-                    var optionalContent = contentSourceProvider.getFileContent(file.get());
+                    var optionalContent = contentSourceProvider.getFileDocument(file.get());
                     if (optionalContent.isPresent())
                     {
                         contents.add(optionalContent.get());
@@ -129,7 +129,7 @@ public class BaseAddFilesToChatHandler
                     continue;
                 }
 
-                var optionalContent = contentSourceProvider.getFileContent(file);
+                var optionalContent = contentSourceProvider.getFileDocument(file);
                 if (optionalContent.isPresent())
                 {
                     contents.add(optionalContent.get());

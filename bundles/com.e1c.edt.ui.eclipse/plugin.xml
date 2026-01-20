@@ -7,7 +7,7 @@
         <marker
             type="com.e1c.edt.ai.marker"
             name="AI Marker"
-            persistent="true">
+            persistent="false">
         </marker>
     </extension>
     
@@ -365,5 +365,13 @@
                refid="org.eclipse.e4.ui.css.theme.e4_dark"></themeid>
       </stylesheet>
    </extension>
+
+    <extension
+            point="org.eclipse.ui.ide.markerResolution">
+        <markerResolutionGenerator
+                class="com.e1c.edt.ai.ui.handlers.AIMarkerResolutionGenerator"
+                markerType="com.e1c.edt.ai.marker">
+        </markerResolutionGenerator>
+    </extension>
 
 </plugin>

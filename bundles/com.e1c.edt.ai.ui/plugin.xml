@@ -7,7 +7,7 @@
         <marker
             type="com.e1c.edt.ai.marker"
             name="AI Marker"
-            persistent="true">
+            persistent="false">
         </marker>
     </extension>
     
@@ -21,9 +21,9 @@
     
     <extension point="org.eclipse.ui.editors.markerAnnotationSpecification">
         <specification
-            annotationType="com.e1c.edt.ai.marker"
-            label="AI Suggestion"
-            colorPreferenceValue="255,215,0"> <!-- Gold color -->
+              annotationType="com.e1c.edt.ai.marker"
+              colorPreferenceValue="255,215,0"
+              label="AI Suggestion"> <!-- Gold color -->
             <visibility
                 verticalRuler="true"
                 overviewRuler="true"
@@ -387,5 +387,13 @@
              class="com.e1c.edt.ai.ui.BuildTrackingParticipant">
        </participant>
     </extension>
+
+   <extension
+         point="org.eclipse.ui.ide.markerResolution">
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.AIMarkerResolutionGenerator"
+            markerType="com.e1c.edt.ai.marker">
+      </markerResolutionGenerator>
+   </extension>
 
 </plugin>

@@ -18,17 +18,18 @@ public class MCPToolsModule
     {
         bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
-        toolBinder.addBinding().to(ProcessRunnerMcpTool.class);
+        toolBinder.addBinding().to(ExecuteMcpTool.class);
         toolBinder.addBinding().to(GetProjectsMcpTool.class);
         toolBinder.addBinding().to(GetCommandCategoriesMcpTool.class);
         toolBinder.addBinding().to(GetCommandsMcpTool.class);
-        // toolBinder.addBinding().to(ExecuteCommandsMcpTool.class);
-        toolBinder.addBinding().to(ReadFileMcpTool.class);
-        toolBinder.addBinding().to(FindFileMcpTool.class);
-        toolBinder.addBinding().to(WriteFileMcpTool.class);
-        toolBinder.addBinding().to(EditFileMcpTool.class);
-        toolBinder.addBinding().to(GetProjectErrorsMcpTool.class);
+        // toolBinder.addBinding().to(ExecuteCommandMcpTool.class);
+        toolBinder.addBinding().to(ReadMcpTool.class);
+        toolBinder.addBinding().to(FindMcpTool.class);
+        toolBinder.addBinding().to(WriteMcpTool.class);
+        toolBinder.addBinding().to(EditMcpTool.class);
+        toolBinder.addBinding().to(GetMarkersMcpTool.class);
         toolBinder.addBinding().to(SetMarkersMcpTool.class);
+        toolBinder.addBinding().to(DeleteMarkersMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
         bind(IBuildWaiter.class).to(BuildWaiter.class).in(Singleton.class);

@@ -2,10 +2,8 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.NoSuchElementException;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -27,10 +25,11 @@ import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-public class EditFileMcpTool
+
+public class EditMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_edit_file"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "Edit"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -38,8 +37,8 @@ public class EditFileMcpTool
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
         + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
-        + "  \"origin_contents\": \"Сообщить(\\\"Привет, мир!\\\");\",\n"
-        + "  \"new_contents\": \"Сообщить(\\\"Hello, world!\\\");\",\n"
+        + "  \"origin_content\": \"Сообщить(\\\"Привет, мир!\\\");\",\n"
+        + "  \"new_content\": \"Сообщить(\\\"Hello, world!\\\");\",\n"
         + "  \"replace_all\": false\n"
         + "}";
     @SuppressWarnings("nls")
@@ -55,7 +54,7 @@ public class EditFileMcpTool
     private final IFileSystem fileSystem;
 
     @Inject
-    public EditFileMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+    public EditMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem)
     {
@@ -105,7 +104,7 @@ public class EditFileMcpTool
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "'project_name' is required."));
+                    "`project_name` is required."));
         }
 
         var relativeFilePath = request.relativeFilePath;
@@ -113,21 +112,21 @@ public class EditFileMcpTool
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "'relative_file_path' is required."));
+                    "`relative_file_path` is required."));
         }
 
-        var originContents = request.originContents;
-        if (originContents == null || originContents.isEmpty())
+        var originContent = request.originContent;
+        if (originContent == null || originContent.isEmpty())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "'origin_contents' must not be empty."));
+                .completedFuture(messageFactory.createError(this, call, "`origin_content` must not be empty."));
         }
 
-        var newContents = request.newContents;
-        if (newContents == null)
+        var newContent = request.newContent;
+        if (newContent == null)
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "'new_contents' is required."));
+                .completedFuture(messageFactory.createError(this, call, "`new_content` is required."));
         }
 
         var replaceAll = request.replaceAll != null ? request.replaceAll : false;
@@ -163,76 +162,61 @@ public class EditFileMcpTool
             }
 
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
-            var optionalFileContent = contentSourceProvider.getFileContent(projectFile);
-            if (optionalFileContent.isEmpty())
+            var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
+            if (optionalDocument.isEmpty())
             {
                 return messageFactory.createError(this, call,
-                    "The file \"" + relativeFilePath + "\" does not exist. Use the '" + WriteFileMcpTool.TOOL_NAME
-                        + "' tool to create a new file.");
+                    "The file \"" + relativeFilePath + "\" does not exist. Use the `" + WriteMcpTool.TOOL_NAME
+                        + "` tool to create a new file.");
             }
 
-            var fileContent = optionalFileContent.get();
+            var document = optionalDocument.get();
 
             // Read current file content
-            String currentContent;
-            try (var input = fileContent.getInputStream().orElseThrow())
-            {
-                currentContent = new String(input.readAllBytes(), fileContent.getCharset());
-            }
-            catch (IOException | NoSuchElementException e)
-            {
-                return messageFactory.createError(this, call, "Failed to read file content: " + e.getMessage());
-            }
+            var currentContent = document.getDocument().get();
 
             // Perform content replacement
             String updatedContent;
             if (replaceAll)
             {
                 updatedContent = currentContent.replace(
-                    java.util.regex.Matcher.quoteReplacement(originContents),
-                    java.util.regex.Matcher.quoteReplacement(newContents));
+                    java.util.regex.Matcher.quoteReplacement(originContent),
+                    java.util.regex.Matcher.quoteReplacement(newContent));
 
                 if (updatedContent.equals(currentContent))
                 {
                     return messageFactory.createError(this, call,
-                        "Original content not found in file. Verify the 'origin_contents'.");
+                        "Original content not found in file. Verify the `origin_content`.");
                 }
             }
             else
             {
-                int firstIndex = currentContent.indexOf(originContents);
+                int firstIndex = currentContent.indexOf(originContent);
                 if (firstIndex == -1)
                 {
                     return messageFactory.createError(this, call,
-                        "Original content not found in file. Verify the 'origin_contents'.");
+                        "Original content not found in file. Verify the `origin_content`.");
                 }
 
-                int secondIndex = currentContent.indexOf(originContents, firstIndex + originContents.length());
+                int secondIndex = currentContent.indexOf(originContent, firstIndex + originContent.length());
                 if (secondIndex != -1)
                 {
                     return messageFactory.createError(this, call,
-                        "Multiple matches found for original content. Change the 'origin_contents' to avoid multiple matches.");
+                        "Multiple matches found for original content. Change the `origin_content` to avoid multiple matches.");
                 }
 
-                updatedContent = currentContent.substring(0, firstIndex) + newContents
-                    + currentContent.substring(firstIndex + originContents.length());
+                updatedContent = currentContent.substring(0, firstIndex) + newContent
+                    + currentContent.substring(firstIndex + originContent.length());
             }
 
             // Write updated content
-            try (var output = fileContent.getOutputStream().orElseThrow())
-            {
-                output.write(updatedContent.getBytes(fileContent.getCharset()));
-            }
-            catch (IOException | NoSuchElementException e)
-            {
-                return messageFactory.createError(this, call, "Failed to write file content: " + e.getMessage());
-            }
+            document.getDocument().set(updatedContent);
 
             var response = new StringBuilder();
             var projectRelativePath = projectFile.getProjectRelativePath();
             response.append("File updated: \"").append(projectRelativePath.toPortableString()).append("\".\n");
-            response.append("ACTION REQUIRED: verify project errors and warnings. Use '"
-                + GetProjectErrorsMcpTool.TOOL_NAME + "' tool.");
+            response.append("ACTION REQUIRED: verify project errors and warnings. Use `"
+                + GetMarkersMcpTool.TOOL_NAME + "` tool.");
             return messageFactory.createMessage(this, call, response.toString());
         });
     }
@@ -247,7 +231,17 @@ public class EditFileMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Edits/updates/modifies the contents of an existing project file.");
+        description.append("Performs exact string replacements in project files.");
+        description.append("\n\nUsage:");
+        description.append("\n- You must use `" + ReadMcpTool.TOOL_NAME + "` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file.");
+        description.append("\n- When editing text from `" + ReadMcpTool.TOOL_NAME + "` tool output, ensure you preserve the exact indentation (tabs/spaces).");
+        description.append("\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.");
+        description.append("\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.");
+        description.append("\n- The edit will FAIL if `origin_content` is not unique in the file. ");
+        description.append("\n- You must use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
+        description.append("Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `origin_content`.");
+        description.append("\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.");
+
         description.append("\nFor example:"); // Исправлено: exapmple -> example
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
@@ -268,25 +262,25 @@ public class EditFileMcpTool
         relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
         properties.put("relative_file_path", relativeFilePathProp);
 
-        var originContentsProp = new McpToolCallProperty();
-        originContentsProp.type = "string";
-        originContentsProp.description = "The fragment of the file content that will be replaced.";
-        properties.put("origin_contents", originContentsProp);
+        var originContentProp = new McpToolCallProperty();
+        originContentProp.type = "string";
+        originContentProp.description = "The fragment of the file content that will be replaced.";
+        properties.put("origin_content", originContentProp);
 
-        var newContentsProp = new McpToolCallProperty();
-        newContentsProp.type = "string";
-        newContentsProp.description = "The content fragment that will replace the original ('origin_contents').";
-        properties.put("new_contents", newContentsProp);
+        var newContentProp = new McpToolCallProperty();
+        newContentProp.type = "string";
+        newContentProp.description = "The content fragment that will replace the original (`origin_content`).";
+        properties.put("new_content", newContentProp);
 
         var replaceAllProp = new McpToolCallProperty();
         replaceAllProp.type = "boolean";
-        replaceAllProp.description = "If true, all occurrences of the 'origin_contents' fragment will be replaced. "
+        replaceAllProp.description = "If true, all occurrences of the `origin_content` fragment will be replaced. "
             + "If false, only the single occurrence will be replaced. "
             + "If no fragments are found, or more than one is found, the request will fail. False by default.";
-        properties.put("replace_all", replaceAllProp); // Исправлено: newContentsProp -> replaceAllProp
+        properties.put("replace_all", replaceAllProp); // Исправлено: newContentProp -> replaceAllProp
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path", "origin_contents", "new_contents");
+        parameters.required = Arrays.asList("project_name", "relative_file_path", "origin_content", "new_content");
 
         spec.function.parameters = parameters;
         return spec;
@@ -302,7 +296,7 @@ public class EditFileMcpTool
         public String projectName;
 
         /**
-         * Relative path to the file which contents should be replaced. Must start with the project name, for example, "src/MyModule.bsl".
+         * Relative path to the file which content should be replaced. Must start with the project name, for example, "src/MyModule.bsl".
          */
         @SerializedName("relative_file_path")
         public String relativeFilePath;
@@ -310,17 +304,17 @@ public class EditFileMcpTool
         /**
          * The fragment of the file content that will be replaced.
          */
-        @SerializedName("origin_contents")
-        public String originContents;
+        @SerializedName("origin_content")
+        public String originContent;
 
         /**
-         * The content fragment that will replace the original ('origin_contents').
+         * The content fragment that will replace the original (`origin_content`).
          */
-        @SerializedName("new_contents")
-        public String newContents;
+        @SerializedName("new_content")
+        public String newContent;
 
         /**
-         * If true, all occurrences of the 'origin_contents' fragment will be replaced.
+         * If true, all occurrences of the `origin_content` fragment will be replaced.
          * If false, only the single occurrence will be replaced. If no fragments are found, or more than one is found, the request will fail.
          * False by default.
          */

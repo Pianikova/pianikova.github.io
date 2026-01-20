@@ -26,7 +26,7 @@ import com.google.inject.Inject;
 public class GetCommandCategoriesMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "ide_get_command_categories"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "GetCommandCategories"; //$NON-NLS-1$
     public static final CommandCategory UNCategorized = createUncategorizedCategory();
 
     // @formatter:off

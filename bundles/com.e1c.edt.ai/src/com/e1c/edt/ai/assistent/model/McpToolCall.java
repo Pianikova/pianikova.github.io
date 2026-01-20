@@ -24,4 +24,8 @@ public class McpToolCall
      * Детали вызываемой функции
      */
     public McpToolCallFunctionCall function;
+
+    public transient String sourceChatId;
+
+    public transient String sourceMessageId;
 }
