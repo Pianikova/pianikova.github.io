@@ -23,8 +23,9 @@ import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
-import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IFiles;
+import com.e1c.edt.ai.IMcpTool;
+import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
 import com.e1c.edt.ai.context.tools.GetObjectByIdMcpTool;
@@ -60,6 +61,8 @@ class ContextModule
         bind(IBmPovider.class).to(BmPovider.class).in(Singleton.class);
         bind(IFiles.class).to(Files.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
+        var projectDetailsProviderBinder = Multibinder.newSetBinder(binder(), IProjectDetailsProvider.class);
+        projectDetailsProviderBinder.addBinding().to(ConfigurationParametersProvider.class);
         bind(MessageDigest.class).toProvider(() -> {
             try
             {

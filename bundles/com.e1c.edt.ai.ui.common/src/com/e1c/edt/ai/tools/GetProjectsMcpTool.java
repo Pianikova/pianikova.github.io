@@ -3,34 +3,29 @@
 */
 package com.e1c.edt.ai.tools;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.texteditor.ITextEditor;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
@@ -38,6 +33,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ProjectId;
+import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -50,39 +46,91 @@ public class GetProjectsMcpTool
 
     // @formatter:off
     @SuppressWarnings("nls")
-    private static String QuestionExample = "{}";
-
-    @SuppressWarnings("nls")
     private static String AnswerExample =
-        "[\n" +
-        "  {\n" +
-        "    \"name\": \"Trade Management 11.5\",\n" +
-        "    \"absolute_path\": \"C:\\\\1C_Projects\\\\UT115\",\n" +
-        "    \"is_open\": true,\n" +
-        "    \"exists\": true,\n" +
-        "    \"is_current\": false,\n" +
-        "    \"description\": \"Project for developing Trade Management configuration\",\n" +
-        "    \"session_id\": \"session-12345\",\n" +
-        "    \"build_commands\": [\"org.eclipse.xtext.ui.shared.xtextBuilder\"],\n" +
-        "    \"natures\": [\"com._1c.g5.v8.dt.core.V8ConfigurationNature\"],\n" +
-        "    \"open_files\": [\n" +
-        "      {\n" +
-        "        \"relative_file_path\": \"src/main/MainModule.bsl\",\n" +
-        "        \"cursor_line\": 10,\n" +
-        "        \"cursor_line_offset\": 5\n" +
-        "      },\n" +
-        "      {\n" +
-        "        \"relative_file_path\": \"src/test/TestModule.bsl\",\n" +
-        "        \"cursor_line\": 20,\n" +
-        "        \"cursor_line_offset\": 3,\n" +
-        "        \"selection_start极line\": 15,\n" +
-        "        \"selection_start_line_offset\": 10,\n" +
-        "        \"selection_end_line\": 20,\n" +
-        "        \"selection_end_line_offset\": 3\n" +
-        "      }\n" +
-        "    ]\n" +
-        "  }\n" +
-        "]";
+        "[\n"
+        + "  {\n"
+        + "    \"name\": \"Склад\",\n"
+        + "    \"absolute_path\": \"D:\\\\Projects\\\\_Eclipse\\\\EDT_Plugin\\\\Склад\",\n"
+        + "    \"is_open\": true,\n"
+        + "    \"exists\": true,\n"
+        + "    \"is_current\": true,\n"
+        + "    \"session_id\": \"A:dd933ffc-a55d-4fef-b6bf-37d66e184209\",\n"
+        + "    \"comment\": \"\",\n"
+        + "    \"build_commands\": [\n"
+        + "      \"org.eclipse.xtext.ui.shared.xtextBuilder\"\n"
+        + "    ],\n"
+        + "    \"natures\": [\n"
+        + "      \"org.eclipse.xtext.ui.shared.xtextNature\",\n"
+        + "      \"com._1c.g5.v8.dt.core.V8ConfigurationNature\"\n"
+        + "    ],\n"
+        + "    \"open_files\": [\n"
+        + "      {\n"
+        + "        \"relative_file_path\": \"src/CommonModules/Математика/Module.bsl\",\n"
+        + "        \"cursor_line\": 11,\n"
+        + "        \"cursor_line_offset\": 1,\n"
+        + "        \"selection_start_line\": 11,\n"
+        + "        \"selection_start_line_offset\": 1,\n"
+        + "        \"selection_end_line\": 15,\n"
+        + "        \"selection_end_line_offset\": 19\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"details\": {\n"
+        + "      \"1C project details\": {\n"
+        + "        \"name\": \"Склад\",\n"
+        + "        \"type\": \"Configuration\",\n"
+        + "        \"script_language\": \"English\",\n"
+        + "        \"version\": \"1.1.3\",\n"
+        + "        \"platform_version\": \"8.3.24\",\n"
+        + "        \"vendor\": \"Abc INC\",\n"
+        + "        \"compatibility\": \"8.3.24\",\n"
+        + "        \"comment\": \"Основной справочник для учета хранения и перемещения товаров на складах предприятия\",\n"
+        + "        \"brief_information\": {\n"
+        + "          \"en\": \"Управление складскими операциями и учет товарных запасов\"\n"
+        + "        }\n"
+        + "      }\n"
+        + "    }\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"name\": \"Склад.РасширениеСклада\",\n"
+        + "    \"absolute_path\": \"D:\\\\Projects\\\\_Eclipse\\\\EDT_Plugin\\\\Склад.РасширениеСклада\",\n"
+        + "    \"is_open\": true,\n"
+        + "    \"exists\": true,\n"
+        + "    \"is_current\": true,\n"
+        + "    \"session_id\": \"A:f1f911e2-3570-4097-99c0-91f0f9d0c28b\",\n"
+        + "    \"comment\": \"\",\n"
+        + "    \"build_commands\": [\n"
+        + "      \"org.eclipse.xtext.ui.shared.xtextBuilder\"\n"
+        + "    ],\n"
+        + "    \"natures\": [\n"
+        + "      \"org.eclipse.xtext.ui.shared.xtextNature\",\n"
+        + "      \"com._1c.g5.v8.dt.core.V8ExtensionNature\"\n"
+        + "    ],\n"
+        + "    \"open_files\": [\n"
+        + "      {\n"
+        + "        \"relative_file_path\": \"src/Configuration/Configuration.mdo\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"relative_file_path\": \"src/CommonModules/РасшСклада_ОбщийМодуль/Module.bsl\",\n"
+        + "        \"cursor_line\": 7,\n"
+        + "        \"cursor_line_offset\": 15\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"details\": {\n"
+        + "      \"1C project details\": {\n"
+        + "        \"name\": \"Склад.РасширениеСклада\",\n"
+        + "        \"type\": \"Extension\",\n"
+        + "        \"script_language\": \"Russian\",\n"
+        + "        \"version\": \"1.0.0\",\n"
+        + "        \"platform_version\": \"8.3.24\",\n"
+        + "        \"vendor\": \"Abc Inc\",\n"
+        + "        \"compatibility\": \"8.3.24\",\n"
+        + "        \"comment\": \"Расширение для управления складскими операциями и учета товаров на складе\",\n"
+        + "        \"brief_information\": {},\n"
+        + "        \"parent_project\": \"Склад\"\n"
+        + "      }\n"
+        + "    }\n"
+        + "  }\n"
+        + "]";
     // @formatter:on
 
     private final ILog log;
@@ -91,22 +139,29 @@ public class GetProjectsMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IDispatcher dispatcher;
     private final ISessionService sessionService;
+    private final Set<IProjectDetailsProvider> projectDetailsProviders;
+    private final IContentSourceProvider contentSourceProvider;
 
     @Inject
     public GetProjectsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IDispatcher dispatcher, ISessionService sessionService)
+        IDispatcher dispatcher, ISessionService sessionService, Set<IProjectDetailsProvider> projectDetailsProviders,
+        IContentSourceProvider contentSourceProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(sessionService);
+        Preconditions.checkNotNull(projectDetailsProviders);
+        Preconditions.checkNotNull(contentSourceProvider);
 
         this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
         this.dispatcher = dispatcher;
         this.sessionService = sessionService;
+        this.projectDetailsProviders = projectDetailsProviders;
+        this.contentSourceProvider = contentSourceProvider;
 
         spec = createSpecification();
     }
@@ -163,12 +218,47 @@ public class GetProjectsMcpTool
                 projectInfo.buildCommands = new ArrayList<>();
                 projectInfo.natures = new ArrayList<>();
                 projectInfo.openFiles = new ArrayList<>();
-                projectInfo.directories = new ArrayList<>();
-                // Read metadata only for open and existing projects
+                projectInfo.details = new HashMap<>();
                 if (project.isOpen() && project.exists())
                 {
-                    // Read project metadata from .project file
-                    readProjectMetadata(project, projectInfo);
+                    try
+                    {
+                        var description = project.getDescription();
+                        if (description != null)
+                        {
+                            projectInfo.comment = description.getComment();
+                            var buildSpec = description.getBuildSpec();
+                            if (buildSpec != null)
+                            {
+                                for (var buildConfig : buildSpec)
+                                {
+                                    projectInfo.buildCommands.add(buildConfig.getBuilderName());
+                                }
+                            }
+
+                            var natureIds = description.getNatureIds();
+                            if (natureIds != null)
+                            {
+                                for (var natureId : natureIds)
+                                {
+                                    if (project.isNatureEnabled(natureId))
+                                    {
+                                        projectInfo.natures.add(natureId);
+                                    }
+                                }
+                            }
+                        }
+
+                        for (var projectDetailsProvider : projectDetailsProviders)
+                        {
+                            projectDetailsProvider.fill(project, projectInfo.details);
+                        }
+                    }
+                    catch (CoreException error)
+                    {
+                        log.logError(error);
+                    }
+
                     // Collect open files
                     if (openFilesList != null)
                     {
@@ -218,21 +308,21 @@ public class GetProjectsMcpTool
                         {
                             continue;
                         }
-                        var editor = editorRef.getEditor(false);
-                        if (editor == null)
-                        {
-                            continue;
-                        }
-                        var project = file.getProject();
+
                         var info = new OpenFileInfo();
                         info.relativeFilePath = file.getProjectRelativePath().toString();
-                        // Process text editors only
-                        if (editor instanceof ITextEditor)
+                        var project = file.getProject();
+                        var document =
+                            contentSourceProvider.getFileDocument(file).map(i -> i.getDocument()).orElse(null);
+                        if (document != null)
                         {
-                            var textEditor = (ITextEditor)editor;
-                            var provider = textEditor.getDocumentProvider();
-                            var document = provider.getDocument(input);
-                            var selection = (ITextSelection)textEditor.getSelectionProvider().getSelection();
+                            var selection = Optional.ofNullable(editorRef.getEditor(false))
+                                .map(editor -> editor.getEditorSite())
+                                .map(editorSite -> editorSite.getSelectionProvider())
+                                .map(selectionProvider -> selectionProvider.getSelection())
+                                .map(s -> s instanceof ITextSelection ? (ITextSelection)s : null)
+                                .orElse(null);
+
                             if (selection != null)
                             {
                                 int offset = selection.getOffset();
@@ -247,11 +337,11 @@ public class GetProjectsMcpTool
                                     // Calculate selection if present
                                     if (length > 0)
                                     {
-                                        int startLine = document.getLineOfOffset(offset) + 1;
-                                        int startOffsetInLine = offset - document.getLineOffset(startLine - 1);
-                                        int endOffset = offset + length;
-                                        int endLine = document.getLineOfOffset(endOffset) + 1;
-                                        int endOffsetInLine = endOffset - document.getLineOffset(endLine - 1);
+                                        var startLine = document.getLineOfOffset(offset) + 1;
+                                        var startOffsetInLine = offset - document.getLineOffset(startLine - 1);
+                                        var endOffset = offset + length;
+                                        var endLine = document.getLineOfOffset(endOffset) + 1;
+                                        var endOffsetInLine = endOffset - document.getLineOffset(endLine - 1);
                                         info.selectionStartLine = startLine;
                                         info.selectionStartLineOffset = startOffsetInLine;
                                         info.selectionEndLine = endLine;
@@ -279,70 +369,6 @@ public class GetProjectsMcpTool
         return projectOpenFiles;
     }
 
-    /**
-     * Reads project metadata from .project file
-     *
-     * @param project Eclipse project instance
-     * @param projectInfo Project info object to populate
-     */
-    @SuppressWarnings("nls")
-    private void readProjectMetadata(IProject project, Project projectInfo)
-    {
-        try
-        {
-            // Locate .project file in project root
-            var projectFile = project.getFile(".project");
-            if (projectFile == null || !projectFile.exists())
-            {
-                return;
-            }
-
-            // Parse XML content of .project file
-            try (InputStream input = projectFile.getContents())
-            {
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                Document doc = builder.parse(input);
-
-                // Extract description from <comment> element
-                NodeList comments = doc.getElementsByTagName("comment");
-                if (comments.getLength() > 0)
-                {
-                    projectInfo.description = comments.item(0).getTextContent().trim();
-                }
-
-                // Extract build commands
-                var buildCommands = doc.getElementsByTagName("buildCommand");
-                for (int i = 0; i < buildCommands.getLength(); i++)
-                {
-                    var commandNode = buildCommands.item(i);
-                    if (commandNode.getNodeType() == Node.ELEMENT_NODE)
-                    {
-                        var commandElement = (Element)commandNode;
-                        var names = commandElement.getElementsByTagName("name");
-                        if (names.getLength() > 0)
-                        {
-                            String commandName = names.item(0).getTextContent().trim();
-                            projectInfo.buildCommands.add(commandName);
-                        }
-                    }
-                }
-
-                // Extract project natures
-                var natures = doc.getElementsByTagName("nature");
-                for (int i = 0; i < natures.getLength(); i++)
-                {
-                    var nature = natures.item(i).getTextContent().trim();
-                    projectInfo.natures.add(nature);
-                }
-            }
-        }
-        catch (Exception error)
-        {
-            log.logError(error);
-        }
-    }
-
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
@@ -354,14 +380,16 @@ public class GetProjectsMcpTool
 
         // Detailed tool description with all fields
         var description = new StringBuilder();
-        description.append("Provides comprehensive information about IDE projects including:");
+        description.append(
+            "Returns a list of all projects in the Eclipse workspace with detailed information. For each project, the following is provided:");
         description.append("\n- Project name and absolute file system path");
         description.append("\n- Project description (from .project file`s <comment> element)");
-        description.append("\n- Status indicators (exists, is open)");
-        description.append("\n- `is_current` flag indicating if project has open files");
-        description.append("\n- Build commands (list of builder names from .project file)");
-        description.append("\n- Project natures (list of project types from .project file)");
-        description.append("\n- List of currently open files with cursor position and selection information:");
+        description.append("\n- Status indicators: exists, is open");
+        description
+            .append("\n- `is_current`: true if the project has any open files (indicating it might be in focus)");
+        description.append("\n- Build commands: list of builder names from .project file");
+        description.append("\n- Project natures: list of project types from .project file");
+        description.append("\n- List of currently open files in the project, each with:");
         description.append("\n  - relative_file_path: Project-relative file path");
         description.append("\n  - cursor_line: Current line number (1-based)");
         description.append("\n  - cursor_line_offset: Character offset in current line");
@@ -369,17 +397,13 @@ public class GetProjectsMcpTool
         description.append("\n  - selection_start_line_offset: Start offset in selection line");
         description.append("\n  - selection_end_line: End line of selection (if any)");
         description.append("\n  - selection_end_line_offset: End offset in selection line");
+        description.append("\n- Additional details: provided by registered providers (e.g., 1C project details)");
         description.append(
-            "\nIMPORTANT: If the scope of code review, error detection, refactoring, etc. is not specified, use this list of currently open files.");
-
-        description.append("\n\nUsage:");
-        description
-            .append(
-                "\n- To get errors, warnings, bookmarks, etc., use the `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
-        description.append("\n\nExample usage:");
-        description.append("\n  Q: ").append(QuestionExample);
-        description.append("\n  A: ").append(AnswerExample);
-
+            "\nIMPORTANT: If the scope of code review, error detection, refactoring, etc. is not specified, use the list of currently open files to determine the context.");
+        description.append("\n\nNote: To get errors, warnings, bookmarks, etc. for a project or file, use the `"
+            + GetMarkersMcpTool.TOOL_NAME + "` tool.");
+        description.append("\n\nExample output:");
+        description.append("\n").append(AnswerExample);
         spec.function.description = description.toString();
 
         // Input parameters (none required)
@@ -388,7 +412,6 @@ public class GetProjectsMcpTool
         parameters.properties = new HashMap<>();
         parameters.required = new ArrayList<>();
         spec.function.parameters = parameters;
-
         return spec;
     }
 
@@ -440,6 +463,12 @@ public class GetProjectsMcpTool
         public String sessionId;
 
         /*
+         * Комментарий к проекту.
+         */
+        @SerializedName("comment")
+        public String comment;
+
+        /*
          * Список команд сборки проекта.
          */
         @SerializedName("build_commands")
@@ -458,10 +487,10 @@ public class GetProjectsMcpTool
         public List<OpenFileInfo> openFiles;
 
         /*
-         * Список директорий проекта.
+         * Дополнительные данные проекта.
          */
-        @SerializedName("directories")
-        public List<String> directories;
+        @SerializedName("details")
+        public Map<String, Object> details;
     }
 
     /**
