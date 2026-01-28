@@ -4,10 +4,11 @@
   <parent>
     <groupId>com.e1c.edt.ai</groupId>
     <artifactId>features</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.2-SNAPSHOT</version>
   </parent>
 
   <artifactId>com.e1c.edt.ai.license</artifactId>
-  <version>1.0.1.v1</version>
+  <version>1.0.2.v1</version>
   <packaging>eclipse-feature</packaging>
 </project>
+
