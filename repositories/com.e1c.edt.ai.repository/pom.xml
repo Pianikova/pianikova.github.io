@@ -10,9 +10,10 @@
   <parent>
     <groupId>com.e1c.edt.ai</groupId>
     <artifactId>repositories</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.0.2-SNAPSHOT</version>
   </parent>
 
   <artifactId>com.e1c.edt.ai.repository</artifactId>
   <packaging>eclipse-repository</packaging>
 </project>
+

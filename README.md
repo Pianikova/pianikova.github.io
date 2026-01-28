@@ -359,7 +359,7 @@ public class UserParameters
     public String edtVersion;
 
     /**
-     * Версия плагина. Например, 1.0.1
+     * Версия плагина. Например, 1.0.2
      */
     @SerializedName("plugin_version")
     public String pluginVersion;
