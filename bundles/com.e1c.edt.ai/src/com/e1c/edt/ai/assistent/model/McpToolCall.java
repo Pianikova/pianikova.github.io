@@ -28,4 +28,6 @@ public class McpToolCall
     public transient String sourceChatId;
 
     public transient String sourceMessageId;
+
+    public transient ToolCallKind callKind;
 }

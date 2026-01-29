@@ -1,11 +1,13 @@
-/**
+﻿/**
  * Copyright (C) 2025, 1C
  */
 package com.e1c.edt.ai.tools;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.IFile;
@@ -17,16 +19,21 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.jface.text.BadLocationException;
 
+import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -35,12 +42,16 @@ import com.google.inject.Inject;
 public class GetMarkersMcpTool implements IMcpTool
 {
     public static final String TOOL_NAME = "GetMarkers"; //$NON-NLS-1$
+    private static final int DEFAULT_MAX_ELEMENTS = McpToolConstants.DEFAULT_MAX_MARKERS;
 
     // @formatter:off
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"project_name\": \"MyProject\"\n"
+        + "  \"project_name\": \"MyProject\",\n"
+        + "  \"first_index\": 0,\n"
+        + "  \"max_count\": 64,\n"
+        + "  \"marker_type\": \"ai_marker\"\n"
         + "}";
 
     @SuppressWarnings("nls")
@@ -55,7 +66,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"type\": \"problem\",\n"
         + "    \"severity\": \"error\",\n"
         + "    \"priority\": \"high\",\n"
-        + "    \"target_content\": \"a = 1 / 0;\"\n"
+        + "    \"marked_text\": \"a = 1 / 0;\"\n"
         + "  },\n"
         + "  {\n"
         + "    \"id\": 1002,\n"
@@ -66,7 +77,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"type\": \"problem\",\n"
         + "    \"severity\": \"warning\",\n"
         + "    \"priority\": \"normal\",\n"
-        + "    \"target_content\": \"myVar = 0;\"\n"
+        + "    \"marked_text\": \"myVar = 0;\"\n"
         + "  },\n"
         + "  {\n"
         + "    \"id\": 2001,\n"
@@ -76,16 +87,49 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"message\": \"Important code section\",\n"
         + "    \"type\": \"bookmark\",\n"
         + "    \"done\": false,\n"
-        + "    \"target_content\": \"Important code section\"\n"
+        + "    \"marked_text\": \"Important code section\"\n"
         + "  },\n"
         + "  {\n"
         + "    \"id\": 3001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/TextModule/Module.bsl\",\n"
-        + "    \"relative_path\": \"CommonModules/TextModule/Module.bs极l\",\n"
+        + "    \"relative_path\": \"CommonModules/TextModule/Module.bsl\",\n"
         + "    \"start_line\": 15,\n"
         + "    \"message\": \"Important text note\",\n"
         + "    \"type\": \"text\",\n"
-        + "    \"target_content\": \"Important text note\"\n"
+        + "    \"marked_text\": \"Important text note\"\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"id\": 4001,\n"
+        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"start_line\": 30,\n"
+        + "    \"message\": \"AI warning (AIWarning)\",\n"
+        + "    \"type\": \"ai_marker\",\n"
+        + "    \"severity\": \"warning\",\n"
+        + "    \"priority\": \"normal\",\n"
+        + "    \"marked_text\": \"calculateTotal(items)\"\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"id\": 4002,\n"
+        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"start_line\": 45,\n"
+        + "    \"message\": \"AI error (AIError)\",\n"
+        + "    \"type\": \"ai_marker\",\n"
+        + "    \"severity\": \"error\",\n"
+        + "    \"priority\": \"high\",\n"
+        + "    \"marked_text\": \"calculateTotal(items)\"\n"
+        + "  },\n"
+        + "  {\n"
+        + "    \"id\": 4003,\n"
+        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"start_line\": 60,\n"
+        + "    \"message\": \"AI info (AIInfo)\",\n"
+        + "    \"type\": \"ai_marker\",\n"
+        + "    \"severity\": \"info\",\n"
+        + "    \"priority\": \"normal\",\n"
+        + "    \"marked_text\": \"calculateTotal(items)\"\n"
         + "  }\n"
         + "]";
     // @formatter:on
@@ -95,19 +139,22 @@ public class GetMarkersMcpTool implements IMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
     private final IBuildWaiter buildWaiter;
+    private final IMarkdownUtils markdownUtils;
 
     @Inject
     public GetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IBuildWaiter buildWaiter)
+        IContentSourceProvider contentSourceProvider, IBuildWaiter buildWaiter, IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(buildWaiter);
+        Preconditions.checkNotNull(markdownUtils);
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.buildWaiter = buildWaiter;
+        this.markdownUtils = markdownUtils;
         this.spec = createSpecification();
     }
 
@@ -127,19 +174,45 @@ public class GetMarkersMcpTool implements IMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.MarkersTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         // Deserialize request parameters
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Cannot deserialize arguments. Use this example: " + QuestionExample));
+                "Cannot deserialize arguments. Use this example: " + QuestionExample
+                    + "\n\nRequired field: 'project_name' (string)"
+                    + "\nOptional fields: 'first_index' (integer), 'max_count' (integer), 'marker_type' (string)"));
         }
+
         var request = optionalRequest.get();
         var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "Project name is required."));
+        }
+
+        int firstIndex = request.firstIndex != null ? Math.max(0, request.firstIndex) : 0;
+        int maxCount = request.maxCount != null && request.maxCount > 0 ? request.maxCount : DEFAULT_MAX_ELEMENTS;
+
+        // Parse marker type filter
+        MarkerType markerTypeFilter = null;
+        if (request.markerType != null && !request.markerType.isBlank())
+        {
+            markerTypeFilter = MarkerType.fromDisplayName(request.markerType);
+            if (markerTypeFilter == null)
+            {
+                return CompletableFuture.completedFuture(
+                    messageFactory.createError(this, call, "Invalid marker_type: " + request.markerType));
+            }
         }
 
         // Synchronous project validation: Check if project exists and is open
@@ -156,13 +229,19 @@ public class GetMarkersMcpTool implements IMcpTool
                 .completedFuture(messageFactory.createError(this, call, "Project is closed: " + projectName));
         }
 
-        return buildWaiter.waitForBuilds(cancellationToken).thenCompose(voidResult -> {
+        // Create final copy for lambda
+        final MarkerType finalMarkerTypeFilter = markerTypeFilter;
+
+        return buildWaiter.waitForBuilds(project, cancellationToken).thenCompose(voidResult -> {
             if (cancellationToken.isCanceled())
             {
                 return CompletableFuture
                     .completedFuture(messageFactory.createError(this, call, "Operation cancelled after build wait"));
             }
-            return CompletableFuture.supplyAsync(() -> createResponse(project, call, cancellationToken));
+
+            return CompletableFuture
+                .supplyAsync(() -> createResponse(project, firstIndex, maxCount, finalMarkerTypeFilter, call,
+                    cancellationToken, details));
         }).exceptionally(e -> {
             Throwable cause = e.getCause();
             if (cause instanceof OperationCanceledException)
@@ -179,7 +258,10 @@ public class GetMarkersMcpTool implements IMcpTool
     }
 
     @SuppressWarnings("nls")
-    private ToolCallMessage createResponse(IProject project, McpToolCall call, ICancellationToken cancellationToken)
+    private ToolCallMessage createResponse(IProject project, int firstIndex, int maxCount, MarkerType markerTypeFilter,
+        McpToolCall call,
+        ICancellationToken cancellationToken,
+        ToolCallMessageDetails details)
     {
         try
         {
@@ -191,7 +273,7 @@ public class GetMarkersMcpTool implements IMcpTool
 
             // Retrieve all markers in the project
             var markers = project.findMarkers(null, true, IResource.DEPTH_INFINITE);
-            var response = new ArrayList<MarkerInfo>();
+            var allMarkers = new ArrayList<MarkerInfo>();
 
             // Process each marker
             for (var marker : markers)
@@ -207,6 +289,10 @@ public class GetMarkersMcpTool implements IMcpTool
                 if (markerType == null)
                     continue; // Skip unknown types
 
+                // Apply type filter if specified
+                if (markerTypeFilter != null && markerType != markerTypeFilter)
+                    continue; // Skip markers that don't match the filter
+
                 var resource = marker.getResource();
                 var location = resource.getLocation();
                 var relativePath = resource.getProjectRelativePath().toPortableString();
@@ -221,11 +307,30 @@ public class GetMarkersMcpTool implements IMcpTool
 
                 // Set common and type-specific attributes
                 setMarkerAttributes(project, marker, markerInfo, markerType, cancellationToken);
-                response.add(markerInfo);
+                allMarkers.add(markerInfo);
             }
 
-            var content = json.serialize(response);
-            return messageFactory.createMessage(this, call, content);
+            // Apply pagination: get sublist based on firstIndex and maxCount
+            List<MarkerInfo> response;
+            if (firstIndex >= allMarkers.size())
+            {
+                response = new ArrayList<>();
+            }
+            else
+            {
+                int endIndex = Math.min(firstIndex + maxCount, allMarkers.size());
+                response = allMarkers.subList(firstIndex, endIndex);
+            }
+
+            String content = json.serialize(response);
+
+            // Add response markdown
+            int markerCount = response.size();
+            String styledMarkerCount = markdownUtils.createStyledText(String.valueOf(markerCount),
+                markerCount > 0 ? TextColor.GREEN : TextColor.BLUE, FontWeight.BOLD);
+            details.responseMarkdown = MessageFormat.format(Messages.MarkersLoadedTemplate, styledMarkerCount);
+
+            return messageFactory.createMessage(this, call, content, details);
         }
         catch (CoreException | OperationCanceledException error)
         {
@@ -381,14 +486,23 @@ public class GetMarkersMcpTool implements IMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append(
-            "Returns markers (errors, warnings, info, bookmarks, tasks, etc.) in the specified IDE project, including:");
+        description.append("Lists markers (errors, warnings, tasks, bookmarks, etc.) for a project or file.");
+        description.append("\n\nUsage:");
+        description.append("\n- Use `marker_type` to filter by type.");
+        description.append("\n- Use `relative_file_path` to scope to a file.");
+        description.append("\n- Use pagination parameters to page through results.");
+        description.append("\n- `ai_marker` includes `AIError`, `AIWarning`, `AIInfo` marker types.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Create/update markers: `" + SetMarkersMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Remove markers: `" + DeleteMarkersMcpTool.TOOL_NAME + "`.");
+        description.append("\n\nPossible marker_type values:");
 
         // Generate supported types from MarkerType enum
         for (MarkerType type : MarkerType.values())
         {
             description.append("\n- ").append(type.getDisplayName()).append(": ").append(type.getDescription());
         }
+        description.append("\n- ai_marker includes AI marker types: AIError, AIWarning, AIInfo.");
 
         description.append("\n\nResponse contains:");
         description.append("\n- id: Unique marker identifier (long number)");
@@ -415,7 +529,8 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append(
             "\n- location: Human-readable location string. The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
         description
-            .append("\n- target_content: The content of the marker (substring of the file at the marker's position)");
+            .append(
+                "\n- marked_text: Code fragment associated with the marker (substring of the file at the marker's position)");
         description.append("\n- source_id: Source identifier for bookmarks");
         description.append("\n\nExample request:");
         description.append("\n").append(QuestionExample);
@@ -434,6 +549,31 @@ public class GetMarkersMcpTool implements IMcpTool
         projectNameProp.description = "Name of the IDE project to retrieve markers from";
         properties.put("project_name", projectNameProp);
 
+        var firstIndexProp = new McpToolCallProperty();
+        firstIndexProp.type = "integer";
+        firstIndexProp.description = "Index of first element to return (0-based). Default: 0";
+        properties.put("first_index", firstIndexProp);
+
+        var maxCountProp = new McpToolCallProperty();
+        maxCountProp.type = "integer";
+        maxCountProp.description = "Maximum number of elements to return. Default: 64";
+        properties.put("max_count", maxCountProp);
+
+        var markerTypeProp = new McpToolCallProperty();
+        markerTypeProp.type = "string";
+        markerTypeProp.description = "Optional marker type to filter results. Possible values: ";
+        boolean firstType = true;
+        for (var type : MarkerType.values())
+        {
+            if (!firstType)
+            {
+                markerTypeProp.description += ", ";
+            }
+            markerTypeProp.description += type.getDisplayName();
+            firstType = false;
+        }
+        properties.put("marker_type", markerTypeProp);
+
         parameters.properties = properties;
         parameters.required = Arrays.asList("project_name");
         spec.function.parameters = parameters;
@@ -446,6 +586,15 @@ public class GetMarkersMcpTool implements IMcpTool
     {
         @SerializedName("project_name")
         public String projectName;
+
+        @SerializedName("first_index")
+        public Integer firstIndex = 0;
+
+        @SerializedName("max_count")
+        public Integer maxCount = DEFAULT_MAX_ELEMENTS;
+
+        @SerializedName("marker_type")
+        public String markerType;
     }
 
     // Marker information DTO for JSON serialization
@@ -481,10 +630,11 @@ public class GetMarkersMcpTool implements IMcpTool
         @SerializedName("location")
         public String location;
 
-        @SerializedName("target_content")
+        @SerializedName("marked_text")
         public String targetContent;
 
         @SerializedName("source_id")
         public String sourceId;
     }
 }
+

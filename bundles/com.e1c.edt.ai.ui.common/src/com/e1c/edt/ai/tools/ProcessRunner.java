@@ -7,7 +7,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.Optional;
@@ -38,12 +37,17 @@ public class ProcessRunner
     @Override
     @SuppressWarnings("nls")
     public CompletableFuture<Optional<ProcessResult>> executeProcess(String executable, String workingDirectory,
-        List<String> args, Long timeout, TimeUnit timeUnit)
+        List<String> args, Long timeout, TimeUnit timeUnit, Integer maxLines)
     {
         Preconditions.checkNotNull(executable);
         if (timeout == null)
         {
             timeout = 15L;
+        }
+
+        if (maxLines == null)
+        {
+            maxLines = 1000; // Default limit
         }
 
         Process process;
@@ -74,8 +78,8 @@ public class ProcessRunner
         }
 
         // Asynchronously read output streams
-        var stdOutFuture = readStreamAsync(process.getInputStream());
-        var stdErrFuture = readStreamAsync(process.getErrorStream());
+        var stdOutFuture = readStreamAsync(process.getInputStream(), maxLines);
+        var stdErrFuture = readStreamAsync(process.getErrorStream(), maxLines);
 
         // Wait for process completion asynchronously
         var exitCodeFuture = CompletableFuture.supplyAsync(() -> {
@@ -95,10 +99,12 @@ public class ProcessRunner
         // Combine all results: exit code + stdout + stderr
         var resultFuture = exitCodeFuture.thenCombineAsync(
             // Combine stdout and stderr first
-            stdOutFuture.thenCombine(stdErrFuture, (stdOut, stdErr) -> {
+            stdOutFuture.thenCombine(stdErrFuture, (stdOutResult, stdErrResult) -> {
                 var result = new ProcessResult();
-                result.stdOut = stdOut;
-                result.stdErr = stdErr;
+                result.stdOut = stdOutResult.content;
+                result.stdErr = stdErrResult.content;
+                result.stdOutTruncated = stdOutResult.truncated;
+                result.stdErrTruncated = stdErrResult.truncated;
                 return result;
             }),
             // Then combine with exit code to create final result
@@ -147,24 +153,46 @@ public class ProcessRunner
     /**
      * Asynchronously reads content from an input stream
      * @param inputStream Stream to read from
-     * @return Future containing stream content as String
+     * @param maxLines Maximum number of lines to read
+     * @return Future containing stream read result with content and truncation flag
      */
-    private CompletableFuture<String> readStreamAsync(InputStream inputStream)
+    private CompletableFuture<StreamReadResult> readStreamAsync(InputStream inputStream, int maxLines)
     {
         return CompletableFuture.supplyAsync(() -> {
-            try (InputStreamReader isr = new InputStreamReader(inputStream);
-                StringWriter sw = new StringWriter())
+            try (InputStreamReader isr = new InputStreamReader(inputStream))
             {
-
                 char[] buffer = new char[1024];
                 int bytesRead;
-                // Read stream until EOF
-                while ((bytesRead = isr.read(buffer)) != -1)
+                int lineCount = 0;
+                StringBuilder lineBuffer = new StringBuilder();
+                boolean truncated = false;
+
+                // Read stream until EOF or line limit reached
+                while ((bytesRead = isr.read(buffer)) != -1 && lineCount < maxLines)
                 {
-                    sw.write(buffer, 0, bytesRead);
+                    String chunk = new String(buffer, 0, bytesRead);
+                    lineBuffer.append(chunk);
+
+                    // Count lines in the chunk
+                    int lineIndex = chunk.indexOf('\n');
+                    while (lineIndex != -1)
+                    {
+                        lineCount++;
+                        if (lineCount >= maxLines)
+                        {
+                            break;
+                        }
+                        lineIndex = chunk.indexOf('\n', lineIndex + 1);
+                    }
                 }
 
-                return sw.toString();
+                // Check if we stopped due to line limit
+                if (lineCount >= maxLines && bytesRead != -1)
+                {
+                    truncated = true;
+                }
+
+                return new StreamReadResult(lineBuffer.toString(), truncated);
             }
             catch (IOException e)
             {

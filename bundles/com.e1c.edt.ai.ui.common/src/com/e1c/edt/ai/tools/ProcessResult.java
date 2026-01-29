@@ -12,4 +12,10 @@ public class ProcessResult
 
     @SerializedName("std_err")
     public String stdErr;
+
+    @SerializedName("std_out_truncated")
+    public boolean stdOutTruncated;
+
+    @SerializedName("std_err_truncated")
+    public boolean stdErrTruncated;
 }

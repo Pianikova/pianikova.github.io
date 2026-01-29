@@ -4,8 +4,10 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -18,16 +20,23 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 
+import com.e1c.edt.ai.FontWeight;
+import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -45,7 +54,7 @@ public class WriteMcpTool
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
         + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
-        + "  \"content\": \"Процедура Тест()\\n    Сообщить(\\\"Привет, мир!\\\");\\nКонецПроцедуры\"\n"
+        + "  \"content\": \"Procedure Test()\\n    Message(\\\"Hello\\\");\\nEndProcedure\"\n"
         + "}";
     @SuppressWarnings("nls")
     private static String AnswerExample =
@@ -57,20 +66,27 @@ public class WriteMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IMarkdownUtils markdownUtils;
+    private final IEditingSupport editingSupport;
 
     @Inject
     public WriteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem)
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
+        IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(editingSupport);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.markdownUtils = markdownUtils;
+        this.editingSupport = editingSupport;
 
         spec = createSpecification();
     }
@@ -91,6 +107,9 @@ public class WriteMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = false;
+
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
@@ -99,19 +118,37 @@ public class WriteMcpTool
         }
 
         var request = optionalRequest.get();
+        var relativeFilePath = request.relativeFilePath;
+        if (relativeFilePath == null || relativeFilePath.isBlank())
+        {
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call, "`relative_file_path` is required."));
+        }
+
+        var fileName = new File(relativeFilePath).getName();
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            var requestMarkdown = new StringBuilder();
+            requestMarkdown.append(MessageFormat.format(Messages.WriteTitleTemplate, fileName));
+
+            // Add content details
+            if (request.content != null)
+            {
+                requestMarkdown.append("\n\n");
+                requestMarkdown.append("<details><summary>").append(fileName).append("</summary>\n\n");
+                requestMarkdown.append(markdownUtils.buildGitDiff(relativeFilePath, null, request.content));
+                requestMarkdown.append("\n</details>");
+            }
+
+            details.requestMarkdown = requestMarkdown.toString();
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
 
         var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "`project_name` is required."));
-        }
-
-        var relativeFilePath = request.relativeFilePath;
-        if (relativeFilePath == null || relativeFilePath.isBlank())
-        {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`relative_file_path` is required."));
         }
 
         var content = request.content;
@@ -163,6 +200,14 @@ public class WriteMcpTool
             }
 
             var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
+
+            // Check if the file can be edited using editingSupport
+            if (!editingSupport.canEdit(projectFile))
+            {
+                return messageFactory.createError(this, call, "The file \"" + relativeFilePath
+                    + "\" cannot be created. Writing is not supported for this file type or the location is restricted.");
+            }
+
             if (projectFile.exists())
             {
                 return messageFactory.createError(this, call, "The file \"" + relativeFilePath
@@ -213,7 +258,14 @@ public class WriteMcpTool
 
             response.append(
                 "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
-            return messageFactory.createMessage(this, call, response.toString());
+
+            // Add response markdown
+            var newLines = content.split("\\r?\\n", -1).length;
+            var changes = new StringBuilder();
+            changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
+            details.responseMarkdown = MessageFormat.format(Messages.WrittenTemplate, fileName, changes);
+
+            return messageFactory.createMessage(this, call, response.toString(), details);
         });
     }
 
@@ -255,16 +307,21 @@ public class WriteMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Writes a project file.");
+        description.append("Creates a new project file.");
         description.append("\n\nUsage:");
-        description.append("\n- This tool will FAIL if the file is located at the specified path.");
-        description.append("\n- Analyze the project structure: directories, other files before writing a file.");
-        description.append("\n- Some files require additional files to be processed correctly. For example, .bsl files require an .mdo file in the corresponding directory.");
-        description.append("\n- To edit or update an existing file, use the `" + EditMcpTool.TOOL_NAME + "` tool.");
-        description.append("\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.");
-        description.append("\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.");
-        description.append("\n- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.");
-        description.append("\nFor example:"); // Исправлено: exapmple -> example
+        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
+        description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
+        description.append("\n- Escape newlines as \\n and quotes as \\\".");
+        description.append("\n- Fails if the file already exists; use `" + EditMcpTool.TOOL_NAME + "` to modify files.");
+        description.append("\n- Verify the target folder and naming patterns before creating files.");
+        description.append("\n- Some file types require companions (e.g., .bsl needs a matching .mdo).");
+        description.append("\n- Avoid creating docs (*.md/README) unless the user explicitly asks.");
+        description.append("\n- Avoid emojis unless explicitly requested.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Check existence and context: `" + ReadMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Locate folders: `" + SearchFilesMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Update existing files: `" + EditMcpTool.TOOL_NAME + "`.");
+        description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
@@ -328,5 +385,6 @@ public class WriteMcpTool
         @SerializedName("charset_name")
         public String charsetName;
     }
-
 }
+
+

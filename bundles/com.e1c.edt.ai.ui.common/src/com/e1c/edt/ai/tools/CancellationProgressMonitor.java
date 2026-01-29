@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.tools;
 
+import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 
 /**

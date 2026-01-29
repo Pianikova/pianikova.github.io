@@ -49,9 +49,9 @@ public class AIModule
         bind(IIdProvider.class).to(HardwareIdProvider.class).in(Singleton.class);
         bind(IProposalExtractor.class).to(ProposalExtractor.class).in(Singleton.class);
         bind(IEnvironment.class).to(Environment.class).in(Singleton.class);
-        bind(IMcpToolsCallMessageFactory.class).to(McpToolsCallMessageFactory.class).in(Singleton.class);
         bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
         bind(IClientTokenValidator.class).to(ClientTokenValidator.class).in(Singleton.class);
+        bind(IContentReplacer.class).to(ContentReplacer.class).in(Singleton.class);
         // @formatter:on
     }
 }

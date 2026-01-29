@@ -3,12 +3,15 @@ import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.OperationCanceledException;
-import org.eclipse.core.runtime.jobs.IJobManager;
 import org.eclipse.core.runtime.jobs.Job;
 
+import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IProjectBuilder;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -21,12 +24,16 @@ public class BuildWaiter implements IBuildWaiter
                 ResourcesPlugin.FAMILY_AUTO_REFRESH, ResourcesPlugin.FAMILY_MANUAL_REFRESH)
             .toArray();
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
+    private final IProjectBuilder builder;
 
     @Inject
-    public BuildWaiter(Provider<ICancellationProgressMonitor> cancellationProgressMonitor)
+    public BuildWaiter(Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IProjectBuilder builder)
     {
         Preconditions.checkNotNull(cancellationProgressMonitor);
+        Preconditions.checkNotNull(builder);
+
         this.cancellationProgressMonitor = cancellationProgressMonitor;
+        this.builder = builder;
     }
 
     /**
@@ -37,9 +44,9 @@ public class BuildWaiter implements IBuildWaiter
      */
     @Override
     @SuppressWarnings("nls")
-    public CompletableFuture<Void> waitForBuilds(ICancellationToken cancellationToken)
+    public CompletableFuture<Void> waitForBuilds(IProject project, ICancellationToken cancellationToken)
     {
-        IJobManager jobManager = Job.getJobManager();
+        var jobManager = Job.getJobManager();
 
         // Check if there are any active jobs in the build families
         boolean hasActiveJobs = Arrays.stream(BUILD_FAMILIES)
@@ -56,6 +63,7 @@ public class BuildWaiter implements IBuildWaiter
         return CompletableFuture.runAsync(() -> {
             try
             {
+                builder.build(project, cancellationToken);
                 var monitor = cancellationProgressMonitor.get();
                 monitor.setCancellationToken(cancellationToken);
                 jobManager.join(BUILD_FAMILIES, monitor);
@@ -68,6 +76,11 @@ public class BuildWaiter implements IBuildWaiter
             {
                 Thread.currentThread().interrupt();
                 throw new CompletionException("Build waiting was interrupted", e);
+            }
+            catch (CoreException e)
+            {
+                Thread.currentThread().interrupt();
+                throw new CompletionException("Build failed", e);
             }
         });
     }

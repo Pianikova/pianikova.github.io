@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.concurrent.ExecutionException;
+
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
@@ -14,6 +16,7 @@ import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITextPreprocessor;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -109,6 +112,7 @@ public class IdeApiHandler
             {
                 call.sourceChatId = chatId;
                 call.sourceMessageId = messageId;
+                call.callKind = ToolCallKind.CALL;
             }
 
             mcpTools.callTools(calls, CancellationTokens.NONE).whenComplete((result, error) -> {
@@ -124,6 +128,37 @@ public class IdeApiHandler
         }, true, CancellationTokens.NONE);
         job.setPriority(Job.INTERACTIVE);
         job.schedule();
+    }
+
+    public String renderTools(String chatId, String messageId, String callToolsJson)
+    {
+        var callToolsOptional = json.deserialize(callToolsJson, McpToolCalls.class);
+        if (callToolsOptional.isEmpty())
+        {
+            log.logError("Cannot deserialize calls: " + callToolsJson); //$NON-NLS-1$
+            return null;
+        }
+
+        var calls = callToolsOptional.get();
+        for (var call : calls)
+        {
+            call.sourceChatId = chatId;
+            call.sourceMessageId = messageId;
+            call.callKind = ToolCallKind.RENDER;
+        }
+
+        try
+        {
+            var result = mcpTools.callTools(calls, CancellationTokens.NONE).get();
+            var messagesJson = result.messages != null ? json.serialize(result.messages) : null;
+            return messagesJson;
+        }
+        catch (InterruptedException | ExecutionException error)
+        {
+            log.logError(error);
+        }
+
+        return null;
     }
 
     public void trace(String message)

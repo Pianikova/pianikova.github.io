@@ -2,6 +2,7 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.context.tools;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -22,20 +23,22 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.context.IEntityFactory;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
-public class GetObjectByIdMcpTool
+public class GetObjectMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "1C_GetObjectById"; //$NON-NLS-1$
+    public static final String TOOL_NAME = "1C_GetObject"; //$NON-NLS-1$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -63,7 +66,7 @@ public class GetObjectByIdMcpTool
     private final IProjectFileSystemSupportProvider projectFileSystemSupportProvider;
 
     @Inject
-    public GetObjectByIdMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBmModelManager modelManager,
+    public GetObjectMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IBmModelManager modelManager,
         IEntityFactory entityFactory, IProjectFileSystemSupportProvider projectFileSystemSupportProvider)
     {
         Preconditions.checkNotNull(json);
@@ -97,6 +100,14 @@ public class GetObjectByIdMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.Get1CObjectByIdTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
@@ -181,7 +192,7 @@ public class GetObjectByIdMcpTool
                 }
 
                 var response = new Response();
-                response.resoureUri = bmObject.bmGetUriAsString();
+                response.resourceUri = bmObject.bmGetUriAsString();
                 response.fqn = bmObject.bmGetFqn();
                 response.isTop = bmObject.bmIsTop();
 
@@ -230,7 +241,11 @@ public class GetObjectByIdMcpTool
                 }
 
                 var content = json.serialize(response);
-                return messageFactory.createMessage(this, call, content);
+
+                // Add response markdown
+                details.responseMarkdown = MessageFormat.format(Messages.ObjectRetrievedTemplate, response.fqn != null ? response.fqn : "Unknown");
+
+                return messageFactory.createMessage(this, call, content, details);
             }
             catch (OperationCanceledException e)
             {
@@ -249,8 +264,12 @@ public class GetObjectByIdMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Returns 1C configuration object by its unique ID.");
-        description.append("\nFor example:");
+        description.append("Returns a 1C configuration object by id.");
+        description.append("\n\nUsage:");
+        description.append("\n- Requires a valid object id.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Find ids: `" + FindMcpTool.TOOL_NAME + "`.");
+        description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
@@ -295,8 +314,8 @@ public class GetObjectByIdMcpTool
 
     private static class Response
     {
-        @SerializedName("resoure_uri")
-        public String resoureUri;
+        @SerializedName("resource_uri")
+        public String resourceUri;
 
         @SerializedName("fqn")
         public String fqn;

@@ -2,6 +2,7 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.context.tools;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,16 +33,21 @@ import com._1c.g5.v8.dt.search.core.refs.BslReferenceMatch;
 import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
 import com._1c.g5.v8.dt.search.core.text.TextSearchFileMatch;
 import com._1c.g5.v8.dt.search.core.text.TextSearchModelMatch;
+import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -50,7 +56,7 @@ public class FindMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "1C_Find"; //$NON-NLS-1$
-    private static final int MAX_ELEMENTS = 64;
+    private static final int DEFAULT_MAX_ELEMENTS = McpToolConstants.DEFAULT_MAX_SEARCH_ELEMENTS;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -72,7 +78,9 @@ public class FindMcpTool
         + "    \"documents\",\n"
         + "    \"constants\"\n"
         + "  ],\n"
-        + "  \"match_case\": true\n"
+        + "  \"match_case\": true,\n"
+        + "  \"first_index\": 0,\n"
+        + "  \"max_count\": 64\n"
         + "}";
 
     @SuppressWarnings("nls")
@@ -101,18 +109,20 @@ public class FindMcpTool
     private final IExternalPropertyManagerRegistry externalPropertyManagerRegistry;
     private final IDtHostResourceManager hostResourceManager;
     private final IBmModelManager modelManager;
+    private final IMarkdownUtils markdownUtils;
 
     @Inject
     public FindMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IBmModelManager bmModelManager, ITextSearchIndexProvider textSearchIndexProvider,
         IExternalPropertyManagerRegistry externalPropertyManagerRegistry, IDtHostResourceManager hostResourceManager,
-        IBmModelManager modelManager)
+        IBmModelManager modelManager, IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(bmModelManager);
         Preconditions.checkNotNull(textSearchIndexProvider);
         Preconditions.checkNotNull(externalPropertyManagerRegistry);
+        Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(hostResourceManager);
         Preconditions.checkNotNull(modelManager);
 
@@ -123,6 +133,7 @@ public class FindMcpTool
         this.externalPropertyManagerRegistry = externalPropertyManagerRegistry;
         this.hostResourceManager = hostResourceManager;
         this.modelManager = modelManager;
+        this.markdownUtils = markdownUtils;
 
         spec = createSpecification();
     }
@@ -143,6 +154,14 @@ public class FindMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.Find1CObjectsTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
@@ -248,22 +267,39 @@ public class FindMcpTool
                 }
 
                 var response = createResponse(resultCollector);
-                var maxElements = false;
-                if (response.size() > MAX_ELEMENTS)
+                int effectiveMaxElements = request.maxCount > 0 ? request.maxCount : DEFAULT_MAX_ELEMENTS;
+                int firstIndex = Math.max(0, request.firstIndex);
+
+                if (response.size() > firstIndex + effectiveMaxElements)
                 {
-                    maxElements = true;
-                    for (int i = MAX_ELEMENTS; i < response.size(); i++)
+                    // Remove elements beyond the requested range
+                    for (int i = firstIndex + effectiveMaxElements; i < response.size(); i++)
                     {
                         response.remove(i);
+                    }
+                    // Remove elements before the first index
+                    for (int i = 0; i < firstIndex && i < response.size(); i++)
+                    {
+                        response.remove(0);
+                    }
+                }
+                else if (firstIndex > 0 && response.size() > firstIndex)
+                {
+                    // Remove elements before the first index if we have enough elements
+                    for (int i = 0; i < firstIndex && i < response.size(); i++)
+                    {
+                        response.remove(0);
                     }
                 }
 
                 var content = json.serialize(response);
-                if (maxElements)
-                {
-                    content += "\n\n max elements + (" + MAX_ELEMENTS + ") reached.";
-                }
-                return messageFactory.createMessage(this, call, content);
+
+                // Add response markdown
+                int objectCount = response.size();
+                String styledObjectCount = markdownUtils.createStyledText(String.valueOf(objectCount),
+                    objectCount > 0 ? TextColor.GREEN : TextColor.BLUE, FontWeight.BOLD);
+                details.responseMarkdown = MessageFormat.format(Messages.Found1CObjectsTemplate, styledObjectCount);
+                return messageFactory.createMessage(this, call, content, details);
             }
             catch (OperationCanceledException | CoreException error)
             {
@@ -381,10 +417,13 @@ public class FindMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Finds elements (objects, attributes, forms, code, etc) in 1C projects.");
-        description.append("\nIMPORTANT: use wildcards (in `search_query`) for a broad search.");
-        description.append("\nIMPORTANT: use " + GetObjectByIdMcpTool.TOOL_NAME + " tool to get an object by its id.");
-        description.append("\nFor example:");
+        description.append("Finds 1C project elements (objects, attributes, forms, code, etc.).");
+        description.append("\n\nUsage:");
+        description.append("\n- Use wildcards in `search_query` for broad search.");
+        description.append("\n- Narrow by project and type to reduce noise.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Fetch by id: `" + GetObjectMcpTool.TOOL_NAME + "`.");
+        description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
@@ -423,6 +462,16 @@ public class FindMcpTool
         matchCaseProp.type = "boolean";
         matchCaseProp.description = "Case-sensitive search. Default: false";
         properties.put("match_case", matchCaseProp);
+
+        var firstIndexProp = new McpToolCallProperty();
+        firstIndexProp.type = "integer";
+        firstIndexProp.description = "Index of first element to return (0-based). Default: 0";
+        properties.put("first_index", firstIndexProp);
+
+        var maxCountProp = new McpToolCallProperty();
+        maxCountProp.type = "integer";
+        maxCountProp.description = "Maximum number of elements to return. Default: 64";
+        properties.put("max_count", maxCountProp);
 
         parameters.properties = properties;
         parameters.required = Arrays.asList("search_query", "project_names", "in", "for", "scopes");
@@ -526,6 +575,12 @@ public class FindMcpTool
 
         @SerializedName("match_case")
         public boolean matchCase = false;
+
+        @SerializedName("first_index")
+        public int firstIndex = 0;
+
+        @SerializedName("max_count")
+        public int maxCount = DEFAULT_MAX_ELEMENTS;
     }
 
     /**

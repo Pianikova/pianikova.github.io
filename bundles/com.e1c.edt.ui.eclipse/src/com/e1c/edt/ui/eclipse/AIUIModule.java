@@ -14,9 +14,12 @@ import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IDefaultSettings;
+import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IProjectBuilder;
+import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
@@ -27,6 +30,7 @@ import com.e1c.edt.ai.ui.IModuleNameProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 
 public class AIUIModule
     extends AbstractModule
@@ -56,6 +60,8 @@ public class AIUIModule
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IContextEntities.class).to(ContextEntities.class).in(Singleton.class);
         bind(IProjectProvider.class).to(ProjectProvider.class).in(Singleton.class);
+        bind(IProjectBuilder.class).to(ProjectBuilder.class).in(Singleton.class);
+        bind(IEditingSupport.class).to(EditingSupport.class).in(Singleton.class);
         bind(MessageDigest.class).toProvider(() -> {
             try
             {
@@ -72,6 +78,8 @@ public class AIUIModule
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
         bind(IFiles.class).to(Files.class).in(Singleton.class);
+        @SuppressWarnings("unused")
+        var projectDetailsProviderBinder = Multibinder.newSetBinder(binder(), IProjectDetailsProvider.class);
         // @formatter:on
     }
 }

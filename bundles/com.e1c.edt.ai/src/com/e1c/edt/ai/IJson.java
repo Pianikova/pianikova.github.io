@@ -10,4 +10,6 @@ public interface IJson
     String serialize(Object src);
 
     <T> Optional<T> deserialize(String json, Class<T> classOfT);
+
+    String formatJson(String json);
 }

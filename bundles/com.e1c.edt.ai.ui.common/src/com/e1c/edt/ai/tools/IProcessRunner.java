@@ -11,5 +11,5 @@ import java.util.concurrent.TimeUnit;
 public interface IProcessRunner
 {
     CompletableFuture<Optional<ProcessResult>> executeProcess(String executable, String workingDirectory,
-        List<String> args, Long timeout, TimeUnit timeUnit);
+        List<String> args, Long timeout, TimeUnit timeUnit, Integer maxLines);
 }

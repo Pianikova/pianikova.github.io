@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.e1c.edt.ai.ui;
 
 import java.io.IOException;
@@ -13,12 +10,14 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextViewer;
 import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.texteditor.ITextEditor;
 
 import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
-public class ContentSourceProvider implements IContentSourceProvider
+public class ContentSourceProvider
+    implements IContentSourceProvider
 {
     private final ILog log;
 
@@ -38,6 +37,8 @@ public class ContentSourceProvider implements IContentSourceProvider
         }
 
         IDocument document = null;
+        ITextEditor textEditor = null;
+
         for (var window : PlatformUI.getWorkbench().getWorkbenchWindows())
         {
             var page = window.getActivePage();
@@ -50,13 +51,13 @@ public class ContentSourceProvider implements IContentSourceProvider
             {
                 try
                 {
-                    var editor = editorRef.getEditor(false);
-                    if (editor == null)
+                    var editorPart = editorRef.getEditor(false);
+                    if (editorPart == null)
                     {
                         continue;
                     }
 
-                    var input = editor.getEditorInput();
+                    var input = editorPart.getEditorInput();
                     if (input == null)
                     {
                         continue;
@@ -73,10 +74,13 @@ public class ContentSourceProvider implements IContentSourceProvider
                         continue;
                     }
 
-                    var textOperationTarget = editor.getAdapter(ITextOperationTarget.class);
+                    // Основное изменение здесь:
+                    var textOperationTarget = editorPart.getAdapter(ITextOperationTarget.class);
                     if (textOperationTarget instanceof TextViewer)
                     {
-                        document = ((TextViewer)textOperationTarget).getDocument();
+                        var textViewer = (TextViewer)textOperationTarget;
+                        document = textViewer.getDocument();
+                        textEditor = editorPart.getAdapter(ITextEditor.class);
                         break;
                     }
                 }
@@ -94,7 +98,7 @@ public class ContentSourceProvider implements IContentSourceProvider
 
         if (document != null)
         {
-            return Optional.of(new FileDocument(document, file, true));
+            return Optional.of(new FileDocument(document, textEditor, file, true));
         }
 
         if (file.exists())
@@ -104,7 +108,7 @@ public class ContentSourceProvider implements IContentSourceProvider
                 var bytes = file.getContents().readAllBytes();
                 var content = new String(bytes, file.getCharset());
                 document = new Document(content);
-                return Optional.of(new FileDocument(document, file, false));
+                return Optional.of(new FileDocument(document, null, file, false));
             }
             catch (IOException | CoreException e)
             {

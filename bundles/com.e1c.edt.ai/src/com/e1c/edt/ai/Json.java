@@ -10,12 +10,14 @@ import com.e1c.edt.ai.assistent.model.TokenHealing;
 import com.google.common.base.Preconditions;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 public class Json
     implements IJson
 {
     private final Gson gson;
+    private final Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
 
     @SuppressWarnings({ "unchecked", "unused", "rawtypes" })
     public Json()
@@ -63,6 +65,19 @@ public class Json
         catch (Exception error)
         {
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public String formatJson(String json)
+    {
+        try
+        {
+            return prettyGson.toJson(JsonParser.parseString(json));
+        }
+        catch (Exception error)
+        {
+            return json;
         }
     }
 }

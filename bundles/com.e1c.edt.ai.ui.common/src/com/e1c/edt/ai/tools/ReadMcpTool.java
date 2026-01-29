@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.io.File;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -10,16 +12,22 @@ import java.util.concurrent.CompletableFuture;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 
+import com.e1c.edt.ai.FontWeight;
+import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
@@ -31,7 +39,7 @@ public class ReadMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
-    private static final int MAX_LINES = 4000; // Maximum lines to read
+    private static final int MAX_LINES = McpToolConstants.MAX_READ_LINES;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -46,7 +54,7 @@ public class ReadMcpTool
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "{\n"
-        + "  \"content\": \"     51: Процедура Пример()\\n     52:     Сообщить(\\\"Привет, мир!\\\");\\n     53: КонецПроцедуры\",\n"
+        + "  \"content\": \"     51: Procedure Test()\\n     52:     Message(\\\"Hello\\\");\\n     53: EndProcedure\",\n"
         + "  \"charset_name\": \"UTF-8\"\n"
         + "}";
     // @formatter:on
@@ -57,22 +65,25 @@ public class ReadMcpTool
     private final IContentSourceProvider contentSourceProvider;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IMarkdownUtils markdownUtils;
 
     @Inject
     public ReadMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
-        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem)
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem, IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(markdownUtils);
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.markdownUtils = markdownUtils;
         spec = createSpecification();
     }
 
@@ -92,21 +103,20 @@ public class ReadMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
+
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+                    "Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
+                        + "Escape newlines as \\n and quotes as \\\". "
+                        + "Use this example: " + QuestionExample));
         }
+
         var request = optionalRequest.get();
-        var projectName = request.projectName;
-        if (projectName == null || projectName.isBlank())
-        {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "`project_name` is required."));
-        }
         var relativeFilePath = request.relativeFilePath;
         if (relativeFilePath == null || relativeFilePath.isBlank())
         {
@@ -115,16 +125,32 @@ public class ReadMcpTool
                     "`relative_file_path` is required."));
         }
 
+        var fileName = new File(relativeFilePath);
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = MessageFormat.format(Messages.ReadTitleTemplate, fileName.getName());
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
+        var projectName = request.projectName;
+        if (projectName == null || projectName.isBlank())
+        {
+            return CompletableFuture
+                .completedFuture(messageFactory.createError(this, call,
+                    "`project_name` is required."));
+        }
+
         // Validate and set default values for line parameters
         int firstLineNumber =
             request.firstLineNumber != null && request.firstLineNumber > 0 ? request.firstLineNumber : 1;
-        int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : 2000;
+        int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : McpToolConstants.DEFAULT_READ_LINES;
 
         // Apply maximum lines limit
         if (linesNumber > MAX_LINES)
         {
             linesNumber = MAX_LINES;
         }
+
         var curLinesNumber = linesNumber;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
@@ -180,7 +206,12 @@ public class ReadMcpTool
             response.content = resultContent.toString();
             response.charsetName = document.getCharset().name();
             var content = json.serialize(response);
-            return messageFactory.createMessage(this, call, content);
+
+            // Add response markdown
+            String styledLineNumber = markdownUtils.createStyledText(String.valueOf(lineNumber), TextColor.GREEN, FontWeight.BOLD);
+            details.responseMarkdown =
+                MessageFormat.format(Messages.ReadTemplate, fileName.getName(), styledLineNumber);
+            return messageFactory.createMessage(this, call, content, details);
         });
     }
 
@@ -194,19 +225,24 @@ public class ReadMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Reads the content of a project file. It is okay to read a file that does not exist; an error will be returned.");
+        description.append("Reads file content from a project.");
         description.append("\n\nUsage:");
-        description.append("\n- The file_path parameter must be a project relative path, not an absolute path.");
-        description.append("\n- By default, it reads up to 2000 lines starting from the beginning of the file.");
-        description.append("\n- You can optionally specify a line offset and limit (especially handy for long files), but it's recommended to read the whole file by not providing these parameters.");
-        description.append("\n- Only the first " + MAX_LINES + " lines will be read (or fewer if the file is shorter).");
-        description.append("\n- Each line is prefixed with an 8-character line number header that is not part of the original content.");
-        description.append("\n  Format: [7-digit number] + colon (e.g., '    123:')");
-        description.append("\n- The edit will FAIL if `origin_content` is not unique in the file. ");
-        description.append("Either provide a larger string with more surrounding context to make it unique or use `replace_all` to change every instance of `origin_content`.");
-        description.append("\n- Use `replace_all` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.");
-        description.append("\n- You must use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and '" + SetMarkersMcpTool.TOOL_NAME + "' tools to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
-        description.append("\nFor example:");
+        description.append("\n- `project_name` and `relative_file_path` are required; path is project-relative.");
+        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
+        description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
+        description.append("\n- Escape newlines as \\n and quotes as \\\".");
+        description.append("\n- Send only the raw JSON object (no code fences or extra text).");
+        description.append("\n- Example (single line is OK): {\"project_name\":\"MyProject\",\"relative_file_path\":\"src/MainModule.bsl\",\"first_line_number\":1,\"lines_number\":200}");
+        description.append("\n- Defaults: `first_line_number` = 1, `lines_number` = 2000; capped at " + MAX_LINES + ".");
+        description.append("\n- Each line is prefixed with a 7-digit line number and colon (e.g., `    123:`); strip it before editing.");
+        description.append("\n- Preserve exact whitespace and line endings (\\r, \\n, \\t).");
+        description.append("\n- If you plan to edit, read a larger chunk to make `origin_content` unique.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Locate files: `" + SearchFilesMcpTool.TOOL_NAME + "`, `" + FindMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Modify files: `" + EditMcpTool.TOOL_NAME + "`, `" + WriteMcpTool.TOOL_NAME + "`.");
+        description.append("\n- MUST use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and `" + SetMarkersMcpTool.TOOL_NAME
+            + "` to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
+        description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
 
@@ -286,3 +322,5 @@ public class ReadMcpTool
         public String charsetName;
     }
 }
+
+

@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -16,16 +17,21 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.commands.ICommandService;
 import org.eclipse.ui.keys.IBindingService;
 
+import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -123,14 +129,17 @@ public class GetCommandsMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
+    private final IMarkdownUtils markdownUtils;
 
     @Inject
-    public GetCommandsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory)
+    public GetCommandsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
+        Preconditions.checkNotNull(markdownUtils);
         this.json = json;
         this.messageFactory = messageFactory;
+        this.markdownUtils = markdownUtils;
         spec = createSpecification();
     }
 
@@ -150,6 +159,14 @@ public class GetCommandsMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.CommandsTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         var optionalRequest = json.deserialize(call.function.arguments, CommandCategory.class);
         if (optionalRequest.isEmpty())
         {
@@ -285,7 +302,14 @@ public class GetCommandsMcpTool
             }
 
             var content = json.serialize(commands.stream().sorted(COMPARATOR).collect(Collectors.toList()));
-            return messageFactory.createMessage(this, call, content);
+            // Add response markdown
+
+            int commandCount = commands.size();
+            String styledCommandCount = markdownUtils.createStyledText(String.valueOf(commandCount),
+                commandCount > 0 ? TextColor.GREEN : TextColor.BLUE, FontWeight.BOLD);
+            details.responseMarkdown = MessageFormat.format(Messages.CommandsLoadedTemplate, styledCommandCount);
+
+            return messageFactory.createMessage(this, call, content, details);
         });
     }
 
@@ -300,11 +324,14 @@ public class GetCommandsMcpTool
 
         var description = new StringBuilder();
 
-        description.append("Provides commands in the IDE: command id, name, description, parameters, return type, etc.");
-        description.append("\nIMPORTANT: use " + GetCommandCategoriesMcpTool.TOOL_NAME + " tool to get categories.");
-        description.append("\nNOTE: add a description of what will be done when using this tool.");
-
-        description.append("\nFor example:");
+        description.append("Lists IDE commands and their metadata.");
+        description.append("\n\nUsage:");
+        description.append("\n- Use category ids to scope results.");
+        description.append("\n- Add a description of what will be done when calling a command.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- List categories: `" + GetCommandCategoriesMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Execute command: `" + ExecuteCommandMcpTool.TOOL_NAME + "`.");
+        description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
 

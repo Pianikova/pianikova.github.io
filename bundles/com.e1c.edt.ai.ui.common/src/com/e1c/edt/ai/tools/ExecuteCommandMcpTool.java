@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
@@ -22,11 +23,13 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -93,6 +96,14 @@ public class ExecuteCommandMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = false;
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.ExecuteCommandTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         var optionalRequest = json.deserialize(call.function.arguments, CommandDescription.class);
         if (optionalRequest.isEmpty())
         {
@@ -215,14 +226,14 @@ public class ExecuteCommandMcpTool
             }
 
             var handlerService = PlatformUI.getWorkbench().getService(IHandlerService.class);
-            return dispatcher.dispatch(() -> executeCommand(handlerService, call, parameterizedCommand))
+            return dispatcher.dispatch(() -> executeCommand(handlerService, call, parameterizedCommand, details))
                 .orElseGet(() -> messageFactory.createError(this, call, "Cannot execute the command."));
         });
     }
 
     @SuppressWarnings("nls")
     private ToolCallMessage executeCommand(IHandlerService handlerService, McpToolCall call,
-        ParameterizedCommand parameterizedCommand)
+        ParameterizedCommand parameterizedCommand, ToolCallMessageDetails details)
     {
         Object result = null;
         try
@@ -234,7 +245,11 @@ public class ExecuteCommandMcpTool
             }
 
             var content = json.serialize(result.toString());
-            return messageFactory.createMessage(this, call, content);
+            // Add response markdown
+
+            details.responseMarkdown = MessageFormat.format(Messages.ExecutedTemplate, parameterizedCommand.getId());
+
+            return messageFactory.createMessage(this, call, content, details);
         }
         catch (ExecutionException e)
         {
@@ -265,12 +280,15 @@ public class ExecuteCommandMcpTool
 
         var description = new StringBuilder();
 
-        description.append("Executes a command in the IDE by its id.");
-        description.append("\nIMPORTANT: use this tool to execute interactive commands of development environment (IDE).");
-        description.append("\nIMPORTANT: uses parameters to execute commands.");
-        description.append("\nNOTE: add a description of what will be done when using this tool.");
-
-        description.append("\nFor example:");
+        description.append("Executes an IDE command by id.");
+        description.append("\n\nUsage:");
+        description.append("\n- Use this tool for IDE actions that require the IDE context.");
+        description.append("\n- Provide required parameters for the command.");
+        description.append("\n- Add a short description of what will be done.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Discover commands: `" + GetCommandsMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Discover categories: `" + GetCommandCategoriesMcpTool.TOOL_NAME + "`.");
+        description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
 

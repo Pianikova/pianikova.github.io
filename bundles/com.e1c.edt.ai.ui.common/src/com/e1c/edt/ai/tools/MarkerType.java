@@ -39,8 +39,14 @@ public enum MarkerType
     /**
      * Custom AI-generated marker type
      */
-    AI_MARKER("com.e1c.edt.ai.marker", //$NON-NLS-1$
+    AI_MARKER("com.e1c.edt.ai.AIMarker", //$NON-NLS-1$
         "ALWAYS use it to show any issues, problems, errors, warnings, etc."); //$NON-NLS-1$
+
+    public static final String AI_MARKER_BASE = "com.e1c.edt.ai.AIMarker"; //$NON-NLS-1$
+    public static final String AI_MARKER_ERROR = "com.e1c.edt.ai.AIError"; //$NON-NLS-1$
+    public static final String AI_MARKER_WARNING = "com.e1c.edt.ai.AIWarning"; //$NON-NLS-1$
+    public static final String AI_MARKER_INFO = "com.e1c.edt.ai.AIInfo"; //$NON-NLS-1$
+    public static final String LEGACY_AI_MARKER_BASE = "com.e1c.edt.ai.marker"; //$NON-NLS-1$
 
     private final String typeId;
     private final String description;
@@ -111,6 +117,10 @@ public enum MarkerType
      */
     public static MarkerType fromTypeId(String typeId)
     {
+        if (typeId != null && (typeId.startsWith(AI_MARKER_BASE) || typeId.startsWith(LEGACY_AI_MARKER_BASE)))
+        {
+            return MarkerType.AI_MARKER;
+        }
         for (MarkerType type : values())
         {
             if (type.typeId.equals(typeId))
@@ -142,5 +152,33 @@ public enum MarkerType
         }
 
         return null;
+    }
+
+    @SuppressWarnings("nls")
+    public static String getAiMarkerTypeId(String severity)
+    {
+        if (severity == null)
+        {
+            return AI_MARKER_INFO;
+        }
+        var normalized = severity.trim().toLowerCase();
+        switch (normalized)
+        {
+        case "error":
+            return AI_MARKER_ERROR;
+        case "warn":
+        case "warning":
+            return AI_MARKER_WARNING;
+        case "info":
+        case "information":
+        default:
+            return AI_MARKER_INFO;
+        }
+    }
+
+    public static String[] getAiMarkerTypeIds()
+    {
+        return new String[] { AI_MARKER_ERROR, AI_MARKER_WARNING, AI_MARKER_INFO,
+            LEGACY_AI_MARKER_BASE + ".error", LEGACY_AI_MARKER_BASE + ".warning", LEGACY_AI_MARKER_BASE + ".info" };
     }
 }

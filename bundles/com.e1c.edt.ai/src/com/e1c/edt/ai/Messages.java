@@ -26,6 +26,7 @@ public class Messages
     public static String CodeCompletionPolicy_Intensive;
     public static String CodeCompletionPolicy_IntensiveShortDescription;
     public static String CodeCompletionPolicy_IntensiveDescription;
+    public static String DiffContextPlaceholder;
 
     static
     {

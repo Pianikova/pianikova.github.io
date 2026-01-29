@@ -31,6 +31,11 @@ public class ToolCallMessage
     public String tool_call_id;
 
     /**
+     * Детали вызова инструмента, на который отвечает это сообщение
+     */
+    public ToolCallMessageDetails details;
+
+    /**
      * Спецификация вызова инструмента, на который отвечает это сообщение
      */
     public transient McpToolCallSpecification specification;

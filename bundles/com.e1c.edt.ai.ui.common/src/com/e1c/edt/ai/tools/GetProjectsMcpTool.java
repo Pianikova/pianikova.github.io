@@ -3,38 +3,36 @@
 */
 package com.e1c.edt.ai.tools;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.jface.text.ITextSelection;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
 
+import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.IProjectDetailsProvider;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ProjectId;
-import com.e1c.edt.ai.ui.IContentSourceProvider;
-import com.e1c.edt.ai.ui.IDispatcher;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -49,13 +47,13 @@ public class GetProjectsMcpTool
     private static String AnswerExample =
         "[\n"
         + "  {\n"
-        + "    \"name\": \"Склад\",\n"
-        + "    \"absolute_path\": \"D:\\\\Projects\\\\_Eclipse\\\\EDT_Plugin\\\\Склад\",\n"
+        + "    \"name\": \"Warehouse\",\n"
+        + "    \"absolute_path\": \"D:\\\\Projects\\\\EDT_Plugin\\\\Warehouse\",\n"
         + "    \"is_open\": true,\n"
         + "    \"exists\": true,\n"
         + "    \"is_current\": true,\n"
         + "    \"session_id\": \"A:dd933ffc-a55d-4fef-b6bf-37d66e184209\",\n"
-        + "    \"comment\": \"\",\n"
+        + "    \"comment\": \"Sample project\",\n"
         + "    \"build_commands\": [\n"
         + "      \"org.eclipse.xtext.ui.shared.xtextBuilder\"\n"
         + "    ],\n"
@@ -63,70 +61,19 @@ public class GetProjectsMcpTool
         + "      \"org.eclipse.xtext.ui.shared.xtextNature\",\n"
         + "      \"com._1c.g5.v8.dt.core.V8ConfigurationNature\"\n"
         + "    ],\n"
-        + "    \"open_files\": [\n"
-        + "      {\n"
-        + "        \"relative_file_path\": \"src/CommonModules/Математика/Module.bsl\",\n"
-        + "        \"cursor_line\": 11,\n"
-        + "        \"cursor_line_offset\": 1,\n"
-        + "        \"selection_start_line\": 11,\n"
-        + "        \"selection_start_line_offset\": 1,\n"
-        + "        \"selection_end_line\": 15,\n"
-        + "        \"selection_end_line_offset\": 19\n"
-        + "      }\n"
-        + "    ],\n"
         + "    \"details\": {\n"
         + "      \"1C project details\": {\n"
-        + "        \"name\": \"Склад\",\n"
+        + "        \"name\": \"Warehouse\",\n"
         + "        \"type\": \"Configuration\",\n"
         + "        \"script_language\": \"English\",\n"
         + "        \"version\": \"1.1.3\",\n"
         + "        \"platform_version\": \"8.3.24\",\n"
-        + "        \"vendor\": \"Abc INC\",\n"
-        + "        \"compatibility\": \"8.3.24\",\n"
-        + "        \"comment\": \"Основной справочник для учета хранения и перемещения товаров на складах предприятия\",\n"
-        + "        \"brief_information\": {\n"
-        + "          \"en\": \"Управление складскими операциями и учет товарных запасов\"\n"
-        + "        }\n"
-        + "      }\n"
-        + "    }\n"
-        + "  },\n"
-        + "  {\n"
-        + "    \"name\": \"Склад.РасширениеСклада\",\n"
-        + "    \"absolute_path\": \"D:\\\\Projects\\\\_Eclipse\\\\EDT_Plugin\\\\Склад.РасширениеСклада\",\n"
-        + "    \"is_open\": true,\n"
-        + "    \"exists\": true,\n"
-        + "    \"is_current\": true,\n"
-        + "    \"session_id\": \"A:f1f911e2-3570-4097-99c0-91f0f9d0c28b\",\n"
-        + "    \"comment\": \"\",\n"
-        + "    \"build_commands\": [\n"
-        + "      \"org.eclipse.xtext.ui.shared.xtextBuilder\"\n"
-        + "    ],\n"
-        + "    \"natures\": [\n"
-        + "      \"org.eclipse.xtext.ui.shared.xtextNature\",\n"
-        + "      \"com._1c.g5.v8.dt.core.V8ExtensionNature\"\n"
-        + "    ],\n"
-        + "    \"open_files\": [\n"
-        + "      {\n"
-        + "        \"relative_file_path\": \"src/Configuration/Configuration.mdo\"\n"
-        + "      },\n"
-        + "      {\n"
-        + "        \"relative_file_path\": \"src/CommonModules/РасшСклада_ОбщийМодуль/Module.bsl\",\n"
-        + "        \"cursor_line\": 7,\n"
-        + "        \"cursor_line_offset\": 15\n"
-        + "      }\n"
-        + "    ],\n"
-        + "    \"details\": {\n"
-        + "      \"1C project details\": {\n"
-        + "        \"name\": \"Склад.РасширениеСклада\",\n"
-        + "        \"type\": \"Extension\",\n"
-        + "        \"script_language\": \"Russian\",\n"
-        + "        \"version\": \"1.0.0\",\n"
-        + "        \"platform_version\": \"8.3.24\",\n"
         + "        \"vendor\": \"Abc Inc\",\n"
         + "        \"compatibility\": \"8.3.24\",\n"
-        + "        \"comment\": \"Расширение для управления складскими операциями и учета товаров на складе\",\n"
-        + "        \"brief_information\": {},\n"
-        + "        \"parent_project\": \"Склад\"\n"
+        + "        \"comment\": \"Sample configuration\",\n"
+        + "        \"brief_information\": {\n"
+        + "          \"en\": \"Warehouse operations and stock accounting\"\n"
+        + "        }\n"
         + "      }\n"
         + "    }\n"
         + "  }\n"
@@ -137,31 +84,28 @@ public class GetProjectsMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
-    private final IDispatcher dispatcher;
     private final ISessionService sessionService;
     private final Set<IProjectDetailsProvider> projectDetailsProviders;
-    private final IContentSourceProvider contentSourceProvider;
+    private final IMarkdownUtils markdownUtils;
 
     @Inject
     public GetProjectsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IDispatcher dispatcher, ISessionService sessionService, Set<IProjectDetailsProvider> projectDetailsProviders,
-        IContentSourceProvider contentSourceProvider)
+        ISessionService sessionService, Set<IProjectDetailsProvider> projectDetailsProviders,
+        IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(projectDetailsProviders);
-        Preconditions.checkNotNull(contentSourceProvider);
+        Preconditions.checkNotNull(markdownUtils);
 
         this.log = log;
         this.json = json;
         this.messageFactory = messageFactory;
-        this.dispatcher = dispatcher;
         this.sessionService = sessionService;
         this.projectDetailsProviders = projectDetailsProviders;
-        this.contentSourceProvider = contentSourceProvider;
+        this.markdownUtils = markdownUtils;
 
         spec = createSpecification();
     }
@@ -182,6 +126,14 @@ public class GetProjectsMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.ProjectsTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         // Execute the operation asynchronously
         return CompletableFuture.supplyAsync(() -> {
             // Check cancellation status before starting
@@ -190,13 +142,10 @@ public class GetProjectsMcpTool
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
-            // Collect information about currently open files in all projects
-            var projectOpenFiles =
-                dispatcher.dispatch(() -> collectOpenFiles())
-                    .orElseGet(() -> new HashMap<>());
             var root = ResourcesPlugin.getWorkspace().getRoot();
             var projects = root.getProjects();
             var response = new ArrayList<Project>();
+            var projectCount = 0;
             // Process each project in the workspace
             for (var project : projects)
             {
@@ -214,10 +163,8 @@ public class GetProjectsMcpTool
                 projectInfo.absolutePath = location != null ? location.toOSString() : null;
                 projectInfo.isOpen = project.isOpen();
                 projectInfo.exists = project.exists();
-                var openFilesList = projectOpenFiles.get(project);
                 projectInfo.buildCommands = new ArrayList<>();
                 projectInfo.natures = new ArrayList<>();
-                projectInfo.openFiles = new ArrayList<>();
                 projectInfo.details = new HashMap<>();
                 if (project.isOpen() && project.exists())
                 {
@@ -259,15 +206,10 @@ public class GetProjectsMcpTool
                         log.logError(error);
                     }
 
-                    // Collect open files
-                    if (openFilesList != null)
-                    {
-                        projectInfo.openFiles.addAll(openFilesList);
-                    }
                 }
 
-                // Set current project flag based on open files
-                projectInfo.isCurrent = !projectInfo.openFiles.isEmpty();
+                // Current project is not inferred from open files in this tool
+                projectInfo.isCurrent = false;
                 try
                 {
                     var optionalSession = sessionFeature.get();
@@ -277,11 +219,48 @@ public class GetProjectsMcpTool
                 {
                     log.logError(error);
                 }
+
+                projectCount++;
             }
+
+            // Create detailed response markdown with project information
+            var responseMarkdown = new StringBuilder();
+            responseMarkdown.append(MessageFormat.format(Messages.ProjectsLoadedTemplate,
+                markdownUtils.createStyledText(String.valueOf(projectCount), TextColor.GREEN, FontWeight.BOLD)));
+
+            // Add project details in collapsible section
+            responseMarkdown.append("\n\n<details><summary>").append(Messages.ProjectsDetailsTitle).append("</summary>\n\n");
+
+            for (var projectInfo : response)
+            {
+                // Add status indicators
+                if (projectInfo.exists != null && projectInfo.exists)
+                {
+                    responseMarkdown.append("- [x]");
+                }
+                else
+                {
+                    responseMarkdown.append("- [ ]");
+                }
+
+                responseMarkdown.append(" **").append(markdownUtils.escapeForMarkdown(projectInfo.name)).append("**");
+
+                // Add comment if available
+                if (projectInfo.comment != null && !projectInfo.comment.trim().isEmpty())
+                {
+                    responseMarkdown.append(" - ").append(markdownUtils.escapeForMarkdown(projectInfo.comment.trim()));
+                }
+
+                responseMarkdown.append("\n");
+            }
+
+            responseMarkdown.append("</details>");
+
+            details.responseMarkdown = responseMarkdown.toString();
 
             // Serialize and return the response
             var content = json.serialize(response);
-            return messageFactory.createMessage(this, call, content);
+            return messageFactory.createMessage(this, call, content, details);
         });
     }
 
@@ -290,85 +269,6 @@ public class GetProjectsMcpTool
      *
      * @return Map containing projects and their open files information
      */
-    private Map<IProject, List<OpenFileInfo>> collectOpenFiles()
-    {
-        var projectOpenFiles = new HashMap<IProject, List<OpenFileInfo>>();
-        var workbench = PlatformUI.getWorkbench();
-        for (var window : workbench.getWorkbenchWindows())
-        {
-            for (var page : window.getPages())
-            {
-                for (var editorRef : page.getEditorReferences())
-                {
-                    try
-                    {
-                        var input = editorRef.getEditorInput();
-                        var file = input.getAdapter(IFile.class);
-                        if (file == null || !file.exists())
-                        {
-                            continue;
-                        }
-
-                        var info = new OpenFileInfo();
-                        info.relativeFilePath = file.getProjectRelativePath().toString();
-                        var project = file.getProject();
-                        var document =
-                            contentSourceProvider.getFileDocument(file).map(i -> i.getDocument()).orElse(null);
-                        if (document != null)
-                        {
-                            var selection = Optional.ofNullable(editorRef.getEditor(false))
-                                .map(editor -> editor.getEditorSite())
-                                .map(editorSite -> editorSite.getSelectionProvider())
-                                .map(selectionProvider -> selectionProvider.getSelection())
-                                .map(s -> s instanceof ITextSelection ? (ITextSelection)s : null)
-                                .orElse(null);
-
-                            if (selection != null)
-                            {
-                                int offset = selection.getOffset();
-                                int length = selection.getLength();
-                                try
-                                {
-                                    // Calculate cursor position
-                                    int cursorLine = document.getLineOfOffset(offset) + 1;
-                                    int cursorLineOffset = offset - document.getLineOffset(cursorLine - 1);
-                                    info.cursorLine = cursorLine;
-                                    info.cursorLineOffset = cursorLineOffset;
-                                    // Calculate selection if present
-                                    if (length > 0)
-                                    {
-                                        var startLine = document.getLineOfOffset(offset) + 1;
-                                        var startOffsetInLine = offset - document.getLineOffset(startLine - 1);
-                                        var endOffset = offset + length;
-                                        var endLine = document.getLineOfOffset(endOffset) + 1;
-                                        var endOffsetInLine = endOffset - document.getLineOffset(endLine - 1);
-                                        info.selectionStartLine = startLine;
-                                        info.selectionStartLineOffset = startOffsetInLine;
-                                        info.selectionEndLine = endLine;
-                                        info.selectionEndLineOffset = endOffsetInLine;
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    log.logError(e);
-                                }
-                            }
-                        }
-
-                        // Add to project's open files list
-                        projectOpenFiles.computeIfAbsent(project, k -> new ArrayList<>()).add(info);
-                    }
-                    catch (PartInitException e)
-                    {
-                        log.logError(e);
-                    }
-                }
-            }
-        }
-
-        return projectOpenFiles;
-    }
-
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
@@ -380,28 +280,21 @@ public class GetProjectsMcpTool
 
         // Detailed tool description with all fields
         var description = new StringBuilder();
-        description.append(
-            "Returns a list of all projects in the Eclipse workspace with detailed information. For each project, the following is provided:");
-        description.append("\n- Project name and absolute file system path");
-        description.append("\n- Project description (from .project file`s <comment> element)");
-        description.append("\n- Status indicators: exists, is open");
-        description
-            .append("\n- `is_current`: true if the project has any open files (indicating it might be in focus)");
-        description.append("\n- Build commands: list of builder names from .project file");
-        description.append("\n- Project natures: list of project types from .project file");
-        description.append("\n- List of currently open files in the project, each with:");
-        description.append("\n  - relative_file_path: Project-relative file path");
-        description.append("\n  - cursor_line: Current line number (1-based)");
-        description.append("\n  - cursor_line_offset: Character offset in current line");
-        description.append("\n  - selection_start_line: Start line of selection (if any)");
-        description.append("\n  - selection_start_line_offset: Start offset in selection line");
-        description.append("\n  - selection_end_line: End line of selection (if any)");
-        description.append("\n  - selection_end_line_offset: End offset in selection line");
-        description.append("\n- Additional details: provided by registered providers (e.g., 1C project details)");
-        description.append(
-            "\nIMPORTANT: If the scope of code review, error detection, refactoring, etc. is not specified, use the list of currently open files to determine the context.");
-        description.append("\n\nNote: To get errors, warnings, bookmarks, etc. for a project or file, use the `"
-            + GetMarkersMcpTool.TOOL_NAME + "` tool.");
+        description.append("Lists projects in the workspace with key metadata and editor context.");
+        description.append("\n\nUsage:");
+        description.append("\n- Use this tool to choose a target project or infer scope from open files.");
+        description.append("\n- `is_current` indicates a project with open files (likely in focus).");
+        description.append("\n\nResponse includes:");
+        description.append("\n- Project name and absolute path");
+        description.append("\n- Description from .project <comment>");
+        description.append("\n- Status flags (exists, open, is_current)");
+        description.append("\n- Build commands and project natures");
+        description.append("\n- Additional provider details (e.g., 1C project info)");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Project issues/markers: `" + GetMarkersMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Locate files: `" + SearchFilesMcpTool.TOOL_NAME + "`, `" + FindMcpTool.TOOL_NAME + "`.");
+        description.append("\n- File history: `" + LocalHistoryMcpTool.TOOL_NAME + "`, `" + LocalChangesMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Navigation history: `" + NavigationHistoryMcpTool.TOOL_NAME + "`.");
         description.append("\n\nExample output:");
         description.append("\n").append(AnswerExample);
         spec.function.description = description.toString();
@@ -420,124 +313,48 @@ public class GetProjectsMcpTool
      */
     private static class Project
     {
-        /*
-         * Имя проекта.
-         */
+        /* Project name. */
         @SerializedName("name")
         public String name;
 
-        /*
-         * Абсолютный путь к проекту.
-         */
+        /* Absolute path to the project. */
         @SerializedName("absolute_path")
         public String absolutePath;
 
-        /*
-         * Открыт проект или нет.
-         */
+        /* Project is open. */
         @SerializedName("is_open")
         public Boolean isOpen;
 
-        /*
-         * Существует ли проект.
-         */
+        /* Project exists. */
         @SerializedName("exists")
         public Boolean exists;
 
-        /*
-         * Текущий проект или нет.
-         */
+        /* Current project. */
         @SerializedName("is_current")
         public Boolean isCurrent;
 
-        /*
-         * Описание проекта.
-         */
+        /* Project description. */
         @SerializedName("description")
         public String description;
 
-        /*
-         * Идентификатор сессии.
-         */
+        /* Session id. */
         @SerializedName("session_id")
         public String sessionId;
 
-        /*
-         * Комментарий к проекту.
-         */
+        /* Project comment. */
         @SerializedName("comment")
         public String comment;
 
-        /*
-         * Список команд сборки проекта.
-         */
+        /* Build commands for the project. */
         @SerializedName("build_commands")
         public List<String> buildCommands;
 
-        /*
-         * Список признаков проекта.
-         */
+        /* Project natures. */
         @SerializedName("natures")
         public List<String> natures;
 
-        /*
-         * Список открытых файлов в IDE.
-         */
-        @SerializedName("open_files")
-        public List<OpenFileInfo> openFiles;
-
-        /*
-         * Дополнительные данные проекта.
-         */
+        /* Additional project details. */
         @SerializedName("details")
         public Map<String, Object> details;
-    }
-
-    /**
-     * Data structure for open file information
-     */
-    private static class OpenFileInfo
-    {
-        /*
-         * Относительный путь к файлу.
-         */
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
-
-        /*
-         * Номер строки курсора.
-         */
-        @SerializedName("cursor_line")
-        public Integer cursorLine;
-
-        /*
-         * Смещение строки курсора.
-         */
-        @SerializedName("cursor_line_offset")
-        public Integer cursorLineOffset;
-
-        /*
-         * Номер строки выделения.
-         */
-        @SerializedName("selection_start_line")
-        public Integer selectionStartLine;
-
-        /*
-         * Смещение строки выделения.
-         */
-        @SerializedName("selection_start_line_offset")
-        public Integer selectionStartLineOffset;
-
-        /*
-         * Номер строки конца выделения.
-         */
-        @SerializedName("selection_end_line")
-        public Integer selectionEndLine;
-
-        /*
-         * Смещение строки конца выделения.
-         */
-        @SerializedName("selection_end_line_offset")
-        public Integer selectionEndLineOffset;
     }
 }

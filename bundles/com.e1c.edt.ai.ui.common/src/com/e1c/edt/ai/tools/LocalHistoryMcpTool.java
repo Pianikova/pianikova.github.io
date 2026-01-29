@@ -1,0 +1,327 @@
+/**
+* Copyright (C) 2025, 1C
+*/
+package com.e1c.edt.ai.tools;
+
+import java.text.MessageFormat;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
+
+import com.e1c.edt.ai.FontWeight;
+import com.e1c.edt.ai.ICancellationProgressMonitor;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
+import com.e1c.edt.ai.IMcpTool;
+import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.TextColor;
+import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.assistent.model.McpToolCall;
+import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
+import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
+import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
+import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.google.common.base.Preconditions;
+import com.google.gson.annotations.SerializedName;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
+
+public class LocalHistoryMcpTool
+	implements IMcpTool
+{
+	public static final String TOOL_NAME = "LocalHistory"; //$NON-NLS-1$
+	private static final int DEFAULT_MAX_ENTRIES = McpToolConstants.DEFAULT_MAX_HISTORY_ENTRIES;
+
+	// @formatter:off
+	@SuppressWarnings("nls")
+	private static String QuestionExample =
+		"{\n"
+		+ "  \"project_name\": \"MyProject\",\n"
+		+ "  \"file_path\": \"src/com/example/MyClass.java\",\n"
+		+ "  \"max_entries\": 10\n"
+		+ "}";
+
+	@SuppressWarnings("nls")
+	private static String AnswerExample =
+		"[\n"
+		+ "  {\n"
+		+ "    \"index\": 0,\n"
+		+ "    \"revision_id\": \"current\",\n"
+		+ "    \"timestamp\": 1642678800000,\n"
+		+ "    \"formatted_time\": \"2022-01-20T10:30:45+03:00\",\n"
+		+ "    \"file_size\": 1024,\n"
+		+ "    \"location\": \"/path/to/file\",\n"
+		+ "    \"is_current\": true,\n"
+		+ "    \"is_oldest\": false\n"
+		+ "  }\n"
+		+ "]";
+
+	// @formatter:on
+
+	private final IJson json;
+	private final McpToolCallSpecification spec;
+	private final IMcpToolsCallMessageFactory messageFactory;
+	private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
+	private final IMarkdownUtils markdownUtils;
+	private final ILocalHistoryUtils localHistoryUtils;
+
+	@Inject
+	public LocalHistoryMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
+		Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils,
+		ILocalHistoryUtils localHistoryUtils)
+	{
+		Preconditions.checkNotNull(json);
+		Preconditions.checkNotNull(messageFactory);
+		Preconditions.checkNotNull(cancellationProgressMonitor);
+		Preconditions.checkNotNull(markdownUtils);
+		Preconditions.checkNotNull(localHistoryUtils);
+		this.json = json;
+		this.messageFactory = messageFactory;
+		this.cancellationProgressMonitor = cancellationProgressMonitor;
+		this.markdownUtils = markdownUtils;
+		this.localHistoryUtils = localHistoryUtils;
+		spec = createSpecification();
+	}
+
+	@Override
+	public boolean isExperimental()
+	{
+		return true;
+	}
+
+	@Override
+	public McpToolCallSpecification getSpecification()
+	{
+		return spec;
+	}
+
+	@SuppressWarnings({ "nls" })
+	@Override
+	public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
+	{
+		var details = new ToolCallMessageDetails();
+		details.autoCall = true;
+
+		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+		if (optionalRequest.isEmpty())
+		{
+			return CompletableFuture
+				.completedFuture(messageFactory.createError(this, call,
+					"Cannot deserialize arguments. Use this example: " + QuestionExample));
+		}
+
+		var request = optionalRequest.get();
+
+		if (call.callKind == ToolCallKind.RENDER)
+		{
+			var projectName = request.projectName != null ? request.projectName : "current project"; //$NON-NLS-1$
+			var filePath = request.filePath != null ? request.filePath : "selected file"; //$NON-NLS-1$
+			details.requestMarkdown = MessageFormat.format(Messages.LocalHistoryTitleTemplate, projectName, filePath);
+			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+		}
+
+		var projectName = request.projectName;
+		if (projectName == null || projectName.isBlank())
+		{
+			return CompletableFuture
+				.completedFuture(messageFactory.createError(this, call,
+					"`project_name` is required."));
+		}
+
+		var filePath = request.filePath;
+		if (filePath == null || filePath.isBlank())
+		{
+			return CompletableFuture
+				.completedFuture(messageFactory.createError(this, call,
+					"`file_path` is required."));
+		}
+
+		int maxEntries;
+		if (request.maxEntries == null)
+		{
+			maxEntries = DEFAULT_MAX_ENTRIES;
+		}
+		else if (request.maxEntries <= 0)
+		{
+			maxEntries = Integer.MAX_VALUE;
+		}
+		else
+		{
+			maxEntries = request.maxEntries;
+		}
+
+		return CompletableFuture.supplyAsync(() ->
+		{
+			if (cancellationToken.isCanceled())
+			{
+				throw new RuntimeException("Operation was cancelled before execution.");
+			}
+
+			var root = ResourcesPlugin.getWorkspace().getRoot();
+			var project = root.getProject(projectName);
+
+			if (project == null || !project.exists())
+			{
+				throw new RuntimeException("The project \"" + projectName + "\" does not exist.");
+			}
+			if (!project.isOpen())
+			{
+				try
+				{
+					var monitor = cancellationProgressMonitor.get();
+					monitor.setCancellationToken(cancellationToken);
+					project.open(monitor);
+				}
+				catch (CoreException error)
+				{
+					throw new RuntimeException("Cannot open the project \"" + projectName + "\". " + error.getMessage());
+				}
+			}
+
+			var file = project.getFile(filePath);
+			if (!file.exists())
+			{
+				throw new RuntimeException("The file \"" + filePath + "\" does not exist in project \"" + projectName + "\".");
+			}
+
+			try
+			{
+				var historyEntries = localHistoryUtils.getLocalHistory(file, maxEntries);
+				var lastIndex = historyEntries.size() - 1;
+				for (int i = 0; i < historyEntries.size(); i++)
+				{
+					var entry = historyEntries.get(i);
+					entry.index = i;
+					entry.isOldest = i == lastIndex;
+				}
+				var content = json.serialize(historyEntries);
+
+				var responseMarkdown = new StringBuilder();
+				responseMarkdown.append(MessageFormat.format(Messages.LocalHistoryFoundTemplate,
+					markdownUtils.createStyledText(String.valueOf(historyEntries.size()), TextColor.GREEN, FontWeight.BOLD),
+					markdownUtils.escapeForMarkdown(filePath),
+					markdownUtils.escapeForMarkdown(projectName)));
+
+				if (!historyEntries.isEmpty())
+				{
+					responseMarkdown.append("\n\n<details><summary>").append(Messages.ViewHistory).append("</summary>\n\n");
+
+					for (var entry : historyEntries)
+					{
+						responseMarkdown.append("### **")
+							.append(markdownUtils.createStyledText(entry.revisionId, TextColor.BLUE, FontWeight.BOLD))
+							.append("**")
+							.append(entry.isCurrent ? " " + Messages.Current : "")
+							.append(" - ")
+							.append(entry.formattedTime)
+							.append("\n\n");
+
+						responseMarkdown.append("**")
+							.append(Messages.FileSize)
+							.append(":** ")
+							.append(entry.fileSize)
+							.append(" bytes\n");
+
+						responseMarkdown.append("**")
+							.append(Messages.Location)
+							.append(":** ")
+							.append(markdownUtils.escapeForMarkdown(entry.location))
+							.append("\n\n");
+
+						responseMarkdown.append("---\n\n");
+					}
+
+					responseMarkdown.append("</details>");
+				}
+				else
+				{
+					responseMarkdown.append("\n\n").append(Messages.NoLocalHistoryFound);
+				}
+
+				details.responseMarkdown = responseMarkdown.toString();
+				return messageFactory.createMessage(this, call, content, details);
+			}
+			catch (Exception e)
+			{
+				throw new RuntimeException("Failed to get local history: " + e.getMessage(), e);
+			}
+		}).exceptionally(throwable ->
+		{
+			return messageFactory.createError(this, call, throwable.getMessage());
+		});
+	}
+
+	@SuppressWarnings("nls")
+	private static McpToolCallSpecification createSpecification()
+	{
+		var spec = new McpToolCallSpecification();
+		spec.type = "function";
+		spec.function = new McpToolCallFunction();
+		spec.function.name = TOOL_NAME;
+
+		var description = new StringBuilder();
+		description.append("Lists local history revisions for a file.");
+		description.append("\n\nUsage:");
+		description.append("\n- Returns recent entries first (index 0 is current).");
+		description.append("\n- Includes timestamp, size, and history location.");
+		description.append("\n- Each entry includes `index` and `is_oldest` to help select versions.");
+		description.append("\n- `location` is a virtual id (`local_history:<revision_id>`) for history entries.");
+		description.append("\n- Set `max_entries` to 0 to return all available history.");
+		description.append("\n- Works with Eclipse local history when available.");
+		description.append("\n\nRelated tools:");
+		description.append("\n- Diff revisions: `" + LocalChangesMcpTool.TOOL_NAME + "`.");
+		description.append("\n\nExample:");
+		description.append("\n  Q: "); description.append(QuestionExample);
+		description.append("\n  A: "); description.append(AnswerExample);
+
+		spec.function.description = description.toString();
+
+		var parameters = new McpToolCallParameters();
+		parameters.type = "object";
+		var properties = new HashMap<String, McpToolCallProperty>();
+
+		var projectNameProp = new McpToolCallProperty();
+		projectNameProp.type = "string";
+		projectNameProp.description = "Project name in IDE. For example, \"MyProject\".";
+		properties.put("project_name", projectNameProp);
+
+		var filePathProp = new McpToolCallProperty();
+		filePathProp.type = "string";
+		filePathProp.description = "Relative file path within the project. For example, \"src/com/example/MyClass.java\".";
+		properties.put("file_path", filePathProp);
+
+		var maxEntriesProp = new McpToolCallProperty();
+		maxEntriesProp.type = "integer";
+		maxEntriesProp.description = "Maximum number of history entries to return. Default: " + DEFAULT_MAX_ENTRIES
+			+ ". Use 0 to return all entries.";
+		properties.put("max_entries", maxEntriesProp);
+
+		parameters.properties = properties;
+		parameters.required = Arrays.asList("project_name", "file_path");
+		spec.function.parameters = parameters;
+
+		return spec;
+	}
+
+	private static class Request
+	{
+		@SerializedName("project_name")
+		public String projectName;
+
+		@SerializedName("file_path")
+		public String filePath;
+
+		@SerializedName("max_entries")
+		public Integer maxEntries;
+	}
+
+}

@@ -10,6 +10,7 @@ import com.e1c.edt.ai.AIModule;
 import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IProjectBuilder;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
@@ -51,6 +52,7 @@ public class AIUIModule
         bind(IXtextBuilderParticipant.class).to(BuildTrackingParticipant.class).in(Singleton.class);
         bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
+        bind(IProjectBuilder.class).to(ProjectBuilder.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -11,6 +11,7 @@ import org.eclipse.core.runtime.Plugin;
 import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentationProvider;
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
+import com._1c.g5.v8.dt.core.model.IModelEditingSupport;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
@@ -23,12 +24,13 @@ import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
+import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
-import com.e1c.edt.ai.context.tools.GetObjectByIdMcpTool;
+import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -59,8 +61,10 @@ class ContextModule
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ICodeProvider.class).to(CodeProvider.class).in(Singleton.class);
         bind(IBmPovider.class).to(BmPovider.class).in(Singleton.class);
+        bind(IBmObjectProvider.class).to(BmObjectProvider.class).in(Singleton.class);
         bind(IFiles.class).to(Files.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
+        bind(IEditingSupport.class).to(EditingSupport.class).in(Singleton.class);
         var projectDetailsProviderBinder = Multibinder.newSetBinder(binder(), IProjectDetailsProvider.class);
         projectDetailsProviderBinder.addBinding().to(ConfigurationParametersProvider.class);
         bind(MessageDigest.class).toProvider(() -> {
@@ -79,7 +83,7 @@ class ContextModule
         // MCP tools
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
         toolBinder.addBinding().to(FindMcpTool.class);
-        toolBinder.addBinding().to(GetObjectByIdMcpTool.class);
+        toolBinder.addBinding().to(GetObjectMcpTool.class);
 
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();
@@ -91,6 +95,7 @@ class ContextModule
         bind(IQualifiedNameFilePathConverter.class).toService();
         bind(IDtHostResourceManager.class).toService();
         bind(ITextSearchIndexProvider.class).toService();
+        bind(IModelEditingSupport.class).toService();
         // @formatter:on
     }
 }

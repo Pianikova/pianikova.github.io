@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -22,11 +24,13 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
@@ -45,47 +49,69 @@ public class SetMarkersMcpTool
     private static String QuestionExample =
         "{\n"
         + "  \"project_name\": \"MyProject\",\n"
-        + "  \"极markers\": [\n"
+        + "  \"markers\": [\n"
         + "    {\n"
         + "      \"type\": \"bookmark\",\n"
         + "      \"relative_file_path\": \"Forms/MyForm/Module.bsl\",\n"
-        + "      \"start_line\": 10,\n"
-        + "      \"target_content\": \"Important code section\",\n"
-        + "      \"message\": \"Important code section\"\n"
+        + "      \"marker_line\": 10,\n"
+        + "      \"marker_highlighted_text\": \"Important code section\",\n"
+        + "      \"message\": \"Important code section that requires attention\"\n"
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"task\",\n"
         + "      \"relative_file_path\": \"CommonModules/MyModule/Module.bsl\",\n"
-        + "      \"start_line\": 25,\n"
-        + "      \"target_content\": \"TODO: Refactor this code\",\n"
+        + "      \"marker_line\": 25,\n"
+        + "      \"marker_highlighted_text\": \"RefactorThisCode()\",\n"
         + "      \"message\": \"TODO: Refactor this code\",\n"
         + "      \"priority\": \"normal\"\n"
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"problem\",\n"
         + "      \"relative_file_path\": \"CommonModules/AnotherModule/Module.bsl\",\n"
-        + "      \"start_line\": 42,\n"
-        + "      \"target_content\": \"Syntax error\",\n"
+        + "      \"marker_line\": 42,\n"
+        + "      \"marker_highlighted_text\": \"a = 1 / 0\",\n"
         + "      \"message\": \"Syntax error\",\n"
         + "      \"severity\": \"error\"\n"
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"text\",\n"
         + "      \"relative_file_path\": \"CommonModules/TextModule/Module.bsl\",\n"
-        + "      \"start_line\": 15,\n"
-        + "      \"target_content\": \"Important text note\",\n"
+        + "      \"marker_line\": 15,\n"
+        + "      \"marker_highlighted_text\": \"Important text note\",\n"
         + "      \"message\": \"Important text note\"\n"
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"ai_marker\",\n"
         + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
-        + "      \"start_line\": 30,\n"
-        + "      \"target_content\": \"AI suggestion\",\n"
-        + "      \"message\": \"AI suggestion\",\n"
-        + "      \"severity\": \"info\",\n"
+        + "      \"marker_line\": 30,\n"
+        + "      \"marker_highlighted_text\": \"calculateTotal(items)\",\n"
+        + "      \"message\": \"AI warning (AIWarning)\",\n"
+        + "      \"severity\": \"warning\",\n"
         + "      \"action_prompt\": \"Please refactor this code to use modern patterns\",\n"
         + "      \"action_title\": \"Refactor code\",\n"
         + "      \"action_description\": \"Update code to use modern design patterns\"\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"type\": \"ai_marker\",\n"
+        + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "      \"marker_line\": 45,\n"
+        + "      \"marker_highlighted_text\": \"calculateTotal(items)\",\n"
+        + "      \"message\": \"AI error (AIError)\",\n"
+        + "      \"severity\": \"error\",\n"
+        + "      \"action_prompt\": \"Fix the error in calculateTotal\",\n"
+        + "      \"action_title\": \"Fix error\",\n"
+        + "      \"action_description\": \"Correct the issue to prevent runtime failure\"\n"
+        + "    },\n"
+        + "    {\n"
+        + "      \"type\": \"ai_marker\",\n"
+        + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "      \"marker_line\": 60,\n"
+        + "      \"marker_highlighted_text\": \"calculateTotal(items)\",\n"
+        + "      \"message\": \"AI info (AIInfo)\",\n"
+        + "      \"severity\": \"info\",\n"
+        + "      \"action_prompt\": \"Consider adding a null check\",\n"
+        + "      \"action_title\": \"Improve safety\",\n"
+        + "      \"action_description\": \"Add a null check to make the code safer\"\n"
         + "    }\n"
         + "  ]\n"
         + "}";
@@ -132,23 +158,44 @@ public class SetMarkersMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            if (optionalRequest.isPresent() && optionalRequest.get().projectName != null
+                && !optionalRequest.get().projectName.isBlank())
+            {
+                details.requestMarkdown =
+                    MessageFormat.format(Messages.CreateMarkersTitleTemplate, optionalRequest.get().projectName);
+            }
+            else
+            {
+                details.requestMarkdown = Messages.CreateMarkersTitle;
+            }
+
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture.completedFuture(
                 messageFactory.createError(this, call, "Invalid request format. Example: " + QuestionExample));
         }
+
         var request = optionalRequest.get();
         if (request.projectName == null || request.projectName.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "Project name is required"));
         }
+
         if (request.markers == null || request.markers.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "At least one marker is required"));
         }
+
         return CompletableFuture.supplyAsync(() -> {
             IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
             IProject project = root.getProject(request.projectName);
@@ -156,11 +203,14 @@ public class SetMarkersMcpTool
             {
                 return messageFactory.createError(this, call, "Project not found: " + request.projectName);
             }
+
             if (!project.isOpen())
             {
                 return messageFactory.createError(this, call, "Project is closed: " + request.projectName);
             }
+
             var markersSet = 0;
+            var createdMarkers = new ArrayList<IMarker>();
             var errors = new StringBuilder();
             for (int i = 0; i < request.markers.size(); i++)
             {
@@ -173,7 +223,7 @@ public class SetMarkersMcpTool
                 markerReq.projectName = project.getName();
                 try
                 {
-                    createMarker(project, call, markerReq);
+                    createdMarkers.add(createMarker(project, call, markerReq));
                     markersSet++;
                 }
                 catch (CoreException | IllegalArgumentException | BadLocationException error)
@@ -183,15 +233,29 @@ public class SetMarkersMcpTool
             }
             if (errors.length() > 0)
             {
+                for (var marker : createdMarkers)
+                {
+                    try
+                    {
+                        marker.delete();
+                    }
+                    catch (CoreException deleteError)
+                    {
+                        errors.append("Rollback error: ").append(deleteError.getMessage()).append("; ");
+                    }
+                }
                 return messageFactory.createError(this, call,
                     "Completed with errors: " + errors + ". Markers set: " + markersSet);
             }
-            return messageFactory.createMessage(this, call, "Successfully created " + markersSet + " markers");
+
+            // Add response markdown
+            details.responseMarkdown = Messages.MarkersCreatedMessage;
+            return messageFactory.createMessage(this, call, "Successfully created " + markersSet + " markers", details);
         });
     }
 
     @SuppressWarnings("nls")
-    private void createMarker(IProject project, McpToolCall call, MarkerRequest markerReq)
+    private IMarker createMarker(IProject project, McpToolCall call, MarkerRequest markerReq)
         throws CoreException, IllegalArgumentException, BadLocationException
     {
         // Validate required fields
@@ -209,14 +273,13 @@ public class SetMarkersMcpTool
         }
         if (markerReq.startLine == null || markerReq.startLine < 1)
         {
-            throw new IllegalArgumentException("start_line must be a positive integer");
+            throw new IllegalArgumentException("marker_line must be a positive integer");
         }
         if (markerReq.targetContent == null || markerReq.targetContent.isBlank())
         {
-            throw new IllegalArgumentException("target_content is required");
+            throw new IllegalArgumentException("marker_highlighted_text is required");
         }
-
-        // Validate action_prompt for ai_marker
+        // Validate required action fields for ai_marker type
         if ("ai_marker".equalsIgnoreCase(markerReq.type))
         {
             if (markerReq.actionPrompt == null || markerReq.actionPrompt.isBlank())
@@ -252,13 +315,19 @@ public class SetMarkersMcpTool
         {
             throw new IllegalArgumentException("Unknown marker type: " + markerReq.type);
         }
-        var marker = file.createMarker(markerType.getTypeId());
+        var markerTypeId = markerType.getTypeId();
+        if (markerType == MarkerType.AI_MARKER)
+        {
+            markerTypeId = MarkerType.getAiMarkerTypeId(markerReq.severity);
+        }
+        var marker = file.createMarker(markerTypeId);
         markerReq.id = marker.getId();
         setMarkerAttributes(marker, call, markerReq, markerType);
+        return marker;
     }
 
     @SuppressWarnings("nls")
-    private int[] calculateCharPositions(IFile file, int startLine, String targetContent)
+    private int[] calculateCharPositions(IFile file, int startLine, String markedText)
         throws CoreException, IllegalArgumentException, BadLocationException
     {
         var optionalDocument = contentSourceProvider.getFileDocument(file);
@@ -269,12 +338,12 @@ public class SetMarkersMcpTool
 
         var document = optionalDocument.get();
         var content = new StringBuilder();
-        var maxLinesCount = targetContent.lines().count() + 1;
+        var maxLinesCount = markedText.lines().count() + 1;
         var charStart = -1;
         for (var line : fileSystem.getLines(document, startLine - 1, (int)maxLinesCount))
         {
             content.append(line);
-            charStart = content.indexOf(targetContent);
+            charStart = content.indexOf(markedText);
             if (charStart >= 0)
             {
                 break;
@@ -284,10 +353,10 @@ public class SetMarkersMcpTool
         if (charStart == -1)
         {
             throw new IllegalArgumentException(
-                "Target content not found in line " + startLine + ": '" + targetContent + "'");
+                "Target content not found in line " + startLine);
         }
 
-        var charEnd = charStart + targetContent.length();
+        var charEnd = charStart + markedText.length();
         return new int[] { document.getDocument().getLineOffset(startLine - 1), charStart, charEnd };
     }
 
@@ -349,10 +418,7 @@ public class SetMarkersMcpTool
 
         case PROBLEM:
         case AI_MARKER:
-            if (markerReq.severity != null)
-            {
-                marker.setAttribute(IMarker.SEVERITY, convertSeverity(markerReq.severity));
-            }
+            marker.setAttribute(IMarker.SEVERITY, convertSeverity(markerReq.severity));
             if (markerReq.priority != null)
             {
                 marker.setAttribute(IMarker.PRIORITY, convertPriority(markerReq.priority));
@@ -377,13 +443,19 @@ public class SetMarkersMcpTool
     private int convertSeverity(String severity)
     {
         if (severity == null)
+        {
             return IMarker.SEVERITY_INFO;
-        switch (severity.toLowerCase())
+        }
+        var normalized = severity.trim().toLowerCase();
+        switch (normalized)
         {
         case "error":
             return IMarker.SEVERITY_ERROR;
+        case "warn":
         case "warning":
             return IMarker.SEVERITY_WARNING;
+        case "info":
+        case "information":
         default:
             return IMarker.SEVERITY_INFO;
         }
@@ -414,17 +486,24 @@ public class SetMarkersMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Creates various types of markers in project files. ");
+        description.append("Creates markers in project files (issues, tasks, bookmarks, etc.).");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
+        description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
+        description.append("\n- `markers` must be an array of marker objects (see required fields below).");
         description.append(
-            "\n- ALWAYS use `" + MarkerType.AI_MARKER.getDisplayName()
-                + "` to show any issues, problems, errors, warnings, etc.");
+            "\n- Use `" + MarkerType.AI_MARKER.getDisplayName()
+                + "` for issues, problems, errors, warnings.");
         description.append(
-            "\n- ALWAYS use `" + MarkerType.TASK.getDisplayName()
-                + "` for plans, schedules, proposals, tasks, TODO, etc.");
-        description.append("\n- ALWAYS use `" + MarkerType.BOOKMARK.getDisplayName() + "` for summaries, reports.");
-        description.append("\n- To update markers, first delete it using the `" + DeleteMarkersMcpTool.TOOL_NAME
-            + "` tool and then create a new one if necessary.");
+            "\n- For `ai_marker`, severity maps to marker types: `AIError`, `AIWarning`, `AIInfo`.");
+        description.append(
+            "\n- Use `" + MarkerType.TASK.getDisplayName()
+                + "` for plans, schedules, proposals, tasks, TODO.");
+        description.append("\n- Use `" + MarkerType.BOOKMARK.getDisplayName() + "` for summaries or reports.");
+        description.append("\n- To update a marker, delete it with `" + DeleteMarkersMcpTool.TOOL_NAME + "` and create a new one.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Inspect existing markers: `" + GetMarkersMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Remove markers: `" + DeleteMarkersMcpTool.TOOL_NAME + "`.");
         description.append("\n\nSupported marker types:");
 
         // Generate supported types from MarkerType enum
@@ -438,16 +517,13 @@ public class SetMarkersMcpTool
         description.append("\n- relative_file_path: File path relative to project root (required)");
         description.append("\n- message: Marker description (required)");
         description.append(
-            "\n- start_line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative. Take the line number from the line prefix using the `"
+            "\n- marker_line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative. Take the line number from the line prefix using the `"
                 + ReadMcpTool.TOOL_NAME + "` tool");
         description.append(
-            "\n- target_content: Text to mark (required). ALWAYS minimize this text to the smallest possible size that still allows to understand the context. ALWAYS exclude extra suffix and prefix.");
-        description.append(
-            "\n- action_prompt: AI prompt to execute when marker is activated (required for ai_marker)");
-        description.append(
-            "\n- action_title: Short title for the quick fix action (required for ai_marker)");
-        description.append(
-            "\n- action_description: Detailed description of the quick fix action (required for ai_marker)");
+            "\n- marker_highlighted_text: Code fragment associated with the marker (required). ALWAYS minimize to the smallest possible size that maintains context. ALWAYS exclude extra suffix and prefix.");
+        description.append("\n- action_prompt: AI prompt to execute when marker is activated (REQUIRED for ai_marker type)");
+        description.append("\n- action_title: Short title for the quick fix action (REQUIRED for ai_marker type)");
+        description.append("\n- action_description: Detailed description of the quick fix action (REQUIRED for ai_marker type)");
 
         description.append("\n\nType-specific properties:");
         description.append("\n- bookmark: done");
@@ -458,6 +534,10 @@ public class SetMarkersMcpTool
         description.append("\n\nQuick fix actions:");
         description
             .append("\n- For `ai_marker` with `action_prompt`: adds quick fix action prompt");
+        description.append(
+            "\n- IMPORTANT: ai_marker type REQUIRES all three action fields: action_prompt, action_title, and action_description");
+        description.append(
+            "\n- If type is not `ai_marker`, omit action_* fields.");
 
         description.append("\n\nExample request:\n").append(QuestionExample);
         description.append("\nExample response:\n").append(AnswerExample);
@@ -477,7 +557,9 @@ public class SetMarkersMcpTool
         // Markers array
         var markersProp = new McpToolCallProperty();
         markersProp.type = "array";
-        markersProp.description = "List of markers to create";
+        markersProp.description =
+            "List of marker objects. Each marker must include: type, relative_file_path, marker_line, marker_highlighted_text, message. "
+                + "If type is ai_marker, action_prompt, action_title, and action_description are required.";
         properties.put("markers", markersProp);
 
         parameters.properties = properties;
@@ -510,10 +592,10 @@ public class SetMarkersMcpTool
         @SerializedName("message")
         public String message;
 
-        @SerializedName("start_line")
+        @SerializedName("marker_line")
         public Integer startLine;
 
-        @SerializedName("target_content")
+        @SerializedName("marker_highlighted_text")
         public String targetContent;
 
         @SerializedName("severity")

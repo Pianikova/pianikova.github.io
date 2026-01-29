@@ -8,5 +8,4 @@ import java.util.ArrayList;
 public class McpToolCalls
     extends ArrayList<McpToolCall>
 {
-    //
 }

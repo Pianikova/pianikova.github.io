@@ -1,11 +1,9 @@
 /**
  *
  */
-package com.e1c.edt.ai.tools;
+package com.e1c.edt.ai;
 
 import org.eclipse.core.runtime.IProgressMonitor;
-
-import com.e1c.edt.ai.ICancellationToken;
 
 public interface ICancellationProgressMonitor
     extends IProgressMonitor

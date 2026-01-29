@@ -2,6 +2,7 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -14,11 +15,13 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -27,7 +30,7 @@ public class ExecuteMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "Execute"; //$NON-NLS-1$
-    private static final int MAX_OUTPUT_LENGTH = 16384; // 16KB
+    private static final int DEFAULT_MAX_LINES = McpToolConstants.DEFAULT_MAX_EXECUTION_LINES;
 
     private static String QuestionExample =
         "{\"executable\":\"cmd\",\"working_directory\":\"C:\\\\\",\"args\":[\"/c\",\"whoami\"],\"timeout\":3}"; //$NON-NLS-1$
@@ -73,6 +76,9 @@ public class ExecuteMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = false;
+
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
@@ -88,6 +94,14 @@ public class ExecuteMcpTool
                 .completedFuture(messageFactory.createError(this, call, "`executable` cannot be empty."));
         }
 
+        // Build command line for user-friendly display
+        var commandLine = buildCommandLine(request.executable, request.args);
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = MessageFormat.format(Messages.ExecuteTitleTemplate, commandLine);
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         // Set default timeout if not provided
         long timeout = request.timeout != null ? request.timeout : 30;
         if (timeout <= 0 || timeout > 300)
@@ -97,7 +111,7 @@ public class ExecuteMcpTool
 
         // Execute process with timeout
         var futureResult = processRunner.executeProcess(request.executable,
-            request.working_directory, request.args, timeout, TimeUnit.SECONDS);
+            request.working_directory, request.args, timeout, TimeUnit.SECONDS, DEFAULT_MAX_LINES);
 
         return futureResult.thenApply(optResult -> {
             if (cancellationToken.isCanceled())
@@ -106,26 +120,77 @@ public class ExecuteMcpTool
             }
 
             return optResult.map(response -> {
-                response.stdOut = truncateOutput(response.stdOut);
-                response.stdErr = truncateOutput(response.stdErr);
                 var content = json.serialize(response);
-                return messageFactory.createMessage(this, call, content);
+
+                // Build response markdown with output details
+                var responseMarkdown = buildResponseMarkdown(response, commandLine);
+                details.responseMarkdown = responseMarkdown;
+
+                return messageFactory.createMessage(this, call, content, details);
             }).orElseGet(() -> messageFactory.createError(this, call, "Process execution failed - no result."));
         });
     }
 
+    /**
+     * Builds response markdown with execution details and output
+     * @param response Process execution result
+     * @param commandLine Command line that was executed
+     * @return Formatted markdown string
+     */
     @SuppressWarnings("nls")
-    private String truncateOutput(String text)
+    private String buildResponseMarkdown(ProcessResult response, String commandLine)
     {
-        if (text == null)
+        var responseMarkdown = new StringBuilder();
+        responseMarkdown.append(MessageFormat.format(Messages.ExecutedTemplate, commandLine));
+        responseMarkdown.append("\n\n<details><summary>").append(Messages.ExecutionDetails).append("</summary>\n\n");
+
+        // Add exit code
+        responseMarkdown.append("__")
+            .append(Messages.ExitCode)
+            .append(":__ `")
+            .append(String.valueOf(response.exitCode))
+            .append("`\n");
+
+        // Display stdout with truncation warning if needed
+        if (response.stdOut != null && !response.stdOut.isEmpty())
         {
-            return null;
+            responseMarkdown.append("\n__").append(Messages.StdOutLabel).append(":__\n");
+            if (response.stdOutTruncated)
+            {
+                responseMarkdown.append(getTruncationWarning());
+            }
+
+            responseMarkdown.append("```\n");
+            responseMarkdown.append(response.stdOut);
+            responseMarkdown.append("\n```\n");
         }
-        if (text.length() <= MAX_OUTPUT_LENGTH)
+
+        // Display stderr with truncation warning if needed
+        if (response.stdErr != null && !response.stdErr.isEmpty())
         {
-            return text;
+            responseMarkdown.append("\n__").append(Messages.StdErrLabel).append(":__\n");
+            if (response.stdErrTruncated)
+            {
+                responseMarkdown.append(getTruncationWarning());
+            }
+
+            responseMarkdown.append("```\n");
+            responseMarkdown.append(response.stdErr);
+            responseMarkdown.append("\n```\n");
         }
-        return text.substring(0, MAX_OUTPUT_LENGTH) + "\n...[OUTPUT TRUNCATED TO " + MAX_OUTPUT_LENGTH + " CHARACTERS]";
+
+        responseMarkdown.append("</details>");
+        return responseMarkdown.toString();
+    }
+
+    /**
+     * Returns the truncation warning message
+     * @return Truncation warning string
+     */
+    @SuppressWarnings("nls")
+    private String getTruncationWarning()
+    {
+        return "*Warning: " + MessageFormat.format(Messages.OutputTruncatedLines, DEFAULT_MAX_LINES) + "*\n\n";
     }
 
     @SuppressWarnings("nls")
@@ -139,9 +204,13 @@ public class ExecuteMcpTool
 
         var description = new StringBuilder();
         description.append("Executes a system process.");
-        description.append("\nIMPORTANT: Runs under ").append(environment.getOSName())
+        description.append("\n\nUsage:");
+        description.append("\n- Runs under ").append(environment.getOSName())
                    .append(" ").append(environment.getOSVersion())
-                   .append(" (").append(environment.getArch()).append(")");
+                   .append(" (").append(environment.getArch()).append(").");
+        description.append("\n- Use for OS-level commands, not IDE actions.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- IDE commands: `" + ExecuteCommandMcpTool.TOOL_NAME + "`.");
         description.append("\n\nExample:");
         description.append("\n  Q: ").append(QuestionExample);
         description.append("\n  A: ").append(AnswerExample);
@@ -194,4 +263,38 @@ public class ExecuteMcpTool
         @SerializedName("timeout")
         public Long timeout;
     }
+
+    /**
+     * Builds user-friendly command line string from executable and arguments.
+     */
+    @SuppressWarnings("nls")
+    private static String buildCommandLine(String executable, List<String> args)
+    {
+        var commandLine = new StringBuilder();
+        commandLine.append("`").append(escapeArgument(executable));
+
+        if (args != null && !args.isEmpty())
+        {
+            commandLine.append(" ");
+            for (String arg : args)
+            {
+                commandLine.append(escapeArgument(arg)).append(" ");
+            }
+
+            // Remove trailing space
+            commandLine.setLength(commandLine.length() - 1);
+        }
+
+        return commandLine.append("`").toString();
+    }
+
+    /**
+     * Escapes command line argument by wrapping in quotes if it contains spaces.
+     */
+    @SuppressWarnings("nls")
+    private static String escapeArgument(String arg)
+    {
+        return arg != null && arg.contains(" ") ? "\"" + arg + "\"" : arg;
+    }
 }
+

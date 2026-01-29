@@ -470,5 +470,11 @@
         <unit id="org.eclipse.zest.sdk.feature.group" version="1.7.0.201606061308"/>
         <unit id="org.sonatype.m2e.mavenarchiver.feature.feature.group" version="0.17.5.202002191804"/>
     </location>
+
+    <!-- Jakarta Annotations for Java 11+ compatibility -->
+    <location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="slicer" includeSource="true" type="InstallableUnit">
+        <unit id="jakarta.annotation-api" version="2.1.1"/>
+        <repository location="http://boreas.dept07/artifactory/p2-releases/orbit-aggregation-4.38.0/"/>
+    </location>
 </locations>
 </target>

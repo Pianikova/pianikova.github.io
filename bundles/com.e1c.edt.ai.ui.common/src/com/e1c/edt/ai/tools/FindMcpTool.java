@@ -2,12 +2,12 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -22,16 +22,22 @@ import org.eclipse.search.ui.text.Match;
 import org.eclipse.search.ui.text.MatchEvent;
 import org.eclipse.search.ui.text.TextSearchQueryProvider;
 
+import com.e1c.edt.ai.FontWeight;
+import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
+import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -41,7 +47,7 @@ public class FindMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "Find"; //$NON-NLS-1$
-    private static final int MAX_ELEMENTS = 64;
+    private static final int DEFAULT_MAX_ELEMENTS = McpToolConstants.DEFAULT_MAX_SEARCH_ELEMENTS;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -52,7 +58,9 @@ public class FindMcpTool
         + "  \"is_regular_expression_search\": true,\n"
         + "  \"search_project_names\": [\"core-api\", \"backend\"],\n"
         + "  \"file_name_patterns\": [\"*.bsl\", \"*.mdo\"],\n"
-        + "  \"include_derived\": false\n"
+        + "  \"include_derived\": false,\n"
+        + "  \"first_index\": 0,\n"
+        + "  \"max_count\": 64\n"
         + "}";
     @SuppressWarnings("nls")
     private static String AnswerExample =
@@ -75,17 +83,20 @@ public class FindMcpTool
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
+    private final IMarkdownUtils markdownUtils;
 
     @Inject
     public FindMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        Provider<ICancellationProgressMonitor> cancellationProgressMonitor)
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
+        Preconditions.checkNotNull(markdownUtils);
         this.json = json;
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
+        this.markdownUtils = markdownUtils;
         spec = createSpecification();
     }
 
@@ -105,12 +116,19 @@ public class FindMcpTool
     @Override
     public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
     {
+        var details = new ToolCallMessageDetails();
+        details.autoCall = true;
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+                    "Cannot deserialize arguments. JSON format is invalid or missing required fields. "
+                    + "Use this example: " + QuestionExample
+                    + "\n\nRequired field: 'search_query' (string)"
+                    + "\nOptional fields: 'is_case_sensitive_search' (boolean), 'is_regular_expression_search' (boolean), "
+                        + "'search_project_names' (array), 'file_name_patterns' (array), 'include_derived' (boolean), "
+                        + "'first_index' (integer), 'max_count' (integer)"));
         }
 
         var request = optionalRequest.get();
@@ -121,6 +139,12 @@ public class FindMcpTool
         }
 
         var searchQuery = request.searchQuery;
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = MessageFormat.format(Messages.SearchTitleTemplate, searchQuery);
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         var isCaseSensitiveSearch = request.isCaseSensitiveSearch != null ? request.isCaseSensitiveSearch : false;
         var isRegularExpressionSearch =
             request.isRegularExpressionSearch != null ? request.isRegularExpressionSearch : false;
@@ -128,6 +152,8 @@ public class FindMcpTool
             ? request.fileNamePatterns.toArray(new String[0]) : null;
         var includeDerived = request.includeDerived != null ? request.includeDerived : true;
         List<String> projectNames = request.projectNames != null ? request.projectNames : List.of();
+        int firstIndex = request.firstIndex != null ? Math.max(0, request.firstIndex) : 0;
+        int maxCount = request.maxCount != null && request.maxCount > 0 ? request.maxCount : DEFAULT_MAX_ELEMENTS;
 
         return CompletableFuture.supplyAsync(() -> {
             if (cancellationToken.isCanceled())
@@ -210,9 +236,8 @@ public class FindMcpTool
                 return messageFactory.createError(this, call, "Cannot create search query. " + error.getMessage());
             }
 
-            final List<Element> elements = new ArrayList<>();
+            final List<Element> allElements = new ArrayList<>();
             final Object lock = new Object();
-            var maxElements = new AtomicBoolean(false);
             ISearchResultListener listener = new ISearchResultListener()
             {
                 @SuppressWarnings("restriction")
@@ -226,9 +251,8 @@ public class FindMcpTool
                         {
                             for (Match match : matchEvent.getMatches())
                             {
-                                if (elements.size() >= MAX_ELEMENTS)
+                                if (allElements.size() >= firstIndex + maxCount)
                                 {
-                                    maxElements.set(true);
                                     return;
                                 }
 
@@ -265,7 +289,7 @@ public class FindMcpTool
                                             element.lineContent = line.getContents();
                                         }
 
-                                        elements.add(element);
+                                        allElements.add(element);
                                     }
                                 }
                             }
@@ -293,13 +317,76 @@ public class FindMcpTool
                 query.getSearchResult().removeListener(listener);
             }
 
-            var content = json.serialize(elements);
-            if (maxElements.get())
+            // Apply pagination: get sublist based on firstIndex and maxCount
+            List<Element> elements;
+            if (firstIndex >= allElements.size())
             {
-                content += "\n\n max elements + (" + MAX_ELEMENTS + ") reached.";
+                elements = new ArrayList<>();
+            }
+            else
+            {
+                int endIndex = Math.min(firstIndex + maxCount, allElements.size());
+                elements = allElements.subList(firstIndex, endIndex);
             }
 
-            return messageFactory.createMessage(this, call, content);
+            var content = json.serialize(elements);
+
+            // Create detailed response markdown with search result information
+            var responseMarkdown = new StringBuilder();
+            responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
+                markdownUtils.createStyledText(String.valueOf(elements.size()), TextColor.GREEN, FontWeight.BOLD)));
+
+            // Add search results in collapsible section
+            responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n");
+
+            // Group results by project for better organization
+            var projectGroups = new HashMap<String, List<Element>>();
+            for (var element : elements)
+            {
+                projectGroups.computeIfAbsent(element.projectName, k -> new ArrayList<>()).add(element);
+            }
+
+            for (var entry : projectGroups.entrySet())
+            {
+                var projectName = entry.getKey();
+                var projectElements = entry.getValue();
+
+                responseMarkdown.append("**").append(markdownUtils.escapeForMarkdown(projectName)).append("**");
+                responseMarkdown.append(" (")
+                    .append(projectElements.size())
+                    .append(" ")
+                    .append(Messages.Matches)
+                    .append(")\n\n");
+
+                for (var element : projectElements)
+                {
+                    responseMarkdown.append("- **")
+                        .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
+                        .append("**");
+
+                    if (element.lineNumber > 0)
+                    {
+                        responseMarkdown.append(" - ").append(Messages.Line).append(" ").append(element.lineNumber);
+                    }
+
+                    if (element.lineContent != null && !element.lineContent.trim().isEmpty())
+                    {
+                        responseMarkdown.append("\n```\n");
+                        responseMarkdown.append(markdownUtils.escapeForMarkdown(element.lineContent.trim()));
+                        responseMarkdown.append("\n```");
+                    }
+
+                    responseMarkdown.append("\n");
+                }
+
+                responseMarkdown.append("\n");
+            }
+
+            responseMarkdown.append("</details>");
+
+            details.responseMarkdown = responseMarkdown.toString();
+
+            return messageFactory.createMessage(this, call, content, details);
         });
     }
 
@@ -313,8 +400,16 @@ public class FindMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Finds files in IDE based on content patterns.");
-        description.append("\nFor example:"); // Исправлено: exapmple -> example
+        description.append("Finds files by content pattern in the IDE.");
+        description.append("\n\nUsage:");
+        description.append("\n- Provide a search pattern in `search_query`.");
+        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
+        description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
+        description.append("\n- Narrow scope with project/file parameters to reduce noise.");
+        description.append("\n\nRelated tools:");
+        description.append("\n- Search by name: `" + SearchFilesMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Open/edit results: `" + ReadMcpTool.TOOL_NAME + "`, `" + EditMcpTool.TOOL_NAME + "`.");
+        description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
@@ -353,6 +448,16 @@ public class FindMcpTool
         includeDerivedProp.type = "boolean";
         includeDerivedProp.description = "Include derived resources. Default: true";
         properties.put("include_derived", includeDerivedProp);
+
+        var firstIndexProp = new McpToolCallProperty();
+        firstIndexProp.type = "integer";
+        firstIndexProp.description = "Index of first element to return (0-based). Default: 0";
+        properties.put("first_index", firstIndexProp);
+
+        var maxCountProp = new McpToolCallProperty();
+        maxCountProp.type = "integer";
+        maxCountProp.description = "Maximum number of elements to return. Default: 64";
+        properties.put("max_count", maxCountProp);
 
         parameters.properties = properties;
         parameters.required = Arrays.asList("search_query");
@@ -399,6 +504,12 @@ public class FindMcpTool
          */
         @SerializedName("include_derived")
         public Boolean includeDerived;
+
+        @SerializedName("first_index")
+        public Integer firstIndex = 0;
+
+        @SerializedName("max_count")
+        public Integer maxCount = DEFAULT_MAX_ELEMENTS;
     }
 
     private static class Element
@@ -436,3 +547,4 @@ public class FindMcpTool
     }
 
 }
+
