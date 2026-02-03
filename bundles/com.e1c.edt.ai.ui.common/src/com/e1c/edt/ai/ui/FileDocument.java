@@ -91,6 +91,28 @@ public class FileDocument
         saveDirectly();
     }
 
+    public void setContent(String content)
+    {
+        // Validate input
+        if (content == null)
+        {
+            content = "";
+        }
+        
+        // Save cursor position before modifying document
+        saveCursorPosition();
+        
+        try
+        {
+            document.set(content);
+        }
+        finally
+        {
+            // Always try to restore cursor position, even if set() failed
+            restoreCursorPosition();
+        }
+    }
+
     private void saveThroughEditor(ITextEditor textEditor) throws CoreException
     {
         textEditor.doSave(new NullProgressMonitor());
@@ -134,12 +156,25 @@ public class FileDocument
     {
         if (textEditor != null)
         {
-            ISelectionProvider selectionProvider = textEditor.getSelectionProvider();
-            if (selectionProvider != null)
+            try
             {
-                ITextSelection selection = (ITextSelection)selectionProvider.getSelection();
-                savedCursorOffset = selection.getOffset();
-                savedSelectionLength = selection.getLength();
+                ISelectionProvider selectionProvider = textEditor.getSelectionProvider();
+                if (selectionProvider != null)
+                {
+                    var selection = selectionProvider.getSelection();
+                    if (selection instanceof ITextSelection)
+                    {
+                        ITextSelection textSelection = (ITextSelection)selection;
+                        savedCursorOffset = textSelection.getOffset();
+                        savedSelectionLength = textSelection.getLength();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                // Ignore cursor save errors - use default values
+                savedCursorOffset = -1;
+                savedSelectionLength = 0;
             }
         }
     }
@@ -151,26 +186,30 @@ public class FileDocument
             try
             {
                 var selectionProvider = textEditor.getSelectionProvider();
-                if (selectionProvider != null)
+                if (selectionProvider == null)
                 {
-                    IDocument currentDocument =
-                        textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
-                    if (currentDocument != null)
-                    {
-                        // Ensure the cursor position is within document bounds
-                        var documentLength = currentDocument.getLength();
-                        var cursorOffset = Math.min(savedCursorOffset, documentLength);
-                        var selectionLength = Math.min(savedSelectionLength, documentLength - cursorOffset);
-
-                        var newSelection =
-                            new org.eclipse.jface.text.TextSelection(currentDocument, cursorOffset, selectionLength);
-                        selectionProvider.setSelection(newSelection);
-                    }
+                    return;
                 }
+                
+                IDocument currentDocument =
+                    textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
+                if (currentDocument == null)
+                {
+                    return;
+                }
+                
+                // Ensure the cursor position is within document bounds
+                var documentLength = currentDocument.getLength();
+                var cursorOffset = Math.min(savedCursorOffset, Math.max(0, documentLength));
+                var selectionLength = Math.min(savedSelectionLength, Math.max(0, documentLength - cursorOffset));
+
+                var newSelection =
+                    new org.eclipse.jface.text.TextSelection(currentDocument, cursorOffset, selectionLength);
+                selectionProvider.setSelection(newSelection);
             }
             catch (Exception e)
             {
-                //
+                // Ignore cursor restoration errors - content is more important
             }
         }
     }

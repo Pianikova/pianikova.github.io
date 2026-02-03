@@ -4,6 +4,8 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -46,8 +48,8 @@ public class ReadMcpTool
     private static String QuestionExample =
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
-        + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
-        + "  \"first_line_number\": 50,\n"
+        + "  \"file_path\": \"AccountingSystem/src/MainModule.bsl\",\n"
+        + "  \"first_line\": 50,\n"
         + "  \"lines_number\": 100\n"
         + "}";
 
@@ -112,20 +114,19 @@ public class ReadMcpTool
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
-                        + "Escape newlines as \\n and quotes as \\\". "
                         + "Use this example: " + QuestionExample));
         }
 
         var request = optionalRequest.get();
-        var relativeFilePath = request.relativeFilePath;
-        if (relativeFilePath == null || relativeFilePath.isBlank())
+        var filePath = request.filePath;
+        if (filePath == null || filePath.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "`relative_file_path` is required."));
+                    "`file_path` is required."));
         }
 
-        var fileName = new File(relativeFilePath);
+        var fileName = new File(filePath);
         if (call.callKind == ToolCallKind.RENDER)
         {
             details.requestMarkdown = MessageFormat.format(Messages.ReadTitleTemplate, fileName.getName());
@@ -133,16 +134,17 @@ public class ReadMcpTool
         }
 
         var projectName = request.projectName;
+        String detectedProjectName = null;
         if (projectName == null || projectName.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "`project_name` is required."));
+            // Auto-determine project name from file path
+            detectedProjectName = fileSystem.determineProjectName(filePath);
         }
+        final String finalProjectName = projectName != null && !projectName.isBlank() ? projectName : detectedProjectName;
 
         // Validate and set default values for line parameters
         int firstLineNumber =
-            request.firstLineNumber != null && request.firstLineNumber > 0 ? request.firstLineNumber : 1;
+            request.firstLine != null && request.firstLine > 0 ? request.firstLine : 1;
         int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : McpToolConstants.DEFAULT_READ_LINES;
 
         // Apply maximum lines limit
@@ -151,7 +153,8 @@ public class ReadMcpTool
             linesNumber = MAX_LINES;
         }
 
-        var curLinesNumber = linesNumber;
+        final int finalLinesNumber = linesNumber;
+        final int finalFirstLineNumber = firstLineNumber;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -161,13 +164,49 @@ public class ReadMcpTool
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
+            // Check if file is part of a project
+            boolean isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
+
+            if (!isProjectFile)
+            {
+                // File is not part of any project - use Java file I/O
+                try
+                {
+                    if (!fileSystem.fileExists(filePath))
+                    {
+                        return messageFactory.createError(this, call,
+                            "The file \"" + filePath + "\" does not exist.");
+                    }
+
+                    byte[] fileData = fileSystem.readAllBytes(filePath);
+                    String content = new String(fileData, StandardCharsets.UTF_8);
+
+                    int endLine = Math.min(finalFirstLineNumber + finalLinesNumber, countLines(content));
+                    Iterable<String> lineIterator = createLineIterator(content, finalFirstLineNumber, endLine);
+
+                    var resultContent = new StringBuilder();
+                    resultContent.append(readLinesWithPrefix(lineIterator, finalFirstLineNumber, endLine, null));
+
+                    var response = new HashMap<String, Object>();
+                    response.put("content", resultContent.toString());
+                    response.put("charset_name", "UTF-8");
+
+                    return messageFactory.createMessage(this, call, resultContent.toString(), details);
+                }
+                catch (IOException error)
+                {
+                    return messageFactory.createError(this, call, "Failed to read file. " + error.getMessage());
+                }
+            }
+
+            // File is part of a project - use Eclipse APIs
             var root = ResourcesPlugin.getWorkspace().getRoot();
-            var project = root.getProject(projectName);
+            var project = root.getProject(finalProjectName);
 
             // Validate project existence and accessibility
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
+                return messageFactory.createError(this, call, "The project \"" + finalProjectName + "\" does not exist.");
             }
             if (!project.isOpen())
             {
@@ -180,26 +219,30 @@ public class ReadMcpTool
                 catch (CoreException error)
                 {
                     return messageFactory.createError(this, call,
-                        "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                        "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
+            var projectFile = fileSystem.getProjectFile(project, filePath);
+            var isAbsolutePath = filePath != null && new File(filePath).isAbsolute();
             var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
             if (optionalDocument.isEmpty())
             {
-                return messageFactory.createError(this, call, "The file \"" + relativeFilePath + "\" does not exist.");
+                var filePathForError = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toOSString();
+                return messageFactory.createError(this, call,
+                    "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
+                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
             }
 
             var document = optionalDocument.get();
+            var idocument = document.getDocument();
+
             var resultContent = new StringBuilder();
-            var lineNumber = firstLineNumber;
-            for (var line : fileSystem.getLines(document, firstLineNumber - 1, curLinesNumber))
-            {
-                var prefix = String.format("%7d:", lineNumber);
-                resultContent.append(prefix).append(line);
-                lineNumber++;
-            }
+            var lineNumber = finalFirstLineNumber;
+            var lines = fileSystem.getLines(document, finalFirstLineNumber - 1, finalLinesNumber);
+            int endLine = Math.min(finalFirstLineNumber + finalLinesNumber, idocument.getNumberOfLines());
+
+            resultContent.append(readLinesWithPrefix(lines, lineNumber, endLine, null));
 
             // Prepare response
             var response = new Response();
@@ -225,20 +268,19 @@ public class ReadMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Reads file content from a project.");
+        description.append("Reads file content from a project or from the file system.");
         description.append("\n\nUsage:");
-        description.append("\n- `project_name` and `relative_file_path` are required; path is project-relative.");
-        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
-        description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
-        description.append("\n- Escape newlines as \\n and quotes as \\\".");
+        description.append("\n- Arguments must be a single JSON object.");
+        description.append("\n- `file_path` is required. `project_name` is optional - if not provided, the system will auto-detect the project from the file path.");
+        description.append("\n- Arguments must be a single JSON object.");
+        description.append("\n- IMPORTANT: Each line is prefixed with a 7-digit line number and colon (e.g., `    123:`); strip it before editing.");
         description.append("\n- Send only the raw JSON object (no code fences or extra text).");
-        description.append("\n- Example (single line is OK): {\"project_name\":\"MyProject\",\"relative_file_path\":\"src/MainModule.bsl\",\"first_line_number\":1,\"lines_number\":200}");
-        description.append("\n- Defaults: `first_line_number` = 1, `lines_number` = 2000; capped at " + MAX_LINES + ".");
-        description.append("\n- Each line is prefixed with a 7-digit line number and colon (e.g., `    123:`); strip it before editing.");
+        description.append("\n- Example (single line is OK): {\"project_name\":\"MyProject\",\"file_path\":\"MyProject/src/MainModule.bsl\",\"first_line\":1,\"lines_number\":200}");
+        description.append("\n- Defaults: `first_line` = 1, `lines_number` = 2000; capped at " + MAX_LINES + ".");
         description.append("\n- Preserve exact whitespace and line endings (\\r, \\n, \\t).");
         description.append("\n- If you plan to edit, read a larger chunk to make `origin_content` unique.");
         description.append("\n\nRelated tools:");
-        description.append("\n- Locate files: `" + SearchFilesMcpTool.TOOL_NAME + "`, `" + FindMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Locate files: `" + FindMcpTool.TOOL_NAME + "`.");
         description.append("\n- Modify files: `" + EditMcpTool.TOOL_NAME + "`, `" + WriteMcpTool.TOOL_NAME + "`.");
         description.append("\n- MUST use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and `" + SetMarkersMcpTool.TOOL_NAME
             + "` to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
@@ -254,18 +296,18 @@ public class ReadMcpTool
 
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
-        projectNameProp.description = "Project name in IDE. For example, \"MyProject\".";
+        projectNameProp.description = "Project name in IDE. For example, \"MyProject\". If not provided, the system will auto-detect the project from the file path.";
         properties.put("project_name", projectNameProp);
 
-        var relativeFilePathProp = new McpToolCallProperty();
-        relativeFilePathProp.type = "string";
-        relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
-        properties.put("relative_file_path", relativeFilePathProp);
+        var filePathProp = new McpToolCallProperty();
+        filePathProp.type = "string";
+        filePathProp.description = "Path to the file. Can be project-relative (e.g., \"MyProject/src/MyModule.bsl\") or absolute. If not part of any project, the file will be read from the file system.";
+        properties.put("file_path", filePathProp);
 
         var firstLineNumberProp = new McpToolCallProperty();
         firstLineNumberProp.type = "integer";
         firstLineNumberProp.description = "Number of the first line of the file to be read. It is 1-relative. The default is 1";
-        properties.put("first_line_number", firstLineNumberProp);
+        properties.put("first_line", firstLineNumberProp);
 
         var linesNumberProp = new McpToolCallProperty();
         linesNumberProp.type = "integer";
@@ -273,7 +315,7 @@ public class ReadMcpTool
         properties.put("lines_number", linesNumberProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path");
+        parameters.required = Arrays.asList("file_path");
         spec.function.parameters = parameters;
 
         return spec;
@@ -283,22 +325,22 @@ public class ReadMcpTool
     private static class Request
     {
         /**
-         * Project name in IDE.
+         * Project name in IDE. Optional.
          */
         @SerializedName("project_name")
         public String projectName;
 
         /**
-         * Relative path to the file. For example, "/src/MyModule.bsl".
+         * Path to the file. Can be project-relative or absolute.
          */
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
+        @SerializedName("file_path")
+        public String filePath;
 
         /**
          * Number of the first line of the file to be read. It is 1-relative. The default is 1.
          */
-        @SerializedName("first_line_number")
-        public Integer firstLineNumber;
+        @SerializedName("first_line")
+        public Integer firstLine;
 
         /**
          * Number of lines to read. By default, reads up to 2000 lines.
@@ -321,6 +363,178 @@ public class ReadMcpTool
         @SerializedName("charset_name")
         public String charsetName;
     }
+
+    /**
+     * Counts the number of lines in the content by counting line endings.
+     *
+     * @param content the content to count lines in
+     * @return the number of lines
+     */
+    private static int countLines(String content)
+    {
+        if (content == null || content.isEmpty())
+        {
+            return 0;
+        }
+
+        int count = 1;
+        int length = content.length();
+        for (int i = 0; i < length; i++)
+        {
+            char c = content.charAt(i);
+            if (c == '\r')
+            {
+                if (i + 1 < length && content.charAt(i + 1) == '\n')
+                {
+                    i++; // Skip \n after \r
+                }
+                count++;
+            }
+            else if (c == '\n')
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Creates an iterator that reads lines from content with their original line endings preserved.
+     * Each line returned includes its line ending (except possibly the last line).
+     *
+     * @param content the content to read from
+     * @param startLine the starting line number (1-based)
+     * @param endLine the ending line number (exclusive)
+     * @return an iterable of lines with their original line endings
+     */
+    private static Iterable<String> createLineIterator(String content, int startLine, int endLine)
+    {
+        return () -> new java.util.Iterator<>() {
+            int currentLine = startLine;
+            int position = 0;
+            int length = content != null ? content.length() : 0;
+            boolean hasNextLine = content != null && !content.isEmpty();
+
+            {
+                // Skip to the starting line
+                for (int line = 1; line < startLine && hasNextLine; line++)
+                {
+                    advanceToNextLine();
+                }
+            }
+
+            private void advanceToNextLine()
+            {
+                while (position < length)
+                {
+                    char c = content.charAt(position);
+                    if (c == '\r')
+                    {
+                        position++;
+                        if (position < length && content.charAt(position) == '\n')
+                        {
+                            position++;
+                        }
+                        return;
+                    }
+                    else if (c == '\n')
+                    {
+                        position++;
+                        return;
+                    }
+                    position++;
+                }
+                hasNextLine = false;
+            }
+
+            @Override
+            public boolean hasNext()
+            {
+                return hasNextLine && currentLine < endLine;
+            }
+
+            @Override
+            public String next()
+            {
+                if (!hasNext())
+                {
+                    throw new java.util.NoSuchElementException();
+                }
+
+                var lineBuilder = new StringBuilder();
+                int lineStart = position;
+                boolean foundLineEnd = false;
+
+                while (position < length)
+                {
+                    char c = content.charAt(position);
+
+                    if (c == '\r')
+                    {
+                        lineBuilder.append(content, lineStart, position);
+                        position++;
+                        if (position < length && content.charAt(position) == '\n')
+                        {
+                            lineBuilder.append("\r\n"); //$NON-NLS-1$
+                            position++;
+                        }
+                        else
+                        {
+                            lineBuilder.append('\r');
+                        }
+                        foundLineEnd = true;
+                        break;
+                    }
+                    else if (c == '\n')
+                    {
+                        lineBuilder.append(content, lineStart, position);
+                        lineBuilder.append('\n');
+                        position++;
+                        foundLineEnd = true;
+                        break;
+                    }
+                    position++;
+                }
+
+                if (!foundLineEnd && lineStart < length)
+                {
+                    // Last line without line ending
+                    lineBuilder.append(content, lineStart, length);
+                    hasNextLine = false;
+                }
+
+                currentLine++;
+                return lineBuilder.toString();
+            }
+        };
+    }
+
+    /**
+     * Reads lines from an iterable and adds line number prefixes.
+     * Lines are assumed to already include their line endings (if applicable).
+     *
+     * @param lines the iterable of lines to read
+     * @param startLineNumber the starting line number (1-based)
+     * @param endLine the ending line number (exclusive)
+     * @param lineSeparator the line separator to use (ignored if null, lines must already contain line endings)
+     * @return the formatted content with line number prefixes
+     */
+    @SuppressWarnings("nls")
+    private static String readLinesWithPrefix(Iterable<String> lines, int startLineNumber, int endLine, String lineSeparator)
+    {
+        var resultContent = new StringBuilder();
+        var lineNumber = startLineNumber;
+
+        for (var line : lines)
+        {
+            var prefix = String.format("%7d:", lineNumber);
+            resultContent.append(prefix).append(" ").append(line);
+            lineNumber++;
+        }
+
+        return resultContent.toString();
+    }
 }
+
 
 

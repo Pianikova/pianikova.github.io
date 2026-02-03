@@ -32,6 +32,13 @@ public class MarkdownUtils implements IMarkdownUtils
     @SuppressWarnings("nls")
     public String createStyledText(String content, TextColor color, FontWeight weight)
     {
+        return createStyledText(content, color, weight, null);
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String createStyledText(String content, TextColor color, FontWeight weight, Double opacity)
+    {
         if (content == null)
         {
             return "";
@@ -50,6 +57,15 @@ public class MarkdownUtils implements IMarkdownUtils
                 style.append("; ");
             }
             style.append("font-weight: ").append(weight.getValue());
+        }
+
+        if (opacity != null)
+        {
+            if (style.length() > 0)
+            {
+                style.append("; ");
+            }
+            style.append("opacity: ").append(opacity);
         }
 
         if (style.length() == 0)

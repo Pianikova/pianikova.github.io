@@ -24,6 +24,7 @@ import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.egit.ui.internal.commit.DiffDocument;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.ui.PlatformUI;
@@ -90,6 +91,7 @@ public class Chat implements IChat, IChatDialog
     private final IProposalsProvider proposalsProvider;
     private final IJson json;
     private final IMcpTools mcpTools;
+    private final IEdtLinkHandler linkHandler;
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).build();
 
     private WebView webView;
@@ -102,7 +104,7 @@ public class Chat implements IChat, IChatDialog
         IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
         ISessionService sessionService, IModuleNameProvider moduleNameProvider,
         IFileSystem fileSystem, ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json,
-        IMcpTools mcpTools)
+        IMcpTools mcpTools, IEdtLinkHandler linkHandler)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -118,6 +120,7 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(proposalsProvider);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
+        Preconditions.checkNotNull(linkHandler);
         this.log = log;
         this.settings = settings;
         this.ui = ui;
@@ -133,6 +136,7 @@ public class Chat implements IChat, IChatDialog
         this.proposalsProvider = proposalsProvider;
         this.json = json;
         this.mcpTools = mcpTools;
+        this.linkHandler = linkHandler;
     }
 
     @Override
@@ -303,7 +307,7 @@ public class Chat implements IChat, IChatDialog
                 {
                     var bytes = Files.readAllBytes(filePath);
                     var content = new String(bytes, StandardCharsets.UTF_8);
-                    var ctx = new AIContext(ProjectId.Default, fileName, null);
+                    var ctx = new AIContext(ProjectId.Default, filePath.toString(), null);
                     chat("insert_code", content, null, ctx);
                 }
                 catch (IOException e)
@@ -382,8 +386,14 @@ public class Chat implements IChat, IChatDialog
                 }
 
                 script.append(ARGS_SEPARATOR);
-                script
-                    .append(javaScript.escape(Optional.ofNullable(ctx).map(i -> i.getPath()).orElse(null), NULL_VALUE));
+                var path = Optional.ofNullable(ctx).map(i -> i.getPath()).orElse(null);
+                if ("insert_code".equals(topic))
+                {
+                    path = linkHandler.getFullPathForInsertCode(ctx);
+                    path = linkHandler.formatInsertCodePath(ctx, path);
+                }
+
+                script.append(javaScript.escape(path, NULL_VALUE));
                 if (topic.equals("insert_code"))
                 {
                     var document = ctx.getDocument();

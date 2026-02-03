@@ -100,6 +100,7 @@ public class Messages
 
     // Error details
     public static String ErrorDetails;
+    public static String ErrorArguments;
     public static String ErrorContent;
 
     static

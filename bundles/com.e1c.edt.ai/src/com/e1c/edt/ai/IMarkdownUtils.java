@@ -25,6 +25,16 @@ public interface IMarkdownUtils
     String createStyledText(String content, TextColor color, FontWeight weight);
 
 	/**
+     * Creates styled text with specified color, weight, and opacity for HTML display
+     * @param content The content to style
+     * @param color The text color
+     * @param weight The font weight
+     * @param opacity The opacity value (0.0 to 1.0), or null to not set opacity
+     * @return Styled HTML text
+     */
+    String createStyledText(String content, TextColor color, FontWeight weight, Double opacity);
+
+	/**
 	 * Builds a markdown-friendly diff view between original and new content.
 	 * @param filePath The file path to display in diff headers
 	 * @param originContent The original content

@@ -3,11 +3,19 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.io.File;
 import java.util.concurrent.ExecutionException;
 
+import org.eclipse.core.filesystem.EFS;
+import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.PlatformUI;
+import org.eclipse.ui.ide.IDE;
 
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IJson;
@@ -31,12 +39,13 @@ public class IdeApiHandler
     private final Provider<IChat> chatProvider;
     private final IJson json;
     private final IMcpTools mcpTools;
+    private final IEdtLinkHandler linkHandler;
     private boolean isReady;
 
     @Inject
     public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
         Provider<IChat> chatProvider, IJson json,
-        IMcpTools mcpTools)
+        IMcpTools mcpTools, IEdtLinkHandler linkHandler)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
@@ -45,6 +54,7 @@ public class IdeApiHandler
         Preconditions.checkNotNull(chatProvider);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
+        Preconditions.checkNotNull(linkHandler);
         this.log = log;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -52,6 +62,7 @@ public class IdeApiHandler
         this.chatProvider = chatProvider;
         this.json = json;
         this.mcpTools = mcpTools;
+        this.linkHandler = linkHandler;
     }
 
     public void wink(String parameter)
@@ -166,6 +177,73 @@ public class IdeApiHandler
         // Chat tracing
         log.trace(TracingSources.CHAT, AI_CHAT, () -> message);
     }
+
+    @SuppressWarnings("nls")
+    public boolean link(String title, String href)
+    {
+        var safeHref = href != null ? href.trim() : "";
+        if (!linkHandler.isRecognizedHref(safeHref))
+        {
+            return false;
+        }
+
+        var safeTitle = title != null ? title.trim() : "";
+        if (safeTitle.isEmpty() && safeHref.isEmpty())
+        {
+            return false;
+        }
+
+        var filePath = linkHandler.extractFilePath(safeHref);
+        if (filePath.isEmpty())
+        {
+            return false;
+        }
+
+        dispatcher.dispatchAsync(() -> {
+            openFileInEditor(filePath);
+        });
+
+        return true;
+    }
+
+    @SuppressWarnings("nls")
+    private void openFileInEditor(String filePath)
+    {
+        try
+        {
+            var page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
+
+            // First try to find file in workspace (relative path)
+            var root = ResourcesPlugin.getWorkspace().getRoot();
+            var file = root.getFile(new Path(filePath));
+            if (file != null && file.exists())
+            {
+                IDE.openEditor(page, file);
+                return;
+            }
+
+            // If not found in workspace, try as absolute path
+            var externalFile = new File(filePath);
+            if (externalFile.exists() && externalFile.isFile())
+            {
+                IFileStore fileStore = EFS.getLocalFileSystem().getStore(externalFile.toURI());
+                IDE.openEditorOnFileStore(page, fileStore);
+                return;
+            }
+
+            // File not found
+            log.logError("File not found: " + filePath);
+        }
+        catch (PartInitException e)
+        {
+            log.logError(e);
+        }
+        catch (Exception e)
+        {
+            log.logError(e);
+        }
+    }
+
 
     public boolean isReady()
     {

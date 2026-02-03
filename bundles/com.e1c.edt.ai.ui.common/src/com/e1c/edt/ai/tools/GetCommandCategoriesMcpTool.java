@@ -192,6 +192,7 @@ public class GetCommandCategoriesMcpTool
         var description = new StringBuilder();
         description.append("Lists IDE command categories.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Returns category id, name, and description.");
         description.append("\n\nRelated tools:");
         description.append("\n- List commands: `" + GetCommandsMcpTool.TOOL_NAME + "`.");

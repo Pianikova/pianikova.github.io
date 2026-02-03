@@ -275,24 +275,21 @@ public class SetMarkersMcpTool
         {
             throw new IllegalArgumentException("marker_line must be a positive integer");
         }
-        if (markerReq.targetContent == null || markerReq.targetContent.isBlank())
+        if (markerReq.markerHighlightedText == null || markerReq.markerHighlightedText.isBlank())
         {
             throw new IllegalArgumentException("marker_highlighted_text is required");
         }
-        // Validate required action fields for ai_marker type
+        // Validate action fields for ai_marker type when provided
         if ("ai_marker".equalsIgnoreCase(markerReq.type))
         {
-            if (markerReq.actionPrompt == null || markerReq.actionPrompt.isBlank())
+            var hasActionPrompt = markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank();
+            var hasActionTitle = markerReq.actionTitle != null && !markerReq.actionTitle.isBlank();
+            var hasActionDescription = markerReq.actionDescription != null && !markerReq.actionDescription.isBlank();
+            var hasAnyAction = hasActionPrompt || hasActionTitle || hasActionDescription;
+            if (hasAnyAction && !(hasActionPrompt && hasActionTitle && hasActionDescription))
             {
-                throw new IllegalArgumentException("action_prompt is required for ai_marker");
-            }
-            if (markerReq.actionTitle == null || markerReq.actionTitle.isBlank())
-            {
-                throw new IllegalArgumentException("action_title is required for ai_marker");
-            }
-            if (markerReq.actionDescription == null || markerReq.actionDescription.isBlank())
-            {
-                throw new IllegalArgumentException("action_description is required for ai_marker");
+                throw new IllegalArgumentException(
+                    "action_prompt, action_title, and action_description must be provided together for ai_marker");
             }
         }
 
@@ -304,7 +301,7 @@ public class SetMarkersMcpTool
         }
 
         // Calculate char positions from target_content using ReadMcpTool approach
-        var positions = calculateCharPositions(file, markerReq.startLine, markerReq.targetContent);
+        var positions = calculateCharPositions(file, markerReq.startLine, markerReq.markerHighlightedText);
         markerReq.lineOffset = positions[0];
         markerReq.charStart = positions[1];
         markerReq.charEnd = positions[2];
@@ -488,7 +485,7 @@ public class SetMarkersMcpTool
         var description = new StringBuilder();
         description.append("Creates markers in project files (issues, tasks, bookmarks, etc.).");
         description.append("\n\nUsage:");
-        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
         description.append("\n- `markers` must be an array of marker objects (see required fields below).");
         description.append(
@@ -518,12 +515,12 @@ public class SetMarkersMcpTool
         description.append("\n- message: Marker description (required)");
         description.append(
             "\n- marker_line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative. Take the line number from the line prefix using the `"
-                + ReadMcpTool.TOOL_NAME + "` tool");
+                + ReadMcpTool.TOOL_NAME + "` tool. Alias: start_line");
         description.append(
             "\n- marker_highlighted_text: Code fragment associated with the marker (required). ALWAYS minimize to the smallest possible size that maintains context. ALWAYS exclude extra suffix and prefix.");
-        description.append("\n- action_prompt: AI prompt to execute when marker is activated (REQUIRED for ai_marker type)");
-        description.append("\n- action_title: Short title for the quick fix action (REQUIRED for ai_marker type)");
-        description.append("\n- action_description: Detailed description of the quick fix action (REQUIRED for ai_marker type)");
+        description.append("\n- action_prompt: AI prompt to execute when marker is activated (optional for ai_marker type)");
+        description.append("\n- action_title: Short title for the quick fix action (optional for ai_marker type)");
+        description.append("\n- action_description: Detailed description of the quick fix action (optional for ai_marker type)");
 
         description.append("\n\nType-specific properties:");
         description.append("\n- bookmark: done");
@@ -533,11 +530,10 @@ public class SetMarkersMcpTool
 
         description.append("\n\nQuick fix actions:");
         description
-            .append("\n- For `ai_marker` with `action_prompt`: adds quick fix action prompt");
+            .append("\n- For `ai_marker` with action fields: adds quick fix action prompt");
         description.append(
-            "\n- IMPORTANT: ai_marker type REQUIRES all three action fields: action_prompt, action_title, and action_description");
-        description.append(
-            "\n- If type is not `ai_marker`, omit action_* fields.");
+            "\n- IMPORTANT: if you provide any action_* fields, you must provide all three action fields");
+        description.append("\n- If type is not `ai_marker`, omit action_* fields.");
 
         description.append("\n\nExample request:\n").append(QuestionExample);
         description.append("\nExample response:\n").append(AnswerExample);
@@ -558,8 +554,9 @@ public class SetMarkersMcpTool
         var markersProp = new McpToolCallProperty();
         markersProp.type = "array";
         markersProp.description =
-            "List of marker objects. Each marker must include: type, relative_file_path, marker_line, marker_highlighted_text, message. "
-                + "If type is ai_marker, action_prompt, action_title, and action_description are required.";
+            "List of marker objects. Each marker must include: type, relative_file_path, marker_line, "
+                + "marker_highlighted_text, message. "
+                + "If you provide any action_* fields for ai_marker, all three are required.";
         properties.put("markers", markersProp);
 
         parameters.properties = properties;
@@ -596,7 +593,7 @@ public class SetMarkersMcpTool
         public Integer startLine;
 
         @SerializedName("marker_highlighted_text")
-        public String targetContent;
+        public String markerHighlightedText;
 
         @SerializedName("severity")
         public String severity;

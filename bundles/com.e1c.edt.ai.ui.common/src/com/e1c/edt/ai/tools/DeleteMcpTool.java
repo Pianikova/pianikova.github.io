@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,7 +46,7 @@ public class DeleteMcpTool
     private static String QuestionExample =
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
-        + "  \"relative_file_path\": \"src/MainModule.bsl\"\n"
+        + "  \"file_path\": \"AccountingSystem/src/MainModule.bsl\"\n"
         + "}";
     @SuppressWarnings("nls")
     private static String AnswerExample =
@@ -110,15 +111,15 @@ public class DeleteMcpTool
         }
 
         var request = optionalRequest.get();
-        var relativeFilePath = request.relativeFilePath;
-        if (relativeFilePath == null || relativeFilePath.isBlank())
+        var filePath = request.filePath;
+        if (filePath == null || filePath.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "`relative_file_path` is required."));
+                    "`file_path` is required."));
         }
 
-        var fileName = new File(relativeFilePath).getName();
+        var fileName = new File(filePath).getName();
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
@@ -128,11 +129,14 @@ public class DeleteMcpTool
         }
 
         var projectName = request.projectName;
+        String detectedProjectName = null;
         if (projectName == null || projectName.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`project_name` is required."));
+            // Auto-determine project name from file path
+            detectedProjectName = fileSystem.determineProjectName(filePath);
         }
+        final String finalProjectName =
+            projectName != null && !projectName.isBlank() ? projectName : detectedProjectName;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -142,11 +146,44 @@ public class DeleteMcpTool
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
+            // Check if file is part of a project
+            boolean isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
+
+            if (!isProjectFile)
+            {
+                // File is not part of any project - use Java file I/O
+                try
+                {
+                    if (!fileSystem.fileExists(filePath))
+                    {
+                        return messageFactory.createError(this, call, "The file \"" + filePath + "\" does not exist.");
+                    }
+
+                    fileSystem.deleteFile(filePath);
+
+                    var response = new StringBuilder();
+                    response.append("File deleted: \"").append(filePath).append("\".\n");
+                    response.append(
+                        "⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
+
+                    var changes = markdownUtils.createStyledText("-1", TextColor.RED, FontWeight.BOLD);
+                    details.responseMarkdown = MessageFormat.format(Messages.DeletedTemplate, fileName, changes);
+
+                    return messageFactory.createMessage(this, call, response.toString(), details);
+                }
+                catch (IOException error)
+                {
+                    return messageFactory.createError(this, call, "Failed to delete file. " + error.getMessage());
+                }
+            }
+
+            // File is part of a project - use Eclipse APIs
             var root = ResourcesPlugin.getWorkspace().getRoot();
-            var project = root.getProject(projectName);
+            var project = root.getProject(finalProjectName);
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
+                return messageFactory.createError(this, call,
+                    "The project \"" + finalProjectName + "\" does not exist.");
             }
 
             if (!project.isOpen())
@@ -160,23 +197,27 @@ public class DeleteMcpTool
                 catch (CoreException error)
                 {
                     return messageFactory.createError(this, call,
-                        "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                        "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
+            var projectFile = fileSystem.getProjectFile(project, filePath);
+            var isAbsolutePath = filePath != null && new File(filePath).isAbsolute();
 
             // Check if the file can be deleted using editingSupport
             if (!editingSupport.canDelete(projectFile))
             {
-                return messageFactory.createError(this, call, "The file \"" + relativeFilePath
+                var filePathForError = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toOSString();
+                return messageFactory.createError(this, call, "The file \"" + filePathForError
                     + "\" cannot be deleted. Deletion is not supported for this file type or the file is locked.");
             }
 
             if (!projectFile.exists())
             {
+                var filePathForError = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toOSString();
                 return messageFactory.createError(this, call,
-                    "The file \"" + relativeFilePath + "\" does not exist.");
+                    "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
+                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
             }
 
             try
@@ -184,8 +225,8 @@ public class DeleteMcpTool
                 var monitor = cancellationProgressMonitor.get();
                 monitor.setCancellationToken(cancellationToken);
 
-                // Get the relative path for response before deletion
-                var projectRelativePath = projectFile.getProjectRelativePath().toPortableString();
+                // Get the path for response before deletion
+                var displayPath = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toPortableString();
 
                 // Delete the file
                 projectFile.delete(true, monitor);
@@ -197,7 +238,7 @@ public class DeleteMcpTool
                 }
 
                 var response = new StringBuilder();
-                response.append("File deleted: \"").append(projectRelativePath).append("\".\n");
+                response.append("File deleted: \"").append(displayPath).append("\".\n");
                 response.append(
                     "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
 
@@ -226,12 +267,12 @@ public class DeleteMcpTool
         var description = new StringBuilder();
         description.append("Deletes a project file.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Verify the file exists before deletion.");
         description.append("\n- This operation cannot be undone.");
         description.append("\n- Review file content and impact before deleting.");
         description.append("\n\nRelated tools:");
         description.append("\n- Read file: `" + ReadMcpTool.TOOL_NAME + "`.");
-        description.append("\n- Locate files: `" + SearchFilesMcpTool.TOOL_NAME + "`.");
         description.append("\n- Review history: `" + GitDiffMcpTool.TOOL_NAME + "`, `" + LocalHistoryMcpTool.TOOL_NAME + "`.");
         description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
@@ -244,16 +285,16 @@ public class DeleteMcpTool
 
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
-        projectNameProp.description = "Project name in IDE. For example, \"MyProject\".";
+        projectNameProp.description = "Project name in IDE. For example, \"MyProject\". If not provided, the system will auto-detect the project from the file path.";
         properties.put("project_name", projectNameProp);
 
-        var relativeFilePathProp = new McpToolCallProperty();
-        relativeFilePathProp.type = "string";
-        relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
-        properties.put("relative_file_path", relativeFilePathProp);
+        var filePathProp = new McpToolCallProperty();
+        filePathProp.type = "string";
+        filePathProp.description = "Path to the file. Can be project-relative (e.g., \"MyProject/src/MyModule.bsl\") or absolute. If not part of any project, the file will be treated as a regular file system file.";
+        properties.put("file_path", filePathProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path");
+        parameters.required = Arrays.asList("file_path");
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
@@ -262,15 +303,15 @@ public class DeleteMcpTool
     private static class Request
     {
         /**
-         * Project name in IDE.
+         * Project name in IDE. Optional.
          */
         @SerializedName("project_name")
         public String projectName;
 
         /**
-         * Relative path to the file to delete.
+         * Path to the file to delete.
          */
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
+        @SerializedName("file_path")
+        public String filePath;
     }
 }

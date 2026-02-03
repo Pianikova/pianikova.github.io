@@ -279,6 +279,7 @@ public class GitCommitsMcpTool
 		var description = new StringBuilder();
 		description.append("Lists recent Git commits for a project.");
 		description.append("\n\nUsage:");
+		description.append("\n- Arguments must be a single JSON object.");
 		description.append("\n- Requires the project to be a Git repository.");
 		description.append("\n- Supports limiting the number of commits.");
 		description.append("\n- Returns hash, author, date, message, and changed files.");

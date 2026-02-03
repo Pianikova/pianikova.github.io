@@ -6,11 +6,8 @@ package com.e1c.edt.ai.tools;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 
@@ -30,6 +27,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -73,22 +71,25 @@ public class LocalHistoryMcpTool
 	private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
 	private final IMarkdownUtils markdownUtils;
 	private final ILocalHistoryUtils localHistoryUtils;
+	private final IFileSystem fileSystem;
 
 	@Inject
 	public LocalHistoryMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
 		Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils,
-		ILocalHistoryUtils localHistoryUtils)
+		ILocalHistoryUtils localHistoryUtils, IFileSystem fileSystem)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
 		Preconditions.checkNotNull(cancellationProgressMonitor);
 		Preconditions.checkNotNull(markdownUtils);
 		Preconditions.checkNotNull(localHistoryUtils);
+		Preconditions.checkNotNull(fileSystem);
 		this.json = json;
 		this.messageFactory = messageFactory;
 		this.cancellationProgressMonitor = cancellationProgressMonitor;
 		this.markdownUtils = markdownUtils;
 		this.localHistoryUtils = localHistoryUtils;
+		this.fileSystem = fileSystem;
 		spec = createSpecification();
 	}
 
@@ -187,10 +188,11 @@ public class LocalHistoryMcpTool
 				}
 			}
 
-			var file = project.getFile(filePath);
+			var file = fileSystem.getProjectFile(project, filePath);
 			if (!file.exists())
 			{
-				throw new RuntimeException("The file \"" + filePath + "\" does not exist in project \"" + projectName + "\".");
+				throw new RuntimeException("The file \"" + filePath + "\" does not exist within the IDE project context. "
+					+ "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
 			}
 
 			try
@@ -271,6 +273,7 @@ public class LocalHistoryMcpTool
 		var description = new StringBuilder();
 		description.append("Lists local history revisions for a file.");
 		description.append("\n\nUsage:");
+		description.append("\n- Arguments must be a single JSON object.");
 		description.append("\n- Returns recent entries first (index 0 is current).");
 		description.append("\n- Includes timestamp, size, and history location.");
 		description.append("\n- Each entry includes `index` and `is_oldest` to help select versions.");
@@ -296,7 +299,7 @@ public class LocalHistoryMcpTool
 
 		var filePathProp = new McpToolCallProperty();
 		filePathProp.type = "string";
-		filePathProp.description = "Relative file path within the project. For example, \"src/com/example/MyClass.java\".";
+		filePathProp.description = "Relative file path within the project. For example, \"src/com/example/MyClass.java\". Absolute paths are also supported.";
 		properties.put("file_path", filePathProp);
 
 		var maxEntriesProp = new McpToolCallProperty();

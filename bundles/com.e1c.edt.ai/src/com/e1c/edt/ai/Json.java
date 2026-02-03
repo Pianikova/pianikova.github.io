@@ -4,6 +4,7 @@
 package com.e1c.edt.ai;
 
 import java.net.URL;
+import java.util.List;
 import java.util.Optional;
 
 import com.e1c.edt.ai.assistent.model.TokenHealing;
@@ -42,6 +43,7 @@ public class Json
             .registerTypeAdapterFactory(new <TokenHealing> OptionalTypeAdapterFactory(
                 new TypeToken<Optional<TokenHealing>>() { /**/ },
                 new TypeToken<TokenHealing>() { /**/ }))
+            .registerTypeAdapter(new TypeToken<List<String>>() { /**/ }.getType(), new StringOrStringListDeserializer())
             .create();
      // @formatter:on
     }

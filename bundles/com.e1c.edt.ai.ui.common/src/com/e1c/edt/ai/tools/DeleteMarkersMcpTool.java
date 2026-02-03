@@ -277,6 +277,7 @@ public class DeleteMarkersMcpTool
         var description = new StringBuilder();
         description.append("Removes markers from a project or file.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- By default removes all non-problem markers.");
         description.append("\n- Use `marker_type` to remove specific marker types.");
         description.append("\n- Use `id` to remove a single marker.");

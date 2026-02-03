@@ -53,7 +53,7 @@ public class WriteMcpTool
     private static String QuestionExample =
         "{\n"
         + "  \"project_name\": \"AccountingSystem\",\n"
-        + "  \"relative_file_path\": \"src/MainModule.bsl\",\n"
+        + "  \"file_path\": \"AccountingSystem/src/MainModule.bsl\",\n"
         + "  \"content\": \"Procedure Test()\\n    Message(\\\"Hello\\\");\\nEndProcedure\"\n"
         + "}";
     @SuppressWarnings("nls")
@@ -118,14 +118,14 @@ public class WriteMcpTool
         }
 
         var request = optionalRequest.get();
-        var relativeFilePath = request.relativeFilePath;
-        if (relativeFilePath == null || relativeFilePath.isBlank())
+        var filePath = request.filePath;
+        if (filePath == null || filePath.isBlank())
         {
             return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`relative_file_path` is required."));
+                .completedFuture(messageFactory.createError(this, call, "`file_path` is required."));
         }
 
-        var fileName = new File(relativeFilePath).getName();
+        var fileName = new File(filePath).getName();
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
@@ -136,7 +136,7 @@ public class WriteMcpTool
             {
                 requestMarkdown.append("\n\n");
                 requestMarkdown.append("<details><summary>").append(fileName).append("</summary>\n\n");
-                requestMarkdown.append(markdownUtils.buildGitDiff(relativeFilePath, null, request.content));
+                requestMarkdown.append(markdownUtils.buildGitDiff(filePath, null, request.content));
                 requestMarkdown.append("\n</details>");
             }
 
@@ -145,11 +145,14 @@ public class WriteMcpTool
         }
 
         var projectName = request.projectName;
+        String detectedProjectName = null;
         if (projectName == null || projectName.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`project_name` is required."));
+            // Auto-determine project name from file path
+            detectedProjectName = fileSystem.determineProjectName(filePath);
         }
+        final String finalProjectName =
+            projectName != null && !projectName.isBlank() ? projectName : detectedProjectName;
 
         var content = request.content;
         if (content == null)
@@ -177,8 +180,43 @@ public class WriteMcpTool
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
+            // Check if file is part of a project
+            boolean isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
+
+            if (!isProjectFile)
+            {
+                // File is not part of any project - use Java file I/O
+                try
+                {
+                    if (fileSystem.fileExists(filePath))
+                    {
+                        return messageFactory.createError(this, call,
+                            "The file \"" + filePath + "\" already exists. Use the `" + EditMcpTool.TOOL_NAME
+                                + "` tool to modify this file.");
+                    }
+
+                    fileSystem.writeAllBytes(filePath, data);
+
+                    var response = new StringBuilder();
+                    response.append("File written: \"").append(filePath).append("\".\n");
+                    response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
+
+                    var newLines = content.split("\\r?\\n", -1).length;
+                    var changes = new StringBuilder();
+                    changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
+                    details.responseMarkdown = MessageFormat.format(Messages.WrittenTemplate, fileName, changes);
+
+                    return messageFactory.createMessage(this, call, response.toString(), details);
+                }
+                catch (IOException error)
+                {
+                    return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
+                }
+            }
+
+            // File is part of a project - use Eclipse APIs
             var root = ResourcesPlugin.getWorkspace().getRoot();
-            var project = root.getProject(projectName);
+            var project = root.getProject(finalProjectName);
             if (project == null || !project.exists())
             {
                 return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
@@ -199,18 +237,21 @@ public class WriteMcpTool
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, relativeFilePath);
+            var projectFile = fileSystem.getProjectFile(project, filePath);
+            var isAbsolutePath = filePath != null && new File(filePath).isAbsolute();
 
             // Check if the file can be edited using editingSupport
             if (!editingSupport.canEdit(projectFile))
             {
-                return messageFactory.createError(this, call, "The file \"" + relativeFilePath
+                var filePathForError = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toOSString();
+                return messageFactory.createError(this, call, "The file \"" + filePathForError
                     + "\" cannot be created. Writing is not supported for this file type or the location is restricted.");
             }
 
             if (projectFile.exists())
             {
-                return messageFactory.createError(this, call, "The file \"" + relativeFilePath
+                var filePathForError = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toOSString();
+                return messageFactory.createError(this, call, "The file \"" + filePathForError
                     + "\" already exists. Use the `" + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
             }
 
@@ -233,8 +274,8 @@ public class WriteMcpTool
             }
 
             var response = new StringBuilder();
-            var projectRelativePath = projectFile.getProjectRelativePath();
-            response.append("File written: \"").append(projectRelativePath.toPortableString()).append("\".\n");
+            var displayPath = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toPortableString();
+            response.append("File written: \"").append(displayPath).append("\".\n");
 
             var fileExt = projectFile.getFileExtension();
             if (fileExt != null)
@@ -244,7 +285,7 @@ public class WriteMcpTool
                 {
                 case "bsl":
                     response.append("ACTION REQUIRED: check that corresponding \"")
-                        .append(projectRelativePath.removeFileExtension().addFileExtension("mdo").toPortableString())
+                        .append(projectFile.getProjectRelativePath().removeFileExtension().addFileExtension("mdo").toPortableString())
                         .append("\" file exists or create it.\n");
                     break;
                 case "mdo":
@@ -309,9 +350,7 @@ public class WriteMcpTool
         var description = new StringBuilder();
         description.append("Creates a new project file.");
         description.append("\n\nUsage:");
-        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
-        description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
-        description.append("\n- Escape newlines as \\n and quotes as \\\".");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Fails if the file already exists; use `" + EditMcpTool.TOOL_NAME + "` to modify files.");
         description.append("\n- Verify the target folder and naming patterns before creating files.");
         description.append("\n- Some file types require companions (e.g., .bsl needs a matching .mdo).");
@@ -319,7 +358,6 @@ public class WriteMcpTool
         description.append("\n- Avoid emojis unless explicitly requested.");
         description.append("\n\nRelated tools:");
         description.append("\n- Check existence and context: `" + ReadMcpTool.TOOL_NAME + "`.");
-        description.append("\n- Locate folders: `" + SearchFilesMcpTool.TOOL_NAME + "`.");
         description.append("\n- Update existing files: `" + EditMcpTool.TOOL_NAME + "`.");
         description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
@@ -333,13 +371,13 @@ public class WriteMcpTool
 
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
-        projectNameProp.description = "Project name in IDE. For example, \"MyProject\".";
+        projectNameProp.description = "Project name in IDE. For example, \"MyProject\". If not provided, the system will auto-detect the project from the file path.";
         properties.put("project_name", projectNameProp);
 
-        var relativeFilePathProp = new McpToolCallProperty();
-        relativeFilePathProp.type = "string";
-        relativeFilePathProp.description = "Project relative path to the file. For example, \"src/MyModule.bsl\".";
-        properties.put("relative_file_path", relativeFilePathProp);
+        var filePathProp = new McpToolCallProperty();
+        filePathProp.type = "string";
+        filePathProp.description = "Path to the file. Can be project-relative (e.g., \"MyProject/src/MyModule.bsl\") or absolute. If not part of any project, the file will be treated as a regular file system file.";
+        properties.put("file_path", filePathProp);
 
         var contentProp = new McpToolCallProperty();
         contentProp.type = "string";
@@ -352,7 +390,7 @@ public class WriteMcpTool
         properties.put("charset_name", charsetNameProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "relative_file_path", "content");
+        parameters.required = Arrays.asList("file_path", "content");
 
         spec.function.parameters = parameters;
         return spec;
@@ -362,16 +400,16 @@ public class WriteMcpTool
     private static class Request
     {
         /**
-         * Project name in IDE.
+         * Project name in IDE. Optional.
          */
         @SerializedName("project_name")
         public String projectName;
 
         /**
-         * Relative path to the file. Must start with the project name, for example, "src/MyModule.bsl".
+         * Path to the file. Can be project-relative or absolute.
          */
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
+        @SerializedName("file_path")
+        public String filePath;
 
         /**
          * Content to write to file.

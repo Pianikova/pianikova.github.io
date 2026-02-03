@@ -19,6 +19,7 @@ import com.google.common.base.Preconditions;
  *   <li>Calculate precise line change statistics</li>
  *   <li>Preserve line breaks in unchanged content</li>
  *   <li>Work with CRLF, LF, CR, and mixed line ending formats using templates</li>
+ *   <li>Flexible whitespace handling - spaces and tabs in originContent match any sequence of spaces/tabs in currentContent</li>
  *   <li>Robust parameter validation using Guava Preconditions</li>
  * </ul>
  *
@@ -111,15 +112,25 @@ public class ContentReplacer implements IContentReplacer
     }
 
     /**
-     * Creates a regex pattern that matches the originContent with templates for line endings.
+     * Creates a regex pattern that matches the originContent with templates for line endings and invisible characters.
      * Line breaks are replaced with templates that can match any line ending format.
+     * Spaces and tabs are handled flexibly - sequences of whitespace (spaces and/or tabs) in the originContent are matched
+     * against any sequence of spaces and/or tabs in the currentContent.
+     *
+     * <p>Important: Only spaces and tabs are treated flexibly. Newlines are handled separately through the line ending
+     * template mechanism and are NOT part of the flexible whitespace matching. This prevents the pattern from
+     * accidentally matching across line boundaries.</p>
+     *
+     * <p>This means that if originContent has " " (space) and currentContent has "\t" (tab) or multiple spaces/tabs,
+     * they will still match because whitespace is treated flexibly during matching.</p>
      *
      * @param originContent the content to create a template pattern for
-     * @return regex pattern that matches originContent with line ending templates
+     * @return regex pattern that matches originContent with line ending and invisible character templates
      */
     private static Pattern createTemplatePattern(String originContent)
     {
-        // Build a regex that matches originContent while allowing any line ending at each break.
+        // Build a regex that matches originContent while allowing any line ending at each break
+        // and handling spaces and tabs flexibly.
         var pattern = new StringBuilder();
         var length = originContent.length();
         var index = 0;
@@ -139,7 +150,31 @@ public class ContentReplacer implements IContentReplacer
 
             if (next > index)
             {
-                pattern.append(Pattern.quote(originContent.substring(index, next)));
+                // Build the pattern character by character to handle spaces and tabs flexibly
+                var segment = originContent.substring(index, next);
+                var i = 0;
+                while (i < segment.length())
+                {
+                    var ch = segment.charAt(i);
+                    // Skip consecutive whitespace characters and create a single flexible pattern
+                    if (ch == ' ' || ch == '\t')
+                    {
+                        // Match one or more spaces or tabs (but NOT newlines)
+                        // Using [ \\t]+ instead of \\s+ to avoid matching newlines
+                        pattern.append("[ \\t]+"); //$NON-NLS-1$
+                        // Skip all consecutive whitespace characters
+                        while (i < segment.length() && (segment.charAt(i) == ' ' || segment.charAt(i) == '\t'))
+                        {
+                            i++;
+                        }
+                    }
+                    else
+                    {
+                        // Quote other characters to escape special regex characters
+                        pattern.append(Pattern.quote(String.valueOf(ch)));
+                        i++;
+                    }
+                }
             }
 
             if (next >= length)

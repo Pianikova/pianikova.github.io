@@ -5,10 +5,13 @@ package com.e1c.edt.ai.tools;
 
 import java.text.MessageFormat;
 
+import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
@@ -22,15 +25,18 @@ public class McpToolsCallMessageFactory
 {
     private final ISettings settings;
     private final IJson json;
+    private final IMarkdownUtils markdownUtils;
 
     @Inject
-    public McpToolsCallMessageFactory(ISettings settings, IJson json)
+    public McpToolsCallMessageFactory(ISettings settings, IJson json, IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(markdownUtils);
 
         this.settings = settings;
         this.json = json;
+        this.markdownUtils = markdownUtils;
     }
 
     @Override
@@ -57,19 +63,20 @@ public class McpToolsCallMessageFactory
         responseMarkdown.append(System.lineSeparator());
 
         // Add error details section
-        responseMarkdown.append("<details><summary>")
-            .append(Messages.ErrorDetails)
-            .append("</summary>")
-            .append(System.lineSeparator())
-            .append(System.lineSeparator());
+        if (isLogLevel(Verbosity.TRACE))
+        {
+            responseMarkdown.append("```").append(System.lineSeparator());
+            if (call != null && call.function != null && call.function.arguments != null)
+            {
+                responseMarkdown.append(Messages.ErrorArguments).append(":").append(System.lineSeparator());
+                responseMarkdown.append(json.formatJson(call.function.arguments)).append(System.lineSeparator());
+                responseMarkdown.append(System.lineSeparator());
+            }
 
-        // Add error content
-        responseMarkdown.append("__").append(Messages.ErrorContent).append(":__").append(System.lineSeparator());
-        responseMarkdown.append("```").append(System.lineSeparator());
-        responseMarkdown.append(errorMessage).append(System.lineSeparator());
-        responseMarkdown.append("```").append(System.lineSeparator());
-
-        responseMarkdown.append("</details>");
+            responseMarkdown.append(Messages.ErrorContent).append(":").append(System.lineSeparator());
+            responseMarkdown.append(errorMessage).append(System.lineSeparator());
+            responseMarkdown.append("```").append(System.lineSeparator());
+        }
 
         details.responseMarkdown = responseMarkdown.toString();
 
@@ -114,8 +121,8 @@ public class McpToolsCallMessageFactory
 
         if (call == null || call.callKind == ToolCallKind.CALL)
         {
-            // Tracing
-            if (isTracing())
+            // Debug - detailed request/response information on errors only
+            if (isLogLevel(Verbosity.DEBUG))
             {
                 if (requestMarkdown.length() == 0)
                 {
@@ -154,22 +161,57 @@ public class McpToolsCallMessageFactory
             responseMarkdown.append(System.lineSeparator());
             if (isDone)
             {
-                responseMarkdown.append(Messages.ToolDone);
+                responseMarkdown.append(styleStatusMessage(Messages.ToolDone, TextColor.GREEN, true));
             }
             else
             {
-                responseMarkdown.append(Messages.ToolFailed);
+                responseMarkdown.append(styleStatusMessage(Messages.ToolFailed, TextColor.RED, true));
             }
         }
 
-        details.requestMarkdown = requestMarkdown.toString();
-        details.responseMarkdown = responseMarkdown.toString();
+        details.requestMarkdown = requestMarkdown.length() > 0 ? requestMarkdown.toString() : null;
+        details.responseMarkdown = responseMarkdown.length() > 0 ? responseMarkdown.toString() : null;
         message.details = details;
         return message;
     }
 
-    private boolean isTracing()
+    @SuppressWarnings("nls")
+    private String styleStatusMessage(String status, TextColor color, boolean dimText)
     {
-        return settings.getVerbosity().getLevel() >= Verbosity.TRACE.getLevel();
+        if (status == null || status.isEmpty())
+        {
+            return "";
+        }
+
+        var iconEnd = -1;
+        for (int i = 0; i < status.length(); i++)
+        {
+            if (Character.isWhitespace(status.charAt(i)))
+            {
+                iconEnd = i;
+                break;
+            }
+        }
+
+        if (iconEnd <= 0)
+        {
+            return markdownUtils.createStyledText(status, color, FontWeight.NORMAL, 0.3);
+        }
+
+        var icon = status.substring(0, iconEnd);
+        var rest = status.substring(iconEnd);
+        var styledIcon = markdownUtils.createStyledText(icon, color, FontWeight.NORMAL, 0.3);
+        if (!dimText)
+        {
+            return styledIcon + rest;
+        }
+
+        var styledRest = markdownUtils.createStyledText(rest, null, FontWeight.NORMAL, 0.3);
+        return styledIcon + styledRest;
+    }
+
+    private boolean isLogLevel(Verbosity verbosity)
+    {
+        return settings.getVerbosity().getLevel() >= verbosity.getLevel();
     }
 }

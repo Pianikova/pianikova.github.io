@@ -107,6 +107,7 @@ public class AIUICommonModule
         bind(StateService.class).in(Singleton.class);
         bind(IStateService.class).to(StateService.class);
         bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
+        bind(IEdtLinkHandler.class).to(EdtLinkHandler.class).in(Singleton.class);
         // @formatter:on
     }
 }

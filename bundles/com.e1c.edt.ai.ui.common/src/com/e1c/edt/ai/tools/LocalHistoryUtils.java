@@ -5,7 +5,6 @@ package com.e1c.edt.ai.tools;
 
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
@@ -65,7 +64,7 @@ class LocalHistoryUtils
 
 			var timestamp = state.getModificationTime();
 			var entry = new LocalHistoryEntry();
-			entry.revisionId = buildRevisionId(state); //$NON-NLS-1$
+			entry.revisionId = buildRevisionId(state);
 			entry.timestamp = timestamp;
 			entry.formattedTime = formatTimestamp(timestamp);
 			entry.fileSize = readStateSize(state);

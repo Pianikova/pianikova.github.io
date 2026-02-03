@@ -419,6 +419,7 @@ public class FindMcpTool
         var description = new StringBuilder();
         description.append("Finds 1C project elements (objects, attributes, forms, code, etc.).");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use wildcards in `search_query` for broad search.");
         description.append("\n- Narrow by project and type to reduce noise.");
         description.append("\n\nRelated tools:");

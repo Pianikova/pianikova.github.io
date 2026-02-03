@@ -266,6 +266,7 @@ public class GetObjectMcpTool
         var description = new StringBuilder();
         description.append("Returns a 1C configuration object by id.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Requires a valid object id.");
         description.append("\n\nRelated tools:");
         description.append("\n- Find ids: `" + FindMcpTool.TOOL_NAME + "`.");

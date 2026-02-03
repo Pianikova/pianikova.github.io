@@ -282,6 +282,7 @@ public class GetProjectsMcpTool
         var description = new StringBuilder();
         description.append("Lists projects in the workspace with key metadata and editor context.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use this tool to choose a target project or infer scope from open files.");
         description.append("\n- `is_current` indicates a project with open files (likely in focus).");
         description.append("\n\nResponse includes:");
@@ -292,7 +293,7 @@ public class GetProjectsMcpTool
         description.append("\n- Additional provider details (e.g., 1C project info)");
         description.append("\n\nRelated tools:");
         description.append("\n- Project issues/markers: `" + GetMarkersMcpTool.TOOL_NAME + "`.");
-        description.append("\n- Locate files: `" + SearchFilesMcpTool.TOOL_NAME + "`, `" + FindMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Locate files: `" + FindMcpTool.TOOL_NAME + "`.");
         description.append("\n- File history: `" + LocalHistoryMcpTool.TOOL_NAME + "`, `" + LocalChangesMcpTool.TOOL_NAME + "`.");
         description.append("\n- Navigation history: `" + NavigationHistoryMcpTool.TOOL_NAME + "`.");
         description.append("\n\nExample output:");

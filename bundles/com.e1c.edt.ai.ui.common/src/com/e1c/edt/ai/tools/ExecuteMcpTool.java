@@ -205,6 +205,7 @@ public class ExecuteMcpTool
         var description = new StringBuilder();
         description.append("Executes a system process.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Runs under ").append(environment.getOSName())
                    .append(" ").append(environment.getOSVersion())
                    .append(" (").append(environment.getArch()).append(").");

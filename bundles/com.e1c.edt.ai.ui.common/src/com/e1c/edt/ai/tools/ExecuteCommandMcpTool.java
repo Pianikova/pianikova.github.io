@@ -282,6 +282,7 @@ public class ExecuteCommandMcpTool
 
         description.append("Executes an IDE command by id.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use this tool for IDE actions that require the IDE context.");
         description.append("\n- Provide required parameters for the command.");
         description.append("\n- Add a short description of what will be done.");

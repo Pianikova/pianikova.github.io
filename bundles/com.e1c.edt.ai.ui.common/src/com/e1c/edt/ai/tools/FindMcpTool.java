@@ -134,16 +134,13 @@ public class FindMcpTool
         var request = optionalRequest.get();
         if (request.searchQuery == null || request.searchQuery.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`search_query` cannot be empty."));
+            request.searchQuery = "*";
         }
 
         var searchQuery = request.searchQuery;
-        if (call.callKind == ToolCallKind.RENDER)
-        {
-            details.requestMarkdown = MessageFormat.format(Messages.SearchTitleTemplate, searchQuery);
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-        }
+        // Check if search_query contains wildcard patterns for file name search
+        boolean isFileNameSearch = isWildcardPattern(searchQuery)
+            && (request.isRegularExpressionSearch == null || !request.isRegularExpressionSearch);
 
         var isCaseSensitiveSearch = request.isCaseSensitiveSearch != null ? request.isCaseSensitiveSearch : false;
         var isRegularExpressionSearch =
@@ -151,9 +148,30 @@ public class FindMcpTool
         var fileNamePatterns = request.fileNamePatterns != null && !request.fileNamePatterns.isEmpty()
             ? request.fileNamePatterns.toArray(new String[0]) : null;
         var includeDerived = request.includeDerived != null ? request.includeDerived : true;
+        var includeSubfolders = request.includeSubfolders != null ? request.includeSubfolders : true;
         List<String> projectNames = request.projectNames != null ? request.projectNames : List.of();
         int firstIndex = request.firstIndex != null ? Math.max(0, request.firstIndex) : 0;
         int maxCount = request.maxCount != null && request.maxCount > 0 ? request.maxCount : DEFAULT_MAX_ELEMENTS;
+
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = MessageFormat.format(Messages.SearchTitleTemplate, searchQuery);
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
+        // For file name search, project_name is required
+        if (isFileNameSearch && projectNames.isEmpty())
+        {
+            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
+                "For file name search (when search_query contains wildcards), `search_project_names` is required."));
+        }
+
+        // If file name search, perform file search instead of content search
+        if (isFileNameSearch)
+        {
+            return performFileSearch(call, cancellationToken, details, projectNames, searchQuery, includeSubfolders,
+                maxCount);
+        }
 
         return CompletableFuture.supplyAsync(() -> {
             if (cancellationToken.isCanceled())
@@ -286,7 +304,6 @@ public class FindMcpTool
                                             element.lineOffset = line.getOffset();
                                             element.lineLength = line.getLength();
                                             element.lineNumber = line.getLine();
-                                            element.lineContent = line.getContents();
                                         }
 
                                         allElements.add(element);
@@ -334,55 +351,57 @@ public class FindMcpTool
             // Create detailed response markdown with search result information
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
-                markdownUtils.createStyledText(String.valueOf(elements.size()), TextColor.GREEN, FontWeight.BOLD)));
+                markdownUtils.createStyledText(String.valueOf(elements.size()), TextColor.GREEN, FontWeight.BOLD)))
+                .append("\n")
+                .append(searchQuery)
+                .append("\n:")
+                .append(fileNamePatterns != null ? Arrays.toString(fileNamePatterns) : "null");
 
-            // Add search results in collapsible section
-            responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n");
-
-            // Group results by project for better organization
-            var projectGroups = new HashMap<String, List<Element>>();
-            for (var element : elements)
+            if (elements.size() > 0)
             {
-                projectGroups.computeIfAbsent(element.projectName, k -> new ArrayList<>()).add(element);
-            }
+                // Add search results in collapsible section
+                responseMarkdown.append("\n\n<details><summary>")
+                    .append(Messages.SearchResults)
+                    .append("</summary>\n\n");
 
-            for (var entry : projectGroups.entrySet())
-            {
-                var projectName = entry.getKey();
-                var projectElements = entry.getValue();
-
-                responseMarkdown.append("**").append(markdownUtils.escapeForMarkdown(projectName)).append("**");
-                responseMarkdown.append(" (")
-                    .append(projectElements.size())
-                    .append(" ")
-                    .append(Messages.Matches)
-                    .append(")\n\n");
-
-                for (var element : projectElements)
+                // Group results by project for better organization
+                var projectGroups = new HashMap<String, List<Element>>();
+                for (var element : elements)
                 {
-                    responseMarkdown.append("- **")
-                        .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
-                        .append("**");
+                    projectGroups.computeIfAbsent(element.projectName, k -> new ArrayList<>()).add(element);
+                }
 
-                    if (element.lineNumber > 0)
-                    {
-                        responseMarkdown.append(" - ").append(Messages.Line).append(" ").append(element.lineNumber);
-                    }
+                for (var entry : projectGroups.entrySet())
+                {
+                    var projectName = entry.getKey();
+                    var projectElements = entry.getValue();
 
-                    if (element.lineContent != null && !element.lineContent.trim().isEmpty())
+                    responseMarkdown.append("**").append(markdownUtils.escapeForMarkdown(projectName)).append("**");
+                    responseMarkdown.append(" (")
+                        .append(projectElements.size())
+                        .append(" ")
+                        .append(Messages.Matches)
+                        .append(")\n\n");
+
+                    for (var element : projectElements)
                     {
-                        responseMarkdown.append("\n```\n");
-                        responseMarkdown.append(markdownUtils.escapeForMarkdown(element.lineContent.trim()));
-                        responseMarkdown.append("\n```");
+                        responseMarkdown.append("- **")
+                            .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
+                            .append("**");
+
+                        if (element.lineNumber > 0)
+                        {
+                            responseMarkdown.append(" - ").append(Messages.Line).append(" ").append(element.lineNumber);
+                        }
+
+                        responseMarkdown.append("\n");
                     }
 
                     responseMarkdown.append("\n");
                 }
 
-                responseMarkdown.append("\n");
+                responseMarkdown.append("</details>");
             }
-
-            responseMarkdown.append("</details>");
 
             details.responseMarkdown = responseMarkdown.toString();
 
@@ -400,16 +419,18 @@ public class FindMcpTool
         spec.function.name = TOOL_NAME;
 
         var description = new StringBuilder();
-        description.append("Finds files by content pattern in the IDE.");
+        description.append("Finds files by content pattern or file name pattern in the IDE.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Provide a search pattern in `search_query`.");
-        description.append("\n- Arguments must be a single JSON object with double-quoted keys/strings.");
-        description.append("\n- Do NOT wrap JSON in Markdown or send arrays; no trailing commas or comments.");
+        description.append("\n- If `search_query` contains wildcard patterns (*, ?), performs file name search.");
+        description.append("\n- For file name search, `search_project_names` is required.");
+        description.append("\n- For content search, searches all projects if `search_project_names` is not specified.");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Narrow scope with project/file parameters to reduce noise.");
         description.append("\n\nRelated tools:");
-        description.append("\n- Search by name: `" + SearchFilesMcpTool.TOOL_NAME + "`.");
         description.append("\n- Open/edit results: `" + ReadMcpTool.TOOL_NAME + "`, `" + EditMcpTool.TOOL_NAME + "`.");
-        description.append("\n\nExample:");
+        description.append("\n\nExample (content search):");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
@@ -421,7 +442,8 @@ public class FindMcpTool
 
         var searchQueryProp = new McpToolCallProperty();
         searchQueryProp.type = "string";
-        searchQueryProp.description = "Text or regular expression to search. Supports wildcards (*, ?) when not using regex.";
+        searchQueryProp.description = "Text or regular expression to search. Supports wildcards (*, ?) when not using regex. "
+            + "If contains wildcards, performs file name search (requires search_project_names).";
         properties.put("search_query", searchQueryProp);
 
         var isCaseSensitiveSearchProp = new McpToolCallProperty();
@@ -436,18 +458,24 @@ public class FindMcpTool
 
         var projectNamesProp = new McpToolCallProperty();
         projectNamesProp.type = "array";
-        projectNamesProp.description = "Project names to search in. Searches all projects if empty.";
+        projectNamesProp.description = "Project names to search in. Searches all projects if empty (for content search). "
+            + "Required for file name search (when search_query contains wildcards).";
         properties.put("search_project_names", projectNamesProp);
 
         var fileNamePatternsProp = new McpToolCallProperty();
         fileNamePatternsProp.type = "array";
-        fileNamePatternsProp.description = "File name patterns (e.g., [\"*.bsl\", \"*.mdo\"])";
+        fileNamePatternsProp.description = "File name patterns (e.g., [\"*.bsl\", \"*.mdo\"]). Used for content search only.";
         properties.put("file_name_patterns", fileNamePatternsProp);
 
         var includeDerivedProp = new McpToolCallProperty();
         includeDerivedProp.type = "boolean";
-        includeDerivedProp.description = "Include derived resources. Default: true";
+        includeDerivedProp.description = "Include derived resources. Default: true. Used for content search only.";
         properties.put("include_derived", includeDerivedProp);
+
+        var includeSubfoldersProp = new McpToolCallProperty();
+        includeSubfoldersProp.type = "boolean";
+        includeSubfoldersProp.description = "Include subfolders in search. Default: true. Used for file name search only.";
+        properties.put("include_subfolders", includeSubfoldersProp);
 
         var firstIndexProp = new McpToolCallProperty();
         firstIndexProp.type = "integer";
@@ -470,7 +498,8 @@ public class FindMcpTool
     private static class Request
     {
         /**
-         * Text or regular expression to search . The search text represents a regular expression or a pattern using `*` and `?` as wildcards. The empty search text signals a file name search.
+         * Text or regular expression to search. The search text represents a regular expression or a pattern using `*` and `?` as wildcards.
+         * If the search_query contains wildcard patterns (*, *?, ?**), it triggers file name search instead of content search.
          */
         @SerializedName("search_query")
         public String searchQuery;
@@ -489,21 +518,30 @@ public class FindMcpTool
 
         /**
          * IDE project names. If not specified, all projects will be searched.
+         * For file name search (when search_query contains wildcards), this is required.
          */
         @SerializedName("search_project_names")
         public List<String> projectNames;
 
         /**
          * Filename patterns that all files must match. If not specified, then all file names must be included.
+         * This is used for content search only.
          */
         @SerializedName("file_name_patterns")
         public List<String> fileNamePatterns;
 
         /**
          * True means including derived files and files inside derived containers. False means excluding them. The default value is True.
+         * This is used for content search only.
          */
         @SerializedName("include_derived")
         public Boolean includeDerived;
+
+        /**
+         * Include subfolders in search. This is used for file name search only. Default: true
+         */
+        @SerializedName("include_subfolders")
+        public Boolean includeSubfolders;
 
         @SerializedName("first_index")
         public Integer firstIndex = 0;
@@ -541,9 +579,184 @@ public class FindMcpTool
 
         @SerializedName("line_number")
         public int lineNumber;
+    }
 
-        @SerializedName("line_content")
-        public String lineContent;
+    /**
+     * Checks if the given string is a wildcard pattern for file name search.
+     * Returns true if the pattern contains wildcard characters like *, *?, or ?**.
+     */
+    private boolean isWildcardPattern(String pattern)
+    {
+        if (pattern == null || pattern.isEmpty())
+        {
+            return false;
+        }
+        // Check for patterns that indicate file name search: *, *?, ?**
+        return pattern.contains("*") || pattern.contains("?");
+    }
+
+    /**
+     * Performs file name search based on wildcard patterns.
+     * This method is called when search_query contains wildcard patterns.
+     */
+    private CompletableFuture<ToolCallMessage> performFileSearch(McpToolCall call, ICancellationToken cancellationToken,
+        ToolCallMessageDetails details, List<String> projectNames, String searchPattern, boolean includeSubfolders,
+        int maxCount)
+    {
+        return CompletableFuture.supplyAsync(() -> {
+            if (cancellationToken.isCanceled())
+            {
+                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+            }
+
+            var root = ResourcesPlugin.getWorkspace().getRoot();
+            final List<Element> allElements = new ArrayList<>();
+
+            for (var projectName : projectNames)
+            {
+                if (cancellationToken.isCanceled() || allElements.size() >= maxCount)
+                {
+                    break;
+                }
+
+                var project = root.getProject(projectName);
+                if (project == null || !project.exists())
+                {
+                    return messageFactory.createError(this, call,
+                        "The project \"" + projectName + "\" does not exist.");
+                }
+
+                if (!project.isOpen())
+                {
+                    try
+                    {
+                        var monitor = cancellationProgressMonitor.get();
+                        monitor.setCancellationToken(cancellationToken);
+                        project.open(monitor);
+                    }
+                    catch (CoreException error)
+                    {
+                        return messageFactory.createError(this, call,
+                            "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                    }
+                }
+
+                try
+                {
+                    var monitor = cancellationProgressMonitor.get();
+                    monitor.setCancellationToken(cancellationToken);
+                    searchFilesByName(project, searchPattern, includeSubfolders, allElements, maxCount, monitor,
+                        cancellationToken);
+                }
+                catch (CoreException e)
+                {
+                    return messageFactory.createError(this, call, "Search failed: " + e.getMessage());
+                }
+            }
+
+            var content = json.serialize(allElements);
+
+            // Create response markdown
+            var responseMarkdown = new StringBuilder();
+            responseMarkdown.append(MessageFormat.format(Messages.FilesFoundTemplate,
+                markdownUtils.createStyledText(String.valueOf(allElements.size()), TextColor.GREEN, FontWeight.BOLD)));
+
+            // Add search results in collapsible section
+            responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n");
+
+            for (var element : allElements)
+            {
+                responseMarkdown.append("- **")
+                    .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
+                    .append("**\n");
+            }
+
+            responseMarkdown.append("</details>");
+
+            details.responseMarkdown = responseMarkdown.toString();
+
+            return messageFactory.createMessage(this, call, content, details);
+        });
+    }
+
+    /**
+     * Recursively searches for files matching the given pattern.
+     */
+    private void searchFilesByName(IResource container, String pattern, boolean includeSubfolders,
+        List<Element> foundElements, int maxCount, ICancellationProgressMonitor monitor,
+        ICancellationToken cancellationToken) throws CoreException
+    {
+        if (cancellationToken.isCanceled() || foundElements.size() >= maxCount)
+        {
+            return;
+        }
+
+        try
+        {
+            if (cancellationToken.isCanceled())
+            {
+                return;
+            }
+
+            IResource[] members;
+            if (container.getType() == IResource.PROJECT || container.getType() == IResource.FOLDER)
+            {
+                members = ((org.eclipse.core.resources.IContainer)container).members();
+            }
+            else
+            {
+                return;
+            }
+
+            for (IResource member : members)
+            {
+                if (cancellationToken.isCanceled() || foundElements.size() >= maxCount)
+                {
+                    return;
+                }
+
+                if (member.getType() == IResource.FILE)
+                {
+                    // Check if file matches the pattern
+                    if (matchesPattern(member.getName(), pattern))
+                    {
+                        var element = new Element();
+                        element.projectName = member.getProject().getName();
+                        element.relativeFilePath = member.getProjectRelativePath().toPortableString();
+                        element.absoluteFilePath = member.getLocation().toOSString();
+                        element.offset = 0;
+                        element.length = 0;
+                        element.lineOffset = 0;
+                        element.lineLength = 0;
+                        element.lineNumber = 0;
+                        foundElements.add(element);
+                    }
+                }
+                else if (includeSubfolders && member.getType() == IResource.FOLDER)
+                {
+                    // Recursively search subfolders
+                    searchFilesByName(member, pattern, includeSubfolders, foundElements, maxCount, monitor,
+                        cancellationToken);
+                }
+            }
+        }
+        catch (CoreException e)
+        {
+            // Log the error but continue searching other files
+        }
+    }
+
+    /**
+     * Checks if a file name matches a wildcard pattern.
+     * Supports * (matches any number of characters) and ? (matches exactly one character).
+     */
+    private boolean matchesPattern(String fileName, String pattern)
+    {
+        // Convert pattern to regex
+        var regex = pattern.replace(".", "\\.") //$NON-NLS-1$ //$NON-NLS-2$
+            .replace("*", ".*") //$NON-NLS-1$ //$NON-NLS-2$
+            .replace("?", "."); //$NON-NLS-1$ //$NON-NLS-2$
+        return fileName.matches(regex);
     }
 
 }

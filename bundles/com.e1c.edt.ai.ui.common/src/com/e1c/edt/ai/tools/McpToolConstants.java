@@ -27,7 +27,7 @@ public final class McpToolConstants
     public static final int DEFAULT_MAX_FILES = 32;
 
     /** Default maximum number of lines for execute command output */
-    public static final int DEFAULT_MAX_EXECUTION_LINES = 3000;
+    public static final int DEFAULT_MAX_EXECUTION_LINES = 500;
 
     // Git operation constants
     /** Default maximum number of git commits to retrieve */

@@ -326,6 +326,7 @@ public class GetCommandsMcpTool
 
         description.append("Lists IDE commands and their metadata.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use category ids to scope results.");
         description.append("\n- Add a description of what will be done when calling a command.");
         description.append("\n\nRelated tools:");

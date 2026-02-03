@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Copyright (C) 2025, 1C
  */
 package com.e1c.edt.ai.tools;
@@ -6,6 +6,7 @@ package com.e1c.edt.ai.tools;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -50,66 +51,15 @@ public class GetMarkersMcpTool implements IMcpTool
         "{\n"
         + "  \"project_name\": \"MyProject\",\n"
         + "  \"first_index\": 0,\n"
-        + "  \"max_count\": 64,\n"
+        + "  \"max_count\": 5,\n"
         + "  \"marker_type\": \"ai_marker\"\n"
         + "}";
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "[\n"
-        + "  {\n"
-        + "    \"id\": 1001,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
-        + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
-        + "    \"start_line\": 5,\n"
-        + "    \"message\": \"Syntax error: missing semicolon\",\n"
-        + "    \"type\": \"problem\",\n"
-        + "    \"severity\": \"error\",\n"
-        + "    \"priority\": \"high\",\n"
-        + "    \"marked_text\": \"a = 1 / 0;\"\n"
-        + "  },\n"
-        + "  {\n"
-        + "    \"id\": 1002,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/MyModule/Module.bsl\",\n"
-        + "    \"relative_path\": \"CommonModules/MyModule/Module.bsl\",\n"
-        + "    \"start_line\": 12,\n"
-        + "    \"message\": \"Unused variable: myVar\",\n"
-        + "    \"type\": \"problem\",\n"
-        + "    \"severity\": \"warning\",\n"
-        + "    \"priority\": \"normal\",\n"
-        + "    \"marked_text\": \"myVar = 0;\"\n"
-        + "  },\n"
-        + "  {\n"
-        + "    \"id\": 2001,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
-        + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
-        + "    \"start_line\": 10,\n"
-        + "    \"message\": \"Important code section\",\n"
-        + "    \"type\": \"bookmark\",\n"
-        + "    \"done\": false,\n"
-        + "    \"marked_text\": \"Important code section\"\n"
-        + "  },\n"
-        + "  {\n"
-        + "    \"id\": 3001,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/TextModule/Module.bsl\",\n"
-        + "    \"relative_path\": \"CommonModules/TextModule/Module.bsl\",\n"
-        + "    \"start_line\": 15,\n"
-        + "    \"message\": \"Important text note\",\n"
-        + "    \"type\": \"text\",\n"
-        + "    \"marked_text\": \"Important text note\"\n"
-        + "  },\n"
-        + "  {\n"
-        + "    \"id\": 4001,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
-        + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
-        + "    \"start_line\": 30,\n"
-        + "    \"message\": \"AI warning (AIWarning)\",\n"
-        + "    \"type\": \"ai_marker\",\n"
-        + "    \"severity\": \"warning\",\n"
-        + "    \"priority\": \"normal\",\n"
-        + "    \"marked_text\": \"calculateTotal(items)\"\n"
-        + "  },\n"
-        + "  {\n"
+        "{\n"
+        + "  \"markers\": [\n"
+        + "    {\n"
         + "    \"id\": 4002,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
         + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
@@ -118,20 +68,37 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    \"type\": \"ai_marker\",\n"
         + "    \"severity\": \"error\",\n"
         + "    \"priority\": \"high\",\n"
-        + "    \"marked_text\": \"calculateTotal(items)\"\n"
-        + "  },\n"
-        + "  {\n"
-        + "    \"id\": 4003,\n"
+        + "    \"marker_highlighted_text\": \"calculateTotal(items)\"\n"
+        + "    },\n"
+        + "    {\n"
+        + "    \"id\": 1001,\n"
+        + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
+        + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
+        + "    \"start_line\": 5,\n"
+        + "    \"message\": \"Syntax error: missing semicolon\",\n"
+        + "    \"type\": \"problem\",\n"
+        + "    \"severity\": \"error\",\n"
+        + "    \"priority\": \"high\",\n"
+        + "    \"marker_highlighted_text\": \"a = 1 / 0;\"\n"
+        + "    },\n"
+        + "    {\n"
+        + "    \"id\": 4001,\n"
         + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
         + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
-        + "    \"start_line\": 60,\n"
-        + "    \"message\": \"AI info (AIInfo)\",\n"
+        + "    \"start_line\": 30,\n"
+        + "    \"message\": \"AI warning (AIWarning)\",\n"
         + "    \"type\": \"ai_marker\",\n"
-        + "    \"severity\": \"info\",\n"
-        + "    \"priority\": \"normal\",\n"
-        + "    \"marked_text\": \"calculateTotal(items)\"\n"
-        + "  }\n"
-        + "]";
+        + "    \"severity\": \"warning\",\n"
+        + "    \"priority\": \"high\",\n"
+        + "    \"marker_highlighted_text\": \"calculateTotal(items)\"\n"
+        + "    }\n"
+        + "  ],\n"
+        + "  \"total_count\": 5,\n"
+        + "  \"returned_count\": 3,\n"
+        + "  \"first_index\": 0,\n"
+        + "  \"has_more\": true,\n"
+        + "  \"next_index\": 3\n"
+        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -310,6 +277,9 @@ public class GetMarkersMcpTool implements IMcpTool
                 allMarkers.add(markerInfo);
             }
 
+            // Sort markers by importance (severity and priority)
+            allMarkers.sort(createMarkerComparator());
+
             // Apply pagination: get sublist based on firstIndex and maxCount
             List<MarkerInfo> response;
             if (firstIndex >= allMarkers.size())
@@ -318,7 +288,7 @@ public class GetMarkersMcpTool implements IMcpTool
             }
             else
             {
-                int endIndex = Math.min(firstIndex + maxCount, allMarkers.size());
+            int endIndex = Math.min(firstIndex + maxCount, allMarkers.size());
                 response = allMarkers.subList(firstIndex, endIndex);
             }
 
@@ -376,12 +346,12 @@ public class GetMarkersMcpTool implements IMcpTool
                 IFile file = (IFile)marker.getResource();
                 if (file.exists())
                 {
-                    markerInfo.targetContent = readContentFromFile(file, charStart, charEnd - charStart);
+                    markerInfo.markerHighlightedText = readContentFromFile(file, charStart, charEnd - charStart);
                 }
             }
             catch (Exception e)
             {
-                // Ignore errors and leave targetContent empty
+                // Ignore errors and leave markerHighlightedText empty
             }
         }
 
@@ -478,6 +448,74 @@ public class GetMarkersMcpTool implements IMcpTool
     }
 
     @SuppressWarnings("nls")
+    private Comparator<MarkerInfo> createMarkerComparator()
+    {
+        return (m1, m2) -> {
+            // Compare by severity first (error > warning > info)
+            int severityCompare = compareSeverity(m1.severity, m2.severity);
+            if (severityCompare != 0)
+            {
+                return severityCompare;
+            }
+
+            // If severity is equal, compare by priority (high > normal > low)
+            return comparePriority(m1.priority, m2.priority);
+        };
+    }
+
+    @SuppressWarnings("nls")
+    private int compareSeverity(String severity1, String severity2)
+    {
+        int severityValue1 = getSeverityValue(severity1);
+        int severityValue2 = getSeverityValue(severity2);
+        return Integer.compare(severityValue2, severityValue1); // Descending order (higher value first)
+    }
+
+    @SuppressWarnings("nls")
+    private int getSeverityValue(String severity)
+    {
+        if ("error".equals(severity))
+        {
+            return 3;
+        }
+        else if ("warning".equals(severity))
+        {
+            return 2;
+        }
+        else if ("info".equals(severity))
+        {
+            return 1;
+        }
+        return 0; // No severity or null
+    }
+
+    @SuppressWarnings("nls")
+    private int comparePriority(String priority1, String priority2)
+    {
+        int priorityValue1 = getPriorityValue(priority1);
+        int priorityValue2 = getPriorityValue(priority2);
+        return Integer.compare(priorityValue2, priorityValue1); // Descending order (higher value first)
+    }
+
+    @SuppressWarnings("nls")
+    private int getPriorityValue(String priority)
+    {
+        if ("high".equals(priority))
+        {
+            return 3;
+        }
+        else if ("normal".equals(priority))
+        {
+            return 2;
+        }
+        else if ("low".equals(priority))
+        {
+            return 1;
+        }
+        return 0; // No priority or null
+    }
+
+    @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
         var spec = new McpToolCallSpecification();
@@ -492,6 +530,8 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- Use `relative_file_path` to scope to a file.");
         description.append("\n- Use pagination parameters to page through results.");
         description.append("\n- `ai_marker` includes `AIError`, `AIWarning`, `AIInfo` marker types.");
+        description.append("\n- Markers are sorted by importance: severity (error > warning > info) then priority (high > normal > low).");
+        description.append("\n- If not all markers are returned, the response will show total count and suggest pagination.");
         description.append("\n\nRelated tools:");
         description.append("\n- Create/update markers: `" + SetMarkersMcpTool.TOOL_NAME + "`.");
         description.append("\n- Remove markers: `" + DeleteMarkersMcpTool.TOOL_NAME + "`.");
@@ -530,12 +570,23 @@ public class GetMarkersMcpTool implements IMcpTool
             "\n- location: Human-readable location string. The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
         description
             .append(
-                "\n- marked_text: Code fragment associated with the marker (substring of the file at the marker's position)");
+                "\n- marker_highlighted_text: Code fragment associated with the marker (substring of the file at the marker's position)");
         description.append("\n- source_id: Source identifier for bookmarks");
         description.append("\n\nExample request:");
         description.append("\n").append(QuestionExample);
         description.append("\nExample response:");
         description.append("\n").append(AnswerExample);
+        description.append("\n\nNote: If not all markers are returned, the response markdown will include:");
+        description.append("\n- Total marker count");
+        description.append("\n- Number of remaining markers");
+        description.append("\n- Pagination suggestion with example request to retrieve remaining markers");
+        description.append("\n\nExample of pagination response markdown:");
+        description.append("\n```\n**5** markers loaded (**10** total)\n");
+        description.append("\n**Additional markers available:** 5 more marker(s) not shown.\n");
+        description.append("\nTo retrieve remaining markers, use pagination:\n");
+        description.append("- Set `first_index`: 5\n");
+        description.append("- Keep or adjust `max_count`: 5\n");
+        description.append("\n**Example:**```json\n{\n  \"project_name\": \"MyProject\",\n  \"first_index\": 5,\n  \"max_count\": 5,\n  \"marker_type\": \"ai_marker\"\n}```\n```");
 
         spec.function.description = description.toString();
 
@@ -630,11 +681,32 @@ public class GetMarkersMcpTool implements IMcpTool
         @SerializedName("location")
         public String location;
 
-        @SerializedName("marked_text")
-        public String targetContent;
+        @SerializedName("marker_highlighted_text")
+        public String markerHighlightedText;
 
         @SerializedName("source_id")
         public String sourceId;
     }
-}
 
+    // Response DTO with pagination information
+    private static class GetMarkersResponse
+    {
+        @SerializedName("markers")
+        public List<MarkerInfo> markers;
+
+        @SerializedName("total_count")
+        public int totalCount;
+
+        @SerializedName("returned_count")
+        public int returnedCount;
+
+        @SerializedName("first_index")
+        public int firstIndex;
+
+        @SerializedName("has_more")
+        public boolean hasMore;
+
+        @SerializedName("next_index")
+        public Integer nextIndex;
+    }
+}

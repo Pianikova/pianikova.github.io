@@ -317,6 +317,7 @@ public class GitDiffMcpTool
 		var description = new StringBuilder();
 		description.append("Retrieves Git diffs for working directory changes or commit ranges.");
 		description.append("\n\nUsage:");
+		description.append("\n- Arguments must be a single JSON object.");
 		description.append("\n- Default: staged vs last commit.");
 		description.append("\n- Set `uncommitted_changes` to include staged + unstaged.");
 		description.append("\n- Provide `old_commit` and `new_commit` to diff specific commits.");

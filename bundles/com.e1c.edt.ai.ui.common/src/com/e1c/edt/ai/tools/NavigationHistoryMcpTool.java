@@ -260,6 +260,11 @@ public class NavigationHistoryMcpTool
             entries.add(entry);
         }
 
+        if (!entries.isEmpty() && entries.stream().noneMatch(entry -> Boolean.TRUE.equals(entry.isCurrent)))
+        {
+            entries.get(entries.size() - 1).isCurrent = true;
+        }
+
         return entries;
     }
 
@@ -289,8 +294,10 @@ public class NavigationHistoryMcpTool
         var description = new StringBuilder();
         description.append("Lists IDE navigation history for the active workbench page.");
         description.append("\n\nUsage:");
+        description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Returns recent navigation locations in editor history.");
         description.append("\n- Each entry includes text plus file info when available.");
+        description.append("\n- The last visited entry is marked as current.");
         description.append("\n\nRelated tools:");
         description.append("\n- Read file: `" + ReadMcpTool.TOOL_NAME + "`.");
         description.append("\n- Open files in context: `" + GetProjectsMcpTool.TOOL_NAME + "`.");
