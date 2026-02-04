@@ -108,6 +108,7 @@ public class AIUICommonModule
         bind(IStateService.class).to(StateService.class);
         bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
         bind(IEdtLinkHandler.class).to(EdtLinkHandler.class).in(Singleton.class);
+        bind(IEditorPositionManager.class).to(EditorPositionManager.class).in(Singleton.class);
         // @formatter:on
     }
 }

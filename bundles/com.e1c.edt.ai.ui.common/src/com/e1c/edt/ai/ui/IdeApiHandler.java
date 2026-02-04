@@ -1,21 +1,13 @@
-/**
+﻿/**
  * Copyright (C) 2025, 1C
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.File;
 import java.util.concurrent.ExecutionException;
 
-import org.eclipse.core.filesystem.EFS;
-import org.eclipse.core.filesystem.IFileStore;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
-import org.eclipse.ui.PartInitException;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.ide.IDE;
 
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IJson;
@@ -40,12 +32,13 @@ public class IdeApiHandler
     private final IJson json;
     private final IMcpTools mcpTools;
     private final IEdtLinkHandler linkHandler;
+    private final IEditorPositionManager editorPositionManager;
     private boolean isReady;
 
     @Inject
     public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
         Provider<IChat> chatProvider, IJson json,
-        IMcpTools mcpTools, IEdtLinkHandler linkHandler)
+        IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
@@ -55,6 +48,7 @@ public class IdeApiHandler
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(linkHandler);
+        Preconditions.checkNotNull(editorPositionManager);
         this.log = log;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -63,6 +57,7 @@ public class IdeApiHandler
         this.json = json;
         this.mcpTools = mcpTools;
         this.linkHandler = linkHandler;
+        this.editorPositionManager = editorPositionManager;
     }
 
     public void wink(String parameter)
@@ -200,50 +195,14 @@ public class IdeApiHandler
         }
 
         dispatcher.dispatchAsync(() -> {
-            openFileInEditor(filePath);
+            // Extract position information from href
+            var selection = linkHandler.extractSelection(safeHref).orElse(null);
+            var cursorPosition = linkHandler.extractCursorPosition(safeHref).orElse(null);
+            editorPositionManager.openFileInEditor(filePath, cursorPosition, selection);
         });
 
         return true;
     }
-
-    @SuppressWarnings("nls")
-    private void openFileInEditor(String filePath)
-    {
-        try
-        {
-            var page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-
-            // First try to find file in workspace (relative path)
-            var root = ResourcesPlugin.getWorkspace().getRoot();
-            var file = root.getFile(new Path(filePath));
-            if (file != null && file.exists())
-            {
-                IDE.openEditor(page, file);
-                return;
-            }
-
-            // If not found in workspace, try as absolute path
-            var externalFile = new File(filePath);
-            if (externalFile.exists() && externalFile.isFile())
-            {
-                IFileStore fileStore = EFS.getLocalFileSystem().getStore(externalFile.toURI());
-                IDE.openEditorOnFileStore(page, fileStore);
-                return;
-            }
-
-            // File not found
-            log.logError("File not found: " + filePath);
-        }
-        catch (PartInitException e)
-        {
-            log.logError(e);
-        }
-        catch (Exception e)
-        {
-            log.logError(e);
-        }
-    }
-
 
     public boolean isReady()
     {

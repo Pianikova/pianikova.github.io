@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.Optional;
+
 import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 
@@ -137,6 +139,93 @@ public class EdtLinkHandler implements IEdtLinkHandler
 		}
 
 		return href.startsWith(EDT_FILE_PROTOCOL);
+	}
+
+	@SuppressWarnings("nls")
+	@Override
+	public Optional<CursorPositionInfo> extractCursorPosition(String href)
+	{
+		if (!isRecognizedHref(href))
+		{
+			return Optional.empty();
+		}
+
+		var filePath = href.substring(EDT_FILE_PROTOCOL.length());
+		var colonIndex = filePath.indexOf(POSTFIX_SEPARATOR);
+		if (colonIndex < 0)
+		{
+			return Optional.empty();
+		}
+
+		var positionPart = filePath.substring(colonIndex + 1);
+		String[] parts = positionPart.split("\\" + POSITION_SEPARATOR);
+
+		if (parts.length < 2)
+		{
+			return Optional.empty();
+		}
+
+		try
+		{
+			int line = Integer.parseInt(parts[0]);
+			int column = Integer.parseInt(parts[1]);
+			return Optional.of(new CursorPositionInfo(line, column));
+		}
+		catch (NumberFormatException e)
+		{
+			return Optional.empty();
+		}
+	}
+
+	@SuppressWarnings("nls")
+	@Override
+	public Optional<SelectionInfo> extractSelection(String href)
+	{
+		if (!isRecognizedHref(href))
+		{
+			return Optional.empty();
+		}
+
+		var filePath = href.substring(EDT_FILE_PROTOCOL.length());
+		var colonIndex = filePath.indexOf(POSTFIX_SEPARATOR);
+		if (colonIndex < 0)
+		{
+			return Optional.empty();
+		}
+
+		var positionPart = filePath.substring(colonIndex + 1);
+		String[] parts = positionPart.split("\\" + POSITION_SEPARATOR);
+
+		if (parts.length < 4)
+		{
+			return Optional.empty();
+		}
+
+		try
+		{
+			int startLine = Integer.parseInt(parts[0]);
+			int startColumn = Integer.parseInt(parts[1]);
+			int endLine = Integer.parseInt(parts[2]);
+			int endColumn = Integer.parseInt(parts[3]);
+            if (startLine > endLine)
+            {
+                return Optional.empty();
+            }
+
+            if (startLine == endLine)
+            {
+                if (startColumn > endColumn)
+                {
+                    return Optional.empty();
+                }
+            }
+
+			return Optional.of(new SelectionInfo(startLine, startColumn, endLine, endColumn));
+		}
+		catch (NumberFormatException e)
+		{
+			return Optional.empty();
+		}
 	}
 
 	private Position getPosition(IDocument document, int offset) throws BadLocationException

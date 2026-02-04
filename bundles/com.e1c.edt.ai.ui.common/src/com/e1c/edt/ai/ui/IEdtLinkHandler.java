@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.Optional;
+
 import org.eclipse.jface.text.IDocument;
 
 import com.e1c.edt.ai.AIContext;
@@ -44,4 +46,84 @@ public interface IEdtLinkHandler
 	 * @return true if the href is a recognized EDT link, false otherwise
 	 */
 	boolean isRecognizedHref(String href);
+
+	/**
+	 * Extracts cursor position information from an EDT link
+	 *
+	 * @param href the EDT link
+	 * @return Optional containing CursorPositionInfo with line and column, or empty if no position information
+	 */
+	Optional<CursorPositionInfo> extractCursorPosition(String href);
+
+	/**
+	 * Extracts selection information from an EDT link
+	 *
+	 * @param href the EDT link
+	 * @return Optional containing SelectionInfo with start and end positions, or empty if no selection information
+	 */
+	Optional<SelectionInfo> extractSelection(String href);
+
+	/**
+	 * Class representing cursor position information
+	 */
+	class CursorPositionInfo
+	{
+		private final int line;
+		private final int column;
+
+		public CursorPositionInfo(int line, int column)
+		{
+			this.line = line;
+			this.column = column;
+		}
+
+		public int getLine()
+		{
+			return line;
+		}
+
+		public int getColumn()
+		{
+			return column;
+		}
+	}
+
+	/**
+	 * Class representing selection information
+	 */
+	class SelectionInfo
+	{
+		private final int startLine;
+		private final int startColumn;
+		private final int endLine;
+		private final int endColumn;
+
+		public SelectionInfo(int startLine, int startColumn, int endLine, int endColumn)
+		{
+			this.startLine = startLine;
+			this.startColumn = startColumn;
+			this.endLine = endLine;
+			this.endColumn = endColumn;
+		}
+
+		public int getStartLine()
+		{
+			return startLine;
+		}
+
+		public int getStartColumn()
+		{
+			return startColumn;
+		}
+
+		public int getEndLine()
+		{
+			return endLine;
+		}
+
+		public int getEndColumn()
+		{
+			return endColumn;
+		}
+	}
 }
