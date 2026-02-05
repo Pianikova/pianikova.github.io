@@ -10,6 +10,7 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.equinox.p2.core.IProvisioningAgent;
 import org.eclipse.equinox.p2.core.IProvisioningAgentProvider;
@@ -24,6 +25,7 @@ import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.eclipse.ui.PlatformUI;
 import org.osgi.framework.ServiceReference;
 
+import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
@@ -122,9 +124,13 @@ public class PluginUpdateService
             {
                 dispatcher.dispatchAsync(() -> notificationService.createNotificationWithAction(
                     PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateMessage, () -> {
-                        installUpdate(agent, latest);
+                        var job = dispatcher.createJob(Messages.UpdatePluginJob, jobCtx -> installUpdate(agent, latest),
+                            false,
+                            CancellationTokens.NONE);
+                        job.setSystem(true);
+                        job.setPriority(Job.DECORATE);
+                        job.schedule();
                     }, UINotificationActionType.UPDATE, UINotificationType.INFO));
-
             }
 
         }
@@ -146,6 +152,9 @@ public class PluginUpdateService
             if (resolveStatus.getSeverity() == IStatus.ERROR)
             {
                 log.trace(TracingSources.COMMON, "Failed to resolve dependencies", () -> "");
+                dispatcher.dispatch(() -> notificationService.createNotification(
+                    PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateError, null, null,
+                    UINotificationType.ERROR));
                 return;
             }
 
@@ -161,19 +170,16 @@ public class PluginUpdateService
                         dispatcher.dispatchAsync(() -> {
                             var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
                             notificationService.createNotificationWithAction(shell, Messages.UpdateInstalled,
-                                new Runnable()
-                                {
-                                    @Override
-                                    public void run()
-                                    {
-                                        PlatformUI.getWorkbench().restart();
-                                    }
-                                }, UINotificationActionType.RELOAD, UINotificationType.INFO);
+                                () -> PlatformUI.getWorkbench().restart(), UINotificationActionType.RELOAD,
+                                UINotificationType.INFO);
                         });
                     }
                     else
                     {
                         log.logError("Error during update installation");
+                        dispatcher.dispatch(() -> notificationService.createNotification(
+                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateError, null,
+                            null, UINotificationType.ERROR));
                     }
                 }
             });
@@ -181,7 +187,10 @@ public class PluginUpdateService
         }
         catch (Exception e)
         {
-            log.logError(e.getMessage());
+            log.logError(e);
+            dispatcher.dispatch(() -> notificationService.createNotification(
+                PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
+                Messages.UpdateError, null, null, UINotificationType.ERROR));
         }
     }
 

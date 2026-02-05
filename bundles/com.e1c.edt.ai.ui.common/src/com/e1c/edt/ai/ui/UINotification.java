@@ -23,6 +23,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.PlatformUI;
 
 import com.e1c.edt.ai.ui.UINotificationService.UINotificationActionType;
+import com.google.inject.Inject;
 
 /**
  * @author Bogdan Sushkov
@@ -31,6 +32,9 @@ import com.e1c.edt.ai.ui.UINotificationService.UINotificationActionType;
 public class UINotification
     extends PopupDialog
 {
+    @Inject
+    private IDispatcher dispatcher;
+
     private final String message;
     private final String linkText;
     private final String url;
@@ -42,6 +46,7 @@ public class UINotification
         String url)
     {
         super(parentShell, SWT.NO_TRIM | SWT.ON_TOP, false, false, false, false, false, null, null);
+        BaseActivator.injectMembers(this);
         this.message = message;
         this.type = type;
         this.linkText = linkText;
@@ -49,8 +54,7 @@ public class UINotification
     }
 
     public UINotification(Shell parentShell, String message, UINotificationType type, String linkText,
-        String url,
-        Runnable action, UINotificationActionType actionType)
+        String url, Runnable action, UINotificationActionType actionType)
     {
         this(parentShell, message, type, linkText, url);
         this.action = action;
@@ -146,7 +150,7 @@ public class UINotification
                 @Override
                 public void widgetSelected(SelectionEvent e)
                 {
-                    action.run();
+                    dispatcher.dispatchAsync(action);
                     close();
                 }
             });

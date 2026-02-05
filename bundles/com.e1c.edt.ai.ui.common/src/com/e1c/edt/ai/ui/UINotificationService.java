@@ -29,7 +29,8 @@ public class UINotificationService
     public void createNotificationWithAction(Shell parentShell, String message, Runnable action,
         UINotificationActionType actionType, UINotificationType type)
     {
-        UINotification popup = new UINotification(parentShell, message, type, null, null, action, actionType);
+        UINotification popup =
+            new UINotification(parentShell, message, type, null, null, action, actionType);
         popup.setBlockOnOpen(false);
         closeNotificationIfOpen();
         popup.open();
@@ -47,19 +48,26 @@ public class UINotificationService
 
     public static enum UINotificationActionType
     {
-        UPDATE(Messages.UpdateButton),
-        RELOAD(Messages.RestartButton);
+        UPDATE(Messages.UpdateButton, Messages.UpdatePluginJob),
+        RELOAD(Messages.RestartButton, Messages.RestartJob);
 
         private final String buttonText;
+        private final String jobName;
 
-        private UINotificationActionType(String buttonText)
+        private UINotificationActionType(String buttonText, String jobName)
         {
             this.buttonText = buttonText;
+            this.jobName = jobName;
         }
 
         public String getActionText()
         {
             return buttonText;
+        }
+
+        public String getJobName()
+        {
+            return jobName;
         }
     }
 

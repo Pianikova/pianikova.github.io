@@ -47,8 +47,11 @@ public class Messages
     public static String CloseButton;
     public static String UpdateLink;
     public static String UpdateMessage;
+    public static String UpdatePluginJob;
     public static String UpdateJobMessage;
     public static String UpdateInstalled;
+    public static String UpdateError;
+    public static String RestartJob;
     public static String CommitMessage;
     public static String GitReview;
     public static String ErrorReadingTextFile;
