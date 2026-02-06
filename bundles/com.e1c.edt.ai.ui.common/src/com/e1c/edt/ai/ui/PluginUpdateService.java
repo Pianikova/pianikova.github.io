@@ -25,7 +25,6 @@ import org.eclipse.equinox.p2.repository.metadata.IMetadataRepositoryManager;
 import org.eclipse.ui.PlatformUI;
 import org.osgi.framework.ServiceReference;
 
-import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
@@ -124,12 +123,7 @@ public class PluginUpdateService
             {
                 dispatcher.dispatchAsync(() -> notificationService.createNotificationWithAction(
                     PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateMessage, () -> {
-                        var job = dispatcher.createJob(Messages.UpdatePluginJob, jobCtx -> installUpdate(agent, latest),
-                            false,
-                            CancellationTokens.NONE);
-                        job.setSystem(true);
-                        job.setPriority(Job.DECORATE);
-                        job.schedule();
+                        installUpdate(agent, latest);
                     }, UINotificationActionType.UPDATE, UINotificationType.INFO));
             }
 
@@ -143,55 +137,60 @@ public class PluginUpdateService
     @SuppressWarnings("nls")
     private void installUpdate(IProvisioningAgent agent, IInstallableUnit latestIU)
     {
-        try
-        {
-            var session = new ProvisioningSession(agent);
-            var installOp = new InstallOperation(session, List.of(latestIU));
-            IStatus resolveStatus = installOp.resolveModal(new NullProgressMonitor());
-
-            if (resolveStatus.getSeverity() == IStatus.ERROR)
+        var job = Job.create(Messages.UpdatePluginJob, jobCtx -> {
+            try
             {
-                log.trace(TracingSources.COMMON, "Failed to resolve dependencies", () -> "");
+                var session = new ProvisioningSession(agent);
+                var installOp = new InstallOperation(session, List.of(latestIU));
+                IStatus resolveStatus = installOp.resolveModal(new NullProgressMonitor());
+
+                if (resolveStatus.getSeverity() == IStatus.ERROR)
+                {
+                    log.trace(TracingSources.COMMON, "Failed to resolve dependencies", () -> "");
+                    dispatcher.dispatch(() -> notificationService.createNotification(
+                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateError, null,
+                        null, UINotificationType.ERROR));
+                    return;
+                }
+
+                var installJob = installOp.getProvisioningJob(new NullProgressMonitor());
+                installJob.addJobChangeListener(new JobChangeAdapter()
+                {
+                    @Override
+                    public void done(IJobChangeEvent event)
+                    {
+                        if (event.getResult().isOK())
+                        {
+                            log.trace(TracingSources.COMMON, "The update has been installed", () -> "");
+                            dispatcher.dispatchAsync(() -> {
+                                var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+                                notificationService.createNotificationWithAction(shell, Messages.UpdateInstalled,
+                                    () -> PlatformUI.getWorkbench().restart(), UINotificationActionType.RELOAD,
+                                    UINotificationType.INFO);
+                            });
+                        }
+                        else
+                        {
+                            log.logError("Error during update installation");
+                            dispatcher.dispatch(() -> notificationService.createNotification(
+                                PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateError,
+                                null, null, UINotificationType.ERROR));
+                        }
+                    }
+                });
+                installJob.schedule();
+            }
+            catch (Exception e)
+            {
+                log.logError(e);
                 dispatcher.dispatch(() -> notificationService.createNotification(
                     PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateError, null, null,
                     UINotificationType.ERROR));
-                return;
             }
-
-            var job = installOp.getProvisioningJob(new NullProgressMonitor());
-            job.addJobChangeListener(new JobChangeAdapter()
-            {
-                @Override
-                public void done(IJobChangeEvent event)
-                {
-                    if (event.getResult().isOK())
-                    {
-                        log.trace(TracingSources.COMMON, "The update has been installed", () -> "");
-                        dispatcher.dispatchAsync(() -> {
-                            var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-                            notificationService.createNotificationWithAction(shell, Messages.UpdateInstalled,
-                                () -> PlatformUI.getWorkbench().restart(), UINotificationActionType.RELOAD,
-                                UINotificationType.INFO);
-                        });
-                    }
-                    else
-                    {
-                        log.logError("Error during update installation");
-                        dispatcher.dispatch(() -> notificationService.createNotification(
-                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.UpdateError, null,
-                            null, UINotificationType.ERROR));
-                    }
-                }
-            });
-            job.schedule();
-        }
-        catch (Exception e)
-        {
-            log.logError(e);
-            dispatcher.dispatch(() -> notificationService.createNotification(
-                PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
-                Messages.UpdateError, null, null, UINotificationType.ERROR));
-        }
+        });
+        job.setSystem(true);
+        job.setPriority(Job.DECORATE);
+        job.schedule();
     }
 
 
