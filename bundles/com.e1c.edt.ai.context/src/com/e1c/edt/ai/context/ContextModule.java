@@ -26,9 +26,11 @@ import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IFiles;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
+import com.e1c.edt.ai.MarkdownUtils;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
 import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
 import com.google.inject.Singleton;
@@ -65,6 +67,7 @@ class ContextModule
         bind(IFiles.class).to(Files.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IEditingSupport.class).to(EditingSupport.class).in(Singleton.class);
+        bind(IMarkdownUtils.class).to(MarkdownUtils.class).in(Singleton.class);
         var projectDetailsProviderBinder = Multibinder.newSetBinder(binder(), IProjectDetailsProvider.class);
         projectDetailsProviderBinder.addBinding().to(ConfigurationParametersProvider.class);
         bind(MessageDigest.class).toProvider(() -> {
