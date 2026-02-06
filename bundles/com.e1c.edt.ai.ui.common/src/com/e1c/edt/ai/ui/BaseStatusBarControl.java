@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -92,7 +93,7 @@ public class BaseStatusBarControl
     private Color colorDisabled;
 
     private RGB currentStatusColor = COLOR_DISABLED;
-    private String statusText = Messages.AIName;
+    private String statusText = Messages.AIName + " "; //$NON-NLS-1$
 
     // Bounds for policy text click detection
     private int policyTextX = 0;
@@ -302,8 +303,17 @@ public class BaseStatusBarControl
         gc.setBackground(statusColor);
         gc.fillRoundRectangle(0, iconY, ICON_SIZE, ICON_SIZE, ICON_CORNER_RADIUS, ICON_CORNER_RADIUS);
 
-        // Draw status text
-        gc.setForeground(display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND));
+        // Draw status text (color adapts to theme)
+        Color brightForeground;
+        if (isDarkTheme())
+        {
+            brightForeground = new Color(display, 220, 220, 220); // Light gray for dark theme
+        }
+        else
+        {
+            brightForeground = display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND); // System color for light theme
+        }
+        gc.setForeground(brightForeground);
         gc.setFont(font);
 
         // Ensure font is set
@@ -318,6 +328,11 @@ public class BaseStatusBarControl
 
         gc.drawText(statusText, textX, textY, SWT.DRAW_TRANSPARENT);
 
+        if (isDarkTheme())
+        {
+            brightForeground.dispose(); // Dispose temporary color only if we created it
+        }
+
         // Draw policy text and dropdown indicator
         var policy = settings.getCodeCompletionPolicy();
         String policyName = policy.getName().toLowerCase();
@@ -325,11 +340,11 @@ public class BaseStatusBarControl
         if (policyName.contains(":"))
         {
             // Get text after last colon
-            policyText = " " + policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+            policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
         }
         else
         {
-            policyText = " " + policyName;
+            policyText = policyName;
         }
 
         int policyTextX = textX + textExtent.x;
@@ -340,16 +355,41 @@ public class BaseStatusBarControl
         this.policyTextX = policyTextX;
         this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
 
-        // Draw policy text as link (blue color and underline)
-        gc.setForeground(display.getSystemColor(SWT.COLOR_LINK_FOREGROUND));
+        // Draw policy text as link (bright blue visible in dark theme)
+        Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
+        gc.setForeground(brightLink);
         gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
 
         // Draw underline for link effect
         int underlineY = policyTextY + policyTextExtent.y - 2;
         gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
 
+        brightLink.dispose(); // Dispose temporary color
+
         // Reset foreground color
         gc.setForeground(display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND));
+    }
+
+    @SuppressWarnings("nls")
+    private boolean isDarkTheme()
+    {
+        try
+        {
+            var prefs = InstanceScope.INSTANCE.getNode("org.eclipse.e4.ui.css.swt.theme");
+            var themeId = prefs.get("themeid", "");
+            return themeId.toLowerCase().contains("dark");
+        }
+        catch (Exception e)
+        {
+            // Fallback to background color check if preferences fail
+            return isDarkThemeByColor();
+        }
+    }
+
+    private boolean isDarkThemeByColor()
+    {
+        var bgColor = statusCanvas.getDisplay().getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
+        return bgColor.getRed() < 128 && bgColor.getGreen() < 128 && bgColor.getBlue() < 128;
     }
 
     private void onStatusCanvasClick(Event event)
