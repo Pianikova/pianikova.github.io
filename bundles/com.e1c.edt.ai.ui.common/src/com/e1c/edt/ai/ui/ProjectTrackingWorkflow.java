@@ -277,7 +277,8 @@ class ProjectTrackingWorkflow
     private Result hash(int maxFiles, IProgressMonitor progressMonitor,
         ICancellationToken cancellationToken)
     {
-        maxFiles = maxFiles - filesToSync.size();
+        var filesToSyncSize = filesToSync.size();
+        maxFiles = maxFiles - filesToSyncSize;
         if (maxFiles <= 0)
         {
             return new Result(ProjectTrackingWorkflowState.INIT, Duration.ofMillis(100));
@@ -286,13 +287,14 @@ class ProjectTrackingWorkflow
         var fileToSyncCount = 0;
         var delay = LongDelay;
         var now = clock.now();
+        var maxFilesFinal = maxFiles;
         var hashingFiles =
             filesToHash.values()
                 .stream()
                 .filter(i -> !cancellationToken.isCanceled())
                 .filter(file -> file.getAge(now).compareTo(delay) >= 0)
                 .sorted(ProjectFile.COMPARATOR)
-                .limit(maxFiles)
+                .limit(maxFilesFinal)
                 .collect(Collectors.toList());
 
         var hashed = 0;
@@ -431,11 +433,17 @@ class ProjectTrackingWorkflow
     @SuppressWarnings("nls")
     private Result sync(int maxFiles, IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
+        if (maxFiles <= 0)
+        {
+            return new Result(ProjectTrackingWorkflowState.HASH, ShortDelay);
+        }
+
+        var maxFilesFinal = maxFiles;
         var filesToProcess =
             filesToSync.stream()
                 .filter(file -> !cancellationToken.isCanceled())
                 .sorted(ProjectFile.COMPARATOR)
-                .limit(maxFiles)
+                .limit(maxFilesFinal)
                 .collect(Collectors.toList());
 
         var features = new ArrayList<CompletableFuture<Boolean>>();
