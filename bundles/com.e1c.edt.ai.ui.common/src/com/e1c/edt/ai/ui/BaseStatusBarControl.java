@@ -3,7 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -67,6 +66,8 @@ public class BaseStatusBarControl
     private IReflection reflection;
     @Inject
     private IClientTokenValidator clientTokenValidator;
+    @Inject
+    private IThemeManager themeManager;
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
@@ -305,7 +306,7 @@ public class BaseStatusBarControl
 
         // Draw status text (color adapts to theme)
         Color brightForeground;
-        if (isDarkTheme())
+        if (themeManager.isDarkTheme())
         {
             brightForeground = new Color(display, 220, 220, 220); // Light gray for dark theme
         }
@@ -328,7 +329,7 @@ public class BaseStatusBarControl
 
         gc.drawText(statusText, textX, textY, SWT.DRAW_TRANSPARENT);
 
-        if (isDarkTheme())
+        if (themeManager.isDarkTheme())
         {
             brightForeground.dispose(); // Dispose temporary color only if we created it
         }
@@ -368,28 +369,6 @@ public class BaseStatusBarControl
 
         // Reset foreground color
         gc.setForeground(display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND));
-    }
-
-    @SuppressWarnings("nls")
-    private boolean isDarkTheme()
-    {
-        try
-        {
-            var prefs = InstanceScope.INSTANCE.getNode("org.eclipse.e4.ui.css.swt.theme");
-            var themeId = prefs.get("themeid", "");
-            return themeId.toLowerCase().contains("dark");
-        }
-        catch (Exception e)
-        {
-            // Fallback to background color check if preferences fail
-            return isDarkThemeByColor();
-        }
-    }
-
-    private boolean isDarkThemeByColor()
-    {
-        var bgColor = statusCanvas.getDisplay().getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
-        return bgColor.getRed() < 128 && bgColor.getGreen() < 128 && bgColor.getBlue() < 128;
     }
 
     private void onStatusCanvasClick(Event event)
