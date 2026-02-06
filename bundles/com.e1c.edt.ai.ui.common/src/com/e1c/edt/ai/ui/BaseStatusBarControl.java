@@ -338,7 +338,7 @@ public class BaseStatusBarControl
 
         // Store bounds for click detection
         this.policyTextX = policyTextX;
-        this.policyTextWidth = policyTextExtent.x + 10; // +10 for triangle and padding
+        this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
 
         // Draw policy text as link (blue color and underline)
         gc.setForeground(display.getSystemColor(SWT.COLOR_LINK_FOREGROUND));
@@ -346,18 +346,7 @@ public class BaseStatusBarControl
 
         // Draw underline for link effect
         int underlineY = policyTextY + policyTextExtent.y - 2;
-        int linkWidth = policyTextExtent.x + 10; // Include space for triangle
-        gc.drawLine(policyTextX, underlineY, policyTextX + linkWidth, underlineY);
-
-        // Draw dropdown triangle (blue as part of link)
-        int triangleSize = 6;
-        int triangleX = policyTextX + policyTextExtent.x + 4;
-        int triangleY = centerY - triangleSize / 2;
-
-        gc.setBackground(display.getSystemColor(SWT.COLOR_LINK_FOREGROUND));
-        int[] trianglePoints = new int[] { triangleX, triangleY, triangleX + triangleSize, triangleY,
-            triangleX + triangleSize / 2, triangleY + triangleSize };
-        gc.fillPolygon(trianglePoints);
+        gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
 
         // Reset foreground color
         gc.setForeground(display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND));
