@@ -10,9 +10,6 @@ public class Images
     public static final String WARNING = "WARNING"; //$NON-NLS-1$
     public static final String ERROR = "ERROR"; //$NON-NLS-1$
     public static final String OFFLINE = "OFFLINE"; //$NON-NLS-1$
-    public static final String ONLINE = "ONLINE"; //$NON-NLS-1$
-    public static final String BUSY = "BUSY"; //$NON-NLS-1$
-    public static final String OFF = "OFF"; //$NON-NLS-1$
     public static final String GIT_MESSAGE = "GIT_MESSAGE"; //$NON-NLS-1$
     public static final String GIT_REVIEW = "GIT_REVIEW"; //$NON-NLS-1$
     public static final String SUGGEST_YOUR_OPTION = "SUGGEST_YOUR_OPTION"; //$NON-NLS-1$
