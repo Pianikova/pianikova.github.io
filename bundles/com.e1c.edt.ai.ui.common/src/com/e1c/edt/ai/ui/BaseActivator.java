@@ -371,9 +371,6 @@ public abstract class BaseActivator
         registry.put(Images.WARNING, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/warning.png"));
         registry.put(Images.ERROR, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/error.png"));
         registry.put(Images.OFFLINE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_offline.png"));
-        registry.put(Images.ONLINE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_online.png"));
-        registry.put(Images.OFF, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_off.png"));
-        registry.put(Images.BUSY, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/status_busy.png"));
         registry.put(Images.GIT_MESSAGE, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitmessage.png"));
         registry.put(Images.GIT_REVIEW, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/gitreview.png"));
         registry.put(Images.SUGGEST_YOUR_OPTION,
