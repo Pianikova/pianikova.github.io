@@ -18,13 +18,15 @@ public class Json
     implements IJson
 {
     private final Gson gson;
-    private final Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
+    private final Gson prettyGson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     @SuppressWarnings({ "unchecked", "unused", "rawtypes" })
     public Json()
     {
         //  @formatter:off
-        gson = new GsonBuilder().setPrettyPrinting()
+        gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
             .registerTypeAdapterFactory(new <Integer> OptionalTypeAdapterFactory(
                 new TypeToken<Optional<Integer>>() { /**/ },
                 new TypeToken<Integer>() { /**/ }))
