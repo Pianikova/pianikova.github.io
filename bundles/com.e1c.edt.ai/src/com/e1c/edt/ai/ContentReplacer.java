@@ -1,6 +1,5 @@
 package com.e1c.edt.ai;
 
-import java.io.PrintStream;
 import java.lang.Math;
 
 import com.google.common.base.Preconditions;
@@ -8,8 +7,7 @@ import com.google.common.base.Preconditions;
 public class ContentReplacer implements IContentReplacer
 {
     private static final String NORMALIZED_LINE_DELIMITER = "\n"; //$NON-NLS-1$
-    private static final String BOM = "\uFEFF"; // Byte Order Mark (UTF-8) //$NON-NLS-1$
-    private static final PrintStream OUT = System.out;
+    private static final String BOM = "\uFEFF"; // Byte Order Mark (UTF-8) //$NON-NLS-1$    
 
 	@Override
 	public ReplaceResult replace(String currentContent, String originContent, String newContent,
@@ -44,14 +42,6 @@ public class ContentReplacer implements IContentReplacer
 		// Check if originContent exists in currentContent (BOM ignored)
 		if (!normalizedCurrentContent.contains(normalizedOriginContent))
 		{
-			// Log with invisible characters visible (BOM stripped)
-			OUT.println("ContentReplacer: Origin content not found in current content (BOM ignored)");
-			OUT.println("Normalized current content: " + makeInvisibleVisible(normalizedCurrentContent));
-			OUT.println("Normalized origin content: " + makeInvisibleVisible(normalizedOriginContent));
-			OUT.println("Normalized new content: " + makeInvisibleVisible(normalizedNewContent));
-			OUT.println("Detected line delimiter: " + makeInvisibleVisible(detectedLineDelimiter));
-			OUT.println("Current has BOM: " + currentHasBOM);
-
             // No occurrence found - return failure result
 			return new ReplaceResult(currentContent, 0, 0, false);
 		}
@@ -92,60 +82,7 @@ public class ContentReplacer implements IContentReplacer
 
 		return new ReplaceResult(updatedContent, addedLines, removedLines, true, multipleOccurrences);
 	}
-
-	/**
-	 * Makes invisible characters in string visible for debugging
-	 *
-	 * @param content the content to process
-	 * @return string with invisible characters replaced with visible representations
-	 */
-	private String makeInvisibleVisible(String content)
-	{
-		if (content == null)
-		{
-			return "null";
-		}
-
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < content.length(); i++)
-		{
-			char c = content.charAt(i);
-			switch (c)
-			{
-				case '\t':
-					sb.append("\\t");
-					break;
-				case '\n':
-					sb.append("\\n");
-					break;
-				case '\r':
-					sb.append("\\r");
-					break;
-				case ' ':
-					sb.append("␣");
-					break;
-				default:
-					if (c < 32 || (c >= 127 && c < 160))
-					{
-						// Other control characters
-						sb.append(String.format("\\u%04x", (int)c));
-					}
-					else
-					{
-						sb.append(c);
-					}
-					break;
-			}
-		}
-		return sb.toString();
-	}
-
-	/**
-	 * Removes BOM (Byte Order Mark) from the beginning of content if present
-	 *
-	 * @param content the content to process
-	 * @return content without BOM at the beginning
-	 */
+	
 	private String stripBOM(String content)
 	{
 		if (content == null || content.isEmpty())
@@ -156,22 +93,17 @@ public class ContentReplacer implements IContentReplacer
 		{
 			return content.substring(BOM.length());
 		}
+		
 		return content;
 	}
 
-	/**
-	 * Adds BOM to the beginning of content if it was originally present
-	 *
-	 * @param content the content to process
-	 * @param hadBOM whether the original content had a BOM
-	 * @return content with BOM at the beginning if hadBOM is true
-	 */
 	private String restoreBOM(String content, boolean hadBOM)
 	{
 		if (hadBOM && (content == null || !content.startsWith(BOM)))
 		{
 			return BOM + content;
 		}
+		
 		return content;
 	}
 
@@ -181,7 +113,8 @@ public class ContentReplacer implements IContentReplacer
 	 * @param content the content to detect line delimiter from
 	 * @return the detected line delimiter (\r\n, \r, or \n), or null if not determinable
 	 */
-	private String detectLineDelimiter(String content)
+	@SuppressWarnings("nls")
+    private String detectLineDelimiter(String content)
 	{
 		if (content.isEmpty())
 		{
@@ -218,10 +151,12 @@ public class ContentReplacer implements IContentReplacer
 		{
 			return "\r\n";
 		}
+		
 		if (crCount > 0)
 		{
 			return "\r";
 		}
+		
 		if (lfCount > 0)
 		{
 			return "\n";
@@ -287,41 +222,6 @@ public class ContentReplacer implements IContentReplacer
 		}
 
 		return count;
-	}
-
-	/**
-	 * Counts the number of lines in a string based on the line delimiter
-	 *
-	 * @param content the content to count lines in
-	 * @param lineDelimiter the line delimiter
-	 * @return the number of lines
-	 */
-	private int countLines(String content, String lineDelimiter)
-	{
-		if (content.isEmpty())
-		{
-			return 0;
-		}
-
-		int count = 0;
-		int idx = 0;
-
-		while ((idx = content.indexOf(lineDelimiter, idx)) != -1)
-		{
-			count++;
-			idx += lineDelimiter.length();
-		}
-
-		// If content contains at least one line delimiter, count lines properly
-		if (count > 0)
-		{
-			// If content ends with line delimiter, return the count
-			// Otherwise, add one for the last line
-			return content.endsWith(lineDelimiter) ? count : count + 1;
-		}
-
-		// No line delimiters found - count as 1 line for any non-empty content
-		return 1;
 	}
 
 	/**

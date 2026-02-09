@@ -296,8 +296,8 @@ public class GetMarkersMcpTool implements IMcpTool
 
             // Add response markdown
             int markerCount = response.size();
-            String styledMarkerCount = markdownUtils.createStyledText(String.valueOf(markerCount),
-                markerCount > 0 ? TextColor.GREEN : TextColor.BLUE, FontWeight.BOLD);
+            String styledMarkerCount =
+                markdownUtils.createStyledText(String.valueOf(markerCount), TextColor.GREEN, FontWeight.BOLD);
             details.responseMarkdown = MessageFormat.format(Messages.MarkersLoadedTemplate, styledMarkerCount);
 
             return messageFactory.createMessage(this, call, content, details);
