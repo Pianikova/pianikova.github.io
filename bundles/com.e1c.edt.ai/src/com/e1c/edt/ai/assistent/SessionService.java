@@ -10,7 +10,6 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
@@ -146,6 +145,7 @@ class SessionService
     {
         log.request(request, null, body);
         var stopwatch = Stopwatch.createStarted();
+        var busyToken = stateService.busy();
         return clientBuilder.create()
             .build()
             .sendAsync(request, BodyHandlers.ofString())
@@ -162,9 +162,13 @@ class SessionService
             .thenApply(HttpResponse::body)
             .thenApply(content -> createCession(projectId, content))
             .whenComplete((session, error) -> {
-                if (error != null)
+                try
                 {
-                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+                    busyToken.close();
+                }
+                catch (Exception e)
+                {
+                    //
                 }
             });
     }

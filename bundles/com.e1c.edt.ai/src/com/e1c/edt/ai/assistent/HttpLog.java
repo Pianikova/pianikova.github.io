@@ -94,7 +94,7 @@ class HttpLog
         {
             if (handleError)
             {
-                stateService.setState(HttpLog.class.getName(), ServiceState.ONLINE);
+                stateService.setState(ServiceState.ONLINE);
             }
 
             if (detailed)
@@ -126,7 +126,7 @@ class HttpLog
                     if (errorResponseOpt.isPresent()) {
                         var errorResponse = errorResponseOpt.get();
                         if (errorResponse.errorType != null && errorResponse.errorType.equals("token_not_found")) {
-                            stateService.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
+                            stateService.setState(ServiceState.TOKEN_FAILED);
                         }
                     }
                     break;
@@ -134,11 +134,11 @@ class HttpLog
                 case 500:
                 case 502:
                 case 503:
-                    stateService.setState(HttpLog.class.getName(), ServiceState.SERVER_ERROR);
+                    stateService.setState(ServiceState.SERVER_ERROR);
                     break;
 
                 default:
-                    stateService.setState(HttpLog.class.getName(), ServiceState.OFFLINE);
+                    stateService.setState(ServiceState.OFFLINE);
                     break;
                 }
             }

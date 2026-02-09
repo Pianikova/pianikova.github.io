@@ -21,7 +21,7 @@ public class AssistentModule
         bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
         bind(ResponseCache.class).in(Singleton.class);
         bind(IResponseCache.class).to(ResponseCache.class);
-        bind(IAIStateListener.class).to(ResponseCache.class);
+        bind(IStateListener.class).to(ResponseCache.class);
         bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);

@@ -9,7 +9,7 @@ import com.e1c.edt.ai.AIState;
  * @author Bogdan Sushkov
  *
  */
-public interface IAIStateListener
+public interface IStateListener
 {
     void onStateChange(AIState state);
 }

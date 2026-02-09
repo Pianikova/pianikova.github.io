@@ -30,12 +30,12 @@ public class SessionCall
     private static final AIState STATE_CHANGED = new AIState(ServiceState.SETTINGS_CHANGED, ActionState.INACTIVE);
     private final ILog log;
     private final IHttpLog httpLog;
-    private final IAIStateListener stateListener;
+    private final IStateListener stateListener;
     private final ISessionService sessionService;
     private final IStateService stateService;
 
     @Inject
-    public SessionCall(ILog log, IHttpLog httpLog, IAIStateListener stateListener,
+    public SessionCall(ILog log, IHttpLog httpLog, IStateListener stateListener,
         ISessionService sessionService,
         IStateService stateService)
     {
@@ -68,7 +68,7 @@ public class SessionCall
     {
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> result.cancel(true));
         var stopwatch = Stopwatch.createStarted();
-        stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
+        var busyToken = stateService.busy();
         sessionService.getSessionAsync(projectId).thenCompose(session -> {
             return taskSupplier.apply(session).whenComplete((response, throwable) -> {
                 if (throwable == null)
@@ -110,7 +110,15 @@ public class SessionCall
             .whenComplete((r, error) -> {
                 try
                 {
-                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+                    try
+                    {
+                        busyToken.close();
+                    }
+                    catch (Exception e)
+                    {
+                        //
+                    }
+
                     if (error != null)
                     {
                         if (!isCancellationException(error))

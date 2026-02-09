@@ -37,7 +37,7 @@ import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ServiceState;
-import com.e1c.edt.ai.assistent.IAIStateListener;
+import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.inject.Inject;
 
@@ -48,7 +48,7 @@ import com.google.inject.Inject;
  */
 public class BaseStatusBarControl
     extends WorkbenchWindowControlContribution
-    implements IAIStateListener, DisposeListener, SelectionListener
+    implements IStateListener, DisposeListener, SelectionListener
 {
     @Inject
     private IStateService stateService;
@@ -486,6 +486,7 @@ public class BaseStatusBarControl
                             Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
                             UINotificationType.INFO);
                     }
+
                     settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
                     hintWasShown = true;
                 }
@@ -501,6 +502,7 @@ public class BaseStatusBarControl
                         UINotificationType.ERROR);
                     hintWasShown = true;
                 }
+
                 break;
             }
 

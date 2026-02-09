@@ -22,7 +22,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 class ResponseCache
-    implements IResponseCache, IAIStateListener
+    implements IResponseCache, IStateListener
 {
     private final ILog log;
     private final Cache<ProjectId, CompletableFuture<Optional<Session>>> responseCache =

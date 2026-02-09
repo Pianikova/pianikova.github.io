@@ -198,7 +198,7 @@ public class ClientAIPreferencePage
             settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.MODERATE);
         }
 
-        stateService.setState(this.getClass().getName(), ServiceState.SETTINGS_CHANGED);
+        stateService.setState(ServiceState.SETTINGS_CHANGED);
         return result;
     }
 

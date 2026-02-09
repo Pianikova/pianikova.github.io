@@ -3,15 +3,19 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.eclipse.core.runtime.ListenerList;
 
 import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.ActionState;
+import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
-import com.e1c.edt.ai.assistent.IAIStateListener;
+import com.e1c.edt.ai.assistent.IStateListener;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -22,55 +26,50 @@ import com.google.inject.Inject;
 class StateService
     implements IStateService, IInitializable
 {
-    private static final ListenerList<IAIStateListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
+    private static final ListenerList<IStateListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
     private final ILog log;
-    private ServiceState serviceState;
-    private ActionState actionState;
-    private String lastClassOwner;
+    private ServiceState serviceState = ServiceState.OFFLINE;
+    private ActionState actionState = ActionState.INACTIVE;
+    private AtomicInteger _busy = new AtomicInteger(0);
 
     @Inject
-    public StateService(ILog log)
+    public StateService(ILog log, ISettings settings, IDispatcher dispatcher)
     {
         Preconditions.checkNotNull(log);
+
         this.log = log;
     }
 
     @Override
     public void initialize()
     {
-        setState(StateService.class.getName(), ServiceState.OFFLINE);
+        //
     };
 
     @Override
-    public void addListener(IAIStateListener newListener)
+    public void addListener(IStateListener newListener)
     {
         listeners.add(newListener);
     }
 
     @Override
-    public void removeListener(IAIStateListener listener)
+    public void removeListener(IStateListener listener)
     {
         listeners.remove(listener);
     }
 
     @Override
-    public void setState(String className, ServiceState serviceState)
+    public void setState(ServiceState serviceState)
     {
-        if (serviceState == ServiceState.SETTINGS_CHANGED || this.serviceState != serviceState)
+        Preconditions.checkNotNull(serviceState);
+        if (this.serviceState != serviceState)
         {
-            this.lastClassOwner = className;
             this.serviceState = serviceState;
-            refresh();
-        }
-    }
+            if (serviceState == ServiceState.OFFLINE)
+            {
+                actionState = ActionState.INACTIVE;
+            }
 
-    @Override
-    public void setState(String className, ActionState actionState)
-    {
-        if (this.actionState != actionState)
-        {
-            this.lastClassOwner = className;
-            this.actionState = actionState;
             refresh();
         }
     }
@@ -78,21 +77,6 @@ class StateService
     @Override
     public void refresh()
     {
-        if (serviceState == null)
-        {
-            serviceState = ServiceState.OFFLINE;
-        }
-
-        if (actionState == null)
-        {
-            actionState = ActionState.INACTIVE;
-        }
-
-        if (serviceState == ServiceState.OFFLINE)
-        {
-            actionState = ActionState.INACTIVE;
-        }
-
         var state = new AIState(serviceState, actionState);
         log.trace(TracingSources.API_CALLS, "StateService", () -> state.toString()); //$NON-NLS-1$
         for (var listener : listeners)
@@ -109,9 +93,28 @@ class StateService
     }
 
     @Override
-    public String getLastClassOwner()
+    public AutoCloseable busy()
     {
-        return lastClassOwner;
+        if (_busy.incrementAndGet() == 1)
+        {
+            setState(ActionState.BUSY);
+        }
+
+        return Closeables.create(() -> {
+            if (_busy.decrementAndGet() == 0)
+            {
+                setState(ActionState.INACTIVE);
+            }
+        });
+    }
+
+    private void setState(ActionState actionState)
+    {
+        Preconditions.checkNotNull(actionState);
+        if (this.actionState != actionState)
+        {
+            this.actionState = actionState;
+            refresh();
+        }
     }
 }
-

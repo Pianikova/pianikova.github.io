@@ -36,7 +36,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
-import com.e1c.edt.ai.assistent.IAIStateListener;
+import com.e1c.edt.ai.assistent.IStateListener;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -236,7 +236,7 @@ public class StagingViewEnhancer
     {
         reflection.getField(StagingView.class, stagingView, "unstageAllAction", IAction.class)
             .ifPresent(unstageAllAction -> {
-                stateService.addListener(new IAIStateListener()
+                stateService.addListener(new IStateListener()
                 {
                     @Override
                     public void onStateChange(AIState state)

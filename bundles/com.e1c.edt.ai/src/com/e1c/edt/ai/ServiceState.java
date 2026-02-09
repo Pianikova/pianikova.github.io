@@ -13,6 +13,7 @@ public enum ServiceState
     SERVER_ERROR,
     SETTINGS_CHANGED,
     SSL_ERROR,
+    SESSION_EXPIRED,
     OFFLINE,
     ONLINE;
 }
