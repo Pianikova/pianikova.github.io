@@ -209,18 +209,10 @@ public class EditMcpTool
                     }
 
                     byte[] fileData = fileSystem.readAllBytes(filePath);
-                    String content = new String(fileData, StandardCharsets.UTF_8);
-
-                    // Handle BOM (Byte Order Mark) if present
-                    String bom = "";
-                    if (content.startsWith("\uFEFF"))
-                    {
-                        bom = "\uFEFF";
-                        content = content.substring(1);
-                    }
+                    var content = new String(fileData, StandardCharsets.UTF_8);
 
                     // Perform replacement using helper method
-                    var replacementResult = performReplacement(call, content, bom, oldContent, newContent, replaceAll);
+                    var replacementResult = performReplacement(call, content, oldContent, newContent, replaceAll);
                     if (replacementResult == null)
                     {
                         return messageFactory.createError(this, call, "Replacement failed.");
@@ -299,16 +291,8 @@ public class EditMcpTool
             }
             var currentContent = optionalCurrentContent.get();
 
-            // Handle BOM (Byte Order Mark) if present
-            String bom = "";
-            if (currentContent.startsWith("\uFEFF"))
-            {
-                bom = "\uFEFF";
-                currentContent = currentContent.substring(1);
-            }
-
             // Perform replacement using helper method
-            var replacementResult = performReplacement(call, currentContent, bom, oldContent, newContent, replaceAll);
+            var replacementResult = performReplacement(call, currentContent, oldContent, newContent, replaceAll);
             if (replacementResult == null)
             {
                 return messageFactory.createError(this, call, "Replacement failed.");
@@ -372,8 +356,8 @@ public class EditMcpTool
      * @return the replacement result, or null if replacement failed
      */
     @SuppressWarnings("nls")
-    private ReplacementResult performReplacement(McpToolCall call, String content, String bom,
-        String oldContent, String newContent, boolean replaceAll)
+    private ReplacementResult performReplacement(McpToolCall call, String content, String oldContent, String newContent,
+        boolean replaceAll)
     {
         var replaceResult = contentReplacer.replace(content, oldContent, newContent, System.lineSeparator(), replaceAll);
 
@@ -403,7 +387,7 @@ public class EditMcpTool
         }
 
         var result = new ReplacementResult();
-        result.updatedContent = bom + replaceResult.getUpdatedContent();
+        result.updatedContent = replaceResult.getUpdatedContent();
         result.addedLines = replaceResult.getAddedLines();
         result.removedLines = replaceResult.getRemovedLines();
 
@@ -452,7 +436,8 @@ public class EditMcpTool
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- MUST read the file first with `" + ReadMcpTool.TOOL_NAME + "`!!!");
-        description.append("\n- Remove line-number prefixes from `" + ReadMcpTool.TOOL_NAME + "` output before using `old_content` or `new_content`.");
+        description.append("\n- MUST remove line-number prefixes from `" + ReadMcpTool.TOOL_NAME + "` output before using `old_content` or `new_content`.");
+        description.append("\n- MUST specify `old_content` exactly, including spaces, tabs, and line separators, but without line-number prefixes.");
         description.append("\n- Provide a unique `old_content` with enough surrounding lines (min 3) to avoid ambiguity.");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use `replace_all` only when you want to replace every match.");

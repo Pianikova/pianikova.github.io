@@ -179,7 +179,7 @@ public class ReadMcpTool
                     }
 
                     byte[] fileData = fileSystem.readAllBytes(filePath);
-                    String content = new String(fileData, StandardCharsets.UTF_8);
+                    String content = removeBOM(new String(fileData, StandardCharsets.UTF_8));
 
                     int endLine = Math.min(finalFirstLineNumber + finalLinesNumber, countLines(content));
                     Iterable<String> lineIterator = createLineIterator(content, finalFirstLineNumber, endLine);
@@ -362,6 +362,28 @@ public class ReadMcpTool
          */
         @SerializedName("charset_name")
         public String charsetName;
+    }
+
+    /**
+     * Removes BOM (Byte Order Mark) from the beginning of the content if present.
+     *
+     * @param content the content to process
+     * @return the content without BOM
+     */
+    private static String removeBOM(String content)
+    {
+        if (content == null || content.isEmpty())
+        {
+            return content;
+        }
+
+        // UTF-8 BOM is EF BB BF
+        if (content.startsWith("\uFEFF")) //$NON-NLS-1$
+        {
+            return content.substring(1);
+        }
+
+        return content;
     }
 
     /**
