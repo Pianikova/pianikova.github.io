@@ -128,7 +128,8 @@ public class ReadMcpTool
         var fileName = new File(path);
         if (call.callKind == ToolCallKind.RENDER)
         {
-            details.requestMarkdown = MessageFormat.format(Messages.ReadTitleTemplate, fileName.getName());
+            details.requestMarkdown =
+                MessageFormat.format(Messages.ReadTitleTemplate, markdownUtils.formatFilePath(path));
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 

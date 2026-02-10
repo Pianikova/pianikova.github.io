@@ -56,4 +56,11 @@ public interface IMarkdownUtils
 	 * @return A markdown-safe diff view grouped by file
 	 */
 	String buildUnifiedDiffByFile(String diffText);
+
+	/**
+	 * Formats a file path for markdown display with styled file name.
+	 * @param path The file path to format
+	 * @return A markdown-formatted string with styled file name
+	 */
+	String formatFilePath(String path);
 }

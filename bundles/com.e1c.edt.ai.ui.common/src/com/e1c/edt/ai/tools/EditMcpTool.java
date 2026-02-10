@@ -143,13 +143,16 @@ public class EditMcpTool
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(MessageFormat.format(Messages.EditTitleTemplate, fileName.getName()));
+
+            requestMarkdown.append(MessageFormat.format(Messages.EditTitleTemplate, markdownUtils.formatFilePath(path)));
 
             // Add diff details
             if (request.oldContent != null && request.newContent != null)
             {
                 requestMarkdown.append("\n\n");
-                requestMarkdown.append("<details><summary>").append(fileName.getName()).append("</summary>\n\n");
+                requestMarkdown.append("<details><summary>")
+                    .append(markdownUtils.formatFilePath(path))
+                    .append("</summary>\n\n");
                 requestMarkdown.append(
                     markdownUtils.buildGitDiff(path, request.oldContent, request.newContent));
                 requestMarkdown.append("\n</details>");
@@ -222,10 +225,13 @@ public class EditMcpTool
 
                     // Add diff details to response markdown
                     var responseMarkdown = new StringBuilder();
-                    responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, fileName.getName(),
+                    responseMarkdown
+                        .append(MessageFormat.format(Messages.EditedTemplate, markdownUtils.formatFilePath(path),
                         createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
                     responseMarkdown.append("\n\n");
-                    responseMarkdown.append("<details><summary>").append(fileName.getName()).append("</summary>\n\n");
+                    responseMarkdown.append("<details><summary>")
+                        .append(markdownUtils.formatFilePath(path))
+                        .append("</summary>\n\n");
                     responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
                     responseMarkdown.append("\n</details>");
                     details.responseMarkdown = responseMarkdown.toString();
@@ -327,10 +333,12 @@ public class EditMcpTool
 
             // Add response markdown with diff details
             var responseMarkdown = new StringBuilder();
-            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, fileName.getName(),
+            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, markdownUtils.formatFilePath(path),
                 createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
             responseMarkdown.append("\n\n");
-            responseMarkdown.append("<details><summary>").append(fileName.getName()).append("</summary>\n\n");
+            responseMarkdown.append("<details><summary>")
+                .append(markdownUtils.formatFilePath(path))
+                .append("</summary>\n\n");
             responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
             responseMarkdown.append("\n</details>");
             details.responseMarkdown = responseMarkdown.toString();

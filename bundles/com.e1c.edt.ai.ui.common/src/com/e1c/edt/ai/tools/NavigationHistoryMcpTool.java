@@ -144,41 +144,21 @@ public class NavigationHistoryMcpTool
 
                 for (var entry : entries)
                 {
-                    responseMarkdown.append("### **")
-                        .append(markdownUtils.escapeForMarkdown(String.valueOf(entry.index)))
-                        .append("**");
-
-                    if (entry.isCurrent != null && entry.isCurrent)
+                    if (entry.absoluteFilePath == null)
                     {
-                        responseMarkdown.append(" ").append(Messages.Current);
+                        continue;
                     }
+
+                    responseMarkdown.append("- ");
 
                     if (entry.text != null && !entry.text.isBlank())
                     {
-                        responseMarkdown.append(" - ").append(markdownUtils.escapeForMarkdown(entry.text));
+                        responseMarkdown.append(markdownUtils.escapeForMarkdown(entry.text));
                     }
 
-                    responseMarkdown.append("\n\n");
+                    responseMarkdown.append(" ").append(markdownUtils.formatFilePath(entry.absoluteFilePath));
 
-                    if (entry.projectName != null && entry.absoluteFilePath != null)
-                    {
-                        responseMarkdown.append("**")
-                            .append(Messages.Location)
-                            .append(":** ")
-                            .append(markdownUtils.escapeForMarkdown(entry.absoluteFilePath))
-                            .append("\n");
-                    }
-
-                    if (entry.input != null && !entry.input.isBlank())
-                    {
-                        responseMarkdown.append("**")
-                            .append(Messages.NavigationInput)
-                            .append(":** ")
-                            .append(markdownUtils.escapeForMarkdown(entry.input))
-                            .append("\n");
-                    }
-
-                    responseMarkdown.append("\n---\n\n");
+                    responseMarkdown.append("\n");
                 }
 
                 responseMarkdown.append("</details>");

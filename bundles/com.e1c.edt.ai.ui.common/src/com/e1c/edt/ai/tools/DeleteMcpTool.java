@@ -118,11 +118,10 @@ public class DeleteMcpTool
                     "`path` is required."));
         }
 
-        var fileName = new File(path).getName();
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(MessageFormat.format(Messages.DeleteTitleTemplate, fileName));
+            requestMarkdown.append(MessageFormat.format(Messages.DeleteTitleTemplate, markdownUtils.formatFilePath(path)));
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
@@ -160,7 +159,8 @@ public class DeleteMcpTool
                         "⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
                     var changes = markdownUtils.createStyledText("-1", TextColor.RED, FontWeight.BOLD);
-                    details.responseMarkdown = MessageFormat.format(Messages.DeletedTemplate, fileName, changes);
+                    details.responseMarkdown =
+                        MessageFormat.format(Messages.DeletedTemplate, markdownUtils.formatFilePath(path), changes);
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
                 }
@@ -237,7 +237,8 @@ public class DeleteMcpTool
                 // Add response markdown
                 var changes = new StringBuilder();
                 changes.append(markdownUtils.createStyledText(Messages.Deleted, TextColor.RED, FontWeight.BOLD));
-                details.responseMarkdown = MessageFormat.format(Messages.DeletedTemplate, fileName, changes);
+                details.responseMarkdown =
+                    MessageFormat.format(Messages.DeletedTemplate, markdownUtils.formatFilePath(path), changes);
 
                 return messageFactory.createMessage(this, call, response.toString(), details);
             }

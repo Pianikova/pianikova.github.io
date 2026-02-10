@@ -4,7 +4,6 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.text.MessageFormat;
@@ -124,17 +123,18 @@ public class WriteMcpTool
                 .completedFuture(messageFactory.createError(this, call, "`path` is required."));
         }
 
-        var fileName = new File(path).getName();
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(MessageFormat.format(Messages.WriteTitleTemplate, fileName));
+            requestMarkdown.append(MessageFormat.format(Messages.WriteTitleTemplate, markdownUtils.formatFilePath(path)));
 
             // Add content details
             if (request.content != null)
             {
                 requestMarkdown.append("\n\n");
-                requestMarkdown.append("<details><summary>").append(fileName).append("</summary>\n\n");
+                requestMarkdown.append("<details><summary>")
+                    .append(markdownUtils.formatFilePath(path))
+                    .append("</summary>\n\n");
                 requestMarkdown.append(markdownUtils.buildGitDiff(path, null, request.content));
                 requestMarkdown.append("\n</details>");
             }
@@ -200,9 +200,12 @@ public class WriteMcpTool
                     changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
 
                     var responseMarkdown = new StringBuilder();
-                    responseMarkdown.append(MessageFormat.format(Messages.WrittenTemplate, fileName, changes));
+                    responseMarkdown.append(
+                        MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
                     responseMarkdown.append("\n\n");
-                    responseMarkdown.append("<details><summary>").append(fileName).append("</summary>\n\n");
+                    responseMarkdown.append("<details><summary>")
+                        .append(markdownUtils.formatFilePath(path))
+                        .append("</summary>\n\n");
                     responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
                     responseMarkdown.append("\n</details>");
                     details.responseMarkdown = responseMarkdown.toString();
@@ -307,9 +310,12 @@ public class WriteMcpTool
             changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
 
             var responseMarkdown = new StringBuilder();
-            responseMarkdown.append(MessageFormat.format(Messages.WrittenTemplate, fileName, changes));
+            responseMarkdown
+                .append(MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
             responseMarkdown.append("\n\n");
-            responseMarkdown.append("<details><summary>").append(fileName).append("</summary>\n\n");
+            responseMarkdown.append("<details><summary>")
+                .append(markdownUtils.formatFilePath(path))
+                .append("</summary>\n\n");
             responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
             responseMarkdown.append("\n</details>");
             details.responseMarkdown = responseMarkdown.toString();

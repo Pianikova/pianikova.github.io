@@ -272,6 +272,24 @@ public class MarkdownUtils implements IMarkdownUtils
         return result.toString();
     }
 
+    @Override
+    @SuppressWarnings("nls")
+    public String formatFilePath(String path)
+    {
+        if (path == null || path.isBlank())
+        {
+            return "";
+        }
+
+        // Extract file name from path
+        java.io.File file = new java.io.File(path);
+        String fileName = file.getName();
+
+        // Create styled file name in markdown format
+        // Use monospace styling for file names
+        return createStyledText(fileName, TextColor.BLUE, FontWeight.BOLD);
+    }
+
     @SuppressWarnings("nls")
     private void appendDiffLines(StringBuilder diff, String prefix, String content, TextColor color, String background)
     {
