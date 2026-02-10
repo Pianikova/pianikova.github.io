@@ -30,7 +30,7 @@ public class Messages
     public static String Deleted;
 
     // Editing operations
-    public static String EditTitle;
+    public static String EditTitleTemplate;
     public static String EditedTemplate;
 
     // Search operations

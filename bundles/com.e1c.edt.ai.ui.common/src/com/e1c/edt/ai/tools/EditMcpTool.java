@@ -143,7 +143,7 @@ public class EditMcpTool
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(Messages.EditTitle);
+            requestMarkdown.append(MessageFormat.format(Messages.EditTitleTemplate, fileName.getName()));
 
             // Add diff details
             if (request.oldContent != null && request.newContent != null)
