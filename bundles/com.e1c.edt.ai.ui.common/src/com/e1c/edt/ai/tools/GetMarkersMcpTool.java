@@ -61,8 +61,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "  \"markers\": [\n"
         + "    {\n"
         + "    \"id\": 4002,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
-        + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"path\": \"C:/Projects/MyProject/MyProject/CommonModules/AIModule/Module.bsl\",\n"
         + "    \"start_line\": 45,\n"
         + "    \"message\": \"AI error (AIError)\",\n"
         + "    \"type\": \"ai_marker\",\n"
@@ -72,8 +71,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    },\n"
         + "    {\n"
         + "    \"id\": 1001,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/Forms/MyForm/Module.bsl\",\n"
-        + "    \"relative_path\": \"Forms/MyForm/Module.bsl\",\n"
+        + "    \"path\": \"C:/Projects/MyProject/MyProject/Forms/MyForm/Module.bsl\",\n"
         + "    \"start_line\": 5,\n"
         + "    \"message\": \"Syntax error: missing semicolon\",\n"
         + "    \"type\": \"problem\",\n"
@@ -83,8 +81,7 @@ public class GetMarkersMcpTool implements IMcpTool
         + "    },\n"
         + "    {\n"
         + "    \"id\": 4001,\n"
-        + "    \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
-        + "    \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "    \"path\": \"C:/Projects/MyProject/MyProject/CommonModules/AIModule/Module.bsl\",\n"
         + "    \"start_line\": 30,\n"
         + "    \"message\": \"AI warning (AIWarning)\",\n"
         + "    \"type\": \"ai_marker\",\n"
@@ -262,12 +259,10 @@ public class GetMarkersMcpTool implements IMcpTool
 
                 var resource = marker.getResource();
                 var location = resource.getLocation();
-                var relativePath = resource.getProjectRelativePath().toPortableString();
 
                 MarkerInfo markerInfo = new MarkerInfo();
                 markerInfo.id = marker.getId();
-                markerInfo.absolutePath = location != null ? location.toFile().getAbsolutePath() : "";
-                markerInfo.relativePath = relativePath;
+                markerInfo.path = location != null ? location.toFile().getAbsolutePath() : "";
                 markerInfo.startLine = marker.getAttribute(IMarker.LINE_NUMBER, -1);
                 markerInfo.message = marker.getAttribute(IMarker.MESSAGE, "");
                 markerInfo.type = markerType.getDisplayName();
@@ -654,11 +649,8 @@ public class GetMarkersMcpTool implements IMcpTool
         @SerializedName("id")
         public long id;
 
-        @SerializedName("absolute_path")
-        public String absolutePath;
-
-        @SerializedName("relative_path")
-        public String relativePath;
+        @SerializedName("path")
+        public String path;
 
         @SerializedName("start_line")
         public int startLine;

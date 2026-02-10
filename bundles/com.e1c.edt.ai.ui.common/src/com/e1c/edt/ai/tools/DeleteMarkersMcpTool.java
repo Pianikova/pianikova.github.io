@@ -42,7 +42,7 @@ public class DeleteMarkersMcpTool
         "{\n"
         + "  \"project_name\": \"MyProject\",\n"
         + "  // \"marker_type\": \"ai_marker\", // Optional: bookmark, task, text, ai_marker (AIError/AIWarning/AIInfo)\n"
-        + "  // \"relative_file_path\": \"optional/file/path.bsl\",\n"
+        + "  // \"path\": \"C:/Projects/MyProject/optional/file/path.bsl\",\n"
         + "  // \"id\": 12345 // Optional: specific marker ID\n"
         + "}";
 
@@ -128,6 +128,7 @@ public class DeleteMarkersMcpTool
             {
                 return messageFactory.createError(this, call, "Project not found: " + projectName);
             }
+
             if (!project.isOpen())
             {
                 return messageFactory.createError(this, call, "Project is closed: " + projectName);
@@ -144,15 +145,15 @@ public class DeleteMarkersMcpTool
                 var markerType = getMarkerType(request.markerType);
                 if (request.relativeFilePath != null && !request.relativeFilePath.isBlank())
                 {
-                    // Clear markers for specific file
-                    var resource = project.findMember(request.relativeFilePath);
-                    if (resource == null || !resource.exists())
+                    // Clear markers for specific file - get file from absolute path
+                    var file = root.getFile(new org.eclipse.core.runtime.Path(request.relativeFilePath));
+                    if (file == null || !file.exists())
                     {
                         return messageFactory.createError(this, call,
-                            "File not found in project: " + request.relativeFilePath);
+                            "File not found: " + request.relativeFilePath);
                     }
 
-                    deleteMarkers(resource, markerType);
+                    deleteMarkers(file, markerType);
                 }
                 else
                 {
@@ -297,13 +298,13 @@ public class DeleteMarkersMcpTool
                 description.append("  - ").append(type.getDisplayName()).append("\n");
             }
         }
-        description.append("- relative_file_path: Optional relative path to file\n");
+        description.append("- path: Optional relative path to file\n");
         description.append("- id: Optional ID of specific marker to delete\n\n");
         description.append("Example requests:\n");
         description.append("- Clear all non-problem markers in project:\n").append(QuestionExample);
         description.append("- Clear AI markers in specific file:\n");
         description.append(
-            "  {\"project_name\":\"MyProject\",\"marker_type\":\"ai_marker\",\"relative_file_path\":\"src/Module.bsl\"} // removes AIError, AIWarning, AIInfo");
+            "  {\"project_name\":\"MyProject\",\"marker_type\":\"ai_marker\",\"path\":\"src/Module.bsl\"} // removes AIError, AIWarning, AIInfo");
         description.append("\n- Delete specific marker by ID:\n");
         description.append("  {\"project_name\":\"MyProject\",\"id\":12345}");
         description.append("\n\nExample response:\n").append(AnswerExample);
@@ -327,11 +328,11 @@ public class DeleteMarkersMcpTool
         markerTypeProp.description = "Type of markers to remove";
         properties.put("marker_type", markerTypeProp);
 
-        // Property: relative_file_path (optional)
+        // Property: path (optional)
         var filePathProp = new McpToolCallProperty();
         filePathProp.type = "string";
         filePathProp.description = "Relative path to target file from project root";
-        properties.put("relative_file_path", filePathProp);
+        properties.put("path", filePathProp);
 
         // Property: id (optional)
         var idProp = new McpToolCallProperty();
@@ -357,7 +358,7 @@ public class DeleteMarkersMcpTool
         @SerializedName("marker_type")
         public String markerType;
 
-        @SerializedName("relative_file_path")
+        @SerializedName("path")
         public String relativeFilePath;
 
         @SerializedName("id")

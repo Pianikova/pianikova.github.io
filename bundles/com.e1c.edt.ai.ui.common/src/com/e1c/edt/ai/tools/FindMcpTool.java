@@ -67,8 +67,7 @@ public class FindMcpTool
         "[\n"
         + "  {\n"
         + "    \"project_name\": \"core-api\",\n"
-        + "    \"relative_file_path\": \"src/services/TestUserService.bsl\",\n"
-        + "    \"absolute_file_path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
+        + "    \"path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
         + "    \"offset\": 243,\n"
         + "    \"length\": 16,\n"
         + "    \"line_offset\": 15,\n"
@@ -171,7 +170,7 @@ public class FindMcpTool
                 requestMarkdown.append("\n\n") //$NON-NLS-1$
                     .append(Messages.FileNamePatterns)
                     .append(": ") //$NON-NLS-1$
-                    .append(formatFileNamePatterns(fileNamePatterns)); //$NON-NLS-1$
+                    .append(formatFileNamePatterns(fileNamePatterns));
             }
 
             details.requestMarkdown = requestMarkdown.toString();
@@ -308,13 +307,7 @@ public class FindMcpTool
                                         var location = file.getRawLocation();
                                         if (location != null)
                                         {
-                                            element.absoluteFilePath = location.toOSString();
-                                        }
-
-                                        var relativePath = file.getProjectRelativePath();
-                                        if (relativePath != null)
-                                        {
-                                            element.relativeFilePath = relativePath.toPortableString();
+                                            element.path = location.toOSString();
                                         }
 
                                         var line = fileMatch.getLineElement();
@@ -411,7 +404,7 @@ public class FindMcpTool
                     for (var element : projectElements)
                     {
                         responseMarkdown.append("- **")
-                            .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
+                            .append(markdownUtils.escapeForMarkdown(element.path))
                             .append("**");
 
                         if (element.lineNumber > 0)
@@ -583,14 +576,8 @@ public class FindMcpTool
         @SerializedName("project_name")
         public String projectName;
 
-        /**
-         * Project relative path to the file.
-         */
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
-
-        @SerializedName("absolute_file_path")
-        public String absoluteFilePath;
+        @SerializedName("path")
+        public String path;
 
         public int offset;
 
@@ -707,7 +694,7 @@ public class FindMcpTool
             for (var element : allElements)
             {
                 responseMarkdown.append("- **") //$NON-NLS-1$
-                    .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
+                    .append(markdownUtils.escapeForMarkdown(element.path))
                     .append("**\n"); //$NON-NLS-1$
             }
 
@@ -762,8 +749,7 @@ public class FindMcpTool
                     {
                         var element = new Element();
                         element.projectName = member.getProject().getName();
-                        element.relativeFilePath = member.getProjectRelativePath().toPortableString();
-                        element.absoluteFilePath = member.getLocation().toOSString();
+                        element.path = member.getLocation().toOSString();
                         element.offset = 0;
                         element.length = 0;
                         element.lineOffset = 0;

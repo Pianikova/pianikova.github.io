@@ -57,7 +57,7 @@ public class NavigationHistoryMcpTool
         + "    \"index\": 5,\n"
         + "    \"text\": \"Module.bsl - line 120\",\n"
         + "    \"project_name\": \"MyProject\",\n"
-        + "    \"relative_file_path\": \"src/CommonModules/Module.bsl\",\n"
+        + "    \"path\": \"C:/Projects/MyProject/src/CommonModules/Module.bsl\",\n"
         + "    \"input\": \"Module.bsl\",\n"
         + "    \"is_current\": true\n"
         + "  }\n"
@@ -160,12 +160,12 @@ public class NavigationHistoryMcpTool
 
                     responseMarkdown.append("\n\n");
 
-                    if (entry.projectName != null && entry.relativeFilePath != null)
+                    if (entry.projectName != null && entry.absoluteFilePath != null)
                     {
                         responseMarkdown.append("**")
                             .append(Messages.Location)
                             .append(":** ")
-                            .append(markdownUtils.escapeForMarkdown(entry.projectName + "/" + entry.relativeFilePath))
+                            .append(markdownUtils.escapeForMarkdown(entry.absoluteFilePath))
                             .append("\n");
                     }
 
@@ -254,7 +254,7 @@ public class NavigationHistoryMcpTool
             {
                 var fileValue = file.get();
                 entry.projectName = fileValue.getProject().getName();
-                entry.relativeFilePath = fileValue.getProjectRelativePath().toString();
+                entry.absoluteFilePath = fileValue.getLocation().toOSString();
             }
 
             entries.add(entry);
@@ -342,8 +342,8 @@ public class NavigationHistoryMcpTool
         @SerializedName("project_name")
         public String projectName;
 
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
+        @SerializedName("path")
+        public String absoluteFilePath;
 
         @SerializedName("is_current")
         public Boolean isCurrent;

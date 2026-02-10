@@ -47,8 +47,7 @@ public class ReadMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"project_name\": \"AccountingSystem\",\n"
-        + "  \"file_path\": \"AccountingSystem/src/MainModule.bsl\",\n"
+        + "  \"path\": \"C:/Projects/AccountingSystem/src/MainModule.bsl\",\n"
         + "  \"first_line\": 50,\n"
         + "  \"lines_number\": 100\n"
         + "}";
@@ -118,29 +117,20 @@ public class ReadMcpTool
         }
 
         var request = optionalRequest.get();
-        var filePath = request.filePath;
-        if (filePath == null || filePath.isBlank())
+        var path = request.path;
+        if (path == null || path.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "`file_path` is required."));
+                    "`path` is required."));
         }
 
-        var fileName = new File(filePath);
+        var fileName = new File(path);
         if (call.callKind == ToolCallKind.RENDER)
         {
             details.requestMarkdown = MessageFormat.format(Messages.ReadTitleTemplate, fileName.getName());
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
-
-        var projectName = request.projectName;
-        String detectedProjectName = null;
-        if (projectName == null || projectName.isBlank())
-        {
-            // Auto-determine project name from file path
-            detectedProjectName = fileSystem.determineProjectName(filePath);
-        }
-        final String finalProjectName = projectName != null && !projectName.isBlank() ? projectName : detectedProjectName;
 
         // Validate and set default values for line parameters
         int firstLineNumber =
@@ -164,6 +154,10 @@ public class ReadMcpTool
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
+            // Determine project name from absolute path
+            String detectedProjectName = fileSystem.determineProjectName(path);
+            final String finalProjectName = detectedProjectName;
+
             // Check if file is part of a project
             boolean isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
 
@@ -172,13 +166,13 @@ public class ReadMcpTool
                 // File is not part of any project - use Java file I/O
                 try
                 {
-                    if (!fileSystem.fileExists(filePath))
+                    if (!fileSystem.fileExists(path))
                     {
                         return messageFactory.createError(this, call,
-                            "The file \"" + filePath + "\" does not exist.");
+                            "The file \"" + path + "\" does not exist.");
                     }
 
-                    byte[] fileData = fileSystem.readAllBytes(filePath);
+                    byte[] fileData = fileSystem.readAllBytes(path);
                     String content = removeBOM(new String(fileData, StandardCharsets.UTF_8));
 
                     int endLine = Math.min(finalFirstLineNumber + finalLinesNumber, countLines(content));
@@ -223,12 +217,11 @@ public class ReadMcpTool
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, filePath);
-            var isAbsolutePath = filePath != null && new File(filePath).isAbsolute();
+            var projectFile = fileSystem.getProjectFile(project, path);
             var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
             if (optionalDocument.isEmpty())
             {
-                var filePathForError = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toOSString();
+                var filePathForError = projectFile.getProjectRelativePath().toOSString();
                 return messageFactory.createError(this, call,
                     "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
                         + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
@@ -271,11 +264,10 @@ public class ReadMcpTool
         description.append("Reads file content from a project or from the file system.");
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
-        description.append("\n- `file_path` is required. `project_name` is optional - if not provided, the system will auto-detect the project from the file path.");
-        description.append("\n- Arguments must be a single JSON object.");
+        description.append("\n- `path` is required and must be an absolute path. The system will auto-detect the project from the absolute path.");
         description.append("\n- IMPORTANT: Each line is prefixed with a 7-digit line number and colon (e.g., `    123:`); strip it before editing.");
         description.append("\n- Send only the raw JSON object (no code fences or extra text).");
-        description.append("\n- Example (single line is OK): {\"project_name\":\"MyProject\",\"file_path\":\"MyProject/src/MainModule.bsl\",\"first_line\":1,\"lines_number\":200}");
+        description.append("\n- Example (single line is OK): {\"path\":\"C:/Projects/MyProject/src/MainModule.bsl\",\"first_line\":1,\"lines_number\":200}");
         description.append("\n- Defaults: `first_line` = 1, `lines_number` = 2000; capped at " + MAX_LINES + ".");
         description.append("\n- Preserve exact whitespace and line endings (\\r, \\n, \\t).");
         description.append("\n- If you plan to edit, read a larger chunk to make `origin_content` unique.");
@@ -294,15 +286,10 @@ public class ReadMcpTool
         parameters.type = "object";
         var properties = new HashMap<String, McpToolCallProperty>();
 
-        var projectNameProp = new McpToolCallProperty();
-        projectNameProp.type = "string";
-        projectNameProp.description = "Project name in IDE. For example, \"MyProject\". If not provided, the system will auto-detect the project from the file path.";
-        properties.put("project_name", projectNameProp);
-
-        var filePathProp = new McpToolCallProperty();
-        filePathProp.type = "string";
-        filePathProp.description = "Path to the file. Can be project-relative (e.g., \"MyProject/src/MyModule.bsl\") or absolute. If not part of any project, the file will be read from the file system.";
-        properties.put("file_path", filePathProp);
+        var pathProp = new McpToolCallProperty();
+        pathProp.type = "string";
+        pathProp.description = "Absolute path to the file. The system will auto-detect the project from the absolute path.";
+        properties.put("path", pathProp);
 
         var firstLineNumberProp = new McpToolCallProperty();
         firstLineNumberProp.type = "integer";
@@ -315,7 +302,7 @@ public class ReadMcpTool
         properties.put("lines_number", linesNumberProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("file_path");
+        parameters.required = Arrays.asList("path");
         spec.function.parameters = parameters;
 
         return spec;
@@ -325,16 +312,10 @@ public class ReadMcpTool
     private static class Request
     {
         /**
-         * Project name in IDE. Optional.
+         * Absolute path to the file. Required.
          */
-        @SerializedName("project_name")
-        public String projectName;
-
-        /**
-         * Path to the file. Can be project-relative or absolute.
-         */
-        @SerializedName("file_path")
-        public String filePath;
+        @SerializedName("path")
+        public String path;
 
         /**
          * Number of the first line of the file to be read. It is 1-relative. The default is 1.
