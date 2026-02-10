@@ -16,6 +16,14 @@ public interface IMarkdownUtils
 	String escapeForMarkdown(String content);
 
 	/**
+     * Decodes URL-encoded characters in the given string.
+     * Handles URL encoding like %3A (colon), %D0 (Cyrillic), etc.
+     * @param content The URL-encoded string
+     * @return The decoded string
+     */
+    String decodeUrl(String content);
+
+    /**
      * Creates styled text with specified color and weight for HTML display
      * @param content The content to style
      * @param color The text color

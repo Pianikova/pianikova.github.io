@@ -7,6 +7,7 @@ import org.eclipse.compare.rangedifferencer.IRangeComparator;
 import org.eclipse.compare.rangedifferencer.RangeDifference;
 import org.eclipse.compare.rangedifferencer.RangeDifferencer;
 
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 /**
@@ -15,6 +16,14 @@ import com.google.inject.Singleton;
 @Singleton
 public class MarkdownUtils implements IMarkdownUtils
 {
+
+    private final ILinkProvider linkProvider;
+
+    @Inject
+    public MarkdownUtils(ILinkProvider linkProvider)
+    {
+        this.linkProvider = linkProvider;
+    }
 	/**
 	 * Escapes content for markdown display by replacing backticks
 	 * @param content The content to escape
@@ -31,6 +40,26 @@ public class MarkdownUtils implements IMarkdownUtils
 		// Replace backticks with escaped backticks to prevent markdown formatting issues
 		return content.replace("`", "\\`");
 	}
+
+    @Override
+    @SuppressWarnings("nls")
+    public String decodeUrl(String content)
+    {
+        if (content == null || content.isEmpty())
+        {
+            return content;
+        }
+
+        try
+        {
+            return java.net.URLDecoder.decode(content, java.nio.charset.StandardCharsets.UTF_8.name());
+        }
+        catch (Exception e)
+        {
+            // If decoding fails, return the original content
+            return content;
+        }
+    }
 
     @Override
     public String createStyledText(String content, TextColor color, FontWeight weight)
@@ -285,9 +314,12 @@ public class MarkdownUtils implements IMarkdownUtils
         java.io.File file = new java.io.File(path);
         String fileName = file.getName();
 
-        // Create styled file name in markdown format
-        // Use monospace styling for file names
-        return createStyledText(fileName, TextColor.BLUE, FontWeight.BOLD);
+        // Generate link using ILinkProvider
+        String link = linkProvider.file(path);
+
+        // Create markdown link with styled file name
+        // Format: [file name](link)
+        return String.format("[%s](%s)", fileName, link);
     }
 
     @SuppressWarnings("nls")

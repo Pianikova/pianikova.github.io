@@ -32,6 +32,7 @@ public class Messages
     // Editing operations
     public static String EditTitleTemplate;
     public static String EditedTemplate;
+    public static String EditDetailsSummary;
 
     // Search operations
     public static String SearchTitleTemplate;

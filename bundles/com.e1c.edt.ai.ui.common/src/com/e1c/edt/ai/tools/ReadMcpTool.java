@@ -186,6 +186,12 @@ public class ReadMcpTool
                     response.put("content", resultContent.toString());
                     response.put("charset_name", "UTF-8");
 
+                    // Add response markdown
+                    String styledLineNumber = markdownUtils.createStyledText(String.valueOf(finalFirstLineNumber),
+                        TextColor.GREEN, FontWeight.BOLD);
+                    details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
+                        markdownUtils.formatFilePath(path), styledLineNumber);
+
                     return messageFactory.createMessage(this, call, resultContent.toString(), details);
                 }
                 catch (IOException error)
@@ -247,7 +253,7 @@ public class ReadMcpTool
             // Add response markdown
             String styledLineNumber = markdownUtils.createStyledText(String.valueOf(lineNumber), TextColor.GREEN, FontWeight.BOLD);
             details.responseMarkdown =
-                MessageFormat.format(Messages.ReadTemplate, fileName.getName(), styledLineNumber);
+                MessageFormat.format(Messages.ReadTemplate, markdownUtils.formatFilePath(path), styledLineNumber);
             return messageFactory.createMessage(this, call, content, details);
         });
     }

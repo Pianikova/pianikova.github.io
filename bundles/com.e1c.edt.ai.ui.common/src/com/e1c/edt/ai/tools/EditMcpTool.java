@@ -151,7 +151,7 @@ public class EditMcpTool
             {
                 requestMarkdown.append("\n\n");
                 requestMarkdown.append("<details><summary>")
-                    .append(markdownUtils.formatFilePath(path))
+                    .append(Messages.EditDetailsSummary)
                     .append("</summary>\n\n");
                 requestMarkdown.append(
                     markdownUtils.buildGitDiff(path, request.oldContent, request.newContent));
@@ -230,7 +230,7 @@ public class EditMcpTool
                         createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
                     responseMarkdown.append("\n\n");
                     responseMarkdown.append("<details><summary>")
-                        .append(markdownUtils.formatFilePath(path))
+                        .append(Messages.EditDetailsSummary)
                         .append("</summary>\n\n");
                     responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
                     responseMarkdown.append("\n</details>");
@@ -336,9 +336,7 @@ public class EditMcpTool
             responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, markdownUtils.formatFilePath(path),
                 createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
             responseMarkdown.append("\n\n");
-            responseMarkdown.append("<details><summary>")
-                .append(markdownUtils.formatFilePath(path))
-                .append("</summary>\n\n");
+            responseMarkdown.append("<details><summary>").append(Messages.EditDetailsSummary).append("</summary>\n\n");
             responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
             responseMarkdown.append("\n</details>");
             details.responseMarkdown = responseMarkdown.toString();
