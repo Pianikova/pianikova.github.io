@@ -194,10 +194,18 @@ public class WriteMcpTool
                     response.append("File written: \"").append(path).append("\".\n");
                     response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
+                    // Add response markdown with content details
                     var newLines = content.split("\\r?\\n", -1).length;
                     var changes = new StringBuilder();
                     changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
-                    details.responseMarkdown = MessageFormat.format(Messages.WrittenTemplate, fileName, changes);
+
+                    var responseMarkdown = new StringBuilder();
+                    responseMarkdown.append(MessageFormat.format(Messages.WrittenTemplate, fileName, changes));
+                    responseMarkdown.append("\n\n");
+                    responseMarkdown.append("<details><summary>").append(fileName).append("</summary>\n\n");
+                    responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
+                    responseMarkdown.append("\n</details>");
+                    details.responseMarkdown = responseMarkdown.toString();
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
                 }
@@ -293,11 +301,18 @@ public class WriteMcpTool
             response.append(
                 "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
 
-            // Add response markdown
+            // Add response markdown with content details
             var newLines = content.split("\\r?\\n", -1).length;
             var changes = new StringBuilder();
             changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
-            details.responseMarkdown = MessageFormat.format(Messages.WrittenTemplate, fileName, changes);
+
+            var responseMarkdown = new StringBuilder();
+            responseMarkdown.append(MessageFormat.format(Messages.WrittenTemplate, fileName, changes));
+            responseMarkdown.append("\n\n");
+            responseMarkdown.append("<details><summary>").append(fileName).append("</summary>\n\n");
+            responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
+            responseMarkdown.append("\n</details>");
+            details.responseMarkdown = responseMarkdown.toString();
 
             return messageFactory.createMessage(this, call, response.toString(), details);
         });

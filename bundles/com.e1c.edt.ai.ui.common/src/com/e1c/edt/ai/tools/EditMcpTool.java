@@ -220,8 +220,15 @@ public class EditMcpTool
                     response.append("File updated: \"").append(path).append("\".\n");
                     response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
-                    var changes = createChangesString(replacementResult.addedLines, replacementResult.removedLines);
-                    details.responseMarkdown = MessageFormat.format(Messages.EditedTemplate, fileName.getName(), changes);
+                    // Add diff details to response markdown
+                    var responseMarkdown = new StringBuilder();
+                    responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, fileName.getName(),
+                        createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
+                    responseMarkdown.append("\n\n");
+                    responseMarkdown.append("<details><summary>").append(fileName.getName()).append("</summary>\n\n");
+                    responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
+                    responseMarkdown.append("\n</details>");
+                    details.responseMarkdown = responseMarkdown.toString();
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
                 }
@@ -318,10 +325,15 @@ public class EditMcpTool
             response.append(
                 "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
 
-            // Add response markdown
-            var changes = createChangesString(replacementResult.addedLines, replacementResult.removedLines);
-            details.responseMarkdown =
-                MessageFormat.format(Messages.EditedTemplate, fileName.getName(), changes);
+            // Add response markdown with diff details
+            var responseMarkdown = new StringBuilder();
+            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, fileName.getName(),
+                createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
+            responseMarkdown.append("\n\n");
+            responseMarkdown.append("<details><summary>").append(fileName.getName()).append("</summary>\n\n");
+            responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
+            responseMarkdown.append("\n</details>");
+            details.responseMarkdown = responseMarkdown.toString();
 
             return messageFactory.createMessage(this, call, response.toString(), details);
         });
