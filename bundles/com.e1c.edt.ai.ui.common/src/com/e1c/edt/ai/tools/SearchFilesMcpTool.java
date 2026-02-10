@@ -137,7 +137,31 @@ public class SearchFilesMcpTool
 		if (call.callKind == ToolCallKind.RENDER)
 		{
 			var pattern = request.searchPattern != null ? request.searchPattern : "*";
-			details.requestMarkdown = MessageFormat.format(Messages.FindFilesTitleTemplate, pattern);
+			var projectName = request.projectName;
+			var path = request.path;
+
+			// Create detailed request markdown with search parameters
+			var requestMarkdown = new StringBuilder();
+			requestMarkdown.append(MessageFormat.format(Messages.FindFilesTitleTemplate, pattern))
+				.append("\n\n") //$NON-NLS-1$
+				.append(Messages.SearchQuery)
+				.append(": ") //$NON-NLS-1$
+				.append("`") //$NON-NLS-1$
+				.append(markdownUtils.escapeForMarkdown(pattern))
+				.append("`"); //$NON-NLS-1$
+
+			// Add project name if specified
+			if (projectName != null && !projectName.isBlank())
+			{
+				requestMarkdown.append("\n\n") //$NON-NLS-1$
+					.append(Messages.ProjectName)
+					.append(": ") //$NON-NLS-1$
+					.append("`") //$NON-NLS-1$
+					.append(markdownUtils.escapeForMarkdown(projectName))
+					.append("`"); //$NON-NLS-1$
+			}
+
+			details.requestMarkdown = requestMarkdown.toString();
 			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
 
@@ -273,21 +297,38 @@ public class SearchFilesMcpTool
 			// Create response markdown
 			var responseMarkdown = new StringBuilder();
 			responseMarkdown.append(MessageFormat.format(Messages.FilesFoundTemplate,
-				markdownUtils.createStyledText(String.valueOf(foundFiles.size()), TextColor.GREEN, FontWeight.BOLD)));
+				markdownUtils.createStyledText(String.valueOf(foundFiles.size()), TextColor.GREEN, FontWeight.BOLD)))
+				.append("\n\n") //$NON-NLS-1$
+				.append(Messages.SearchQuery)
+				.append(": ") //$NON-NLS-1$
+				.append("`") //$NON-NLS-1$
+				.append(markdownUtils.escapeForMarkdown(searchPattern))
+				.append("`"); //$NON-NLS-1$
+
+			// Add project name if specified
+			if (projectName != null && !projectName.isBlank())
+			{
+				responseMarkdown.append("\n\n") //$NON-NLS-1$
+					.append(Messages.ProjectName)
+					.append(": ") //$NON-NLS-1$
+					.append("`") //$NON-NLS-1$
+					.append(markdownUtils.escapeForMarkdown(projectName))
+					.append("`"); //$NON-NLS-1$
+			}
 
 			// Add search results in collapsible section
-			responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n");
+			responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
 			for (var fileInfo : foundFiles)
 			{
-				responseMarkdown.append("- **")
+				responseMarkdown.append("- **") //$NON-NLS-1$
 					.append(markdownUtils.escapeForMarkdown(fileInfo.relativeFilePath))
-					.append("**\n");
+					.append("**\n"); //$NON-NLS-1$
 
-				responseMarkdown.append("\n");
+				responseMarkdown.append("\n"); //$NON-NLS-1$
 			}
 
-			responseMarkdown.append("</details>");
+			responseMarkdown.append("</details>"); //$NON-NLS-1$
 
 			details.responseMarkdown = responseMarkdown.toString();
 			return messageFactory.createMessage(this, call, content, details);
