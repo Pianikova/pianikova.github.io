@@ -128,8 +128,13 @@ public class ReadMcpTool
         var fileName = new File(path);
         if (call.callKind == ToolCallKind.RENDER)
         {
+            int lineNumber = request.firstLine != null && request.firstLine > 0 ? request.firstLine : 1;
+            int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : McpToolConstants.DEFAULT_READ_LINES;
+            int finishLineNumber = lineNumber + linesNumber;
+
             details.requestMarkdown =
-                MessageFormat.format(Messages.ReadTitleTemplate, markdownUtils.formatFilePath(path));
+                MessageFormat.format(Messages.ReadTitleTemplate,
+                    markdownUtils.formatFilePath(path, lineNumber, 0, finishLineNumber, 0));
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
@@ -189,8 +194,10 @@ public class ReadMcpTool
                     // Add response markdown
                     String styledLineNumber = markdownUtils.createStyledText(String.valueOf(finalFirstLineNumber),
                         TextColor.GREEN, FontWeight.BOLD);
+
+                    // Use endLine directly for the link range
                     details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
-                        markdownUtils.formatFilePath(path), styledLineNumber);
+                        markdownUtils.formatFilePath(path, finalFirstLineNumber, 0, endLine, 0), styledLineNumber);
 
                     return messageFactory.createMessage(this, call, resultContent.toString(), details);
                 }
@@ -252,8 +259,11 @@ public class ReadMcpTool
 
             // Add response markdown
             String styledLineNumber = markdownUtils.createStyledText(String.valueOf(lineNumber), TextColor.GREEN, FontWeight.BOLD);
+
+            // Use endLine directly for the link range
             details.responseMarkdown =
-                MessageFormat.format(Messages.ReadTemplate, markdownUtils.formatFilePath(path), styledLineNumber);
+                MessageFormat.format(Messages.ReadTemplate,
+                    markdownUtils.formatFilePath(path, lineNumber, 0, endLine, 0), styledLineNumber);
             return messageFactory.createMessage(this, call, content, details);
         });
     }

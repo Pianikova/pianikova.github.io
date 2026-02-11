@@ -403,9 +403,17 @@ public class FindMcpTool
 
                     for (var element : projectElements)
                     {
-                        responseMarkdown.append("- **")
-                            .append(markdownUtils.formatFilePath(element.path))
-                            .append("**");
+                        String formattedPath;
+                        if (element.lineNumber > 0)
+                        {
+                            formattedPath = markdownUtils.formatFilePath(element.path, element.lineNumber, 0);
+                        }
+                        else
+                        {
+                            formattedPath = markdownUtils.formatFilePath(element.path);
+                        }
+
+                        responseMarkdown.append("- **").append(formattedPath).append("**");
 
                         if (element.lineNumber > 0)
                         {
@@ -693,8 +701,18 @@ public class FindMcpTool
 
             for (var element : allElements)
             {
+                String formattedPath;
+                if (element.lineNumber > 0)
+                {
+                    formattedPath = markdownUtils.formatFilePath(element.path, element.lineNumber, 0);
+                }
+                else
+                {
+                    formattedPath = markdownUtils.formatFilePath(element.path);
+                }
+
                 responseMarkdown.append("- **") //$NON-NLS-1$
-                    .append(markdownUtils.formatFilePath(element.path))
+                    .append(formattedPath)
                     .append("**\n"); //$NON-NLS-1$
             }
 
