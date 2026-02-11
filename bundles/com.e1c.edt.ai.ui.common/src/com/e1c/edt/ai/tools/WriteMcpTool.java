@@ -245,30 +245,34 @@ public class WriteMcpTool
             var projectFile = fileSystem.getProjectFile(project, path);
 
             // Check if the file can be edited using editingSupport
-            if (!editingSupport.canEdit(projectFile))
+            if (!editingSupport.canEdit(projectFile.orElse(null)))
             {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
+                var filePathForError = projectFile.map(f -> f.getProjectRelativePath().toOSString()).orElse(path);
                 return messageFactory.createError(this, call, "The file \"" + filePathForError
                     + "\" cannot be created. Writing is not supported for this file type or the location is restricted.");
             }
 
-            if (projectFile.exists())
+            if (projectFile.isPresent() && projectFile.get().exists())
             {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
+                var filePathForError = projectFile.map(f -> f.getProjectRelativePath().toOSString()).orElse(path);
                 return messageFactory.createError(this, call, "The file \"" + filePathForError
                     + "\" already exists. Use the `" + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
             }
 
+            // Since the file doesn't exist (or is not in the project), we need to create it
+            // Re-get the file to ensure we have a proper IFile reference for creation
+            var actualFile = projectFile.orElse(project.getFile(new org.eclipse.core.runtime.Path(path)));
+
             try
             {
-                createParentFolders(projectFile, monitor);
+                createParentFolders(actualFile, monitor);
                 try (ByteArrayInputStream source = new ByteArrayInputStream(data))
                 {
-                    projectFile.create(source, true, monitor);
-                    projectFile.refreshLocal(IResource.DEPTH_ZERO, monitor);
-                    if (projectFile.getParent() != null)
+                    actualFile.create(source, true, monitor);
+                    actualFile.refreshLocal(IResource.DEPTH_ZERO, monitor);
+                    if (actualFile.getParent() != null)
                     {
-                        projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
+                        actualFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
                     }
                 }
             }
@@ -278,10 +282,10 @@ public class WriteMcpTool
             }
 
             var response = new StringBuilder();
-            var displayPath = projectFile.getProjectRelativePath().toPortableString();
+            var displayPath = actualFile.getProjectRelativePath().toPortableString();
             response.append("File written: \"").append(displayPath).append("\".\n");
 
-            var fileExt = projectFile.getFileExtension();
+            var fileExt = actualFile.getFileExtension();
             if (fileExt != null)
             {
                 fileExt = fileExt.toLowerCase();
@@ -289,7 +293,7 @@ public class WriteMcpTool
                 {
                 case "bsl":
                     response.append("ACTION REQUIRED: check that corresponding \"")
-                        .append(projectFile.getProjectRelativePath().removeFileExtension().addFileExtension("mdo").toPortableString())
+                        .append(actualFile.getProjectRelativePath().removeFileExtension().addFileExtension("mdo").toPortableString())
                         .append("\" file exists or create it.\n");
                     break;
                 case "mdo":

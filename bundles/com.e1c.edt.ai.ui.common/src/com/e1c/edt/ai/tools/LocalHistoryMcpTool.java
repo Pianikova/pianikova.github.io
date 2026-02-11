@@ -189,15 +189,17 @@ public class LocalHistoryMcpTool
 			}
 
 			var file = fileSystem.getProjectFile(project, filePath);
-			if (!file.exists())
+			if (!file.isPresent())
 			{
 				throw new RuntimeException("The file \"" + filePath + "\" does not exist within the IDE project context. "
 					+ "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
 			}
 
+			var actualFile = file.get();
+
 			try
 			{
-				var historyEntries = localHistoryUtils.getLocalHistory(file, maxEntries);
+				var historyEntries = localHistoryUtils.getLocalHistory(actualFile, maxEntries);
 				var lastIndex = historyEntries.size() - 1;
 				for (int i = 0; i < historyEntries.size(); i++)
 				{

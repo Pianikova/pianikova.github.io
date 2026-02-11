@@ -307,13 +307,15 @@ public class SetMarkersMcpTool
 
         // Get file from absolute path using IFileSystem
         var file = fileSystem.getProjectFile(project, markerReq.absoluteFilePath);
-        if (file == null || !file.exists())
+        if (!file.isPresent())
         {
             throw new IllegalArgumentException("File not found: " + markerReq.absoluteFilePath);
         }
 
+        var actualFile = file.get();
+
         // Calculate char positions from target_content using ReadMcpTool approach
-        var positions = calculateCharPositions(file, markerReq.startLine, markerReq.markerHighlightedText);
+        var positions = calculateCharPositions(actualFile, markerReq.startLine, markerReq.markerHighlightedText);
         markerReq.lineOffset = positions[0];
         markerReq.charStart = positions[1];
         markerReq.charEnd = positions[2];
@@ -329,7 +331,7 @@ public class SetMarkersMcpTool
         {
             markerTypeId = MarkerType.getAiMarkerTypeId(markerReq.severity);
         }
-        var marker = file.createMarker(markerTypeId);
+        var marker = actualFile.createMarker(markerTypeId);
         markerReq.id = marker.getId();
         setMarkerAttributes(marker, call, markerReq, markerType);
         return marker;

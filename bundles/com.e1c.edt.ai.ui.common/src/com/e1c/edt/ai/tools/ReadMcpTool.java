@@ -232,10 +232,18 @@ public class ReadMcpTool
             }
 
             var projectFile = fileSystem.getProjectFile(project, path);
-            var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
+            if (!projectFile.isPresent())
+            {
+                return messageFactory.createError(this, call,
+                    "The file \"" + path + "\" does not exist within the IDE project context. "
+                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
+            }
+
+            var actualFile = projectFile.get();
+            var optionalDocument = contentSourceProvider.getFileDocument(actualFile);
             if (optionalDocument.isEmpty())
             {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
+                var filePathForError = actualFile.getProjectRelativePath().toOSString();
                 return messageFactory.createError(this, call,
                     "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
                         + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");

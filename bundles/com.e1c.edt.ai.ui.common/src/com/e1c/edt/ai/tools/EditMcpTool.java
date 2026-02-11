@@ -270,16 +270,25 @@ public class EditMcpTool
             var projectFile = fileSystem.getProjectFile(project, path);
 
             // Check if the file can be edited using editingSupport
-            if (!editingSupport.canEdit(projectFile))
+            if (!editingSupport.canEdit(projectFile.orElse(null)))
             {
                 return messageFactory.createError(this, call, "The file \"" + path
                     + "\" cannot be edited. Editing is not supported for this file type or the file is locked.");
             }
 
-            var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
+            if (!projectFile.isPresent())
+            {
+                return messageFactory.createError(this, call,
+                    "The file \"" + path + "\" does not exist within the IDE project context. "
+                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
+                        + "Use the `" + WriteMcpTool.TOOL_NAME + "` tool to create a new file.");
+            }
+
+            var actualFile = projectFile.get();
+            var optionalDocument = contentSourceProvider.getFileDocument(actualFile);
             if (optionalDocument.isEmpty())
             {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
+                var filePathForError = actualFile.getProjectRelativePath().toOSString();
                 return messageFactory.createError(this, call,
                     "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
                         + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
@@ -326,7 +335,7 @@ public class EditMcpTool
             }
 
             var response = new StringBuilder();
-            var displayPath = projectFile.getProjectRelativePath().toPortableString();
+            var displayPath = actualFile.getProjectRelativePath().toPortableString();
             response.append("File updated: \"").append(displayPath).append("\".\n");
             response.append(
                 "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");

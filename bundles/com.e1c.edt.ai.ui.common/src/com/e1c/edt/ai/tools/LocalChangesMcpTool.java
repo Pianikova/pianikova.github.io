@@ -249,11 +249,13 @@ public class LocalChangesMcpTool
 			}
 
 			var file = fileSystem.getProjectFile(project, filePath);
-			if (!file.exists())
+			if (!file.isPresent())
 			{
 				throw new RuntimeException("The file \"" + filePath + "\" does not exist within the IDE project context. "
 					+ "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
 			}
+
+			var actualFile = file.get();
 
 			try
 			{
@@ -287,7 +289,7 @@ public class LocalChangesMcpTool
 
 				var historyEntries =
 					needsHistoryEntries(fromSelector) || needsHistoryEntries(toSelector)
-						? localHistoryUtils.getLocalHistory(file, maxEntries)
+						? localHistoryUtils.getLocalHistory(actualFile, maxEntries)
 						: null;
 				if (historyEntries != null)
 				{
@@ -302,11 +304,11 @@ public class LocalChangesMcpTool
 
 				var historyStates =
 					needsHistoryStates(fromSelector) || needsHistoryStates(toSelector)
-						? getHistoryStates(file, maxEntries)
+						? getHistoryStates(actualFile, maxEntries)
 						: null;
 
-				var fromRevision = resolveRevision(file, fromSelector, historyEntries, historyStates);
-				var toRevision = resolveRevision(file, toSelector, historyEntries, historyStates);
+				var fromRevision = resolveRevision(actualFile, fromSelector, historyEntries, historyStates);
+				var toRevision = resolveRevision(actualFile, toSelector, historyEntries, historyStates);
 
 				var oldContent = fromRevision.getContent();
 				var newContent = toRevision.getContent();
