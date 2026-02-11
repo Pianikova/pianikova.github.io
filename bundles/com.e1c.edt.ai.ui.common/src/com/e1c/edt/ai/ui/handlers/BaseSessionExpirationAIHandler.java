@@ -8,6 +8,7 @@ import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
@@ -20,6 +21,8 @@ public class BaseSessionExpirationAIHandler
     IChat chat;
     @Inject
     ISettings settings;
+    @Inject
+    ITraceScenario traceScenario;
 
     public BaseSessionExpirationAIHandler()
     {
@@ -35,7 +38,7 @@ public class BaseSessionExpirationAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        // Session expiration logic here
+        traceScenario.EpireSession(2);
         return null;
     }
 }

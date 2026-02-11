@@ -4,12 +4,17 @@
 package com.e1c.edt.ai.assistent;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Optional;
+
+import javax.net.ssl.SSLSession;
 
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.SessionErrorResponse;
@@ -23,16 +28,19 @@ class HttpLog
     private final ILog log;
     private final IJson json;
     private final IStateService stateService;
+    private final ITraceScenario traceScenario;
 
     @Inject
-    public HttpLog(ILog log, IStateService stateService, IJson json)
+    public HttpLog(ILog log, IStateService stateService, IJson json, ITraceScenario traceScenario)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(traceScenario);
         this.json = json;
         this.log = log;
         this.stateService = stateService;
+        this.traceScenario = traceScenario;
     }
 
     @Override
@@ -89,6 +97,12 @@ class HttpLog
         boolean handleError)
     {
         Preconditions.checkNotNull(response);
+
+        if (traceScenario.isSessionExpired())
+        {
+            response = createSessionExpiredResponse(response);
+        }
+
         var statusCode = response.statusCode();
         if (statusCode >= 200 && statusCode < 300)
         {
@@ -99,15 +113,16 @@ class HttpLog
 
             if (detailed)
             {
+                final HttpResponse<T> currentResponse = response;
                 if (stopwatch.elapsed().toMillis() < 1000)
                 {
-                    log.trace(TracingSources.API_CALLS, createHeader("AI response", response.uri(), ref),
-                        () -> createTrace(response, stopwatch, statusCode));
+                    log.trace(TracingSources.API_CALLS, createHeader("AI response", currentResponse.uri(), ref),
+                        () -> createTrace(currentResponse, stopwatch, statusCode));
                 }
                 else
                 {
-                    log.warning(createHeader("AI response", response.uri(), ref),
-                        () -> createTrace(response, stopwatch, statusCode));
+                    log.warning(createHeader("AI response", currentResponse.uri(), ref),
+                        () -> createTrace(currentResponse, stopwatch, statusCode));
                 }
             }
         }
@@ -171,6 +186,70 @@ class HttpLog
         sb.append(System.lineSeparator());
         sb.append(response.body());
         return sb.toString();
+    }
+
+    private <T> HttpResponse<T> createReplacementResponse(HttpResponse<T> originalResponse, int statusCode, String body)
+    {
+        return new HttpResponse<>()
+        {
+            @Override
+            public int statusCode()
+            {
+                return statusCode;
+            }
+
+            @Override
+            public HttpRequest request()
+            {
+                return originalResponse.request();
+            }
+
+            @Override
+            public Optional<HttpResponse<T>> previousResponse()
+            {
+                return originalResponse.previousResponse();
+            }
+
+            @Override
+            public java.net.http.HttpHeaders headers()
+            {
+                return originalResponse.headers();
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public T body()
+            {
+                return (T)body;
+            }
+
+            @Override
+            public URI uri()
+            {
+                return originalResponse.uri();
+            }
+
+            @Override
+            public HttpClient.Version version()
+            {
+                return originalResponse.version();
+            }
+
+            @Override
+            public Optional<SSLSession> sslSession()
+            {
+                return Optional.empty();
+            }
+        };
+    }
+
+    private <T> HttpResponse<T> createSessionExpiredResponse(HttpResponse<T> originalResponse)
+    {
+        var sessionExpiredError = new SessionErrorResponse();
+        sessionExpiredError.error = "Session expired"; //$NON-NLS-1$
+        sessionExpiredError.errorType = "invalid_session"; //$NON-NLS-1$
+        var errorBody = json.serialize(sessionExpiredError);
+        return createReplacementResponse(originalResponse, 403, errorBody);
     }
 
     @Override
