@@ -317,9 +317,12 @@ public class MarkdownUtils implements IMarkdownUtils
         // Generate link using ILinkProvider
         String link = linkProvider.file(path);
 
-        // Create markdown link with styled file name
-        // Format: [file name](link)
-        return String.format("[%s](%s)", fileName, link);
+        // Escape the path and link for HTML attributes (tooltip and href)
+        String escapedPath = escapeHtml(path);
+        String escapedLink = escapeHtml(link);
+
+        // Create HTML link with title attribute (tooltip on hover)
+        return String.format("<a href=\"%s\" title=\"%s\">%s</a>", escapedLink, escapedPath, fileName);
     }
 
     @SuppressWarnings("nls")
