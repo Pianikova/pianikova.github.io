@@ -317,12 +317,109 @@ public class MarkdownUtils implements IMarkdownUtils
         // Generate link using ILinkProvider
         String link = linkProvider.file(path);
 
-        // Escape the path and link for HTML attributes (tooltip and href)
+        // Escape the path and link for HTML attributes
         String escapedPath = escapeHtml(path);
         String escapedLink = escapeHtml(link);
+        String escapedFileName = escapeHtml(fileName);
 
-        // Create HTML link with title attribute (tooltip on hover)
-        return String.format("<a href=\"%s\" title=\"%s\">%s</a>", escapedLink, escapedPath, fileName);
+        // Generate unique ID for the menu
+        String menuId = "file-menu-" + System.identityHashCode(path);
+
+        // Create HTML link with popup menu on hover
+        var result = new StringBuilder();
+        result.append("<span class=\"file-link-container\" style=\"position: relative; display: inline-block;\">");
+
+        // Build popup menu HTML (positioned absolutely within the relative span)
+        result.append("<div id=\"").append(menuId).append("\" class=\"file-link-popup\"");
+        result.append(" onmouseenter=\"if(window.filePopupTimeout) clearTimeout(window.filePopupTimeout);\"");
+        result.append(" onmouseleave=\"window.filePopupTimeout = setTimeout(function(){");
+        result.append(" document.getElementById('").append(menuId).append("').style.display='none';");
+        result.append(" }, 200);\"");
+        result
+            .append(" style=\"display: none; position: absolute; left: 0; top: 100%; margin-top: 4px; z-index: 1000;");
+        result.append(" background: #d0d0d0;");
+        result.append(" border: 1px solid var(--vscode-panel-border, #454545);");
+        result.append(" border-radius: 4px; padding: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);\">");
+
+        // Copy absolute path button
+        result.append("<button data-copy-text=\"").append(escapedPath).append("\" ");
+        result.append(" onclick=\"(function(btn){var txt=btn.getAttribute('data-copy-text');");
+        result.append("event.stopPropagation();");
+        result.append("var txtArea=document.createElement('textarea');");
+        result.append("txtArea.value=txt;txtArea.style.position='fixed';txtArea.style.opacity='0';");
+        result.append("document.body.appendChild(txtArea);txtArea.select();");
+        result.append(
+            "try{document.execCommand('copy');console.log('Copied:',txt);}catch(e){console.error('Copy failed:',e);}");
+        result.append("document.body.removeChild(txtArea);");
+        result.append("var menu=btn.closest('.file-link-popup');");
+        result.append("if(menu)menu.style.display='none';");
+        result.append("})(this);\" ");
+        result.append(" style=\"display: block; width: 100%; text-align: left; padding: 6px 12px;");
+        result.append(" background: transparent; border: none; color: #000000;");
+        result.append(" cursor: pointer; border-radius: 2px; margin-bottom: 2px;\" ");
+        result.append(" onmouseover=\"this.style.background='#2a2d2e';this.style.color='#ffffff'\" ");
+        result.append(" onmouseout=\"this.style.background='transparent';this.style.color='#000000'\">");
+        result.append(escapeHtml("📋 " + Messages.FileMenu_CopyAbsolutePath)).append("</button>");
+
+        // Copy file name button
+        result.append("<button data-copy-text=\"").append(escapedFileName).append("\" ");
+        result.append(" onclick=\"(function(btn){var txt=btn.getAttribute('data-copy-text');");
+        result.append("event.stopPropagation();");
+        result.append("var txtArea=document.createElement('textarea');");
+        result.append("txtArea.value=txt;txtArea.style.position='fixed';txtArea.style.opacity='0';");
+        result.append("document.body.appendChild(txtArea);txtArea.select();");
+        result.append(
+            "try{document.execCommand('copy');console.log('Copied:',txt);}catch(e){console.error('Copy failed:',e);}");
+        result.append("document.body.removeChild(txtArea);");
+        result.append("var menu=btn.closest('.file-link-popup');");
+        result.append("if(menu)menu.style.display='none';");
+        result.append("})(this);\" ");
+        result.append(" style=\"display: block; width: 100%; text-align: left; padding: 6px 12px;");
+        result.append(" background: transparent; border: none; color: #000000;");
+        result.append(" cursor: pointer; border-radius: 2px; margin-bottom: 2px;\" ");
+        result.append(" onmouseover=\"this.style.background='#2a2d2e';this.style.color='#ffffff'\" ");
+        result.append(" onmouseout=\"this.style.background='transparent';this.style.color='#000000'\">");
+        result.append(escapeHtml("📄 " + Messages.FileMenu_CopyFileName)).append("</button>");
+
+        // Copy link button
+        result.append("<button data-copy-text=\"").append(escapedLink).append("\" ");
+        result.append(" onclick=\"(function(btn){var txt=btn.getAttribute('data-copy-text');");
+        result.append("event.stopPropagation();");
+        result.append("var txtArea=document.createElement('textarea');");
+        result.append("txtArea.value=txt;txtArea.style.position='fixed';txtArea.style.opacity='0';");
+        result.append("document.body.appendChild(txtArea);txtArea.select();");
+        result.append(
+            "try{document.execCommand('copy');console.log('Copied:',txt);}catch(e){console.error('Copy failed:',e);}");
+        result.append("document.body.removeChild(txtArea);");
+        result.append("var menu=btn.closest('.file-link-popup');");
+        result.append("if(menu)menu.style.display='none';");
+        result.append("})(this);\" ");
+        result.append(" style=\"display: block; width: 100%; text-align: left; padding: 6px 12px;");
+        result.append(" background: transparent; border: none; color: #000000;");
+        result.append(" cursor: pointer; border-radius: 2px;\" ");
+        result.append(" onmouseover=\"this.style.background='#2a2d2e';this.style.color='#ffffff'\" ");
+        result.append(" onmouseout=\"this.style.background='transparent';this.style.color='#000000'\">");
+        result.append(escapeHtml("🔗 " + Messages.FileMenu_CopyLink)).append("</button>");
+
+        result.append("</div>");
+
+        // The link itself
+        result.append("<a href=\"").append(escapedLink).append("\" title=\"").append(escapedPath).append("\"");
+        result.append(" onmouseenter=\"");
+        result.append("  var menu = document.getElementById('").append(menuId).append("');");
+        result.append("  if(menu) menu.style.display='block';");
+        result.append("\"");
+        result.append(" onmouseleave=\"window.filePopupTimeout = setTimeout(function(){");
+        result.append("  var menu = document.getElementById('").append(menuId).append("');");
+        result.append("  if(menu) menu.style.display='none';");
+        result.append("}, 200);\"");
+        result.append(">");
+        result.append(escapedFileName);
+        result.append("</a>");
+
+        result.append("</span>");
+
+        return result.toString();
     }
 
     @SuppressWarnings("nls")
