@@ -9,8 +9,6 @@ public interface IStateService
 {
     void setState(ServiceState serviceState);
 
-    // void setState(ActionState actionState);
-
     AutoCloseable busy();
 
     void refresh();

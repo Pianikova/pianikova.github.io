@@ -125,8 +125,18 @@ class HttpLog
                     var errorResponseOpt = json.deserialize(response.body().toString(), SessionErrorResponse.class);
                     if (errorResponseOpt.isPresent()) {
                         var errorResponse = errorResponseOpt.get();
-                        if (errorResponse.errorType != null && errorResponse.errorType.equals("token_not_found")) {
-                            stateService.setState(ServiceState.TOKEN_FAILED);
+                        if (errorResponse.errorType != null)
+                        {
+                            switch (errorResponse.errorType.toLowerCase())
+                            {
+                            case "token_not_found":
+                                stateService.setState(ServiceState.TOKEN_FAILED);
+                                break;
+
+                            case "invalid_session":
+                                stateService.setState(ServiceState.SESSION_EXPIRED);
+                                break;
+                            }
                         }
                     }
                     break;

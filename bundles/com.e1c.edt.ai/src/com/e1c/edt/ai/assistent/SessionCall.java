@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.e1c.edt.ai.AIState;
@@ -28,6 +29,8 @@ public class SessionCall
     implements ISessionCall
 {
     private static final AIState STATE_CHANGED = new AIState(ServiceState.SETTINGS_CHANGED, ActionState.INACTIVE);
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long INITIAL_RETRY_DELAY_SECONDS = 5;
     private final ILog log;
     private final IHttpLog httpLog;
     private final IStateListener stateListener;
@@ -61,7 +64,6 @@ public class SessionCall
         return result;
     }
 
-    @SuppressWarnings("nls")
     private <T> void callInternal(ProjectId projectId, ICancellationToken cancellationToken,
         Function<Optional<Session>, CompletableFuture<HttpResponse<T>>> taskSupplier,
         CompletableFuture<HttpResponse<T>> result)
@@ -69,44 +71,7 @@ public class SessionCall
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> result.cancel(true));
         var stopwatch = Stopwatch.createStarted();
         var busyToken = stateService.busy();
-        sessionService.getSessionAsync(projectId).thenCompose(session -> {
-            return taskSupplier.apply(session).whenComplete((response, throwable) -> {
-                if (throwable == null)
-                {
-                    httpLog.response(response, cancellationToken.toString(), stopwatch, true, false);
-                    var statusCode = response.statusCode();
-                    if (statusCode >= 400 && statusCode < 500)
-                    {
-                        stateListener.onStateChange(STATE_CHANGED);
-                        log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
-                            () -> "Retrying request due to unexpected response status code: " + statusCode);
-                        sessionService.getSessionAsync(projectId).thenCompose(newSesssion -> {
-                            return taskSupplier.apply(session);
-                        }).whenComplete((anotherOneResponse, error) -> {
-                            if (error == null)
-                            {
-                                httpLog.response(anotherOneResponse, cancellationToken.toString(), stopwatch, true,
-                                    true);
-                                result.complete(anotherOneResponse);
-                            }
-                            else
-                            {
-                                result.completeExceptionally(error);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        result.complete(response);
-                    }
-                }
-                else
-                {
-                    result.completeExceptionally(
-                        throwable instanceof CompletionException ? throwable.getCause() : throwable);
-                }
-            });
-        })
+        executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result, 0)
             .whenComplete((r, error) -> {
                 try
                 {
@@ -126,7 +91,10 @@ public class SessionCall
                             httpLog.error(error, cancellationToken.toString());
                         }
 
-                        result.completeExceptionally(error);
+                        if (!result.isDone())
+                        {
+                            result.completeExceptionally(error);
+                        }
                     }
                 }
                 finally
@@ -141,6 +109,55 @@ public class SessionCall
                     }
                 }
             });
+    }
+
+    @SuppressWarnings("nls")
+    private <T> CompletableFuture<HttpResponse<T>> executeWithRetry(ProjectId projectId,
+        ICancellationToken cancellationToken,
+        Function<Optional<Session>, CompletableFuture<HttpResponse<T>>> taskSupplier, Stopwatch stopwatch,
+        CompletableFuture<HttpResponse<T>> result, int attemptCount)
+    {
+        return sessionService.getSessionAsync(projectId).thenCompose(session -> {
+            return taskSupplier.apply(session).whenComplete((response, throwable) -> {
+                if (throwable == null)
+                {
+                    var statusCode = response.statusCode();
+                    if (statusCode >= 400 && statusCode < 500 && attemptCount < MAX_RETRY_ATTEMPTS)
+                    {
+                        int nextAttempt = attemptCount + 1;
+                        long delaySeconds = calculateRetryDelay(attemptCount);
+
+                        log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
+                            () -> "Retrying request due to unexpected response status code. Attempt: " + nextAttempt
+                                + "/" + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
+
+                        CompletableFuture.delayedExecutor(delaySeconds, TimeUnit.SECONDS).execute(() -> {
+                            executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result,
+                                nextAttempt);
+                        });
+                    }
+                    else
+                    {
+                        if (statusCode >= 400 && statusCode < 500)
+                        {
+                            stateListener.onStateChange(STATE_CHANGED);
+                        }
+                        httpLog.response(response, cancellationToken.toString(), stopwatch, true, attemptCount > 0);
+                        result.complete(response);
+                    }
+                }
+                else
+                {
+                    result.completeExceptionally(
+                        throwable instanceof CompletionException ? throwable.getCause() : throwable);
+                }
+            });
+        });
+    }
+
+    private long calculateRetryDelay(int attemptCount)
+    {
+        return INITIAL_RETRY_DELAY_SECONDS * (1L << attemptCount);
     }
 
     private boolean isCancellationException(Throwable error)
