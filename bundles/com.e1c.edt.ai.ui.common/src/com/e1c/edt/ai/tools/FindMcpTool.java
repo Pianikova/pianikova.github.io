@@ -156,13 +156,7 @@ public class FindMcpTool
         {
             // Create detailed request markdown with search parameters
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(MessageFormat.format(Messages.SearchTitleTemplate, searchQuery))
-                .append("\n\n") //$NON-NLS-1$
-                .append(Messages.SearchQuery)
-                .append(": ") //$NON-NLS-1$
-                .append("`") //$NON-NLS-1$
-                .append(markdownUtils.escapeForMarkdown(searchQuery))
-                .append("`"); //$NON-NLS-1$
+            requestMarkdown.append(MessageFormat.format(Messages.SearchTitleTemplate, searchQuery));
 
             // Add file patterns only for content search (not for file name search)
             if (!isFileNameSearch)

@@ -242,7 +242,7 @@ public class GitCommitsMcpTool
 				for (var commit : commitInfos)
 				{
 					responseMarkdown.append("### **") //$NON-NLS-1$
-						.append(markdownUtils.createStyledText(commit.shortHash, TextColor.BLUE, FontWeight.BOLD))
+                        .append(markdownUtils.createStyledText(commit.shortHash, TextColor.BLUE, FontWeight.NORMAL))
 						.append("** - ") //$NON-NLS-1$
 						.append(markdownUtils.escapeForMarkdown(commit.message))
 						.append("\n\n"); //$NON-NLS-1$
