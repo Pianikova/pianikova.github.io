@@ -48,7 +48,8 @@ public class SetMarkersMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"project_name\": \"MyProject\",\n"
+        + "  // project_name is optional - can be determined from absolute file paths\n"
+        + "  // \"project_name\": \"MyProject\",\n"
         + "  \"markers\": [\n"
         + "    {\n"
         + "      \"type\": \"bookmark\",\n"
@@ -184,11 +185,6 @@ public class SetMarkersMcpTool
         }
 
         var request = optionalRequest.get();
-        if (request.projectName == null || request.projectName.isBlank())
-        {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Project name is required"));
-        }
 
         if (request.markers == null || request.markers.isEmpty())
         {
@@ -198,15 +194,31 @@ public class SetMarkersMcpTool
 
         return CompletableFuture.supplyAsync(() -> {
             IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-            IProject project = root.getProject(request.projectName);
+
+            // Determine project name - either from request or auto-determine from file path
+            String effectiveProjectName = request.projectName;
+            if (effectiveProjectName == null || effectiveProjectName.isBlank())
+            {
+                // Auto-determine project from first marker's file path
+                var firstMarker = request.markers.get(0);
+                effectiveProjectName = fileSystem.determineProjectName(firstMarker.absoluteFilePath);
+                if (effectiveProjectName == null)
+                {
+                    return messageFactory.createError(this, call,
+                        "Cannot determine project from file path: " + firstMarker.absoluteFilePath
+                            + ". Please specify project_name explicitly.");
+                }
+            }
+
+            IProject project = root.getProject(effectiveProjectName);
             if (!project.exists())
             {
-                return messageFactory.createError(this, call, "Project not found: " + request.projectName);
+                return messageFactory.createError(this, call, "Project not found: " + effectiveProjectName);
             }
 
             if (!project.isOpen())
             {
-                return messageFactory.createError(this, call, "Project is closed: " + request.projectName);
+                return messageFactory.createError(this, call, "Project is closed: " + effectiveProjectName);
             }
 
             var markersSet = 0;
@@ -259,7 +271,7 @@ public class SetMarkersMcpTool
         throws CoreException, IllegalArgumentException, BadLocationException
     {
         // Validate required fields
-        if (markerReq.relativeFilePath == null || markerReq.relativeFilePath.isBlank())
+        if (markerReq.absoluteFilePath == null || markerReq.absoluteFilePath.isBlank())
         {
             throw new IllegalArgumentException("path is required");
         }
@@ -294,10 +306,10 @@ public class SetMarkersMcpTool
         }
 
         // Get file from absolute path using IFileSystem
-        var file = fileSystem.getProjectFile(project, markerReq.relativeFilePath);
+        var file = fileSystem.getProjectFile(project, markerReq.absoluteFilePath);
         if (file == null || !file.exists())
         {
-            throw new IllegalArgumentException("File not found: " + markerReq.relativeFilePath);
+            throw new IllegalArgumentException("File not found: " + markerReq.absoluteFilePath);
         }
 
         // Calculate char positions from target_content using ReadMcpTool approach
@@ -544,10 +556,10 @@ public class SetMarkersMcpTool
         parameters.type = "object";
         var properties = new HashMap<String, McpToolCallProperty>();
 
-        // Project name
+        // Project name (optional - can be determined from absolute file paths)
         var projectNameProp = new McpToolCallProperty();
         projectNameProp.type = "string";
-        projectNameProp.description = "Target project name";
+        projectNameProp.description = "Target project name. Optional - can be determined from absolute file paths.";
         properties.put("project_name", projectNameProp);
 
         // Markers array
@@ -560,7 +572,7 @@ public class SetMarkersMcpTool
         properties.put("markers", markersProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("project_name", "markers");
+        parameters.required = Arrays.asList("markers");
         spec.function.parameters = parameters;
 
         return spec;
@@ -584,7 +596,7 @@ public class SetMarkersMcpTool
         public String projectName;
 
         @SerializedName("path")
-        public String relativeFilePath;
+        public String absoluteFilePath;
 
         @SerializedName("message")
         public String message;
