@@ -201,6 +201,11 @@
               id="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
               name="%command.label.addfilestochat">
         </command>
+        <command
+              categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+              id="com.e1c.edt.ai.ui.commands.openChatView.ai"
+              name="%command.name.openChatView">
+        </command>
     </extension>
 
     <extension point="org.eclipse.ui.bindings">
@@ -275,6 +280,10 @@
         <handler
               class="com.e1c.edt.ai.ui.handlers.AddFilesToChatHandler"
               commandId="com.e1c.edt.ai.ui.commands.addfilestochat.ai">
+        </handler>
+        <handler
+              class="com.e1c.edt.ai.ui.handlers.OpenChatViewHandler"
+              commandId="com.e1c.edt.ai.ui.commands.openChatView.ai">
         </handler>
 
     </extension>
@@ -390,6 +399,20 @@
                  label="%command.label.addfilestochat"
                  style="push">
            </command>
+        </menuContribution>
+        <menuContribution
+              allPopups="false"
+              locationURI="toolbar:org.eclipse.ui.main.toolbar">
+           <toolbar
+                 id="com.e1c.edt.ai.ui.chatView.ai">
+              <command
+                    commandId="com.e1c.edt.ai.ui.commands.openChatView.ai"
+                    icon="icons/obj16/ai.png"
+                    label="%command.name.openChatView"
+                    style="push"
+                    tooltip="%command.name.openChatView">
+              </command>
+           </toolbar>
         </menuContribution>
     </extension>
     
