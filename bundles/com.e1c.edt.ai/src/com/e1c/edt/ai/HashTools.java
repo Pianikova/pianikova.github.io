@@ -17,6 +17,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import java.io.FileNotFoundException;
+
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.text.IDocument;
@@ -132,6 +134,11 @@ public class HashTools
     public MessageDigest compute(IFile file, CharBuffer buffer)
         throws UnsupportedEncodingException, IOException, CoreException
     {
+        if (!file.getLocation().toFile().exists())
+        {
+            throw new FileNotFoundException("File not found on disk: " + file.getLocation().toOSString()); //$NON-NLS-1$
+        }
+
         Charset charset;
         try
         {
