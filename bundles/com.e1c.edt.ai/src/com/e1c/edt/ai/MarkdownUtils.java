@@ -18,11 +18,13 @@ public class MarkdownUtils implements IMarkdownUtils
 {
 
     private final ILinkProvider linkProvider;
+    private final IFiles files;
 
     @Inject
-    public MarkdownUtils(ILinkProvider linkProvider)
+    public MarkdownUtils(ILinkProvider linkProvider, IFiles files)
     {
         this.linkProvider = linkProvider;
+        this.files = files;
     }
 	/**
 	 * Escapes content for markdown display by replacing backticks
@@ -310,9 +312,10 @@ public class MarkdownUtils implements IMarkdownUtils
             return "";
         }
 
-        // Extract file name from path
+        // Get displayed file name using IFiles
         java.io.File file = new java.io.File(path);
-        String fileName = file.getName();
+        String displayedFileName = files.getDisplayedFileName(file);
+        String fileName = file.getName(); // Simple file name for copy operation
 
         // Generate link using ILinkProvider
         String link = linkProvider.file(path);
@@ -320,7 +323,8 @@ public class MarkdownUtils implements IMarkdownUtils
         // Escape the path and link for HTML attributes
         String escapedPath = escapeHtml(path);
         String escapedLink = escapeHtml(link);
-        String escapedFileName = escapeHtml(fileName);
+        String escapedFileName = escapeHtml(displayedFileName); // Use displayed name for link
+        String escapedSimpleFileName = escapeHtml(fileName); // Simple name for copy button
 
         // Generate unique ID for the menu
         String menuId = "file-menu-" + System.identityHashCode(path);
@@ -362,7 +366,7 @@ public class MarkdownUtils implements IMarkdownUtils
         result.append(escapeHtml("📋 " + Messages.FileMenu_CopyAbsolutePath)).append("</button>");
 
         // Copy file name button
-        result.append("<button data-copy-text=\"").append(escapedFileName).append("\" ");
+        result.append("<button data-copy-text=\"").append(escapedSimpleFileName).append("\" ");
         result.append(" onclick=\"(function(btn){var txt=btn.getAttribute('data-copy-text');");
         result.append("event.stopPropagation();");
         result.append("var txtArea=document.createElement('textarea');");

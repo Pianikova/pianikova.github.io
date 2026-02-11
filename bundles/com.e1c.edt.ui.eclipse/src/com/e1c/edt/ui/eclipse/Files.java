@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ui.eclipse;
 
+import java.io.File;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
@@ -19,4 +20,14 @@ public class Files
         return Optional.empty();
     }
 
+    @Override
+    public String getDisplayedFileName(File file)
+    {
+        if (file == null)
+        {
+            return ""; //$NON-NLS-1$
+        }
+
+        return file.getName();
+    }
 }

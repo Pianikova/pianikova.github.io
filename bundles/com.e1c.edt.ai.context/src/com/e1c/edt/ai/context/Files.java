@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.context;
 
+import java.io.File;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
@@ -41,5 +42,48 @@ public class Files
         }
 
         return Optional.empty();
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public String getDisplayedFileName(File file)
+    {
+        if (file == null)
+        {
+            return "";
+        }
+
+        String path = file.getPath();
+        String fileName = file.getName();
+
+        // Find the src directory in the path
+        int srcIndex = path.indexOf("src");
+        if (srcIndex > 0)
+        {
+            // Get the path after src (exclude "src" itself)
+            String afterSrc = path.substring(srcIndex + 3); // +3 to skip "src"
+
+            // Clean up path separators and leading slashes
+            String relativePath = afterSrc.replace('\\', '/');
+            while (relativePath.startsWith("/"))
+            {
+                relativePath = relativePath.substring(1);
+            }
+
+            // Check if the relative path already contains the file name
+            if (!relativePath.isEmpty() && relativePath.endsWith(fileName))
+            {
+                // Already contains the file name, just return the relative path
+                return relativePath;
+            }
+            else if (!relativePath.isEmpty())
+            {
+                // Doesn't contain the file name, add it
+                return relativePath + "/" + fileName;
+            }
+        }
+
+        // If src not found, return just the file name
+        return fileName;
     }
 }
