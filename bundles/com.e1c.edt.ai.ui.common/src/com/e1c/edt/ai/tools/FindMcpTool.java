@@ -404,7 +404,7 @@ public class FindMcpTool
                     for (var element : projectElements)
                     {
                         responseMarkdown.append("- **")
-                            .append(markdownUtils.escapeForMarkdown(element.path))
+                            .append(markdownUtils.formatFilePath(element.path))
                             .append("**");
 
                         if (element.lineNumber > 0)
@@ -694,7 +694,7 @@ public class FindMcpTool
             for (var element : allElements)
             {
                 responseMarkdown.append("- **") //$NON-NLS-1$
-                    .append(markdownUtils.escapeForMarkdown(element.path))
+                    .append(markdownUtils.formatFilePath(element.path))
                     .append("**\n"); //$NON-NLS-1$
             }
 
