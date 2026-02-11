@@ -10,6 +10,7 @@ import org.eclipse.jface.text.IDocument;
 
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ILinkProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -18,22 +19,19 @@ import com.google.inject.Inject;
  */
 public class EdtLinkHandler implements IEdtLinkHandler
 {
-	private static final String EDT_FILE_PROTOCOL = "edt-file://"; //$NON-NLS-1$
-    private static final String POSTFIX_SEPARATOR = ":"; //$NON-NLS-1$
-	private static final String POSITION_SEPARATOR = ":"; //$NON-NLS-1$
-	private static final String COLON_ESCAPE = "%3A"; //$NON-NLS-1$
-	private static final String COLON_CHAR = ":"; //$NON-NLS-1$
-
 	private final IUI ui;
 	private final ILog log;
+	private final ILinkProvider linkProvider;
 
 	@Inject
-	public EdtLinkHandler(IUI ui, ILog log)
+	public EdtLinkHandler(IUI ui, ILog log, ILinkProvider linkProvider)
 	{
 		Preconditions.checkNotNull(ui);
 		Preconditions.checkNotNull(log);
+		Preconditions.checkNotNull(linkProvider);
 		this.ui = ui;
 		this.log = log;
+		this.linkProvider = linkProvider;
 	}
 
     @SuppressWarnings("nls")
@@ -46,13 +44,11 @@ public class EdtLinkHandler implements IEdtLinkHandler
 		}
 
 		var normalizedPath = path.replace('\\', '/');
-		// Escape colons in the path to avoid conflicts with position separator
-		normalizedPath = normalizedPath.replace(COLON_CHAR, COLON_ESCAPE);
 
 		var document = ctx.getDocument();
 		if (document == null)
 		{
-			return EDT_FILE_PROTOCOL + normalizedPath;
+			return linkProvider.file(normalizedPath);
 		}
 
 		var hasSelection = !ctx.getText().equals(ctx.getSource());
@@ -64,21 +60,19 @@ public class EdtLinkHandler implements IEdtLinkHandler
 				var selectionFinish = selectionStart + ctx.getText().length();
 				var startPosition = getPosition(document, selectionStart);
 				var endPosition = getPosition(document, selectionFinish);
-				return String.format("%s%s%s%d%s%d%s%d%s%d", EDT_FILE_PROTOCOL, normalizedPath,
-					POSTFIX_SEPARATOR, startPosition.line, POSITION_SEPARATOR, startPosition.column,
-					POSITION_SEPARATOR, endPosition.line, POSITION_SEPARATOR, endPosition.column);
+				return linkProvider.file(normalizedPath, startPosition.line, startPosition.column,
+					endPosition.line, endPosition.column);
 			}
 
 			var caretPosition = getPosition(document, ctx.getSourceOffset());
-			return String.format("%s%s%s%d%s%d", EDT_FILE_PROTOCOL, normalizedPath,
-				POSTFIX_SEPARATOR, caretPosition.line, POSITION_SEPARATOR, caretPosition.column);
+			return linkProvider.file(normalizedPath, caretPosition.line, caretPosition.column);
 		}
 		catch (BadLocationException error)
 		{
 			log.logError(error);
 		}
 
-		return EDT_FILE_PROTOCOL + normalizedPath;
+		return linkProvider.file(normalizedPath);
 	}
 
     @SuppressWarnings("nls")
@@ -111,21 +105,21 @@ public class EdtLinkHandler implements IEdtLinkHandler
     @Override
 	public String extractFilePath(String href)
 	{
-		if (!href.startsWith(EDT_FILE_PROTOCOL))
+		if (!isRecognizedHref(href))
 		{
 			return "";
 		}
 
-		var filePath = href.substring(EDT_FILE_PROTOCOL.length());
+		var filePath = href.substring(linkProvider.getFileProtocol().length());
 
         // Remove special postfix
-		var colonIndex = filePath.indexOf(POSTFIX_SEPARATOR);
+		var colonIndex = filePath.indexOf(ILinkProvider.POSTFIX_SEPARATOR);
 		if (colonIndex > 0)
 		{
 			filePath = filePath.substring(0, colonIndex);
 		}
 
-		filePath = filePath.replace(COLON_ESCAPE, COLON_CHAR);
+		filePath = filePath.replace(ILinkProvider.COLON_ESCAPE, ILinkProvider.COLON_CHAR);
 
 		return filePath;
 	}
@@ -138,7 +132,7 @@ public class EdtLinkHandler implements IEdtLinkHandler
 			return false;
 		}
 
-		return href.startsWith(EDT_FILE_PROTOCOL);
+		return href.startsWith(linkProvider.getFileProtocol());
 	}
 
 	@SuppressWarnings("nls")
@@ -150,15 +144,15 @@ public class EdtLinkHandler implements IEdtLinkHandler
 			return Optional.empty();
 		}
 
-		var filePath = href.substring(EDT_FILE_PROTOCOL.length());
-		var colonIndex = filePath.indexOf(POSTFIX_SEPARATOR);
+		var filePath = href.substring(linkProvider.getFileProtocol().length());
+		var colonIndex = filePath.indexOf(ILinkProvider.POSTFIX_SEPARATOR);
 		if (colonIndex < 0)
 		{
 			return Optional.empty();
 		}
 
 		var positionPart = filePath.substring(colonIndex + 1);
-		String[] parts = positionPart.split("\\" + POSITION_SEPARATOR);
+		String[] parts = positionPart.split("\\" + ILinkProvider.POSITION_SEPARATOR);
 
 		if (parts.length < 2)
 		{
@@ -186,15 +180,15 @@ public class EdtLinkHandler implements IEdtLinkHandler
 			return Optional.empty();
 		}
 
-		var filePath = href.substring(EDT_FILE_PROTOCOL.length());
-		var colonIndex = filePath.indexOf(POSTFIX_SEPARATOR);
+		var filePath = href.substring(linkProvider.getFileProtocol().length());
+		var colonIndex = filePath.indexOf(ILinkProvider.POSTFIX_SEPARATOR);
 		if (colonIndex < 0)
 		{
 			return Optional.empty();
 		}
 
 		var positionPart = filePath.substring(colonIndex + 1);
-		String[] parts = positionPart.split("\\" + POSITION_SEPARATOR);
+		String[] parts = positionPart.split("\\" + ILinkProvider.POSITION_SEPARATOR);
 
 		if (parts.length < 4)
 		{

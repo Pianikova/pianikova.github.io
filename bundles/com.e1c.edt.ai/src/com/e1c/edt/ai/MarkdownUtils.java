@@ -3,6 +3,11 @@
 */
 package com.e1c.edt.ai;
 
+import org.eclipse.compare.rangedifferencer.IRangeComparator;
+import org.eclipse.compare.rangedifferencer.RangeDifference;
+import org.eclipse.compare.rangedifferencer.RangeDifferencer;
+
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 /**
@@ -11,6 +16,16 @@ import com.google.inject.Singleton;
 @Singleton
 public class MarkdownUtils implements IMarkdownUtils
 {
+
+    private final ILinkProvider linkProvider;
+    private final IFiles files;
+
+    @Inject
+    public MarkdownUtils(ILinkProvider linkProvider, IFiles files)
+    {
+        this.linkProvider = linkProvider;
+        this.files = files;
+    }
 	/**
 	 * Escapes content for markdown display by replacing backticks
 	 * @param content The content to escape
@@ -29,7 +44,25 @@ public class MarkdownUtils implements IMarkdownUtils
 	}
 
     @Override
-    @SuppressWarnings("nls")
+    public String decodeUrl(String content)
+    {
+        if (content == null || content.isEmpty())
+        {
+            return content;
+        }
+
+        try
+        {
+            return java.net.URLDecoder.decode(content, java.nio.charset.StandardCharsets.UTF_8.name());
+        }
+        catch (Exception e)
+        {
+            // If decoding fails, return the original content
+            return content;
+        }
+    }
+
+    @Override
     public String createStyledText(String content, TextColor color, FontWeight weight)
     {
         return createStyledText(content, color, weight, null);
@@ -84,8 +117,81 @@ public class MarkdownUtils implements IMarkdownUtils
         diff.append("<pre style=\"background: var(--code-bg); padding: 6px 8px; border-radius: 2px; ");
         diff.append("color: var(--text-color); white-space: pre; overflow: auto;\">");
         diff.append("<code>");
-        appendDiffLines(diff, "-", originContent, TextColor.RED, "var(--code-bg)");
-        appendDiffLines(diff, "+", newContent, TextColor.GREEN, "var(--code-bg)");
+
+        // If originContent is null, show all lines as added (new file)
+        if (originContent == null)
+        {
+            appendDiffLines(diff, "+", newContent, TextColor.GREEN, null);
+        }
+        // If newContent is null, show all lines as removed (file deletion)
+        else if (newContent == null)
+        {
+            appendDiffLines(diff, "-", originContent, TextColor.RED, null);
+        }
+        // Otherwise, use Eclipse Compare API to compare and show only changed lines
+        else
+        {
+            String[] originLines = originContent.split("\\r?\\n", -1);
+            String[] newLines = newContent.split("\\r?\\n", -1);
+
+            // Create range comparators
+            IRangeComparator leftComparator = new LineComparator(originLines);
+            IRangeComparator rightComparator = new LineComparator(newLines);
+
+            // Use RangeDifferencer to find differences
+            RangeDifference[] differences = RangeDifferencer.findDifferences(leftComparator, rightComparator);
+
+            if (differences == null || differences.length == 0)
+            {
+                // No differences found - show empty diff
+            }
+            else
+            {
+                boolean contextOmitted = false;
+                int lastRightEnd = 0;
+
+                for (RangeDifference diffInfo : differences)
+                {
+                    // Add context placeholder if there was a gap
+                    if (diffInfo.rightStart() > lastRightEnd)
+                    {
+                        if (contextOmitted)
+                        {
+                            appendContextLine(diff);
+                        }
+                        contextOmitted = true;
+                    }
+
+                    // Show removed lines (from left)
+                    for (int i = diffInfo.leftStart(); i < diffInfo.leftEnd(); i++)
+                    {
+                        if (i < originLines.length)
+                        {
+                            appendStyledLine(diff, "-" + escapeHtml(originLines[i]), TextColor.RED, null);
+                        }
+                    }
+
+                    // Show added lines (from right)
+                    for (int i = diffInfo.rightStart(); i < diffInfo.rightEnd(); i++)
+                    {
+                        if (i < newLines.length)
+                        {
+                            appendStyledLine(diff, "+" + escapeHtml(newLines[i]), TextColor.GREEN, null);
+                        }
+                    }
+
+                    contextOmitted = false;
+                    lastRightEnd = diffInfo.rightEnd();
+                }
+
+                // Add context placeholder at the end if needed
+                if (lastRightEnd < newLines.length)
+                {
+                    appendContextLine(diff);
+                }
+            }
+        }
+
         diff.append("</code></pre>");
         return diff.toString();
     }
@@ -128,7 +234,7 @@ public class MarkdownUtils implements IMarkdownUtils
                     omittedContext = false;
                     omittedVisible = false;
                 }
-                appendStyledLine(diff, escapeHtml(line), TextColor.GREEN, "var(--code-bg)");
+                appendStyledLine(diff, escapeHtml(line), TextColor.GREEN, null);
                 continue;
             }
 
@@ -140,7 +246,7 @@ public class MarkdownUtils implements IMarkdownUtils
                     omittedContext = false;
                     omittedVisible = false;
                 }
-                appendStyledLine(diff, escapeHtml(line), TextColor.RED, "var(--code-bg)");
+                appendStyledLine(diff, escapeHtml(line), TextColor.RED, null);
                 continue;
             }
 
@@ -194,6 +300,110 @@ public class MarkdownUtils implements IMarkdownUtils
         }
 
         return result.toString();
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String formatFilePath(String path)
+    {
+        if (path == null || path.isBlank())
+        {
+            return "";
+        }
+
+        // Get displayed file name using IFiles
+        var file = new java.io.File(path);
+        var displayedFileName = files.getDisplayedFileName(file);
+        var link = linkProvider.file(path);
+
+        // Escape the path and link for HTML attributes
+        var escapedPath = escapeHtml(path);
+        var escapedLink = escapeHtml(link);
+        var escapedFileName = escapeHtml(displayedFileName);
+
+        return "<a href=\"" + escapedLink + "\" title=\"" + escapedPath + "\">" + escapedFileName + "</a>";
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String formatFilePath(String path, int line, int column)
+    {
+        if (path == null || path.isBlank())
+        {
+            return "";
+        }
+
+        // Get displayed file name using IFiles
+        var file = new java.io.File(path);
+        var displayedFileName = files.getDisplayedFileName(file);
+
+        // Use the appropriate linkProvider method based on line/column information
+        String link;
+        if (line > 0 && column > 0)
+        {
+            link = linkProvider.file(path, line, column);
+        }
+        else if (line > 0)
+        {
+            link = linkProvider.file(path, line, 0);
+        }
+        else
+        {
+            link = linkProvider.file(path);
+        }
+
+        // Escape the path and link for HTML attributes
+        var escapedPath = escapeHtml(path);
+        var escapedLink = escapeHtml(link);
+        var escapedFileName = escapeHtml(displayedFileName);
+
+        return "<a href=\"" + escapedLink + "\" title=\"" + escapedPath + "\">" + escapedFileName + "</a>";
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String formatFilePath(String path, int line, int column, int finishLine, int finishColumn)
+    {
+        if (path == null || path.isBlank())
+        {
+            return "";
+        }
+
+        // Get displayed file name using IFiles
+        var file = new java.io.File(path);
+        var displayedFileName = files.getDisplayedFileName(file);
+
+        // Use the appropriate linkProvider method based on line/column information
+        String link;
+        if (line > 0 && finishLine > 0)
+        {
+            // Use range-based link when both start and finish positions are available
+            int startColumn = column > 0 ? column : 0;
+            int endColumn = finishColumn > 0 ? finishColumn : 0;
+            link = linkProvider.file(path, line, startColumn, finishLine, endColumn);
+        }
+        else if (line > 0 && column > 0)
+        {
+            // Use point-based link when only start position is available
+            link = linkProvider.file(path, line, column);
+        }
+        else if (line > 0)
+        {
+            // Use line-only link
+            link = linkProvider.file(path, line, 0);
+        }
+        else
+        {
+            // Use file-only link
+            link = linkProvider.file(path);
+        }
+
+        // Escape the path and link for HTML attributes
+        var escapedPath = escapeHtml(path);
+        var escapedLink = escapeHtml(link);
+        var escapedFileName = escapeHtml(displayedFileName);
+
+        return "<a href=\"" + escapedLink + "\" title=\"" + escapedPath + "\">" + escapedFileName + "</a>";
     }
 
     @SuppressWarnings("nls")
@@ -305,5 +515,46 @@ public class MarkdownUtils implements IMarkdownUtils
         var normalized = path.replace('\\', '/');
         var lastSlash = normalized.lastIndexOf('/');
         return lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+    }
+
+    /**
+     * Line comparator for Eclipse Compare API
+     */
+    private static class LineComparator
+        implements IRangeComparator
+    {
+        private final String[] lines;
+
+        public LineComparator(String[] lines)
+        {
+            this.lines = lines;
+        }
+
+        @Override
+        public int getRangeCount()
+        {
+            return lines.length;
+        }
+
+        @Override
+        public boolean rangesEqual(int thisIndex, IRangeComparator other, int otherIndex)
+        {
+            if (!(other instanceof LineComparator))
+            {
+                return false;
+            }
+            String[] otherLines = ((LineComparator)other).lines;
+            if (thisIndex >= lines.length || otherIndex >= otherLines.length)
+            {
+                return false;
+            }
+            return lines[thisIndex].equals(otherLines[otherIndex]);
+        }
+
+        @Override
+        public boolean skipRangeComparison(int length, int maxLength, IRangeComparator other)
+        {
+            return false;
+        }
     }
 }

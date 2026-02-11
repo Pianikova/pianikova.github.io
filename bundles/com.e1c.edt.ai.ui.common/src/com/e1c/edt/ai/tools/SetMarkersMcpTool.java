@@ -52,14 +52,14 @@ public class SetMarkersMcpTool
         + "  \"markers\": [\n"
         + "    {\n"
         + "      \"type\": \"bookmark\",\n"
-        + "      \"relative_file_path\": \"Forms/MyForm/Module.bsl\",\n"
+        + "      \"path\": \"C:/Projects/MyProject/Forms/MyForm/Module.bsl\",\n"
         + "      \"marker_line\": 10,\n"
         + "      \"marker_highlighted_text\": \"Important code section\",\n"
         + "      \"message\": \"Important code section that requires attention\"\n"
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"task\",\n"
-        + "      \"relative_file_path\": \"CommonModules/MyModule/Module.bsl\",\n"
+        + "      \"path\": \"C:/Projects/MyProject/CommonModules/MyModule/Module.bsl\",\n"
         + "      \"marker_line\": 25,\n"
         + "      \"marker_highlighted_text\": \"RefactorThisCode()\",\n"
         + "      \"message\": \"TODO: Refactor this code\",\n"
@@ -67,7 +67,7 @@ public class SetMarkersMcpTool
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"problem\",\n"
-        + "      \"relative_file_path\": \"CommonModules/AnotherModule/Module.bsl\",\n"
+        + "      \"path\": \"C:/Projects/MyProject/CommonModules/AnotherModule/Module.bsl\",\n"
         + "      \"marker_line\": 42,\n"
         + "      \"marker_highlighted_text\": \"a = 1 / 0\",\n"
         + "      \"message\": \"Syntax error\",\n"
@@ -75,14 +75,14 @@ public class SetMarkersMcpTool
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"text\",\n"
-        + "      \"relative_file_path\": \"CommonModules/TextModule/Module.bsl\",\n"
+        + "      \"path\": \"C:/Projects/MyProject/CommonModules/TextModule/Module.bsl\",\n"
         + "      \"marker_line\": 15,\n"
         + "      \"marker_highlighted_text\": \"Important text note\",\n"
         + "      \"message\": \"Important text note\"\n"
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"ai_marker\",\n"
-        + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "      \"path\": \"C:/Projects/MyProject/CommonModules/AIModule/Module.bsl\",\n"
         + "      \"marker_line\": 30,\n"
         + "      \"marker_highlighted_text\": \"calculateTotal(items)\",\n"
         + "      \"message\": \"AI warning (AIWarning)\",\n"
@@ -93,7 +93,7 @@ public class SetMarkersMcpTool
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"ai_marker\",\n"
-        + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "      \"path\": \"C:/Projects/MyProject/CommonModules/AIModule/Module.bsl\",\n"
         + "      \"marker_line\": 45,\n"
         + "      \"marker_highlighted_text\": \"calculateTotal(items)\",\n"
         + "      \"message\": \"AI error (AIError)\",\n"
@@ -104,7 +104,7 @@ public class SetMarkersMcpTool
         + "    },\n"
         + "    {\n"
         + "      \"type\": \"ai_marker\",\n"
-        + "      \"relative_file_path\": \"CommonModules/AIModule/Module.bsl\",\n"
+        + "      \"path\": \"C:/Projects/MyProject/CommonModules/AIModule/Module.bsl\",\n"
         + "      \"marker_line\": 60,\n"
         + "      \"marker_highlighted_text\": \"calculateTotal(items)\",\n"
         + "      \"message\": \"AI info (AIInfo)\",\n"
@@ -261,7 +261,7 @@ public class SetMarkersMcpTool
         // Validate required fields
         if (markerReq.relativeFilePath == null || markerReq.relativeFilePath.isBlank())
         {
-            throw new IllegalArgumentException("relative_file_path is required");
+            throw new IllegalArgumentException("path is required");
         }
         if (markerReq.message == null || markerReq.message.isBlank())
         {
@@ -293,11 +293,11 @@ public class SetMarkersMcpTool
             }
         }
 
-        var relativePath = new Path(markerReq.relativeFilePath);
-        var file = project.getFile(relativePath);
-        if (!file.exists())
+        // Get file from absolute path using IFileSystem
+        var file = fileSystem.getProjectFile(project, markerReq.relativeFilePath);
+        if (file == null || !file.exists())
         {
-            throw new IllegalArgumentException("File not found: " + relativePath);
+            throw new IllegalArgumentException("File not found: " + markerReq.relativeFilePath);
         }
 
         // Calculate char positions from target_content using ReadMcpTool approach
@@ -511,7 +511,7 @@ public class SetMarkersMcpTool
 
         description.append("\n\nCommon properties for all markers:");
         description.append("\n- type: Marker type (required)");
-        description.append("\n- relative_file_path: File path relative to project root (required)");
+        description.append("\n- path: File path relative to project root (required)");
         description.append("\n- message: Marker description (required)");
         description.append(
             "\n- marker_line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative. Take the line number from the line prefix using the `"
@@ -554,7 +554,7 @@ public class SetMarkersMcpTool
         var markersProp = new McpToolCallProperty();
         markersProp.type = "array";
         markersProp.description =
-            "List of marker objects. Each marker must include: type, relative_file_path, marker_line, "
+            "List of marker objects. Each marker must include: type, path, marker_line, "
                 + "marker_highlighted_text, message. "
                 + "If you provide any action_* fields for ai_marker, all three are required.";
         properties.put("markers", markersProp);
@@ -583,7 +583,7 @@ public class SetMarkersMcpTool
         @SerializedName("project_name")
         public String projectName;
 
-        @SerializedName("relative_file_path")
+        @SerializedName("path")
         public String relativeFilePath;
 
         @SerializedName("message")

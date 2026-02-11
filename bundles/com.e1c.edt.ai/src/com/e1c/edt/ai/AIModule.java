@@ -52,6 +52,7 @@ public class AIModule
         bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
         bind(IClientTokenValidator.class).to(ClientTokenValidator.class).in(Singleton.class);
         bind(IContentReplacer.class).to(ContentReplacer.class).in(Singleton.class);
+        bind(ILinkProvider.class).to(LinkProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }

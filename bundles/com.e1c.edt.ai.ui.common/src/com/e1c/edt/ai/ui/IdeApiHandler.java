@@ -12,6 +12,7 @@ import org.eclipse.jface.text.TextSelection;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITextPreprocessor;
@@ -33,12 +34,14 @@ public class IdeApiHandler
     private final IMcpTools mcpTools;
     private final IEdtLinkHandler linkHandler;
     private final IEditorPositionManager editorPositionManager;
+    private final IMarkdownUtils markdownUtils;
     private boolean isReady;
 
     @Inject
     public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
         Provider<IChat> chatProvider, IJson json,
-        IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager)
+        IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager,
+        IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
@@ -49,6 +52,7 @@ public class IdeApiHandler
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(linkHandler);
         Preconditions.checkNotNull(editorPositionManager);
+        Preconditions.checkNotNull(markdownUtils);
         this.log = log;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -58,6 +62,7 @@ public class IdeApiHandler
         this.mcpTools = mcpTools;
         this.linkHandler = linkHandler;
         this.editorPositionManager = editorPositionManager;
+        this.markdownUtils = markdownUtils;
     }
 
     public void wink(String parameter)
@@ -177,18 +182,27 @@ public class IdeApiHandler
     public boolean link(String title, String href)
     {
         var safeHref = href != null ? href.trim() : "";
-        if (!linkHandler.isRecognizedHref(safeHref))
+
+        // Decode URL-encoded characters (e.g., %3A -> :, %D0 -> Cyrillic letters)
+        var decodedHref = markdownUtils.decodeUrl(safeHref);
+
+        // After decoding, colons in Windows paths (D:\, C:\, etc.) need to be re-escaped
+        // because extractFilePath expects %3A (COLON_ESCAPE) and will replace it with :
+        // If we pass a decoded URL with colons, extractFilePath will incorrectly parse it
+        var processedHref = escapeColonsInPath(decodedHref);
+
+        if (!linkHandler.isRecognizedHref(processedHref))
         {
             return false;
         }
 
         var safeTitle = title != null ? title.trim() : "";
-        if (safeTitle.isEmpty() && safeHref.isEmpty())
+        if (safeTitle.isEmpty() && processedHref.isEmpty())
         {
             return false;
         }
 
-        var filePath = linkHandler.extractFilePath(safeHref);
+        var filePath = linkHandler.extractFilePath(processedHref);
         if (filePath.isEmpty())
         {
             return false;
@@ -196,12 +210,48 @@ public class IdeApiHandler
 
         dispatcher.dispatchAsync(() -> {
             // Extract position information from href
-            var selection = linkHandler.extractSelection(safeHref).orElse(null);
-            var cursorPosition = linkHandler.extractCursorPosition(safeHref).orElse(null);
+            var selection = linkHandler.extractSelection(processedHref).orElse(null);
+            var cursorPosition = linkHandler.extractCursorPosition(processedHref).orElse(null);
             editorPositionManager.openFileInEditor(filePath, cursorPosition, selection);
         });
 
         return true;
+    }
+
+    /**
+     * Escapes colons in file paths (e.g., D:\ -> D:%3A) for proper parsing by extractFilePath.
+     * Only escapes colons that appear after the protocol and before any path separators.
+     *
+     * @param href the decoded href
+     * @return the href with colons escaped
+     */
+    @SuppressWarnings("nls")
+    private static String escapeColonsInPath(String href)
+    {
+        if (href == null || href.isEmpty())
+        {
+            return href;
+        }
+
+        // Find the protocol end (edt-file://)
+        int protocolEnd = href.indexOf("://");
+        if (protocolEnd < 0)
+        {
+            return href;
+        }
+
+        String pathPart = href.substring(protocolEnd + 3);
+
+        // Escape colons in the drive letter (D:\ -> D:%3A) or other path separators
+        // We need to find the first colon that's part of a drive letter or path separator
+        int firstColon = pathPart.indexOf(':');
+        if (firstColon > 0 && firstColon < 3)
+        {
+            // This is likely a Windows drive letter (e.g., D:\)
+            pathPart = pathPart.substring(0, firstColon) + "%3A" + pathPart.substring(firstColon + 1);
+        }
+
+        return href.substring(0, protocolEnd + 3) + pathPart;
     }
 
     public boolean isReady()

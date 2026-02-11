@@ -27,6 +27,9 @@ public class Messages
     public static String CodeCompletionPolicy_IntensiveShortDescription;
     public static String CodeCompletionPolicy_IntensiveDescription;
     public static String DiffContextPlaceholder;
+    public static String FileMenu_CopyAbsolutePath;
+    public static String FileMenu_CopyFileName;
+    public static String FileMenu_CopyLink;
 
     static
     {

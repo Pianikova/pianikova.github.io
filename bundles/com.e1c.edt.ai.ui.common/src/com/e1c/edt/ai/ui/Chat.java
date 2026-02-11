@@ -24,7 +24,6 @@ import org.eclipse.core.runtime.preferences.ConfigurationScope;
 import org.eclipse.egit.ui.internal.commit.DiffDocument;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.BadLocationException;
-import org.eclipse.jface.text.IDocument;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.ui.PlatformUI;

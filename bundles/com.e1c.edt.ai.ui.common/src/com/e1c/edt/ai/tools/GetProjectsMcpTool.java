@@ -48,7 +48,7 @@ public class GetProjectsMcpTool
         "[\n"
         + "  {\n"
         + "    \"name\": \"Warehouse\",\n"
-        + "    \"absolute_path\": \"D:\\\\Projects\\\\EDT_Plugin\\\\Warehouse\",\n"
+        + "    \"path\": \"D:\\\\Projects\\\\EDT_Plugin\\\\Warehouse\",\n"
         + "    \"is_open\": true,\n"
         + "    \"exists\": true,\n"
         + "    \"is_current\": true,\n"
@@ -319,7 +319,7 @@ public class GetProjectsMcpTool
         public String name;
 
         /* Absolute path to the project. */
-        @SerializedName("absolute_path")
+        @SerializedName("path")
         public String absolutePath;
 
         /* Project is open. */

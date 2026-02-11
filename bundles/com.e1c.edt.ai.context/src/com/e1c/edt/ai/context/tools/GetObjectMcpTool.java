@@ -54,7 +54,7 @@ public class GetObjectMcpTool
         + "  \"resoure_uri\": \"bm:...\",\n"
         + "  \"fqn\": \"Catalog.MyCatalog\",\n"
         + "  \"is_top\": true,\n"
-        + "  \"relative_file_path\": \"Catalogs/MyCatalog/Forms/ItemForm/Ext/Module.bsl\"\n"
+        + "  \"path\": \"C:/Projects/MyProject/Catalogs/MyCatalog/Forms/ItemForm/Ext/Module.bsl\"\n"
         + "}";
     // @formatter:on
 
@@ -211,17 +211,7 @@ public class GetObjectMcpTool
                         var location = file.getRawLocation();
                         if (location != null)
                         {
-                            response.absoluteFilePath = location.toOSString();
-                        }
-
-                        var relativePath = file.getProjectRelativePath();
-                        if (relativePath != null)
-                        {
-                            response.relativeFilePath = relativePath.toPortableString();
-
-                            // Build filePath safely without double slashes
-                            var filePath = new Path(project.getName()).append(relativePath);
-                            response.filePath = filePath.toPortableString();
+                            response.path = location.toOSString();
                         }
                     }
                 }
@@ -330,13 +320,7 @@ public class GetObjectMcpTool
         @SerializedName("object_model")
         public Object objectModel;
 
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
-
-        @SerializedName("file_path")
-        public String filePath; // Fixed serialization name
-
-        @SerializedName("absolute_file_path")
-        public String absoluteFilePath;
+        @SerializedName("path")
+        public String path;
     }
 }

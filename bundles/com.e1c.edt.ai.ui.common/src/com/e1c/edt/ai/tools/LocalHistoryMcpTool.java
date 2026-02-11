@@ -220,7 +220,7 @@ public class LocalHistoryMcpTool
 					for (var entry : historyEntries)
 					{
 						responseMarkdown.append("### **")
-							.append(markdownUtils.createStyledText(entry.revisionId, TextColor.BLUE, FontWeight.BOLD))
+                            .append(markdownUtils.createStyledText(entry.revisionId, TextColor.BLUE, FontWeight.NORMAL))
 							.append("**")
 							.append(entry.isCurrent ? " " + Messages.Current : "")
 							.append(" - ")

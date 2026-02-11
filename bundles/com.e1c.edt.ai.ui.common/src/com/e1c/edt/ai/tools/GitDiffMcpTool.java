@@ -227,7 +227,7 @@ public class GitDiffMcpTool
 					// Get staged diff (index vs HEAD)
 					diffText = gitTools.getDiffText(repository, contextLines);
 				}
-				
+
 				var hasChanges = !diffText.trim().isEmpty();
 
 				// Prepare response
@@ -244,15 +244,17 @@ public class GitDiffMcpTool
 
 				// Create response markdown
 				var responseMarkdown = new StringBuilder();
-				
+
 				if (hasChanges)
 				{
 					String diffType;
 					if (oldCommit != null && newCommit != null)
 					{
 						diffType = MessageFormat.format(Messages.GitCommitDiffTemplate,
-							markdownUtils.createStyledText(oldCommit.substring(0, Math.min(8, oldCommit.length())), TextColor.BLUE, FontWeight.BOLD),
-							markdownUtils.createStyledText(newCommit.substring(0, Math.min(8, newCommit.length())), TextColor.BLUE, FontWeight.BOLD),
+                            markdownUtils.createStyledText(oldCommit.substring(0, Math.min(8, oldCommit.length())),
+                                TextColor.BLUE, FontWeight.NORMAL),
+                            markdownUtils.createStyledText(newCommit.substring(0, Math.min(8, newCommit.length())),
+                                TextColor.BLUE, FontWeight.NORMAL),
 							markdownUtils.escapeForMarkdown(projectName));
 					}
 					else if (uncommittedChanges)
@@ -267,7 +269,7 @@ public class GitDiffMcpTool
 							markdownUtils.createStyledText(String.valueOf(contextLines), TextColor.GREEN, FontWeight.BOLD),
 							markdownUtils.escapeForMarkdown(projectName));
 					}
-					
+
 					responseMarkdown.append(diffType);
 					responseMarkdown.append("\n\n");
 					responseMarkdown.append(markdownUtils.buildUnifiedDiffByFile(diffText));

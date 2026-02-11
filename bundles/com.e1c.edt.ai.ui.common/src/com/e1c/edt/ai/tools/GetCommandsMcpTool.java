@@ -306,7 +306,7 @@ public class GetCommandsMcpTool
 
             int commandCount = commands.size();
             String styledCommandCount = markdownUtils.createStyledText(String.valueOf(commandCount),
-                commandCount > 0 ? TextColor.GREEN : TextColor.BLUE, FontWeight.BOLD);
+                TextColor.GREEN, FontWeight.BOLD);
             details.responseMarkdown = MessageFormat.format(Messages.CommandsLoadedTemplate, styledCommandCount);
 
             return messageFactory.createMessage(this, call, content, details);

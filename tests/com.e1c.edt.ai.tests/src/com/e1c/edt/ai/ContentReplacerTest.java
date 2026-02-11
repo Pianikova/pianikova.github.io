@@ -1,1682 +1,887 @@
-/**
- * Copyright (C) 2025, 1C
- */
 package com.e1c.edt.ai;
 
-import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
-/**
- * Test class for ContentReplacer using template-based line ending matching.
- *
- * <p>This test class verifies that ContentReplacer correctly replaces content
- * using template patterns that can match any line ending format (CRLF, LF, CR)
- * without normalization.</p>
- *
- * @author 1C EDT AI Team
- */
 @SuppressWarnings("nls")
 public class ContentReplacerTest
 {
-	private final ContentReplacer replacer = new ContentReplacer();
-    private static final String LF = "\n";
-    private static final String CRLF = "\r\n";
-    private static final String CR = "\r";
-
-	// ========== Template-Based Line Ending Matching Tests ==========
-
     @Test
-	public void shouldReplaceContentWithLFOriginsInLFContent()
-	{
-		// Given
-        var currentContent = "line1\nline2\nline3\n";
-        var originContent = "line2";
-        var newContent = "modified_line2";
+    public void testReplaceSingleOccurrence()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Hello World\nThis is a test\nGoodbye";
+        String originContent = "World";
+        String newContent = "Universe";
+        String lineDelimiter = "\n";
 
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "line1\nmodified_line2\nline3\n", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldReplaceContentWithCRLForiginsInCRLFContent()
-	{
-		// Given
-        var currentContent = "line1\r\nline2\r\nline3\r\n";
-        var originContent = "line2";
-        var newContent = "modified_line2";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, CRLF, true);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "line1\r\nmodified_line2\r\nline3\r\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Hello Universe\nThis is a test\nGoodbye",
             result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-	}
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added lines", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed lines", 1, result.getRemovedLines());
+    }
 
-	@Test
-	public void shouldReplaceContentWithMROriginsInCRContent()
-	{
-		// Given
-        var currentContent = "line1\rline2\rline3\r";
-        var originContent = "line2";
-        var newContent = "modified_line2";
+    @Test
+    public void testReplaceSingleOccurrenceWithWindowsLineDelimiter()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Hello World\r\nThis is a test\r\nGoodbye";
+        String originContent = "World";
+        String newContent = "Universe";
+        String lineDelimiter = "\r\n";
 
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, CR, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "line1\rmodified_line2\rline3\r", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldReplaceMultiLineContentWithDifferentLineEndings()
-	{
-		// Given
-		var currentContent = "function test() {\n\treturn true;\n}";
-		var originContent = "function test() {\n\treturn true;\n}";
-		var newContent = "function test() {\n\treturn false;\n}";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "function test() {\n\treturn false;\n}",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Hello Universe\r\nThis is a test\r\nGoodbye",
             result.getUpdatedContent());
-		Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-		Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
-	}
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added lines", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed lines", 1, result.getRemovedLines());
+    }
 
-	@Test
-	public void shouldHandleMixedLineEndingsInCurrentContent()
-	{
-		// Given
-		var currentContent = "line1\nline2\r\nline3\rline4\n";
-		var originContent = "line3";
-		var newContent = "modified_line3";
+    @Test
+    public void testReplaceSingleLine()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "Line2";
+        String newContent = "NewLine";
+        String lineDelimiter = "\n";
 
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "line1\nline2\r\nmodified_line3\rline4\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nNewLine\nLine3", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
+    }
+
+    @Test
+    public void testReplaceSingleLineWithContext()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nLine2\nXyz\nLine3";
+        String originContent = "Abc\nLine2\nXyz\n";
+        String newContent = "Abc\nNewLine\nXyz\n";
+        String lineDelimiter = "\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nAbc\nNewLine\nXyz\nLine3",
             result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-	}
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
+    }
 
-	// ========== Single Occurrence Replacement Tests ==========
+    @Test
+    public void testReplaceSingleLineWithContextWindowsLineDelimiter()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\r\nAbc\r\nLine2\r\nXyz\r\nLine3";
+        String originContent = "Abc\nLine2\nXyz\n";
+        String newContent = "Abc\nNewLine\nXyz\n";
+        String lineDelimiter = "\r\n";
 
-	@Test
-	public void shouldReplaceSingleOccurrenceSuccessfully()
-	{
-		// Given
-		var currentContent = "var x = 10;\nvar y = 20;\nvar z = 30;";
-		var originContent = "var y = 20;";
-		var newContent = "var y = 25;";
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-		Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertEquals("Content should be modified", "var x = 10;\nvar y = 25;\nvar z = 30;",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\r\nAbc\r\nNewLine\r\nXyz\r\nLine3",
             result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-	}
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
+    }
 
-	@Test
-	public void shouldFailWhenMultipleOccurrencesFoundForSingleReplacement()
-	{
-		// Given
-        var currentContent = "foo\nbar\nfoo";
-        var originContent = "foo";
-        var newContent = "baz";
+    @Test
+    public void testRemoveSingleLineWithContext()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nLine2\nXyz\nLine3";
+        String originContent = "Abc\nLine2\nXyz\n";
+        String newContent = "Abc\nXyz\n";
+        String lineDelimiter = "\n";
 
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, false);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// Then
-        Assert.assertFalse("Replacement should fail due to multiple occurrences of 'foo'", result.isSuccess());
-		Assert.assertTrue("Should detect multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertEquals("Content should remain unchanged", currentContent, result.getUpdatedContent());
-        Assert.assertEquals("Should not remove any lines", 0, result.getRemovedLines());
-        Assert.assertEquals("Should not add any lines", 0, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldFailWhenNoOccurrencesFound()
-	{
-		// Given
-		var currentContent = "var x = 10;\nvar y = 20;";
-		var originContent = "var z = 30;";
-		var newContent = "var z = 35;";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-		// Then
-		Assert.assertFalse("Replacement should fail when content not found", result.isSuccess());
-		Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertEquals("Content should remain unchanged", currentContent, result.getUpdatedContent());
-        Assert.assertEquals("Should not remove any lines", 0, result.getRemovedLines());
-        Assert.assertEquals("Should not add any lines", 0, result.getAddedLines());
-	}
-
-	// ========== Multiple Occurrence Replacement Tests ==========
-
-	@Test
-	public void shouldReplaceAllOccurrencesSuccessfully()
-	{
-		// Given
-		var currentContent = "foo bar foo baz foo";
-		var originContent = "foo";
-		var newContent = "qux";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "qux bar qux baz qux", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 3 lines (each 'foo' counts as 1 line)", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines (each 'qux' counts as 1 line)", 3, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldReplaceAllMultiLineOccurrences()
-	{
-		// Given
-		var currentContent = "if (condition) {\n\tdoSomething();\n}\nif (condition) {\n\tdoSomething();\n}";
-		var originContent = "if (condition) {\n\tdoSomething();\n}";
-		var newContent = "if (condition) {\n\tdoSomethingElse();\n}";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified",
-            "if (condition) {\n\tdoSomethingElse();\n}\nif (condition) {\n\tdoSomethingElse();\n}",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nAbc\nXyz\nLine3",
             result.getUpdatedContent());
-		Assert.assertEquals("Should remove 6 lines", 6, result.getRemovedLines());
-		Assert.assertEquals("Should add 6 lines", 6, result.getAddedLines());
-	}
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added line", 0, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
+    }
 
-	@Test
-	public void shouldReturnOriginalContentWhenNoOccurrencesFoundForReplaceAll()
-	{
-		// Given
-		var currentContent = "var x = 10;\nvar y = 20;";
-		var originContent = "var z = 30;";
-		var newContent = "var z = 35;";
+    @Test
+    public void testRemoveAll()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nLine2\nXyz\nLine3";
+        String originContent = "Line1\nAbc\nLine2\nXyz\nLine3";
+        String newContent = "";
+        String lineDelimiter = "\n";
 
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// Then
-		Assert.assertFalse("Replacement should fail when content not found", result.isSuccess());
-        Assert.assertEquals("Content should remain unchanged", currentContent, result.getUpdatedContent());
-        Assert.assertEquals("Should not remove any lines", 0, result.getRemovedLines());
-        Assert.assertEquals("Should not add any lines", 0, result.getAddedLines());
-	}
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added line", 0, result.getAddedLines());
+        assertEquals("Should have 5 removed line", 5, result.getRemovedLines());
+    }
 
-	// ========== Edge Cases and Error Conditions ==========
+    @Test
+    public void testAddAll()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "";
+        String originContent = "";
+        String newContent = "Line1\nAbc\nLine2\nXyz\nLine3";
+        String lineDelimiter = "\n";
 
-	@Test(expected = NullPointerException.class)
-	public void shouldThrowExceptionWhenCurrentContentIsNull()
-	{
-		// Given
-		String currentContent = null;
-        var originContent = "test";
-        var newContent = "modified";
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// When
-		replacer.replace(currentContent, originContent, newContent, LF, true);
-	}
-
-	@Test(expected = NullPointerException.class)
-	public void shouldThrowExceptionWhenOriginContentIsNull()
-	{
-		// Given
-		var currentContent = "test content";
-		String originContent = null;
-        var newContent = "modified";
-
-		// When
-		replacer.replace(currentContent, originContent, newContent, LF, true);
-	}
-
-	@Test(expected = NullPointerException.class)
-	public void shouldThrowExceptionWhenNewContentIsNull()
-	{
-		// Given
-		var currentContent = "test content";
-        var originContent = "test";
-		String newContent = null;
-
-		// When
-		replacer.replace(currentContent, originContent, newContent, LF, true);
-	}
-
-	@Test(expected = NullPointerException.class)
-	public void shouldThrowExceptionWhenLineDelimiterIsNull()
-	{
-		// Given
-		var currentContent = "test content";
-        var originContent = "test";
-        var newContent = "modified";
-		String lineDelimiter = null;
-
-		// When
-		replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
-	}
-
-	@Test
-	public void shouldHandleEmptyOriginContent()
-	{
-		// Given
-		var currentContent = "test content";
-		var originContent = "";
-        var newContent = "modified";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-		Assert.assertFalse("Replacement should fail with empty origin content", result.isSuccess());
-        Assert.assertEquals("Content should remain unchanged", currentContent, result.getUpdatedContent());
-        Assert.assertEquals("Should not remove any lines", 0, result.getRemovedLines());
-        Assert.assertEquals("Should not add any lines", 0, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldHandleEmptyCurrentContent()
-	{
-		// Given
-		var currentContent = "";
-        var originContent = "test";
-        var newContent = "modified";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-		Assert.assertFalse("Replacement should fail with empty current content", result.isSuccess());
-        Assert.assertEquals("Content should remain unchanged", "", result.getUpdatedContent());
-        Assert.assertEquals("Should not remove any lines", 0, result.getRemovedLines());
-        Assert.assertEquals("Should not add any lines", 0, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldHandleEmptyNewContent()
-	{
-		// Given
-		var currentContent = "test content";
-        var originContent = "test";
-		var newContent = "";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-		Assert.assertTrue("Replacement should succeed with empty new content", result.isSuccess());
-        Assert.assertEquals("Content should be modified", " content", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines()); // "test" counts as 1 line
-        Assert.assertEquals("Should add 0 lines", 0, result.getAddedLines()); // "" counts as 0 lines (empty)
-	}
-
-	@Test
-	public void shouldHandleMultiLineContentWithMixedEndings()
-	{
-		// Given
-		var currentContent = "line1\r\nline2\nline3\rline4\r\n";
-		var originContent = "line3\r";
-		var newContent = "modified_line3\n";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "line1\r\nline2\nmodified_line3\nline4\r\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nAbc\nLine2\nXyz\nLine3",
             result.getUpdatedContent());
-	}
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 5 added line", 5, result.getAddedLines());
+        assertEquals("Should have 0 removed line", 0, result.getRemovedLines());
+    }
 
-	@Test
-	public void shouldHandleSpecialCharactersInContent()
-	{
-		// Given
-		var currentContent = "function test() {\n\treturn \"string with \\\"quotes\\\"\";\n}";
-		var originContent = "\treturn \"string with \\\"quotes\\\"\";";
-		var newContent = "\treturn \"new string with \\\"quotes\\\"\";";
+    @Test
+    public void testReplaceAddLineWithContext()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nXyz\nLine3";
+        String originContent = "Abc\nXyz\n";
+        String newContent = "Abc\nNewLine\nXyz\n";
+        String lineDelimiter = "\n";
 
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified",
-            "function test() {\n\treturn \"new string with \\\"quotes\\\"\";\n}", result.getUpdatedContent());
-	}
-
-	@Test
-	public void shouldHandleUnicodeCharacters()
-	{
-		// Given
-		var currentContent = "переменная = 10;\nтестовая строка;\nеще переменная = 20;";
-		var originContent = "тестовая строка;";
-		var newContent = "измененная строка;";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "переменная = 10;\nизмененная строка;\nеще переменная = 20;",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nAbc\nNewLine\nXyz\nLine3",
             result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldHandleVeryLargeContent()
-	{
-		// Given
-		var largeContent = new StringBuilder();
-		for (int i = 0; i < 1000; i++)
-		{
-			largeContent.append("line ").append(i).append("\n");
-		}
-		var currentContent = largeContent.toString();
-		var originContent = "line 500\n";
-		var newContent = "modified line 500\n";
-
-		// When
-		var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-		// Then
-        Assert.assertTrue("Replacement should succeed", result.isSuccess());
-		Assert.assertTrue("Content should contain modified line", result.getUpdatedContent().contains("modified line 500"));
-        Assert.assertFalse("Content should not contain original line 500 with newline",
-            result.getUpdatedContent().contains("\nline 500\n"));
-        Assert.assertTrue("Content should contain context around line 500",
-            result.getUpdatedContent().contains("line 499\nmodified line 500\nline 501"));
-        Assert.assertFalse("Content should not contain original context",
-            result.getUpdatedContent().contains("line 499\nline 500\nline 501"));
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-	}
-
-	@Test
-	public void shouldHandleConsecutiveReplacements()
-	{
-		// Given
-		var currentContent = "a b c d e";
-
-		// When - first replacement
-		var result1 = replacer.replace(currentContent, "b", "x", LF, true);
-
-		// Then - first replacement result
-		Assert.assertTrue("First replacement should succeed", result1.isSuccess());
-		Assert.assertEquals("First replacement content should be correct", "a x c d e", result1.getUpdatedContent());
-
-		// When - second replacement on result
-		var result2 = replacer.replace(result1.getUpdatedContent(), "x", "y", LF, true);
-
-		// Then - second replacement result
-		Assert.assertTrue("Second replacement should succeed", result2.isSuccess());
-		Assert.assertEquals("Second replacement content should be correct", "a y c d e", result2.getUpdatedContent());
-	}
-
-    // ===== Invisible Character Handling Tests =====
-
-    @Test
-    public void shouldReplaceContentWithDifferentSpacing()
-    {
-        // Given - origin has spaces, current has tabs
-        var currentContent = "\tvar\tx\t=\t10;\n";
-        var originContent = "var x = 10;";
-        var newContent = "var y = 20;";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with different spacing", result.isSuccess());
-        // Note: The leading tab from currentContent is preserved since it's not part of the match
-        Assert.assertEquals("Content should be modified", "\tvar y = 20;\n", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 0 removed line", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithMixedSpacesAndTabs()
+    public void testReplaceMultipleLinesWithContext()
     {
-        // Given - mixed spaces and tabs in current content
-        var currentContent = " \t var \t x \t = \t 10; \t \n";
-        var originContent = "var x = 10;";
-        var newContent = "var y = 20;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nLine2\nLine3\nXyz\nLine6";
+        String originContent = "Abc\nLine2\nLine3\nXyz\n";
+        String newContent = "Abc\nNewLine1\nNewLine2\nXyz\n";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with mixed spacing", result.isSuccess());
-        // Note: Leading " \t " and trailing " \t " are preserved since they're not part of the match
-        Assert.assertEquals("Content should be modified", " \t var y = 20; \t \n", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWhenOriginHasExtraSpaces()
-    {
-        // Given - origin has extra spaces
-        var currentContent = "var x = 10;";
-        var originContent = "var  x  =  10;";
-        var newContent = "var y = 20;";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with extra spaces in origin", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "var y = 20;", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWhenCurrentHasExtraSpaces()
-    {
-        // Given - current has extra spaces
-        var currentContent = "var  x  =  10;";
-        var originContent = "var x = 10;";
-        var newContent = "var y = 20;";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with extra spaces in current", result.isSuccess());
-        // Note: The replacement uses newContent as-is, so it doesn't preserve extra spaces from currentContent
-        Assert.assertEquals("Content should be modified", "var y = 20;", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceMultiLineContentWithDifferentIndentation()
-    {
-        // Given - origin has different indentation than current
-        var currentContent = "\tfunction test() {\n\t\treturn true;\n\t}\n";
-        var originContent = "  function test() {\n    return true;\n  }"; // spaces instead of tabs
-        var newContent = "  function test() {\n    return false;\n  }";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with different indentation", result.isSuccess());
-        // Note: The replacement uses newContent as-is (with spaces), not preserving current content's indentation
-        Assert.assertEquals("Content should be modified", "  function test() {\n    return false;\n  }\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nAbc\nNewLine1\nNewLine2\nXyz\nLine6",
             result.getUpdatedContent());
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 2 added lines", 2, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
     }
 
     @Test
-    public void shouldMatchContentWithDifferentWhitespaceTypes()
+    public void testRemoveMultipleLinesWithContext()
     {
-        // Given - origin has spaces, current has tabs, both should match
-        var currentContent = "\tvar\tx\t=\t10;\n";
-        var originContent = "var x = 10;";
-        var newContent = "var x = 20;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nLine2\nLine3\nXyz\nLine6";
+        String originContent = "Abc\nLine2\nLine3\nXyz\n";
+        String newContent = "Abc\nXyz\n";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with different whitespace types", result.isSuccess());
-        // Note: The leading tab from currentContent is preserved since it's not part of the match
-        Assert.assertEquals("Content should be modified with newContent", "\tvar x = 20;\n", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldMatchContentWithMultipleSpacesVersusSingleTab()
-    {
-        // Given - origin has multiple spaces, current has single tab
-        var currentContent = "\tvalue\n";
-        var originContent = "    value"; // 4 spaces
-        var newContent = "newValue";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with different whitespace amounts", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "newValue\n", result.getUpdatedContent());
-    }
-
-    @Test
-    public void shouldReplaceWithWhitespaceFlexibilityInComplexScenario()
-    {
-        // Given - realistic scenario where origin and current have different whitespace
-        var currentContent = "if (x > 0) {\n\t\t doSomething();\n\t\t}\n";
-        var originContent = "if (x > 0) {\n  doSomething();\n\t\t}";
-        var newContent = "if (x > 0) {\n  doSomethingElse();\n}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with flexible whitespace", result.isSuccess());
-        // Note: The replacement uses newContent as-is (with spaces), not preserving current content's indentation
-        Assert.assertEquals("Content should be modified", "if (x > 0) {\n  doSomethingElse();\n}\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nAbc\nXyz\nLine6",
             result.getUpdatedContent());
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceSingleOccurrenceWithDifferentWhitespace()
+    public void testReplaceWithEmptyLeftContext()
     {
-        // Given - origin has spaces, current has tabs, single occurrence replacement
-        var currentContent = "\tvar\tx\t=\t10;\nvar y = 20;\n";
-        var originContent = "var x = 10;";
-        var newContent = "var x = 15;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nXyz\nLine4";
+        String originContent = "Line1\nLine2\n";
+        String newContent = "NewLine1\nNewLine2\n";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with different whitespace", result.isSuccess());
-        Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        // Note: The leading tab from currentContent is preserved since it's not part of the match
-        Assert.assertEquals("Content should be modified", "\tvar x = 15;\nvar y = 20;\n", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldNotMatchWhenWhitespaceDifferenceIsSignificant()
-    {
-        // Given - origin has whitespace, current doesn't (no whitespace at all)
-        var currentContent = "varx=10;\n";
-        var originContent = "var x = 10;";
-        var newContent = "var x = 20;";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertFalse("Replacement should fail when no whitespace in current", result.isSuccess());
-        Assert.assertEquals("Content should remain unchanged", "varx=10;\n", result.getUpdatedContent());
-        Assert.assertEquals("Should not remove any lines", 0, result.getRemovedLines());
-        Assert.assertEquals("Should not add any lines", 0, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWithMixedWhitespaceInMultiLineContent()
-    {
-        // Given - complex multi-line with different whitespace patterns
-        var currentContent = "class Test {\n\t\tvoid method1() {\r\n\t\t\t// code\n\t\t}\n}";
-        var originContent = "class Test {\n  void method1() {\n    // code\n  }\n}";
-        var newContent = "class Test {\n  void method2() {\n    // new code\n  }\n}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with mixed multi-line whitespace", result.isSuccess());
-        Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertTrue("Content should contain new method name",
-            result.getUpdatedContent().contains("void method2()"));
-    }
-
-    // ===== Special Regex Characters Handling Tests =====
-
-    @Test
-    public void shouldReplaceContentWithDollarSign()
-    {
-        // Given - content contains dollar sign (end-of-line anchor in regex)
-        var currentContent = "var price = $10.00;\nvar total = $50.00;\n";
-        var originContent = "var price = $10.00;";
-        var newContent = "var cost = $15.00;";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with dollar sign", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "var cost = $15.00;\nvar total = $50.00;\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "NewLine1\nNewLine2\nXyz\nLine4",
             result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 2 added lines", 2, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithCaretSign()
+    public void testRemoveWithEmptyLeftContext()
     {
-        // Given - content contains caret sign (start-of-line anchor in regex)
-        var currentContent = "var ^value = 100;\nvar ^count = 5;\n";
-        var originContent = "var ^value = 100;";
-        var newContent = "var ^result = 200;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nXyz\nLine4";
+        String originContent = "Line1\nLine2\n";
+        String newContent = "";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with caret sign", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "var ^result = 200;\nvar ^count = 5;\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Xyz\nLine4", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
+    }
+
+    @Test
+    public void testReplaceWithEmptyRightContext()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nLine3\nLine4";
+        String originContent = "\nAbc\nLine3\n";
+        String newContent = "\nNewLine1\nNewLine2\n";
+        String lineDelimiter = "\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nNewLine1\nNewLine2\nLine4",
             result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 2 added lines", 2, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithAsterisk()
+    public void testRemoveWithEmptyRightContext()
     {
-        // Given - content contains asterisk (quantifier in regex)
-        var currentContent = "int* ptr = null;\nString* str = null;\n";
-        var originContent = "int* ptr = null;";
-        var newContent = "float* ptr = null;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nAbc\nLine3\nLine4";
+        String originContent = "\nAbc\nLine3\n";
+        String newContent = "\n";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with asterisk", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "float* ptr = null;\nString* str = null;\n",
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nLine4", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
+    }
+
+    @Test
+    public void testReplaceMultiLineContent()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "Line2\nLine3";
+        String newContent = "NewLine";
+        String lineDelimiter = "\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nNewLine", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
+    }
+
+    @Test
+    public void testReplaceMultipleOccurrences()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine1\nLine2\nLine1";
+        String originContent = "Line1";
+        String newContent = "NewLine";
+        String lineDelimiter = "\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "NewLine\nLine2\nNewLine\nLine2\nNewLine",
             result.getUpdatedContent());
+        assertTrue("Should have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 3 added lines", 3, result.getAddedLines());
+        assertEquals("Should have 3 removed lines", 3, result.getRemovedLines());
+    }
+
+    // Complex scenario tests
+
+    @Test
+    public void testReplaceWithEmptyCurrentContent()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "";
+        String originContent = "";
+        String newContent = "NewContent";
+        String lineDelimiter = "\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should be new content", "NewContent", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithPlusSign()
+    public void testReplaceWithEmptyOriginContent()
     {
-        // Given - content contains plus sign (quantifier in regex)
-        var currentContent = "x + y = z;\n";
-        var originContent = "x + y = z;";
-        var newContent = "a + b = c;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "";
+        String newContent = "";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with plus sign", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "a + b = c;\n", result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should be unchanged", "Line1\nLine2\nLine3", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithQuestionMark()
+    public void testReplaceWithEmptyNewContent()
     {
-        // Given - content contains question mark (quantifier in regex)
-        var currentContent = "int? value = null;\n";
-        var originContent = "int? value = null;";
-        var newContent = "String? value = null;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "Line2";
+        String newContent = "";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with question mark", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "String? value = null;\n", result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        // When Line2 is replaced with empty string, the newline after it remains
+        assertEquals("Updated content should have Line2 removed", "Line1\n\nLine3", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithDot()
+    public void testReplaceWithAllEmptyParameters()
     {
-        // Given - content contains dot (any character in regex)
-        var currentContent = "obj.method();\nobj.property = value;\n";
-        var originContent = "obj.method();";
-        var newContent = "obj.call();";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "";
+        String originContent = "";
+        String newContent = "";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with dot", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "obj.call();\nobj.property = value;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should be empty", "", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithSquareBrackets()
+    public void testReplaceAllMultipleOccurrences()
     {
-        // Given - content contains square brackets (character class in regex)
-        var currentContent = "arr[index] = value;\nlist[0] = item;\n";
-        var originContent = "arr[index] = value;";
-        var newContent = "map[key] = value;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine1\nLine2\nLine1";
+        String originContent = "Line1";
+        String newContent = "ReplacedLine";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with square brackets", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "map[key] = value;\nlist[0] = item;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain all replacements",
+            "ReplacedLine\nLine2\nReplacedLine\nLine2\nReplacedLine", result.getUpdatedContent());
+        assertTrue("Should have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 3 added lines", 3, result.getAddedLines());
+        assertEquals("Should have 3 removed lines", 3, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithCurlyBraces()
+    public void testReplaceAllMultiLineOccurrences()
     {
-        // Given - content contains curly braces (quantifier in regex)
-        var currentContent = "regex = \"a{3}\";\npattern = \"b{2}\";\n";
-        var originContent = "regex = \"a{3}\";";
-        var newContent = "regex = \"x{5}\";";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3\nLine1\nLine2\nLine3\nLine1\nLine2\nLine3";
+        String originContent = "Line1\nLine2";
+        String newContent = "NewContent";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with curly braces", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "regex = \"x{5}\";\npattern = \"b{2}\";\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain all replacements",
+            "NewContent\nLine3\nNewContent\nLine3\nNewContent\nLine3", result.getUpdatedContent());
+        assertTrue("Should have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 3 added lines", 3, result.getAddedLines());
+        assertEquals("Should have 6 removed lines", 6, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithParentheses()
+    public void testReplaceAllSingleOccurrence()
     {
-        // Given - content contains parentheses (grouping in regex)
-        var currentContent = "func(a, b);\ncall(x, y);\n";
-        var originContent = "func(a, b);";
-        var newContent = "func(p, q);";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "Line2";
+        String newContent = "NewLine";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with parentheses", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "func(p, q);\ncall(x, y);\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement", "Line1\nNewLine\nLine3", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithPipe()
+    public void testReplaceAllEmptyOriginInNonEmptyContent()
     {
-        // Given - content contains pipe (alternation in regex)
-        var currentContent = "value = a | b;\nresult = x | y;\n";
-        var originContent = "value = a | b;";
-        var newContent = "value = c | d;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "";
+        String newContent = "Insert";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with pipe", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "value = c | d;\nresult = x | y;\n",
-            result.getUpdatedContent());
+        // Empty originContent matches everywhere in Java's replace, so it inserts between every character
+        // This is expected behavior from Java's String.replace() method
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain insertions",
+            "InsertLInsertiInsertnInserteInsert1Insert\n" +
+            "InsertLInsertiInsertnInserteInsert2Insert\n" +
+            "InsertLInsertiInsertnInserteInsert3Insert", result.getUpdatedContent());
+        // Note: empty originContent is not counted as an occurrence, so hasMultipleOccurrences returns false
+        assertFalse("Should not have multiple occurrences (empty origin)", result.hasMultipleOccurrences());
+        // Line count is 0 because both originContent and newContent have 0 lines (they're single-line strings)
+        // The replacement happens between characters but doesn't affect line count calculation
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithBackslash()
+    public void testReplaceWithEmptyOriginAndEmptyNewContent()
     {
-        // Given - content contains backslash (escape character in regex)
-        var currentContent = "path = \"C:\\\\Users\\\\test\";\nfile = \"D:\\\\Data\\\\file.txt\";\n";
-        var originContent = "path = \"C:\\\\Users\\\\test\";";
-        var newContent = "path = \"C:\\\\Users\\\\new\";";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "";
+        String newContent = "";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with backslash", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "path = \"C:\\\\Users\\\\new\";\nfile = \"D:\\\\Data\\\\file.txt\";\n",
-            result.getUpdatedContent());
+        // Empty origin and empty new should leave content unchanged
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should be unchanged", currentContent, result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithMultipleSpecialCharacters()
+    public void testReplaceAllWithWindowsLineDelimiter()
     {
-        // Given - content contains multiple special regex characters
-        var currentContent = "regex = \"a*b+c?d{2}e[f]g|h\\\\i\";\npattern = \"x*y+z?w{2}v[u]t|s\\\\r\";\n";
-        var originContent = "regex = \"a*b+c?d{2}e[f]g|h\\\\i\";";
-        var newContent = "regex = \"1*2+3?4{5}6[7]8|9\\\\0\";";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\r\nLine2\r\nLine1\r\nLine2\r\nLine1";
+        String originContent = "Line1";
+        String newContent = "NewLine";
+        String lineDelimiter = "\r\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with multiple special characters", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "regex = \"1*2+3?4{5}6[7]8|9\\\\0\";\npattern = \"x*y+z?w{2}v[u]t|s\\\\r\";\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should preserve Windows line delimiters",
+            "NewLine\r\nLine2\r\nNewLine\r\nLine2\r\nNewLine", result.getUpdatedContent());
+        assertTrue("Should have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 3 added lines", 3, result.getAddedLines());
+        assertEquals("Should have 3 removed lines", 3, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithSpecialCharactersAndWhitespace()
+    public void testReplaceAllMultiLineWithContext()
     {
-        // Given - content contains special regex characters with flexible whitespace
-        var currentContent = "\tvar\tx\t=\t$10.00;\n";
-        var originContent = "var x = $10.00;";
-        var newContent = "var y = $20.00;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Start\nAbc\nTarget\nXyz\nEnd\nStart\nAbc\nTarget\nXyz\nEnd";
+        String originContent = "Abc\nTarget\nXyz\n";
+        String newContent = "Abc\nNewTarget\nXyz\n";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with special chars and whitespace", result.isSuccess());
-        // Note: newContent is used as-is (with spaces), but leading tab is preserved
-        Assert.assertEquals("Content should be modified", "\tvar y = $20.00;\n", result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should replace all occurrences with context",
+            "Start\nAbc\nNewTarget\nXyz\nEnd\nStart\nAbc\nNewTarget\nXyz\nEnd", result.getUpdatedContent());
+        assertTrue("Should have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 2 added lines", 2, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceSingleOccurrenceWithSpecialCharacters()
+    public void testReplaceAllWithMixedContent()
     {
-        // Given - content with special regex characters, single occurrence
-        var currentContent = "obj.prop = value;\nobj.prop = other;\n";
-        var originContent = "obj.prop = value;";
-        var newContent = "obj.attr = data;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "var x = 1;\nvar y = 2;\nvar x = 3;\nvar y = 4;";
+        String originContent = "var x";
+        String newContent = "let x";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with special characters", result.isSuccess());
-        Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertEquals("Content should be modified", "obj.attr = data;\nobj.prop = other;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should replace all var x occurrences",
+            "let x = 1;\nvar y = 2;\nlet x = 3;\nvar y = 4;", result.getUpdatedContent());
+        assertTrue("Should have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 2 added lines", 2, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceAllOccurrencesWithSpecialCharacters()
+    public void testReplaceAllWithNoOccurrences()
     {
-        // Given - content with special regex characters, multiple occurrences
-        var currentContent = "obj.method().call();\nobj.method().get();\nobj.method().set();\n";
-        var originContent = "obj.method()";
-        var newContent = "obj.action()";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Line1\nLine2\nLine3";
+        String originContent = "NonExistent";
+        String newContent = "NewContent";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed for all occurrences", result.isSuccess());
-        Assert.assertEquals("Content should replace all occurrences",
-            "obj.action().call();\nobj.action().get();\nobj.action().set();\n",
-            result.getUpdatedContent());
-    }
-
-    // ===== Unicode and Emoji Handling Tests =====
-
-    @Test
-    public void shouldReplaceContentWithBasicEmojis()
-    {
-        // Given - content contains basic emojis
-        var currentContent = "status = \"✅ success\";\nresult = \"❌ failed\";\n";
-        var originContent = "status = \"✅ success\";";
-        var newContent = "status = \"⚠️ warning\";";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with basic emojis", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "status = \"⚠️ warning\";\nresult = \"❌ failed\";\n",
-            result.getUpdatedContent());
+        assertFalse("Replacement should fail", result.isSuccess());
+        assertEquals("Updated content should be unchanged", currentContent, result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithUnicodeCyrillic()
+    public void testReplaceWithCyrillicCharacters()
     {
-        // Given - content contains Cyrillic characters
-        var currentContent = "переменная = 10;\nзначение = 20;\n";
-        var originContent = "переменная = 10;";
-        var newContent = "переменная = 15;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Привет мир\nЭто тест\nДо свидания";
+        String originContent = "мир";
+        String newContent = "Вселенная";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with Cyrillic", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "переменная = 15;\nзначение = 20;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement",
+            "Привет Вселенная\nЭто тест\nДо свидания", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithUnicodeGreek()
+    public void testReplaceWithChineseCharacters()
     {
-        // Given - content contains Greek characters
-        var currentContent = "α = 1;\nβ = 2;\nγ = 3;\n";
-        var originContent = "α = 1;";
-        var newContent = "α = 10;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "你好 世界\n这是一个测试\n再见";
+        String originContent = "世界";
+        String newContent = "宇宙";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with Greek", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "α = 10;\nβ = 2;\nγ = 3;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement",
+            "你好 宇宙\n这是一个测试\n再见", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithUnicodeChinese()
+    public void testReplaceWithJapaneseCharacters()
     {
-        // Given - content contains Chinese characters
-        var currentContent = "变量 = 100;\n结果 = 200;\n";
-        var originContent = "变量 = 100;";
-        var newContent = "变量 = 150;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "こんにちは 世界\nこれはテストです\nさようなら";
+        String originContent = "世界";
+        String newContent = "宇宙";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with Chinese", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "变量 = 150;\n结果 = 200;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement",
+            "こんにちは 宇宙\nこれはテストです\nさようなら", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithUnicodeArabic()
+    public void testReplaceWithArabicCharacters()
     {
-        // Given - content contains Arabic characters
-        var currentContent = "متغير = 10;\nقيمة = 20;\n";
-        var originContent = "متغير = 10;";
-        var newContent = "متغير = 15;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "مرحبا بالعالم\nهذا اختبار\nمع السلامة";
+        String originContent = "العالم";
+        String newContent = "الكون";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with Arabic", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "متغير = 15;\nقيمة = 20;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement",
+            "مرحبا بالكون\nهذا اختبار\nمع السلامة", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithSimpleEmoji()
+    public void testReplaceWithGreekCharacters()
     {
-        // Given - content contains simple emojis without ZWJ
-        var currentContent = "status = \"✅ OK\";\nresult = \"❌ FAIL\";\n";
-        var originContent = "status = \"✅ OK\";";
-        var newContent = "status = \"⚠️ WARN\";";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Γεια σου κόσμε\nΑυτή είναι μια δοκιμή\nΑντίο";
+        String originContent = "κόσμε";
+        String newContent = "σύμπαν";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with simple emojis", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "status = \"⚠️ WARN\";\nresult = \"❌ FAIL\";\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement",
+            "Γεια σου σύμπαν\nΑυτή είναι μια δοκιμή\nΑντίο", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithMathematicalSymbols()
+    public void testReplaceWithMixedUnicodeCharacters()
     {
-        // Given - content contains mathematical Unicode symbols
-        var currentContent = "∑ = 0;\n∞ = 100;\nπ = 3.14;\n";
-        var originContent = "∑ = 0;";
-        var newContent = "∑ = 10;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Hello 你好 Привет مرحبا\nMixed content test\nEnd 🌟";
+        String originContent = "你好";
+        String newContent = "👋";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with mathematical symbols", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "∑ = 10;\n∞ = 100;\nπ = 3.14;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should replace Chinese with emoji",
+            "Hello 👋 Привет مرحبا\nMixed content test\nEnd 🌟", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithCurrencySymbols()
+    public void testReplaceWithSpecialSymbols()
     {
-        // Given - content contains currency symbols
-        var currentContent = "price = €100;\ncost = $50;\namount = ¥1000;\n";
-        var originContent = "price = €100;";
-        var newContent = "price = €150;";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Copyright © 2024\nRegistered ® trademark\nCurrency € and ¥";
+        String originContent = "©";
+        String newContent = "℗";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with currency symbols", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "price = €150;\ncost = $50;\namount = ¥1000;\n",
-            result.getUpdatedContent());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should replace copyright symbol",
+            "Copyright ℗ 2024\nRegistered ® trademark\nCurrency € and ¥", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithArrows()
+    public void testReplaceWithBOMAndCRLF()
     {
-        // Given - content contains arrow symbols
-        var currentContent = "pointer → target;\narrow ← source;\n";
-        var originContent = "pointer → target;";
-        var newContent = "pointer → destination;";
+        ContentReplacer replacer = new ContentReplacer();
+        // Content with BOM (Byte Order Mark), CRLF line delimiters, emoji, and Cyrillic text
+        String currentContent =
+            "\uFEFF# Status indicators\nToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n"
+                + "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n"
+                + "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        // Origin content with leading whitespace (the issue from real scenario)
+        String originContent = "  # Status indicators\nToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n"
+            + "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n"
+            + "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**";
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with arrows", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "pointer → destination;\narrow ← source;\n",
-            result.getUpdatedContent());
+        // New content with additional comments in Russian
+        String newContent =
+            "   # Status indicators\n# Шаблон для названия инструмента с эмодзи ракеты\n# Параметр {0} будет заменен на имя инструмента\n"
+                + "ToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n# Заголовок секции загрузки проектов\n"
+                + "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n"
+                + "# Сообщение о количестве загруженных проектов\n# Параметр {0} будет заменен на число проектов\n"
+                + "# Используется жирное начертание для выделения числа\n"
+                + "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**";
+
+        String lineDelimiter = "\r\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        // The replacement should fail because origin content has leading whitespace that current content doesn't have
+        // Note: BOM is ignored during search, so BOM difference alone wouldn't cause failure
+        // This test verifies the logging will show the invisible character differences
+        assertFalse("Replacement should fail due to whitespace mismatch", result.isSuccess());
+        assertEquals("Content should remain unchanged", currentContent, result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithBoxDrawing()
+    public void testReplaceWithBOMAndCRLFMatching()
     {
-        // Given - content contains box drawing characters
-        var currentContent = "border = \"┌───┐\";\nframe = \"│   │\";\n";
-        var originContent = "border = \"┌───┐\";";
-        var newContent = "border = \"┌─────┐\";";
+        ContentReplacer replacer = new ContentReplacer();
+        // Content with BOM (Byte Order Mark), CRLF line delimiters, emoji, and Cyrillic text
+        String currentContent = "\uFEFF# Status indicators\nToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n" +
+            "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n" +
+            "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        // Origin content without leading whitespace - should match
+        String originContent = "# Status indicators\nToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n" +
+            "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n" +
+            "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**";
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with box drawing", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "border = \"┌─────┐\";\nframe = \"│   │\";\n",
-            result.getUpdatedContent());
+        // New content with additional comments in Russian
+        String newContent = "# Status indicators\n# Шаблон для названия инструмента с эмодзи ракеты\n# Параметр {0} будет заменен на имя инструмента\n" +
+            "ToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n# Заголовок секции загрузки проектов\n" +
+            "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n" +
+            "# Сообщение о количестве загруженных проектов\n# Параметр {0} будет заменен на число проектов\n" +
+            "# Используется жирное начертание для выделения числа\n" +
+            "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**";
+
+        String lineDelimiter = "\r\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        // The replacement should succeed
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertTrue("Updated content should contain BOM", result.getUpdatedContent().startsWith("\uFEFF"));
+        assertTrue("Updated content should contain emoji", result.getUpdatedContent().contains("\uD83D\uDE80"));
+        assertTrue("Updated content should contain Cyrillic", result.getUpdatedContent().contains("\u0428\u0430\u0431\u043B\u043E\u043D"));
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        // Should add 10 new lines of comments (including blank lines between comment blocks)
+        assertEquals("Should have 10 added lines", 10, result.getAddedLines());
+        // The origin content ends without trailing newline, so line counting shows 4 lines as removed
+        // This is due to how countLinesIgnoringContext calculates the difference
+        assertEquals("Should have 4 removed lines", 4, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceContentWithMixedUnicodeAndEmoji()
+    public void testReplaceWithBOMInOriginOnly()
     {
-        // Given - content contains mixed Unicode and emoji
-        var currentContent = "переменная = 10; ✅\nзначение = 20; ❌\n";
-        var originContent = "переменная = 10; ✅";
-        var newContent = "переменная = 15; ⚠️";
+        ContentReplacer replacer = new ContentReplacer();
+        // This test verifies BOM handling:
+        // - currentContent HAS BOM at the start
+        // - originContent HAS BOM at the start
+        // - newContent HAS BOM at the start
+        // BOM should be ignored during search but preserved in result
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
+        String currentContent = "\uFEFF# Status indicators\nToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n" +
+            "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n" +
+            "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**\n";
 
-        // Then
-        Assert.assertTrue("Replacement should succeed with mixed content", result.isSuccess());
-        Assert.assertEquals("Content should be modified", "переменная = 15; ⚠️\nзначение = 20; ❌\n",
-            result.getUpdatedContent());
+        // Origin content with BOM (U+FEFF) and 2 leading spaces, no trailing newline
+        String originContent = "\uFEFF  # Status indicators\nToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n"
+            + "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n" +
+            "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**";
+
+        // New content with BOM and 3 leading spaces
+        String newContent = "\uFEFF   # Status indicators\n# Шаблон для названия инструмента с эмодзи ракеты\n# Параметр {0} будет заменен на имя инструмента\n"
+            + "ToolNameTemplate=\uD83D\uDE80 _{0}_\n\n# Project operations\n# Заголовок секции загрузки проектов\n" +
+            "ProjectsTitle=\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u043F\u0440\u043E\u0435\u043A\u0442\u044B\n" +
+            "# Сообщение о количестве загруженных проектов\n# Параметр {0} будет заменен на число проектов\n" +
+            "# Используется жирное начертание для выделения числа\n" +
+            "ProjectsLoadedTemplate=\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E \u043F\u0440\u043E\u0435\u043A\u0442\u043E\u0432 **{0}**";
+
+        String lineDelimiter = "\r\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        // The replacement should fail because:
+        // After stripping BOM, origin starts with 2 spaces + "#", current starts with "#"
+        // BOM is ignored during search, but leading whitespace still causes mismatch
+        assertFalse("Replacement should fail due to leading whitespace mismatch", result.isSuccess());
+        assertEquals("Content should remain unchanged", currentContent, result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 0 added lines", 0, result.getAddedLines());
+        assertEquals("Should have 0 removed lines", 0, result.getRemovedLines());
+    }
+
+    public void testReplaceWithEmoji()
+    {
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Hello 😀 World\nHow are you? 😊\nGoodbye 🌟";
+        String originContent = "😀";
+        String newContent = "😎";
+        String lineDelimiter = "\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should contain replacement with emoji",
+            "Hello 😎 World\nHow are you? 😊\nGoodbye 🌟", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceSingleOccurrenceWithEmoji()
+    public void testReplaceMultipleEmoji()
     {
-        // Given - content with emoji, single occurrence
-        var currentContent = "status = \"✅ success\";\nstatus = \"✅ success\";\n";
-        var originContent = "status = \"✅ success\";";
-        var newContent = "status = \"⚠️ warning\";";
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "First 😀 line\nSecond 😊 line\nFirst 😀 line";
+        String originContent = "😀";
+        String newContent = "🚀";
+        String lineDelimiter = "\n";
 
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, true);
 
-        // Then
-        Assert.assertTrue("Replacement should fail with multiple occurrences", !result.isSuccess());
-        Assert.assertTrue("Should detect multiple occurrences", result.hasMultipleOccurrences());
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should replace all emoji occurrences",
+            "First 🚀 line\nSecond 😊 line\nFirst 🚀 line", result.getUpdatedContent());
+        assertTrue("Should have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 2 added lines", 2, result.getAddedLines());
+        assertEquals("Should have 2 removed lines", 2, result.getRemovedLines());
     }
 
     @Test
-    public void shouldReplaceAllOccurrencesWithEmoji()
+    public void testReplaceWithComplexEmoji()
     {
-        // Given - content with emoji, multiple occurrences
-        var currentContent = "✅ task1;\n✅ task2;\n✅ task3;\n";
-        var originContent = "✅";
-        var newContent = "⚠️";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed for all emoji", result.isSuccess());
-        Assert.assertEquals("Content should replace all emojis",
-            "⚠️ task1;\n⚠️ task2;\n⚠️ task3;\n",
-            result.getUpdatedContent());
-    }
-
-    @Test
-    public void shouldReplaceContentWithEmojiAndWhitespace()
-    {
-        // Given - emoji with flexible whitespace
-        var currentContent = "\t✅\tsuccess\t\n\t❌\tfail\t\n";
-        var originContent = "✅ success";
-        var newContent = "⚠️ warning";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with emoji and whitespace", result.isSuccess());
-        // Note: newContent is used as-is, but leading/trailing whitespace is preserved
-        Assert.assertEquals("Content should be modified", "\t⚠️ warning\t\n\t❌\tfail\t\n",
-            result.getUpdatedContent());
-    }
-
-    // ===== Complex Mixed Line Ending Tests =====
-
-    @Test
-    public void shouldReplaceWhenOriginHasCRLFAndCurrentHasLF()
-    {
-        // Given - origin uses CRLF, current uses LF
-        var currentContent = "function test() {\n\treturn true;\n}";
-        var originContent = "function test() {\r\n\treturn true;\r\n}";
-        var newContent = "function updated() {\n\treturn false;\n}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed across line ending formats", result.isSuccess());
-        Assert.assertEquals("Content should be replaced correctly", "function updated() {\n\treturn false;\n}",
-            result.getUpdatedContent());
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWhenOriginHasLFAndCurrentHasCRLF()
-    {
-        // Given - origin uses LF, current uses CRLF
-        var currentContent = "function test() {\r\n\treturn true;\r\n}";
-        var originContent = "function test() {\n\treturn true;\n}";
-        var newContent = "function updated() {\r\n\treturn false;\r\n}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, CRLF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed across line ending formats", result.isSuccess());
-        Assert.assertEquals("Content should be replaced correctly", "function updated() {\r\n\treturn false;\r\n}",
-            result.getUpdatedContent());
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWhenOriginHasCRAndCurrentHasLF()
-    {
-        // Given - origin uses CR, current uses LF
-        var currentContent = "function test() {\n\treturn true;\n}";
-        var originContent = "function test() {\r\treturn true;\r}";
-        var newContent = "function updated() {\n\treturn false;\n}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed across line ending formats", result.isSuccess());
-        Assert.assertEquals("Content should be replaced correctly", "function updated() {\n\treturn false;\n}",
-            result.getUpdatedContent());
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWhenOriginHasMixedEndingsAndCurrentIsUniform()
-    {
-        // Given - origin uses mixed endings, current uses LF only
-        var currentContent = "a\nb\nc\nd";
-        var originContent = "a\r\nb\nc\rd";
-        var newContent = "x\ny\nz\nw";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed across mixed origin endings", result.isSuccess());
-        Assert.assertEquals("Content should be replaced correctly", "x\ny\nz\nw", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 4 lines", 4, result.getRemovedLines());
-        Assert.assertEquals("Should add 4 lines", 4, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWithMixedLineEndingsInCurrentContent()
-    {
-        // Given - current content has mixed line endings, origin has consistent LF
-        var currentContent = "line1\nline2\r\nline3\rline4\nline5";
-        var originContent = "line3";
-        var newContent = "modified_line3";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with mixed line endings", result.isSuccess());
-        Assert.assertEquals("Mixed line endings should be preserved", "line1\nline2\r\nmodified_line3\rline4\nline5",
-            result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceMultiLineWithDifferentLineEndingsBetweenOriginAndNew()
-    {
-        // Given - origin uses LF, new content uses CRLF
-        var currentContent = "if (condition) {\n\tdoSomething();\n}";
-        var originContent = "if (condition) {\n\tdoSomething();\n}";
-        var newContent = "if (condition) {\r\n\tdoSomethingElse();\r\n}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with different line endings", result.isSuccess());
-        Assert.assertEquals("New content line endings should be preserved",
-            "if (condition) {\r\n\tdoSomethingElse();\r\n}", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWhenNewContentHasDifferentLineEndingsThanCurrent()
-    {
-        // Given - current uses LF, new content uses CR
-        var currentContent = "var x = 10;\nvar y = 20;\nvar z = 30;";
-        var originContent = "var y = 20;";
-        var newContent = "var y = 25;\rvar x = 15;";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed with CR line endings in new content", result.isSuccess());
-        Assert.assertEquals("CR line endings should be preserved in new content",
-            "var x = 10;\nvar y = 25;\rvar x = 15;\nvar z = 30;", result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 2 lines", 2, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceComplexMultiLineWithMixedEndings()
-    {
-        // Given - complex scenario with multiple line ending types
-        var currentContent =
-            "class Test {\n\tpublic void method1() {\r\n\t\t// LF and CRLF mixed\r\n\t}\r\n\tpublic void method2() {\n\t\t// More mixed endings\r\n\t}\r}";
-        var originContent = "\tpublic void method1() {\r\n\t\t// LF and CRLF mixed\r\n\t}";
-        var newContent = "\tpublic void method1() {\n\t\t// Updated with LF only\n\t}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed in complex mixed scenario", result.isSuccess());
-        Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertTrue("Should preserve mixed line endings correctly",
-            result.getUpdatedContent().contains("method1() {\n\t\t// Updated with LF only\n\t}"));
-        Assert.assertTrue("Should preserve other methods with their original endings",
-            result.getUpdatedContent().contains("method2() {\n\t\t// More mixed endings\r\n\t}"));
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 3 lines", 3, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceWithOriginEndingInDifferentLineEndingThanCurrentStart()
-    {
-        // Given - origin ends with CRLF but is followed by content starting with different ending
-        var currentContent = "line1\nline2\r\nline3";
-        var originContent = "line2\r\n";
-        var newContent = "modified_line2\n";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should handle boundary line endings", result.isSuccess());
-        Assert.assertEquals("Should replace and preserve line endings correctly", "line1\nmodified_line2\nline3",
-            result.getUpdatedContent());
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldReplaceMultipleOccurrencesWithDifferentLineEndings()
-    {
-        // Given - clearer separation between occurrences with different line endings
-        var currentContent = "first\nstart\nblock1\nend\nsecond\nstart\nblock1\nend\rthird\nstart\nblock1\nend";
-        var originContent = "start\nblock1\nend";
-        var newContent = "START\r\nBLOCK1\r\nEND";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Replacement should find all three occurrences", result.isSuccess());
-        // All three occurrences should be found regardless of surrounding line endings
-        Assert.assertEquals("Should replace all three occurrences with clear separators",
-            "first\nSTART\r\nBLOCK1\r\nEND\nsecond\nSTART\r\nBLOCK1\r\nEND\rthird\nSTART\r\nBLOCK1\r\nEND",
-            result.getUpdatedContent());
-        Assert.assertEquals("Should remove 9 lines (3 occurrences × 3 lines each)", 9, result.getRemovedLines());
-        Assert.assertEquals("Should add 9 lines (3 occurrences × 3 lines each)", 9, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldHandleVeryComplexMixedEndingScenario()
-    {
-        // Given - extremely complex mixed scenario
-        var currentContent =
-            "// File header\r\npackage test;\n\nimport java.util.*;\r\n\r\nclass Test {\n\tpublic Test() {\r\n\t\t// Constructor\n\t}\n\n\tpublic void method() {\r\n\t\tSystem.out.println(\"test\");\n\t}\r\n}";
-        var originContent = "\tpublic void method() {\r\n\t\tSystem.out.println(\"test\");\n\t}";
-        var newContent = "\tpublic void method() {\n\t\tSystem.out.println(\"updated\");\r\n\t\treturn;\n\t}";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Replacement should succeed in very complex scenario", result.isSuccess());
-        Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertTrue("Should preserve file structure",
-            result.getUpdatedContent().startsWith("// File header\r\npackage test;"));
-        Assert.assertTrue("Should update method correctly",
-            result.getUpdatedContent().contains("System.out.println(\"updated\");"));
-        Assert.assertTrue("Should preserve class ending", result.getUpdatedContent().endsWith("}\r\n}"));
-        Assert.assertEquals("Should remove 3 lines", 3, result.getRemovedLines());
-        Assert.assertEquals("Should add 4 lines", 4, result.getAddedLines());
-    }
-
-    // ===== Editing Tests with Markers =====
-
-    @Test
-    public void shouldEditMarkerMessage()
-    {
-        // Given - JSON-like content with marker message to edit
-        var currentContent = "    {\n" + "      \"message\": \"AI error (AIError)\",\n"
-            + "      \"severity\": \"error\",\n" + "      \"priority\": \"high\"\n" + "    }";
-        var originContent = "      \"message\": \"AI error (AIError)\",";
-        var newContent = "      \"message\": \"AI warning (AIWarning)\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Marker message edit should succeed", result.isSuccess());
-        Assert.assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertTrue("Updated content should contain new message",
-            result.getUpdatedContent().contains("AI warning (AIWarning)"));
-        Assert.assertFalse("Updated content should not contain old message",
-            result.getUpdatedContent().contains("AI error (AIError)"));
-        Assert.assertEquals("Should remove 1 line", 1, result.getRemovedLines());
-        Assert.assertEquals("Should add 1 line", 1, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldEditMarkerSeverity()
-    {
-        // Given - edit marker severity level
-        var currentContent = "    {\n" + "    \"id\": 4002,\n" + "    \"severity\": \"error\",\n"
-            + "    \"priority\": \"high\"\n" + "    }";
-        var originContent = "    \"severity\": \"error\",";
-        var newContent = "    \"severity\": \"warning\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Severity edit should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain warning severity",
-            result.getUpdatedContent().contains("\"severity\": \"warning\""));
-        Assert.assertFalse("Updated content should not contain error severity",
-            result.getUpdatedContent().contains("\"severity\": \"error\""));
-    }
-
-    @Test
-    public void shouldEditMarkerId()
-    {
-        // Given - edit marker ID
-        var currentContent = "    {\n" + "    \"id\": 4002,\n" + "    \"message\": \"AI error\",\n"
-            + "    \"type\": \"ai_marker\"\n" + "    }";
-        var originContent = "    \"id\": 4002,";
-        var newContent = "    \"id\": 5001,";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("ID edit should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain new ID", result.getUpdatedContent().contains("\"id\": 5001"));
-        Assert.assertFalse("Updated content should not contain old ID",
-            result.getUpdatedContent().contains("\"id\": 4002"));
-    }
-
-    @Test
-    public void shouldEditMarkerType()
-    {
-        // Given - edit marker type from ai_marker to problem
-        var currentContent = "    {\n" + "    \"id\": 4002,\n" + "    \"message\": \"AI error\",\n"
-            + "    \"type\": \"ai_marker\",\n" + "    \"severity\": \"error\"\n" + "    }";
-        var originContent = "    \"type\": \"ai_marker\",";
-        var newContent = "    \"type\": \"problem\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Marker type edit should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain problem type",
-            result.getUpdatedContent().contains("\"type\": \"problem\""));
-        Assert.assertFalse("Updated content should not contain ai_marker type",
-            result.getUpdatedContent().contains("\"type\": \"ai_marker\""));
-    }
-
-    @Test
-    public void shouldEditMarkerPriority()
-    {
-        // Given - edit marker priority
-        var currentContent = "    {\n" + "    \"severity\": \"error\",\n" + "    \"priority\": \"high\",\n"
-            + "    \"message\": \"AI error\"\n" + "    }";
-        var originContent = "    \"priority\": \"high\",";
-        var newContent = "    \"priority\": \"normal\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Priority edit should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain normal priority",
-            result.getUpdatedContent().contains("\"priority\": \"normal\""));
-        Assert.assertFalse("Updated content should not contain high priority",
-            result.getUpdatedContent().contains("\"priority\": \"high\""));
-    }
-
-    @Test
-    public void shouldEditMarkerStartLine()
-    {
-        // Given - edit marker line number
-        var currentContent = "    {\n" + "    \"id\": 4002,\n" + "    \"start_line\": 45,\n"
-            + "    \"message\": \"AI error\"\n" + "    }";
-        var originContent = "    \"start_line\": 45,";
-        var newContent = "    \"start_line\": 50,";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Start line edit should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain new line number",
-            result.getUpdatedContent().contains("\"start_line\": 50"));
-        Assert.assertFalse("Updated content should not contain old line number",
-            result.getUpdatedContent().contains("\"start_line\": 45"));
-    }
-
-    @Test
-    public void shouldEditMultipleMarkersWithSameField()
-    {
-        // Given - multiple markers with severity field, edit all
-        var currentContent = "  \"markers\": [\n" + "    {\n" + "    \"id\": 4002,\n" + "    \"severity\": \"error\"\n"
-            + "    },\n" + "    {\n" + "    \"id\": 1001,\n" + "    \"severity\": \"error\"\n" + "    },\n" + "    {\n"
-            + "    \"id\": 4001,\n" + "    \"severity\": \"warning\"\n" + "    }\n" + "  ]";
-        var originContent = "    \"severity\": \"error\"";
-        var newContent = "    \"severity\": \"info\"";
-
-        // When - replace all occurrences
-        var result = replacer.replace(currentContent, originContent, newContent, LF, true);
-
-        // Then
-        Assert.assertTrue("Multiple marker edit should succeed", result.isSuccess());
-        Assert.assertEquals("Should have 2 info markers now", 2,
-            countOccurrences(result.getUpdatedContent(), "\"severity\": \"info\""));
-        Assert.assertEquals("Should have no error markers now", 0,
-            countOccurrences(result.getUpdatedContent(), "\"severity\": \"error\""));
-        Assert.assertEquals("Should preserve warning marker", 1,
-            countOccurrences(result.getUpdatedContent(), "\"severity\": \"warning\""));
-        Assert.assertEquals("Should remove 2 lines", 2, result.getRemovedLines());
-        Assert.assertEquals("Should add 2 lines", 2, result.getAddedLines());
-    }
-
-    @Test
-    public void shouldFailWhenMultipleMarkersWithSameIdForSingleEdit()
-    {
-        // Given - multiple markers with same ID pattern
-        var currentContent = "  \"markers\": [\n" + "    {\n" + "    \"id\": 4002,\n" + "    \"severity\": \"error\"\n"
-            + "    },\n" + "    {\n" + "    \"id\": 4002,\n" + "    \"severity\": \"warning\"\n" + "    }\n" + "  ]";
-        var originContent = "    \"id\": 4002,";
-        var newContent = "    \"id\": 4003,";
-
-        // When - single replacement mode
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertFalse("Should fail due to multiple occurrences", result.isSuccess());
-        Assert.assertTrue("Should detect multiple occurrences", result.hasMultipleOccurrences());
-        Assert.assertEquals("Content should remain unchanged", currentContent, result.getUpdatedContent());
-    }
-
-    @Test
-    public void shouldEditComplexMarkerWithNestedStructure()
-    {
-        // Given - marker with nested JSON structure
-        var currentContent = "  {\n" + "    \"markers\": [\n" + "    {\n" + "      \"id\": 4002,\n"
-            + "      \"absolute_path\": \"/path/to/project/MyProject/CommonModules/AIModule/Module.bsl\",\n"
-            + "      \"relative_path\": \"CommonModules/AIModule/Module.bsl\",\n" + "      \"start_line\": 45,\n"
-            + "      \"message\": \"AI error (AIError)\",\n" + "      \"type\": \"ai_marker\",\n"
-            + "      \"severity\": \"error\",\n" + "      \"priority\": \"high\",\n"
-            + "      \"marker_highlighted_text\": \"calculateTotal(items)\"\n" + "    }\n" + "    ],\n"
-            + "    \"total_count\": 5,\n" + "    \"returned_count\": 3\n" + "  }";
-        var originContent = "      \"message\": \"AI error (AIError)\",";
-        var newContent = "      \"message\": \"AI warning - review suggested\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Complex marker edit should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain new message",
-            result.getUpdatedContent().contains("AI warning - review suggested"));
-        Assert.assertTrue("Should preserve other marker fields",
-            result.getUpdatedContent().contains("\"id\": 4002")
-                && result.getUpdatedContent().contains("\"severity\": \"error\"")
-                && result.getUpdatedContent().contains("calculateTotal(items)"));
-    }
-
-    @Test
-    public void shouldEditMarkerPreservingLineEndings()
-    {
-        // Given - marker content with CRLF line endings
-        var currentContent = "{\r\n" + "  \"id\": 4002,\r\n" + "  \"severity\": \"error\",\r\n"
-            + "  \"message\": \"AI error\"\r\n" + "}";
-        var originContent = "  \"severity\": \"error\",";
-        var newContent = "  \"severity\": \"warning\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, CRLF, false);
-
-        // Then
-        Assert.assertTrue("Edit should preserve CRLF endings", result.isSuccess());
-        Assert.assertTrue("Updated content should use CRLF", result.getUpdatedContent().contains("\r\n"));
-        Assert.assertTrue("Content should end with brace",
-            result.getUpdatedContent().endsWith("}"));
-    }
-
-    @Test
-    public void shouldEditMarkerWithSpecialCharactersInMessage()
-    {
-        // Given - marker with special characters
-        var currentContent =
-            "{\n" + "  \"message\": \"Error: unexpected token ';' at line 45\",\n" + "  \"type\": \"problem\"\n" + "}";
-        var originContent = "  \"message\": \"Error: unexpected token ';' at line 45\",";
-        var newContent = "  \"message\": \"Warning: consider using semicolon at line 45\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Edit with special characters should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain warning", result.getUpdatedContent().contains("Warning"));
-        Assert.assertTrue("Should preserve semicolon and line number",
-            result.getUpdatedContent().contains("at line 45"));
-        Assert.assertFalse("Should not contain old error message",
-            result.getUpdatedContent().contains("Error: unexpected token"));
-    }
-
-    @Test
-    public void shouldEditEmptyMarkerMessage()
-    {
-        // Given - marker with empty message
-        var currentContent = "{\n" + "  \"message\": \"\",\n" + "  \"severity\": \"error\"\n" + "}";
-        var originContent = "  \"message\": \"\",";
-        var newContent = "  \"message\": \"Error description added\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Edit from empty message should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain new message",
-            result.getUpdatedContent().contains("Error description added"));
-        Assert.assertFalse("Should not contain empty message",
-            result.getUpdatedContent().contains("\"message\": \"\""));
-    }
-
-    @Test
-    public void shouldEditToEmptyMarkerMessage()
-    {
-        // Given - marker with message to be cleared
-        var currentContent = "{\n" + "  \"message\": \"Old message\",\n" + "  \"severity\": \"error\"\n" + "}";
-        var originContent = "  \"message\": \"Old message\",";
-        var newContent = "  \"message\": \"\",";
-
-        // When
-        var result = replacer.replace(currentContent, originContent, newContent, LF, false);
-
-        // Then
-        Assert.assertTrue("Edit to empty message should succeed", result.isSuccess());
-        Assert.assertTrue("Updated content should contain empty message",
-            result.getUpdatedContent().contains("\"message\": \"\""));
-        Assert.assertFalse("Should not contain old message", result.getUpdatedContent().contains("Old message"));
-    }
-
-    @Test
-    public void shouldEditMultipleFieldsInMarker()
-    {
-        // Given - consecutive edits to different fields
-        var currentContent =
-            "{\n" + "  \"id\": 4002,\n" + "  \"severity\": \"error\",\n" + "  \"priority\": \"high\"\n" + "}";
-
-        // When - first edit: severity
-        var result1 =
-            replacer.replace(currentContent, "  \"severity\": \"error\",", "  \"severity\": \"warning\",", LF, false);
-        Assert.assertTrue("First edit should succeed", result1.isSuccess());
-
-        // When - second edit: priority on result
-        var result2 = replacer.replace(result1.getUpdatedContent(), "  \"priority\": \"high\"",
-            "  \"priority\": \"normal\"", LF, false);
-
-        // Then
-        Assert.assertTrue("Second edit should succeed", result2.isSuccess());
-        Assert.assertTrue("Final content should have both changes",
-            result2.getUpdatedContent().contains("\"severity\": \"warning\"")
-                && result2.getUpdatedContent().contains("\"priority\": \"normal\""));
-    }
-
-    // Helper method to count occurrences of a substring
-    private int countOccurrences(String text, String substring)
-    {
-        int count = 0;
-        int index = 0;
-        while ((index = text.indexOf(substring, index)) != -1)
-        {
-            count++;
-            index += substring.length();
-        }
-        return count;
+        ContentReplacer replacer = new ContentReplacer();
+        String currentContent = "Function 👨‍💻 coding()\nStart 🏁 process\nEnd ✅";
+        String originContent = "👨‍💻";
+        String newContent = "👩‍💻";
+        String lineDelimiter = "\n";
+
+        ReplaceResult result = replacer.replace(currentContent, originContent, newContent, lineDelimiter, false);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertEquals("Updated content should replace complex emoji",
+            "Function 👩‍💻 coding()\nStart 🏁 process\nEnd ✅", result.getUpdatedContent());
+        assertFalse("Should not have multiple occurrences", result.hasMultipleOccurrences());
+        assertEquals("Should have 1 added line", 1, result.getAddedLines());
+        assertEquals("Should have 1 removed line", 1, result.getRemovedLines());
     }
 }

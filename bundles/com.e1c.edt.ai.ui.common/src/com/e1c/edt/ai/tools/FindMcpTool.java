@@ -67,8 +67,7 @@ public class FindMcpTool
         "[\n"
         + "  {\n"
         + "    \"project_name\": \"core-api\",\n"
-        + "    \"relative_file_path\": \"src/services/TestUserService.bsl\",\n"
-        + "    \"absolute_file_path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
+        + "    \"path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
         + "    \"offset\": 243,\n"
         + "    \"length\": 16,\n"
         + "    \"line_offset\": 15,\n"
@@ -155,7 +154,20 @@ public class FindMcpTool
 
         if (call.callKind == ToolCallKind.RENDER)
         {
-            details.requestMarkdown = MessageFormat.format(Messages.SearchTitleTemplate, searchQuery);
+            // Create detailed request markdown with search parameters
+            var requestMarkdown = new StringBuilder();
+            requestMarkdown.append(MessageFormat.format(Messages.SearchTitleTemplate, searchQuery));
+
+            // Add file patterns only for content search (not for file name search)
+            if (!isFileNameSearch)
+            {
+                requestMarkdown.append("\n\n") //$NON-NLS-1$
+                    .append(Messages.FileNamePatterns)
+                    .append(": ") //$NON-NLS-1$
+                    .append(formatFileNamePatterns(fileNamePatterns));
+            }
+
+            details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
@@ -289,13 +301,7 @@ public class FindMcpTool
                                         var location = file.getRawLocation();
                                         if (location != null)
                                         {
-                                            element.absoluteFilePath = location.toOSString();
-                                        }
-
-                                        var relativePath = file.getProjectRelativePath();
-                                        if (relativePath != null)
-                                        {
-                                            element.relativeFilePath = relativePath.toPortableString();
+                                            element.path = location.toOSString();
                                         }
 
                                         var line = fileMatch.getLineElement();
@@ -352,10 +358,16 @@ public class FindMcpTool
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
                 markdownUtils.createStyledText(String.valueOf(elements.size()), TextColor.GREEN, FontWeight.BOLD)))
-                .append("\n")
-                .append(searchQuery)
-                .append("\n:")
-                .append(fileNamePatterns != null ? Arrays.toString(fileNamePatterns) : "null");
+                .append("\n\n") //$NON-NLS-1$
+                .append(Messages.SearchQuery)
+                .append(": ") //$NON-NLS-1$
+                .append("`") //$NON-NLS-1$
+                .append(markdownUtils.escapeForMarkdown(searchQuery))
+                .append("`") //$NON-NLS-1$
+                .append("\n\n") //$NON-NLS-1$
+                .append(Messages.FileNamePatterns)
+                .append(": ") //$NON-NLS-1$
+                .append(formatFileNamePatterns(fileNamePatterns));
 
             if (elements.size() > 0)
             {
@@ -385,9 +397,17 @@ public class FindMcpTool
 
                     for (var element : projectElements)
                     {
-                        responseMarkdown.append("- **")
-                            .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
-                            .append("**");
+                        String formattedPath;
+                        if (element.lineNumber > 0)
+                        {
+                            formattedPath = markdownUtils.formatFilePath(element.path, element.lineNumber, 0);
+                        }
+                        else
+                        {
+                            formattedPath = markdownUtils.formatFilePath(element.path);
+                        }
+
+                        responseMarkdown.append("- **").append(formattedPath).append("**");
 
                         if (element.lineNumber > 0)
                         {
@@ -558,14 +578,8 @@ public class FindMcpTool
         @SerializedName("project_name")
         public String projectName;
 
-        /**
-         * Project relative path to the file.
-         */
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
-
-        @SerializedName("absolute_file_path")
-        public String absoluteFilePath;
+        @SerializedName("path")
+        public String path;
 
         public int offset;
 
@@ -611,6 +625,9 @@ public class FindMcpTool
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
             final List<Element> allElements = new ArrayList<>();
+
+            // Check if searchPattern is the default file search pattern
+            boolean isDefaultSearch = "*".equals(searchPattern);
 
             for (var projectName : projectNames)
             {
@@ -659,19 +676,41 @@ public class FindMcpTool
             // Create response markdown
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.FilesFoundTemplate,
-                markdownUtils.createStyledText(String.valueOf(allElements.size()), TextColor.GREEN, FontWeight.BOLD)));
+                markdownUtils.createStyledText(String.valueOf(allElements.size()), TextColor.GREEN, FontWeight.BOLD)))
+                .append("\n\n") //$NON-NLS-1$
+                .append(Messages.SearchQuery)
+                .append(": ") //$NON-NLS-1$
+                .append("`") //$NON-NLS-1$
+                .append(markdownUtils.escapeForMarkdown(isDefaultSearch ? "*" : searchPattern)) //$NON-NLS-1$
+                .append("`") //$NON-NLS-1$
+                .append("\n\n") //$NON-NLS-1$
+                .append(Messages.FileNamePatterns)
+                .append(": ") //$NON-NLS-1$
+                .append("`") //$NON-NLS-1$
+                .append(markdownUtils.escapeForMarkdown(isDefaultSearch ? "*" : searchPattern)) //$NON-NLS-1$
+                .append("`"); //$NON-NLS-1$
 
             // Add search results in collapsible section
-            responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n");
+            responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
             for (var element : allElements)
             {
-                responseMarkdown.append("- **")
-                    .append(markdownUtils.escapeForMarkdown(element.relativeFilePath))
-                    .append("**\n");
+                String formattedPath;
+                if (element.lineNumber > 0)
+                {
+                    formattedPath = markdownUtils.formatFilePath(element.path, element.lineNumber, 0);
+                }
+                else
+                {
+                    formattedPath = markdownUtils.formatFilePath(element.path);
+                }
+
+                responseMarkdown.append("- **") //$NON-NLS-1$
+                    .append(formattedPath)
+                    .append("**\n"); //$NON-NLS-1$
             }
 
-            responseMarkdown.append("</details>");
+            responseMarkdown.append("</details>"); //$NON-NLS-1$
 
             details.responseMarkdown = responseMarkdown.toString();
 
@@ -722,8 +761,7 @@ public class FindMcpTool
                     {
                         var element = new Element();
                         element.projectName = member.getProject().getName();
-                        element.relativeFilePath = member.getProjectRelativePath().toPortableString();
-                        element.absoluteFilePath = member.getLocation().toOSString();
+                        element.path = member.getLocation().toOSString();
                         element.offset = 0;
                         element.length = 0;
                         element.lineOffset = 0;
@@ -757,6 +795,34 @@ public class FindMcpTool
             .replace("*", ".*") //$NON-NLS-1$ //$NON-NLS-2$
             .replace("?", "."); //$NON-NLS-1$ //$NON-NLS-2$
         return fileName.matches(regex);
+    }
+
+    /**
+     * Formats file name patterns array for display.
+     * Uses backticks for values and removes brackets for single element.
+     */
+    private String formatFileNamePatterns(String[] patterns)
+    {
+        if (patterns == null || patterns.length == 0)
+        {
+            return Messages.AllFiles;
+        }
+
+        if (patterns.length == 1)
+        {
+            return "`" + patterns[0] + "`"; //$NON-NLS-1$ //$NON-NLS-2$
+        }
+
+        var result = new StringBuilder();
+        for (int i = 0; i < patterns.length; i++)
+        {
+            if (i > 0)
+            {
+                result.append(", "); //$NON-NLS-1$
+            }
+            result.append("`").append(patterns[i]).append("`"); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        return result.toString();
     }
 
 }

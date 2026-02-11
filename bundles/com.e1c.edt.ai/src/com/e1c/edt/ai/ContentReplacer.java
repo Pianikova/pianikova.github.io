@@ -1,375 +1,282 @@
 package com.e1c.edt.ai;
 
-import java.util.regex.Pattern;
+import java.lang.Math;
 
 import com.google.common.base.Preconditions;
 
-/**
- * Handles content replacement operations using template-based line ending matching.
- *
- * <p>This class provides methods for replacing text content in strings with the ability
- * to track how many lines were added or removed during the replacement process.
- * It supports both single and multiple occurrences replacement and provides detailed
- * statistics about the operation.</p>
- *
- * <p>Key features:</p>
- * <ul>
- *   <li>Replace all occurrences of a text pattern using template-based line ending matching</li>
- *   <li>Replace single occurrence with safety checks for multiple matches</li>
- *   <li>Calculate precise line change statistics</li>
- *   <li>Preserve line breaks in unchanged content</li>
- *   <li>Work with CRLF, LF, CR, and mixed line ending formats using templates</li>
- *   <li>Flexible whitespace handling - spaces and tabs in originContent match any sequence of spaces/tabs in currentContent</li>
- *   <li>Robust parameter validation using Guava Preconditions</li>
- * </ul>
- *
- * @author 1C EDT AI Team
- * @version 3.0
- * @since 1.0
- */
 public class ContentReplacer implements IContentReplacer
 {
-    /**
-     * {@inheritDoc}
-     *
-     * <p>Replaces content in currentContent with newContent based on the replaceAll parameter.
-     * This method performs content replacement with detailed statistics tracking and supports
-     * both single occurrence and multiple occurrences replacement modes using template-based
-     * line ending matching that works with any line endings (CRLF, LF, CR).</p>
-     *
-     * <p>The method replaces line breaks in originContent with templates for line ending characters,
-     * then finds the occurrence in currentContent and performs the replacement without normalization.</p>
-     *
-     * <p>When replaceAll is true (multiple occurrences mode):</p>
-     * <ol>
-     *   <li>Converts line breaks in originContent to templates</li>
-     *   <li>Finds and replaces all occurrences using template matching</li>
-     *   <li>Preserves line breaks in unchanged content</li>
-     *   <li>Calculates total lines added/removed across all replacements</li>
-     *   <li>Returns updated content with detailed statistics</li>
-     * </ol>
-     *
-     * <p>When replaceAll is false (single occurrence mode):</p>
-     * <ol>
-     *   <li>Converts line breaks in originContent to templates</li>
-     *   <li>Finds the first occurrence using template matching</li>
-     *   <li>Verifies no additional occurrences exist (safety check)</li>
-     *   <li>Performs the replacement if safe, preserving line breaks</li>
-     *   <li>Calculates lines added/removed for the single replacement</li>
-     * </ol>
-     *
-     * <p>Key safety features:</p>
-     * <ul>
-     *   <li>Null parameter validation with descriptive error messages</li>
-     *   <li>Early return for empty origin content</li>
-     *   <li>Efficient string building for large content</li>
-     *   <li>Accurate line change calculation</li>
-     *   <li>Multiple occurrence detection in single replacement mode</li>
-     * </ul>
-     *
-     * <p>Use cases:</p>
-     * <ul>
-     *   <li>replaceAll=true: Replacing common patterns, variable names, imports across entire file</li>
-     *   <li>replaceAll=false: Replacing specific, unique code segments where safety is critical</li>
-     * </ul>
-     *
-     * @param currentContent the original file content to modify
-     * @param originContent the text pattern to search for and replace
-     * @param newContent the replacement text
-     * @param lineDelimiter the line ending format to use for consistent processing
-     * @param replaceAll if true, replaces all occurrences; if false, replaces single occurrence
-     * @return ReplaceResult containing updated content, line statistics, and multiple occurrences flag
-     * @throws NullPointerException if any parameter is null
-     */
-    @Override
-    public ReplaceResult replace(String currentContent, String originContent, String newContent,
-        String lineDelimiter, boolean replaceAll)
-    {
-        // Validate input parameters
-        Preconditions.checkNotNull(currentContent, "currentContent cannot be null"); //$NON-NLS-1$
-        Preconditions.checkNotNull(originContent, "originContent cannot be null"); //$NON-NLS-1$
-        Preconditions.checkNotNull(newContent, "newContent cannot be null"); //$NON-NLS-1$
-        Preconditions.checkNotNull(lineDelimiter, "lineDelimiter cannot be null"); //$NON-NLS-1$
+    private static final String NORMALIZED_LINE_DELIMITER = "\n"; //$NON-NLS-1$
+    private static final String BOM = "\uFEFF"; // Byte Order Mark (UTF-8) //$NON-NLS-1$    
 
-        // Early return if nothing to replace - invalid operation but not an error
-        if (originContent.isEmpty())
-        {
-            return new ReplaceResult(currentContent, 0, 0, false, false);
-        }
+	@Override
+	public ReplaceResult replace(String currentContent, String originContent, String newContent,
+		String lineDelimiter, boolean replaceAll)
+	{
+		// Validate input parameters
+		Preconditions.checkNotNull(currentContent);
+		Preconditions.checkNotNull(originContent);
+		Preconditions.checkNotNull(newContent);
+		Preconditions.checkNotNull(lineDelimiter);
 
-        // Replace line breaks in originContent with templates for line ending characters
-        var templatePattern = createTemplatePattern(originContent);
+		// Determine line delimiter from currentContent, fallback to provided argument
+		String detectedLineDelimiter = detectLineDelimiter(currentContent);
+		if (detectedLineDelimiter == null)
+		{
+			detectedLineDelimiter = lineDelimiter;
+		}
 
-        // Find occurrence in currentContent and perform replacement
-        if (replaceAll)
-        {
-            return performReplaceAllWithTemplate(currentContent, templatePattern, newContent, lineDelimiter);
-        }
-        else
-        {
-            return performReplaceOneWithTemplate(currentContent, templatePattern, newContent, lineDelimiter);
-        }
-    }
+		// Check if currentContent has BOM and remember it
+		boolean currentHasBOM = currentContent.startsWith(BOM);
 
-    /**
-     * Creates a regex pattern that matches the originContent with templates for line endings and invisible characters.
-     * Line breaks are replaced with templates that can match any line ending format.
-     * Spaces and tabs are handled flexibly - sequences of whitespace (spaces and/or tabs) in the originContent are matched
-     * against any sequence of spaces and/or tabs in the currentContent.
-     *
-     * <p>Important: Only spaces and tabs are treated flexibly. Newlines are handled separately through the line ending
-     * template mechanism and are NOT part of the flexible whitespace matching. This prevents the pattern from
-     * accidentally matching across line boundaries.</p>
-     *
-     * <p>This means that if originContent has " " (space) and currentContent has "\t" (tab) or multiple spaces/tabs,
-     * they will still match because whitespace is treated flexibly during matching.</p>
-     *
-     * @param originContent the content to create a template pattern for
-     * @return regex pattern that matches originContent with line ending and invisible character templates
-     */
-    private static Pattern createTemplatePattern(String originContent)
-    {
-        // Build a regex that matches originContent while allowing any line ending at each break
-        // and handling spaces and tabs flexibly.
-        var pattern = new StringBuilder();
-        var length = originContent.length();
-        var index = 0;
+		// Remove BOM from all content for searching/comparison (ignore BOM)
+		String searchCurrentContent = stripBOM(currentContent);
+		String searchOriginContent = stripBOM(originContent);
+		String searchNewContent = stripBOM(newContent);
 
-        while (index < length)
-        {
-            var next = index;
-            while (next < length)
-            {
-                var ch = originContent.charAt(next);
-                if (ch == '\r' || ch == '\n')
-                {
-                    break;
-                }
-                next++;
-            }
+		// Normalize all content to use \n as line delimiter
+		String normalizedCurrentContent = normalizeLineDelimiters(searchCurrentContent, detectedLineDelimiter);
+		String normalizedOriginContent = normalizeLineDelimiters(searchOriginContent, detectedLineDelimiter);
+		String normalizedNewContent = normalizeLineDelimiters(searchNewContent, detectedLineDelimiter);
 
-            if (next > index)
-            {
-                // Build the pattern character by character to handle spaces and tabs flexibly
-                var segment = originContent.substring(index, next);
-                var i = 0;
-                while (i < segment.length())
-                {
-                    var ch = segment.charAt(i);
-                    // Skip consecutive whitespace characters and create a single flexible pattern
-                    if (ch == ' ' || ch == '\t')
-                    {
-                        // Match one or more spaces or tabs (but NOT newlines)
-                        // Using [ \\t]+ instead of \\s+ to avoid matching newlines
-                        pattern.append("[ \\t]+"); //$NON-NLS-1$
-                        // Skip all consecutive whitespace characters
-                        while (i < segment.length() && (segment.charAt(i) == ' ' || segment.charAt(i) == '\t'))
-                        {
-                            i++;
-                        }
-                    }
-                    else
-                    {
-                        // Quote other characters to escape special regex characters
-                        pattern.append(Pattern.quote(String.valueOf(ch)));
-                        i++;
-                    }
-                }
-            }
+		// Check if originContent exists in currentContent (BOM ignored)
+		if (!normalizedCurrentContent.contains(normalizedOriginContent))
+		{
+            // No occurrence found - return failure result
+			return new ReplaceResult(currentContent, 0, 0, false);
+		}
 
-            if (next >= length)
-            {
-                break;
-            }
+		// Count occurrences
+		int occurrenceCount = countOccurrences(normalizedCurrentContent, normalizedOriginContent);
+		boolean multipleOccurrences = occurrenceCount > 1;
 
-            // Consume a line ending sequence and replace it with a template that matches any line ending.
-            if (originContent.charAt(next) == '\r' && next + 1 < length
-                && originContent.charAt(next + 1) == '\n')
-            {
-                index = next + 2;
-            }
-            else
-            {
-                index = next + 1;
-            }
+		// Count lines in origin and new content, ignoring common context
+		int removedLines = countLinesIgnoringContext(normalizedOriginContent, normalizedNewContent,
+			NORMALIZED_LINE_DELIMITER, true);
+		int addedLines = countLinesIgnoringContext(normalizedNewContent, normalizedOriginContent,
+			NORMALIZED_LINE_DELIMITER, false);
 
-            pattern.append("(?:\\r\\n|\\r|\\n)"); //$NON-NLS-1$
-        }
+		// Perform replacement on normalized content
+		String normalizedUpdatedContent;
+		if (replaceAll)
+		{
+			normalizedUpdatedContent = normalizedCurrentContent.replace(normalizedOriginContent,
+				normalizedNewContent);
+			// Adjust line counts for multiple occurrences
+			removedLines = removedLines * occurrenceCount;
+			addedLines = addedLines * occurrenceCount;
+		}
+		else
+		{
+			// Replace only first occurrence
+			normalizedUpdatedContent = normalizedCurrentContent.replaceFirst(
+				java.util.regex.Pattern.quote(normalizedOriginContent),
+				java.util.regex.Matcher.quoteReplacement(normalizedNewContent));
+		}
 
-        return Pattern.compile(pattern.toString());
-    }
+		// Convert back to original line delimiter
+		String updatedContent = denormalizeLineDelimiters(normalizedUpdatedContent, detectedLineDelimiter);
 
-    /**
-     * Performs replacement of all occurrences in the content using template-based line ending matching.
-     *
-     * @param currentContent original current content
-     * @param templatePattern regex pattern with line ending templates
-     * @param newContent replacement content
-     * @param lineDelimiter line delimiter for line counting
-     * @return ReplaceResult with updated content and statistics
-     */
-    private ReplaceResult performReplaceAllWithTemplate(String currentContent, Pattern templatePattern,
-        String newContent,
-        String lineDelimiter)
-    {
-        // Find all occurrences using template pattern
-        var matcher = templatePattern.matcher(currentContent);
-        var count = 0;
-        var lastEnd = 0;
-        var result = new StringBuilder();
-        var matchedContent = ""; // Store the matched content for line counting //$NON-NLS-1$
+		// Restore BOM if it was present in current content
+		updatedContent = restoreBOM(updatedContent, currentHasBOM);
 
-        while (matcher.find())
-        {
-            count++;
-            matchedContent = matcher.group(); // Store the current match
+		return new ReplaceResult(updatedContent, addedLines, removedLines, true, multipleOccurrences);
+	}
+	
+	private String stripBOM(String content)
+	{
+		if (content == null || content.isEmpty())
+		{
+			return content;
+		}
+		if (content.startsWith(BOM))
+		{
+			return content.substring(BOM.length());
+		}
+		
+		return content;
+	}
 
-            // Append content before the current match
-            result.append(currentContent, lastEnd, matcher.start());
+	private String restoreBOM(String content, boolean hadBOM)
+	{
+		if (hadBOM && (content == null || !content.startsWith(BOM)))
+		{
+			return BOM + content;
+		}
+		
+		return content;
+	}
 
-            // Append the replacement content
-            result.append(newContent);
+	/**
+	 * Detects the line delimiter used in content
+	 *
+	 * @param content the content to detect line delimiter from
+	 * @return the detected line delimiter (\r\n, \r, or \n), or null if not determinable
+	 */
+	@SuppressWarnings("nls")
+    private String detectLineDelimiter(String content)
+	{
+		if (content.isEmpty())
+		{
+			return null;
+		}
 
-            // Update position
-            lastEnd = matcher.end();
-        }
+		int crCount = 0;
+		int lfCount = 0;
+		int crlfCount = 0;
 
-        // If no occurrences were found, return original content
-        if (count == 0)
-        {
-            return new ReplaceResult(currentContent, 0, 0, false, false);
-        }
+		for (int i = 0; i < content.length(); i++)
+		{
+			char c = content.charAt(i);
+			if (c == '\r')
+			{
+				if (i + 1 < content.length() && content.charAt(i + 1) == '\n')
+				{
+					crlfCount++;
+					i++; // Skip the next character (\n)
+				}
+				else
+				{
+					crCount++;
+				}
+			}
+			else if (c == '\n')
+			{
+				lfCount++;
+			}
+		}
 
-        // Append any remaining content after the last replacement
-        result.append(currentContent.substring(lastEnd));
-        var updatedContent = result.toString();
+		// Prioritize CRLF over CR/LF individually
+		if (crlfCount > 0)
+		{
+			return "\r\n";
+		}
+		
+		if (crCount > 0)
+		{
+			return "\r";
+		}
+		
+		if (lfCount > 0)
+		{
+			return "\n";
+		}
 
-        // Calculate line change statistics
-        var originLines = countLinesWithAnyLineEnding(matchedContent);
-        var newLines = countLinesWithAnyLineEnding(newContent);
-        var addedLines = newLines * count; // Lines added across all replacements
-        var removedLines = originLines * count; // Lines removed across all replacements
+		// No line delimiters found
+		return null;
+	}
 
-        return new ReplaceResult(updatedContent, addedLines, removedLines, true, false);
-    }
+	/**
+	 * Normalizes line delimiters in content to \n
+	 *
+	 * @param content the content to normalize
+	 * @param lineDelimiter the current line delimiter
+	 * @return normalized content with \n line delimiters
+	 */
+	private String normalizeLineDelimiters(String content, String lineDelimiter)
+	{
+		if (content.isEmpty() || lineDelimiter.equals(NORMALIZED_LINE_DELIMITER))
+		{
+			return content;
+		}
+		return content.replace(lineDelimiter, NORMALIZED_LINE_DELIMITER);
+	}
 
-    /**
-     * Performs replacement of a single occurrence in the content with safety checks using template-based line ending matching.
-     *
-     * @param currentContent original current content
-     * @param templatePattern regex pattern with line ending templates
-     * @param newContent replacement content
-     * @param lineDelimiter line delimiter for line counting
-     * @return ReplaceResult with updated content and statistics
-     */
-    private ReplaceResult performReplaceOneWithTemplate(String currentContent, Pattern templatePattern,
-        String newContent,
-        String lineDelimiter)
-    {
-        // Find all occurrences using template pattern
-        var matcher = templatePattern.matcher(currentContent);
-        var occurrences = new java.util.ArrayList<String>();
-        var positions = new java.util.ArrayList<int[]>();
+	/**
+	 * Denormalizes line delimiters from \n back to the original line delimiter
+	 *
+	 * @param content the content with \n line delimiters
+	 * @param lineDelimiter the target line delimiter
+	 * @return content with original line delimiters
+	 */
+	private String denormalizeLineDelimiters(String content, String lineDelimiter)
+	{
+		if (content.isEmpty() || lineDelimiter.equals(NORMALIZED_LINE_DELIMITER))
+		{
+			return content;
+		}
+		return content.replace(NORMALIZED_LINE_DELIMITER, lineDelimiter);
+	}
 
-        while (matcher.find())
-        {
-            occurrences.add(matcher.group());
-            positions.add(new int[] { matcher.start(), matcher.end() });
-        }
+	/**
+	 * Counts the number of occurrences of a substring in a string
+	 *
+	 * @param str the string to search in
+	 * @param sub the substring to search for
+	 * @return the number of occurrences
+	 */
+	private int countOccurrences(String str, String sub)
+	{
+		if (str.isEmpty() || sub.isEmpty())
+		{
+			return 0;
+		}
 
-        // Check if any occurrences were found
-        if (occurrences.isEmpty())
-        {
-            // No occurrence found - return original content with failure status
-            return new ReplaceResult(currentContent, 0, 0, false, false);
-        }
+		int count = 0;
+		int idx = 0;
 
-        // Check for multiple occurrences
-        var hasMultiple = (occurrences.size() > 1);
-        if (hasMultiple)
-        {
-            // Multiple occurrences found - this is unsafe for single replacement operation
-            // Return original content with failure and multiple occurrences flag
-            return new ReplaceResult(currentContent, 0, 0, false, true);
-        }
+		while ((idx = str.indexOf(sub, idx)) != -1)
+		{
+			count++;
+			idx += sub.length();
+		}
 
-        // Get the single occurrence position
-        var position = positions.get(0);
-        var start = position[0];
-        var end = position[1];
-        var matchedContent = occurrences.get(0);
+		return count;
+	}
 
-        // Build the updated content by:
-        // 1. Taking content before the match
-        // 2. Adding the replacement content
-        // 3. Adding content after the match
-        var updatedContent =
-            currentContent.substring(0, start) + newContent + currentContent.substring(end);
+	/**
+	 * Counts the number of lines in content, ignoring common prefix and suffix with other content
+	 *
+	 * @param content the content to count lines in
+	 * @param otherContent the other content to compare against
+	 * @param lineDelimiter the line delimiter
+	 * @param isRemoved true if this is removed content, false if added
+	 * @return the number of lines
+	 */
+	private int countLinesIgnoringContext(String content, String otherContent, String lineDelimiter, boolean isRemoved)
+	{
+		if (content.isEmpty())
+		{
+			return 0;
+		}
 
-        // Calculate line change statistics for single replacement
-        var originLines = countLinesWithAnyLineEnding(matchedContent);
-        var newLines = countLinesWithAnyLineEnding(newContent);
-        var addedLines = newLines; // For single replacement, this is just new content lines
-        var removedLines = originLines; // For single replacement, this is just original content lines
+		// Split content into lines
+		String[] contentLines = content.split(java.util.regex.Pattern.quote(lineDelimiter), -1);
+		String[] otherLines = otherContent.split(java.util.regex.Pattern.quote(lineDelimiter), -1);
 
-        return new ReplaceResult(updatedContent, addedLines, removedLines, true, false);
-    }
+		// Find common prefix
+		int prefixLength = 0;
+		int minPrefixLength = Math.min(contentLines.length, otherLines.length);
+		while (prefixLength < minPrefixLength && contentLines[prefixLength].equals(otherLines[prefixLength]))
+		{
+			prefixLength++;
+		}
 
-    /**
-     * Counts lines in content using regular expressions that work with any line endings.
-     *
-     * <p>This method accurately counts the number of lines in a text string regardless of
-     * line ending format (CRLF, LF, or CR). It handles various edge cases including:</p>
-     * <ul>
-     *   <li>Empty content (returns 0)</li>
-     *   <li>Single-line content without delimiters (returns 1)</li>
-     *   <li>Content ending with or without line delimiter</li>
-     *   <li>Multiple consecutive delimiters</li>
-     *   <li>Mixed line ending styles in the same content</li>
-     * </ul>
-     *
-     * <p>The counting algorithm uses regex to find all line ending patterns:
-     * \r\n (Windows), \r (old Mac), and \n (Unix) and counts lines appropriately,
-     * including the final line that may not end with a delimiter.</p>
-     *
-     * @param content text to analyze (must not be null)
-     * @return number of lines in the content (0 for empty content)
-     * @throws NullPointerException if content is null
-     */
-    public static int countLinesWithAnyLineEnding(String content)
-    {
-        // Validate input parameter
-        Preconditions.checkNotNull(content, "content cannot be null"); //$NON-NLS-1$
+		// Find common suffix
+		int suffixLength = 0;
+		int minSuffixLength = Math.min(contentLines.length - prefixLength, otherLines.length - prefixLength);
+		while (suffixLength < minSuffixLength
+			&& contentLines[contentLines.length - 1 - suffixLength].equals(otherLines[otherLines.length - 1 - suffixLength]))
+		{
+			suffixLength++;
+		}
 
-        // Empty content has no lines
-        if (content.isEmpty())
-        {
-            return 0;
-        }
+		// Count lines excluding common prefix and suffix
+		int countedLines = contentLines.length - prefixLength - suffixLength;
 
-        // Use regex to find all line ending patterns: \r\n, \r, or \n
-        // The pattern \r\n|\r|\n matches any line ending, but we need to handle \r\n first
-        // to avoid double-counting when \r\n is split into \r and \n
-        var lineEndingPattern = Pattern.compile("\r\n|\r|\n"); //$NON-NLS-1$
-        var matcher = lineEndingPattern.matcher(content);
+		// Special case: if removing, and there's only one line being replaced (middle line)
+		// We should count it as 1 removed line
+		if (isRemoved && countedLines == 0 && contentLines.length > 0 && otherLines.length > 0)
+		{
+			// Check if this is a case where a single line is being replaced within context
+			// e.g., "Abc\nLine2\nXyz\n" -> "Abc\nNewLine\nXyz\n"
+			// Here, Line2 is replaced by NewLine, but Abc and Xyz are context
+			if (contentLines.length == otherLines.length && prefixLength + suffixLength == contentLines.length - 1)
+			{
+				return 1;
+			}
+		}
 
-        // Count line endings
-        var lineEndingCount = 0;
-        while (matcher.find())
-        {
-            lineEndingCount++;
-        }
-
-        // Calculate lines: if content ends with a line ending, line count = line endings count
-        // If content doesn't end with a line ending, line count = line endings count + 1
-        var lastChar = content.charAt(content.length() - 1);
-        if (lastChar == '\r' || lastChar == '\n')
-        {
-            return lineEndingCount;
-        }
-        else
-        {
-            return lineEndingCount + 1;
-        }
-    }
+		return Math.max(0, countedLines);
+	}
 }

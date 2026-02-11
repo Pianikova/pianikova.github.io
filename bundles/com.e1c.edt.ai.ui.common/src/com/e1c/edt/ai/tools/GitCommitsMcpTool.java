@@ -122,8 +122,27 @@ public class GitCommitsMcpTool
 
 		if (call.callKind == ToolCallKind.RENDER)
 		{
-			var projectName = request.projectName != null ? request.projectName : "current project"; //$NON-NLS-1$
-			details.requestMarkdown = MessageFormat.format(Messages.GitCommitsTitleTemplate, projectName);
+			var projectName = request.projectName;
+			var maxCommits = request.maxCommits != null && request.maxCommits > 0 ? request.maxCommits : DEFAULT_MAX_COMMITS;
+
+			// Create detailed request markdown with search parameters
+			var requestMarkdown = new StringBuilder();
+			requestMarkdown.append(MessageFormat.format(Messages.GitCommitsTitleTemplate, projectName))
+				.append("\n\n") //$NON-NLS-1$
+				.append(Messages.ProjectName)
+				.append(": ") //$NON-NLS-1$
+				.append("`") //$NON-NLS-1$
+				.append(markdownUtils.escapeForMarkdown(projectName))
+				.append("`"); //$NON-NLS-1$
+
+			// Add max commits parameter
+			requestMarkdown.append("\n\n") //$NON-NLS-1$
+				.append("Max commits: ") //$NON-NLS-1$
+				.append("`") //$NON-NLS-1$
+				.append(maxCommits)
+				.append("`"); //$NON-NLS-1$
+
+			details.requestMarkdown = requestMarkdown.toString();
 			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
 
@@ -204,40 +223,51 @@ public class GitCommitsMcpTool
 				var responseMarkdown = new StringBuilder();
 				responseMarkdown.append(MessageFormat.format(Messages.GitCommitsFoundTemplate,
 					markdownUtils.createStyledText(String.valueOf(commitInfos.size()), TextColor.GREEN, FontWeight.BOLD),
-					markdownUtils.escapeForMarkdown(projectName)));
+					markdownUtils.escapeForMarkdown(projectName)))
+					.append("\n\n") //$NON-NLS-1$
+					.append(Messages.ProjectName)
+					.append(": ") //$NON-NLS-1$
+					.append("`") //$NON-NLS-1$
+					.append(markdownUtils.escapeForMarkdown(projectName))
+					.append("`") //$NON-NLS-1$
+					.append("\n\n") //$NON-NLS-1$
+					.append("Max commits: ") //$NON-NLS-1$
+					.append("`") //$NON-NLS-1$
+					.append(maxCommits)
+					.append("`"); //$NON-NLS-1$
 
 				// Add search results in collapsible section
-				responseMarkdown.append("\n\n<details><summary>").append(Messages.CommitsList).append("</summary>\n\n");
+				responseMarkdown.append("\n\n<details><summary>").append(Messages.CommitsList).append("</summary>\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
 				for (var commit : commitInfos)
 				{
-					responseMarkdown.append("### **")
-						.append(markdownUtils.createStyledText(commit.shortHash, TextColor.BLUE, FontWeight.BOLD))
-						.append("** - ")
+					responseMarkdown.append("### **") //$NON-NLS-1$
+                        .append(markdownUtils.createStyledText(commit.shortHash, TextColor.BLUE, FontWeight.NORMAL))
+						.append("** - ") //$NON-NLS-1$
 						.append(markdownUtils.escapeForMarkdown(commit.message))
-						.append("\n\n");
+						.append("\n\n"); //$NON-NLS-1$
 
-					responseMarkdown.append("**")
+					responseMarkdown.append("**") //$NON-NLS-1$
 						.append(Messages.Author)
-						.append(":** ")
+						.append(":** ") //$NON-NLS-1$
 						.append(markdownUtils.escapeForMarkdown(commit.authorName))
-						.append(" <")
+						.append(" <") //$NON-NLS-1$
 						.append(markdownUtils.escapeForMarkdown(commit.authorEmail))
-						.append(">\n");
+						.append(">\n"); //$NON-NLS-1$
 
-					responseMarkdown.append("**")
+					responseMarkdown.append("**") //$NON-NLS-1$
 						.append(Messages.Date)
-						.append(":** ")
+						.append(":** ") //$NON-NLS-1$
 						.append(commit.formattedTime)
-						.append("\n");
+						.append("\n"); //$NON-NLS-1$
 
-					responseMarkdown.append("**")
+					responseMarkdown.append("**") //$NON-NLS-1$
 						.append(Messages.ChangedFiles)
-						.append(":** ")
+						.append(":** ") //$NON-NLS-1$
 						.append(commit.changedFilesCount)
-						.append(" ")
+						.append(" ") //$NON-NLS-1$
 						.append(Messages.Files.toLowerCase())
-						.append("\n");
+						.append("\n"); //$NON-NLS-1$
 
 					if (!commit.changedFiles.isEmpty())
 					{

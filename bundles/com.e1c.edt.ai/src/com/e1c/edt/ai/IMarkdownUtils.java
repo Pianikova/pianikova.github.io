@@ -16,6 +16,14 @@ public interface IMarkdownUtils
 	String escapeForMarkdown(String content);
 
 	/**
+     * Decodes URL-encoded characters in the given string.
+     * Handles URL encoding like %3A (colon), %D0 (Cyrillic), etc.
+     * @param content The URL-encoded string
+     * @return The decoded string
+     */
+    String decodeUrl(String content);
+
+    /**
      * Creates styled text with specified color and weight for HTML display
      * @param content The content to style
      * @param color The text color
@@ -56,4 +64,31 @@ public interface IMarkdownUtils
 	 * @return A markdown-safe diff view grouped by file
 	 */
 	String buildUnifiedDiffByFile(String diffText);
+
+	/**
+	 * Formats a file path for markdown display with styled file name.
+	 * @param path The file path to format
+	 * @return A markdown-formatted string with styled file name
+	 */
+	String formatFilePath(String path);
+
+    /**
+     * Formats a file path with line and column information for markdown display with styled file name.
+     * @param path The file path to format
+     * @param line The line number (1-relative, or 0/less if unknown)
+     * @param column The column number (1-relative, or 0/less if unknown)
+     * @return A markdown-formatted string with styled file name and link with position
+     */
+    String formatFilePath(String path, int line, int column);
+
+    /**
+     * Formats a file path with line range (start and finish positions) for markdown display with styled file name.
+     * @param path The file path to format
+     * @param line The start line number (1-relative, or 0/less if unknown)
+     * @param column The start column number (1-relative, or 0/less if unknown)
+     * @param finishLine The finish line number (1-relative, or 0/less if unknown)
+     * @param finishColumn The finish column number (1-relative, or 0/less if unknown)
+     * @return A markdown-formatted string with styled file name and link with range
+     */
+    String formatFilePath(String path, int line, int column, int finishLine, int finishColumn);
 }

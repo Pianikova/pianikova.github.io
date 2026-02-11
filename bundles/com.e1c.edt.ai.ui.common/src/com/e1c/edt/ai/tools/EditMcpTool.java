@@ -48,15 +48,14 @@ public class EditMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"project_name\": \"AccountingSystem\",\n"
-        + "  \"file_path\": \"AccountingSystem/src/MainModule.bsl\",\n"
+        + "  \"path\": \"C:/Projects/AccountingSystem/src/MainModule.bsl\",\n"
         + "  \"old_content\": \"Procedure Test()\\n    Message(\\\"Hello\\\");\\nEndProcedure\",\n"
         + "  \"new_content\": \"Procedure Test()\\n    Message(\\\"Hi\\\");\\nEndProcedure\",\n"
         + "  \"replace_all\": false\n"
         + "}";
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "File updated: \"src/MainModule.bsl\"";
+        "File updated: \"C:/Projects/AccountingSystem/src/MainModule.bsl\"";
     // @formatter:on
 
     private final IJson json;
@@ -126,48 +125,42 @@ public class EditMcpTool
                 .completedFuture(messageFactory.createError(this, call,
                     "Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
                         + "Use this example: " + QuestionExample
-                        + "\n\nRequired fields: 'project_name' (string), 'relative_file_path' (string), "
+                        + "\n\nRequired fields: 'path' (string), "
                         + "'old_content' (string), 'new_content' (string)"
                         + "\nOptional field: 'replace_all' (boolean)"));
         }
 
         var request = optionalRequest.get();
-        var filePath = request.filePath;
-        if (filePath == null || filePath.isBlank())
+        var path = request.path;
+        if (path == null || path.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call,
-                    "`file_path` is required."));
+                    "`path` is required."));
         }
 
-        var fileName = new File(filePath);
+        var fileName = new File(path);
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(Messages.EditTitle);
+
+            requestMarkdown.append(MessageFormat.format(Messages.EditTitleTemplate, markdownUtils.formatFilePath(path)));
 
             // Add diff details
             if (request.oldContent != null && request.newContent != null)
             {
                 requestMarkdown.append("\n\n");
-                requestMarkdown.append("<details><summary>").append(fileName.getName()).append("</summary>\n\n");
+                requestMarkdown.append("<details><summary>")
+                    .append(Messages.EditDetailsSummary)
+                    .append("</summary>\n\n");
                 requestMarkdown.append(
-                    markdownUtils.buildGitDiff(filePath, request.oldContent, request.newContent));
+                    markdownUtils.buildGitDiff(path, request.oldContent, request.newContent));
                 requestMarkdown.append("\n</details>");
             }
 
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
-
-        var projectName = request.projectName;
-        String detectedProjectName = null;
-        if (projectName == null || projectName.isBlank())
-        {
-            // Auto-determine project name from file path
-            detectedProjectName = fileSystem.determineProjectName(filePath);
-        }
-        final String finalProjectName = projectName != null && !projectName.isBlank() ? projectName : detectedProjectName;
 
         var oldContent = request.oldContent;
         if (oldContent == null)
@@ -194,6 +187,10 @@ public class EditMcpTool
                 return messageFactory.createError(this, call, "Operation was cancelled before execution.");
             }
 
+            // Determine project name from absolute path
+            String detectedProjectName = fileSystem.determineProjectName(path);
+            final String finalProjectName = detectedProjectName;
+
             // Check if file is part of a project
             boolean isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
 
@@ -202,25 +199,17 @@ public class EditMcpTool
                 // File is not part of any project - use Java file I/O
                 try
                 {
-                    if (!fileSystem.fileExists(filePath))
+                    if (!fileSystem.fileExists(path))
                     {
                         return messageFactory.createError(this, call,
-                            "The file \"" + filePath + "\" does not exist.");
+                            "The file \"" + path + "\" does not exist.");
                     }
 
-                    byte[] fileData = fileSystem.readAllBytes(filePath);
-                    String content = new String(fileData, StandardCharsets.UTF_8);
-
-                    // Handle BOM (Byte Order Mark) if present
-                    String bom = "";
-                    if (content.startsWith("\uFEFF"))
-                    {
-                        bom = "\uFEFF";
-                        content = content.substring(1);
-                    }
+                    byte[] fileData = fileSystem.readAllBytes(path);
+                    var content = new String(fileData, StandardCharsets.UTF_8);
 
                     // Perform replacement using helper method
-                    var replacementResult = performReplacement(call, content, bom, oldContent, newContent, replaceAll);
+                    var replacementResult = performReplacement(call, content, oldContent, newContent, replaceAll);
                     if (replacementResult == null)
                     {
                         return messageFactory.createError(this, call, "Replacement failed.");
@@ -228,14 +217,24 @@ public class EditMcpTool
 
                     // Write back
                     byte[] updatedData = replacementResult.updatedContent.getBytes(StandardCharsets.UTF_8);
-                    fileSystem.writeAllBytes(filePath, updatedData);
+                    fileSystem.writeAllBytes(path, updatedData);
 
                     var response = new StringBuilder();
-                    response.append("File updated: \"").append(filePath).append("\".\n");
+                    response.append("File updated: \"").append(path).append("\".\n");
                     response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
-                    var changes = createChangesString(replacementResult.addedLines, replacementResult.removedLines);
-                    details.responseMarkdown = MessageFormat.format(Messages.EditedTemplate, fileName.getName(), changes);
+                    // Add diff details to response markdown
+                    var responseMarkdown = new StringBuilder();
+                    responseMarkdown
+                        .append(MessageFormat.format(Messages.EditedTemplate, markdownUtils.formatFilePath(path),
+                        createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
+                    responseMarkdown.append("\n\n");
+                    responseMarkdown.append("<details><summary>")
+                        .append(Messages.EditDetailsSummary)
+                        .append("</summary>\n\n");
+                    responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
+                    responseMarkdown.append("\n</details>");
+                    details.responseMarkdown = responseMarkdown.toString();
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
                 }
@@ -268,20 +267,19 @@ public class EditMcpTool
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, filePath);
-            var isAbsolutePath = filePath != null && new File(filePath).isAbsolute();
+            var projectFile = fileSystem.getProjectFile(project, path);
 
             // Check if the file can be edited using editingSupport
             if (!editingSupport.canEdit(projectFile))
             {
-                return messageFactory.createError(this, call, "The file \"" + filePath
+                return messageFactory.createError(this, call, "The file \"" + path
                     + "\" cannot be edited. Editing is not supported for this file type or the file is locked.");
             }
 
             var optionalDocument = contentSourceProvider.getFileDocument(projectFile);
             if (optionalDocument.isEmpty())
             {
-                var filePathForError = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toOSString();
+                var filePathForError = projectFile.getProjectRelativePath().toOSString();
                 return messageFactory.createError(this, call,
                     "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
                         + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
@@ -295,20 +293,12 @@ public class EditMcpTool
             var optionalCurrentContent = dispatcher.dispatch(() -> document.get());
             if (optionalCurrentContent.isEmpty())
             {
-                return messageFactory.createError(this, call, "Cannot read the file \"" + filePath + "\". ");
+                return messageFactory.createError(this, call, "Cannot read the file \"" + path + "\". ");
             }
             var currentContent = optionalCurrentContent.get();
 
-            // Handle BOM (Byte Order Mark) if present
-            String bom = "";
-            if (currentContent.startsWith("\uFEFF"))
-            {
-                bom = "\uFEFF";
-                currentContent = currentContent.substring(1);
-            }
-
             // Perform replacement using helper method
-            var replacementResult = performReplacement(call, currentContent, bom, oldContent, newContent, replaceAll);
+            var replacementResult = performReplacement(call, currentContent, oldContent, newContent, replaceAll);
             if (replacementResult == null)
             {
                 return messageFactory.createError(this, call, "Replacement failed.");
@@ -336,15 +326,20 @@ public class EditMcpTool
             }
 
             var response = new StringBuilder();
-            var displayPath = isAbsolutePath ? filePath : projectFile.getProjectRelativePath().toPortableString();
+            var displayPath = projectFile.getProjectRelativePath().toPortableString();
             response.append("File updated: \"").append(displayPath).append("\".\n");
             response.append(
                 "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
 
-            // Add response markdown
-            var changes = createChangesString(replacementResult.addedLines, replacementResult.removedLines);
-            details.responseMarkdown =
-                MessageFormat.format(Messages.EditedTemplate, fileName.getName(), changes);
+            // Add response markdown with diff details
+            var responseMarkdown = new StringBuilder();
+            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, markdownUtils.formatFilePath(path),
+                createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
+            responseMarkdown.append("\n\n");
+            responseMarkdown.append("<details><summary>").append(Messages.EditDetailsSummary).append("</summary>\n\n");
+            responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
+            responseMarkdown.append("\n</details>");
+            details.responseMarkdown = responseMarkdown.toString();
 
             return messageFactory.createMessage(this, call, response.toString(), details);
         });
@@ -372,8 +367,8 @@ public class EditMcpTool
      * @return the replacement result, or null if replacement failed
      */
     @SuppressWarnings("nls")
-    private ReplacementResult performReplacement(McpToolCall call, String content, String bom,
-        String oldContent, String newContent, boolean replaceAll)
+    private ReplacementResult performReplacement(McpToolCall call, String content, String oldContent, String newContent,
+        boolean replaceAll)
     {
         var replaceResult = contentReplacer.replace(content, oldContent, newContent, System.lineSeparator(), replaceAll);
 
@@ -403,7 +398,7 @@ public class EditMcpTool
         }
 
         var result = new ReplacementResult();
-        result.updatedContent = bom + replaceResult.getUpdatedContent();
+        result.updatedContent = replaceResult.getUpdatedContent();
         result.addedLines = replaceResult.getAddedLines();
         result.removedLines = replaceResult.getRemovedLines();
 
@@ -452,7 +447,8 @@ public class EditMcpTool
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- MUST read the file first with `" + ReadMcpTool.TOOL_NAME + "`!!!");
-        description.append("\n- Remove line-number prefixes from `" + ReadMcpTool.TOOL_NAME + "` output before using `old_content` or `new_content`.");
+        description.append("\n- MUST remove line-number prefixes from `" + ReadMcpTool.TOOL_NAME + "` output before using `old_content` or `new_content`.");
+        description.append("\n- MUST specify `old_content` exactly, including spaces, tabs, and line separators, but without line-number prefixes.");
         description.append("\n- Provide a unique `old_content` with enough surrounding lines (min 3) to avoid ambiguity.");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use `replace_all` only when you want to replace every match.");
@@ -472,15 +468,10 @@ public class EditMcpTool
         parameters.type = "object";
         var properties = new HashMap<String, McpToolCallProperty>();
 
-        var projectNameProp = new McpToolCallProperty();
-        projectNameProp.type = "string";
-        projectNameProp.description = "Project name in IDE. For example, \"MyProject\". If not provided, the system will auto-detect the project from the file path.";
-        properties.put("project_name", projectNameProp);
-
-        var filePathProp = new McpToolCallProperty();
-        filePathProp.type = "string";
-        filePathProp.description = "Path to the file. Can be project-relative (e.g., \"MyProject/src/MyModule.bsl\") or absolute. If not part of any project, the file will be treated as a regular file system file.";
-        properties.put("file_path", filePathProp);
+        var pathProp = new McpToolCallProperty();
+        pathProp.type = "string";
+        pathProp.description = "Absolute path to the file. The system will auto-detect the project from the absolute path.";
+        properties.put("path", pathProp);
 
         var oldContentProp = new McpToolCallProperty();
         oldContentProp.type = "string";
@@ -500,7 +491,7 @@ public class EditMcpTool
         properties.put("replace_all", replaceAllProp);
 
         parameters.properties = properties;
-        parameters.required = Arrays.asList("file_path", "old_content", "new_content");
+        parameters.required = Arrays.asList("path", "old_content", "new_content");
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
@@ -509,16 +500,10 @@ public class EditMcpTool
     private static class Request
     {
         /**
-         * Project name in IDE. Optional.
+         * Absolute path to the file. Required.
          */
-        @SerializedName("project_name")
-        public String projectName;
-
-        /**
-         * Path to the file which content should be replaced.
-         */
-        @SerializedName("file_path")
-        public String filePath;
+        @SerializedName("path")
+        public String path;
 
         /**
          * The fragment of the file content that will be replaced.

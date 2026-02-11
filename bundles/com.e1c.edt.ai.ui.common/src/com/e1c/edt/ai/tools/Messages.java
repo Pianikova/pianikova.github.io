@@ -30,8 +30,9 @@ public class Messages
     public static String Deleted;
 
     // Editing operations
-    public static String EditTitle;
+    public static String EditTitleTemplate;
     public static String EditedTemplate;
+    public static String EditDetailsSummary;
 
     // Search operations
     public static String SearchTitleTemplate;
@@ -43,6 +44,10 @@ public class Messages
     public static String FilesFoundTemplate;
     public static String FileSize;
     public static String LastModified;
+    public static String SearchQuery;
+    public static String FileNamePatterns;
+    public static String AllFiles;
+    public static String ProjectName;
     public static String GitCommitsTitleTemplate;
     public static String GitCommitsFoundTemplate;
     public static String CommitsList;

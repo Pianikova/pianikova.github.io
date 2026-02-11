@@ -328,7 +328,7 @@ public class LocalChangesMcpTool
 
 				var responseMarkdown = new StringBuilder();
 				var revisionLabel = markdownUtils.createStyledText(
-					response.fromRevisionId + " -> " + response.toRevisionId, TextColor.BLUE, FontWeight.BOLD);
+                    response.fromRevisionId + " -> " + response.toRevisionId, TextColor.BLUE, FontWeight.NORMAL);
 
 				if (hasChanges)
 				{

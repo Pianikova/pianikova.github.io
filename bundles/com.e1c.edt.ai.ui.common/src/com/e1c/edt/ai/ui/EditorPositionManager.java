@@ -266,6 +266,21 @@ public class EditorPositionManager
 				// Try to clamp to document bounds
 				startLine = Math.min(startLine, numberOfLines - 1);
 				endLine = Math.min(endLine, numberOfLines - 1);
+
+                // If clamped to the last line, set endColumn to the end of that line
+                if (endLine == numberOfLines - 1)
+                {
+                    try
+                    {
+                        var lineLength = document.getLineLength(endLine);
+                        endColumn = lineLength;
+                    }
+                    catch (Exception e)
+                    {
+                        log.logError("Error getting line length: " + e.getMessage());
+                        endColumn = 0;
+                    }
+                }
 			}
 
 			final var startOffset =

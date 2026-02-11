@@ -89,9 +89,7 @@ public class FindMcpTool
         + "  {\n"
         + "    \"type\": \"Text file\",\n"
         + "    \"project_name\": \"MyProject\",\n"
-        + "    \"absolute_file_path\": \"C:/Projects/MyProject/src/CommonModule/Module.bsl\",\n"
-        + "    \"relative_file_path\": \"src/CommonModule/Module.bsl\",\n"
-        + "    \"file_path\": \"/MyProject/src/CommonModule/Module.bsl\",\n"
+        + "    \"path\": \"C:/Projects/MyProject/src/CommonModule/Module.bsl\",\n"
         + "    \"text_fragment\": \"Процедура ОбработкаПроведения(Отказ, Режим)\\n    Если Не Режим = РежимПроведения.Проведение Тогда\\n        Возврат;\\n    КонецЕсли;\",\n"
         + "    \"fragment_offset\": 45,\n"
         + "    \"match_length\": 8,\n"
@@ -296,8 +294,8 @@ public class FindMcpTool
 
                 // Add response markdown
                 int objectCount = response.size();
-                String styledObjectCount = markdownUtils.createStyledText(String.valueOf(objectCount),
-                    objectCount > 0 ? TextColor.GREEN : TextColor.BLUE, FontWeight.BOLD);
+                String styledObjectCount =
+                    markdownUtils.createStyledText(String.valueOf(objectCount), TextColor.GREEN, FontWeight.BOLD);
                 details.responseMarkdown = MessageFormat.format(Messages.Found1CObjectsTemplate, styledObjectCount);
                 return messageFactory.createMessage(this, call, content, details);
             }
@@ -330,13 +328,7 @@ public class FindMcpTool
                     var location = file.getRawLocation();
                     if (location != null)
                     {
-                        dst.absoluteFilePath = location.toOSString();
-                    }
-
-                    var relativePath = file.getProjectRelativePath();
-                    if (relativePath != null)
-                    {
-                        dst.relativeFilePath = relativePath.toPortableString();
+                        dst.path = location.toOSString();
                     }
                 }
 
@@ -612,14 +604,8 @@ public class FindMcpTool
         /**
          * Absolute path to the file
          */
-        @SerializedName("absolute_file_path")
-        public String absoluteFilePath;
-
-        /**
-         * Project-relative path to the file
-         */
-        @SerializedName("relative_file_path")
-        public String relativeFilePath;
+        @SerializedName("path")
+        public String path;
 
         /**
          * Text fragment containing the search match
