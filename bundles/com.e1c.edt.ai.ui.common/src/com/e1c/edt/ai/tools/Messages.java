@@ -25,6 +25,7 @@ public class Messages
     public static String ReadTemplate;
     public static String WriteTitleTemplate;
     public static String WrittenTemplate;
+    public static String WriteDetailsSummary;
     public static String DeleteTitleTemplate;
     public static String DeletedTemplate;
     public static String Deleted;

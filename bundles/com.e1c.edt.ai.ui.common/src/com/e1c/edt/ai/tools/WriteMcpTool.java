@@ -204,7 +204,7 @@ public class WriteMcpTool
                         MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
                     responseMarkdown.append("\n\n");
                     responseMarkdown.append("<details><summary>")
-                        .append(markdownUtils.formatFilePath(path))
+                        .append(Messages.WriteDetailsSummary)
                         .append("</summary>\n\n");
                     responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
                     responseMarkdown.append("\n</details>");
@@ -314,7 +314,7 @@ public class WriteMcpTool
                 .append(MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
             responseMarkdown.append("\n\n");
             responseMarkdown.append("<details><summary>")
-                .append(markdownUtils.formatFilePath(path))
+                .append(Messages.WriteDetailsSummary)
                 .append("</summary>\n\n");
             responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
             responseMarkdown.append("\n</details>");
