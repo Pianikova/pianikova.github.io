@@ -73,7 +73,7 @@ public class FileSystem implements IFileSystem
         // Check if file exists in Eclipse workspace before returning
         if (projectFile == null || !projectFile.exists())
         {
-            return Optional.empty();
+            return Optional.of(project.getFile(new org.eclipse.core.runtime.Path(relativePath)));
         }
 
         return Optional.of(projectFile);
@@ -216,6 +216,23 @@ public class FileSystem implements IFileSystem
         }
 
         return Files.exists(Paths.get(filePath));
+    }
+
+    @Override
+    public boolean isFileEmpty(String filePath) throws IOException
+    {
+        if (filePath == null || filePath.isBlank())
+        {
+            return false;
+        }
+
+        var path = Paths.get(filePath);
+        if (!Files.exists(path))
+        {
+            return false;
+        }
+
+        return Files.size(path) == 0;
     }
 
     @Override

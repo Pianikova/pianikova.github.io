@@ -268,20 +268,19 @@ public class EditMcpTool
             }
 
             var projectFile = fileSystem.getProjectFile(project, path);
-
-            // Check if the file can be edited using editingSupport
-            if (!editingSupport.canEdit(projectFile.orElse(null)))
-            {
-                return messageFactory.createError(this, call, "The file \"" + path
-                    + "\" cannot be edited. Editing is not supported for this file type or the file is locked.");
-            }
-
             if (!projectFile.isPresent())
             {
                 return messageFactory.createError(this, call,
                     "The file \"" + path + "\" does not exist within the IDE project context. "
                         + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
                         + "Use the `" + WriteMcpTool.TOOL_NAME + "` tool to create a new file.");
+            }
+
+            // Check if the file can be edited using editingSupport
+            if (!editingSupport.canEdit(projectFile.orElse(null)))
+            {
+                return messageFactory.createError(this, call, "The file \"" + path
+                    + "\" cannot be edited. Editing is not supported for this file type or the file is locked.");
             }
 
             var actualFile = projectFile.get();

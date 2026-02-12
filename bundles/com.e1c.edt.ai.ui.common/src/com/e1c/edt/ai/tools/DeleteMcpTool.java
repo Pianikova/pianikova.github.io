@@ -194,20 +194,19 @@ public class DeleteMcpTool
             }
 
             var projectFile = fileSystem.getProjectFile(project, path);
+            if (!projectFile.isPresent())
+            {
+                return messageFactory.createError(this, call, "The file \"" + path
+                    + "\" does not exist within the IDE project context. "
+                    + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
+            }
 
             // Check if the file can be deleted using editingSupport
-            if (!editingSupport.canDelete(projectFile.orElse(null)))
+            if (!editingSupport.canDelete(projectFile.get()))
             {
                 var filePathForError = projectFile.map(f -> f.getProjectRelativePath().toOSString()).orElse(path);
                 return messageFactory.createError(this, call, "The file \"" + filePathForError
                     + "\" cannot be deleted. Deletion is not supported for this file type or the file is locked.");
-            }
-
-            if (!projectFile.isPresent())
-            {
-                return messageFactory.createError(this, call,
-                    "The file \"" + path + "\" does not exist within the IDE project context. "
-                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
             }
 
             var actualFile = projectFile.get();

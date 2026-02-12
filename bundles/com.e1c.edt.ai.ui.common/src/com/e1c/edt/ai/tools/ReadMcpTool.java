@@ -270,6 +270,7 @@ public class ReadMcpTool
 
             var optionalDocument =
                 fileSystem.getProjectFile(project, path).flatMap(file -> contentSourceProvider.getFileDocument(file));
+
             if (optionalDocument.isEmpty())
             {
                 var response = new HashMap<String, Object>();

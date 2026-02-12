@@ -38,6 +38,15 @@ public interface IFileSystem
     boolean fileExists(String filePath) throws IOException;
 
     /**
+     * Checks if a file at the given path is empty.
+     *
+     * @param filePath the file path to check
+     * @return true if the file exists and is empty, false otherwise
+     * @throws IOException if an I/O error occurs
+     */
+    boolean isFileEmpty(String filePath) throws IOException;
+
+    /**
      * Reads all bytes from a file.
      *
      * @param filePath the file path to read from
