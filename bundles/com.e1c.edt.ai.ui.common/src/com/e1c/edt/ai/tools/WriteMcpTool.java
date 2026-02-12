@@ -27,6 +27,7 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -64,18 +65,20 @@ public class WriteMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
 
     @Inject
     public WriteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
 
@@ -83,6 +86,7 @@ public class WriteMcpTool
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
 
@@ -133,7 +137,7 @@ public class WriteMcpTool
             {
                 requestMarkdown.append("\n\n");
                 requestMarkdown.append("<details><summary>")
-                    .append(markdownUtils.formatFilePath(path))
+                    .append(Messages.WriteDetailsSummary)
                     .append("</summary>\n\n");
                 requestMarkdown.append(markdownUtils.buildGitDiff(path, null, request.content));
                 requestMarkdown.append("\n</details>");
@@ -170,29 +174,124 @@ public class WriteMcpTool
             }
 
             // Determine project name from absolute path
-            String detectedProjectName = fileSystem.determineProjectName(path);
+            String detectedProjectName = projectTools.determineProjectName(path);
             final String finalProjectName = detectedProjectName;
 
             // Check if file is part of a project
             boolean isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
-
-            if (!isProjectFile)
+            if (isProjectFile)
             {
-                // File is not part of any project - use Java file I/O
-                try
+                // File is part of a project - use Eclipse APIs
+                var root = ResourcesPlugin.getWorkspace().getRoot();
+                var project = root.getProject(finalProjectName);
+                if (project == null || !project.exists())
                 {
-                    if (fileSystem.fileExists(path))
+                    return messageFactory.createError(this, call,
+                        "The project \"" + finalProjectName + "\" does not exist.");
+                }
+
+                var monitor = cancellationProgressMonitor.get();
+                monitor.setCancellationToken(cancellationToken);
+                if (!project.isOpen())
+                {
+                    try
+                    {
+                        project.open(monitor);
+                    }
+                    catch (CoreException error)
                     {
                         return messageFactory.createError(this, call,
-                            "The file \"" + path + "\" already exists. Use the `" + EditMcpTool.TOOL_NAME
-                                + "` tool to modify this file.");
+                            "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
+                    }
+                }
+
+                var optionalProjectFile = projectTools.getProjectFile(project, path);
+                if (optionalProjectFile.isPresent())
+                {
+                    var projectFile = optionalProjectFile.get();
+                    if (projectFile.exists())
+                    {
+                        // Check if file is empty
+                        try
+                        {
+                            if (projectFile.getLocation() != null && projectFile.getLocation().toFile().length() > 0)
+                            {
+                                return messageFactory.createError(this, call,
+                                    "The file \"" + path + "\" already exists and is not empty. Use the `"
+                                        + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
+                            }
+                        }
+                        catch (Exception error)
+                        {
+                            return messageFactory.createError(this, call,
+                                "The file \"" + path + "\" already exists. Use the `"
+                                    + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
+                        }
                     }
 
-                    fileSystem.writeAllBytes(path, data);
+                    // Check if the file can be edited using editingSupport
+                    if (!editingSupport.canEdit(projectFile))
+                    {
+                        return messageFactory.createError(this, call, "The file \"" + path
+                            + "\" cannot be created. Writing is not supported for this file type or the location is restricted.");
+                    }
+
+                    try
+                    {
+                        createParentFolders(projectFile, monitor);
+                        try (ByteArrayInputStream source = new ByteArrayInputStream(data))
+                        {
+                            if (projectFile.exists())
+                            {
+                                // File exists and is empty - use setContents to overwrite
+                                projectFile.setContents(source, IResource.FORCE, monitor);
+                            }
+                            else
+                            {
+                                // File doesn't exist - use create
+                                projectFile.create(source, true, monitor);
+                            }
+
+                            projectFile.refreshLocal(IResource.DEPTH_ZERO, monitor);
+                            if (projectFile.getParent() != null)
+                            {
+                                projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
+                            }
+                        }
+                    }
+                    catch (CoreException | IOException error)
+                    {
+                        return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
+                    }
 
                     var response = new StringBuilder();
                     response.append("File written: \"").append(path).append("\".\n");
-                    response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
+
+                    var fileExt = projectFile.getFileExtension();
+                    if (fileExt != null)
+                    {
+                        fileExt = fileExt.toLowerCase();
+                        switch (fileExt)
+                        {
+                        case "bsl":
+                            response.append("ACTION REQUIRED: check that corresponding \"")
+                                .append(projectFile.getProjectRelativePath()
+                                    .removeFileExtension()
+                                    .addFileExtension("mdo")
+                                    .toPortableString())
+                                .append("\" file exists or create it.\n");
+                            break;
+                        case "mdo":
+                        case "form":
+                            response.append(
+                                "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use `"
+                                    + EditMcpTool.TOOL_NAME + "` tool.");
+                            break;
+                        }
+                    }
+
+                    response.append("ACTION REQUIRED: verify project errors and warnings. Use `"
+                        + GetMarkersMcpTool.TOOL_NAME + "` tool.");
 
                     // Add response markdown with content details
                     var newLines = content.split("\\r?\\n", -1).length;
@@ -204,7 +303,7 @@ public class WriteMcpTool
                         MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
                     responseMarkdown.append("\n\n");
                     responseMarkdown.append("<details><summary>")
-                        .append(markdownUtils.formatFilePath(path))
+                        .append(Messages.WriteDetailsSummary)
                         .append("</summary>\n\n");
                     responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
                     responseMarkdown.append("\n</details>");
@@ -212,115 +311,47 @@ public class WriteMcpTool
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
                 }
-                catch (IOException error)
-                {
-                    return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
-                }
             }
 
-            // File is part of a project - use Eclipse APIs
-            var root = ResourcesPlugin.getWorkspace().getRoot();
-            var project = root.getProject(finalProjectName);
-            if (project == null || !project.exists())
-            {
-                return messageFactory.createError(this, call,
-                    "The project \"" + finalProjectName + "\" does not exist.");
-            }
-
-            var monitor = cancellationProgressMonitor.get();
-            monitor.setCancellationToken(cancellationToken);
-            if (!project.isOpen())
-            {
-                try
-                {
-                    project.open(monitor);
-                }
-                catch (CoreException error)
-                {
-                    return messageFactory.createError(this, call,
-                        "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
-                }
-            }
-
-            var projectFile = fileSystem.getProjectFile(project, path);
-
-            // Check if the file can be edited using editingSupport
-            if (!editingSupport.canEdit(projectFile))
-            {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
-                return messageFactory.createError(this, call, "The file \"" + filePathForError
-                    + "\" cannot be created. Writing is not supported for this file type or the location is restricted.");
-            }
-
-            if (projectFile.exists())
-            {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
-                return messageFactory.createError(this, call, "The file \"" + filePathForError
-                    + "\" already exists. Use the `" + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
-            }
-
+            // File is not part of any project - use Java file I/O
             try
             {
-                createParentFolders(projectFile, monitor);
-                try (ByteArrayInputStream source = new ByteArrayInputStream(data))
+                if (fileSystem.fileExists(path) && !fileSystem.isFileEmpty(path))
                 {
-                    projectFile.create(source, true, monitor);
-                    projectFile.refreshLocal(IResource.DEPTH_ZERO, monitor);
-                    if (projectFile.getParent() != null)
-                    {
-                        projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
-                    }
+                    return messageFactory.createError(this, call,
+                        "The file \"" + path + "\" already exists and is not empty. Use the `"
+                            + EditMcpTool.TOOL_NAME
+                            + "` tool to modify this file.");
                 }
+
+                fileSystem.writeAllBytes(path, data);
+
+                var response = new StringBuilder();
+                response.append("File written: \"").append(path).append("\".\n");
+                response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
+
+                // Add response markdown with content details
+                var newLines = content.split("\\r?\\n", -1).length;
+                var changes = new StringBuilder();
+                changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
+
+                var responseMarkdown = new StringBuilder();
+                responseMarkdown.append(
+                    MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
+                responseMarkdown.append("\n\n");
+                responseMarkdown.append("<details><summary>")
+                    .append(Messages.WriteDetailsSummary)
+                    .append("</summary>\n\n");
+                responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
+                responseMarkdown.append("\n</details>");
+                details.responseMarkdown = responseMarkdown.toString();
+
+                return messageFactory.createMessage(this, call, response.toString(), details);
             }
-            catch (CoreException | IOException error)
+            catch (IOException error)
             {
                 return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
             }
-
-            var response = new StringBuilder();
-            var displayPath = projectFile.getProjectRelativePath().toPortableString();
-            response.append("File written: \"").append(displayPath).append("\".\n");
-
-            var fileExt = projectFile.getFileExtension();
-            if (fileExt != null)
-            {
-                fileExt = fileExt.toLowerCase();
-                switch (fileExt)
-                {
-                case "bsl":
-                    response.append("ACTION REQUIRED: check that corresponding \"")
-                        .append(projectFile.getProjectRelativePath().removeFileExtension().addFileExtension("mdo").toPortableString())
-                        .append("\" file exists or create it.\n");
-                    break;
-                case "mdo":
-                case "form":
-                    response.append(
-                        "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use `"
-                            + EditMcpTool.TOOL_NAME + "` tool.");
-                    break;
-                }
-            }
-
-            response.append(
-                "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
-
-            // Add response markdown with content details
-            var newLines = content.split("\\r?\\n", -1).length;
-            var changes = new StringBuilder();
-            changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
-
-            var responseMarkdown = new StringBuilder();
-            responseMarkdown
-                .append(MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
-            responseMarkdown.append("\n\n");
-            responseMarkdown.append("<details><summary>")
-                .append(markdownUtils.formatFilePath(path))
-                .append("</summary>\n\n");
-            responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
-            responseMarkdown.append("\n</details>");
-            details.responseMarkdown = responseMarkdown.toString();
-
-            return messageFactory.createMessage(this, call, response.toString(), details);
         });
     }
 
@@ -365,7 +396,7 @@ public class WriteMcpTool
         description.append("Creates a new project file.");
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
-        description.append("\n- Fails if the file already exists; use `" + EditMcpTool.TOOL_NAME + "` to modify files.");
+        description.append("\n- Fails if the file already exists and is not empty; empty files can be overwritten. Use `" + EditMcpTool.TOOL_NAME + "` to modify existing non-empty files.");
         description.append("\n- Verify the target folder and naming patterns before creating files.");
         description.append("\n- Some file types require companions (e.g., .bsl needs a matching .mdo).");
         description.append("\n- Avoid creating docs (*.md/README) unless the user explicitly asks.");

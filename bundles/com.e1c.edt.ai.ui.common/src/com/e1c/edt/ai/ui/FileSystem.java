@@ -3,50 +3,18 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.jface.text.BadLocationException;
 
 @SuppressWarnings("nls")
 public class FileSystem implements IFileSystem
 {
-    @Override
-    public IFile getProjectFile(IProject project, String relativePath)
-    {
-        // Check if the path is absolute
-        if (relativePath != null && new File(relativePath).isAbsolute())
-        {
-            // For absolute paths, try to find the file in the workspace
-            var absoluteFile = new File(relativePath);
-            var workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
-            var location = org.eclipse.core.runtime.Path.fromOSString(absoluteFile.getAbsolutePath());
-            var foundFile = workspaceRoot.getFileForLocation(location);
-
-            if (foundFile != null && foundFile.exists())
-            {
-                return foundFile;
-            }
-        }
-
-        // For relative paths or if absolute path not found in workspace
-        if (relativePath == null)
-        {
-            return null;
-        }
-
-        var filePath = normalizeFilePath(project, relativePath);
-        var file = project.getFile(filePath);
-        return file;
-    }
-
     @Override
     public Iterable<String> getLines(IFileDocument fileDocument, int firstLineNumber, int linesNumber)
     {
@@ -77,28 +45,6 @@ public class FileSystem implements IFileSystem
     {
         var block = Character.UnicodeBlock.of(c);
         return (!Character.isISOControl(c)) && block != null && block != Character.UnicodeBlock.SPECIALS;
-    }
-
-    @SuppressWarnings("nls")
-    private static String normalizeFilePath(IProject project, String filePath)
-    {
-        if (filePath == null || filePath.isBlank())
-        {
-            return filePath;
-        }
-
-        if (!filePath.startsWith("/"))
-        {
-            filePath = "/" + filePath;
-        }
-
-        var projectName = project.getName();
-        if (filePath.startsWith("/" + projectName))
-        {
-            filePath = filePath.substring(1 + projectName.length());
-        }
-
-        return filePath;
     }
 
     private static class LineIterator
@@ -145,58 +91,6 @@ public class FileSystem implements IFileSystem
     }
 
     @Override
-    public String determineProjectName(String filePath)
-    {
-        if (filePath == null || filePath.isBlank())
-        {
-            return null;
-        }
-
-        var file = new File(filePath);
-        boolean isRelativePath = !file.isAbsolute();
-
-        var workspaceRoot = ResourcesPlugin.getWorkspace().getRoot();
-        var projects = workspaceRoot.getProjects();
-
-        for (IProject project : projects)
-        {
-            if (!project.exists() || !project.isOpen())
-            {
-                continue;
-            }
-
-            var projectLocation = project.getLocation();
-            if (projectLocation == null)
-            {
-                continue;
-            }
-
-            String projectLocationString = projectLocation.toOSString();
-
-            if (isRelativePath)
-            {
-                // For relative paths, check if the file exists within the project
-                var projectFile = new File(projectLocationString, normalizeFilePath(project, filePath));
-                if (projectFile.exists())
-                {
-                    return project.getName();
-                }
-            }
-            else
-            {
-                // For absolute paths, check if the file path starts with project location
-                var absolutePath = file.getAbsolutePath();
-                if (absolutePath.startsWith(projectLocationString))
-                {
-                    return project.getName();
-                }
-            }
-        }
-
-        return null;
-    }
-
-    @Override
     public boolean fileExists(String filePath) throws IOException
     {
         if (filePath == null || filePath.isBlank())
@@ -205,6 +99,23 @@ public class FileSystem implements IFileSystem
         }
 
         return Files.exists(Paths.get(filePath));
+    }
+
+    @Override
+    public boolean isFileEmpty(String filePath) throws IOException
+    {
+        if (filePath == null || filePath.isBlank())
+        {
+            return false;
+        }
+
+        var path = Paths.get(filePath);
+        if (!Files.exists(path))
+        {
+            return false;
+        }
+
+        return Files.size(path) == 0;
     }
 
     @Override
@@ -246,5 +157,157 @@ public class FileSystem implements IFileSystem
         }
 
         Files.deleteIfExists(Paths.get(filePath));
+    }
+
+    @Override
+    public Iterable<String> getLines(Reader reader)
+    {
+        return () -> new BufferedReaderLineIterator(reader);
+    }
+
+    /**
+     * Iterator that reads lines from a BufferedReader on-demand, preserving original line separators.
+     * Handles BOM (Byte Order Mark) at the beginning of the file.
+     */
+    private static class BufferedReaderLineIterator
+        implements java.util.Iterator<String>
+    {
+        private final Reader reader;
+        private String nextLine = null;
+        private boolean bomSkipped = false;
+        private boolean finished = false;
+
+        public BufferedReaderLineIterator(Reader reader)
+        {
+            this.reader = reader;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            if (finished)
+            {
+                return false;
+            }
+
+            nextLine = readNextLine();
+            return nextLine != null;
+        }
+
+        @Override
+        public String next()
+        {
+            return nextLine;
+        }
+
+        private String readNextLine()
+        {
+            StringBuilder currentLine = new StringBuilder();
+            try
+            {
+                int ch;
+                while ((ch = reader.read()) != -1)
+                {
+                    if (ch == '\r')
+                    {
+                        // Check if next char is \n (Windows-style CRLF)
+                        reader.mark(1);
+                        int nextCh = reader.read();
+                        if (nextCh == '\n')
+                        {
+                            // Line ending is CRLF
+                            String lineContent = currentLine.toString();
+                            if (!bomSkipped)
+                            {
+                                lineContent = removeBOM(lineContent);
+                                bomSkipped = true;
+                            }
+
+                            currentLine.setLength(0);
+                            return lineContent + "\r\n"; //$NON-NLS-1$
+                        }
+                        else
+                        {
+                            // Line ending is CR only (old Mac style)
+                            // Reset reader since we already read the next character
+                            if (nextCh != -1)
+                            {
+                                reader.reset();
+                            }
+
+                            String lineContent = currentLine.toString();
+                            if (!bomSkipped)
+                            {
+                                lineContent = removeBOM(lineContent);
+                                bomSkipped = true;
+                            }
+
+                            currentLine.setLength(0);
+                            return lineContent + "\r"; //$NON-NLS-1$
+                        }
+                    }
+                    else if (ch == '\n')
+                    {
+                        // Line ending is LF (Unix-style)
+                        String lineContent = currentLine.toString();
+                        if (!bomSkipped)
+                        {
+                            lineContent = removeBOM(lineContent);
+                            bomSkipped = true;
+                        }
+
+                        currentLine.setLength(0);
+                        return lineContent + "\n"; //$NON-NLS-1$
+                    }
+                    else
+                    {
+                        currentLine.append((char)ch);
+                    }
+                }
+
+                // Handle the last line if it doesn't have a line ending
+                if (currentLine.length() > 0)
+                {
+                    String lineContent = currentLine.toString();
+                    if (!bomSkipped)
+                    {
+                        lineContent = removeBOM(lineContent);
+                        bomSkipped = true;
+                    }
+
+                    finished = true;
+                    return lineContent;
+                }
+
+                finished = true;
+                return null;
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException("Error reading line", e); //$NON-NLS-1$
+            }
+        }
+
+        /**
+         * Removes BOM (Byte Order Mark) from the beginning of the content if present.
+         *
+         * @param content the content to process
+         * @return the content without BOM
+         */
+        private static String removeBOM(String content)
+        {
+            if (content == null || content.isEmpty())
+            {
+                return content;
+            }
+
+            // UTF-8 BOM is EF BB BF
+            if (content.startsWith("\uFEFF")) //$NON-NLS-1$
+            {
+                return content.substring(1);
+            }
+
+            return content;
+        }
     }
 }

@@ -3,7 +3,6 @@
 */
 package com.e1c.edt.ai.tools;
 
-import java.io.File;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Arrays;
@@ -31,6 +30,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -57,18 +57,20 @@ public class DeleteMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
 
     @Inject
     public DeleteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
 
@@ -76,6 +78,7 @@ public class DeleteMcpTool
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
 
@@ -135,7 +138,7 @@ public class DeleteMcpTool
             }
 
             // Determine project name from absolute path
-            String detectedProjectName = fileSystem.determineProjectName(path);
+            String detectedProjectName = projectTools.determineProjectName(path);
             final String finalProjectName = detectedProjectName;
 
             // Check if file is part of a project
@@ -194,23 +197,23 @@ public class DeleteMcpTool
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, path);
+            var projectFile = projectTools.getProjectFile(project, path);
+            if (!projectFile.isPresent())
+            {
+                return messageFactory.createError(this, call, "The file \"" + path
+                    + "\" does not exist within the IDE project context. "
+                    + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
+            }
 
             // Check if the file can be deleted using editingSupport
-            if (!editingSupport.canDelete(projectFile))
+            if (!editingSupport.canDelete(projectFile.get()))
             {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
+                var filePathForError = projectFile.map(f -> f.getProjectRelativePath().toOSString()).orElse(path);
                 return messageFactory.createError(this, call, "The file \"" + filePathForError
                     + "\" cannot be deleted. Deletion is not supported for this file type or the file is locked.");
             }
 
-            if (!projectFile.exists())
-            {
-                var filePathForError = projectFile.getProjectRelativePath().toOSString();
-                return messageFactory.createError(this, call,
-                    "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
-                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
-            }
+            var actualFile = projectFile.get();
 
             try
             {
@@ -218,15 +221,15 @@ public class DeleteMcpTool
                 monitor.setCancellationToken(cancellationToken);
 
                 // Get the path for response before deletion
-                var displayPath = projectFile.getProjectRelativePath().toPortableString();
+                var displayPath = actualFile.getProjectRelativePath().toPortableString();
 
                 // Delete the file
-                projectFile.delete(true, monitor);
+                actualFile.delete(true, monitor);
 
                 // Refresh the parent folder
-                if (projectFile.getParent() != null)
+                if (actualFile.getParent() != null)
                 {
-                    projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
+                    actualFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
                 }
 
                 var response = new StringBuilder();

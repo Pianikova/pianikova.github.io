@@ -4,25 +4,15 @@
 package com.e1c.edt.ai.ui;
 
 import java.io.IOException;
-
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
+import java.io.Reader;
 
 public interface IFileSystem
 {
-    IFile getProjectFile(IProject project, String relativePath);
-
     Iterable<String> getLines(IFileDocument fileDocument, int firstLineNumber, int linesNumber);
 
-    boolean isPrintable(String text, double threshold);
+    Iterable<String> getLines(Reader reader);
 
-    /**
-     * Determines if the given file path is within a project in the workspace.
-     *
-     * @param filePath the file path to check (can be absolute or relative)
-     * @return the project name if the file is part of a project, null otherwise
-     */
-    String determineProjectName(String filePath);
+    boolean isPrintable(String text, double threshold);
 
     /**
      * Checks if a file exists at the given path.
@@ -32,6 +22,15 @@ public interface IFileSystem
      * @throws IOException if an I/O error occurs
      */
     boolean fileExists(String filePath) throws IOException;
+
+    /**
+     * Checks if a file at the given path is empty.
+     *
+     * @param filePath the file path to check
+     * @return true if the file exists and is empty, false otherwise
+     * @throws IOException if an I/O error occurs
+     */
+    boolean isFileEmpty(String filePath) throws IOException;
 
     /**
      * Reads all bytes from a file.

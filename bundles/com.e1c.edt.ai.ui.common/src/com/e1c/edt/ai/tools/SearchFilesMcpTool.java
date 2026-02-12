@@ -35,6 +35,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -83,22 +84,25 @@ public class SearchFilesMcpTool
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IMarkdownUtils markdownUtils;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
 
     @Inject
     public SearchFilesMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils,
-        IFileSystem fileSystem)
+        IFileSystem fileSystem, IProjectTools projectTools)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
         this.json = json;
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.markdownUtils = markdownUtils;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         spec = createSpecification();
     }
 
@@ -172,7 +176,7 @@ public class SearchFilesMcpTool
                 // If path is provided, try to determine project from it
                 if (path != null && !path.isBlank())
                 {
-                    var determinedProject = fileSystem.determineProjectName(path);
+                    var determinedProject = projectTools.determineProjectName(path);
 
                     if (determinedProject != null)
                     {

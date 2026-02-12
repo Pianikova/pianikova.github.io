@@ -230,6 +230,12 @@ class ProjectTrackingWorkflow
         var now = clock.now();
         for (var file : files)
         {
+            // Skip files that don't exist on disk
+            if (!file.getLocation().toFile().exists())
+            {
+                continue;
+            }
+
             var path = file.getFullPath().makeRelative().toPortableString();
             filesToHash.computeIfAbsent(path,
                 key -> new ProjectFile(new AIContext(projectId, key, (IDocument)null), key, file, now));

@@ -16,7 +16,6 @@ import com.google.inject.Singleton;
 @Singleton
 public class MarkdownUtils implements IMarkdownUtils
 {
-
     private final ILinkProvider linkProvider;
     private final IFiles files;
 
@@ -339,11 +338,11 @@ public class MarkdownUtils implements IMarkdownUtils
 
         // Use the appropriate linkProvider method based on line/column information
         String link;
-        if (line > 0 && column > 0)
+        if (line >= 0 && column >= 0)
         {
             link = linkProvider.file(path, line, column);
         }
-        else if (line > 0)
+        else if (line >= 0)
         {
             link = linkProvider.file(path, line, 0);
         }
@@ -375,19 +374,19 @@ public class MarkdownUtils implements IMarkdownUtils
 
         // Use the appropriate linkProvider method based on line/column information
         String link;
-        if (line > 0 && finishLine > 0)
+        if (finishLine >= 0 && finishColumn >= 0)
         {
             // Use range-based link when both start and finish positions are available
             int startColumn = column > 0 ? column : 0;
             int endColumn = finishColumn > 0 ? finishColumn : 0;
             link = linkProvider.file(path, line, startColumn, finishLine, endColumn);
         }
-        else if (line > 0 && column > 0)
+        else if (line >= 0 && column >= 0)
         {
             // Use point-based link when only start position is available
             link = linkProvider.file(path, line, column);
         }
-        else if (line > 0)
+        else if (line >= 0)
         {
             // Use line-only link
             link = linkProvider.file(path, line, 0);
