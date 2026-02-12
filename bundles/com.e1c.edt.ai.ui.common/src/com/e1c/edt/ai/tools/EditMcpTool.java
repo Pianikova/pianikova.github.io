@@ -32,6 +32,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.e1c.edt.ai.ui.IFileSystem;
@@ -64,6 +65,7 @@ public class EditMcpTool
     private final IContentSourceProvider contentSourceProvider;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
     private final IDispatcher dispatcher;
     private final IContentReplacer contentReplacer;
     private final IMarkdownUtils markdownUtils;
@@ -73,7 +75,7 @@ public class EditMcpTool
     public EditMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IDispatcher dispatcher, IContentReplacer contentReplacer, IMarkdownUtils markdownUtils,
+        IProjectTools projectTools, IDispatcher dispatcher, IContentReplacer contentReplacer, IMarkdownUtils markdownUtils,
         IEditingSupport editingSupport)
     {
         Preconditions.checkNotNull(json);
@@ -81,6 +83,7 @@ public class EditMcpTool
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(contentReplacer);
         Preconditions.checkNotNull(markdownUtils);
@@ -91,6 +94,7 @@ public class EditMcpTool
         this.contentSourceProvider = contentSourceProvider;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         this.dispatcher = dispatcher;
         this.contentReplacer = contentReplacer;
         this.markdownUtils = markdownUtils;
@@ -188,7 +192,7 @@ public class EditMcpTool
             }
 
             // Determine project name from absolute path
-            String detectedProjectName = fileSystem.determineProjectName(path);
+            String detectedProjectName = projectTools.determineProjectName(path);
             final String finalProjectName = detectedProjectName;
 
             // Check if file is part of a project
@@ -267,7 +271,7 @@ public class EditMcpTool
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, path);
+            var projectFile = projectTools.getProjectFile(project, path);
             if (!projectFile.isPresent())
             {
                 return messageFactory.createError(this, call,

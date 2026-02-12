@@ -5,28 +5,14 @@ package com.e1c.edt.ai.ui;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.Optional;
-
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
 
 public interface IFileSystem
 {
-    Optional<IFile> getProjectFile(IProject project, String relativePath);
-
     Iterable<String> getLines(IFileDocument fileDocument, int firstLineNumber, int linesNumber);
 
     Iterable<String> getLines(Reader reader);
 
     boolean isPrintable(String text, double threshold);
-
-    /**
-     * Determines if the given file path is within a project in the workspace.
-     *
-     * @param filePath the file path to check (can be absolute or relative)
-     * @return the project name if the file is part of a project, null otherwise
-     */
-    String determineProjectName(String filePath);
 
     /**
      * Checks if a file exists at the given path.

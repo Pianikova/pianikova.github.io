@@ -27,6 +27,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -72,11 +73,12 @@ public class LocalHistoryMcpTool
 	private final IMarkdownUtils markdownUtils;
 	private final ILocalHistoryUtils localHistoryUtils;
 	private final IFileSystem fileSystem;
+	private final IProjectTools projectTools;
 
 	@Inject
 	public LocalHistoryMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
 		Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils,
-		ILocalHistoryUtils localHistoryUtils, IFileSystem fileSystem)
+		ILocalHistoryUtils localHistoryUtils, IFileSystem fileSystem, IProjectTools projectTools)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
@@ -84,12 +86,14 @@ public class LocalHistoryMcpTool
 		Preconditions.checkNotNull(markdownUtils);
 		Preconditions.checkNotNull(localHistoryUtils);
 		Preconditions.checkNotNull(fileSystem);
+		Preconditions.checkNotNull(projectTools);
 		this.json = json;
 		this.messageFactory = messageFactory;
 		this.cancellationProgressMonitor = cancellationProgressMonitor;
 		this.markdownUtils = markdownUtils;
 		this.localHistoryUtils = localHistoryUtils;
 		this.fileSystem = fileSystem;
+		this.projectTools = projectTools;
 		spec = createSpecification();
 	}
 
@@ -188,7 +192,7 @@ public class LocalHistoryMcpTool
 				}
 			}
 
-			var file = fileSystem.getProjectFile(project, filePath);
+			var file = projectTools.getProjectFile(project, filePath);
 			if (!file.isPresent())
 			{
 				throw new RuntimeException("The file \"" + filePath + "\" does not exist within the IDE project context. "

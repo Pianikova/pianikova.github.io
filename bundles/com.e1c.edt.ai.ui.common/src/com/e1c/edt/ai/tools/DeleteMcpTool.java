@@ -30,6 +30,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -56,18 +57,20 @@ public class DeleteMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
 
     @Inject
     public DeleteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
 
@@ -75,6 +78,7 @@ public class DeleteMcpTool
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
 
@@ -134,7 +138,7 @@ public class DeleteMcpTool
             }
 
             // Determine project name from absolute path
-            String detectedProjectName = fileSystem.determineProjectName(path);
+            String detectedProjectName = projectTools.determineProjectName(path);
             final String finalProjectName = detectedProjectName;
 
             // Check if file is part of a project
@@ -193,7 +197,7 @@ public class DeleteMcpTool
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, path);
+            var projectFile = projectTools.getProjectFile(project, path);
             if (!projectFile.isPresent())
             {
                 return messageFactory.createError(this, call, "The file \"" + path

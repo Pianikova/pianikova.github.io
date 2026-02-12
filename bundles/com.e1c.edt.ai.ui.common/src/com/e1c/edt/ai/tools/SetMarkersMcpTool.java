@@ -31,6 +31,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
@@ -126,20 +127,23 @@ public class SetMarkersMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
 
     @Inject
     public SetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IFileSystem fileSystem)
+        IContentSourceProvider contentSourceProvider, IFileSystem fileSystem, IProjectTools projectTools)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         this.spec = createSpecification();
     }
 
@@ -201,7 +205,7 @@ public class SetMarkersMcpTool
             {
                 // Auto-determine project from first marker's file path
                 var firstMarker = request.markers.get(0);
-                effectiveProjectName = fileSystem.determineProjectName(firstMarker.absoluteFilePath);
+                effectiveProjectName = projectTools.determineProjectName(firstMarker.absoluteFilePath);
                 if (effectiveProjectName == null)
                 {
                     return messageFactory.createError(this, call,
@@ -306,7 +310,7 @@ public class SetMarkersMcpTool
         }
 
         // Get file from absolute path using IFileSystem
-        var file = fileSystem.getProjectFile(project, markerReq.absoluteFilePath);
+        var file = projectTools.getProjectFile(project, markerReq.absoluteFilePath);
         if (!file.isPresent())
         {
             throw new IllegalArgumentException("File not found: " + markerReq.absoluteFilePath);

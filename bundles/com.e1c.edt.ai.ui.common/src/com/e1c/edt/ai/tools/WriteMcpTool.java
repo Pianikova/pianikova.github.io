@@ -27,6 +27,7 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -64,18 +65,20 @@ public class WriteMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
 
     @Inject
     public WriteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
 
@@ -83,6 +86,7 @@ public class WriteMcpTool
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
 
@@ -170,7 +174,7 @@ public class WriteMcpTool
             }
 
             // Determine project name from absolute path
-            String detectedProjectName = fileSystem.determineProjectName(path);
+            String detectedProjectName = projectTools.determineProjectName(path);
             final String finalProjectName = detectedProjectName;
 
             // Check if file is part of a project
@@ -201,7 +205,7 @@ public class WriteMcpTool
                     }
                 }
 
-                var optionalProjectFile = fileSystem.getProjectFile(project, path);
+                var optionalProjectFile = projectTools.getProjectFile(project, path);
                 if (optionalProjectFile.isPresent())
                 {
                     var projectFile = optionalProjectFile.get();

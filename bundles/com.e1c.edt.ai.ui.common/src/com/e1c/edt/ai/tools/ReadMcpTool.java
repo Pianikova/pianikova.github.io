@@ -25,6 +25,7 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -72,6 +73,7 @@ public class ReadMcpTool
     private final IContentSourceProvider contentSourceProvider;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
+    private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IFiles files;
 
@@ -79,13 +81,14 @@ public class ReadMcpTool
     public ReadMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IMarkdownUtils markdownUtils, IFiles files)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IFiles files)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(files);
 
@@ -94,6 +97,7 @@ public class ReadMcpTool
         this.contentSourceProvider = contentSourceProvider;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
+        this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.files = files;
         spec = createSpecification();
@@ -167,7 +171,7 @@ public class ReadMcpTool
             }
 
             // Determine project name from absolute path
-            var detectedProjectName = fileSystem.determineProjectName(path);
+            var detectedProjectName = projectTools.determineProjectName(path);
             final var finalProjectName = detectedProjectName;
 
             // Check if file is part of a project
@@ -269,7 +273,7 @@ public class ReadMcpTool
             }
 
             var optionalDocument =
-                fileSystem.getProjectFile(project, path).flatMap(file -> contentSourceProvider.getFileDocument(file));
+                projectTools.getProjectFile(project, path).flatMap(file -> contentSourceProvider.getFileDocument(file));
 
             if (optionalDocument.isEmpty())
             {
