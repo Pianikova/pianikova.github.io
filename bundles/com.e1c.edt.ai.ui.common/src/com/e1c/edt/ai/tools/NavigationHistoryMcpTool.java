@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.io.File;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,6 +16,7 @@ import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.INavigationHistory;
 import org.eclipse.ui.INavigationLocation;
+import org.eclipse.ui.IURIEditorInput;
 import org.eclipse.ui.PlatformUI;
 
 import com.e1c.edt.ai.FontWeight;
@@ -55,10 +57,9 @@ public class NavigationHistoryMcpTool
         "[\n"
         + "  {\n"
         + "    \"index\": 5,\n"
-        + "    \"text\": \"Module.bsl - line 120\",\n"
+        + "    \"text\": \"Module.bsl\",\n"
         + "    \"project_name\": \"MyProject\",\n"
-        + "    \"path\": \"C:/Projects/MyProject/src/CommonModules/Module.bsl\",\n"
-        + "    \"input\": \"Module.bsl\",\n"
+        + "    \"path\": \"C:\\Projects\\MyProject\\src\\CommonModules\\Module.bsl\",\n"
         + "    \"is_current\": true\n"
         + "  }\n"
         + "]";
@@ -176,6 +177,7 @@ public class NavigationHistoryMcpTool
         });
     }
 
+    @SuppressWarnings("nls")
     private List<NavigationEntry> collectHistory(int maxEntries)
     {
         var workbench = PlatformUI.getWorkbench();
@@ -225,16 +227,33 @@ public class NavigationHistoryMcpTool
             entry.index = i;
             entry.text = location.getText();
             entry.isCurrent = location == current;
-
-            Object input = location.getInput();
-            entry.input = input != null ? input.toString() : null;
-
-            Optional<IFile> file = resolveFile(input);
-            if (file.isPresent())
+            var input = location.getInput();
+            if (input instanceof IFileEditorInput)
             {
-                var fileValue = file.get();
-                entry.projectName = fileValue.getProject().getName();
-                entry.absoluteFilePath = fileValue.getLocation().toOSString();
+                Optional.ofNullable(((IFileEditorInput)input).getFile()).ifPresent(file -> {
+                    entry.absoluteFilePath = file.getLocation().toOSString();
+                    entry.projectName = file.getProject().getName();
+                });
+            }
+
+            if (input instanceof IURIEditorInput)
+            {
+                var uri = ((IURIEditorInput)input).getURI();
+                if (uri != null)
+                {
+                    var file = new File(uri);
+                    entry.absoluteFilePath = file.getAbsolutePath();
+                    entry.projectName =
+                        "The file \"" + entry.absoluteFilePath + "\" does not exist within the IDE project context.";
+                }
+            }
+
+            if (input instanceof IAdaptable)
+            {
+                Optional.ofNullable(((IAdaptable)input).getAdapter(IFile.class)).ifPresent(file -> {
+                    entry.absoluteFilePath = file.getLocation().toOSString();
+                    entry.projectName = file.getProject().getName();
+                });
             }
 
             entries.add(entry);
@@ -246,21 +265,6 @@ public class NavigationHistoryMcpTool
         }
 
         return entries;
-    }
-
-    private Optional<IFile> resolveFile(Object input)
-    {
-        if (input instanceof IFileEditorInput)
-        {
-            return Optional.ofNullable(((IFileEditorInput)input).getFile());
-        }
-
-        if (input instanceof IAdaptable)
-        {
-            return Optional.ofNullable(((IAdaptable)input).getAdapter(IFile.class));
-        }
-
-        return Optional.empty();
     }
 
     @SuppressWarnings("nls")
@@ -315,9 +319,6 @@ public class NavigationHistoryMcpTool
 
         @SerializedName("text")
         public String text;
-
-        @SerializedName("input")
-        public String input;
 
         @SerializedName("project_name")
         public String projectName;

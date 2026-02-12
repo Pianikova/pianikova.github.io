@@ -16,7 +16,6 @@ import com.google.inject.Singleton;
 @Singleton
 public class MarkdownUtils implements IMarkdownUtils
 {
-
     private final ILinkProvider linkProvider;
     private final IFiles files;
 

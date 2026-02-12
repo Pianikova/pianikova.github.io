@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -19,6 +20,7 @@ import org.eclipse.core.runtime.CoreException;
 import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
@@ -71,11 +73,13 @@ public class ReadMcpTool
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IFileSystem fileSystem;
     private final IMarkdownUtils markdownUtils;
+    private final IFiles files;
 
     @Inject
     public ReadMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
-        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem, IMarkdownUtils markdownUtils)
+        Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
+        IMarkdownUtils markdownUtils, IFiles files)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -83,12 +87,15 @@ public class ReadMcpTool
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(fileSystem);
         Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(files);
+
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.fileSystem = fileSystem;
         this.markdownUtils = markdownUtils;
+        this.files = files;
         spec = createSpecification();
     }
 
@@ -178,7 +185,7 @@ public class ReadMcpTool
                         response.put("note", "The file \"" + path + "\" does not exist.");
 
                         details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
-                            markdownUtils.formatFilePath(path, finalFirstLineNumber, 0, 0, 0),
+                            files.getDisplayedFileName(new File(path)),
                             markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD));
 
                         return messageFactory.createMessage(this, call, json.serialize(response), details);
@@ -271,7 +278,7 @@ public class ReadMcpTool
                     "The file \"" + path + "\" does not exist within the IDE project context.");
 
                 details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
-                    markdownUtils.formatFilePath(path, finalFirstLineNumber, 0, 0, 0),
+                    files.getDisplayedFileName(new File(path)),
                     markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD));
 
                 return messageFactory.createMessage(this, call, json.serialize(response), details);
