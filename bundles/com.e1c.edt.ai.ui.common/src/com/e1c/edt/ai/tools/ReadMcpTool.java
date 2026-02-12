@@ -3,8 +3,10 @@
  */
 package com.e1c.edt.ai.tools;
 
-import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Arrays;
@@ -47,16 +49,18 @@ public class ReadMcpTool
     @SuppressWarnings("nls")
     private static String QuestionExample =
         "{\n"
-        + "  \"path\": \"C:/Projects/AccountingSystem/src/MainModule.bsl\",\n"
-        + "  \"first_line\": 50,\n"
-        + "  \"lines_number\": 100\n"
+        + "  \"path\": \"C:/Projects/MyProject/src/Catalogs/Nomencaltura/Module.bsl\",\n"
+        + "  \"first_line\": 1,\n"
+        + "  \"lines_number\": 10\n"
         + "}";
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
         "{\n"
-        + "  \"content\": \"     51: Procedure Test()\\n     52:     Message(\\\"Hello\\\");\\n     53: EndProcedure\",\n"
-        + "  \"charset_name\": \"UTF-8\"\n"
+        + "  \"content\": \"     1: // Module\\n     2: Procedure Test()\\n     3:     Message(\\\"Hello\\\");\\n     4: EndProcedure\\n     5:\\n     6: Procedure AnotherTest()\\n     7:     Var x = 10;\\n     8: EndProcedure\",\n"
+        + "  \"charset_name\": \"UTF-8\",\n"
+        + "  \"total_lines\": 42,\n"
+        + "  \"note\": \"There are more lines in the file that were not read. Increase lines_number parameter to read more content.\"\n"
         + "}";
     // @formatter:on
 
@@ -125,28 +129,23 @@ public class ReadMcpTool
                     "`path` is required."));
         }
 
-        var fileName = new File(path);
-        if (call.callKind == ToolCallKind.RENDER)
-        {
-            int lineNumber = request.firstLine != null && request.firstLine > 0 ? request.firstLine : 1;
-            int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : McpToolConstants.DEFAULT_READ_LINES;
-            int finishLineNumber = lineNumber + linesNumber;
-
-            details.requestMarkdown =
-                MessageFormat.format(Messages.ReadTitleTemplate,
-                    markdownUtils.formatFilePath(path, lineNumber, 0, finishLineNumber, 0));
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-        }
-
         // Validate and set default values for line parameters
-        int firstLineNumber =
+        var firstLineNumber =
             request.firstLine != null && request.firstLine > 0 ? request.firstLine : 1;
-        int linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber : McpToolConstants.DEFAULT_READ_LINES;
+        var linesNumber = request.linesNumber != null && request.linesNumber > 0 ? request.linesNumber
+            : McpToolConstants.DEFAULT_READ_LINES;
 
         // Apply maximum lines limit
         if (linesNumber > MAX_LINES)
         {
             linesNumber = MAX_LINES;
+        }
+
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            var href = markdownUtils.formatFilePath(path, firstLineNumber - 1, 0, firstLineNumber + linesNumber - 1, 0);
+            details.requestMarkdown = MessageFormat.format(Messages.ReadTitleTemplate, href);
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
         final int finalLinesNumber = linesNumber;
@@ -161,11 +160,11 @@ public class ReadMcpTool
             }
 
             // Determine project name from absolute path
-            String detectedProjectName = fileSystem.determineProjectName(path);
-            final String finalProjectName = detectedProjectName;
+            var detectedProjectName = fileSystem.determineProjectName(path);
+            final var finalProjectName = detectedProjectName;
 
             // Check if file is part of a project
-            boolean isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
+            var isProjectFile = finalProjectName != null && !finalProjectName.isBlank();
 
             if (!isProjectFile)
             {
@@ -174,32 +173,61 @@ public class ReadMcpTool
                 {
                     if (!fileSystem.fileExists(path))
                     {
-                        return messageFactory.createError(this, call,
-                            "The file \"" + path + "\" does not exist.");
+                        var response = new HashMap<String, Object>();
+                        response.put("content", "");
+                        response.put("note", "The file \"" + path + "\" does not exist.");
+
+                        details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
+                            markdownUtils.formatFilePath(path, finalFirstLineNumber, 0, 0, 0),
+                            markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD));
+
+                        return messageFactory.createMessage(this, call, json.serialize(response), details);
                     }
 
-                    byte[] fileData = fileSystem.readAllBytes(path);
-                    String content = removeBOM(new String(fileData, StandardCharsets.UTF_8));
+                    // Stream lines from file, preserving original line separators and handling BOM
+                    try (var fileInputStream = new FileInputStream(path);
+                        var inputStreamReader = new InputStreamReader(fileInputStream, StandardCharsets.UTF_8);
+                        var reader = new BufferedReader(inputStreamReader))
+                    {
+                        var endLineNumber = finalFirstLineNumber + finalLinesNumber - 1;
+                        var totalLines = 0;
+                        var linesRead = 0;
+                        var lastLineSize = 0;
+                        var resultContent = new StringBuilder();
+                        for (var line : fileSystem.getLines(reader))
+                        {
+                            totalLines++;
+                            if (totalLines >= finalFirstLineNumber && totalLines <= endLineNumber)
+                            {
+                                resultContent.append(String.format("%7d:", totalLines));
+                                resultContent.append(line);
+                                lastLineSize = line.length();
+                                linesRead++;
+                            }
+                        }
 
-                    int endLine = Math.min(finalFirstLineNumber + finalLinesNumber, countLines(content));
-                    Iterable<String> lineIterator = createLineIterator(content, finalFirstLineNumber, endLine);
+                        var response = new HashMap<String, Object>();
+                        response.put("content", resultContent.toString());
+                        response.put("charset_name", "UTF-8");
+                        response.put("total_lines", totalLines);
 
-                    var resultContent = new StringBuilder();
-                    resultContent.append(readLinesWithPrefix(lineIterator, finalFirstLineNumber, endLine, null));
+                        // Check if there are more lines based on totalLines
+                        if (endLineNumber < totalLines)
+                        {
+                            response.put("note",
+                                "There are more lines in the file that were not read. Increase lines_number parameter to read more content.");
+                        }
 
-                    var response = new HashMap<String, Object>();
-                    response.put("content", resultContent.toString());
-                    response.put("charset_name", "UTF-8");
+                        // Add response markdown
+                        var styledLineNumber = markdownUtils.createStyledText(
+                            String.valueOf(String.format("%d/%d", linesRead, totalLines)),
+                            TextColor.GREEN, FontWeight.BOLD);
 
-                    // Add response markdown
-                    String styledLineNumber = markdownUtils.createStyledText(String.valueOf(finalFirstLineNumber),
-                        TextColor.GREEN, FontWeight.BOLD);
-
-                    // Use endLine directly for the link range
-                    details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
-                        markdownUtils.formatFilePath(path, finalFirstLineNumber, 0, endLine, 0), styledLineNumber);
-
-                    return messageFactory.createMessage(this, call, resultContent.toString(), details);
+                        var href = markdownUtils.formatFilePath(path, finalFirstLineNumber - 1, 0,
+                            finalFirstLineNumber + linesRead - 1, lastLineSize);
+                        details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate, href, styledLineNumber);
+                        return messageFactory.createMessage(this, call, json.serialize(response), details);
+                    }
                 }
                 catch (IOException error)
                 {
@@ -214,8 +242,10 @@ public class ReadMcpTool
             // Validate project existence and accessibility
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call, "The project \"" + finalProjectName + "\" does not exist.");
+                return messageFactory.createError(this, call,
+                    "The project \"" + finalProjectName + "\" does not exist.");
             }
+
             if (!project.isOpen())
             {
                 try
@@ -231,47 +261,62 @@ public class ReadMcpTool
                 }
             }
 
-            var projectFile = fileSystem.getProjectFile(project, path);
-            if (!projectFile.isPresent())
-            {
-                return messageFactory.createError(this, call,
-                    "The file \"" + path + "\" does not exist within the IDE project context. "
-                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
-            }
-
-            var actualFile = projectFile.get();
-            var optionalDocument = contentSourceProvider.getFileDocument(actualFile);
+            var optionalDocument =
+                fileSystem.getProjectFile(project, path).flatMap(file -> contentSourceProvider.getFileDocument(file));
             if (optionalDocument.isEmpty())
             {
-                var filePathForError = actualFile.getProjectRelativePath().toOSString();
-                return messageFactory.createError(this, call,
-                    "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
-                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
+                var response = new HashMap<String, Object>();
+                response.put("content", "");
+                response.put("note",
+                    "The file \"" + path + "\" does not exist within the IDE project context.");
+
+                details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
+                    markdownUtils.formatFilePath(path, finalFirstLineNumber, 0, 0, 0),
+                    markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD));
+
+                return messageFactory.createMessage(this, call, json.serialize(response), details);
             }
 
             var document = optionalDocument.get();
-            var idocument = document.getDocument();
+            var doc = document.getDocument();
 
             var resultContent = new StringBuilder();
-            var lineNumber = finalFirstLineNumber;
-            var lines = fileSystem.getLines(document, finalFirstLineNumber - 1, finalLinesNumber);
-            int endLine = Math.min(finalFirstLineNumber + finalLinesNumber, idocument.getNumberOfLines());
-
-            resultContent.append(readLinesWithPrefix(lines, lineNumber, endLine, null));
+            var linesRead = 0;
+            var lastLineSize = 0;
+            for (var line : fileSystem.getLines(document, finalFirstLineNumber - 1, finalLinesNumber))
+            {
+                resultContent.append(String.format("%7d:", finalFirstLineNumber + linesRead));
+                resultContent.append(line);
+                lastLineSize = line.length();
+                linesRead++;
+            }
 
             // Prepare response
             var response = new Response();
             response.content = resultContent.toString();
             response.charsetName = document.getCharset().name();
+            int totalLines = doc.getNumberOfLines();
+            response.totalLines = totalLines;
+
+            // Check if there are more lines based on totalLines
+            int endLineNumber = finalFirstLineNumber + finalLinesNumber - 1;
+            if (totalLines > endLineNumber)
+            {
+                response.note =
+                    "There are more lines in the file that were not read. Increase lines_number parameter to read more content.";
+            }
+
             var content = json.serialize(response);
 
             // Add response markdown
-            String styledLineNumber = markdownUtils.createStyledText(String.valueOf(lineNumber), TextColor.GREEN, FontWeight.BOLD);
+            String styledLineNumber =
+                markdownUtils.createStyledText(String.format("%d/%d", linesRead, totalLines), TextColor.GREEN,
+                    FontWeight.BOLD);
 
-            // Use endLine directly for the link range
-            details.responseMarkdown =
-                MessageFormat.format(Messages.ReadTemplate,
-                    markdownUtils.formatFilePath(path, lineNumber, 0, endLine, 0), styledLineNumber);
+            var href = markdownUtils.formatFilePath(path, finalFirstLineNumber - 1, 0,
+                finalFirstLineNumber + linesRead - 1,
+                lastLineSize);
+            details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate, href, styledLineNumber);
             return messageFactory.createMessage(this, call, content, details);
         });
     }
@@ -368,199 +413,18 @@ public class ReadMcpTool
          */
         @SerializedName("charset_name")
         public String charsetName;
-    }
 
-    /**
-     * Removes BOM (Byte Order Mark) from the beginning of the content if present.
-     *
-     * @param content the content to process
-     * @return the content without BOM
-     */
-    private static String removeBOM(String content)
-    {
-        if (content == null || content.isEmpty())
-        {
-            return content;
-        }
+        /**
+         * Optional note with additional information.
+         */
+        @SerializedName("note")
+        public String note;
 
-        // UTF-8 BOM is EF BB BF
-        if (content.startsWith("\uFEFF")) //$NON-NLS-1$
-        {
-            return content.substring(1);
-        }
-
-        return content;
-    }
-
-    /**
-     * Counts the number of lines in the content by counting line endings.
-     *
-     * @param content the content to count lines in
-     * @return the number of lines
-     */
-    private static int countLines(String content)
-    {
-        if (content == null || content.isEmpty())
-        {
-            return 0;
-        }
-
-        int count = 1;
-        int length = content.length();
-        for (int i = 0; i < length; i++)
-        {
-            char c = content.charAt(i);
-            if (c == '\r')
-            {
-                if (i + 1 < length && content.charAt(i + 1) == '\n')
-                {
-                    i++; // Skip \n after \r
-                }
-                count++;
-            }
-            else if (c == '\n')
-            {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /**
-     * Creates an iterator that reads lines from content with their original line endings preserved.
-     * Each line returned includes its line ending (except possibly the last line).
-     *
-     * @param content the content to read from
-     * @param startLine the starting line number (1-based)
-     * @param endLine the ending line number (exclusive)
-     * @return an iterable of lines with their original line endings
-     */
-    private static Iterable<String> createLineIterator(String content, int startLine, int endLine)
-    {
-        return () -> new java.util.Iterator<>() {
-            int currentLine = startLine;
-            int position = 0;
-            int length = content != null ? content.length() : 0;
-            boolean hasNextLine = content != null && !content.isEmpty();
-
-            {
-                // Skip to the starting line
-                for (int line = 1; line < startLine && hasNextLine; line++)
-                {
-                    advanceToNextLine();
-                }
-            }
-
-            private void advanceToNextLine()
-            {
-                while (position < length)
-                {
-                    char c = content.charAt(position);
-                    if (c == '\r')
-                    {
-                        position++;
-                        if (position < length && content.charAt(position) == '\n')
-                        {
-                            position++;
-                        }
-                        return;
-                    }
-                    else if (c == '\n')
-                    {
-                        position++;
-                        return;
-                    }
-                    position++;
-                }
-                hasNextLine = false;
-            }
-
-            @Override
-            public boolean hasNext()
-            {
-                return hasNextLine && currentLine < endLine;
-            }
-
-            @Override
-            public String next()
-            {
-                if (!hasNext())
-                {
-                    throw new java.util.NoSuchElementException();
-                }
-
-                var lineBuilder = new StringBuilder();
-                int lineStart = position;
-                boolean foundLineEnd = false;
-
-                while (position < length)
-                {
-                    char c = content.charAt(position);
-
-                    if (c == '\r')
-                    {
-                        lineBuilder.append(content, lineStart, position);
-                        position++;
-                        if (position < length && content.charAt(position) == '\n')
-                        {
-                            lineBuilder.append("\r\n"); //$NON-NLS-1$
-                            position++;
-                        }
-                        else
-                        {
-                            lineBuilder.append('\r');
-                        }
-                        foundLineEnd = true;
-                        break;
-                    }
-                    else if (c == '\n')
-                    {
-                        lineBuilder.append(content, lineStart, position);
-                        lineBuilder.append('\n');
-                        position++;
-                        foundLineEnd = true;
-                        break;
-                    }
-                    position++;
-                }
-
-                if (!foundLineEnd && lineStart < length)
-                {
-                    // Last line without line ending
-                    lineBuilder.append(content, lineStart, length);
-                    hasNextLine = false;
-                }
-
-                currentLine++;
-                return lineBuilder.toString();
-            }
-        };
-    }
-
-    /**
-     * Reads lines from an iterable and adds line number prefixes.
-     * Lines are assumed to already include their line endings (if applicable).
-     *
-     * @param lines the iterable of lines to read
-     * @param startLineNumber the starting line number (1-based)
-     * @param endLine the ending line number (exclusive)
-     * @param lineSeparator the line separator to use (ignored if null, lines must already contain line endings)
-     * @return the formatted content with line number prefixes
-     */
-    @SuppressWarnings("nls")
-    private static String readLinesWithPrefix(Iterable<String> lines, int startLineNumber, int endLine, String lineSeparator)
-    {
-        var resultContent = new StringBuilder();
-        var lineNumber = startLineNumber;
-
-        for (var line : lines)
-        {
-            var prefix = String.format("%7d:", lineNumber);
-            resultContent.append(prefix).append(" ").append(line);
-            lineNumber++;
-        }
-
-        return resultContent.toString();
+        /**
+         * Total number of lines in the file.
+         */
+        @SerializedName("total_lines")
+        public Integer totalLines;
     }
 }
 

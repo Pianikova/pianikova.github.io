@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
@@ -14,6 +15,8 @@ public interface IFileSystem
     Optional<IFile> getProjectFile(IProject project, String relativePath);
 
     Iterable<String> getLines(IFileDocument fileDocument, int firstLineNumber, int linesNumber);
+
+    Iterable<String> getLines(Reader reader);
 
     boolean isPrintable(String text, double threshold);
 

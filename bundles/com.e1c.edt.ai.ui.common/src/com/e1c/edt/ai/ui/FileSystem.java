@@ -5,6 +5,7 @@ package com.e1c.edt.ai.ui;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -256,5 +257,157 @@ public class FileSystem implements IFileSystem
         }
 
         Files.deleteIfExists(Paths.get(filePath));
+    }
+
+    @Override
+    public Iterable<String> getLines(Reader reader)
+    {
+        return () -> new BufferedReaderLineIterator(reader);
+    }
+
+    /**
+     * Iterator that reads lines from a BufferedReader on-demand, preserving original line separators.
+     * Handles BOM (Byte Order Mark) at the beginning of the file.
+     */
+    private static class BufferedReaderLineIterator
+        implements java.util.Iterator<String>
+    {
+        private final Reader reader;
+        private String nextLine = null;
+        private boolean bomSkipped = false;
+        private boolean finished = false;
+
+        public BufferedReaderLineIterator(Reader reader)
+        {
+            this.reader = reader;
+        }
+
+        @Override
+        public boolean hasNext()
+        {
+            if (finished)
+            {
+                return false;
+            }
+
+            nextLine = readNextLine();
+            return nextLine != null;
+        }
+
+        @Override
+        public String next()
+        {
+            return nextLine;
+        }
+
+        private String readNextLine()
+        {
+            StringBuilder currentLine = new StringBuilder();
+            try
+            {
+                int ch;
+                while ((ch = reader.read()) != -1)
+                {
+                    if (ch == '\r')
+                    {
+                        // Check if next char is \n (Windows-style CRLF)
+                        reader.mark(1);
+                        int nextCh = reader.read();
+                        if (nextCh == '\n')
+                        {
+                            // Line ending is CRLF
+                            String lineContent = currentLine.toString();
+                            if (!bomSkipped)
+                            {
+                                lineContent = removeBOM(lineContent);
+                                bomSkipped = true;
+                            }
+
+                            currentLine.setLength(0);
+                            return lineContent + "\r\n"; //$NON-NLS-1$
+                        }
+                        else
+                        {
+                            // Line ending is CR only (old Mac style)
+                            // Reset reader since we already read the next character
+                            if (nextCh != -1)
+                            {
+                                reader.reset();
+                            }
+
+                            String lineContent = currentLine.toString();
+                            if (!bomSkipped)
+                            {
+                                lineContent = removeBOM(lineContent);
+                                bomSkipped = true;
+                            }
+
+                            currentLine.setLength(0);
+                            return lineContent + "\r"; //$NON-NLS-1$
+                        }
+                    }
+                    else if (ch == '\n')
+                    {
+                        // Line ending is LF (Unix-style)
+                        String lineContent = currentLine.toString();
+                        if (!bomSkipped)
+                        {
+                            lineContent = removeBOM(lineContent);
+                            bomSkipped = true;
+                        }
+
+                        currentLine.setLength(0);
+                        return lineContent + "\n"; //$NON-NLS-1$
+                    }
+                    else
+                    {
+                        currentLine.append((char)ch);
+                    }
+                }
+
+                // Handle the last line if it doesn't have a line ending
+                if (currentLine.length() > 0)
+                {
+                    String lineContent = currentLine.toString();
+                    if (!bomSkipped)
+                    {
+                        lineContent = removeBOM(lineContent);
+                        bomSkipped = true;
+                    }
+
+                    finished = true;
+                    return lineContent;
+                }
+
+                finished = true;
+                return null;
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException("Error reading line", e); //$NON-NLS-1$
+            }
+        }
+
+        /**
+         * Removes BOM (Byte Order Mark) from the beginning of the content if present.
+         *
+         * @param content the content to process
+         * @return the content without BOM
+         */
+        private static String removeBOM(String content)
+        {
+            if (content == null || content.isEmpty())
+            {
+                return content;
+            }
+
+            // UTF-8 BOM is EF BB BF
+            if (content.startsWith("\uFEFF")) //$NON-NLS-1$
+            {
+                return content.substring(1);
+            }
+
+            return content;
+        }
     }
 }

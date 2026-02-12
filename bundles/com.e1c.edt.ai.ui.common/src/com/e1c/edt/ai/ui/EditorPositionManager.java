@@ -54,12 +54,20 @@ public class EditorPositionManager
 
 			// First try to find file in workspace (relative path)
 			var root = ResourcesPlugin.getWorkspace().getRoot();
-			var file = root.getFile(new Path(filePath));
-			if (file != null && file.exists())
-			{
-				editor = IDE.openEditor(page, file);
+            try
+            {
+                var file = root.getFile(new Path(filePath));
+                if (file != null && file.exists())
+                {
+                    editor = IDE.openEditor(page, file);
+                }
 			}
-			else
+            catch (Exception e)
+            {
+                //
+            }
+
+            if (editor == null)
 			{
 				// If not found in workspace, try as absolute path
 				var externalFile = new File(filePath);
@@ -252,10 +260,14 @@ public class EditorPositionManager
 			log.logError("Document has " + numberOfLines + " lines");
 
 			// Convert line/column to offset
-			var startLine = Math.max(0, selection.getStartLine() - 1);
-			var startColumn = Math.max(0, selection.getStartColumn() - 1);
-			var endLine = Math.max(0, selection.getEndLine() - 1);
-			var endColumn = Math.max(0, selection.getEndColumn() - 1);
+            var startLine = Math.max(0, selection.getStartLine() - 1);
+            var startColumn = Math.max(0, selection.getStartColumn() - 1);
+            var endLine = Math.max(0, selection.getEndLine() - 1);
+            var endColumn = Math.max(0, selection.getEndColumn() - 1);
+            if (endLine == numberOfLines - 1)
+            {
+                endColumn++;
+            }
 
 			// Check if lines are within document bounds
 			if (startLine >= numberOfLines || endLine >= numberOfLines)
