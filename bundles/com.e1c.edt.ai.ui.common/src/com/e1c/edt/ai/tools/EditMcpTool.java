@@ -23,6 +23,8 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
+import com.e1c.edt.ai.ReplaceResult;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -32,7 +34,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.e1c.edt.ai.ui.IFileSystem;
@@ -213,11 +214,18 @@ public class EditMcpTool
                     var content = new String(fileData, StandardCharsets.UTF_8);
 
                     // Perform replacement using helper method
-                    var replacementResult = performReplacement(call, content, oldContent, newContent, replaceAll);
-                    if (replacementResult == null)
+                    var replaceResult =
+                        contentReplacer.replace(content, oldContent, newContent, System.lineSeparator(), replaceAll);
+                    if (!replaceResult.isSuccess())
                     {
-                        return messageFactory.createError(this, call, "Replacement failed.");
+                        String errorMessage = getReplacementErrorMessage(replaceAll, replaceResult);
+                        return messageFactory.createError(this, call, errorMessage);
                     }
+
+                    var replacementResult = new ReplacementResult();
+                    replacementResult.updatedContent = replaceResult.getUpdatedContent();
+                    replacementResult.addedLines = replaceResult.getAddedLines();
+                    replacementResult.removedLines = replaceResult.getRemovedLines();
 
                     // Write back
                     byte[] updatedData = replacementResult.updatedContent.getBytes(StandardCharsets.UTF_8);
@@ -310,11 +318,18 @@ public class EditMcpTool
             var currentContent = optionalCurrentContent.get();
 
             // Perform replacement using helper method
-            var replacementResult = performReplacement(call, currentContent, oldContent, newContent, replaceAll);
-            if (replacementResult == null)
+            var replaceResult =
+                contentReplacer.replace(currentContent, oldContent, newContent, System.lineSeparator(), replaceAll);
+            if (!replaceResult.isSuccess())
             {
-                return messageFactory.createError(this, call, "Replacement failed.");
+                String errorMessage = getReplacementErrorMessage(replaceAll, replaceResult);
+                return messageFactory.createError(this, call, errorMessage);
             }
+
+            var replacementResult = new ReplacementResult();
+            replacementResult.updatedContent = replaceResult.getUpdatedContent();
+            replacementResult.addedLines = replaceResult.getAddedLines();
+            replacementResult.removedLines = replaceResult.getRemovedLines();
 
             // Write updated content
             var optionalError = dispatcher.dispatch(() ->
@@ -368,53 +383,30 @@ public class EditMcpTool
     }
 
     /**
-     * Performs content replacement using contentReplacer.
+     * Generates a user-friendly error message for replacement failures.
      *
-     * @param call the MCP tool call
-     * @param content the current file content (without BOM)
-     * @param bom the BOM (Byte Order Mark) if present
-     * @param oldContent the content to replace
-     * @param newContent the new content
-     * @param replaceAll whether to replace all occurrences
-     * @return the replacement result, or null if replacement failed
+     * @param replaceAll whether replace_all was true
+     * @param replaceResult the replacement result
+     * @return the error message
      */
     @SuppressWarnings("nls")
-    private ReplacementResult performReplacement(McpToolCall call, String content, String oldContent, String newContent,
-        boolean replaceAll)
+    private String getReplacementErrorMessage(boolean replaceAll, ReplaceResult replaceResult)
     {
-        var replaceResult = contentReplacer.replace(content, oldContent, newContent, System.lineSeparator(), replaceAll);
-
-        if (!replaceResult.isSuccess())
+        if (replaceAll)
         {
-            if (replaceAll)
+            return "Original content not found in file. Verify the `old_content`.";
+        }
+        else
+        {
+            if (replaceResult.hasMultipleOccurrences())
             {
-                messageFactory.createError(this, call,
-                    "Original content not found in file. Verify the `old_content`.");
-                return null;
+                return "Multiple matches found for original content. Change the `old_content` to avoid multiple matches. Provide a larger `old_content` with more surrounding lines (minimum 3).";
             }
             else
             {
-                if (replaceResult.hasMultipleOccurrences())
-                {
-                    messageFactory.createError(this, call,
-                        "Multiple matches found for original content. Change the `old_content` to avoid multiple matches. Provide a larger `old_content` with more surrounding lines (minimum 3).");
-                    return null;
-                }
-                else
-                {
-                    messageFactory.createError(this, call,
-                        "Original content not found in file. Verify the `old_content`.");
-                    return null;
-                }
+                return "Original content not found in file. Verify the `old_content`.";
             }
         }
-
-        var result = new ReplacementResult();
-        result.updatedContent = replaceResult.getUpdatedContent();
-        result.addedLines = replaceResult.getAddedLines();
-        result.removedLines = replaceResult.getRemovedLines();
-
-        return result;
     }
 
     /**
