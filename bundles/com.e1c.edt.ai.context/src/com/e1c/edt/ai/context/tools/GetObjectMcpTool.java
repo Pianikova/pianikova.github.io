@@ -238,6 +238,10 @@ public class GetObjectMcpTool
             }
             catch (OperationCanceledException e)
             {
+                return messageFactory.createError(this, call, "Operation cancelled: " + e.getMessage());
+            }
+            catch (Exception e)
+            {
                 return messageFactory.createError(this, call, "Cannot get object by id: " + e.getMessage());
             }
         });

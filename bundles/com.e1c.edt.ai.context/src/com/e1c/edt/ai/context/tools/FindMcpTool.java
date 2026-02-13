@@ -123,6 +123,7 @@ public class FindMcpTool
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(hostResourceManager);
         Preconditions.checkNotNull(modelManager);
+        Preconditions.checkNotNull(markdownUtils);
 
         this.json = json;
         this.messageFactory = messageFactory;
