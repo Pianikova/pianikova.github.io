@@ -24,6 +24,7 @@ import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
@@ -68,11 +69,12 @@ public class WriteMcpTool
     private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final ILog log;
 
     @Inject
     public WriteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport, ILog log)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -81,6 +83,7 @@ public class WriteMcpTool
         Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(log);
 
         this.json = json;
         this.messageFactory = messageFactory;
@@ -89,6 +92,7 @@ public class WriteMcpTool
         this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.log = log;
 
         spec = createSpecification();
     }
@@ -252,15 +256,13 @@ public class WriteMcpTool
                                 projectFile.create(source, true, monitor);
                             }
 
-                            projectFile.refreshLocal(IResource.DEPTH_ZERO, monitor);
-                            if (projectFile.getParent() != null)
-                            {
-                                projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
-                            }
+                            refreshResources(projectFile, monitor);
                         }
                     }
                     catch (CoreException | IOException error)
                     {
+                        // Ensure resources are refreshed even on error
+                        refreshResourcesSafe(projectFile, monitor);
                         return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
                     }
 
@@ -380,6 +382,40 @@ public class WriteMcpTool
         if (!folder.exists())
         {
             folder.create(true, true, monitor);
+        }
+    }
+
+    /**
+     * Refreshes the file and its parent folder in the workspace.
+     *
+     * @param file the file to refresh
+     * @param monitor the progress monitor
+     * @throws CoreException if refresh fails
+     */
+    private void refreshResources(IFile file, IProgressMonitor monitor) throws CoreException
+    {
+        file.refreshLocal(IResource.DEPTH_ZERO, monitor);
+        if (file.getParent() != null)
+        {
+            file.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
+        }
+    }
+
+    /**
+     * Safely refreshes the file and its parent folder. Errors are logged but not thrown.
+     *
+     * @param file the file to refresh
+     * @param monitor the progress monitor
+     */
+    private void refreshResourcesSafe(IFile file, IProgressMonitor monitor)
+    {
+        try
+        {
+            refreshResources(file, monitor);
+        }
+        catch (CoreException error)
+        {
+            log.logError(error);
         }
     }
 

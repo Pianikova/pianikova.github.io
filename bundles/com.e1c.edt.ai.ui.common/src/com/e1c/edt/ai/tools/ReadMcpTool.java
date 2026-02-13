@@ -47,6 +47,7 @@ public class ReadMcpTool
 {
     public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
     private static final int MAX_LINES = McpToolConstants.MAX_READ_LINES;
+    private static final int LINE_NUMBER_WIDTH = 7;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -210,8 +211,7 @@ public class ReadMcpTool
                             totalLines++;
                             if (totalLines >= finalFirstLineNumber && totalLines <= endLineNumber)
                             {
-                                resultContent.append(String.format("%7d:", totalLines));
-                                resultContent.append(line);
+                                resultContent.append(formatLineWithNumberPrefix(totalLines, line));
                                 lastLineSize = line.length();
                                 linesRead++;
                             }
@@ -297,8 +297,7 @@ public class ReadMcpTool
             var lastLineSize = 0;
             for (var line : fileSystem.getLines(document, finalFirstLineNumber - 1, finalLinesNumber))
             {
-                resultContent.append(String.format("%7d:", finalFirstLineNumber + linesRead));
-                resultContent.append(line);
+                resultContent.append(formatLineWithNumberPrefix(finalFirstLineNumber + linesRead, line));
                 lastLineSize = line.length();
                 linesRead++;
             }
@@ -389,6 +388,18 @@ public class ReadMcpTool
 
         return spec;
         // @formatter:on
+    }
+
+    /**
+     * Formats a line with a line number prefix.
+     *
+     * @param lineNumber the line number (1-relative)
+     * @param lineContent the line content
+     * @return the formatted line with prefix
+     */
+    private static String formatLineWithNumberPrefix(int lineNumber, String lineContent)
+    {
+        return String.format("%" + LINE_NUMBER_WIDTH + "d:", lineNumber) + lineContent;
     }
 
     private static class Request

@@ -102,36 +102,36 @@ public class FindMcpTool
     private final IJson json;
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
-    private final IBmModelManager bmModelManager;
+    private final IBmModelManager searchModelManager;
     private final ITextSearchIndexProvider textSearchIndexProvider;
     private final IExternalPropertyManagerRegistry externalPropertyManagerRegistry;
     private final IDtHostResourceManager hostResourceManager;
-    private final IBmModelManager modelManager;
+    private final IBmModelManager projectModelManager;
     private final IMarkdownUtils markdownUtils;
 
     @Inject
     public FindMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IBmModelManager bmModelManager, ITextSearchIndexProvider textSearchIndexProvider,
+        IBmModelManager searchModelManager, ITextSearchIndexProvider textSearchIndexProvider,
         IExternalPropertyManagerRegistry externalPropertyManagerRegistry, IDtHostResourceManager hostResourceManager,
-        IBmModelManager modelManager, IMarkdownUtils markdownUtils)
+        IBmModelManager projectModelManager, IMarkdownUtils markdownUtils)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(bmModelManager);
+        Preconditions.checkNotNull(searchModelManager);
         Preconditions.checkNotNull(textSearchIndexProvider);
         Preconditions.checkNotNull(externalPropertyManagerRegistry);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(hostResourceManager);
-        Preconditions.checkNotNull(modelManager);
+        Preconditions.checkNotNull(projectModelManager);
         Preconditions.checkNotNull(markdownUtils);
 
         this.json = json;
         this.messageFactory = messageFactory;
-        this.bmModelManager = bmModelManager;
+        this.searchModelManager = searchModelManager;
         this.textSearchIndexProvider = textSearchIndexProvider;
         this.externalPropertyManagerRegistry = externalPropertyManagerRegistry;
         this.hostResourceManager = hostResourceManager;
-        this.modelManager = modelManager;
+        this.projectModelManager = projectModelManager;
         this.markdownUtils = markdownUtils;
 
         spec = createSpecification();
@@ -255,7 +255,8 @@ public class FindMcpTool
 
                 var searcher =
                     new TextSearcher(request.searchQuery, request.matchCase, searchSettings, resultCollector,
-                        bmModelManager, textSearchIndexProvider, externalPropertyManagerRegistry, hostResourceManager);
+                        searchModelManager, textSearchIndexProvider, externalPropertyManagerRegistry,
+                        hostResourceManager);
 
                 searcher.search(monitor);
 
@@ -314,7 +315,7 @@ public class FindMcpTool
         for (var match : collector.getMatches())
         {
             var model = match.getModel();
-            var project = modelManager.getProject(model);
+            var project = projectModelManager.getProject(model);
             var projectName = project != null ? project.getName() : "Unknown";
             if (match instanceof TextSearchFileMatch)
             {
@@ -696,16 +697,6 @@ public class FindMcpTool
         @SerializedName("target_object_id")
         public long targetObjectId;
     }
-
-    /**
-     * Represents a base metadata reference element (currently without additional fields)
-     * type = "1C model reference"
-     */
-    /*private static class BmReferenceElement
-        extends Element
-    {
-        // Intentionally empty - used as base for metadata references
-    }*/
 
     /**
      * Represents a related metadata object in search results

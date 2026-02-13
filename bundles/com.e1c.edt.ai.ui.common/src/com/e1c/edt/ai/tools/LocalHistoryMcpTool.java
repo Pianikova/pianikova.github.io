@@ -6,6 +6,7 @@ package com.e1c.edt.ai.tools;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -18,6 +19,7 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -27,7 +29,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -164,11 +165,12 @@ public class LocalHistoryMcpTool
 			maxEntries = request.maxEntries;
 		}
 
-		return CompletableFuture.supplyAsync(() ->
+        return CompletableFuture.supplyAsync(() ->
 		{
+			// Check cancellation first
 			if (cancellationToken.isCanceled())
 			{
-				throw new RuntimeException("Operation was cancelled before execution.");
+				return messageFactory.createError(this, call, "Operation was cancelled before execution.");
 			}
 
 			var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -176,7 +178,7 @@ public class LocalHistoryMcpTool
 
 			if (project == null || !project.exists())
 			{
-				throw new RuntimeException("The project \"" + projectName + "\" does not exist.");
+				return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
 			}
 			if (!project.isOpen())
 			{
@@ -188,83 +190,98 @@ public class LocalHistoryMcpTool
 				}
 				catch (CoreException error)
 				{
-					throw new RuntimeException("Cannot open the project \"" + projectName + "\". " + error.getMessage());
+					return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". " + error.getMessage());
 				}
 			}
 
 			var file = projectTools.getProjectFile(project, filePath);
 			if (!file.isPresent())
 			{
-				throw new RuntimeException("The file \"" + filePath + "\" does not exist within the IDE project context. "
+				return messageFactory.createError(this, call, "The file \"" + filePath + "\" does not exist within the IDE project context. "
 					+ "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
 			}
 
 			var actualFile = file.get();
 
+			// Check cancellation before expensive operation
+			if (cancellationToken.isCanceled())
+			{
+				return messageFactory.createError(this, call, "Operation was cancelled before retrieving history.");
+			}
+
+			// Retrieve local history
+			List<LocalHistoryEntry> historyEntries;
 			try
 			{
-				var historyEntries = localHistoryUtils.getLocalHistory(actualFile, maxEntries);
-				var lastIndex = historyEntries.size() - 1;
-				for (int i = 0; i < historyEntries.size(); i++)
-				{
-					var entry = historyEntries.get(i);
-					entry.index = i;
-					entry.isOldest = i == lastIndex;
-				}
-				var content = json.serialize(historyEntries);
-
-				var responseMarkdown = new StringBuilder();
-				responseMarkdown.append(MessageFormat.format(Messages.LocalHistoryFoundTemplate,
-					markdownUtils.createStyledText(String.valueOf(historyEntries.size()), TextColor.GREEN, FontWeight.BOLD),
-					markdownUtils.escapeForMarkdown(filePath),
-					markdownUtils.escapeForMarkdown(projectName)));
-
-				if (!historyEntries.isEmpty())
-				{
-					responseMarkdown.append("\n\n<details><summary>").append(Messages.ViewHistory).append("</summary>\n\n");
-
-					for (var entry : historyEntries)
-					{
-						responseMarkdown.append("### **")
-                            .append(markdownUtils.createStyledText(entry.revisionId, TextColor.BLUE, FontWeight.NORMAL))
-							.append("**")
-							.append(entry.isCurrent ? " " + Messages.Current : "")
-							.append(" - ")
-							.append(entry.formattedTime)
-							.append("\n\n");
-
-						responseMarkdown.append("**")
-							.append(Messages.FileSize)
-							.append(":** ")
-							.append(entry.fileSize)
-							.append(" bytes\n");
-
-						responseMarkdown.append("**")
-							.append(Messages.Location)
-							.append(":** ")
-							.append(markdownUtils.escapeForMarkdown(entry.location))
-							.append("\n\n");
-
-						responseMarkdown.append("---\n\n");
-					}
-
-					responseMarkdown.append("</details>");
-				}
-				else
-				{
-					responseMarkdown.append("\n\n").append(Messages.NoLocalHistoryFound);
-				}
-
-				details.responseMarkdown = responseMarkdown.toString();
-				return messageFactory.createMessage(this, call, content, details);
+				historyEntries = localHistoryUtils.getLocalHistory(actualFile, maxEntries);
 			}
 			catch (Exception e)
 			{
-				throw new RuntimeException("Failed to get local history: " + e.getMessage(), e);
+				return messageFactory.createError(this, call, "Failed to get local history: " + e.getMessage());
 			}
-		}).exceptionally(throwable ->
-		{
-			return messageFactory.createError(this, call, throwable.getMessage());
+
+			// Check cancellation after retrieving history
+			if (cancellationToken.isCanceled())
+			{
+				return messageFactory.createError(this, call, "Operation was cancelled while processing history.");
+			}
+
+			// Index history entries
+			var lastIndex = historyEntries.size() - 1;
+			for (int i = 0; i < historyEntries.size(); i++)
+			{
+				var entry = historyEntries.get(i);
+				entry.index = i;
+				entry.isOldest = i == lastIndex;
+			}
+
+			var content = json.serialize(historyEntries);
+
+			// Build response markdown
+			var responseMarkdown = new StringBuilder();
+			responseMarkdown.append(MessageFormat.format(Messages.LocalHistoryFoundTemplate,
+				markdownUtils.createStyledText(String.valueOf(historyEntries.size()), TextColor.GREEN, FontWeight.BOLD),
+				markdownUtils.escapeForMarkdown(filePath),
+				markdownUtils.escapeForMarkdown(projectName)));
+
+			if (!historyEntries.isEmpty())
+			{
+				responseMarkdown.append("\n\n<details><summary>").append(Messages.ViewHistory).append("</summary>\n\n");
+
+				for (var entry : historyEntries)
+				{
+					responseMarkdown.append("### **")
+						.append(markdownUtils.createStyledText(entry.revisionId, TextColor.BLUE, FontWeight.NORMAL))
+						.append("**")
+						.append(entry.isCurrent ? " " + Messages.Current : "")
+						.append(" - ")
+						.append(entry.formattedTime)
+						.append("\n\n");
+
+					responseMarkdown.append("**")
+						.append(Messages.FileSize)
+						.append(":** ")
+						.append(entry.fileSize)
+						.append(" bytes\n");
+
+					responseMarkdown.append("**")
+						.append(Messages.Location)
+						.append(":** ")
+						.append(markdownUtils.escapeForMarkdown(entry.location))
+						.append("\n\n");
+
+					responseMarkdown.append("---\n\n");
+				}
+
+				responseMarkdown.append("</details>");
+			}
+			else
+			{
+				responseMarkdown.append("\n\n").append(Messages.NoLocalHistoryFound);
+			}
+
+			details.responseMarkdown = responseMarkdown.toString();
+			return messageFactory.createMessage(this, call, content, details);
 		});
 	}
 
