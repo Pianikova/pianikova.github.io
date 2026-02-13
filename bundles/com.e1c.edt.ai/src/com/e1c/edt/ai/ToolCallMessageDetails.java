@@ -14,6 +14,12 @@ public class ToolCallMessageDetails
     public Boolean autoCall;
 
     /**
+     * Скрыть вызов инструмента
+     */
+    @SerializedName("hidden")
+    public Boolean hidden;
+
+    /**
      * Представление запроса  в формате MARKDOWN, который будет выполнен
      */
     @SerializedName("request_markdown")
