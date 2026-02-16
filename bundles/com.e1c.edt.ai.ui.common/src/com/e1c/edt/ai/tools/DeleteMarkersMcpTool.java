@@ -85,24 +85,8 @@ public class DeleteMarkersMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
-        if (call.callKind == ToolCallKind.RENDER)
-        {
-            var optionalRequest = json.deserialize(call.function.arguments, Request.class);
-            if (optionalRequest.isPresent() && optionalRequest.get().projectName != null
-                && !optionalRequest.get().projectName.isBlank())
-            {
-                details.requestMarkdown =
-                    MessageFormat.format(Messages.RemoveMarkersTitleTemplate, optionalRequest.get().projectName);
-            }
-            else
-            {
-                details.requestMarkdown = Messages.RemoveMarkersTitle;
-            }
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-        }
-
-        // Deserialize request parameters
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        // Deserialize request parameters
         if (optionalRequest.isEmpty())
         {
             return CompletableFuture.completedFuture(messageFactory.createError(this, call,
@@ -111,12 +95,18 @@ public class DeleteMarkersMcpTool
 
         var request = optionalRequest.get();
         var projectName = request.projectName;
-
         // Validate project name
         if (projectName == null || projectName.isBlank())
         {
             return CompletableFuture
                 .completedFuture(messageFactory.createError(this, call, "Project name is required"));
+        }
+
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown =
+                MessageFormat.format(Messages.RemoveMarkersTitleTemplate, optionalRequest.get().projectName);
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
         return CompletableFuture.supplyAsync(() -> {
