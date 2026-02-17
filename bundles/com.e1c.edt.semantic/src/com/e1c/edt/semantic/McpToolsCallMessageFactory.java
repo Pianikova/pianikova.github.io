@@ -20,6 +20,13 @@ public class McpToolsCallMessageFactory
     }
 
     @Override
+    public ToolCallMessage createRawMessage(IMcpTool tool, McpToolCall call, String content,
+        ToolCallMessageDetails details)
+    {
+        throw new UnsupportedOperationException("Not supported yet."); //$NON-NLS-1$
+    }
+
+    @Override
     public ToolCallMessage createError(IMcpTool tool, McpToolCall call, String errorMessage)
     {
         throw new UnsupportedOperationException("Not supported yet."); //$NON-NLS-1$
