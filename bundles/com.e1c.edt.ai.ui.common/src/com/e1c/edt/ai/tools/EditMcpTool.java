@@ -3,7 +3,6 @@
 */
 package com.e1c.edt.ai.tools;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
@@ -28,6 +27,8 @@ import com.e1c.edt.ai.ReplaceResult;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -126,25 +127,32 @@ public class EditMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
-                        + "Use this example: " + QuestionExample
-                        + "\n\nRequired fields: 'path' (string), "
-                        + "'old_content' (string), 'new_content' (string)"
-                        + "\nOptional field: 'replace_all' (boolean)"));
+            throw new ToolException("Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
+                + "Use this example: " + QuestionExample
+                + "\n\nRequired fields: 'path' (string), "
+                + "'old_content' (string), 'new_content' (string)"
+                + "\nOptional field: 'replace_all' (boolean)");
         }
 
         var request = optionalRequest.get();
         var path = request.path;
         if (path == null || path.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "`path` is required."));
+            throw new ToolException("`path` is required.");
         }
 
-        var fileName = new File(path);
+        var oldContent = request.oldContent;
+        if (oldContent == null)
+        {
+            throw new ToolException("`old_content` is required and cannot be null.");
+        }
+
+        var newContent = request.newContent;
+        if (newContent == null)
+        {
+            throw new ToolException("`new_content` is required.");
+        }
+
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
@@ -167,21 +175,6 @@ public class EditMcpTool
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
-        var oldContent = request.oldContent;
-        if (oldContent == null)
-        {
-            return CompletableFuture
-                .completedFuture(
-                    messageFactory.createError(this, call, "`old_content` is required and cannot be null."));
-        }
-
-        var newContent = request.newContent;
-        if (newContent == null)
-        {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`new_content` is required."));
-        }
-
         var replaceAll = request.replaceAll != null ? request.replaceAll : false;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
@@ -189,7 +182,7 @@ public class EditMcpTool
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             // Determine project name from absolute path
@@ -206,8 +199,7 @@ public class EditMcpTool
                 {
                     if (!fileSystem.fileExists(path))
                     {
-                        return messageFactory.createError(this, call,
-                            "The file \"" + path + "\" does not exist.");
+                        throw new ToolException("The file \"" + path + "\" does not exist.");
                     }
 
                     byte[] fileData = fileSystem.readAllBytes(path);
@@ -219,7 +211,7 @@ public class EditMcpTool
                     if (!replaceResult.isSuccess())
                     {
                         String errorMessage = getReplacementErrorMessage(replaceAll, replaceResult);
-                        return messageFactory.createError(this, call, errorMessage);
+                        throw new ToolException(errorMessage);
                     }
 
                     var replacementResult = new ReplacementResult();
@@ -228,7 +220,7 @@ public class EditMcpTool
                     replacementResult.removedLines = replaceResult.getRemovedLines();
 
                     // Write back
-                    byte[] updatedData = replacementResult.updatedContent.getBytes(StandardCharsets.UTF_8);
+                    var updatedData = replacementResult.updatedContent.getBytes(StandardCharsets.UTF_8);
                     fileSystem.writeAllBytes(path, updatedData);
 
                     var response = new StringBuilder();
@@ -252,7 +244,7 @@ public class EditMcpTool
                 }
                 catch (IOException error)
                 {
-                    return messageFactory.createError(this, call, "Failed to edit file. " + error.getMessage());
+                    throw new ToolException("Failed to edit file", error, ToolErrorType.RETRYABLE);
                 }
             }
 
@@ -261,7 +253,7 @@ public class EditMcpTool
             var project = root.getProject(finalProjectName);
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call, "The project \"" + finalProjectName + "\" does not exist.");
+                throw new ToolException("The project \"" + finalProjectName + "\" does not exist.");
             }
 
             if (!project.isOpen())
@@ -274,24 +266,22 @@ public class EditMcpTool
                 }
                 catch (CoreException error)
                 {
-                    return messageFactory.createError(this, call,
-                        "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
+                    throw new ToolException("Cannot open the project \"" + finalProjectName + "\"", error, ToolErrorType.RETRYABLE);
                 }
             }
 
             var projectFile = projectTools.getProjectFile(project, path);
             if (!projectFile.isPresent())
             {
-                return messageFactory.createError(this, call,
-                    "The file \"" + path + "\" does not exist within the IDE project context. "
-                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
-                        + "Use the `" + WriteMcpTool.TOOL_NAME + "` tool to create a new file.");
+                throw new ToolException("The file \"" + path + "\" does not exist within the IDE project context. "
+                    + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
+                    + "Use the `" + WriteMcpTool.TOOL_NAME + "` tool to create a new file.");
             }
 
             // Check if the file can be edited using editingSupport
             if (!editingSupport.canEdit(projectFile.orElse(null)))
             {
-                return messageFactory.createError(this, call, "The file \"" + path
+                throw new ToolException("The file \"" + path
                     + "\" cannot be edited. Editing is not supported for this file type or the file is locked.");
             }
 
@@ -300,10 +290,9 @@ public class EditMcpTool
             if (optionalDocument.isEmpty())
             {
                 var filePathForError = actualFile.getProjectRelativePath().toOSString();
-                return messageFactory.createError(this, call,
-                    "The file \"" + filePathForError + "\" does not exist within the IDE project context. "
-                        + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
-                        + "Use the `" + WriteMcpTool.TOOL_NAME + "` tool to create a new file.");
+                throw new ToolException("The file \"" + filePathForError + "\" does not exist within the IDE project context. "
+                    + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope. "
+                    + "Use the `" + WriteMcpTool.TOOL_NAME + "` tool to create a new file.");
             }
 
             var fileDocument = optionalDocument.get();
@@ -313,7 +302,7 @@ public class EditMcpTool
             var optionalCurrentContent = dispatcher.dispatch(() -> document.get());
             if (optionalCurrentContent.isEmpty())
             {
-                return messageFactory.createError(this, call, "Cannot read the file \"" + path + "\". ");
+                throw new ToolException("Cannot read the file \"" + path + "\".");
             }
             var currentContent = optionalCurrentContent.get();
 
@@ -323,7 +312,7 @@ public class EditMcpTool
             if (!replaceResult.isSuccess())
             {
                 String errorMessage = getReplacementErrorMessage(replaceAll, replaceResult);
-                return messageFactory.createError(this, call, errorMessage);
+                throw new ToolException(errorMessage);
             }
 
             var replacementResult = new ReplacementResult();
@@ -348,8 +337,7 @@ public class EditMcpTool
 
             if (optionalError.isPresent())
             {
-                return messageFactory.createError(this, call,
-                    "Failed to save file: " + optionalError.get().getMessage());
+                throw new ToolException("Failed to save file", optionalError.get(), ToolErrorType.RETRYABLE);
             }
 
             var response = new StringBuilder();

@@ -23,6 +23,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -113,18 +115,23 @@ public class GitCommitsMcpTool
 		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
 		if (optionalRequest.isEmpty())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"Cannot deserialize arguments. Use this example: " + QuestionExample));
+			throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample
+				+ "\n\nRequired field: 'project_name' (string)"
+				+ "\nOptional fields: 'max_commits' (integer)", ToolErrorType.RETRYABLE);
 		}
 
 		var request = optionalRequest.get();
+        var projectName = request.projectName;
+        if (projectName == null || projectName.isBlank())
+        {
+            throw new ToolException("`project_name` is required.");
+        }
+
+        var maxCommits =
+            request.maxCommits != null && request.maxCommits > 0 ? request.maxCommits : DEFAULT_MAX_COMMITS;
 
 		if (call.callKind == ToolCallKind.RENDER)
 		{
-			var projectName = request.projectName;
-			var maxCommits = request.maxCommits != null && request.maxCommits > 0 ? request.maxCommits : DEFAULT_MAX_COMMITS;
-
 			// Create detailed request markdown with search parameters
 			var requestMarkdown = new StringBuilder();
 			requestMarkdown.append(MessageFormat.format(Messages.GitCommitsTitleTemplate, projectName))
@@ -144,17 +151,7 @@ public class GitCommitsMcpTool
 
 			details.requestMarkdown = requestMarkdown.toString();
 			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-		}
-
-		var projectName = request.projectName;
-		if (projectName == null || projectName.isBlank())
-		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"`project_name` is required."));
-		}
-
-		var maxCommits = request.maxCommits != null && request.maxCommits > 0 ? request.maxCommits : DEFAULT_MAX_COMMITS;
+        }
 
 		// Use supplyAsync to execute the blocking operation on a separate thread.
 		return CompletableFuture.supplyAsync(() ->
@@ -162,7 +159,7 @@ public class GitCommitsMcpTool
 			// Check for cancellation before starting the work.
 			if (cancellationToken.isCanceled())
 			{
-				throw new RuntimeException("Operation was cancelled before execution.");
+				throw new ToolException("Operation was cancelled before execution.");
 			}
 
 			var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -171,7 +168,7 @@ public class GitCommitsMcpTool
 			// Validate project existence and accessibility
 			if (project == null || !project.exists())
 			{
-				throw new RuntimeException("The project \"" + projectName + "\" does not exist.");
+				throw new ToolException("The project \"" + projectName + "\" does not exist.");
 			}
 			if (!project.isOpen())
 			{
@@ -183,7 +180,8 @@ public class GitCommitsMcpTool
 				}
 				catch (CoreException error)
 				{
-					throw new RuntimeException("Cannot open the project \"" + projectName + "\". " + error.getMessage());
+					throw new ToolException("Cannot open the project \"" + projectName + "\"", error,
+						ToolErrorType.RETRYABLE);
 				}
 			}
 
@@ -191,7 +189,7 @@ public class GitCommitsMcpTool
 			var repository = GitUtils.getRepository(project);
 			if (repository == null)
 			{
-				throw new RuntimeException("The project \"" + projectName + "\" is not a Git repository.");
+				throw new ToolException("The project \"" + projectName + "\" is not a Git repository.");
 			}
 
 			try
@@ -289,11 +287,15 @@ public class GitCommitsMcpTool
 			}
 			catch (Exception e)
 			{
-				throw new RuntimeException("Failed to get commit history: " + e.getMessage(), e);
+				throw new ToolException("Failed to get commit history", e, ToolErrorType.RETRYABLE);
 			}
 		}).exceptionally(throwable ->
 		{
-			return messageFactory.createError(this, call, throwable.getMessage());
+			if (throwable.getCause() instanceof ToolException)
+			{
+				throw (ToolException) throwable.getCause();
+			}
+			throw new ToolException(throwable.getMessage(), throwable, ToolErrorType.RETRYABLE);
 		});
 	}
 

@@ -42,6 +42,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -155,18 +157,11 @@ public class FindMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
-        if (call.callKind == ToolCallKind.RENDER)
-        {
-            details.requestMarkdown = Messages.Find1CObjectsTitle;
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-        }
-
+        details.hideAfter = true;
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
@@ -174,36 +169,38 @@ public class FindMcpTool
 
         if (request.searchQuery == null || request.searchQuery.isBlank())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "`search_query` cannot be empty."));
+            throw new ToolException("`search_query` cannot be empty.");
         }
 
         // Validate project names
         if (request.projectNames == null || request.projectNames.isEmpty())
         {
-            return CompletableFuture.completedFuture(
-                messageFactory.createError(this, call, "At least one project must be specified in `project_names`."));
+            throw new ToolException("At least one project must be specified in `project_names`.");
         }
 
         // Convert enums with proper error handling
         var searchInResult = convertEnums(request.searchIn, "in", SearchIn.class);
         if (!searchInResult.errorMessage.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, searchInResult.errorMessage));
+            throw new ToolException(searchInResult.errorMessage);
         }
 
         var searchForResult = convertEnums(request.searchFor, "for", SearchFor.class);
         if (!searchForResult.errorMessage.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, searchForResult.errorMessage));
+            throw new ToolException(searchForResult.errorMessage);
         }
 
         var searchScopesResult = convertEnums(request.searchScopes, "scopes", SearchScope.class);
         if (!searchScopesResult.errorMessage.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, searchScopesResult.errorMessage));
+            throw new ToolException(searchScopesResult.errorMessage);
+        }
+
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.Find1CObjectsTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
         // Add converted enums to search settings
@@ -214,7 +211,7 @@ public class FindMcpTool
         return CompletableFuture.supplyAsync(() -> {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             try
@@ -228,7 +225,7 @@ public class FindMcpTool
                     var project = root.getProject(projectName);
                     if (project == null || !project.exists())
                     {
-                        return messageFactory.createError(this, call, "Project not found: " + projectName);
+                        throw new ToolException("Project not found: " + projectName);
                     }
 
                     if (!project.isOpen())
@@ -239,8 +236,7 @@ public class FindMcpTool
                         }
                         catch (CoreException error)
                         {
-                            return messageFactory.createError(this, call,
-                                "Cannot open project \"" + projectName + "\". " + error.getMessage());
+                            throw new ToolException("Cannot open project \"" + projectName + "\"", error, ToolErrorType.RETRYABLE);
                         }
                     }
 
@@ -263,7 +259,7 @@ public class FindMcpTool
                 // Check cancellation after search
                 if (cancellationToken.isCanceled())
                 {
-                    return messageFactory.createError(this, call, "Operation was cancelled during search.");
+                    throw new ToolException("Operation was cancelled during search.");
                 }
 
                 var response = createResponse(resultCollector);
@@ -299,11 +295,16 @@ public class FindMcpTool
                 String styledObjectCount =
                     markdownUtils.createStyledText(String.valueOf(objectCount), TextColor.GREEN, FontWeight.BOLD);
                 details.responseMarkdown = MessageFormat.format(Messages.Found1CObjectsTemplate, styledObjectCount);
+                details.hideAfter = response.size() == 0;
                 return messageFactory.createMessage(this, call, content, details);
             }
-            catch (OperationCanceledException | CoreException error)
+            catch (OperationCanceledException error)
             {
-                return messageFactory.createError(this, call, "Search failed: " + error.getMessage());
+                throw new ToolException("Search failed", error, ToolErrorType.RETRYABLE);
+            }
+            catch (CoreException error)
+            {
+                throw new ToolException("Search failed", error, ToolErrorType.RETRYABLE);
             }
         });
     }

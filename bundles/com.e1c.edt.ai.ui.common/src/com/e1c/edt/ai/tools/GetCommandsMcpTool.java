@@ -26,6 +26,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -161,29 +163,28 @@ public class GetCommandsMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
+        details.hideAfter = true;
+        var optionalRequest = json.deserialize(call.function.arguments, CommandCategory.class);
+        if (optionalRequest.isEmpty())
+        {
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
+        }
+
+        var request = optionalRequest.get();
+        var categoryId = request.id;
+
         if (call.callKind == ToolCallKind.RENDER)
         {
             details.requestMarkdown = Messages.CommandsTitle;
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
-        var optionalRequest = json.deserialize(call.function.arguments, CommandCategory.class);
-        if (optionalRequest.isEmpty())
-        {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
-        }
-
-        var request = optionalRequest.get();
-        var categoryId = request.id;
-
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.", null, ToolErrorType.RETRYABLE);
             }
 
             var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);

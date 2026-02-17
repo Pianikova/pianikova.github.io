@@ -28,6 +28,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -108,9 +110,7 @@ public class NavigationHistoryMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
@@ -126,7 +126,7 @@ public class NavigationHistoryMcpTool
         {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.", null, ToolErrorType.RETRYABLE);
             }
 
             var entries = dispatcher.dispatch(() -> collectHistory(maxEntries))
@@ -173,7 +173,7 @@ public class NavigationHistoryMcpTool
             return messageFactory.createMessage(this, call, content, details);
         }).exceptionally(throwable ->
         {
-            return messageFactory.createError(this, call, throwable.getMessage());
+            throw new ToolException(throwable.getMessage(), throwable, ToolErrorType.RETRYABLE);
         });
     }
 

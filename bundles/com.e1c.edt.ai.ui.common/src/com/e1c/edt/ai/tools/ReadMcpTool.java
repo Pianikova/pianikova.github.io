@@ -29,6 +29,8 @@ import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -126,19 +128,15 @@ public class ReadMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
-                        + "Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
+                + "Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
         var path = request.path;
         if (path == null || path.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "`path` is required."));
+            throw new ToolException("`path` is required.");
         }
 
         // Validate and set default values for line parameters
@@ -168,7 +166,7 @@ public class ReadMcpTool
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             // Determine project name from absolute path
@@ -242,7 +240,7 @@ public class ReadMcpTool
                 }
                 catch (IOException error)
                 {
-                    return messageFactory.createError(this, call, "Failed to read file. " + error.getMessage());
+                    throw new ToolException("Failed to read file", error, ToolErrorType.RETRYABLE);
                 }
             }
 
@@ -253,8 +251,7 @@ public class ReadMcpTool
             // Validate project existence and accessibility
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call,
-                    "The project \"" + finalProjectName + "\" does not exist.");
+                throw new ToolException("The project \"" + finalProjectName + "\" does not exist.");
             }
 
             if (!project.isOpen())
@@ -267,8 +264,8 @@ public class ReadMcpTool
                 }
                 catch (CoreException error)
                 {
-                    return messageFactory.createError(this, call,
-                        "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
+                    throw new ToolException("Cannot open the project \"" + finalProjectName + "\"", error,
+                        ToolErrorType.RETRYABLE);
                 }
             }
 
@@ -328,6 +325,7 @@ public class ReadMcpTool
                 finalFirstLineNumber + linesRead - 1,
                 lastLineSize);
             details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate, href, styledLineNumber);
+            details.hideAfter = totalLines == 0;
             return messageFactory.createMessage(this, call, content, details);
         });
     }

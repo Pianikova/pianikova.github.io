@@ -31,17 +31,18 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.IProjectTools;
-import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -120,28 +121,27 @@ public class LocalChangesMcpTool
 	private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
 	private final IMarkdownUtils markdownUtils;
 	private final ILocalHistoryUtils localHistoryUtils;
-	private final IFileSystem fileSystem;
 	private final IProjectTools projectTools;
 
 	@Inject
 	public LocalChangesMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
 		Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils,
-		ILocalHistoryUtils localHistoryUtils, IFileSystem fileSystem, IProjectTools projectTools)
+        ILocalHistoryUtils localHistoryUtils, IProjectTools projectTools)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
 		Preconditions.checkNotNull(cancellationProgressMonitor);
 		Preconditions.checkNotNull(markdownUtils);
 		Preconditions.checkNotNull(localHistoryUtils);
-		Preconditions.checkNotNull(fileSystem);
 		Preconditions.checkNotNull(projectTools);
+
 		this.json = json;
 		this.messageFactory = messageFactory;
 		this.cancellationProgressMonitor = cancellationProgressMonitor;
 		this.markdownUtils = markdownUtils;
 		this.localHistoryUtils = localHistoryUtils;
-		this.fileSystem = fileSystem;
 		this.projectTools = projectTools;
+
 		spec = createSpecification();
 	}
 
@@ -167,35 +167,20 @@ public class LocalChangesMcpTool
 		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
 		if (optionalRequest.isEmpty())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"Cannot deserialize arguments. Use this example: " + QuestionExample));
+			throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
 		}
 
 		var request = optionalRequest.get();
-
-		if (call.callKind == ToolCallKind.RENDER)
-		{
-			var projectName = request.projectName != null ? request.projectName : "current project"; //$NON-NLS-1$
-			var filePath = request.filePath != null ? request.filePath : "selected file"; //$NON-NLS-1$
-			details.requestMarkdown = MessageFormat.format(Messages.LocalChangesTitleTemplate, projectName, filePath);
-			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-		}
-
 		var projectName = request.projectName;
 		if (projectName == null || projectName.isBlank())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"`project_name` is required."));
+			throw new ToolException("`project_name` is required.");
 		}
 
 		var filePath = request.filePath;
 		if (filePath == null || filePath.isBlank())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"`file_path` is required."));
+			throw new ToolException("`file_path` is required.");
 		}
 
 		var contextLines = request.contextLines != null && request.contextLines > 0 ? request.contextLines : DEFAULT_CONTEXT_LINES;
@@ -219,16 +204,22 @@ public class LocalChangesMcpTool
 
 		if (!hasFromSelectors && !hasToSelectors && !hasLegacySelectors)
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"`revision_id` or `history_location` is required, or provide `from_*`/`to_*` selectors."));
+			throw new ToolException(
+				"`revision_id` or `history_location` is required, or provide `from_*`/`to_*` selectors.");
 		}
+
+		if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = MessageFormat.format(Messages.LocalChangesTitleTemplate,
+                projectName != null ? projectName : "current project", filePath != null ? filePath : "selected file");
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
 
 		return CompletableFuture.supplyAsync(() ->
 		{
 			if (cancellationToken.isCanceled())
 			{
-				throw new RuntimeException("Operation was cancelled before execution.");
+				throw new ToolException("Operation was cancelled before execution.");
 			}
 
 			var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -236,7 +227,7 @@ public class LocalChangesMcpTool
 
 			if (project == null || !project.exists())
 			{
-				throw new RuntimeException("The project \"" + projectName + "\" does not exist.");
+				throw new ToolException("The project \"" + projectName + "\" does not exist.");
 			}
 			if (!project.isOpen())
 			{
@@ -248,14 +239,15 @@ public class LocalChangesMcpTool
 				}
 				catch (CoreException error)
 				{
-					throw new RuntimeException("Cannot open the project \"" + projectName + "\". " + error.getMessage());
+					throw new ToolException("Cannot open the project \"" + projectName + "\". " + error.getMessage(), error,
+						ToolErrorType.RETRYABLE);
 				}
 			}
 
 			var file = projectTools.getProjectFile(project, filePath);
 			if (!file.isPresent())
 			{
-				throw new RuntimeException("The file \"" + filePath + "\" does not exist within the IDE project context. "
+				throw new ToolException("The file \"" + filePath + "\" does not exist within the IDE project context. "
 					+ "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
 			}
 
@@ -359,15 +351,13 @@ public class LocalChangesMcpTool
 			}
 			catch (Exception e)
 			{
-				throw new RuntimeException("Failed to get local changes: " + e.getMessage(), e);
+				throw new ToolException("Failed to get local changes: " + e.getMessage(), e, ToolErrorType.RETRYABLE);
 			}
-		}).exceptionally(throwable ->
-		{
-			return messageFactory.createError(this, call, throwable.getMessage());
 		});
 	}
 
-	private static String createDiffText(String filePath, byte[] oldContent, byte[] newContent, int contextLines)
+    @SuppressWarnings("nls")
+    private static String createDiffText(String filePath, byte[] oldContent, byte[] newContent, int contextLines)
 		throws Exception
 	{
 		var oldText = new RawText(oldContent);
@@ -382,9 +372,10 @@ public class LocalChangesMcpTool
 
 		var normalizedPath = filePath.replace('\\', '/');
 		var output = new ByteArrayOutputStream();
-		output.write(("diff --git a/" + normalizedPath + " b/" + normalizedPath + "\n").getBytes(StandardCharsets.UTF_8)); //$NON-NLS-1$ //$NON-NLS-2$
-		output.write(("--- a/" + normalizedPath + "\n").getBytes(StandardCharsets.UTF_8)); //$NON-NLS-1$ //$NON-NLS-2$
-		output.write(("+++ b/" + normalizedPath + "\n").getBytes(StandardCharsets.UTF_8)); //$NON-NLS-1$ //$NON-NLS-2$
+        output
+            .write(("diff --git a/" + normalizedPath + " b/" + normalizedPath + "\n").getBytes(StandardCharsets.UTF_8));
+        output.write(("--- a/" + normalizedPath + "\n").getBytes(StandardCharsets.UTF_8));
+        output.write(("+++ b/" + normalizedPath + "\n").getBytes(StandardCharsets.UTF_8));
 
 		try (var formatter = new DiffFormatter(output))
 		{
@@ -462,7 +453,8 @@ public class LocalChangesMcpTool
 		return OLDEST_REVISION.equalsIgnoreCase(revisionId);
 	}
 
-	private static ResolvedRevision resolveRevision(org.eclipse.core.resources.IFile file, RevisionSelector selector,
+    @SuppressWarnings("nls")
+    private static ResolvedRevision resolveRevision(org.eclipse.core.resources.IFile file, RevisionSelector selector,
 		Iterable<LocalHistoryEntry> historyEntries, List<HistoryState> historyStates)
 	{
 		if (selector == null)
@@ -527,7 +519,8 @@ public class LocalChangesMcpTool
 		return ResolvedRevision.forPath(path, CURRENT_REVISION, path.toString());
 	}
 
-	private static LocalHistoryEntry getEntryByIndex(Iterable<LocalHistoryEntry> historyEntries, int index)
+    @SuppressWarnings("nls")
+    private static LocalHistoryEntry getEntryByIndex(Iterable<LocalHistoryEntry> historyEntries, int index)
 	{
 		if (historyEntries == null)
 		{
@@ -543,7 +536,8 @@ public class LocalChangesMcpTool
 		throw new RuntimeException("Local history entry with index \"" + index + "\" was not found.");
 	}
 
-	private static LocalHistoryEntry getLatestHistoryEntry(Iterable<LocalHistoryEntry> historyEntries,
+    @SuppressWarnings("nls")
+    private static LocalHistoryEntry getLatestHistoryEntry(Iterable<LocalHistoryEntry> historyEntries,
 		List<HistoryState> historyStates)
 	{
 		if (historyEntries == null)
@@ -568,7 +562,8 @@ public class LocalChangesMcpTool
 		throw new RuntimeException("No local history entries available.");
 	}
 
-	private static LocalHistoryEntry getOldestHistoryEntry(Iterable<LocalHistoryEntry> historyEntries,
+    @SuppressWarnings("nls")
+    private static LocalHistoryEntry getOldestHistoryEntry(Iterable<LocalHistoryEntry> historyEntries,
 		List<HistoryState> historyStates)
 	{
 		if (historyEntries == null)
@@ -597,7 +592,8 @@ public class LocalChangesMcpTool
 		return oldest;
 	}
 
-	private static ResolvedRevision resolveHistoryState(String revisionId, List<HistoryState> historyStates)
+    @SuppressWarnings("nls")
+    private static ResolvedRevision resolveHistoryState(String revisionId, List<HistoryState> historyStates)
 	{
 		if (revisionId == null || revisionId.isBlank())
 		{
@@ -657,7 +653,8 @@ public class LocalChangesMcpTool
 		return state.getName() + "_" + generateRevisionId(state.getModificationTime()); //$NON-NLS-1$
 	}
 
-	private static byte[] readStateContent(IFileState state)
+    @SuppressWarnings("nls")
+    private static byte[] readStateContent(IFileState state)
 	{
 		try (InputStream stream = state.getContents())
 		{
@@ -882,7 +879,8 @@ public class LocalChangesMcpTool
 			return new ResolvedRevision(null, content, revisionId, historyLocation);
 		}
 
-		public byte[] getContent()
+        @SuppressWarnings("nls")
+        public byte[] getContent()
 		{
 			if (content != null)
 			{

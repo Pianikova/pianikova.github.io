@@ -32,6 +32,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -117,17 +119,16 @@ public class FindMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
+        details.hideAfter = true;
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. JSON format is invalid or missing required fields. "
+            throw new ToolException("Cannot deserialize arguments. JSON format is invalid or missing required fields. "
                     + "Use this example: " + QuestionExample
                     + "\n\nRequired field: 'search_query' (string)"
                     + "\nOptional fields: 'is_case_sensitive_search' (boolean), 'is_regular_expression_search' (boolean), "
                         + "'search_project_names' (array), 'file_name_patterns' (array), 'include_derived' (boolean), "
-                        + "'first_index' (integer), 'max_count' (integer)"));
+                        + "'first_index' (integer), 'max_count' (integer)");
         }
 
         var request = optionalRequest.get();
@@ -174,8 +175,8 @@ public class FindMcpTool
         // For file name search, project_name is required
         if (isFileNameSearch && projectNames.isEmpty())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "For file name search (when search_query contains wildcards), `search_project_names` is required."));
+            throw new ToolException(
+                "For file name search (when search_query contains wildcards), `search_project_names` is required.");
         }
 
         // If file name search, perform file search instead of content search
@@ -188,7 +189,7 @@ public class FindMcpTool
         return CompletableFuture.supplyAsync(() -> {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             List<IResource> roots = new ArrayList<>();
@@ -203,8 +204,7 @@ public class FindMcpTool
                     var project = root.getProject(projectName);
                     if (project == null || !project.exists())
                     {
-                        return messageFactory.createError(this, call,
-                            "The project \"" + projectName + "\" does not exist.");
+                        throw new ToolException("The project \"" + projectName + "\" does not exist.");
                     }
 
                     if (!project.isOpen())
@@ -215,8 +215,7 @@ public class FindMcpTool
                         }
                         catch (CoreException error)
                         {
-                            return messageFactory.createError(this, call,
-                                "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                            throw new ToolException("Cannot open the project \"" + projectName + "\"", error, ToolErrorType.RETRYABLE);
                         }
                     }
                     roots.add(project);
@@ -263,7 +262,7 @@ public class FindMcpTool
             }
             catch (CoreException error)
             {
-                return messageFactory.createError(this, call, "Cannot create search query. " + error.getMessage());
+                throw new ToolException("Cannot create search query", error, ToolErrorType.RETRYABLE);
             }
 
             final List<Element> allElements = new ArrayList<>();
@@ -329,11 +328,11 @@ public class FindMcpTool
             }
             catch (OperationCanceledException e)
             {
-                return messageFactory.createError(this, call, "Search was cancelled.");
+                throw new ToolException("Search was cancelled", e, ToolErrorType.RETRYABLE);
             }
             catch (Exception e)
             {
-                return messageFactory.createError(this, call, "Search failed: " + e.getMessage());
+                throw new ToolException("Search failed", e, ToolErrorType.RETRYABLE);
             }
             finally
             {
@@ -424,6 +423,7 @@ public class FindMcpTool
             }
 
             details.responseMarkdown = responseMarkdown.toString();
+            details.hideAfter = elements.size() == 0;
 
             return messageFactory.createMessage(this, call, content, details);
         });
@@ -613,6 +613,7 @@ public class FindMcpTool
      * Performs file name search based on wildcard patterns.
      * This method is called when search_query contains wildcard patterns.
      */
+    @SuppressWarnings("nls")
     private CompletableFuture<ToolCallMessage> performFileSearch(McpToolCall call, ICancellationToken cancellationToken,
         ToolCallMessageDetails details, List<String> projectNames, String searchPattern, boolean includeSubfolders,
         int maxCount)
@@ -620,7 +621,7 @@ public class FindMcpTool
         return CompletableFuture.supplyAsync(() -> {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -639,8 +640,7 @@ public class FindMcpTool
                 var project = root.getProject(projectName);
                 if (project == null || !project.exists())
                 {
-                    return messageFactory.createError(this, call,
-                        "The project \"" + projectName + "\" does not exist.");
+                    throw new ToolException("The project \"" + projectName + "\" does not exist.");
                 }
 
                 if (!project.isOpen())
@@ -653,8 +653,7 @@ public class FindMcpTool
                     }
                     catch (CoreException error)
                     {
-                        return messageFactory.createError(this, call,
-                            "Cannot open the project \"" + projectName + "\". " + error.getMessage());
+                        throw new ToolException("Cannot open the project \"" + projectName + "\"", error, ToolErrorType.RETRYABLE);
                     }
                 }
 
@@ -667,7 +666,7 @@ public class FindMcpTool
                 }
                 catch (CoreException e)
                 {
-                    return messageFactory.createError(this, call, "Search failed: " + e.getMessage());
+                    throw new ToolException("Search failed", e, ToolErrorType.RETRYABLE);
                 }
             }
 

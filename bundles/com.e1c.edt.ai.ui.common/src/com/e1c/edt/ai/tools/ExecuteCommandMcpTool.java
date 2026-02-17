@@ -24,6 +24,8 @@ import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -107,18 +109,14 @@ public class ExecuteCommandMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, CommandDescription.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
         var commandId = request.id;
         if (commandId == null || commandId.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "The command_id cannot be empty."));
+            throw new ToolException("The command_id cannot be empty.");
         }
 
         var params = request.parameters;
@@ -141,14 +139,14 @@ public class ExecuteCommandMcpTool
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
             var command = commandService.getCommand(commandId);
             if (command == null)
             {
-                return messageFactory.createError(this, call, "The command was not found.");
+                throw new ToolException("The command was not found.");
             }
 
             try
@@ -210,7 +208,7 @@ public class ExecuteCommandMcpTool
 
                     if (paramsError.length() > 0)
                     {
-                        return messageFactory.createError(this, call, paramsError.toString());
+                        throw new ToolException(paramsError.toString());
                     }
                 }
             }
@@ -222,12 +220,12 @@ public class ExecuteCommandMcpTool
             var parameterizedCommand = ParameterizedCommand.generateCommand(command, paramsMap);
             if (parameterizedCommand == null)
             {
-                return messageFactory.createError(this, call, "Invalid command parameter format.");
+                throw new ToolException("Invalid command parameter format.");
             }
 
             var handlerService = PlatformUI.getWorkbench().getService(IHandlerService.class);
             return dispatcher.dispatch(() -> executeCommand(handlerService, call, parameterizedCommand, details))
-                .orElseGet(() -> messageFactory.createError(this, call, "Cannot execute the command."));
+                .orElseThrow(() -> new ToolException("Cannot execute the command."));
         });
     }
 
@@ -253,19 +251,19 @@ public class ExecuteCommandMcpTool
         }
         catch (ExecutionException e)
         {
-            return messageFactory.createError(this, call, "Cannot execute the command. " + e.getMessage());
+            throw new ToolException("Cannot execute the command", e, ToolErrorType.RETRYABLE);
         }
         catch (NotDefinedException e)
         {
-            return messageFactory.createError(this, call, "The command is not defined. " + e.getMessage());
+            throw new ToolException("The command is not defined", e, ToolErrorType.RETRYABLE);
         }
         catch (NotEnabledException e)
         {
-            return messageFactory.createError(this, call, "The command is not enabled. " + e.getMessage());
+            throw new ToolException("The command is not enabled", e, ToolErrorType.RETRYABLE);
         }
         catch (NotHandledException e)
         {
-            return messageFactory.createError(this, call, "The command is not handled. " + e.getMessage());
+            throw new ToolException("The command is not handled", e, ToolErrorType.RETRYABLE);
         }
     }
 

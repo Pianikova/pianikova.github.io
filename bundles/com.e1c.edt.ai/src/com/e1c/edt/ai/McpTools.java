@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -148,14 +147,13 @@ public class McpTools
         return futureResult;
     }
 
-    @SuppressWarnings("nls")
     private ToolCallMessage createErrorMessage(IMcpTool tool, McpToolCall call, String toolName, Throwable error)
     {
         var details = new ToolCallMessageDetails();
+        var message = error.getMessage();
         if (error instanceof ToolException)
         {
             var toolError = (ToolException)error;
-            var message = error.getMessage();
             switch (toolError.getErrorType())
             {
             case USER_VISIBLE:
@@ -173,20 +171,14 @@ public class McpTools
 
                 details.autoCall = true;
                 return messageFactory.createMessage(tool, call, message, details);
-
-            case RETRYABLE:
-                // Retryable errors are handled silently by LLM, log as warning for debugging
-                details.autoCall = true;
-                details.hideAfter = true;
-                details.responseMarkdown = Messages.McpTools_RetryableError;
-                return messageFactory.createRawMessage(tool, call, message, details);
             }
         }
 
-
-        var cause = error instanceof CompletionException ? error.getCause() : error;
-        return messageFactory.createMessage(tool, call,
-            "Failed to call tool \"" + toolName + "\". " + cause.getMessage(), details);
+        // Retryable errors are handled silently by LLM, log as warning for debugging
+        details.autoCall = true;
+        details.hideAfter = true;
+        details.responseMarkdown = Messages.McpTools_RetryableError;
+        return messageFactory.createRawMessage(tool, call, message, details);
     }
 
     private boolean exceedsMaxContentLines(String content)

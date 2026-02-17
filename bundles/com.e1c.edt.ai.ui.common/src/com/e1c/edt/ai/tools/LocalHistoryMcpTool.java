@@ -29,7 +29,8 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.ui.IFileSystem;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -73,28 +74,27 @@ public class LocalHistoryMcpTool
 	private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
 	private final IMarkdownUtils markdownUtils;
 	private final ILocalHistoryUtils localHistoryUtils;
-	private final IFileSystem fileSystem;
 	private final IProjectTools projectTools;
 
 	@Inject
 	public LocalHistoryMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
 		Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils,
-		ILocalHistoryUtils localHistoryUtils, IFileSystem fileSystem, IProjectTools projectTools)
+		ILocalHistoryUtils localHistoryUtils, IProjectTools projectTools)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
 		Preconditions.checkNotNull(cancellationProgressMonitor);
 		Preconditions.checkNotNull(markdownUtils);
 		Preconditions.checkNotNull(localHistoryUtils);
-		Preconditions.checkNotNull(fileSystem);
 		Preconditions.checkNotNull(projectTools);
+
 		this.json = json;
 		this.messageFactory = messageFactory;
 		this.cancellationProgressMonitor = cancellationProgressMonitor;
 		this.markdownUtils = markdownUtils;
 		this.localHistoryUtils = localHistoryUtils;
-		this.fileSystem = fileSystem;
 		this.projectTools = projectTools;
+
 		spec = createSpecification();
 	}
 
@@ -120,35 +120,20 @@ public class LocalHistoryMcpTool
 		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
 		if (optionalRequest.isEmpty())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"Cannot deserialize arguments. Use this example: " + QuestionExample));
+			throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
 		}
 
-		var request = optionalRequest.get();
-
-		if (call.callKind == ToolCallKind.RENDER)
-		{
-			var projectName = request.projectName != null ? request.projectName : "current project"; //$NON-NLS-1$
-			var filePath = request.filePath != null ? request.filePath : "selected file"; //$NON-NLS-1$
-			details.requestMarkdown = MessageFormat.format(Messages.LocalHistoryTitleTemplate, projectName, filePath);
-			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-		}
-
+        var request = optionalRequest.get();
 		var projectName = request.projectName;
 		if (projectName == null || projectName.isBlank())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"`project_name` is required."));
+			throw new ToolException("`project_name` is required.");
 		}
 
 		var filePath = request.filePath;
 		if (filePath == null || filePath.isBlank())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"`file_path` is required."));
+			throw new ToolException("`file_path` is required.");
 		}
 
 		int maxEntries;
@@ -165,66 +150,76 @@ public class LocalHistoryMcpTool
 			maxEntries = request.maxEntries;
 		}
 
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = MessageFormat.format(Messages.LocalHistoryTitleTemplate,
+                projectName != null ? projectName : "current project", filePath != null ? filePath : "selected file");
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         return CompletableFuture.supplyAsync(() ->
 		{
-			// Check cancellation first
-			if (cancellationToken.isCanceled())
-			{
-				return messageFactory.createError(this, call, "Operation was cancelled before execution.");
-			}
-
-			var root = ResourcesPlugin.getWorkspace().getRoot();
-			var project = root.getProject(projectName);
-
-			if (project == null || !project.exists())
-			{
-				return messageFactory.createError(this, call, "The project \"" + projectName + "\" does not exist.");
-			}
-			if (!project.isOpen())
-			{
-				try
-				{
-					var monitor = cancellationProgressMonitor.get();
-					monitor.setCancellationToken(cancellationToken);
-					project.open(monitor);
-				}
-				catch (CoreException error)
-				{
-					return messageFactory.createError(this, call, "Cannot open the project \"" + projectName + "\". " + error.getMessage());
-				}
-			}
-
-			var file = projectTools.getProjectFile(project, filePath);
-			if (!file.isPresent())
-			{
-				return messageFactory.createError(this, call, "The file \"" + filePath + "\" does not exist within the IDE project context. "
-					+ "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
-			}
-
-			var actualFile = file.get();
-
-			// Check cancellation before expensive operation
-			if (cancellationToken.isCanceled())
-			{
-				return messageFactory.createError(this, call, "Operation was cancelled before retrieving history.");
-			}
-
-			// Retrieve local history
-			List<LocalHistoryEntry> historyEntries;
 			try
 			{
-				historyEntries = localHistoryUtils.getLocalHistory(actualFile, maxEntries);
-			}
-			catch (Exception e)
-			{
-				return messageFactory.createError(this, call, "Failed to get local history: " + e.getMessage());
-			}
+				// Check cancellation first
+				if (cancellationToken.isCanceled())
+				{
+					throw new ToolException("Operation was cancelled before execution.");
+				}
 
-			// Check cancellation after retrieving history
-			if (cancellationToken.isCanceled())
-			{
-				return messageFactory.createError(this, call, "Operation was cancelled while processing history.");
-			}
+				var root = ResourcesPlugin.getWorkspace().getRoot();
+				var project = root.getProject(projectName);
+
+				if (project == null || !project.exists())
+				{
+					throw new ToolException("The project \"" + projectName + "\" does not exist.");
+				}
+				if (!project.isOpen())
+				{
+					try
+					{
+						var monitor = cancellationProgressMonitor.get();
+						monitor.setCancellationToken(cancellationToken);
+						project.open(monitor);
+					}
+					catch (CoreException error)
+					{
+						throw new ToolException("Cannot open the project \"" + projectName + "\". " + error.getMessage(), error,
+							ToolErrorType.RETRYABLE);
+					}
+				}
+
+				var file = projectTools.getProjectFile(project, filePath);
+				if (!file.isPresent())
+				{
+					throw new ToolException("The file \"" + filePath + "\" does not exist within the IDE project context. "
+						+ "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
+				}
+
+				var actualFile = file.get();
+
+				// Check cancellation before expensive operation
+				if (cancellationToken.isCanceled())
+				{
+					throw new ToolException("Operation was cancelled before retrieving history.");
+				}
+
+				// Retrieve local history
+				List<LocalHistoryEntry> historyEntries;
+				try
+				{
+					historyEntries = localHistoryUtils.getLocalHistory(actualFile, maxEntries);
+				}
+				catch (Exception e)
+				{
+					throw new ToolException("Failed to get local history: " + e.getMessage(), e, ToolErrorType.RETRYABLE);
+				}
+
+				// Check cancellation after retrieving history
+				if (cancellationToken.isCanceled())
+				{
+					throw new ToolException("Operation was cancelled while processing history.");
+				}
 
 			// Index history entries
 			var lastIndex = historyEntries.size() - 1;
@@ -282,6 +277,11 @@ public class LocalHistoryMcpTool
 
 			details.responseMarkdown = responseMarkdown.toString();
 			return messageFactory.createMessage(this, call, content, details);
+			}
+			catch (Exception e)
+			{
+				throw new ToolException("Failed to get local history: " + e.getMessage(), e, ToolErrorType.RETRYABLE);
+			}
 		});
 	}
 

@@ -16,6 +16,8 @@ import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -82,16 +84,20 @@ public class ExecuteMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
         if (request.executable == null || request.executable.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`executable` cannot be empty."));
+            throw new ToolException("`executable` cannot be empty.");
+        }
+
+        // Set default timeout if not provided
+        long timeout = request.timeout != null ? request.timeout : 30;
+        if (timeout <= 0 || timeout > 300)
+        {
+            timeout = 30; // Default to 30 seconds
         }
 
         // Build command line for user-friendly display
@@ -102,21 +108,14 @@ public class ExecuteMcpTool
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
-        // Set default timeout if not provided
-        long timeout = request.timeout != null ? request.timeout : 30;
-        if (timeout <= 0 || timeout > 300)
-        {
-            timeout = 30; // Default to 30 seconds
-        }
-
         // Execute process with timeout
         var futureResult = processRunner.executeProcess(request.executable,
             request.working_directory, request.args, timeout, TimeUnit.SECONDS, DEFAULT_MAX_LINES);
 
-        return futureResult.thenApply(optResult -> {
+        return futureResult.thenCompose(optResult -> {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled during process execution.");
+                throw new ToolException("Operation was cancelled during process execution.");
             }
 
             return optResult.map(response -> {
@@ -126,8 +125,13 @@ public class ExecuteMcpTool
                 var responseMarkdown = buildResponseMarkdown(response, commandLine);
                 details.responseMarkdown = responseMarkdown;
 
-                return messageFactory.createMessage(this, call, content, details);
-            }).orElseGet(() -> messageFactory.createError(this, call, "Process execution failed - no result."));
+                return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, content, details));
+            }).orElseGet(() -> {
+                throw new ToolException("Process execution failed - no result.");
+            });
+        }).exceptionally(error -> {
+            Throwable cause = error.getCause();
+            throw new ToolException("Process execution failed", cause, ToolErrorType.RETRYABLE);
         });
     }
 
