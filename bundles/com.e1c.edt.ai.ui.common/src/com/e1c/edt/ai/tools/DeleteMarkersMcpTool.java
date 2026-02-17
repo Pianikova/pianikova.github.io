@@ -85,6 +85,7 @@ public class DeleteMarkersMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
+        details.hideAfter = true;
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         // Deserialize request parameters
         if (optionalRequest.isEmpty())

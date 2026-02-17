@@ -44,7 +44,6 @@ public class Messages
     public static String FindFilesTitleTemplate;
     public static String FilesFoundTemplate;
     public static String FileSize;
-    public static String LastModified;
     public static String SearchQuery;
     public static String FileNamePatterns;
     public static String AllFiles;
@@ -74,7 +73,6 @@ public class Messages
     public static String NavigationHistoryFoundTemplate;
     public static String ViewNavigationHistory;
     public static String NoNavigationHistoryFound;
-    public static String NavigationInput;
     public static String Location;
     public static String Current;
 
