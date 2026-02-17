@@ -159,16 +159,6 @@ public class McpTools
         {
             var toolError = (ToolException)error;
             var details = new ToolCallMessageDetails();
-            if (call.callKind == ToolCallKind.RENDER)
-            {
-                if (!isLogLevel(Verbosity.TRACE))
-                {
-                    details.hidden = true;
-                }
-
-                details.autoCall = false;
-            }
-
             switch (toolError.getErrorType())
             {
             case USER_VISIBLE:

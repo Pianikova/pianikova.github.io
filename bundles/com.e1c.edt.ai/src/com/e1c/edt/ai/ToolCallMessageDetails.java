@@ -14,10 +14,10 @@ public class ToolCallMessageDetails
     public Boolean autoCall;
 
     /**
-     * Скрыть вызов инструмента
+     * Скрыть вызов инструмента если следующий такой же
      */
-    @SerializedName("hidden")
-    public Boolean hidden;
+    @SerializedName("hide_after")
+    public Boolean hideAfter;
 
     /**
      * Представление запроса  в формате MARKDOWN, который будет выполнен

@@ -140,6 +140,7 @@ public class GetMarkersMcpTool implements IMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
+        details.hideAfter = true;
         if (call.callKind == ToolCallKind.RENDER)
         {
             details.requestMarkdown = Messages.MarkersTitle;
