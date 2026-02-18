@@ -432,6 +432,7 @@ public class WriteMcpTool
         description.append("\n- Some file types require companions (e.g., .bsl needs a matching .mdo).");
         description.append("\n- Avoid creating docs (*.md/README) unless the user explicitly asks.");
         description.append("\n- Avoid emojis unless explicitly requested.");
+        description.append("\n- For temporary files, create them in the system temporary folder: `" + getTempDirectory() + "`.");
         description.append("\n\nRelated tools:");
         description.append("\n- Check existence and context: `" + ReadMcpTool.TOOL_NAME + "`.");
         description.append("\n- Update existing files: `" + EditMcpTool.TOOL_NAME + "`.");
@@ -466,6 +467,17 @@ public class WriteMcpTool
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
+    }
+
+    /**
+     * Returns the system temporary directory path for cross-platform compatibility.
+     *
+     * @return the temporary directory path
+     */
+    @SuppressWarnings("nls")
+    private static String getTempDirectory()
+    {
+        return System.getProperty("java.io.tmpdir");
     }
 
     private static class Request
