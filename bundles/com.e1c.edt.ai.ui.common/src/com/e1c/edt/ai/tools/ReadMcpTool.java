@@ -355,6 +355,10 @@ public class ReadMcpTool
         description.append("\n- Modify files: `" + EditMcpTool.TOOL_NAME + "`, `" + WriteMcpTool.TOOL_NAME + "`.");
         description.append("\n- MUST use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and `" + SetMarkersMcpTool.TOOL_NAME
             + "` to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
+        description.append("\n\nFile references in responses should use HTML `<a>` tags with `edt-file://` URLs and include a `title` attribute:");
+        description.append("\n- Format: `<a href=\"edt-file://full_path:line:column:finish_line:finish_column\" title=\"description\">text</a>`");
+        description.append("\n- Line and column numbers are 0-based integers.");
+        description.append("\n- Example: `<a href=\"edt-file://C:/Projects/MyProject/src/Module.bsl:10:0:20:50\">Procedure in Module.bsl</a>`");
         description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
@@ -395,6 +399,7 @@ public class ReadMcpTool
      * @param lineContent the line content
      * @return the formatted line with prefix
      */
+    @SuppressWarnings("nls")
     private static String formatLineWithNumberPrefix(int lineNumber, String lineContent)
     {
         return String.format("%" + LINE_NUMBER_WIDTH + "d:", lineNumber) + lineContent;
