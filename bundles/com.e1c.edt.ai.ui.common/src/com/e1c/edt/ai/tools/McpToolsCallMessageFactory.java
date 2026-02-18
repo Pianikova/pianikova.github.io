@@ -46,6 +46,13 @@ public class McpToolsCallMessageFactory
         return createMessage(tool, call, content, details, true);
     }
 
+    @Override
+    public ToolCallMessage createRawMessage(IMcpTool tool, McpToolCall call, String content,
+        ToolCallMessageDetails details)
+    {
+        return createMessage(tool, call, content, details, null);
+    }
+
     @SuppressWarnings("nls")
     @Override
     public ToolCallMessage createError(IMcpTool tool, McpToolCall call, String errorMessage)
@@ -79,13 +86,12 @@ public class McpToolsCallMessageFactory
         }
 
         details.responseMarkdown = responseMarkdown.toString();
-
         return createMessage(tool, call, "Error: \"" + errorMessage + "\"", details, false);
     }
 
     @SuppressWarnings("nls")
     private ToolCallMessage createMessage(IMcpTool tool, McpToolCall call, String content,
-        ToolCallMessageDetails details, boolean isDone)
+        ToolCallMessageDetails details, Boolean isDone)
     {
         var message = new ToolCallMessage();
         message.role = "tool"; //$NON-NLS-1$
@@ -157,14 +163,17 @@ public class McpToolsCallMessageFactory
                 responseMarkdown.append(MessageFormat.format(Messages.ToolNameTemplate, call.function.name));
             }
 
-            responseMarkdown.append(System.lineSeparator());
-            responseMarkdown.append(System.lineSeparator());
-            if (isDone)
+            if (isDone != null && isDone == true)
             {
+                responseMarkdown.append(System.lineSeparator());
+                responseMarkdown.append(System.lineSeparator());
                 responseMarkdown.append(styleStatusMessage(Messages.ToolDone, TextColor.GREEN, true));
             }
-            else
+
+            if (isDone != null && isDone == false)
             {
+                responseMarkdown.append(System.lineSeparator());
+                responseMarkdown.append(System.lineSeparator());
                 responseMarkdown.append(styleStatusMessage(Messages.ToolFailed, TextColor.RED, true));
             }
         }

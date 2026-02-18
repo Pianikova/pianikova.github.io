@@ -14,5 +14,5 @@ public interface IMcpTool
 
     McpToolCallSpecification getSpecification();
 
-    CompletableFuture<ToolCallMessage> call(McpToolCall calls, ICancellationToken сancellationToken);
+    CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken);
 }

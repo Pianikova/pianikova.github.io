@@ -23,6 +23,8 @@ import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -101,18 +103,10 @@ public class GetObjectMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
-        if (call.callKind == ToolCallKind.RENDER)
-        {
-            details.requestMarkdown = Messages.Get1CObjectByIdTitle;
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-        }
-
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
@@ -121,20 +115,24 @@ public class GetObjectMcpTool
 
         if (projectName == null || projectName.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Project name is required."));
+            throw new ToolException("Project name is required.");
         }
 
         if (objectId == null)
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Object id is required."));
+            throw new ToolException("Object id is required.");
+        }
+
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.Get1CObjectByIdTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
         return CompletableFuture.supplyAsync(() -> {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -142,13 +140,13 @@ public class GetObjectMcpTool
 
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call, "Project not found: " + projectName);
+                throw new ToolException("Project not found: " + projectName);
             }
 
             var model = modelManager.getModel(project);
             if (model == null)
             {
-                return messageFactory.createError(this, call, "Model not available for project: " + projectName);
+                throw new ToolException("Model not available for project: " + projectName);
             }
 
             try
@@ -161,7 +159,8 @@ public class GetObjectMcpTool
                         // Check cancellation inside BM task
                         if (cancellationToken.isCanceled())
                         {
-                            throw new OperationCanceledException("Operation cancelled during BM task execution");
+                            throw new ToolException("Operation cancelled during BM task execution", null,
+                                ToolErrorType.RETRYABLE);
                         }
                         return transaction.getObjectById(objectId);
                     }
@@ -187,7 +186,7 @@ public class GetObjectMcpTool
 
                 if (bmObject == null)
                 {
-                    return messageFactory.createError(this, call, "Object not found: " + objectId);
+                    throw new ToolException("Object not found: " + objectId);
                 }
 
                 var response = new Response();
@@ -217,7 +216,7 @@ public class GetObjectMcpTool
 
                 if (cancellationToken.isCanceled())
                 {
-                    return messageFactory.createError(this, call, "Operation was cancelled during entity creation.");
+                    throw new ToolException("Operation was cancelled during entity creation.");
                 }
 
                 if (bmObject instanceof Form)
@@ -238,7 +237,11 @@ public class GetObjectMcpTool
             }
             catch (OperationCanceledException e)
             {
-                return messageFactory.createError(this, call, "Cannot get object by id: " + e.getMessage());
+                throw new ToolException("Operation cancelled", e, ToolErrorType.RETRYABLE);
+            }
+            catch (Exception e)
+            {
+                throw new ToolException("Cannot get object by id", e, ToolErrorType.RETRYABLE);
             }
         });
     }

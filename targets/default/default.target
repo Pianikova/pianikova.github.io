@@ -111,7 +111,7 @@
 <unit id="org.apache.batik.transcoder" version="0.0.0"/>
 <unit id="javax.servlet" version="0.0.0"/>
 <unit id="openjfx.swt.feature.feature.group" version="0.0.0"/>
-<repository location="https://edt.1c.ru/downloads/releases/ruby/2023.3/"/>
+<repository location="http://artifactory.boreas.dept07:80/artifactory/edt-distr-releases/p2/2023.3.6.33/repo.zip!"/>
 </location>
 
 <!-- OpenJFX -->

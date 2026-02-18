@@ -21,6 +21,8 @@ import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -85,38 +87,27 @@ public class DeleteMarkersMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
-        if (call.callKind == ToolCallKind.RENDER)
-        {
-            var optionalRequest = json.deserialize(call.function.arguments, Request.class);
-            if (optionalRequest.isPresent() && optionalRequest.get().projectName != null
-                && !optionalRequest.get().projectName.isBlank())
-            {
-                details.requestMarkdown =
-                    MessageFormat.format(Messages.RemoveMarkersTitleTemplate, optionalRequest.get().projectName);
-            }
-            else
-            {
-                details.requestMarkdown = Messages.RemoveMarkersTitle;
-            }
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-        }
-
-        // Deserialize request parameters
+        details.hideAfter = true;
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        // Deserialize request parameters
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Cannot deserialize arguments. Use example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
         var projectName = request.projectName;
-
         // Validate project name
         if (projectName == null || projectName.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Project name is required"));
+            throw new ToolException("Project name is required");
+        }
+
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown =
+                MessageFormat.format(Messages.RemoveMarkersTitleTemplate, optionalRequest.get().projectName);
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
         return CompletableFuture.supplyAsync(() -> {
@@ -126,12 +117,12 @@ public class DeleteMarkersMcpTool
             // Check project existence and state
             if (!project.exists())
             {
-                return messageFactory.createError(this, call, "Project not found: " + projectName);
+                throw new ToolException("Project not found: " + projectName);
             }
 
             if (!project.isOpen())
             {
-                return messageFactory.createError(this, call, "Project is closed: " + projectName);
+                throw new ToolException("Project is closed: " + projectName);
             }
 
             try
@@ -149,8 +140,7 @@ public class DeleteMarkersMcpTool
                     var file = root.getFile(new org.eclipse.core.runtime.Path(request.relativeFilePath));
                     if (file == null || !file.exists())
                     {
-                        return messageFactory.createError(this, call,
-                            "File not found: " + request.relativeFilePath);
+                        throw new ToolException("File not found: " + request.relativeFilePath);
                     }
 
                     deleteMarkers(file, markerType);
@@ -168,7 +158,7 @@ public class DeleteMarkersMcpTool
             catch (CoreException | IllegalArgumentException error)
             {
                 log.logError(error);
-                return messageFactory.createError(this, call, "Failed to clear markers: " + error.getMessage());
+                throw new ToolException("Failed to clear markers", error, ToolErrorType.RETRYABLE);
             }
         });
     }
@@ -182,7 +172,7 @@ public class DeleteMarkersMcpTool
             IMarker marker = findMarkerById(project, markerId);
             if (marker == null)
             {
-                return messageFactory.createError(this, call, "Marker not found with id: " + markerId);
+                throw new ToolException("Marker not found with id: " + markerId);
             }
 
             marker.delete();
@@ -195,7 +185,7 @@ public class DeleteMarkersMcpTool
         catch (CoreException e)
         {
             log.logError(e);
-            return messageFactory.createError(this, call, "Failed to delete marker: " + e.getMessage());
+            throw new ToolException("Failed to delete marker", e, ToolErrorType.RETRYABLE);
         }
     }
 

@@ -21,6 +21,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -143,26 +145,15 @@ public class GitDiffMcpTool
 		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
 		if (optionalRequest.isEmpty())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"Cannot deserialize arguments. Use this example: " + QuestionExample));
+			throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
 		}
 
-		var request = optionalRequest.get();
-
-		if (call.callKind == ToolCallKind.RENDER)
-		{
-			var projectName = request.projectName != null ? request.projectName : "current project"; //$NON-NLS-1$
-			details.requestMarkdown = MessageFormat.format(Messages.GitDiffTitleTemplate, projectName);
-			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-		}
+        var request = optionalRequest.get();
 
 		var projectName = request.projectName;
 		if (projectName == null || projectName.isBlank())
 		{
-			return CompletableFuture
-				.completedFuture(messageFactory.createError(this, call,
-					"`project_name` is required."));
+			throw new ToolException("`project_name` is required.");
 		}
 
 		var contextLines = request.contextLines != null && request.contextLines > 0 ? request.contextLines : DEFAULT_CONTEXT_LINES;
@@ -170,13 +161,20 @@ public class GitDiffMcpTool
 		var newCommit = request.newCommit;
 		var uncommittedChanges = Boolean.TRUE.equals(request.uncommittedChanges);
 
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = MessageFormat.format(Messages.GitDiffTitleTemplate,
+                projectName != null ? projectName : "current project");
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
 		// Use supplyAsync to execute the blocking operation on a separate thread.
 		return CompletableFuture.supplyAsync(() ->
 		{
 			// Check for cancellation before starting the work.
 			if (cancellationToken.isCanceled())
 			{
-				throw new RuntimeException("Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
 			}
 
 			var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -185,7 +183,7 @@ public class GitDiffMcpTool
 			// Validate project existence and accessibility
 			if (project == null || !project.exists())
 			{
-				throw new RuntimeException("The project \"" + projectName + "\" does not exist.");
+				throw new ToolException("The project \"" + projectName + "\" does not exist.");
 			}
 			if (!project.isOpen())
 			{
@@ -197,7 +195,7 @@ public class GitDiffMcpTool
 				}
 				catch (CoreException error)
 				{
-					throw new RuntimeException("Cannot open the project \"" + projectName + "\". " + error.getMessage());
+					throw new ToolException("Cannot open the project \"" + projectName + "\"", error, ToolErrorType.RETRYABLE);
 				}
 			}
 
@@ -205,7 +203,7 @@ public class GitDiffMcpTool
 			var repository = GitUtils.getRepository(project);
 			if (repository == null)
 			{
-				throw new RuntimeException("The project \"" + projectName + "\" is not a Git repository.");
+				throw new ToolException("The project \"" + projectName + "\" is not a Git repository.");
 			}
 
 			try
@@ -299,11 +297,15 @@ public class GitDiffMcpTool
 			}
 			catch (Exception e)
 			{
-				throw new RuntimeException("Failed to get Git diff: " + e.getMessage(), e);
+				throw new ToolException("Failed to get Git diff", e, ToolErrorType.RETRYABLE);
 			}
 		}).exceptionally(throwable ->
 		{
-			return messageFactory.createError(this, call, throwable.getMessage());
+			if (throwable.getCause() instanceof ToolException)
+			{
+				throw (ToolException) throwable.getCause();
+			}
+			throw new ToolException(throwable.getMessage(), throwable, ToolErrorType.RETRYABLE);
 		});
 	}
 

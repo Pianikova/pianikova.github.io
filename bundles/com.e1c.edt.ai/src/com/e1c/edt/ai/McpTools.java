@@ -9,12 +9,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
+import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -36,8 +37,10 @@ public class McpTools
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(messageFactory);
+
         this.log = log;
         this.messageFactory = messageFactory;
+
         if (!settings.isExperimental())
         {
             tools = tools.stream().filter(i -> !i.isExperimental()).collect(Collectors.toSet());
@@ -93,19 +96,15 @@ public class McpTools
 
             try
             {
-                var callFuture = tool.call(call, cancellationToken).exceptionally(ex -> {
-                    var message = createErrorMessage(toolName, ex);
-                    log.logError(message);
-                    return messageFactory.createError(null, call, ex.getMessage());
-                });
-
+                var callFuture =
+                    tool.call(call, cancellationToken)
+                        .exceptionally(error -> createErrorMessage(tool, call, toolName, error));
                 futures.add(callFuture);
             }
             catch (Exception ex)
             {
-                var message = createErrorMessage(toolName, ex);
-                log.logError(message);
-                futures.add(CompletableFuture.completedFuture(messageFactory.createError(tool, call, message)));
+                var message = createErrorMessage(tool, call, toolName, ex);
+                futures.add(CompletableFuture.completedFuture(message));
             }
         }
 
@@ -148,12 +147,38 @@ public class McpTools
         return futureResult;
     }
 
-    @SuppressWarnings("nls")
-    private String createErrorMessage(String toolName, Throwable ex)
+    private ToolCallMessage createErrorMessage(IMcpTool tool, McpToolCall call, String toolName, Throwable error)
     {
-        var cause = ex instanceof CompletionException ? ex.getCause() : ex;
-        var message = "Failed to call tool \"" + toolName + "\". " + cause.getMessage();
-        return message;
+        var details = new ToolCallMessageDetails();
+        var message = error.getMessage();
+        if (error instanceof ToolException)
+        {
+            var toolError = (ToolException)error;
+            switch (toolError.getErrorType())
+            {
+            case USER_VISIBLE:
+                // User-visible errors should be shown to user
+                var markdown = new StringBuilder();
+                markdown.append(message);
+                if (call.callKind == ToolCallKind.RENDER)
+                {
+                    details.requestMarkdown = markdown.toString();
+                }
+                else
+                {
+                    details.responseMarkdown = markdown.toString();
+                }
+
+                details.autoCall = true;
+                return messageFactory.createMessage(tool, call, message, details);
+            }
+        }
+
+        // Retryable errors are handled silently by LLM, log as warning for debugging
+        details.autoCall = true;
+        details.hideAfter = true;
+        details.responseMarkdown = Messages.McpTools_RetryableError;
+        return messageFactory.createRawMessage(tool, call, message, details);
     }
 
     private boolean exceedsMaxContentLines(String content)

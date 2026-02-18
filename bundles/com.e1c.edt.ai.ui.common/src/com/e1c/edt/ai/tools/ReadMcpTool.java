@@ -29,6 +29,8 @@ import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -47,6 +49,7 @@ public class ReadMcpTool
 {
     public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
     private static final int MAX_LINES = McpToolConstants.MAX_READ_LINES;
+    private static final int LINE_NUMBER_WIDTH = 7;
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -125,19 +128,15 @@ public class ReadMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
-                        + "Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. JSON must be a single object with double-quoted keys and strings. "
+                + "Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
         var path = request.path;
         if (path == null || path.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "`path` is required."));
+            throw new ToolException("`path` is required.");
         }
 
         // Validate and set default values for line parameters
@@ -167,7 +166,7 @@ public class ReadMcpTool
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             // Determine project name from absolute path
@@ -210,8 +209,7 @@ public class ReadMcpTool
                             totalLines++;
                             if (totalLines >= finalFirstLineNumber && totalLines <= endLineNumber)
                             {
-                                resultContent.append(String.format("%7d:", totalLines));
-                                resultContent.append(line);
+                                resultContent.append(formatLineWithNumberPrefix(totalLines, line));
                                 lastLineSize = line.length();
                                 linesRead++;
                             }
@@ -242,7 +240,7 @@ public class ReadMcpTool
                 }
                 catch (IOException error)
                 {
-                    return messageFactory.createError(this, call, "Failed to read file. " + error.getMessage());
+                    throw new ToolException("Failed to read file", error, ToolErrorType.RETRYABLE);
                 }
             }
 
@@ -253,8 +251,7 @@ public class ReadMcpTool
             // Validate project existence and accessibility
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call,
-                    "The project \"" + finalProjectName + "\" does not exist.");
+                throw new ToolException("The project \"" + finalProjectName + "\" does not exist.");
             }
 
             if (!project.isOpen())
@@ -267,8 +264,8 @@ public class ReadMcpTool
                 }
                 catch (CoreException error)
                 {
-                    return messageFactory.createError(this, call,
-                        "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
+                    throw new ToolException("Cannot open the project \"" + finalProjectName + "\"", error,
+                        ToolErrorType.RETRYABLE);
                 }
             }
 
@@ -297,8 +294,7 @@ public class ReadMcpTool
             var lastLineSize = 0;
             for (var line : fileSystem.getLines(document, finalFirstLineNumber - 1, finalLinesNumber))
             {
-                resultContent.append(String.format("%7d:", finalFirstLineNumber + linesRead));
-                resultContent.append(line);
+                resultContent.append(formatLineWithNumberPrefix(finalFirstLineNumber + linesRead, line));
                 lastLineSize = line.length();
                 linesRead++;
             }
@@ -329,6 +325,7 @@ public class ReadMcpTool
                 finalFirstLineNumber + linesRead - 1,
                 lastLineSize);
             details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate, href, styledLineNumber);
+            details.hideAfter = totalLines == 0;
             return messageFactory.createMessage(this, call, content, details);
         });
     }
@@ -358,6 +355,10 @@ public class ReadMcpTool
         description.append("\n- Modify files: `" + EditMcpTool.TOOL_NAME + "`, `" + WriteMcpTool.TOOL_NAME + "`.");
         description.append("\n- MUST use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and `" + SetMarkersMcpTool.TOOL_NAME
             + "` to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
+        description.append("\n\nFile references in responses should use HTML `<a>` tags with `edt-file://` URLs and include a `title` attribute:");
+        description.append("\n- Format: `<a href=\"edt-file://full_path:line:column:finish_line:finish_column\" title=\"description\">text</a>`");
+        description.append("\n- Line and column numbers are 0-based integers.");
+        description.append("\n- Example: `<a href=\"edt-file://C:/Projects/MyProject/src/Module.bsl:10:0:20:50\">Procedure in Module.bsl</a>`");
         description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
@@ -389,6 +390,19 @@ public class ReadMcpTool
 
         return spec;
         // @formatter:on
+    }
+
+    /**
+     * Formats a line with a line number prefix.
+     *
+     * @param lineNumber the line number (1-relative)
+     * @param lineContent the line content
+     * @return the formatted line with prefix
+     */
+    @SuppressWarnings("nls")
+    private static String formatLineWithNumberPrefix(int lineNumber, String lineContent)
+    {
+        return String.format("%" + LINE_NUMBER_WIDTH + "d:", lineNumber) + lineContent;
     }
 
     private static class Request

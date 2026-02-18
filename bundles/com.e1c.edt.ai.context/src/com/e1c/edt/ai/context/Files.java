@@ -81,6 +81,11 @@ public class Files
         }
 
         var projectName = projectTools.determineProjectName(path);
+        if (projectName == null || projectName.isBlank())
+        {
+            return getFileName(file).replace('/', '→');
+        }
+
         if (path != projectName)
         {
             var root = ResourcesPlugin.getWorkspace().getRoot();

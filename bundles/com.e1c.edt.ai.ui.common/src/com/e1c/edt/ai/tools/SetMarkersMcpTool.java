@@ -13,25 +13,25 @@ import java.util.concurrent.CompletableFuture;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.text.BadLocationException;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
@@ -166,13 +166,24 @@ public class SetMarkersMcpTool
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
+        if (optionalRequest.isEmpty())
+        {
+            throw new ToolException("Invalid request format. Example: " + QuestionExample);
+        }
+
+        var request = optionalRequest.get();
+        if (request.markers == null || request.markers.isEmpty())
+        {
+            throw new ToolException("At least one marker is required");
+        }
+
+        var projectName = request.projectName;
         if (call.callKind == ToolCallKind.RENDER)
         {
-            if (optionalRequest.isPresent() && optionalRequest.get().projectName != null
-                && !optionalRequest.get().projectName.isBlank())
+            if (projectName != null && !projectName.isBlank())
             {
                 details.requestMarkdown =
-                    MessageFormat.format(Messages.CreateMarkersTitleTemplate, optionalRequest.get().projectName);
+                    MessageFormat.format(Messages.CreateMarkersTitleTemplate, projectName);
             }
             else
             {
@@ -182,47 +193,34 @@ public class SetMarkersMcpTool
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
-        if (optionalRequest.isEmpty())
-        {
-            return CompletableFuture.completedFuture(
-                messageFactory.createError(this, call, "Invalid request format. Example: " + QuestionExample));
-        }
 
-        var request = optionalRequest.get();
-
-        if (request.markers == null || request.markers.isEmpty())
-        {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "At least one marker is required"));
-        }
 
         return CompletableFuture.supplyAsync(() -> {
-            IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+            var root = ResourcesPlugin.getWorkspace().getRoot();
 
             // Determine project name - either from request or auto-determine from file path
-            String effectiveProjectName = request.projectName;
-            if (effectiveProjectName == null || effectiveProjectName.isBlank())
+            var deteminedProjectName = projectName;
+            if (projectName == null || projectName.isBlank())
             {
                 // Auto-determine project from first marker's file path
                 var firstMarker = request.markers.get(0);
-                effectiveProjectName = projectTools.determineProjectName(firstMarker.absoluteFilePath);
-                if (effectiveProjectName == null)
+                deteminedProjectName = projectTools.determineProjectName(firstMarker.absoluteFilePath);
+                if (deteminedProjectName == null)
                 {
-                    return messageFactory.createError(this, call,
-                        "Cannot determine project from file path: " + firstMarker.absoluteFilePath
-                            + ". Please specify project_name explicitly.");
+                    throw new ToolException("Cannot determine project from file path: " + firstMarker.absoluteFilePath
+                        + ". Please specify project_name explicitly.");
                 }
             }
 
-            IProject project = root.getProject(effectiveProjectName);
+            var project = root.getProject(deteminedProjectName);
             if (!project.exists())
             {
-                return messageFactory.createError(this, call, "Project not found: " + effectiveProjectName);
+                throw new ToolException("Project not found: " + deteminedProjectName);
             }
 
             if (!project.isOpen())
             {
-                return messageFactory.createError(this, call, "Project is closed: " + effectiveProjectName);
+                throw new ToolException("Project is closed: " + deteminedProjectName);
             }
 
             var markersSet = 0;
@@ -232,8 +230,7 @@ public class SetMarkersMcpTool
             {
                 if (cancellationToken.isCanceled())
                 {
-                    errors.append("Operation cancelled after setting ").append(markersSet).append(" markers");
-                    break;
+                    throw new ToolException("Operation cancelled after setting " + markersSet + " markers");
                 }
                 var markerReq = request.markers.get(i);
                 markerReq.projectName = project.getName();
@@ -260,8 +257,7 @@ public class SetMarkersMcpTool
                         errors.append("Rollback error: ").append(deleteError.getMessage()).append("; ");
                     }
                 }
-                return messageFactory.createError(this, call,
-                    "Completed with errors: " + errors + ". Markers set: " + markersSet);
+                throw new ToolException("Completed with errors: " + errors + ". Markers set: " + markersSet);
             }
 
             // Add response markdown

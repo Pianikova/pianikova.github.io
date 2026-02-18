@@ -9,5 +9,7 @@ public interface IMcpToolsCallMessageFactory
 {
     ToolCallMessage createMessage(IMcpTool tool, McpToolCall call, String content, ToolCallMessageDetails details);
 
+    ToolCallMessage createRawMessage(IMcpTool tool, McpToolCall call, String content, ToolCallMessageDetails details);
+
     ToolCallMessage createError(IMcpTool tool, McpToolCall call, String errorMessage);
 }

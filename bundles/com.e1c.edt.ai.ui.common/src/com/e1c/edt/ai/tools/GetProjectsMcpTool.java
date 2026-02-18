@@ -128,6 +128,7 @@ public class GetProjectsMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
+        details.hideAfter = true;
         if (call.callKind == ToolCallKind.RENDER)
         {
             details.requestMarkdown = Messages.ProjectsTitle;

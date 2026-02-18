@@ -30,6 +30,7 @@ public class Messages
     public static String FileMenu_CopyAbsolutePath;
     public static String FileMenu_CopyFileName;
     public static String FileMenu_CopyLink;
+    public static String McpTools_RetryableError;
 
     static
     {

@@ -29,6 +29,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -140,28 +142,22 @@ public class GetMarkersMcpTool implements IMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
-        if (call.callKind == ToolCallKind.RENDER)
-        {
-            details.requestMarkdown = Messages.MarkersTitle;
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
-        }
+        details.hideAfter = true;
 
         // Deserialize request parameters
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Cannot deserialize arguments. Use this example: " + QuestionExample
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample
                     + "\n\nRequired field: 'project_name' (string)"
-                    + "\nOptional fields: 'first_index' (integer), 'max_count' (integer), 'marker_type' (string)"));
+                + "\nOptional fields: 'first_index' (integer), 'max_count' (integer), 'marker_type' (string)");
         }
 
         var request = optionalRequest.get();
         var projectName = request.projectName;
         if (projectName == null || projectName.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Project name is required."));
+            throw new ToolException("Project name is required.");
         }
 
         int firstIndex = request.firstIndex != null ? Math.max(0, request.firstIndex) : 0;
@@ -174,8 +170,7 @@ public class GetMarkersMcpTool implements IMcpTool
             markerTypeFilter = MarkerType.fromDisplayName(request.markerType);
             if (markerTypeFilter == null)
             {
-                return CompletableFuture.completedFuture(
-                    messageFactory.createError(this, call, "Invalid marker_type: " + request.markerType));
+                throw new ToolException("Invalid marker_type: " + request.markerType);
             }
         }
 
@@ -184,23 +179,26 @@ public class GetMarkersMcpTool implements IMcpTool
         var project = root.getProject(projectName);
         if (project == null || !project.exists())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Project not found: " + projectName));
+            throw new ToolException("Project not found: " + projectName);
         }
         if (!project.isOpen())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "Project is closed: " + projectName));
+            throw new ToolException("Project is closed: " + projectName);
         }
 
         // Create final copy for lambda
         final MarkerType finalMarkerTypeFilter = markerTypeFilter;
 
+        if (call.callKind == ToolCallKind.RENDER)
+        {
+            details.requestMarkdown = Messages.MarkersTitle;
+            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+        }
+
         return buildWaiter.waitForBuilds(project, cancellationToken).thenCompose(voidResult -> {
             if (cancellationToken.isCanceled())
             {
-                return CompletableFuture
-                    .completedFuture(messageFactory.createError(this, call, "Operation cancelled after build wait"));
+                throw new ToolException("Operation cancelled after build wait");
             }
 
             return CompletableFuture
@@ -210,14 +208,15 @@ public class GetMarkersMcpTool implements IMcpTool
             Throwable cause = e.getCause();
             if (cause instanceof OperationCanceledException)
             {
-                return messageFactory.createError(this, call, "Build waiting cancelled");
+                throw new ToolException("Build waiting cancelled", cause, ToolErrorType.RETRYABLE);
             }
             if (cause instanceof InterruptedException)
             {
                 Thread.currentThread().interrupt();
-                return messageFactory.createError(this, call, "Build waiting interrupted");
+                throw new ToolException("Build waiting interrupted", cause, ToolErrorType.RETRYABLE);
             }
-            return messageFactory.createError(this, call, "Error during build waiting: " + e.getMessage());
+
+            throw new ToolException("Error during build waiting", cause, ToolErrorType.RETRYABLE);
         });
     }
 
@@ -232,7 +231,7 @@ public class GetMarkersMcpTool implements IMcpTool
             // Early cancellation check
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation cancelled during marker collection");
+                throw new ToolException("Operation cancelled during marker collection");
             }
 
             // Retrieve all markers in the project
@@ -245,7 +244,7 @@ public class GetMarkersMcpTool implements IMcpTool
                 // Check cancellation during marker processing
                 if (cancellationToken.isCanceled())
                 {
-                    return messageFactory.createError(this, call, "Operation cancelled during marker processing");
+                    throw new ToolException("Operation cancelled during marker processing");
                 }
 
                 // Determine marker type using enum
@@ -283,7 +282,7 @@ public class GetMarkersMcpTool implements IMcpTool
             }
             else
             {
-            int endIndex = Math.min(firstIndex + maxCount, allMarkers.size());
+                int endIndex = Math.min(firstIndex + maxCount, allMarkers.size());
                 response = allMarkers.subList(firstIndex, endIndex);
             }
 
@@ -294,21 +293,21 @@ public class GetMarkersMcpTool implements IMcpTool
             String styledMarkerCount =
                 markdownUtils.createStyledText(String.valueOf(markerCount), TextColor.GREEN, FontWeight.BOLD);
             details.responseMarkdown = MessageFormat.format(Messages.MarkersLoadedTemplate, styledMarkerCount);
-
+            details.hideAfter = response.size() == 0;
             return messageFactory.createMessage(this, call, content, details);
         }
         catch (CoreException | OperationCanceledException error)
         {
             if (error instanceof CoreException)
             {
-                return messageFactory.createError(this, call,
-                    "Error retrieving project markers: " + error.getMessage());
+                throw new ToolException("Error retrieving project markers", error, ToolErrorType.RETRYABLE);
             }
             if (error instanceof OperationCanceledException)
             {
-                return messageFactory.createError(this, call, "Operation cancelled: " + error.getMessage());
+                throw new ToolException("Operation cancelled", error, ToolErrorType.RETRYABLE);
             }
-            return messageFactory.createError(this, call, "Unexpected error: " + error.getMessage());
+
+            throw new ToolException("Unexpected error", error, ToolErrorType.RETRYABLE);
         }
     }
 

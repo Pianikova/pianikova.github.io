@@ -26,16 +26,18 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -124,15 +126,19 @@ public class SearchFilesMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = true;
+        details.hideAfter = true;
 
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
+        var path = request.path;
+        var searchPattern = request.searchPattern != null ? request.searchPattern : "*";
+        var includeSubfolders = request.includeSubfolders != null ? request.includeSubfolders : true;
+        var maxResults = request.maxResults != null && request.maxResults > 0 ? request.maxResults : DEFAULT_MAX_FILES;
 
         if (call.callKind == ToolCallKind.RENDER)
         {
@@ -152,17 +158,12 @@ public class SearchFilesMcpTool
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
-        var path = request.path;
-        var searchPattern = request.searchPattern != null ? request.searchPattern : "*";
-        var includeSubfolders = request.includeSubfolders != null ? request.includeSubfolders : true;
-        var maxResults = request.maxResults != null && request.maxResults > 0 ? request.maxResults : DEFAULT_MAX_FILES;
-
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             var root = ResourcesPlugin.getWorkspace().getRoot();
@@ -185,8 +186,7 @@ public class SearchFilesMcpTool
 
                         if (project == null || !project.exists())
                         {
-                            return messageFactory.createError(this, call,
-                                "The project \"" + determinedProject + "\" does not exist.");
+                            throw new ToolException("The project \"" + determinedProject + "\" does not exist.");
                         }
                         if (!project.isOpen())
                         {
@@ -196,8 +196,8 @@ public class SearchFilesMcpTool
                             }
                             catch (CoreException error)
                             {
-                                return messageFactory.createError(this, call,
-                                    "Cannot open the project \"" + determinedProject + "\". " + error.getMessage());
+                                throw new ToolException("Cannot open the project \"" + determinedProject + "\"", error,
+                                    ToolErrorType.RETRYABLE);
                             }
                         }
 
@@ -243,11 +243,11 @@ public class SearchFilesMcpTool
             }
             catch (CoreException e)
             {
-                return messageFactory.createError(this, call, "Search failed: " + e.getMessage());
+                throw new ToolException("Search failed", e, ToolErrorType.RETRYABLE);
             }
             catch (IOException e)
             {
-                return messageFactory.createError(this, call, "Search failed: " + e.getMessage());
+                throw new ToolException("Search failed", e, ToolErrorType.RETRYABLE);
             }
 
             // Prepare response
@@ -281,6 +281,7 @@ public class SearchFilesMcpTool
             responseMarkdown.append("</details>"); //$NON-NLS-1$
 
             details.responseMarkdown = responseMarkdown.toString();
+            details.hideAfter = foundFiles.size() == 0;
             return messageFactory.createMessage(this, call, content, details);
         });
     }

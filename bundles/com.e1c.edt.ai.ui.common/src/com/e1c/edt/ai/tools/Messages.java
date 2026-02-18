@@ -44,11 +44,13 @@ public class Messages
     public static String FindFilesTitleTemplate;
     public static String FilesFoundTemplate;
     public static String FileSize;
-    public static String LastModified;
     public static String SearchQuery;
     public static String FileNamePatterns;
     public static String AllFiles;
     public static String ProjectName;
+    public static String MaxCommits;
+    public static String CurrentProject;
+    public static String SelectedFile;
     public static String GitCommitsTitleTemplate;
     public static String GitCommitsFoundTemplate;
     public static String CommitsList;
@@ -74,7 +76,6 @@ public class Messages
     public static String NavigationHistoryFoundTemplate;
     public static String ViewNavigationHistory;
     public static String NoNavigationHistoryFound;
-    public static String NavigationInput;
     public static String Location;
     public static String Current;
 

@@ -21,16 +21,18 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -103,28 +105,25 @@ public class DeleteMcpTool
     {
         var details = new ToolCallMessageDetails();
         details.autoCall = false;
-
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Cannot deserialize arguments. Use this example: " + QuestionExample
-                    + "\n\nRequired field: 'path' (string)"));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample
+                + "\n\nRequired field: 'path' (string)");
         }
 
         var request = optionalRequest.get();
         var path = request.path;
         if (path == null || path.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call,
-                    "`path` is required."));
+            throw new ToolException("`path` is required.");
         }
 
         if (call.callKind == ToolCallKind.RENDER)
         {
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(MessageFormat.format(Messages.DeleteTitleTemplate, markdownUtils.formatFilePath(path)));
+            requestMarkdown
+                .append(MessageFormat.format(Messages.DeleteTitleTemplate, markdownUtils.formatFilePath(path)));
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
@@ -134,7 +133,7 @@ public class DeleteMcpTool
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             // Determine project name from absolute path
@@ -148,10 +147,10 @@ public class DeleteMcpTool
             {
                 // File is not part of any project - use Java file I/O
                 try
-                {
+            {
                     if (!fileSystem.fileExists(path))
-                    {
-                        return messageFactory.createError(this, call, "The file \"" + path + "\" does not exist.");
+                {
+                        throw new ToolException("The file \"" + path + "\" does not exist.");
                     }
 
                     fileSystem.deleteFile(path);
@@ -166,11 +165,11 @@ public class DeleteMcpTool
                         MessageFormat.format(Messages.DeletedTemplate, markdownUtils.formatFilePath(path), changes);
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
-                }
+            }
                 catch (IOException error)
-                {
-                    return messageFactory.createError(this, call, "Failed to delete file. " + error.getMessage());
-                }
+            {
+                    throw new ToolException("Failed to delete file", error, ToolErrorType.RETRYABLE);
+            }
             }
 
             // File is part of a project - use Eclipse APIs
@@ -178,30 +177,28 @@ public class DeleteMcpTool
             var project = root.getProject(finalProjectName);
             if (project == null || !project.exists())
             {
-                return messageFactory.createError(this, call,
-                    "The project \"" + finalProjectName + "\" does not exist.");
+                throw new ToolException("The project \"" + finalProjectName + "\" does not exist.");
             }
 
             if (!project.isOpen())
             {
                 try
-                {
+            {
                     var monitor = cancellationProgressMonitor.get();
                     monitor.setCancellationToken(cancellationToken);
                     project.open(monitor);
-                }
+            }
                 catch (CoreException error)
-                {
-                    return messageFactory.createError(this, call,
-                        "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
-                }
+            {
+                    throw new ToolException("Cannot open the project \"" + finalProjectName + "\"", error,
+                        ToolErrorType.RETRYABLE);
+            }
             }
 
             var projectFile = projectTools.getProjectFile(project, path);
             if (!projectFile.isPresent())
             {
-                return messageFactory.createError(this, call, "The file \"" + path
-                    + "\" does not exist within the IDE project context. "
+                throw new ToolException("The file \"" + path + "\" does not exist within the IDE project context. "
                     + "The file may exist outside the project directory, but IDE tools can only access files within the current project scope.");
             }
 
@@ -209,7 +206,7 @@ public class DeleteMcpTool
             if (!editingSupport.canDelete(projectFile.get()))
             {
                 var filePathForError = projectFile.map(f -> f.getProjectRelativePath().toOSString()).orElse(path);
-                return messageFactory.createError(this, call, "The file \"" + filePathForError
+                throw new ToolException("The file \"" + filePathForError
                     + "\" cannot be deleted. Deletion is not supported for this file type or the file is locked.");
             }
 
@@ -228,14 +225,14 @@ public class DeleteMcpTool
 
                 // Refresh the parent folder
                 if (actualFile.getParent() != null)
-                {
+            {
                     actualFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
-                }
+            }
 
                 var response = new StringBuilder();
                 response.append("File deleted: \"").append(displayPath).append("\".\n");
-                response.append(
-                    "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
+                response.append("ACTION REQUIRED: verify project errors and warnings. Use `"
+                    + GetMarkersMcpTool.TOOL_NAME + "` tool.");
 
                 // Add response markdown
                 var changes = new StringBuilder();
@@ -247,9 +244,20 @@ public class DeleteMcpTool
             }
             catch (CoreException error)
             {
-                return messageFactory.createError(this, call, "Failed to delete file: " + error.getMessage());
+                throw new ToolException("Failed to delete file", error, ToolErrorType.RETRYABLE);
             }
-        });
+        }).handle((result, error) -> {
+            if (error != null)
+            {
+                Throwable cause = error;
+                if (cause instanceof ToolException)
+                {
+                    return messageFactory.createError(this, call, ((ToolException)cause).getMessage());
+                }
+                return messageFactory.createError(this, call, "Unexpected error: " + cause.getMessage());
+            }
+            return result;
+            });
     }
 
     @SuppressWarnings("nls")

@@ -24,6 +24,7 @@ import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
@@ -31,6 +32,8 @@ import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -68,11 +71,12 @@ public class WriteMcpTool
     private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final ILog log;
 
     @Inject
     public WriteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport, ILog log)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -81,6 +85,7 @@ public class WriteMcpTool
         Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(log);
 
         this.json = json;
         this.messageFactory = messageFactory;
@@ -89,6 +94,7 @@ public class WriteMcpTool
         this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.log = log;
 
         spec = createSpecification();
     }
@@ -115,16 +121,31 @@ public class WriteMcpTool
         var optionalRequest = json.deserialize(call.function.arguments, Request.class);
         if (optionalRequest.isEmpty())
         {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Cannot deserialize arguments. Use this example: " + QuestionExample));
+            throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
         }
 
         var request = optionalRequest.get();
         var path = request.path;
         if (path == null || path.isBlank())
         {
-            return CompletableFuture
-                .completedFuture(messageFactory.createError(this, call, "`path` is required."));
+            throw new ToolException("`path` is required.");
+        }
+
+        var content = request.content;
+        if (content == null)
+        {
+            throw new ToolException("`content` is required.");
+        }
+
+        var charsetName = request.charsetName != null && !request.charsetName.isBlank() ? request.charsetName : "UTF-8";
+        byte[] data;
+        try
+        {
+            data = content.getBytes(charsetName);
+        }
+        catch (UnsupportedEncodingException error)
+        {
+            throw new ToolException("Unsupported charset: \"" + charsetName + "\"", error, ToolErrorType.RETRYABLE);
         }
 
         if (call.callKind == ToolCallKind.RENDER)
@@ -147,30 +168,12 @@ public class WriteMcpTool
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
-        var content = request.content;
-        if (content == null)
-        {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call, "`content` is required."));
-        }
-
-        var charsetName = request.charsetName != null && !request.charsetName.isBlank() ? request.charsetName : "UTF-8";
-        byte[] data;
-        try
-        {
-            data = content.getBytes(charsetName);
-        }
-        catch (UnsupportedEncodingException error)
-        {
-            return CompletableFuture.completedFuture(messageFactory.createError(this, call,
-                "Unsupported charset: \"" + charsetName + "\". " + error.getMessage()));
-        }
-
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
             // Check for cancellation before starting the work.
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             // Determine project name from absolute path
@@ -186,8 +189,7 @@ public class WriteMcpTool
                 var project = root.getProject(finalProjectName);
                 if (project == null || !project.exists())
                 {
-                    return messageFactory.createError(this, call,
-                        "The project \"" + finalProjectName + "\" does not exist.");
+                    throw new ToolException("The project \"" + finalProjectName + "\" does not exist.");
                 }
 
                 var monitor = cancellationProgressMonitor.get();
@@ -200,8 +202,8 @@ public class WriteMcpTool
                     }
                     catch (CoreException error)
                     {
-                        return messageFactory.createError(this, call,
-                            "Cannot open the project \"" + finalProjectName + "\". " + error.getMessage());
+                        throw new ToolException("Cannot open the project \"" + finalProjectName + "\"", error,
+                            ToolErrorType.RETRYABLE);
                     }
                 }
 
@@ -216,23 +218,21 @@ public class WriteMcpTool
                         {
                             if (projectFile.getLocation() != null && projectFile.getLocation().toFile().length() > 0)
                             {
-                                return messageFactory.createError(this, call,
-                                    "The file \"" + path + "\" already exists and is not empty. Use the `"
-                                        + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
+                                throw new ToolException("The file \"" + path + "\" already exists and is not empty. Use the `"
+                                    + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
                             }
                         }
                         catch (Exception error)
                         {
-                            return messageFactory.createError(this, call,
-                                "The file \"" + path + "\" already exists. Use the `"
-                                    + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
+                            throw new ToolException("The file \"" + path + "\" already exists. Use the `"
+                                + EditMcpTool.TOOL_NAME + "` tool to modify this file.");
                         }
                     }
 
                     // Check if the file can be edited using editingSupport
                     if (!editingSupport.canEdit(projectFile))
                     {
-                        return messageFactory.createError(this, call, "The file \"" + path
+                        throw new ToolException("The file \"" + path
                             + "\" cannot be created. Writing is not supported for this file type or the location is restricted.");
                     }
 
@@ -252,16 +252,14 @@ public class WriteMcpTool
                                 projectFile.create(source, true, monitor);
                             }
 
-                            projectFile.refreshLocal(IResource.DEPTH_ZERO, monitor);
-                            if (projectFile.getParent() != null)
-                            {
-                                projectFile.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
-                            }
+                            refreshResources(projectFile, monitor);
                         }
                     }
                     catch (CoreException | IOException error)
                     {
-                        return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
+                        // Ensure resources are refreshed even on error
+                        refreshResourcesSafe(projectFile, monitor);
+                        throw new ToolException("Failed to write file", error, ToolErrorType.RETRYABLE);
                     }
 
                     var response = new StringBuilder();
@@ -318,10 +316,9 @@ public class WriteMcpTool
             {
                 if (fileSystem.fileExists(path) && !fileSystem.isFileEmpty(path))
                 {
-                    return messageFactory.createError(this, call,
-                        "The file \"" + path + "\" already exists and is not empty. Use the `"
-                            + EditMcpTool.TOOL_NAME
-                            + "` tool to modify this file.");
+                    throw new ToolException("The file \"" + path + "\" already exists and is not empty. Use the `"
+                        + EditMcpTool.TOOL_NAME
+                        + "` tool to modify this file.");
                 }
 
                 fileSystem.writeAllBytes(path, data);
@@ -350,7 +347,7 @@ public class WriteMcpTool
             }
             catch (IOException error)
             {
-                return messageFactory.createError(this, call, "Failed to write file. " + error.getMessage());
+                throw new ToolException("Failed to write file", error, ToolErrorType.RETRYABLE);
             }
         });
     }
@@ -383,6 +380,40 @@ public class WriteMcpTool
         }
     }
 
+    /**
+     * Refreshes the file and its parent folder in the workspace.
+     *
+     * @param file the file to refresh
+     * @param monitor the progress monitor
+     * @throws CoreException if refresh fails
+     */
+    private void refreshResources(IFile file, IProgressMonitor monitor) throws CoreException
+    {
+        file.refreshLocal(IResource.DEPTH_ZERO, monitor);
+        if (file.getParent() != null)
+        {
+            file.getParent().refreshLocal(IResource.DEPTH_ONE, monitor);
+        }
+    }
+
+    /**
+     * Safely refreshes the file and its parent folder. Errors are logged but not thrown.
+     *
+     * @param file the file to refresh
+     * @param monitor the progress monitor
+     */
+    private void refreshResourcesSafe(IFile file, IProgressMonitor monitor)
+    {
+        try
+        {
+            refreshResources(file, monitor);
+        }
+        catch (CoreException error)
+        {
+            log.logError(error);
+        }
+    }
+
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
@@ -401,6 +432,7 @@ public class WriteMcpTool
         description.append("\n- Some file types require companions (e.g., .bsl needs a matching .mdo).");
         description.append("\n- Avoid creating docs (*.md/README) unless the user explicitly asks.");
         description.append("\n- Avoid emojis unless explicitly requested.");
+        description.append("\n- For temporary files, create them in the system temporary folder: `" + getTempDirectory() + "`.");
         description.append("\n\nRelated tools:");
         description.append("\n- Check existence and context: `" + ReadMcpTool.TOOL_NAME + "`.");
         description.append("\n- Update existing files: `" + EditMcpTool.TOOL_NAME + "`.");
@@ -435,6 +467,17 @@ public class WriteMcpTool
         spec.function.parameters = parameters;
         return spec;
      // @formatter:on
+    }
+
+    /**
+     * Returns the system temporary directory path for cross-platform compatibility.
+     *
+     * @return the temporary directory path
+     */
+    @SuppressWarnings("nls")
+    private static String getTempDirectory()
+    {
+        return System.getProperty("java.io.tmpdir");
     }
 
     private static class Request

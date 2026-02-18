@@ -21,6 +21,8 @@ import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
@@ -109,7 +111,7 @@ public class GetCommandCategoriesMcpTool
         return CompletableFuture.supplyAsync(() -> {
             if (cancellationToken.isCanceled())
             {
-                return messageFactory.createError(this, call, "Operation was cancelled before execution.");
+                throw new ToolException("Operation was cancelled before execution.");
             }
 
             try
@@ -164,8 +166,7 @@ public class GetCommandCategoriesMcpTool
             }
             catch (Exception e)
             {
-                return messageFactory.createError(this, call,
-                    "Failed to retrieve command categories: " + e.getMessage());
+                throw new ToolException("Failed to retrieve command categories", e, ToolErrorType.RETRYABLE);
             }
         });
     }
