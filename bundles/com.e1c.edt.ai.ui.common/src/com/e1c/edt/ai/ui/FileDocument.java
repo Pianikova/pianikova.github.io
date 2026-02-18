@@ -12,6 +12,7 @@ import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.ui.texteditor.ITextEditor;
 
+import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 
@@ -96,12 +97,12 @@ public class FileDocument
         // Validate input
         if (content == null)
         {
-            content = "";
+            content = ""; //$NON-NLS-1$
         }
-        
+
         // Save cursor position before modifying document
         saveCursorPosition();
-        
+
         try
         {
             document.set(content);
@@ -190,14 +191,14 @@ public class FileDocument
                 {
                     return;
                 }
-                
+
                 IDocument currentDocument =
                     textEditor.getDocumentProvider().getDocument(textEditor.getEditorInput());
                 if (currentDocument == null)
                 {
                     return;
                 }
-                
+
                 // Ensure the cursor position is within document bounds
                 var documentLength = currentDocument.getLength();
                 var cursorOffset = Math.min(savedCursorOffset, Math.max(0, documentLength));

@@ -32,6 +32,7 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IContextEntities;
+import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;

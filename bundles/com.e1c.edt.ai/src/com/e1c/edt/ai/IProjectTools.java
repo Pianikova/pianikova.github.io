@@ -12,5 +12,5 @@ public interface IProjectTools
 {
     String determineProjectName(String filePath);
 
-    Optional<IFile> getProjectFile(IProject project, String relativePath);
+    Optional<IFile> getProjectFile(IProject project, String absolutePath);
 }

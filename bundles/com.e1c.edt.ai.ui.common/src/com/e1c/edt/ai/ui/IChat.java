@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui;
 import java.util.List;
 
 import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.McpCallToolsResult;
 
 public interface IChat
