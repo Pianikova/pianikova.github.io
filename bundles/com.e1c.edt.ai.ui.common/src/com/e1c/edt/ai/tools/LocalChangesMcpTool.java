@@ -211,7 +211,7 @@ public class LocalChangesMcpTool
 		if (call.callKind == ToolCallKind.RENDER)
         {
             details.requestMarkdown = MessageFormat.format(Messages.LocalChangesTitleTemplate,
-                projectName != null ? projectName : "current project", filePath != null ? filePath : "selected file");
+                projectName != null ? projectName : Messages.CurrentProject, filePath != null ? filePath : Messages.SelectedFile);
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 

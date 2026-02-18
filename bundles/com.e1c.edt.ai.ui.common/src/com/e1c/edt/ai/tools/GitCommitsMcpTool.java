@@ -144,7 +144,8 @@ public class GitCommitsMcpTool
 
 			// Add max commits parameter
 			requestMarkdown.append("\n\n") //$NON-NLS-1$
-				.append("Max commits: ") //$NON-NLS-1$
+				.append(Messages.MaxCommits)
+				.append(": ") //$NON-NLS-1$
 				.append("`") //$NON-NLS-1$
 				.append(maxCommits)
 				.append("`"); //$NON-NLS-1$
@@ -229,7 +230,7 @@ public class GitCommitsMcpTool
 					.append(markdownUtils.escapeForMarkdown(projectName))
 					.append("`") //$NON-NLS-1$
 					.append("\n\n") //$NON-NLS-1$
-					.append("Max commits: ") //$NON-NLS-1$
+					.append(Messages.MaxCommits + ": ") //$NON-NLS-1$
 					.append("`") //$NON-NLS-1$
 					.append(maxCommits)
 					.append("`"); //$NON-NLS-1$
