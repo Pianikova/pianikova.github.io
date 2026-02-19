@@ -19,7 +19,6 @@ public class AssistentModule
         bind(IHttpLog.class).to(HttpLog.class).in(Singleton.class);
         bind(IHttpClientBuilder.class).to(HttpClientBuilder.class).in(Singleton.class);
         bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
-        bind(IHealthCheckService.class).to(HealthCheckService.class).in(Singleton.class);
         bind(ResponseCache.class).in(Singleton.class);
         bind(IResponseCache.class).to(ResponseCache.class);
         bind(IAIStateListener.class).to(ResponseCache.class);
