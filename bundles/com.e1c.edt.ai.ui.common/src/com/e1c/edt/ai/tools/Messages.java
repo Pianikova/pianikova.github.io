@@ -12,7 +12,6 @@ public class Messages
 
     // Status indicators
     public static String ToolNameTemplate;
-    public static String ToolDone;
     public static String ToolFailed;
 
     // Project operations
@@ -29,8 +28,6 @@ public class Messages
     public static String DeleteTitleTemplate;
     public static String DeletedTemplate;
     public static String Deleted;
-
-    // Editing operations
     public static String EditTitleTemplate;
     public static String EditedTemplate;
     public static String EditDetailsSummary;
