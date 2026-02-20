@@ -5,6 +5,7 @@ package com.e1c.edt.ai.tools;
 
 import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.IMarkdownUtils;
+import com.e1c.edt.ai.IMarkersProvider;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
@@ -46,5 +47,9 @@ public class MCPToolsModule
         bind(IMcpToolsCallMessageFactory.class).to(McpToolsCallMessageFactory.class).in(Singleton.class);
         bind(IMarkdownUtils.class).to(com.e1c.edt.ai.MarkdownUtils.class).in(Singleton.class);
         bind(ILocalHistoryUtils.class).to(LocalHistoryUtils.class).in(Singleton.class);
+
+        // Markers providers
+        var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
+        markersProviderBinder.addBinding().to(CommonMarkersProvider.class);
     }
 }

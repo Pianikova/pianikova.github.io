@@ -8,6 +8,7 @@ import com.e1c.edt.ai.CodeCompletionActionHandler;
 import com.e1c.edt.ai.CodeCompletionSession;
 import com.e1c.edt.ai.ICodeCompletionActionHandler;
 import com.e1c.edt.ai.ICodeCompletionSession;
+import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ISettings;

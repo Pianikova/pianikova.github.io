@@ -17,7 +17,7 @@ pipeline {
     disableConcurrentBuilds()
     timestamps()
     buildDiscarder(logRotator(numToKeepStr:'10'))    // Keeps the 10 most recent builds
-    timeout(time: 30, unit: 'MINUTES')
+    timeout(time: 90, unit: 'MINUTES')
   }
     
   parameters {

@@ -18,13 +18,13 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.text.BadLocationException;
 
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
-import com.e1c.edt.ai.ToolErrorType;
 import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
@@ -32,7 +32,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.ui.IContentSourceProvider;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -331,6 +330,7 @@ public class SetMarkersMcpTool
         {
             markerTypeId = MarkerType.getAiMarkerTypeId(markerReq.severity);
         }
+
         var marker = actualFile.createMarker(markerTypeId);
         markerReq.id = marker.getId();
         setMarkerAttributes(marker, call, markerReq, markerType);

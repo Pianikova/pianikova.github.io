@@ -1,7 +1,7 @@
 /**
  *
  */
-package com.e1c.edt.ai.ui;
+package com.e1c.edt.ai;
 
 import java.nio.charset.Charset;
 
@@ -23,6 +23,8 @@ public interface IFileDocument
     IDocument getDocument();
 
     ITextEditor getTextEditor();
+
+    void setContent(String content);
 
     void save() throws CoreException;
 

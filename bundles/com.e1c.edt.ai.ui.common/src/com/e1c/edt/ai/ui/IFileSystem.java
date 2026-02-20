@@ -6,6 +6,8 @@ package com.e1c.edt.ai.ui;
 import java.io.IOException;
 import java.io.Reader;
 
+import com.e1c.edt.ai.IFileDocument;
+
 public interface IFileSystem
 {
     Iterable<String> getLines(IFileDocument fileDocument, int firstLineNumber, int linesNumber);

@@ -19,6 +19,7 @@ import com._1c.g5.v8.dt.core.platform.management.IDtHostResourceManager;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
+import com._1c.g5.v8.dt.validation.marker.v2.IMarkerManagerV2;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.e1c.edt.ai.ICodePartsProvider;
 import com.e1c.edt.ai.ICodeProvider;
@@ -27,12 +28,14 @@ import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IMarkdownUtils;
+import com.e1c.edt.ai.IMarkersProvider;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.MarkdownUtils;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
 import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
+import com.e1c.edt.ai.context.tools.MarkersProvider;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -88,6 +91,10 @@ class ContextModule
         toolBinder.addBinding().to(FindMcpTool.class);
         toolBinder.addBinding().to(GetObjectMcpTool.class);
 
+        // Markers providers
+        var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
+        markersProviderBinder.addBinding().to(MarkersProvider.class);
+
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();
         bind(IBmModelManager.class).toService();
@@ -99,6 +106,7 @@ class ContextModule
         bind(IDtHostResourceManager.class).toService();
         bind(ITextSearchIndexProvider.class).toService();
         bind(IModelEditingSupport.class).toService();
+        bind(IMarkerManagerV2.class).toService();
         // @formatter:on
     }
 }

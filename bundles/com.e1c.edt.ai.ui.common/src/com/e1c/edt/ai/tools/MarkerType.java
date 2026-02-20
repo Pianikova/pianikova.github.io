@@ -10,6 +10,8 @@ import org.eclipse.core.resources.IMarker;
  */
 public enum MarkerType
 {
+    UNKNOWN(null, "Unknown marker type."), //$NON-NLS-1$
+
     /**
      * Base marker type
      */
@@ -36,6 +38,8 @@ public enum MarkerType
     BOOKMARK(IMarker.BOOKMARK,
         "ALWAYS use it for summaries, reports."), //$NON-NLS-1$
 
+    M1C("1C", "1C marker."), //$NON-NLS-1$ //$NON-NLS-2$
+
     /**
      * Custom AI-generated marker type
      */
@@ -46,7 +50,8 @@ public enum MarkerType
     public static final String AI_MARKER_ERROR = "com.e1c.edt.ai.AIError"; //$NON-NLS-1$
     public static final String AI_MARKER_WARNING = "com.e1c.edt.ai.AIWarning"; //$NON-NLS-1$
     public static final String AI_MARKER_INFO = "com.e1c.edt.ai.AIInfo"; //$NON-NLS-1$
-    public static final String LEGACY_AI_MARKER_BASE = "com.e1c.edt.ai.marker"; //$NON-NLS-1$
+    public static final String M1C_MARKER_BASE = "com._1c.g5.v8.dt.bsl.ui.bsl."; //$NON-NLS-1$
+    public static final String M1C_MARKER_INFO = "1c"; //$NON-NLS-1$
 
     private final String typeId;
     private final String description;
@@ -92,6 +97,8 @@ public enum MarkerType
     {
         switch (this)
         {
+        case UNKNOWN:
+            return "unknown";
         case MARKER:
             return "marker";
         case TASK:
@@ -104,6 +111,8 @@ public enum MarkerType
             return "bookmark";
         case AI_MARKER:
             return "ai_marker";
+        case M1C:
+            return M1C_MARKER_INFO;
         default:
             return name().toLowerCase();
         }
@@ -117,19 +126,28 @@ public enum MarkerType
      */
     public static MarkerType fromTypeId(String typeId)
     {
-        if (typeId != null && (typeId.startsWith(AI_MARKER_BASE) || typeId.startsWith(LEGACY_AI_MARKER_BASE)))
+        if (typeId != null)
         {
-            return MarkerType.AI_MARKER;
+            if (typeId.startsWith(AI_MARKER_BASE))
+            {
+                return MarkerType.AI_MARKER;
+            }
+
+            if (typeId.startsWith(M1C_MARKER_BASE))
+            {
+                return MarkerType.M1C;
+            }
         }
-        for (MarkerType type : values())
+
+        for (var type : values())
         {
-            if (type.typeId.equals(typeId))
+            if (typeId.equals(type.typeId))
             {
                 return type;
             }
         }
 
-        return MarkerType.PROBLEM;
+        return MarkerType.UNKNOWN;
     }
 
     /**
@@ -141,7 +159,9 @@ public enum MarkerType
     public static MarkerType fromDisplayName(String displayName)
     {
         if (displayName == null)
-            return null;
+        {
+            return MarkerType.UNKNOWN;
+        }
 
         for (MarkerType type : values())
         {
@@ -151,7 +171,7 @@ public enum MarkerType
             }
         }
 
-        return null;
+        return MarkerType.UNKNOWN;
     }
 
     @SuppressWarnings("nls")
@@ -161,6 +181,7 @@ public enum MarkerType
         {
             return AI_MARKER_INFO;
         }
+
         var normalized = severity.trim().toLowerCase();
         switch (normalized)
         {
@@ -178,7 +199,6 @@ public enum MarkerType
 
     public static String[] getAiMarkerTypeIds()
     {
-        return new String[] { AI_MARKER_ERROR, AI_MARKER_WARNING, AI_MARKER_INFO,
-            LEGACY_AI_MARKER_BASE + ".error", LEGACY_AI_MARKER_BASE + ".warning", LEGACY_AI_MARKER_BASE + ".info" };
+        return new String[] { AI_MARKER_ERROR, AI_MARKER_WARNING, AI_MARKER_INFO };
     }
 }

@@ -12,6 +12,8 @@ import java.util.NoSuchElementException;
 
 import org.eclipse.jface.text.BadLocationException;
 
+import com.e1c.edt.ai.IFileDocument;
+
 @SuppressWarnings("nls")
 public class FileSystem implements IFileSystem
 {

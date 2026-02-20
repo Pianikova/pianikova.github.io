@@ -18,13 +18,13 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.handlers.HandlerUtil;
 
+import com.e1c.edt.ai.IContentSourceProvider;
+import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
-import com.e1c.edt.ai.ui.IContentSourceProvider;
-import com.e1c.edt.ai.ui.IFileDocument;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.inject.Inject;
 

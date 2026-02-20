@@ -12,6 +12,8 @@ import org.eclipse.jface.text.TextViewer;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.texteditor.ITextEditor;
 
+import com.e1c.edt.ai.IContentSourceProvider;
+import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -29,7 +31,7 @@ public class ContentSourceProvider
     }
 
     @Override
-    public Optional<FileDocument> getFileDocument(IFile file)
+    public Optional<IFileDocument> getFileDocument(IFile file)
     {
         if (file == null)
         {

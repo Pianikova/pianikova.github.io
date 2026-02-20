@@ -163,13 +163,6 @@ public class McpToolsCallMessageFactory
                 responseMarkdown.append(MessageFormat.format(Messages.ToolNameTemplate, call.function.name));
             }
 
-            if (isDone != null && isDone == true)
-            {
-                responseMarkdown.append(System.lineSeparator());
-                responseMarkdown.append(System.lineSeparator());
-                responseMarkdown.append(styleStatusMessage(Messages.ToolDone, TextColor.GREEN, true));
-            }
-
             if (isDone != null && isDone == false)
             {
                 responseMarkdown.append(System.lineSeparator());
