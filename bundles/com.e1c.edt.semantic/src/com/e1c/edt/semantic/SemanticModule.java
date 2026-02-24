@@ -8,13 +8,18 @@ import org.eclipse.jface.preference.IPreferenceStore;
 
 import com._1c.g5.wiring.AbstractServiceAwareModule;
 import com.e1c.edt.ai.HashTools;
+import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ILinkProvider;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.IProgramingLanguage;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Json;
+import com.e1c.edt.ai.LinkProvider;
+import com.e1c.edt.ai.ProjectTools;
 import com.e1c.edt.ai.context.IModuleProvider;
 import com.e1c.edt.ai.context.ModuleProvider;
 import com.google.common.base.Preconditions;
@@ -49,6 +54,9 @@ public class SemanticModule
         bind(IHashTools.class).to(HashTools.class).in(Singleton.class);
         bind(ISettings.class).to(Settings.class).in(Singleton.class);
         bind(IMcpToolsCallMessageFactory.class).to(McpToolsCallMessageFactory.class).in(Singleton.class);
+        bind(ILinkProvider.class).to(LinkProvider.class).in(Singleton.class);
+        bind(IProjectTools.class).to(ProjectTools.class).in(Singleton.class);
+        bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }
