@@ -4,12 +4,12 @@
 package com.e1c.edt.ai.context.tools;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.jface.text.BadLocationException;
 
 import com._1c.g5.v8.dt.validation.marker.BmObjectMarker;
 import com._1c.g5.v8.dt.validation.marker.Marker;
@@ -45,7 +45,7 @@ public class MarkersProvider implements IMarkersProvider
             .map(marker -> marker.get());
     }
 
-    @SuppressWarnings("nls")
+    @SuppressWarnings({ "nls", "unchecked" })
     private Optional<MarkerInfo> createMarkerInfo(IProject project, IFile targetFile, Marker marker)
     {
         var info = new MarkerInfo();
@@ -54,12 +54,29 @@ public class MarkersProvider implements IMarkersProvider
         info.sourceId = marker.getSourceType();
         var details = new HashMap<String, Object>();
         info.details = details;
-        var extraInfos = marker.getExtraInfo();
         Integer offset = null;
         Integer length = null;
+
+        // Use reflection to handle both Map<String, String> and IExtraInfoMap return types
+        Map<String, String> extraInfos = null;
+        try
+        {
+            var getExtraInfoMethod = marker.getClass().getMethod("getExtraInfo");
+            var result = getExtraInfoMethod.invoke(marker);
+            if (result instanceof Map)
+            {
+                extraInfos = (Map<String, String>)result;
+            }
+        }
+        catch (Exception e)
+        {
+            // Method not available or reflection error
+            extraInfos = null;
+        }
+
         if (extraInfos != null)
         {
-            for (var extraInfo : marker.getExtraInfo().entrySet())
+            for (var extraInfo : extraInfos.entrySet())
             {
                 var key = extraInfo.getKey();
                 if (key == null || key.isBlank())
@@ -224,7 +241,8 @@ public class MarkersProvider implements IMarkersProvider
         return Optional.ofNullable(info);
     }
 
-    private String readContentFromFile(IFile file, int line, int offset, int length) throws BadLocationException
+    private String readContentFromFile(IFile file, int line, int offset, int length)
+        throws org.eclipse.jface.text.BadLocationException
     {
         var optionalDocument = contentSourceProvider.getFileDocument(file);
         if (optionalDocument.isEmpty())

@@ -242,19 +242,6 @@ public class GetMarkersMcpTool implements IMcpTool
             return CompletableFuture
                 .supplyAsync(() -> createResponse(project, firstIndex, maxCount, finalMarkerTypeFilter, request.path,
                     call, cancellationToken, details));
-        }).exceptionally(e -> {
-            Throwable cause = e.getCause();
-            if (cause instanceof OperationCanceledException)
-            {
-                throw new ToolException("Build waiting cancelled", cause, ToolErrorType.RETRYABLE);
-            }
-            if (cause instanceof InterruptedException)
-            {
-                Thread.currentThread().interrupt();
-                throw new ToolException("Build waiting interrupted", cause, ToolErrorType.RETRYABLE);
-            }
-
-            throw new ToolException("Error during build waiting", cause, ToolErrorType.RETRYABLE);
         });
     }
 

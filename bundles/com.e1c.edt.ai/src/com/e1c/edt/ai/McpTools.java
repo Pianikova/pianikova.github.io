@@ -16,6 +16,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -26,6 +27,7 @@ public class McpTools
     private static final Pattern LINE_SEPARATOR = Pattern.compile("\\r\\n|\\r|\\n"); //$NON-NLS-1$
 
     private final ILog log;
+    private final ISettings settings;
     private final Map<String, IMcpTool> tools = new HashMap<>();
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
     private final IMcpToolsCallMessageFactory messageFactory;
@@ -39,6 +41,7 @@ public class McpTools
         Preconditions.checkNotNull(messageFactory);
 
         this.log = log;
+        this.settings = settings;
         this.messageFactory = messageFactory;
 
         if (!settings.isExperimental())
@@ -151,6 +154,35 @@ public class McpTools
     {
         var details = new ToolCallMessageDetails();
         var message = error.getMessage();
+
+        // Build detailed message in trace mode
+        if (isLogLevel(Verbosity.TRACE))
+        {
+            var traceMessage = new StringBuilder();
+            traceMessage.append(message);
+            traceMessage.append("\n\n"); //$NON-NLS-1$
+
+            // Add cause if present
+            var cause = error.getCause();
+            if (cause != null)
+            {
+                traceMessage.append("Cause: "); //$NON-NLS-1$
+                traceMessage.append(cause.getMessage());
+                traceMessage.append("\n\n"); //$NON-NLS-1$
+            }
+
+            // Add stack trace
+            traceMessage.append("Stack trace:\n"); //$NON-NLS-1$
+            for (var stackElement : error.getStackTrace())
+            {
+                traceMessage.append("\tat "); //$NON-NLS-1$
+                traceMessage.append(stackElement.toString());
+                traceMessage.append("\n"); //$NON-NLS-1$
+            }
+
+            message = traceMessage.toString();
+        }
+
         if (error instanceof ToolException)
         {
             var toolError = (ToolException)error;
@@ -190,5 +222,10 @@ public class McpTools
 
         var lines = LINE_SEPARATOR.split(content);
         return lines.length > MAX_CONTENT_LINES;
+    }
+
+    private boolean isLogLevel(Verbosity verbosity)
+    {
+        return settings.getVerbosity().getLevel() >= verbosity.getLevel();
     }
 }
