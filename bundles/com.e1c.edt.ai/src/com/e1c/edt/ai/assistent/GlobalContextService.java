@@ -157,7 +157,11 @@ class GlobalContextService
 
         for (var statValue : statistics.getValues())
         {
-            requestBuilder = requestBuilder.header(statValue.getStatisticsType().getHeader(), statValue.getValue());
+            var value = statValue.getValue();
+            if (value != null)
+            {
+                requestBuilder = requestBuilder.header(statValue.getStatisticsType().getHeader(), value);
+            }
         }
 
         var client = clientBuilder.create().build();

@@ -184,7 +184,21 @@ class HttpLog
         sb.append(System.lineSeparator());
         sb.append(response.toString());
         sb.append(System.lineSeparator());
-        sb.append(response.body());
+        var body = response.body();
+        if (body != null)
+        {
+            sb.append("size: ");
+            sb.append(body.toString().length());
+            sb.append(System.lineSeparator());
+            sb.append("body:");
+            var it = body.toString().lines().iterator();
+            while (it.hasNext())
+            {
+                sb.append(System.lineSeparator());
+                sb.append('\t');
+                sb.append(it.next());
+            }
+        }
         return sb.toString();
     }
 

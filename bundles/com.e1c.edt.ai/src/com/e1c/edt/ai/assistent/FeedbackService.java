@@ -110,15 +110,6 @@ class FeedbackService
             .build()
             .sendAsync(request, BodyHandlers.ofString())
             .thenApply(response -> log.response(response, null, stopwatch, true, true))
-            .thenApply(response -> {
-                var statusCode = response.statusCode();
-                if (statusCode >= 300)
-                {
-                    throw new AIClientException("AI HTTP feedback response status code is " + statusCode, null); //$NON-NLS-1$
-                }
-
-                return response;
-            })
             .thenApply(response -> null);
     }
 }

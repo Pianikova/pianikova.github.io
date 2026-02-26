@@ -150,15 +150,6 @@ class SessionService
             .build()
             .sendAsync(request, BodyHandlers.ofString())
             .thenApply(response -> log.response(response, null, stopwatch, true, true))
-            .thenApply(response -> {
-                var statusCode = response.statusCode();
-                if (statusCode >= 300)
-                {
-                    throw new AIClientException("AI HTTP session response status code is " + statusCode, null); //$NON-NLS-1$
-                }
-
-                return response;
-            })
             .thenApply(HttpResponse::body)
             .thenApply(content -> createCession(projectId, content))
             .whenComplete((session, error) -> {

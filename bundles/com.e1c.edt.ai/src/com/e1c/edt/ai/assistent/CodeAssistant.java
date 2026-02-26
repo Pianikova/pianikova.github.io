@@ -25,6 +25,7 @@ import com.e1c.edt.ai.assistent.model.Completion;
 import com.e1c.edt.ai.assistent.model.CompletionRequest;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -163,7 +164,9 @@ class CodeAssistant
             return client.sendAsync(request, BodyHandlers.ofLines());
         });
 
+        var stopwatch = Stopwatch.createStarted();
         call.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+            .thenApply(response -> log.response(response, null, stopwatch, true, true))
             .thenApply(response -> checkResponse(response, observer, cancellationToken))
             .thenApply(HttpResponse::body)
             .thenAccept(stream -> processStream(stream, observer, cancellationToken))
