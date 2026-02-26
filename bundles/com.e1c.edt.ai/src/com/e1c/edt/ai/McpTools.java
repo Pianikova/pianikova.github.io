@@ -31,18 +31,22 @@ public class McpTools
     private final Map<String, IMcpTool> tools = new HashMap<>();
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
     private final IMcpToolsCallMessageFactory messageFactory;
+    private final IJson json;
 
     @Inject
-    public McpTools(ILog log, ISettings settings, Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory)
+    public McpTools(ILog log, ISettings settings, Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory,
+        IJson json)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(messageFactory);
+        Preconditions.checkNotNull(json);
 
         this.log = log;
         this.settings = settings;
         this.messageFactory = messageFactory;
+        this.json = json;
 
         if (!settings.isExperimental())
         {
@@ -99,9 +103,19 @@ public class McpTools
 
             try
             {
+                @SuppressWarnings("nls")
                 var callFuture =
                     tool.call(call, cancellationToken)
-                        .exceptionally(error -> createErrorMessage(tool, call, toolName, error));
+                        .exceptionally(error -> {
+                            log.warning("AI Tool failed", () -> {
+                                var message = new StringBuilder();
+                                message.append(error.toString());
+                                message.append("\n\nCall:\n\n");
+                                message.append(json.serialize(call));
+                                return message.toString();
+                            });
+                            return createErrorMessage(tool, call, toolName, error);
+                        });
                 futures.add(callFuture);
             }
             catch (Exception ex)
