@@ -38,6 +38,7 @@ public class SettingsTracker
             {
                 stateService.setState(ServiceState.SETTINGS_CHANGED);
             }
+
             notifyListeners();
             this.currentSettings.put(owner, settings);
             return true;

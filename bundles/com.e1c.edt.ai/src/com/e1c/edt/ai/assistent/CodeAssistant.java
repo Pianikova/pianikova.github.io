@@ -158,8 +158,14 @@ class CodeAssistant
         var client = clientBuilder.create().build();
         var currentRequestBuilder = requestBuilder;
         var call = sessionCall.call(projectId, cancellationToken, session -> {
-            var request =
-                currentRequestBuilder.header("Session-Id", session.get().sessionId).POST(bodyPublisher).build(); //$NON-NLS-1$
+        	var httpRequestBuilder = currentRequestBuilder;
+            var sessionId = session.flatMap(s -> Optional.ofNullable(s.sessionId)).orElse(null);
+        	if (sessionId != null)
+        	{
+        		httpRequestBuilder = httpRequestBuilder.header("Session-Id", sessionId); //$NON-NLS-1$
+        	}
+
+            var request = httpRequestBuilder.POST(bodyPublisher).build();
             log.request(request, cancellationToken.toString(), requestBody);
             return client.sendAsync(request, BodyHandlers.ofLines());
         });

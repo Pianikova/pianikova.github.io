@@ -29,6 +29,7 @@ class ResponseCache
         CacheBuilder.newBuilder().maximumSize(256).build();
     private final Cache<ProjectId, CompletableFuture<Optional<Session>>> errorsCache =
         CacheBuilder.newBuilder().maximumSize(256).expireAfterWrite(60, TimeUnit.SECONDS).build();
+    private ServiceState lastServiceState;
 
     @Inject
     public ResponseCache(ILog log, IStateService stateService)
@@ -72,10 +73,6 @@ class ResponseCache
 
                             responseCache.invalidate(projectId);
                         }
-                        else
-                        {
-                            errorsCache.invalidate(projectId);
-                        }
                     });
                 });
             }
@@ -88,30 +85,41 @@ class ResponseCache
         return CompletableFuture.completedFuture(Optional.empty());
     }
 
-    @SuppressWarnings("nls")
+    @SuppressWarnings({ "nls", "incomplete-switch" })
     @Override
     public synchronized void onStateChange(AIState state)
     {
-        var serverState = state.getServiceState();
-        if (serverState == ServiceState.SETTINGS_CHANGED)
+        var serviceState = state.getServiceState();
+        if (serviceState.equals(lastServiceState))
         {
+            return;
+        }
+
+        lastServiceState = serviceState;
+        switch (serviceState)
+        {
+        case SETTINGS_CHANGED:
             synchronized (responseCache)
             {
                 responseCache.invalidateAll();
                 errorsCache.invalidateAll();
             }
 
-            return;
-        }
+            log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "cleared (settings changed)");
+            break;
 
-        if (serverState != ServiceState.ONLINE && serverState != ServiceState.SETTINGS_CHANGED)
-        {
+        case OFFLINE:
+        case SERVER_ERROR:
+        case SESSION_EXPIRED:
+        case SSL_ERROR:
             synchronized (responseCache)
             {
                 responseCache.invalidateAll();
             }
 
-            log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "cleared");
+            log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "cleared  (fail)");
+            break;
+
         }
     }
 }

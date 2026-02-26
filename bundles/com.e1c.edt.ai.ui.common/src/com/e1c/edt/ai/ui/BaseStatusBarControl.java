@@ -27,16 +27,13 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
-import com.e1c.edt.ai.IClientTokenValidator;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IVersionProvider;
-import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.inject.Inject;
@@ -57,21 +54,16 @@ public class BaseStatusBarControl
     @Inject
     private IVersionProvider versionProvider;
     @Inject
-    private IUINotificationService notificationService;
-    @Inject
     private ISettings settings;
     @Inject
     private ISettingsSetter settingsSetter;
     @Inject
     private IReflection reflection;
     @Inject
-    private IClientTokenValidator clientTokenValidator;
-    @Inject
     private IThemeManager themeManager;
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
-    private boolean hintWasShown = false;
     private Font font;
     private Canvas statusCanvas;
     private CCombo policyCombo;
@@ -80,7 +72,7 @@ public class BaseStatusBarControl
 
     // Status colors (soft, not too bright)
     private static final RGB COLOR_ONLINE = new RGB(120, 180, 120);
-    private static final RGB COLOR_BUSY = new RGB(200, 180, 100);
+    private static final RGB COLOR_BUSY = new RGB(150, 210, 150);
     private static final RGB COLOR_OFF = new RGB(180, 120, 120); // Red for error state
     private static final RGB COLOR_DISABLED = new RGB(150, 150, 150); // Gray for disabled/off mode
 
@@ -268,13 +260,14 @@ public class BaseStatusBarControl
 
         parent.getParent().setRedraw(true);
         composite.addDisposeListener(this);
-        stateService.addListener(this);
 
         // Force redraw with delay to ensure layout is complete
         dispatcher.dispatch(() -> {
             statusCanvas.redraw();
         });
 
+        stateService.addListener(this);
+        onStateChange(stateService.getState());
         return composite;
     }
 
@@ -452,65 +445,14 @@ public class BaseStatusBarControl
         dispatcher.dispatch(() -> changeState(state));
     }
 
-    @SuppressWarnings("incomplete-switch")
     private void changeState(AIState state)
     {
-        var policy = settings.getCodeCompletionPolicy();
         var info = versionProvider.getPluginVersion().toString();
-        var serviceState = state.getServiceState();
-        if (serviceState == ServiceState.SETTINGS_CHANGED || serviceState == ServiceState.ONLINE)
-        {
-            hintWasShown = false;
-        }
-
         if (settings.isEnabled())
         {
-            switch (serviceState)
-            {
-            case TOKEN_FAILED:
-
-                if (!hintWasShown)
-                {
-                    if (clientTokenValidator.isValid(settings.getClientToken()))
-                    {
-
-                        notificationService.createNotification(
-                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
-                            Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
-                            UINotificationType.ERROR);
-                    }
-                    else
-                    {
-                        notificationService.createNotification(
-                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.NotActivated,
-                            Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
-                            UINotificationType.INFO);
-                    }
-
-                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
-                    hintWasShown = true;
-                }
-
-                break;
-
-            case SSL_ERROR:
-                if (!hintWasShown)
-                {
-                    notificationService.createNotification(
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
-                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
-                        UINotificationType.ERROR);
-                    hintWasShown = true;
-                }
-
-                break;
-            }
-
             switch (state.getServiceState())
             {
             case ONLINE:
-                hintWasShown = false;
-                notificationService.closeNotificationIfOpen();
                 info = info + ' ' + Messages.StatusOnline;
                 switch (state.getActionState())
                 {
@@ -524,8 +466,8 @@ public class BaseStatusBarControl
                 }
                 break;
 
-            case SETTINGS_CHANGED:
-                currentStatusColor = COLOR_OFF;
+            case MISSING_TOKEN:
+                currentStatusColor = COLOR_DISABLED;
                 break;
 
             default:
@@ -533,14 +475,12 @@ public class BaseStatusBarControl
                 break;
             }
         }
-
-        policy = settings.getCodeCompletionPolicy();
-        if (!settings.isEnabled() || policy == CodeCompletionPolicy.OFF)
+        else
         {
             currentStatusColor = COLOR_DISABLED;
         }
 
-        policy = settings.getCodeCompletionPolicy();
+        var policy = settings.getCodeCompletionPolicy();
         statusCanvas.setToolTipText(info);
         policyCombo.select(policy.getIndex());
         policyTooltip.setText(policy.getDescription());

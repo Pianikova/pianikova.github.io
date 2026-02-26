@@ -59,7 +59,7 @@ class RequestBuilder
         }
         catch (IllegalArgumentException e)
         {
-            stateService.setState(ServiceState.TOKEN_FAILED);
+            stateService.setState(ServiceState.TOKEN_ERROR);
             // ignore
         }
 

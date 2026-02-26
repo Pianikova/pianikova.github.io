@@ -38,8 +38,7 @@ public class SessionCall
     private final IStateService stateService;
 
     @Inject
-    public SessionCall(ILog log, IHttpLog httpLog, IStateListener stateListener,
-        ISessionService sessionService,
+    public SessionCall(ILog log, IHttpLog httpLog, IStateListener stateListener, ISessionService sessionService,
         IStateService stateService)
     {
         Preconditions.checkNotNull(log);
@@ -122,7 +121,7 @@ public class SessionCall
                 if (throwable == null)
                 {
                     var statusCode = response.statusCode();
-                    if (statusCode >= 400 && statusCode < 500 && attemptCount < MAX_RETRY_ATTEMPTS)
+                    if (statusCode >= 400 && statusCode < 500 && statusCode != 403 && attemptCount < MAX_RETRY_ATTEMPTS)
                     {
                         int nextAttempt = attemptCount + 1;
                         long delaySeconds = calculateRetryDelay(attemptCount);
@@ -138,10 +137,6 @@ public class SessionCall
                     }
                     else
                     {
-                        if (statusCode >= 400 && statusCode < 500)
-                        {
-                            stateListener.onStateChange(STATE_CHANGED);
-                        }
                         httpLog.response(response, cancellationToken.toString(), stopwatch, true, attemptCount > 0);
                         result.complete(response);
                     }

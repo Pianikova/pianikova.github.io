@@ -106,11 +106,7 @@ class HttpLog
         var statusCode = response.statusCode();
         if (statusCode >= 200 && statusCode < 300)
         {
-            if (handleError)
-            {
-                stateService.setState(ServiceState.ONLINE);
-            }
-
+            stateService.setState(ServiceState.ONLINE);
             if (detailed)
             {
                 final HttpResponse<T> currentResponse = response;
@@ -145,7 +141,7 @@ class HttpLog
                             switch (errorResponse.errorType.toLowerCase())
                             {
                             case "token_not_found":
-                                stateService.setState(ServiceState.TOKEN_FAILED);
+                                stateService.setState(ServiceState.TOKEN_ERROR);
                                 break;
 
                             case "invalid_session":

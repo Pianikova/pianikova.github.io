@@ -24,27 +24,24 @@ import com.google.inject.Inject;
  *
  */
 class StateService
-    implements IStateService, IInitializable
+    implements IStateService
 {
     private static final ListenerList<IStateListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
     private final ILog log;
+    private final ISettings settings;
     private ServiceState serviceState = ServiceState.OFFLINE;
     private ActionState actionState = ActionState.INACTIVE;
     private AtomicInteger _busy = new AtomicInteger(0);
 
     @Inject
-    public StateService(ILog log, ISettings settings, IDispatcher dispatcher)
+    public StateService(ILog log, ISettings settings)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settings);
 
         this.log = log;
+        this.settings = settings;
     }
-
-    @Override
-    public void initialize()
-    {
-        //
-    };
 
     @Override
     public void addListener(IStateListener newListener)
@@ -59,17 +56,23 @@ class StateService
     }
 
     @Override
+    public AIState getState()
+    {
+        if (!settings.hasClientToken())
+        {
+            serviceState = ServiceState.MISSING_TOKEN;
+        }
+
+        return new AIState(serviceState, actionState);
+    }
+
+    @Override
     public void setState(ServiceState serviceState)
     {
         Preconditions.checkNotNull(serviceState);
         if (this.serviceState != serviceState)
         {
             this.serviceState = serviceState;
-            if (serviceState == ServiceState.OFFLINE)
-            {
-                actionState = ActionState.INACTIVE;
-            }
-
             refresh();
         }
     }
@@ -77,7 +80,7 @@ class StateService
     @Override
     public void refresh()
     {
-        var state = new AIState(serviceState, actionState);
+        var state = getState();
         log.trace(TracingSources.API_CALLS, "StateService", () -> state.toString()); //$NON-NLS-1$
         for (var listener : listeners)
         {

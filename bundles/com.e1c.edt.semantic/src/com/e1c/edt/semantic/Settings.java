@@ -24,6 +24,12 @@ class Settings
     }
 
     @Override
+    public boolean hasClientToken()
+    {
+        return true;
+    }
+
+    @Override
     public String getClientToken()
     {
         return "semantic"; //$NON-NLS-1$

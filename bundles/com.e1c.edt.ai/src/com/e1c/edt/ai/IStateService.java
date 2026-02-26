@@ -7,6 +7,8 @@ import com.e1c.edt.ai.assistent.IStateListener;
 
 public interface IStateService
 {
+    AIState getState();
+
     void setState(ServiceState serviceState);
 
     AutoCloseable busy();
