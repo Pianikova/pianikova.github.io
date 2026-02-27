@@ -64,6 +64,8 @@ public class BaseStatusBarControl
     private IThemeManager themeManager;
     @Inject
     private IWeb web;
+    @Inject
+    private IPreferences preferences;
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
@@ -406,8 +408,9 @@ public class BaseStatusBarControl
         {
             if (isMissingTokenState)
             {
-                // Open browser to activation page
+                // Open browser to activation page and open preferences
                 web.browse(settings.getHomePage());
+                preferences.show(IPreferences.AI);
             }
             else
             {

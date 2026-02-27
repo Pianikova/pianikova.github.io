@@ -118,6 +118,7 @@ public class AIUICommonModule
         bind(IThemeManager.class).to(ThemeManager.class).in(Singleton.class);
         bind(INotifications.class).to(Notifications.class).in(Singleton.class);
         bind(IWeb.class).to(Web.class).in(Singleton.class);
+        bind(IPreferences.class).to(Preferences.class).in(Singleton.class);
         // @formatter:on
     }
 }
