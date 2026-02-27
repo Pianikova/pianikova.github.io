@@ -410,10 +410,11 @@ public class BaseStatusBarControl
                 // Open browser to activation page
                 try
                 {
+                    String homePage = settings.getHomePage();
                     PlatformUI.getWorkbench()
                         .getBrowserSupport()
                         .getExternalBrowser()
-                        .openURL(new URL("https://code.1c.ai/")); //$NON-NLS-1$
+                        .openURL(new URL(homePage));
                 }
                 catch (Exception ex)
                 {
