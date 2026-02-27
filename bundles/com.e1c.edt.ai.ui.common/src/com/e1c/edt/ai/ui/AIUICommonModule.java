@@ -117,6 +117,7 @@ public class AIUICommonModule
         bind(IEditorPositionManager.class).to(EditorPositionManager.class).in(Singleton.class);
         bind(IThemeManager.class).to(ThemeManager.class).in(Singleton.class);
         bind(INotifications.class).to(Notifications.class).in(Singleton.class);
+        bind(IWeb.class).to(Web.class).in(Singleton.class);
         // @formatter:on
     }
 }

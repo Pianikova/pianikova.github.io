@@ -3,9 +3,6 @@
  */
 package com.e1c.edt.ai.ui.preferences;
 
-import java.awt.Desktop;
-import java.net.URI;
-
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.preference.ComboFieldEditor;
@@ -38,6 +35,7 @@ import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.ui.AIUICommonModule;
 import com.e1c.edt.ai.ui.BaseActivator;
+import com.e1c.edt.ai.ui.IWeb;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 
@@ -80,6 +78,8 @@ public class ClientAIPreferencePage
     ISettingsSetter settingsSetter;
     @Inject
     IClientTokenValidator clientTokenValidator;
+    @Inject
+    IWeb web;
 
     private String prevToken;
 
@@ -155,22 +155,7 @@ public class ClientAIPreferencePage
             @Override
             public void widgetSelected(SelectionEvent e)
             {
-                try
-                {
-                    var url = defaultSettings.getHomePage(); //
-                    if (Desktop.isDesktopSupported())
-                    {
-                        var desktop = Desktop.getDesktop();
-                        if (desktop.isSupported(Desktop.Action.BROWSE))
-                        {
-                            desktop.browse(new URI(url));
-                        }
-                    }
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
-                }
+                web.browse(defaultSettings.getHomePage());
             }
         });
 

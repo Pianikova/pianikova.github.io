@@ -3,8 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.net.URL;
-
 import org.eclipse.jface.dialogs.PopupDialog;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -20,7 +18,6 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Link;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.ui.PlatformUI;
 
 import com.e1c.edt.ai.ui.UINotificationService.UINotificationActionType;
 import com.google.inject.Inject;
@@ -34,6 +31,9 @@ public class UINotification
 {
     @Inject
     private IDispatcher dispatcher;
+
+    @Inject
+    private IWeb web;
 
     private final String message;
     private final String linkText;
@@ -113,14 +113,7 @@ public class UINotification
                 @Override
                 public void widgetSelected(SelectionEvent e)
                 {
-                    try
-                    {
-                        PlatformUI.getWorkbench().getBrowserSupport().getExternalBrowser().openURL(new URL(url));
-                    }
-                    catch (Exception ex)
-                    {
-                        ex.printStackTrace();
-                    }
+                    web.browse(url);
                 }
             });
             GridData linkData = new GridData(SWT.FILL, SWT.TOP, true, false);

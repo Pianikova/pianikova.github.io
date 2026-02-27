@@ -3,8 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.net.URL;
-
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -29,7 +27,6 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
@@ -65,6 +62,8 @@ public class BaseStatusBarControl
     private IReflection reflection;
     @Inject
     private IThemeManager themeManager;
+    @Inject
+    private IWeb web;
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
@@ -408,18 +407,7 @@ public class BaseStatusBarControl
             if (isMissingTokenState)
             {
                 // Open browser to activation page
-                try
-                {
-                    String homePage = settings.getHomePage();
-                    PlatformUI.getWorkbench()
-                        .getBrowserSupport()
-                        .getExternalBrowser()
-                        .openURL(new URL(homePage));
-                }
-                catch (Exception ex)
-                {
-                    ex.printStackTrace();
-                }
+                web.browse(settings.getHomePage());
             }
             else
             {
