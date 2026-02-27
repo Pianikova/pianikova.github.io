@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.net.URL;
+
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -27,6 +29,7 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
@@ -34,6 +37,7 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.inject.Inject;
@@ -91,6 +95,9 @@ public class BaseStatusBarControl
     // Bounds for policy text click detection
     private int policyTextX = 0;
     private int policyTextWidth = 0;
+
+    // Track if we're in MISSING_TOKEN state
+    private boolean isMissingTokenState = false;
 
     public BaseStatusBarControl()
     {
@@ -327,38 +334,66 @@ public class BaseStatusBarControl
             brightForeground.dispose(); // Dispose temporary color only if we created it
         }
 
-        // Draw policy text and dropdown indicator
-        var policy = settings.getCodeCompletionPolicy();
-        String policyName = policy.getName().toLowerCase();
-        String policyText;
-        if (policyName.contains(":"))
+        // Draw policy text and dropdown indicator (or activation link when MISSING_TOKEN)
+        String policyText = ""; //$NON-NLS-1$
+        int policyTextX = textX + textExtent.x;
+        var policyTextExtent = gc.textExtent(policyText);
+
+        if (isMissingTokenState)
         {
-            // Get text after last colon
-            policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+            // Show activation link instead of policy
+            policyText = Messages.Activate;
+            policyTextExtent = gc.textExtent(policyText);
+            int policyTextY = centerY - policyTextExtent.y / 2;
+
+            // Store bounds for click detection
+            this.policyTextX = policyTextX;
+            this.policyTextWidth = policyTextExtent.x;
+
+            // Draw activation text as link (bright blue visible in dark theme)
+            Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
+            gc.setForeground(brightLink);
+            gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
+
+            // Draw underline for link effect
+            int underlineY = policyTextY + policyTextExtent.y - 2;
+            gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
+
+            brightLink.dispose(); // Dispose temporary color
         }
         else
         {
-            policyText = policyName;
+            // Show policy text as usual
+            var policy = settings.getCodeCompletionPolicy();
+            String policyName = policy.getName().toLowerCase();
+            if (policyName.contains(":"))
+            {
+                // Get text after last colon
+                policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+            }
+            else
+            {
+                policyText = policyName;
+            }
+
+            policyTextExtent = gc.textExtent(policyText);
+            int policyTextY = centerY - policyTextExtent.y / 2;
+
+            // Store bounds for click detection
+            this.policyTextX = policyTextX;
+            this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
+
+            // Draw policy text as link (bright blue visible in dark theme)
+            Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
+            gc.setForeground(brightLink);
+            gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
+
+            // Draw underline for link effect
+            int underlineY = policyTextY + policyTextExtent.y - 2;
+            gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
+
+            brightLink.dispose(); // Dispose temporary color
         }
-
-        int policyTextX = textX + textExtent.x;
-        var policyTextExtent = gc.textExtent(policyText);
-        int policyTextY = centerY - policyTextExtent.y / 2;
-
-        // Store bounds for click detection
-        this.policyTextX = policyTextX;
-        this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
-
-        // Draw policy text as link (bright blue visible in dark theme)
-        Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
-        gc.setForeground(brightLink);
-        gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
-
-        // Draw underline for link effect
-        int underlineY = policyTextY + policyTextExtent.y - 2;
-        gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
-
-        brightLink.dispose(); // Dispose temporary color
 
         // Reset foreground color
         gc.setForeground(display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND));
@@ -370,10 +405,28 @@ public class BaseStatusBarControl
         if (event.x >= policyTextX && event.x <= policyTextX + policyTextWidth && event.y >= 0
             && event.y <= bounds.height)
         {
-            // Show policy menu at cursor position
-            var location = statusCanvas.toDisplay(event.x, event.y);
-            policyMenu.setLocation(location.x, location.y);
-            policyMenu.setVisible(true);
+            if (isMissingTokenState)
+            {
+                // Open browser to activation page
+                try
+                {
+                    PlatformUI.getWorkbench()
+                        .getBrowserSupport()
+                        .getExternalBrowser()
+                        .openURL(new URL("https://code.1c.ai/")); //$NON-NLS-1$
+                }
+                catch (Exception ex)
+                {
+                    ex.printStackTrace();
+                }
+            }
+            else
+            {
+                // Show policy menu at cursor position
+                var location = statusCanvas.toDisplay(event.x, event.y);
+                policyMenu.setLocation(location.x, location.y);
+                policyMenu.setVisible(true);
+            }
         }
     }
 
@@ -448,6 +501,8 @@ public class BaseStatusBarControl
     private void changeState(AIState state)
     {
         var info = versionProvider.getPluginVersion().toString();
+        isMissingTokenState = state.getServiceState() == ServiceState.MISSING_TOKEN;
+
         if (settings.isEnabled())
         {
             switch (state.getServiceState())

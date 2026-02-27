@@ -60,6 +60,7 @@ public class Messages
     public static String CorrectErrors;
     public static String InOtherWords;
     public static String ImproveStyle;
+    public static String Activate;
 
     static
     {
