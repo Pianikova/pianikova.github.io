@@ -328,7 +328,7 @@ public class SetMarkersMcpTool
         var markerTypeId = markerType.getTypeId();
         if (markerType == MarkerType.AI_MARKER)
         {
-            markerTypeId = MarkerType.getAiMarkerTypeId(markerReq.severity);
+            markerTypeId = convertAISeverity(markerReq.severity);
         }
 
         var marker = actualFile.createMarker(markerTypeId);
@@ -469,6 +469,29 @@ public class SetMarkersMcpTool
         case "information":
         default:
             return IMarker.SEVERITY_INFO;
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private static String convertAISeverity(String severity)
+    {
+        if (severity == null)
+        {
+            return MarkerType.AI_MARKER_INFO;
+        }
+
+        var normalized = severity.trim().toLowerCase();
+        switch (normalized)
+        {
+        case "error":
+            return MarkerType.AI_MARKER_ERROR;
+        case "warn":
+        case "warning":
+            return MarkerType.AI_MARKER_WARNING;
+        case "info":
+        case "information":
+        default:
+            return MarkerType.AI_MARKER_INFO;
         }
     }
 
