@@ -38,14 +38,14 @@ public class Notifications implements INotifications
     @Override
     public boolean showTokenError()
     {
-        return createNotification(Messages.StatusTokenFailed, Messages.Support,
+        return createNotification(com.e1c.edt.ai.Messages.StatusTokenFailed, Messages.Support,
             settings.getHomePage() + "troubleshooting/#issue_missing_token", UINotificationType.ERROR); //$NON-NLS-1$
     }
 
     @Override
     public boolean showSSLError()
     {
-        return createNotification(Messages.StatusSSLFailed, Messages.Support,
+        return createNotification(com.e1c.edt.ai.Messages.StatusSSLFailed, Messages.Support,
             settings.getHomePage() + "troubleshooting/#issue_ssl_error", UINotificationType.ERROR); //$NON-NLS-1$
     }
 

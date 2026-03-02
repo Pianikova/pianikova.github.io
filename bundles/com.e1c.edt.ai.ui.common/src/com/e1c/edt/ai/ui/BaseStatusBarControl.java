@@ -515,9 +515,10 @@ public class BaseStatusBarControl
         var info = versionProvider.getPluginVersion().toString();
         isMissingTokenState = state.getServiceState() == ServiceState.MISSING_TOKEN;
 
-        if (settings.isEnabled() && state.getServiceState() == ServiceState.ONLINE)
+        if (settings.isEnabled())
         {
-            info = info + ' ' + Messages.StatusOnline;
+            var message = state.getServiceState().getMessage();
+            info = info + ' ' + message;
         }
 
         lastAIState = state;

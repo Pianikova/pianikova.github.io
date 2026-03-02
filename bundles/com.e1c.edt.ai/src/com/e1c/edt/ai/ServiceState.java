@@ -9,24 +9,31 @@ package com.e1c.edt.ai;
  */
 public enum ServiceState
 {
-    MISSING_TOKEN(false),
-    TOKEN_ERROR(false),
-    SERVER_ERROR(false),
-    SETTINGS_CHANGED(false),
-    SSL_ERROR(false),
-    SESSION_EXPIRED(true),
-    OFFLINE(false),
-    ONLINE(false);
+    MISSING_TOKEN(false, Messages.StatusMissingToken),
+    TOKEN_ERROR(false, Messages.StatusTokenFailed),
+    SERVER_ERROR(false, Messages.StatusServerError),
+    SETTINGS_CHANGED(false, Messages.StatusSettingsChanged),
+    SSL_ERROR(false, Messages.StatusSSLFailed),
+    SESSION_EXPIRED(true, Messages.StatusSessionExpired),
+    OFFLINE(false, Messages.StatusOffline),
+    ONLINE(false, Messages.StatusOnline);
 
     private final boolean allowDuplicates;
+    private final String message;
 
-    ServiceState(boolean allowDuplicates)
+    ServiceState(boolean allowDuplicates, String message)
     {
         this.allowDuplicates = allowDuplicates;
+        this.message = message;
     }
 
     public boolean isAllowDuplicates()
     {
         return allowDuplicates;
+    }
+
+    public String getMessage()
+    {
+        return message;
     }
 }

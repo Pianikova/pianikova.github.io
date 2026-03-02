@@ -31,6 +31,14 @@ public class Messages
     public static String FileMenu_CopyFileName;
     public static String FileMenu_CopyLink;
     public static String McpTools_RetryableError;
+    public static String StatusOffline;
+    public static String StatusOnline;
+    public static String StatusMissingToken;
+    public static String StatusServerError;
+    public static String StatusSettingsChanged;
+    public static String StatusSessionExpired;
+    public static String StatusTokenFailed;
+    public static String StatusSSLFailed;
 
     static
     {
