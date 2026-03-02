@@ -51,7 +51,7 @@ public class Notificator
     public void initialize()
     {
         onStateChange(stateService.getState());
-        scheduleUpdate(TimeUnit.SECONDS.toMillis(5));
+        scheduleUpdate(TimeUnit.SECONDS.toMillis(15));
     }
 
     @SuppressWarnings("incomplete-switch")

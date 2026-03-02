@@ -30,6 +30,7 @@ import org.eclipse.swt.widgets.Listener;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
@@ -77,6 +78,7 @@ public class BaseStatusBarControl
 
     // Status colors (soft, not too bright)
     private static final RGB COLOR_ONLINE = new RGB(120, 180, 120);
+    private static final RGB COLOR_SETTINGS_CHANGED = new RGB(100, 150, 100); // Darker than COLOR_ONLINE
     private static final RGB COLOR_BUSY = new RGB(150, 210, 150);
     private static final RGB COLOR_OFF = new RGB(180, 120, 120); // Red for error state
     private static final RGB COLOR_DISABLED = new RGB(150, 150, 150); // Gray for disabled/off mode
@@ -86,11 +88,12 @@ public class BaseStatusBarControl
     private static final int STATUS_TEXT_MARGIN = 5;
 
     private Color colorOnline;
+    private Color colorSettingsChanged;
     private Color colorBusy;
     private Color colorOff;
     private Color colorDisabled;
 
-    private RGB currentStatusColor = COLOR_DISABLED;
+    private AIState lastAIState;
     private String statusText = Messages.AIName + " "; //$NON-NLS-1$
 
     // Bounds for policy text click detection
@@ -166,6 +169,7 @@ public class BaseStatusBarControl
 
         // Initialize colors
         colorOnline = new Color(parent.getDisplay(), COLOR_ONLINE);
+        colorSettingsChanged = new Color(parent.getDisplay(), COLOR_SETTINGS_CHANGED);
         colorBusy = new Color(parent.getDisplay(), COLOR_BUSY);
         colorOff = new Color(parent.getDisplay(), COLOR_OFF);
         colorDisabled = new Color(parent.getDisplay(), COLOR_DISABLED);
@@ -248,16 +252,6 @@ public class BaseStatusBarControl
                 {
                     settingsSetter.setCodeCompletionPolicy(codeCompletionPolicy);
                     policyTooltip.setText(codeCompletionPolicy.getDescription());
-
-                    // Update color if OFF is selected
-                    if (codeCompletionPolicy == CodeCompletionPolicy.OFF)
-                    {
-                        currentStatusColor = COLOR_DISABLED;
-                    }
-                    else if (settings.isEnabled())
-                    {
-                        currentStatusColor = COLOR_ONLINE;
-                    }
 
                     statusCanvas.redraw();
                 }
@@ -424,25 +418,38 @@ public class BaseStatusBarControl
 
     private Color getCurrentStatusColor()
     {
-        if (colorOnline == null || colorBusy == null || colorOff == null || colorDisabled == null)
+        if (colorOnline == null || colorBusy == null || colorOff == null || colorDisabled == null
+            || colorSettingsChanged == null)
         {
             return statusCanvas.getDisplay().getSystemColor(SWT.COLOR_GRAY);
         }
 
-        if (currentStatusColor == COLOR_ONLINE)
-        {
-            return colorOnline;
-        }
-        else if (currentStatusColor == COLOR_BUSY)
-        {
-            return colorBusy;
-        }
-        else if (currentStatusColor == COLOR_DISABLED)
+        if (!settings.isEnabled())
         {
             return colorDisabled;
         }
-        else
+
+        if (lastAIState == null)
         {
+            return colorDisabled;
+        }
+
+        switch (lastAIState.getServiceState())
+        {
+        case ONLINE:
+            if (lastAIState.getActionState() == ActionState.BUSY)
+            {
+                return colorBusy;
+            }
+            return colorOnline;
+
+        case MISSING_TOKEN:
+            return colorDisabled;
+
+        case SETTINGS_CHANGED:
+            return colorSettingsChanged;
+
+        default:
             return colorOff;
         }
     }
@@ -466,6 +473,11 @@ public class BaseStatusBarControl
         if (colorOnline != null && !colorOnline.isDisposed())
         {
             colorOnline.dispose();
+        }
+
+        if (colorSettingsChanged != null && !colorSettingsChanged.isDisposed())
+        {
+            colorSettingsChanged.dispose();
         }
 
         if (colorBusy != null && !colorBusy.isDisposed())
@@ -501,31 +513,14 @@ public class BaseStatusBarControl
             {
             case ONLINE:
                 info = info + ' ' + Messages.StatusOnline;
-                switch (state.getActionState())
-                {
-                case BUSY:
-                    currentStatusColor = COLOR_BUSY;
-                    break;
-
-                default:
-                    currentStatusColor = COLOR_ONLINE;
-                    break;
-                }
-                break;
-
-            case MISSING_TOKEN:
-                currentStatusColor = COLOR_DISABLED;
                 break;
 
             default:
-                currentStatusColor = COLOR_OFF;
                 break;
             }
         }
-        else
-        {
-            currentStatusColor = COLOR_DISABLED;
-        }
+
+        lastAIState = state;
 
         var policy = settings.getCodeCompletionPolicy();
         statusCanvas.setToolTipText(info);
@@ -547,11 +542,6 @@ public class BaseStatusBarControl
         var codeCompletionPolicy = policies[index];
         settingsSetter.setCodeCompletionPolicy(codeCompletionPolicy);
         policyTooltip.setText(codeCompletionPolicy.getDescription());
-        if (!settings.isEnabled())
-        {
-            currentStatusColor = COLOR_OFF;
-            statusCanvas.redraw();
-        }
     }
 
     @Override
