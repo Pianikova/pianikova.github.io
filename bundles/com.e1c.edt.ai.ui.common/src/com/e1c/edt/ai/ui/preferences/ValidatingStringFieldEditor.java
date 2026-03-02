@@ -14,7 +14,7 @@ class ValidatingStringFieldEditor
     extends StringFieldEditor
 {
     private static final TreeMap<WellknownError, String> Errors = new TreeMap<>();
-    private IValidator<String> validator;
+    protected IValidator<String> validator;
 
     static
     {

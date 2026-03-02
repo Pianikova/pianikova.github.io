@@ -88,6 +88,7 @@ public class ClientAIPreferencePage
     IWeb web;
 
     private String prevToken;
+    private TokenFieldEditor tokenFieldEditor;
     private boolean settingsChanged = false;
 
     public ClientAIPreferencePage()
@@ -108,13 +109,14 @@ public class ClientAIPreferencePage
     {
         var parent = getFieldEditorParent();
 
-        var tokenField = new ValidatingStringFieldEditor(ISettingsStore.CLIENT_TOKEN,
+        // Create token field with validation
+        tokenFieldEditor = new TokenFieldEditor(ISettingsStore.CLIENT_TOKEN,
             Messages.ClientAIPreferencePage_Client_Token, parent, new IValidator<String>()
             {
                 @Override
                 public ValidationResult validate(String token)
                 {
-                    // Empty or whitespace-only tokens are considered valid
+                    // Empty or whitespace-only tokens are always valid
                     if (token == null || token.isBlank())
                     {
                         return ValidationResult.SUCCESS;
@@ -129,10 +131,11 @@ public class ClientAIPreferencePage
                     return ValidationResult.SUCCESS;
                 }
             });
-        setLabelTooltip(tokenField, Messages.ClientAIPreferencePage_Client_Token_Tooltip);
-        var tokenText = tokenField.getTextControl(getFieldEditorParent());
+        BaseActivator.injectMembers(tokenFieldEditor);
+        setLabelTooltip(tokenFieldEditor, Messages.ClientAIPreferencePage_Client_Token_Tooltip);
+        var tokenText = tokenFieldEditor.getTextControl(getFieldEditorParent());
         tokenText.setEchoChar('*');
-        addField(tokenField);
+        addField(tokenFieldEditor);
 
         var policyCombo = new PolicyComboFieldEditor(parent);
         setLabelTooltip(policyCombo, Messages.ClientAIPreferencePage_CodeCompletionPolicy_Tooltip);
@@ -231,7 +234,6 @@ public class ClientAIPreferencePage
         }
 
         this.prevToken = settings.getClientToken();
-        settingsChanged = false;
         return result;
     }
 

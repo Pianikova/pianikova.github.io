@@ -31,6 +31,11 @@ public class Messages
     public static String Error_Unknown;
     public static String Error_InvalidToken;
     public static String ClientAIPreferencePage_Client_Token_Tooltip;
+    public static String TokenFieldEditor_Validate;
+    public static String TokenFieldEditor_ValidationError;
+    public static String TokenFieldEditor_ValidationSuccess;
+    public static String TokenFieldEditor_TokenValid;
+    public static String TokenFieldEditor_TokenInvalid;
     public static String ClientAIPreferencePage_CodeCompletionPolicy_Tooltip;
     public static String ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip;
     public static String ClientAIPreferencePage_Language_Tooltip;

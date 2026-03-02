@@ -31,6 +31,7 @@ public class AssistentModule
         bind(ICompressor.class).to(Compressor.class).in(Singleton.class);
         bind(ITools.class).to(Tools.class).in(Singleton.class);
         bind(ISessionCall.class).to(SessionCall.class).in(Singleton.class);
+        bind(ITokenCheck.class).to(TokenCheck.class).in(Singleton.class);
         // @formatter:on
     }
 }
