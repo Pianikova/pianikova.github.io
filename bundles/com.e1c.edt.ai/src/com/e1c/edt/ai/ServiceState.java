@@ -9,12 +9,24 @@ package com.e1c.edt.ai;
  */
 public enum ServiceState
 {
-    MISSING_TOKEN,
-    TOKEN_ERROR,
-    SERVER_ERROR,
-    SETTINGS_CHANGED,
-    SSL_ERROR,
-    SESSION_EXPIRED,
-    OFFLINE,
-    ONLINE;
+    MISSING_TOKEN(false),
+    TOKEN_ERROR(false),
+    SERVER_ERROR(false),
+    SETTINGS_CHANGED(false),
+    SSL_ERROR(false),
+    SESSION_EXPIRED(true),
+    OFFLINE(false),
+    ONLINE(false);
+
+    private final boolean allowDuplicates;
+
+    ServiceState(boolean allowDuplicates)
+    {
+        this.allowDuplicates = allowDuplicates;
+    }
+
+    public boolean isAllowDuplicates()
+    {
+        return allowDuplicates;
+    }
 }

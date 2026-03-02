@@ -70,7 +70,7 @@ class StateService
     public void setState(ServiceState serviceState)
     {
         Preconditions.checkNotNull(serviceState);
-        if (this.serviceState != serviceState)
+        if (this.serviceState != serviceState || serviceState.isAllowDuplicates())
         {
             this.serviceState = serviceState;
             refresh();
@@ -86,7 +86,8 @@ class StateService
         {
             try
             {
-                listener.onStateChange(state);
+                listener.onServiceStateChange(state.getServiceState());
+                listener.onActionStateChange(state.getActionState());
             }
             catch (Throwable error)
             {

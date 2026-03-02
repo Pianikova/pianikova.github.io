@@ -30,12 +30,13 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.forms.widgets.Section;
 
-import com.e1c.edt.ai.AIState;
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -239,7 +240,13 @@ public class StagingViewEnhancer
                 stateService.addListener(new IStateListener()
                 {
                     @Override
-                    public void onStateChange(AIState state)
+                    public void onServiceStateChange(ServiceState serviceState)
+                    {
+                        enabledHandler.accept(settings.isEnabled() && unstageAllAction.isEnabled());
+                    }
+
+                    @Override
+                    public void onActionStateChange(ActionState actionState)
                     {
                         enabledHandler.accept(settings.isEnabled() && unstageAllAction.isEnabled());
                     }

@@ -3,7 +3,8 @@
  */
 package com.e1c.edt.ai.assistent;
 
-import com.e1c.edt.ai.AIState;
+import com.e1c.edt.ai.ActionState;
+import com.e1c.edt.ai.ServiceState;
 
 /**
  * @author Bogdan Sushkov
@@ -11,5 +12,7 @@ import com.e1c.edt.ai.AIState;
  */
 public interface IStateListener
 {
-    void onStateChange(AIState state);
+    void onServiceStateChange(ServiceState serviceState);
+
+    void onActionStateChange(ActionState actionState);
 }

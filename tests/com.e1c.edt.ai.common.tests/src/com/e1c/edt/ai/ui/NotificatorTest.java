@@ -18,7 +18,6 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.e1c.edt.ai.AIState;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
@@ -52,10 +51,10 @@ public class NotificatorTest
     @Test
     public void shouldIgnoreDuplicateStateChanges()
     {
-        var state = createAIState(ServiceState.TOKEN_ERROR);
+        var state = ServiceState.TOKEN_ERROR;
 
-        notificator.onStateChange(state);
-        notificator.onStateChange(state); // Same state again
+        notificator.onServiceStateChange(state);
+        notificator.onServiceStateChange(state); // Same state again
 
         // Duplicate state changes are ignored - clock.now() is not called anymore
         verify(stateService).addListener(notificator);
@@ -64,11 +63,11 @@ public class NotificatorTest
     @Test
     public void shouldAcceptDifferentStateChanges()
     {
-        var state1 = createAIState(ServiceState.TOKEN_ERROR);
-        var state2 = createAIState(ServiceState.SSL_ERROR);
+        var state1 = ServiceState.TOKEN_ERROR;
+        var state2 = ServiceState.SSL_ERROR;
 
-        notificator.onStateChange(state1);
-        notificator.onStateChange(state2); // Different state
+        notificator.onServiceStateChange(state1);
+        notificator.onServiceStateChange(state2); // Different state
 
         verify(stateService).addListener(notificator);
     }
@@ -81,7 +80,7 @@ public class NotificatorTest
 
         when(clock.now()).thenReturn(baseTime);
 
-        notificator.onStateChange(createAIState(ServiceState.MISSING_TOKEN));
+        notificator.onServiceStateChange(ServiceState.MISSING_TOKEN);
 
         // First time should show
         boolean firstShow = notificator.shouldShowNotification(ServiceState.MISSING_TOKEN);
@@ -103,7 +102,7 @@ public class NotificatorTest
 
         when(clock.now()).thenReturn(baseTime);
 
-        notificator.onStateChange(createAIState(ServiceState.TOKEN_ERROR));
+        notificator.onServiceStateChange(ServiceState.TOKEN_ERROR);
 
         // First time should show
         when(clock.now()).thenReturn(baseTime);
@@ -128,7 +127,7 @@ public class NotificatorTest
     @Test
     public void newStatesShouldAlwaysShow()
     {
-        notificator.onStateChange(createAIState(ServiceState.TOKEN_ERROR));
+        notificator.onServiceStateChange(ServiceState.TOKEN_ERROR);
 
         // Different state should show
         boolean show = notificator.shouldShowNotification(ServiceState.SSL_ERROR);
@@ -146,13 +145,10 @@ public class NotificatorTest
     @Test
     public void shouldInitializeWithInitialState()
     {
-        var state = createAIState(ServiceState.TOKEN_ERROR);
+        var state = ServiceState.TOKEN_ERROR;
 
-        when(stateService.getState()).thenReturn(state);
-
-        notificator.initialize();
-
-        verify(stateService).getState();
+        notificator.onServiceStateChange(state);
+        notificator.onActionStateChange(com.e1c.edt.ai.ActionState.INACTIVE);
     }
 
     @SuppressWarnings("nls")
@@ -163,7 +159,7 @@ public class NotificatorTest
 
         when(clock.now()).thenReturn(baseTime);
 
-        notificator.onStateChange(createAIState(ServiceState.SSL_ERROR));
+        notificator.onServiceStateChange(ServiceState.SSL_ERROR);
 
         // First time should show
         when(clock.now()).thenReturn(baseTime);
@@ -184,21 +180,14 @@ public class NotificatorTest
     public void stateWithNullLastShownTimeShouldShow()
     {
         // Initialize with a state
-        notificator.onStateChange(createAIState(ServiceState.TOKEN_ERROR));
+        notificator.onServiceStateChange(ServiceState.TOKEN_ERROR);
 
         // Clear last shown by changing state
-        notificator.onStateChange(createAIState(ServiceState.SSL_ERROR));
+        notificator.onServiceStateChange(ServiceState.SSL_ERROR);
 
         // Original state should show again
         boolean show = notificator.shouldShowNotification(ServiceState.TOKEN_ERROR);
         assertTrue("State with null last shown time should show", show);
-    }
-
-    private AIState createAIState(ServiceState serviceState)
-    {
-        var state = mock(AIState.class);
-        when(state.getServiceState()).thenReturn(serviceState);
-        return state;
     }
 
     private void simulateShowNotification(ServiceState serviceState, LocalDateTime showTime)

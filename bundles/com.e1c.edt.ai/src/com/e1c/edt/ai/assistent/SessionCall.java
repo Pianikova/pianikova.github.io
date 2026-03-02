@@ -11,14 +11,10 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.e1c.edt.ai.AIState;
-import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
-import com.e1c.edt.ai.ServiceState;
-import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
@@ -28,27 +24,22 @@ import com.google.inject.Inject;
 public class SessionCall
     implements ISessionCall
 {
-    private static final AIState STATE_CHANGED = new AIState(ServiceState.SETTINGS_CHANGED, ActionState.INACTIVE);
     private static final int MAX_RETRY_ATTEMPTS = 3;
     private static final long INITIAL_RETRY_DELAY_SECONDS = 5;
     private final ILog log;
     private final IHttpLog httpLog;
-    private final IStateListener stateListener;
     private final ISessionService sessionService;
     private final IStateService stateService;
 
     @Inject
-    public SessionCall(ILog log, IHttpLog httpLog, IStateListener stateListener, ISessionService sessionService,
-        IStateService stateService)
+    public SessionCall(ILog log, IHttpLog httpLog, ISessionService sessionService, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(httpLog);
-        Preconditions.checkNotNull(stateListener);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(stateService);
         this.log = log;
         this.httpLog = httpLog;
-        this.stateListener = stateListener;
         this.sessionService = sessionService;
         this.stateService = stateService;
     }
@@ -117,6 +108,31 @@ public class SessionCall
         CompletableFuture<HttpResponse<T>> result, int attemptCount)
     {
         return sessionService.getSessionAsync(projectId).thenCompose(session -> {
+            var sessionId = session.map(i -> i.sessionId).orElse(null);
+            if (sessionId == null)
+            {
+                if (attemptCount < MAX_RETRY_ATTEMPTS)
+                {
+                    int nextAttempt = attemptCount + 1;
+                    long delaySeconds = calculateRetryDelay(attemptCount);
+
+                    log.warning("ApiCallRepeater",
+                        () -> "Retrying request due to null sessionId. Attempt: " + nextAttempt + "/"
+                            + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
+
+                    CompletableFuture.delayedExecutor(delaySeconds, TimeUnit.SECONDS).execute(() -> {
+                        executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result, nextAttempt);
+                    });
+                    return result;
+                }
+                else
+                {
+                    result.completeExceptionally(
+                        new IllegalStateException("Failed to create session after " + attemptCount + " attempts"));
+                    return result;
+                }
+            }
+
             return taskSupplier.apply(session).whenComplete((response, throwable) -> {
                 if (throwable == null)
                 {
@@ -126,7 +142,7 @@ public class SessionCall
                         int nextAttempt = attemptCount + 1;
                         long delaySeconds = calculateRetryDelay(attemptCount);
 
-                        log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
+                        log.warning("ApiCallRepeater",
                             () -> "Retrying request due to unexpected response status code. Attempt: " + nextAttempt
                                 + "/" + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
 

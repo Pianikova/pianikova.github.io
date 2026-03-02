@@ -13,7 +13,6 @@ import com.e1c.edt.ai.assistent.model.Session;
 public interface IResponseCache
 {
     CompletableFuture<Optional<Session>> get(ProjectId projectId,
-        Supplier<CompletableFuture<Optional<Session>>> taskSupplier,
-        boolean reset, boolean cacheErrors);
+        Supplier<CompletableFuture<Optional<Session>>> taskSupplier, boolean reset);
 }
 

@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.runtime.jobs.Job;
 
-import com.e1c.edt.ai.AIState;
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IStateService;
@@ -50,15 +50,16 @@ public class Notificator
     @Override
     public void initialize()
     {
-        onStateChange(stateService.getState());
+        var state = stateService.getState();
+        onServiceStateChange(state.getServiceState());
+        onActionStateChange(state.getActionState());
         scheduleUpdate(TimeUnit.SECONDS.toMillis(15));
     }
 
     @SuppressWarnings("incomplete-switch")
     @Override
-    public void onStateChange(AIState state)
+    public void onServiceStateChange(ServiceState serviceState)
     {
-        var serviceState = state.getServiceState();
         synchronized (lock)
         {
             if (serviceState == lastServiceState)
@@ -68,6 +69,12 @@ public class Notificator
 
             lastServiceState = serviceState;
         }
+    }
+
+    @Override
+    public void onActionStateChange(ActionState actionState)
+    {
+        // Do nothing for action state changes
     }
 
     private void scheduleUpdate(long delayMs)

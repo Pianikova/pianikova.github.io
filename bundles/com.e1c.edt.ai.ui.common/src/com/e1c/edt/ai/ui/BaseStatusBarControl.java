@@ -269,7 +269,9 @@ public class BaseStatusBarControl
         });
 
         stateService.addListener(this);
-        onStateChange(stateService.getState());
+        var state = stateService.getState();
+        onServiceStateChange(state.getServiceState());
+        onActionStateChange(state.getActionState());
         return composite;
     }
 
@@ -497,9 +499,15 @@ public class BaseStatusBarControl
     }
 
     @Override
-    public void onStateChange(AIState state)
+    public void onServiceStateChange(ServiceState serviceState)
     {
-        dispatcher.dispatch(() -> changeState(state));
+        dispatcher.dispatch(() -> changeServiceState(serviceState));
+    }
+
+    @Override
+    public void onActionStateChange(ActionState actionState)
+    {
+        dispatcher.dispatch(() -> changeActionState(actionState));
     }
 
     private void changeState(AIState state)
@@ -507,17 +515,9 @@ public class BaseStatusBarControl
         var info = versionProvider.getPluginVersion().toString();
         isMissingTokenState = state.getServiceState() == ServiceState.MISSING_TOKEN;
 
-        if (settings.isEnabled())
+        if (settings.isEnabled() && state.getServiceState() == ServiceState.ONLINE)
         {
-            switch (state.getServiceState())
-            {
-            case ONLINE:
-                info = info + ' ' + Messages.StatusOnline;
-                break;
-
-            default:
-                break;
-            }
+            info = info + ' ' + Messages.StatusOnline;
         }
 
         lastAIState = state;
@@ -527,6 +527,24 @@ public class BaseStatusBarControl
         policyCombo.select(policy.getIndex());
         policyTooltip.setText(policy.getDescription());
         statusCanvas.redraw();
+    }
+
+    private void changeServiceState(ServiceState serviceState)
+    {
+        var actionState = lastAIState != null ? lastAIState.getActionState() : ActionState.INACTIVE;
+        updateState(serviceState, actionState);
+    }
+
+    private void changeActionState(ActionState actionState)
+    {
+        var serviceState = lastAIState != null ? lastAIState.getServiceState() : ServiceState.OFFLINE;
+        updateState(serviceState, actionState);
+    }
+
+    private void updateState(ServiceState serviceState, ActionState actionState)
+    {
+        lastAIState = new AIState(serviceState, actionState);
+        changeState(lastAIState);
     }
 
     @Override

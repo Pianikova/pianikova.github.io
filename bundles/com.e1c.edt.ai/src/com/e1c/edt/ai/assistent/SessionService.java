@@ -79,7 +79,7 @@ class SessionService
     public CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId)
     {
         var reset = settingsTracker.register(SessionService.class.getName(), settings.getUserParameters());
-        return responseCache.get(projectId, () -> getSession(projectId), reset, true);
+        return responseCache.get(projectId, () -> getSession(projectId), reset);
     }
 
     private CompletableFuture<Optional<Session>> getSession(ProjectId projectId)
