@@ -100,8 +100,10 @@ public class BaseStatusBarControl
     private int policyTextX = 0;
     private int policyTextWidth = 0;
 
-    // Track if we're in MISSING_TOKEN state
+    // Track if we're in an error state with a link
+    private boolean isErrorStateWithLink = false;
     private boolean isMissingTokenState = false;
+    private String currentUrlPath = ""; //$NON-NLS-1$
 
     public BaseStatusBarControl()
     {
@@ -331,15 +333,22 @@ public class BaseStatusBarControl
             brightForeground.dispose(); // Dispose temporary color only if we created it
         }
 
-        // Draw policy text and dropdown indicator (or activation link when MISSING_TOKEN)
+        // Draw policy text and dropdown indicator (or activation link when error state)
         String policyText = ""; //$NON-NLS-1$
         int policyTextX = textX + textExtent.x;
         var policyTextExtent = gc.textExtent(policyText);
 
-        if (isMissingTokenState)
+        if (isErrorStateWithLink)
         {
-            // Show activation link instead of policy
-            policyText = Messages.Activate;
+            // Show link text instead of policy
+            if (isMissingTokenState)
+            {
+                policyText = Messages.Activate;
+            }
+            else
+            {
+                policyText = Messages.Details;
+            }
             policyTextExtent = gc.textExtent(policyText);
             int policyTextY = centerY - policyTextExtent.y / 2;
 
@@ -347,7 +356,7 @@ public class BaseStatusBarControl
             this.policyTextX = policyTextX;
             this.policyTextWidth = policyTextExtent.x;
 
-            // Draw activation text as link (bright blue visible in dark theme)
+            // Draw support text as link (bright blue visible in dark theme)
             Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
             gc.setForeground(brightLink);
             gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
@@ -402,11 +411,16 @@ public class BaseStatusBarControl
         if (event.x >= policyTextX && event.x <= policyTextX + policyTextWidth && event.y >= 0
             && event.y <= bounds.height)
         {
-            if (isMissingTokenState)
+            if (isErrorStateWithLink)
             {
-                // Open browser to activation page and open preferences
-                web.browse(settings.getHomePage());
-                preferences.show(IPreferences.AI);
+                // Open browser to support page
+                String url = settings.getHomePage() + currentUrlPath;
+                web.browse(url);
+                // Also open preferences for MISSING_TOKEN state
+                if (lastAIState != null && lastAIState.getServiceState() == ServiceState.MISSING_TOKEN)
+                {
+                    preferences.show(IPreferences.AI);
+                }
             }
             else
             {
@@ -513,11 +527,19 @@ public class BaseStatusBarControl
     private void changeState(AIState state)
     {
         var info = versionProvider.getPluginVersion().toString();
-        isMissingTokenState = state.getServiceState() == ServiceState.MISSING_TOKEN;
+        ServiceState serviceState = state.getServiceState();
+
+        // Check if we're in MISSING_TOKEN state
+        isMissingTokenState = serviceState == ServiceState.MISSING_TOKEN;
+
+        // Check if we're in an error state with a link (including MISSING_TOKEN)
+        String urlPath = serviceState.getUrlPath();
+        isErrorStateWithLink = !urlPath.isEmpty() || isMissingTokenState;
+        currentUrlPath = urlPath;
 
         if (settings.isEnabled())
         {
-            var message = state.getServiceState().getMessage();
+            var message = serviceState.getMessage();
             info = info + ' ' + message;
         }
 

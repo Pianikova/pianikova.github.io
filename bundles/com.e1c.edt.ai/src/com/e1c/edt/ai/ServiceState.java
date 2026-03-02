@@ -9,22 +9,24 @@ package com.e1c.edt.ai;
  */
 public enum ServiceState
 {
-    MISSING_TOKEN(false, Messages.StatusMissingToken),
-    TOKEN_ERROR(false, Messages.StatusTokenFailed),
-    SERVER_ERROR(false, Messages.StatusServerError),
-    SETTINGS_CHANGED(false, Messages.StatusSettingsChanged),
-    SSL_ERROR(false, Messages.StatusSSLFailed),
-    SESSION_EXPIRED(true, Messages.StatusSessionExpired),
-    OFFLINE(false, Messages.StatusOffline),
-    ONLINE(false, Messages.StatusOnline);
+    MISSING_TOKEN(false, Messages.StatusMissingToken, ""), //$NON-NLS-1$
+    TOKEN_ERROR(false, Messages.StatusTokenFailed, "troubleshooting/#issue_missing_token"), //$NON-NLS-1$
+    SERVER_ERROR(false, Messages.StatusServerError, "troubleshooting/#issue_server_error"), //$NON-NLS-1$
+    SETTINGS_CHANGED(false, Messages.StatusSettingsChanged, ""), //$NON-NLS-1$
+    SSL_ERROR(false, Messages.StatusSSLFailed, "troubleshooting/#issue_ssl_error"), //$NON-NLS-1$
+    SESSION_EXPIRED(true, Messages.StatusSessionExpired, "troubleshooting/#issue_session_expired"), //$NON-NLS-1$
+    OFFLINE(false, Messages.StatusOffline, ""), //$NON-NLS-1$
+    ONLINE(false, Messages.StatusOnline, ""); //$NON-NLS-1$
 
     private final boolean allowDuplicates;
     private final String message;
+    private final String urlPath;
 
-    ServiceState(boolean allowDuplicates, String message)
+    ServiceState(boolean allowDuplicates, String message, String urlPath)
     {
         this.allowDuplicates = allowDuplicates;
         this.message = message;
+        this.urlPath = urlPath;
     }
 
     public boolean isAllowDuplicates()
@@ -35,5 +37,10 @@ public enum ServiceState
     public String getMessage()
     {
         return message;
+    }
+
+    public String getUrlPath()
+    {
+        return urlPath;
     }
 }

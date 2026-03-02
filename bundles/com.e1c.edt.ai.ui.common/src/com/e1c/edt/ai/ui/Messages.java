@@ -57,6 +57,7 @@ public class Messages
     public static String InOtherWords;
     public static String ImproveStyle;
     public static String Activate;
+    public static String Details;
 
     static
     {

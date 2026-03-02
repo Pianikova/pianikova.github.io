@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ServiceState;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -39,14 +40,14 @@ public class Notifications implements INotifications
     public boolean showTokenError()
     {
         return createNotification(com.e1c.edt.ai.Messages.StatusTokenFailed, Messages.Support,
-            settings.getHomePage() + "troubleshooting/#issue_missing_token", UINotificationType.ERROR); //$NON-NLS-1$
+            settings.getHomePage() + ServiceState.TOKEN_ERROR.getUrlPath(), UINotificationType.ERROR);
     }
 
     @Override
     public boolean showSSLError()
     {
         return createNotification(com.e1c.edt.ai.Messages.StatusSSLFailed, Messages.Support,
-            settings.getHomePage() + "troubleshooting/#issue_ssl_error", UINotificationType.ERROR); //$NON-NLS-1$
+            settings.getHomePage() + ServiceState.SSL_ERROR.getUrlPath(), UINotificationType.ERROR);
     }
 
     private boolean createNotification(String title, String buttonText, String url, UINotificationType type)
