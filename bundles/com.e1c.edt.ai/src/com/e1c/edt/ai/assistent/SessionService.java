@@ -9,6 +9,9 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+import javax.net.ssl.SSLException;
 
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
@@ -16,7 +19,10 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.TraceScenarioType;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
@@ -42,12 +48,14 @@ class SessionService
     private final IEnvironment environment;
     private final IConfigurationParametersProvider configurationParametersProvider;
     private final IStateService stateService;
+    private final ITraceScenario traceScenario;
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker, IResponseCache responseCache, IVersionProvider versionProvider,
         ISettings settings, ISettingsSetter settingsSetter, IEnvironment environment,
-        IConfigurationParametersProvider configurationParametersProvider, IStateService stateService)
+        IConfigurationParametersProvider configurationParametersProvider, IStateService stateService,
+        ITraceScenario traceScenario)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -61,6 +69,7 @@ class SessionService
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(configurationParametersProvider);
         Preconditions.checkNotNull(stateService);
+        Preconditions.checkNotNull(traceScenario);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -73,6 +82,7 @@ class SessionService
         this.environment = environment;
         this.configurationParametersProvider = configurationParametersProvider;
         this.stateService = stateService;
+        this.traceScenario = traceScenario;
     }
 
     @Override
@@ -143,6 +153,13 @@ class SessionService
 
     private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, HttpRequest request, String body)
     {
+        if (traceScenario.getActive() == TraceScenarioType.SSL_ERROR)
+        {
+            var sslException = new javax.net.ssl.SSLHandshakeException("Simulated SSL handshake error for testing"); //$NON-NLS-1$
+            stateService.setState(ServiceState.SSL_ERROR);
+            return CompletableFuture.failedFuture(sslException);
+        }
+
         log.request(request, null, body);
         var stopwatch = Stopwatch.createStarted();
         var busyToken = stateService.busy();
@@ -160,6 +177,17 @@ class SessionService
                 catch (Exception e)
                 {
                     //
+                }
+                finally
+                {
+                    if (error != null)
+                    {
+                        var actualError = error instanceof CompletionException ? error.getCause() : error;
+                        if (actualError instanceof SSLException)
+                        {
+                            stateService.setState(ServiceState.SSL_ERROR);
+                        }
+                    }
                 }
             });
     }

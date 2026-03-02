@@ -8,5 +8,6 @@ public enum TraceScenarioType
     NONE,
     SESSION_EXPIRED,
     TOKEN_NOT_FOUND,
-    SERVER_ERROR
+    SERVER_ERROR,
+    SSL_ERROR
 }

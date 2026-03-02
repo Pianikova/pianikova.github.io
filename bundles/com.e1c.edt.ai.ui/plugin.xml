@@ -223,6 +223,11 @@
                 name="Server Error">
         </command>
         <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.sslerror.ai"
+                name="SSL Error">
+        </command>
+        <command
               categoryId="com.e1c.edt.ai.ui.commands.category.ai"
               id="com.e1c.edt.ai.ui.commands.openChatView.ai"
               name="%command.name.openChatView">
@@ -321,6 +326,10 @@
         <handler
                 class="com.e1c.edt.ai.ui.handlers.ServerErrorAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.servererror.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.SSLErrorAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.sslerror.ai">
         </handler>
 
     </extension>
@@ -431,6 +440,12 @@
                             commandId="com.e1c.edt.ai.ui.commands.servererror.ai"
                             id="com.e1c.edt.ai.ui.commands.servererror.ai.id"
                             label="Server Error"
+                            style="push">
+                    </command>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.sslerror.ai"
+                            id="com.e1c.edt.ai.ui.commands.sslerror.ai.id"
+                            label="SSL Error"
                             style="push">
                     </command>
                     <separator
