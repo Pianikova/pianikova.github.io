@@ -98,9 +98,20 @@ class HttpLog
     {
         Preconditions.checkNotNull(response);
 
-        if (traceScenario.isSessionExpired())
+        switch (traceScenario.getActive())
         {
+        case SESSION_EXPIRED:
             response = createSessionExpiredResponse(response);
+            break;
+        case TOKEN_NOT_FOUND:
+            response = createTokenNotFoundResponse(response);
+            break;
+        case SERVER_ERROR:
+            response = createServerErrorResponse(response);
+            break;
+        case NONE:
+        default:
+            break;
         }
 
         var statusCode = response.statusCode();
@@ -260,6 +271,24 @@ class HttpLog
         sessionExpiredError.errorType = "invalid_session"; //$NON-NLS-1$
         var errorBody = json.serialize(sessionExpiredError);
         return createReplacementResponse(originalResponse, 403, errorBody);
+    }
+
+    private <T> HttpResponse<T> createTokenNotFoundResponse(HttpResponse<T> originalResponse)
+    {
+        var tokenNotFoundError = new SessionErrorResponse();
+        tokenNotFoundError.error = "Token not found"; //$NON-NLS-1$
+        tokenNotFoundError.errorType = "token_not_found"; //$NON-NLS-1$
+        var errorBody = json.serialize(tokenNotFoundError);
+        return createReplacementResponse(originalResponse, 401, errorBody);
+    }
+
+    private <T> HttpResponse<T> createServerErrorResponse(HttpResponse<T> originalResponse)
+    {
+        var serverError = new SessionErrorResponse();
+        serverError.error = "Internal server error"; //$NON-NLS-1$
+        serverError.errorType = "internal_server_error"; //$NON-NLS-1$
+        var errorBody = json.serialize(serverError);
+        return createReplacementResponse(originalResponse, 500, errorBody);
     }
 
     @Override

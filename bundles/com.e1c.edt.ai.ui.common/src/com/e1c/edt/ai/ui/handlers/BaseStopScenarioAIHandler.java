@@ -9,13 +9,12 @@ import org.eclipse.core.commands.ExecutionException;
 
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ITraceScenario;
-import com.e1c.edt.ai.TraceScenarioType;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
 import com.google.inject.Inject;
 
-public class BaseSessionExpirationAIHandler
+public class BaseStopScenarioAIHandler
     extends AbstractHandler
 {
     @Inject
@@ -25,7 +24,7 @@ public class BaseSessionExpirationAIHandler
     @Inject
     ITraceScenario traceScenario;
 
-    public BaseSessionExpirationAIHandler()
+    public BaseStopScenarioAIHandler()
     {
         BaseActivator.injectMembers(this);
     }
@@ -39,7 +38,7 @@ public class BaseSessionExpirationAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        traceScenario.activate(TraceScenarioType.SESSION_EXPIRED);
+        traceScenario.deactivate();
         return null;
     }
 }

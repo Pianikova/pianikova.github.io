@@ -15,7 +15,7 @@ import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
 import com.google.inject.Inject;
 
-public class BaseSessionExpirationAIHandler
+public class BaseServerErrorAIHandler
     extends AbstractHandler
 {
     @Inject
@@ -25,7 +25,7 @@ public class BaseSessionExpirationAIHandler
     @Inject
     ITraceScenario traceScenario;
 
-    public BaseSessionExpirationAIHandler()
+    public BaseServerErrorAIHandler()
     {
         BaseActivator.injectMembers(this);
     }
@@ -39,7 +39,7 @@ public class BaseSessionExpirationAIHandler
     @Override
     public Object execute(ExecutionEvent event) throws ExecutionException
     {
-        traceScenario.activate(TraceScenarioType.SESSION_EXPIRED);
+        traceScenario.activate(TraceScenarioType.SERVER_ERROR);
         return null;
     }
 }

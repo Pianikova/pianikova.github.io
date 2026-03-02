@@ -5,7 +5,9 @@ package com.e1c.edt.ai;
 
 public interface ITraceScenario
 {
-    public void EpireSession(int counter);
+    public void activate(TraceScenarioType type);
 
-    public boolean isSessionExpired();
+    public TraceScenarioType getActive();
+
+    public void deactivate();
 }

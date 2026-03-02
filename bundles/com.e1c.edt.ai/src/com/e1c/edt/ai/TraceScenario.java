@@ -3,22 +3,51 @@
  */
 package com.e1c.edt.ai;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.EnumMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TraceScenario
     implements ITraceScenario
 {
-    private AtomicInteger isSessionExpired = new AtomicInteger(0);
+    private final EnumMap<TraceScenarioType, AtomicBoolean> scenarios = new EnumMap<>(TraceScenarioType.class);
 
-    @Override
-    public void EpireSession(int counter)
+    public TraceScenario()
     {
-        isSessionExpired.set(counter);
+        for (TraceScenarioType type : TraceScenarioType.values())
+        {
+            scenarios.put(type, new AtomicBoolean(false));
+        }
     }
 
     @Override
-    public boolean isSessionExpired()
+    public void activate(TraceScenarioType type)
     {
-        return isSessionExpired.getAndDecrement() > 0;
+        for (TraceScenarioType scenarioType : TraceScenarioType.values())
+        {
+            scenarios.get(scenarioType).set(scenarioType == type);
+        }
+    }
+
+    @Override
+    public TraceScenarioType getActive()
+    {
+        for (TraceScenarioType type : TraceScenarioType.values())
+        {
+            if (scenarios.get(type).get())
+            {
+                return type;
+            }
+        }
+
+        return TraceScenarioType.NONE;
+    }
+
+    @Override
+    public void deactivate()
+    {
+        for (TraceScenarioType type : TraceScenarioType.values())
+        {
+            scenarios.get(type).set(false);
+        }
     }
 }
