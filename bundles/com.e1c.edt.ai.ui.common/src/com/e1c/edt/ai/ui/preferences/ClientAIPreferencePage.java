@@ -3,14 +3,17 @@
  */
 package com.e1c.edt.ai.ui.preferences;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
-import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -32,6 +35,9 @@ import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IValidator;
 import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.ValidationError;
+import com.e1c.edt.ai.ValidationResult;
+import com.e1c.edt.ai.WellknownError;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.ui.AIUICommonModule;
 import com.e1c.edt.ai.ui.BaseActivator;
@@ -82,6 +88,7 @@ public class ClientAIPreferencePage
     IWeb web;
 
     private String prevToken;
+    private boolean settingsChanged = false;
 
     public ClientAIPreferencePage()
     {
@@ -101,44 +108,70 @@ public class ClientAIPreferencePage
     {
         var parent = getFieldEditorParent();
 
-        var tokenField =
-            new StringFieldEditor(ISettingsStore.CLIENT_TOKEN, Messages.ClientAIPreferencePage_Client_Token, parent);
-        var tokenLabel = tokenField.getLabelControl(parent);
-        tokenLabel.setToolTipText(Messages.ClientAIPreferencePage_Client_Token_Tooltip);
-        var TokenText = tokenField.getTextControl(getFieldEditorParent());
-        TokenText.setEchoChar('*');
+        var tokenField = new ValidatingStringFieldEditor(ISettingsStore.CLIENT_TOKEN,
+            Messages.ClientAIPreferencePage_Client_Token, parent, new IValidator<String>()
+            {
+                @Override
+                public ValidationResult validate(String token)
+                {
+                    // Empty or whitespace-only tokens are considered valid
+                    if (token == null || token.isBlank())
+                    {
+                        return ValidationResult.SUCCESS;
+                    }
+
+                    // Validate non-empty tokens using the client token validator
+                    if (!clientTokenValidator.isValid(token))
+                    {
+                        return new ValidationResult(new ValidationError(WellknownError.InvalidToken, token));
+                    }
+
+                    return ValidationResult.SUCCESS;
+                }
+            });
+        setLabelTooltip(tokenField, Messages.ClientAIPreferencePage_Client_Token_Tooltip);
+        var tokenText = tokenField.getTextControl(getFieldEditorParent());
+        tokenText.setEchoChar('*');
         addField(tokenField);
 
         var policyCombo = new PolicyComboFieldEditor(parent);
-        var policyComboLabel = policyCombo.getLabelControl(parent);
-        policyComboLabel.setToolTipText(Messages.ClientAIPreferencePage_CodeCompletionPolicy_Tooltip);
+        setLabelTooltip(policyCombo, Messages.ClientAIPreferencePage_CodeCompletionPolicy_Tooltip);
         addField(policyCombo);
 
         var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
             Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
         codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
-        var codeCompletionLinesCountLabel = codeCompletionLinesCount.getLabelControl(parent);
-        codeCompletionLinesCountLabel
-            .setToolTipText(Messages.ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip);
+        setLabelTooltip(codeCompletionLinesCount, Messages.ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip);
         addField(codeCompletionLinesCount);
 
         var comboField =
             new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, LANGUAGES, parent);
-        var comboLabel = comboField.getLabelControl(parent);
-        comboLabel.setToolTipText(Messages.ClientAIPreferencePage_Language_Tooltip);
+        setLabelTooltip(comboField, Messages.ClientAIPreferencePage_Language_Tooltip);
         addField(comboField);
 
         var validatorField = new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
             Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator);
-        var validatorLabel = validatorField.getLabelControl(parent);
-        validatorLabel.setToolTipText(Messages.ClientAIPreferencePage_Parameters_Tooltip);
+        setLabelTooltip(validatorField, Messages.ClientAIPreferencePage_Parameters_Tooltip);
         addField(validatorField);
+    }
+
+    private void setLabelTooltip(org.eclipse.jface.preference.FieldEditor editor, String tooltip)
+    {
+        var label = editor.getLabelControl(getFieldEditorParent());
+        label.setToolTipText(tooltip);
     }
 
     @Override
     public void init(IWorkbench workbench)
     {
         this.prevToken = settings.getClientToken();
+    }
+
+    @Override
+    public void propertyChange(PropertyChangeEvent event)
+    {
+        super.propertyChange(event);
+        settingsChanged = true;
     }
 
     @SuppressWarnings("nls")
@@ -155,7 +188,15 @@ public class ClientAIPreferencePage
             @Override
             public void widgetSelected(SelectionEvent e)
             {
-                web.browse(defaultSettings.getHomePage());
+                try
+                {
+                    web.browse(defaultSettings.getHomePage());
+                }
+                catch (Exception ex)
+                {
+                    log.logError("Failed to open URL: " + defaultSettings.getHomePage());
+                    log.logError(ex);
+                }
             }
         });
 
@@ -176,14 +217,21 @@ public class ClientAIPreferencePage
     public boolean performOk()
     {
         var result = super.performOk();
-        var token = settings.getClientToken();
-        if (clientTokenValidator.isValid(token) && settings.getCodeCompletionPolicy() == CodeCompletionPolicy.OFF
-            && !token.equals(this.prevToken))
+
+        if (settingsChanged)
         {
-            settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.MODERATE);
+            var token = settings.getClientToken();
+            if (clientTokenValidator.isValid(token) && settings.getCodeCompletionPolicy() == CodeCompletionPolicy.OFF
+                && !Objects.equals(token, this.prevToken))
+            {
+                settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.MODERATE);
+            }
+
+            stateService.setState(ServiceState.SETTINGS_CHANGED);
         }
 
-        stateService.setState(ServiceState.SETTINGS_CHANGED);
+        this.prevToken = settings.getClientToken();
+        settingsChanged = false;
         return result;
     }
 
@@ -197,18 +245,10 @@ public class ClientAIPreferencePage
     private static class PolicyComboFieldEditor
         extends ComboFieldEditor
     {
-        private static final String[][] CODE_COMPLETION_POLICIES;
+        private static final String[][] CODE_COMPLETION_POLICIES = Arrays.stream(CodeCompletionPolicy.values())
+            .map(policy -> new String[] { policy.getLongName(), policy.getId() })
+            .toArray(String[][]::new);
         private Combo combo;
-
-        static
-        {
-            CODE_COMPLETION_POLICIES = new String[CodeCompletionPolicy.values().length][];
-            var index = 0;
-            for (var policy : CodeCompletionPolicy.values())
-            {
-                CODE_COMPLETION_POLICIES[index++] = new String[] { policy.getLongName(), policy.getId() };
-            }
-        }
 
         public PolicyComboFieldEditor(Composite parent)
         {
@@ -260,9 +300,10 @@ public class ClientAIPreferencePage
             }
 
             var index = combo.getSelectionIndex();
-            if (index >= 0 && index < CodeCompletionPolicy.values().length)
+            var policies = CodeCompletionPolicy.values();
+            if (policies != null && policies.length > 0 && index >= 0 && index < policies.length)
             {
-                combo.setToolTipText(CodeCompletionPolicy.values()[index].getDescription());
+                combo.setToolTipText(policies[index].getDescription());
             }
             else
             {
