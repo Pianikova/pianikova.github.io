@@ -91,7 +91,7 @@ public class NavigationHistoryMcpTool
     @Override
     public boolean isExperimental()
     {
-        return true;
+        return false;
     }
 
     @Override
