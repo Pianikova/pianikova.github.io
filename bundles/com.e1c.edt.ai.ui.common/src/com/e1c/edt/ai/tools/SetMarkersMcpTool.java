@@ -149,7 +149,7 @@ public class SetMarkersMcpTool
     @Override
     public boolean isExperimental()
     {
-        return true;
+        return false;
     }
 
     @Override

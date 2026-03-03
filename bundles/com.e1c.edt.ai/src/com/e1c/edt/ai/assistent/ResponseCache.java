@@ -6,10 +6,9 @@ package com.e1c.edt.ai.assistent;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import com.e1c.edt.ai.AIState;
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
@@ -22,13 +21,11 @@ import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 class ResponseCache
-    implements IResponseCache, IAIStateListener
+    implements IResponseCache, IStateListener
 {
     private final ILog log;
     private final Cache<ProjectId, CompletableFuture<Optional<Session>>> responseCache =
         CacheBuilder.newBuilder().maximumSize(256).build();
-    private final Cache<ProjectId, CompletableFuture<Optional<Session>>> errorsCache =
-        CacheBuilder.newBuilder().maximumSize(256).expireAfterWrite(60, TimeUnit.SECONDS).build();
 
     @Inject
     public ResponseCache(ILog log, IStateService stateService)
@@ -39,11 +36,9 @@ class ResponseCache
         stateService.addListener(this);
     }
 
-    @SuppressWarnings("nls")
     @Override
     public CompletableFuture<Optional<Session>> get(ProjectId projectId,
-        Supplier<CompletableFuture<Optional<Session>>> taskSupplier,
-        boolean reset, boolean cacheErrors)
+        Supplier<CompletableFuture<Optional<Session>>> taskSupplier, boolean reset)
     {
         Preconditions.checkNotNull(projectId);
         Preconditions.checkNotNull(taskSupplier);
@@ -51,30 +46,11 @@ class ResponseCache
         {
             synchronized (responseCache)
             {
-                if (cacheErrors)
-                {
-                    var error = errorsCache.getIfPresent(projectId);
-                    if (error != null)
-                    {
-                        log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "Returns an error from the cache.");
-                        return error;
-                    }
-                }
-
                 return responseCache.get(projectId, () -> {
                     return taskSupplier.get().whenComplete((r, e) -> {
                         if (e != null || r.isEmpty())
                         {
-                            if (cacheErrors)
-                            {
-                                errorsCache.put(projectId, CompletableFuture.failedFuture(e));
-                            }
-
                             responseCache.invalidate(projectId);
-                        }
-                        else
-                        {
-                            errorsCache.invalidate(projectId);
                         }
                     });
                 });
@@ -88,30 +64,27 @@ class ResponseCache
         return CompletableFuture.completedFuture(Optional.empty());
     }
 
-    @SuppressWarnings("nls")
+    @SuppressWarnings({ "nls", "incomplete-switch" })
     @Override
-    public synchronized void onStateChange(AIState state)
+    public synchronized void onServiceStateChange(ServiceState serviceState)
     {
-        var serverState = state.getServiceState();
-        if (serverState == ServiceState.SETTINGS_CHANGED)
+        switch (serviceState)
         {
-            synchronized (responseCache)
-            {
-                responseCache.invalidateAll();
-                errorsCache.invalidateAll();
-            }
-
-            return;
-        }
-
-        if (serverState != ServiceState.ONLINE && serverState != ServiceState.SETTINGS_CHANGED)
-        {
+        case SETTINGS_CHANGED:
+        case SESSION_EXPIRED:
             synchronized (responseCache)
             {
                 responseCache.invalidateAll();
             }
 
             log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "cleared");
+            break;
         }
+    }
+
+    @Override
+    public void onActionStateChange(ActionState actionState)
+    {
+        // Do nothing for action state changes
     }
 }

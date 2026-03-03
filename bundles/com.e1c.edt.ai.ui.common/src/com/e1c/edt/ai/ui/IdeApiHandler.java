@@ -35,13 +35,14 @@ public class IdeApiHandler
     private final IEdtLinkHandler linkHandler;
     private final IEditorPositionManager editorPositionManager;
     private final IMarkdownUtils markdownUtils;
+    private final IWeb web;
     private boolean isReady;
 
     @Inject
     public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
         Provider<IChat> chatProvider, IJson json,
         IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager,
-        IMarkdownUtils markdownUtils)
+        IMarkdownUtils markdownUtils, IWeb web)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
@@ -53,6 +54,7 @@ public class IdeApiHandler
         Preconditions.checkNotNull(linkHandler);
         Preconditions.checkNotNull(editorPositionManager);
         Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(web);
         this.log = log;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -63,6 +65,7 @@ public class IdeApiHandler
         this.linkHandler = linkHandler;
         this.editorPositionManager = editorPositionManager;
         this.markdownUtils = markdownUtils;
+        this.web = web;
     }
 
     public void wink(String parameter)
@@ -193,7 +196,8 @@ public class IdeApiHandler
 
         if (!linkHandler.isRecognizedHref(processedHref))
         {
-            return false;
+            web.browse(decodedHref);
+            return true;
         }
 
         var safeTitle = title != null ? title.trim() : "";

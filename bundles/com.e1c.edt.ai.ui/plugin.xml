@@ -198,8 +198,34 @@
                 name="Аннотации">
         </command>
         <command
-              id="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
-              name="%command.label.addfilestochat">
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
+                name="%command.label.addfilestochat">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
+                name="Session Expiration">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
+                name="Token Not Found">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.stopscenarios.ai"
+                name="Stop Scenarios">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.servererror.ai"
+                name="Server Error">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.sslerror.ai"
+                name="SSL Error">
         </command>
         <command
               categoryId="com.e1c.edt.ai.ui.commands.category.ai"
@@ -278,12 +304,32 @@
                 commandId="com.e1c.edt.ai.ui.commands.feedback.ai">
         </handler>
         <handler
-              class="com.e1c.edt.ai.ui.handlers.AddFilesToChatHandler"
-              commandId="com.e1c.edt.ai.ui.commands.addfilestochat.ai">
+                class="com.e1c.edt.ai.ui.handlers.AddFilesToChatHandler"
+                commandId="com.e1c.edt.ai.ui.commands.addfilestochat.ai">
         </handler>
         <handler
               class="com.e1c.edt.ai.ui.handlers.OpenChatViewHandler"
               commandId="com.e1c.edt.ai.ui.commands.openChatView.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.SessionExpirationAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.TokenNotFoundAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.StopScenarioAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.stopscenarios.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.ServerErrorAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.servererror.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ai.ui.handlers.SSLErrorAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.sslerror.ai">
         </handler>
 
     </extension>
@@ -350,13 +396,70 @@
                   visible="true">
             </separator>
             <command
-                  commandId="com.e1c.edt.ai.ui.commands.feedback.ai"
-                  icon="icons/obj16/feedback.png"
-                  id="com.e1c.edt.ai.ui.commands.feedback.ai.id"
-                  label="%command.label.feedback"
-                  style="push"
-                  tooltip="%command.tooltip.feedback">
+                    commandId="com.e1c.edt.ai.ui.commands.feedback.ai"
+                    icon="icons/obj16/feedback.png"
+                    id="com.e1c.edt.ai.ui.commands.feedback.ai.id"
+                    label="%command.label.feedback"
+                    style="push"
+                    tooltip="%command.tooltip.feedback">
             </command>
+        </menuContribution>
+        <menuContribution
+                locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+            <menu
+                  icon="icons/obj16/ai.png"
+                  id="com.e1c.edt.ai.ui.mainMenu"
+                  label="AI">
+                <separator
+                      name="com.e1c.edt.ai.ui.separatorCases"
+                      visible="true">
+                </separator>
+                <menu
+                      id="com.e1c.edt.ai.ui.casesMenu"
+                      label="Cases">
+                    <visibleWhen
+                            checkEnabled="false">
+                        <test
+                              forcePluginActivation="true"
+                              property="com.e1c.edt.ai.ui.isTraceMode">
+                        </test>
+                    </visibleWhen>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
+                            id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai.id"
+                            label="Session Expiration"
+                            style="push">
+                    </command>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
+                            id="com.e1c.edt.ai.ui.commands.tokennotfound.ai.id"
+                            label="Token Not Found"
+                            style="push">
+                    </command>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.servererror.ai"
+                            id="com.e1c.edt.ai.ui.commands.servererror.ai.id"
+                            label="Server Error"
+                            style="push">
+                    </command>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.sslerror.ai"
+                            id="com.e1c.edt.ai.ui.commands.sslerror.ai.id"
+                            label="SSL Error"
+                            style="push">
+                    </command>
+                    <separator
+                            name="com.e1c.edt.ai.ui.separatorStopScenarios"
+                            visible="true">
+                    </separator>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.stopscenarios.ai"
+                            id="com.e1c.edt.ai.ui.commands.stopscenarios.ai.id"
+                            label="Stop Scenarios"
+                            style="push">
+                    </command>
+                </menu>
+            </menu>
         </menuContribution>
         <menuContribution
                 allPopups="false"
@@ -413,9 +516,20 @@
                     tooltip="%command.name.openChatView">
               </command>
            </toolbar>
-        </menuContribution>
+        </menuContribution>         
     </extension>
-    
+
+    <extension
+            point="org.eclipse.core.expressions.propertyTesters">
+        <propertyTester
+              class="com.e1c.edt.ai.ui.handlers.TraceModePropertyTester"
+              id="com.e1c.edt.ai.ui.traceModeTester"
+              namespace="com.e1c.edt.ai.ui"
+              properties="isTraceMode"
+              type="java.lang.Object">
+        </propertyTester>
+    </extension>
+
     <extension
             point="org.eclipse.ui.startup">
         <startup

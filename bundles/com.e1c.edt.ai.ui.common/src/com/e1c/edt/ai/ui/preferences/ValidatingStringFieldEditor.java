@@ -14,13 +14,14 @@ class ValidatingStringFieldEditor
     extends StringFieldEditor
 {
     private static final TreeMap<WellknownError, String> Errors = new TreeMap<>();
-    private IValidator<String> validator;
+    protected IValidator<String> validator;
 
     static
     {
         Errors.put(WellknownError.UnableToParse, Messages.Error_UnableToParse);
         Errors.put(WellknownError.OutOfRange, Messages.Error_OutOfRange);
         Errors.put(WellknownError.Unknown, Messages.Error_Unknown);
+        Errors.put(WellknownError.InvalidToken, Messages.Error_InvalidToken);
     }
 
     public ValidatingStringFieldEditor(String name, String labelText, Composite parent, IValidator<String> validator)
@@ -57,14 +58,22 @@ class ValidatingStringFieldEditor
             if (stringBuilder.length() == 0)
             {
                 stringBuilder.append(message);
-                stringBuilder.append(": "); //$NON-NLS-1$
+                // Do not append target value for InvalidToken error to avoid showing sensitive token data
+                if (error != WellknownError.InvalidToken)
+                {
+                    stringBuilder.append(": "); //$NON-NLS-1$
+                }
             }
             else
             {
                 stringBuilder.append(", "); //$NON-NLS-1$
             }
 
-            stringBuilder.append(validationError.getTarget());
+            // Do not append target value for InvalidToken error to avoid showing sensitive token data
+            if (error != WellknownError.InvalidToken)
+            {
+                stringBuilder.append(validationError.getTarget());
+            }
         }
 
         StringBuilder errors = new StringBuilder();

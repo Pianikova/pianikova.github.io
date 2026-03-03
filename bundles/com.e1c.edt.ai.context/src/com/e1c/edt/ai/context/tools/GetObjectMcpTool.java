@@ -88,7 +88,7 @@ public class GetObjectMcpTool
     @Override
     public boolean isExperimental()
     {
-        return true;
+        return false;
     }
 
     @Override

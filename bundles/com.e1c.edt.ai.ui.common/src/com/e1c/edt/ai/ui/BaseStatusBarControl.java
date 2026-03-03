@@ -3,7 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import org.eclipse.core.runtime.preferences.InstanceScope;
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
@@ -28,17 +27,16 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.List;
 import org.eclipse.swt.widgets.Listener;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.menus.WorkbenchWindowControlContribution;
 
 import com.e1c.edt.ai.AIState;
-import com.e1c.edt.ai.IClientTokenValidator;
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ServiceState;
-import com.e1c.edt.ai.assistent.IAIStateListener;
+import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.google.inject.Inject;
 
@@ -49,7 +47,7 @@ import com.google.inject.Inject;
  */
 public class BaseStatusBarControl
     extends WorkbenchWindowControlContribution
-    implements IAIStateListener, DisposeListener, SelectionListener
+    implements IStateListener, DisposeListener, SelectionListener
 {
     @Inject
     private IStateService stateService;
@@ -58,19 +56,20 @@ public class BaseStatusBarControl
     @Inject
     private IVersionProvider versionProvider;
     @Inject
-    private IUINotificationService notificationService;
-    @Inject
     private ISettings settings;
     @Inject
     private ISettingsSetter settingsSetter;
     @Inject
     private IReflection reflection;
     @Inject
-    private IClientTokenValidator clientTokenValidator;
+    private IThemeManager themeManager;
+    @Inject
+    private IWeb web;
+    @Inject
+    private IPreferences preferences;
 
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
-    private boolean hintWasShown = false;
     private Font font;
     private Canvas statusCanvas;
     private CCombo policyCombo;
@@ -79,7 +78,8 @@ public class BaseStatusBarControl
 
     // Status colors (soft, not too bright)
     private static final RGB COLOR_ONLINE = new RGB(120, 180, 120);
-    private static final RGB COLOR_BUSY = new RGB(200, 180, 100);
+    private static final RGB COLOR_SETTINGS_CHANGED = new RGB(100, 150, 100); // Darker than COLOR_ONLINE
+    private static final RGB COLOR_BUSY = new RGB(150, 210, 150);
     private static final RGB COLOR_OFF = new RGB(180, 120, 120); // Red for error state
     private static final RGB COLOR_DISABLED = new RGB(150, 150, 150); // Gray for disabled/off mode
 
@@ -88,16 +88,22 @@ public class BaseStatusBarControl
     private static final int STATUS_TEXT_MARGIN = 5;
 
     private Color colorOnline;
+    private Color colorSettingsChanged;
     private Color colorBusy;
     private Color colorOff;
     private Color colorDisabled;
 
-    private RGB currentStatusColor = COLOR_DISABLED;
+    private AIState lastAIState;
     private String statusText = Messages.AIName + " "; //$NON-NLS-1$
 
     // Bounds for policy text click detection
     private int policyTextX = 0;
     private int policyTextWidth = 0;
+
+    // Track if we're in an error state with a link
+    private boolean isErrorStateWithLink = false;
+    private boolean isMissingTokenState = false;
+    private String currentUrlPath = ""; //$NON-NLS-1$
 
     public BaseStatusBarControl()
     {
@@ -165,6 +171,7 @@ public class BaseStatusBarControl
 
         // Initialize colors
         colorOnline = new Color(parent.getDisplay(), COLOR_ONLINE);
+        colorSettingsChanged = new Color(parent.getDisplay(), COLOR_SETTINGS_CHANGED);
         colorBusy = new Color(parent.getDisplay(), COLOR_BUSY);
         colorOff = new Color(parent.getDisplay(), COLOR_OFF);
         colorDisabled = new Color(parent.getDisplay(), COLOR_DISABLED);
@@ -248,16 +255,6 @@ public class BaseStatusBarControl
                     settingsSetter.setCodeCompletionPolicy(codeCompletionPolicy);
                     policyTooltip.setText(codeCompletionPolicy.getDescription());
 
-                    // Update color if OFF is selected
-                    if (codeCompletionPolicy == CodeCompletionPolicy.OFF)
-                    {
-                        currentStatusColor = COLOR_DISABLED;
-                    }
-                    else if (settings.isEnabled())
-                    {
-                        currentStatusColor = COLOR_ONLINE;
-                    }
-
                     statusCanvas.redraw();
                 }
             });
@@ -267,13 +264,13 @@ public class BaseStatusBarControl
 
         parent.getParent().setRedraw(true);
         composite.addDisposeListener(this);
-        stateService.addListener(this);
 
         // Force redraw with delay to ensure layout is complete
         dispatcher.dispatch(() -> {
             statusCanvas.redraw();
         });
 
+        stateService.addListener(this);
         return composite;
     }
 
@@ -304,92 +301,122 @@ public class BaseStatusBarControl
         gc.fillRoundRectangle(0, iconY, ICON_SIZE, ICON_SIZE, ICON_CORNER_RADIUS, ICON_CORNER_RADIUS);
 
         // Draw status text (color adapts to theme)
-        Color brightForeground;
-        if (isDarkTheme())
-        {
-            brightForeground = new Color(display, 220, 220, 220); // Light gray for dark theme
-        }
-        else
-        {
-            brightForeground = display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND); // System color for light theme
-        }
-        gc.setForeground(brightForeground);
-        gc.setFont(font);
-
-        // Ensure font is set
-        if (font != null && !font.isDisposed())
-        {
-            gc.setFont(font);
-        }
-
+        Color brightForeground = null;
         var textExtent = gc.textExtent(statusText);
         int textX = ICON_SIZE + STATUS_TEXT_MARGIN;
-        int textY = centerY - textExtent.y / 2;
 
-        gc.drawText(statusText, textX, textY, SWT.DRAW_TRANSPARENT);
-
-        if (isDarkTheme())
+        try
         {
-            brightForeground.dispose(); // Dispose temporary color only if we created it
+            if (themeManager.isDarkTheme())
+            {
+                brightForeground = new Color(display, 220, 220, 220); // Light gray for dark theme
+            }
+            else
+            {
+                brightForeground = display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND); // System color for light theme
+            }
+            gc.setForeground(brightForeground);
+            gc.setFont(font);
+
+            // Ensure font is set
+            if (font != null && !font.isDisposed())
+            {
+                gc.setFont(font);
+            }
+
+            int textY = centerY - textExtent.y / 2;
+
+            gc.drawText(statusText, textX, textY, SWT.DRAW_TRANSPARENT);
+        }
+        finally
+        {
+            if (brightForeground != null && !brightForeground.isDisposed() && themeManager.isDarkTheme())
+            {
+                brightForeground.dispose(); // Dispose temporary color only if we created it
+            }
         }
 
-        // Draw policy text and dropdown indicator
-        var policy = settings.getCodeCompletionPolicy();
-        String policyName = policy.getName().toLowerCase();
-        String policyText;
-        if (policyName.contains(":"))
-        {
-            // Get text after last colon
-            policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
-        }
-        else
-        {
-            policyText = policyName;
-        }
-
+        // Draw policy text and dropdown indicator (or activation link when error state)
+        String policyText = ""; //$NON-NLS-1$
         int policyTextX = textX + textExtent.x;
         var policyTextExtent = gc.textExtent(policyText);
-        int policyTextY = centerY - policyTextExtent.y / 2;
 
-        // Store bounds for click detection
-        this.policyTextX = policyTextX;
-        this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
+        if (lastAIState != null)
+        {
+            if (isErrorStateWithLink)
+            {
+                // Show link text instead of policy
+                if (isMissingTokenState)
+                {
+                    policyText = Messages.Activate;
+                }
+                else
+                {
+                    policyText = Messages.Details;
+                }
+                policyTextExtent = gc.textExtent(policyText);
+                int policyTextY = centerY - policyTextExtent.y / 2;
 
-        // Draw policy text as link (bright blue visible in dark theme)
-        Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
-        gc.setForeground(brightLink);
-        gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
+                // Store bounds for click detection
+                this.policyTextX = policyTextX;
+                this.policyTextWidth = policyTextExtent.x;
 
-        // Draw underline for link effect
-        int underlineY = policyTextY + policyTextExtent.y - 2;
-        gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
+                // Draw support text as link (bright blue visible in dark theme)
+                Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
+                gc.setForeground(brightLink);
+                gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
 
-        brightLink.dispose(); // Dispose temporary color
+                // Draw underline for link effect
+                int underlineY = policyTextY + policyTextExtent.y - 2;
+                gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
+
+                brightLink.dispose(); // Dispose temporary color
+            }
+            else
+            {
+                // Show policy text as usual
+                var policy = settings.getCodeCompletionPolicy();
+                String policyName = policy.getName();
+                if (policyName != null)
+                {
+                    policyName = policyName.toLowerCase();
+                    if (policyName.contains(":"))
+                    {
+                        // Get text after last colon
+                        policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+                    }
+                    else
+                    {
+                        policyText = policyName;
+                    }
+                }
+                else
+                {
+                    policyText = "";
+                }
+
+                policyTextExtent = gc.textExtent(policyText);
+                int policyTextY = centerY - policyTextExtent.y / 2;
+
+                // Store bounds for click detection
+                this.policyTextX = policyTextX;
+                this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
+
+                // Draw policy text as link (bright blue visible in dark theme)
+                Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
+                gc.setForeground(brightLink);
+                gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
+
+                // Draw underline for link effect
+                int underlineY = policyTextY + policyTextExtent.y - 2;
+                gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
+
+                brightLink.dispose(); // Dispose temporary color
+            }
+        }
 
         // Reset foreground color
         gc.setForeground(display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND));
-    }
-
-    @SuppressWarnings("nls")
-    private boolean isDarkTheme()
-    {
-        try
-        {
-            var prefs = InstanceScope.INSTANCE.getNode("org.eclipse.e4.ui.css.swt.theme");
-            var themeId = prefs.get("themeid", "");
-            return themeId.toLowerCase().contains("dark");
-        }
-        catch (Exception e)
-        {
-            // Fallback to background color check if preferences fail
-            return isDarkThemeByColor();
-        }
-    }
-
-    private boolean isDarkThemeByColor()
-    {
-        var bgColor = statusCanvas.getDisplay().getSystemColor(SWT.COLOR_WIDGET_BACKGROUND);
-        return bgColor.getRed() < 128 && bgColor.getGreen() < 128 && bgColor.getBlue() < 128;
     }
 
     private void onStatusCanvasClick(Event event)
@@ -398,34 +425,62 @@ public class BaseStatusBarControl
         if (event.x >= policyTextX && event.x <= policyTextX + policyTextWidth && event.y >= 0
             && event.y <= bounds.height)
         {
-            // Show policy menu at cursor position
-            var location = statusCanvas.toDisplay(event.x, event.y);
-            policyMenu.setLocation(location.x, location.y);
-            policyMenu.setVisible(true);
+            if (isErrorStateWithLink)
+            {
+                // Open browser to support page
+                String url = settings.getHomePage() + currentUrlPath;
+                web.browse(url);
+                // Also open preferences for MISSING_TOKEN state
+                if (lastAIState != null && lastAIState.getServiceState() == ServiceState.MISSING_TOKEN)
+                {
+                    preferences.show(IPreferences.AI);
+                }
+            }
+            else
+            {
+                // Show policy menu at cursor position
+                var location = statusCanvas.toDisplay(event.x, event.y);
+                policyMenu.setLocation(location.x, location.y);
+                policyMenu.setVisible(true);
+            }
         }
     }
 
     private Color getCurrentStatusColor()
     {
-        if (colorOnline == null || colorBusy == null || colorOff == null || colorDisabled == null)
+        if (colorOnline == null || colorBusy == null || colorOff == null || colorDisabled == null
+            || colorSettingsChanged == null)
         {
             return statusCanvas.getDisplay().getSystemColor(SWT.COLOR_GRAY);
         }
 
-        if (currentStatusColor == COLOR_ONLINE)
-        {
-            return colorOnline;
-        }
-        else if (currentStatusColor == COLOR_BUSY)
-        {
-            return colorBusy;
-        }
-        else if (currentStatusColor == COLOR_DISABLED)
+        if (!settings.isEnabled())
         {
             return colorDisabled;
         }
-        else
+
+        if (lastAIState == null)
         {
+            return colorDisabled;
+        }
+
+        switch (lastAIState.getServiceState())
+        {
+        case ONLINE:
+            if (lastAIState.getActionState() == ActionState.BUSY)
+            {
+                return colorBusy;
+            }
+            return colorOnline;
+
+        case NONE:
+        case MISSING_TOKEN:
+            return colorDisabled;
+
+        case SETTINGS_CHANGED:
+            return colorSettingsChanged;
+
+        default:
             return colorOff;
         }
     }
@@ -446,124 +501,77 @@ public class BaseStatusBarControl
             font.dispose();
         }
 
-        if (colorOnline != null && !colorOnline.isDisposed())
-        {
-            colorOnline.dispose();
-        }
+        disposeColorIfNotDisposed(colorOnline);
+        disposeColorIfNotDisposed(colorSettingsChanged);
+        disposeColorIfNotDisposed(colorBusy);
+        disposeColorIfNotDisposed(colorOff);
+        disposeColorIfNotDisposed(colorDisabled);
+    }
 
-        if (colorBusy != null && !colorBusy.isDisposed())
+    private void disposeColorIfNotDisposed(Color color)
+    {
+        if (color != null && !color.isDisposed())
         {
-            colorBusy.dispose();
-        }
-
-        if (colorOff != null && !colorOff.isDisposed())
-        {
-            colorOff.dispose();
-        }
-
-        if (colorDisabled != null && !colorDisabled.isDisposed())
-        {
-            colorDisabled.dispose();
+            color.dispose();
         }
     }
 
     @Override
-    public void onStateChange(AIState state)
+    public void onServiceStateChange(ServiceState serviceState)
     {
-        dispatcher.dispatch(() -> changeState(state));
+        dispatcher.dispatch(() -> changeServiceState(serviceState));
     }
 
-    @SuppressWarnings("incomplete-switch")
+    @Override
+    public void onActionStateChange(ActionState actionState)
+    {
+        dispatcher.dispatch(() -> changeActionState(actionState));
+    }
+
     private void changeState(AIState state)
     {
-        var policy = settings.getCodeCompletionPolicy();
         var info = versionProvider.getPluginVersion().toString();
         var serviceState = state.getServiceState();
-        if (serviceState == ServiceState.SETTINGS_CHANGED || serviceState == ServiceState.ONLINE)
-        {
-            hintWasShown = false;
-        }
+
+        // Check if we're in MISSING_TOKEN state
+        isMissingTokenState = serviceState == ServiceState.MISSING_TOKEN;
+
+        // Check if we're in an error state with a link (including MISSING_TOKEN)
+        var urlPath = serviceState.getUrlPath();
+        isErrorStateWithLink = !urlPath.isEmpty() || isMissingTokenState;
+        currentUrlPath = urlPath;
 
         if (settings.isEnabled())
         {
-            switch (serviceState)
-            {
-            case TOKEN_FAILED:
-
-                if (!hintWasShown)
-                {
-                    if (clientTokenValidator.isValid(settings.getClientToken()))
-                    {
-
-                        notificationService.createNotification(
-                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusTokenFailed,
-                            Messages.Support, "https://code.1c.ai/troubleshooting/#issue_missing_token", //$NON-NLS-1$
-                            UINotificationType.ERROR);
-                    }
-                    else
-                    {
-                        notificationService.createNotification(
-                            PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.NotActivated,
-                            Messages.Activation, "https://code.1c.ai/", //$NON-NLS-1$
-                            UINotificationType.INFO);
-                    }
-                    settingsSetter.setCodeCompletionPolicy(CodeCompletionPolicy.OFF);
-                    hintWasShown = true;
-                }
-
-                break;
-
-            case SSL_ERROR:
-                if (!hintWasShown)
-                {
-                    notificationService.createNotification(
-                        PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(), Messages.StatusSSLFailed,
-                        Messages.Support, "https://code.1c.ai/troubleshooting/#issue_ssl_error", //$NON-NLS-1$
-                        UINotificationType.ERROR);
-                    hintWasShown = true;
-                }
-                break;
-            }
-
-            switch (state.getServiceState())
-            {
-            case ONLINE:
-                hintWasShown = false;
-                notificationService.closeNotificationIfOpen();
-                info = info + ' ' + Messages.StatusOnline;
-                switch (state.getActionState())
-                {
-                case BUSY:
-                    currentStatusColor = COLOR_BUSY;
-                    break;
-
-                default:
-                    currentStatusColor = COLOR_ONLINE;
-                    break;
-                }
-                break;
-
-            case SETTINGS_CHANGED:
-                currentStatusColor = COLOR_OFF;
-                break;
-
-            default:
-                currentStatusColor = COLOR_OFF;
-                break;
-            }
+            var message = serviceState.getMessage();
+            info = info + ' ' + message;
         }
 
-        policy = settings.getCodeCompletionPolicy();
-        if (!settings.isEnabled() || policy == CodeCompletionPolicy.OFF)
-        {
-            currentStatusColor = COLOR_DISABLED;
-        }
+        lastAIState = state;
 
-        policy = settings.getCodeCompletionPolicy();
+        var policy = settings.getCodeCompletionPolicy();
         statusCanvas.setToolTipText(info);
         policyCombo.select(policy.getIndex());
         policyTooltip.setText(policy.getDescription());
         statusCanvas.redraw();
+    }
+
+    private void changeServiceState(ServiceState serviceState)
+    {
+        var actionState = lastAIState != null ? lastAIState.getActionState() : ActionState.INACTIVE;
+        updateState(serviceState, actionState);
+    }
+
+    private void changeActionState(ActionState actionState)
+    {
+        var serviceState = lastAIState != null ? lastAIState.getServiceState() : ServiceState.OFFLINE;
+        updateState(serviceState, actionState);
+    }
+
+    private void updateState(ServiceState serviceState, ActionState actionState)
+    {
+        lastAIState = new AIState(serviceState, actionState);
+        changeState(lastAIState);
     }
 
     @Override
@@ -571,7 +579,7 @@ public class BaseStatusBarControl
     {
         policyTooltip.hide();
         var index = policyCombo.getSelectionIndex();
-        if (index < 0 && index >= policies.length)
+        if (index < 0 || index >= policies.length)
         {
             return;
         }
@@ -579,11 +587,6 @@ public class BaseStatusBarControl
         var codeCompletionPolicy = policies[index];
         settingsSetter.setCodeCompletionPolicy(codeCompletionPolicy);
         policyTooltip.setText(codeCompletionPolicy.getDescription());
-        if (!settings.isEnabled())
-        {
-            currentStatusColor = COLOR_OFF;
-            statusCanvas.redraw();
-        }
     }
 
     @Override

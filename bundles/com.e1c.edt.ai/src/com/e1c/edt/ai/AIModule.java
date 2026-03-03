@@ -54,6 +54,7 @@ public class AIModule
         bind(IContentReplacer.class).to(ContentReplacer.class).in(Singleton.class);
         bind(ILinkProvider.class).to(LinkProvider.class).in(Singleton.class);
         bind(IProjectTools.class).to(ProjectTools.class).in(Singleton.class);
+        bind(ITraceScenario.class).to(TraceScenario.class).in(Singleton.class);
         // @formatter:on
     }
 }

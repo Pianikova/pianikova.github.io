@@ -111,7 +111,7 @@ public class SearchFilesMcpTool
     @Override
     public boolean isExperimental()
     {
-        return true;
+        return false;
     }
 
     @Override

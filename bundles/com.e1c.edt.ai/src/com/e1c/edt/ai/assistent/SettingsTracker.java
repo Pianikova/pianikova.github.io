@@ -36,8 +36,9 @@ public class SettingsTracker
         {
             if (stateService != null)
             {
-                stateService.setState(this.getClass().getName(), ServiceState.SETTINGS_CHANGED);
+                stateService.setState(ServiceState.SETTINGS_CHANGED);
             }
+
             notifyListeners();
             this.currentSettings.put(owner, settings);
             return true;

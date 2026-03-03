@@ -21,7 +21,7 @@ public class AssistentModule
         bind(IRequestBuilder.class).to(RequestBuilder.class).in(Singleton.class);
         bind(ResponseCache.class).in(Singleton.class);
         bind(IResponseCache.class).to(ResponseCache.class);
-        bind(IAIStateListener.class).to(ResponseCache.class);
+        bind(IStateListener.class).to(ResponseCache.class);
         bind(ISessionService.class).to(SessionService.class).in(Singleton.class);
         bind(IFeedbackService.class).to(FeedbackService.class).in(Singleton.class);
         bind(ISettingsTracker.class).to(SettingsTracker.class).in(Singleton.class);
@@ -31,6 +31,7 @@ public class AssistentModule
         bind(ICompressor.class).to(Compressor.class).in(Singleton.class);
         bind(ITools.class).to(Tools.class).in(Singleton.class);
         bind(ISessionCall.class).to(SessionCall.class).in(Singleton.class);
+        bind(ITokenCheck.class).to(TokenCheck.class).in(Singleton.class);
         // @formatter:on
     }
 }

@@ -71,7 +71,7 @@ class UI
     @Override
     public Optional<Shell> getShell()
     {
-        return Optional.ofNullable(Display.getCurrent().getActiveShell());
+        return Optional.ofNullable(Display.getCurrent()).map(dysplay -> dysplay.getActiveShell());
     }
 
     @Override

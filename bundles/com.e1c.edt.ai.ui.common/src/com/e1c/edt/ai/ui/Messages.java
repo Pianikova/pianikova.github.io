@@ -31,16 +31,12 @@ public class Messages
     public static String ReplaceCode;
     public static String FixCodeRequestDetails;
     public static String FixCodeDefaultDetails;
-    public static String StatusOffline;
-    public static String StatusOnline;
     public static String HintHotKey_AcceptBlock;
     public static String HintHotKey_AcceptLine;
     public static String HintHotKey_AcceptAll;
     public static String HintHotKey_AcceptBack;
     public static String HintHotKey_AcceptStop;
     public static String NotActivated;
-    public static String StatusTokenFailed;
-    public static String StatusSSLFailed;
     public static String Support;
     public static String UpdateButton;
     public static String RestartButton;
@@ -60,6 +56,8 @@ public class Messages
     public static String CorrectErrors;
     public static String InOtherWords;
     public static String ImproveStyle;
+    public static String Activate;
+    public static String Details;
 
     static
     {

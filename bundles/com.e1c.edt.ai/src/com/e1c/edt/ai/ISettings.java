@@ -19,6 +19,8 @@ public interface ISettings
 
     boolean isEnabled();
 
+    boolean hasClientToken();
+
     String getClientToken();
 
     String getClientUniqueId();

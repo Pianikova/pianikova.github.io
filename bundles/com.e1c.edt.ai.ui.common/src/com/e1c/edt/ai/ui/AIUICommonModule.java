@@ -46,8 +46,18 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(ClipboardManager.class);
         initializableBinder.addBinding().to(DialogsEnhancer.class);
         initializableBinder.addBinding().to(ResourceListener.class);
-        initializableBinder.addBinding().to(StateService.class);
         initializableBinder.addBinding().to(UpdateService.class);
+        initializableBinder.addBinding().to(Notificator.class);
+
+        bind(UI.class).in(Singleton.class);
+        bind(IUI.class).to(UI.class);
+        bind(ContextMenuInterceptor.class).in(Singleton.class);
+        bind(ClipboardManager.class).in(Singleton.class);
+        bind(IClipboard.class).to(ClipboardManager.class);
+        bind(DialogsEnhancer.class).in(Singleton.class);
+        bind(ResourceListener.class).in(Singleton.class);
+        bind(UpdateService.class).in(Singleton.class);
+        bind(Notificator.class).in(Singleton.class);
 
         // view enhancers
         var viewEnhancerBinder = Multibinder.newSetBinder(binder(), IViewEnhancer.class);
@@ -55,10 +65,6 @@ public class AIUICommonModule
 
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);
-        bind(UI.class).in(Singleton.class);
-        bind(IUI.class).to(UI.class);
-        bind(ClipboardManager.class).in(Singleton.class);
-        bind(IClipboard.class).to(ClipboardManager.class);
         bind(IdeApiHandler.class).in(Singleton.class);
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
@@ -105,11 +111,14 @@ public class AIUICommonModule
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
-        bind(StateService.class).in(Singleton.class);
-        bind(IStateService.class).to(StateService.class);
+        bind(IStateService.class).to(StateService.class).in(Singleton.class);
         bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
         bind(IEdtLinkHandler.class).to(EdtLinkHandler.class).in(Singleton.class);
         bind(IEditorPositionManager.class).to(EditorPositionManager.class).in(Singleton.class);
+        bind(IThemeManager.class).to(ThemeManager.class).in(Singleton.class);
+        bind(INotifications.class).to(Notifications.class).in(Singleton.class);
+        bind(IWeb.class).to(Web.class).in(Singleton.class);
+        bind(IPreferences.class).to(Preferences.class).in(Singleton.class);
         // @formatter:on
     }
 }

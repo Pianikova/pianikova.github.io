@@ -142,7 +142,7 @@ public class FindMcpTool
     @Override
     public boolean isExperimental()
     {
-        return true;
+        return false;
     }
 
     @Override

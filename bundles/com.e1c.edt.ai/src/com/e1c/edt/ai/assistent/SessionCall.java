@@ -8,15 +8,13 @@ import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
-import com.e1c.edt.ai.AIState;
-import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
-import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
@@ -27,26 +25,22 @@ import com.google.inject.Inject;
 public class SessionCall
     implements ISessionCall
 {
-    private static final AIState STATE_CHANGED = new AIState(ServiceState.SETTINGS_CHANGED, ActionState.INACTIVE);
+    private static final int MAX_RETRY_ATTEMPTS = 3;
+    private static final long INITIAL_RETRY_DELAY_SECONDS = 5;
     private final ILog log;
     private final IHttpLog httpLog;
-    private final IAIStateListener stateListener;
     private final ISessionService sessionService;
     private final IStateService stateService;
 
     @Inject
-    public SessionCall(ILog log, IHttpLog httpLog, IAIStateListener stateListener,
-        ISessionService sessionService,
-        IStateService stateService)
+    public SessionCall(ILog log, IHttpLog httpLog, ISessionService sessionService, IStateService stateService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(httpLog);
-        Preconditions.checkNotNull(stateListener);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(stateService);
         this.log = log;
         this.httpLog = httpLog;
-        this.stateListener = stateListener;
         this.sessionService = sessionService;
         this.stateService = stateService;
     }
@@ -61,56 +55,26 @@ public class SessionCall
         return result;
     }
 
-    @SuppressWarnings("nls")
     private <T> void callInternal(ProjectId projectId, ICancellationToken cancellationToken,
         Function<Optional<Session>, CompletableFuture<HttpResponse<T>>> taskSupplier,
         CompletableFuture<HttpResponse<T>> result)
     {
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> result.cancel(true));
         var stopwatch = Stopwatch.createStarted();
-        stateService.setState(CodeAssistant.class.getName(), ActionState.BUSY);
-        sessionService.getSessionAsync(projectId).thenCompose(session -> {
-            return taskSupplier.apply(session).whenComplete((response, throwable) -> {
-                if (throwable == null)
-                {
-                    httpLog.response(response, cancellationToken.toString(), stopwatch, true, false);
-                    var statusCode = response.statusCode();
-                    if (statusCode >= 400 && statusCode < 500)
-                    {
-                        stateListener.onStateChange(STATE_CHANGED);
-                        log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
-                            () -> "Retrying request due to unexpected response status code: " + statusCode);
-                        sessionService.getSessionAsync(projectId).thenCompose(newSesssion -> {
-                            return taskSupplier.apply(session);
-                        }).whenComplete((anotherOneResponse, error) -> {
-                            if (error == null)
-                            {
-                                httpLog.response(anotherOneResponse, cancellationToken.toString(), stopwatch, true,
-                                    true);
-                                result.complete(anotherOneResponse);
-                            }
-                            else
-                            {
-                                result.completeExceptionally(error);
-                            }
-                        });
-                    }
-                    else
-                    {
-                        result.complete(response);
-                    }
-                }
-                else
-                {
-                    result.completeExceptionally(
-                        throwable instanceof CompletionException ? throwable.getCause() : throwable);
-                }
-            });
-        })
+        var busyToken = stateService.busy();
+        executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result, 0)
             .whenComplete((r, error) -> {
                 try
                 {
-                    stateService.setState(CodeAssistant.class.getName(), ActionState.INACTIVE);
+                    try
+                    {
+                        busyToken.close();
+                    }
+                    catch (Exception e)
+                    {
+                        //
+                    }
+
                     if (error != null)
                     {
                         if (!isCancellationException(error))
@@ -118,7 +82,10 @@ public class SessionCall
                             httpLog.error(error, cancellationToken.toString());
                         }
 
-                        result.completeExceptionally(error);
+                        if (!result.isDone())
+                        {
+                            result.completeExceptionally(error);
+                        }
                     }
                 }
                 finally
@@ -133,6 +100,76 @@ public class SessionCall
                     }
                 }
             });
+    }
+
+    @SuppressWarnings("nls")
+    private <T> CompletableFuture<HttpResponse<T>> executeWithRetry(ProjectId projectId,
+        ICancellationToken cancellationToken,
+        Function<Optional<Session>, CompletableFuture<HttpResponse<T>>> taskSupplier, Stopwatch stopwatch,
+        CompletableFuture<HttpResponse<T>> result, int attemptCount)
+    {
+        return sessionService.getSessionAsync(projectId).thenCompose(session -> {
+            var sessionId = session.map(i -> i.sessionId).orElse(null);
+            if (sessionId == null)
+            {
+                if (attemptCount < MAX_RETRY_ATTEMPTS)
+                {
+                    int nextAttempt = attemptCount + 1;
+                    long delaySeconds = calculateRetryDelay(attemptCount);
+
+                    log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
+                        () -> "Retrying request due to null sessionId. Attempt: " + nextAttempt + "/"
+                            + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
+
+                    CompletableFuture.delayedExecutor(delaySeconds, TimeUnit.SECONDS).execute(() -> {
+                        executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result, nextAttempt);
+                    });
+                    return result;
+                }
+                else
+                {
+                    result.completeExceptionally(
+                        new IllegalStateException("Failed to create session after " + attemptCount + " attempts"));
+                    return result;
+                }
+            }
+
+            return taskSupplier.apply(session).whenComplete((response, throwable) -> {
+                if (throwable == null)
+                {
+                    var statusCode = response.statusCode();
+                    if (statusCode >= 400 && statusCode < 500 && statusCode != 403 && attemptCount < MAX_RETRY_ATTEMPTS)
+                    {
+                        int nextAttempt = attemptCount + 1;
+                        long delaySeconds = calculateRetryDelay(attemptCount);
+
+                        log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
+                            () -> "Retrying request due to unexpected response status code. Attempt: " + nextAttempt
+                                + "/" + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
+
+                        CompletableFuture.delayedExecutor(delaySeconds, TimeUnit.SECONDS).execute(() -> {
+                            executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result,
+                                nextAttempt);
+                        });
+                    }
+                    else
+                    {
+                        httpLog.response(response, cancellationToken.toString(), stopwatch, true, attemptCount > 0);
+                        result.complete(response);
+                    }
+                }
+                else
+                {
+                    result.completeExceptionally(
+                        throwable instanceof CompletionException ? throwable.getCause() : throwable);
+                }
+            });
+        });
+    }
+
+    private long calculateRetryDelay(int attemptCount)
+    {
+        return INITIAL_RETRY_DELAY_SECONDS * (1L << attemptCount);
     }
 
     private boolean isCancellationException(Throwable error)

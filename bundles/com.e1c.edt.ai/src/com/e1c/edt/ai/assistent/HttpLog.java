@@ -4,12 +4,17 @@
 package com.e1c.edt.ai.assistent;
 
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Optional;
+
+import javax.net.ssl.SSLSession;
 
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.SessionErrorResponse;
@@ -23,16 +28,19 @@ class HttpLog
     private final ILog log;
     private final IJson json;
     private final IStateService stateService;
+    private final ITraceScenario traceScenario;
 
     @Inject
-    public HttpLog(ILog log, IStateService stateService, IJson json)
+    public HttpLog(ILog log, IStateService stateService, IJson json, ITraceScenario traceScenario)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(traceScenario);
         this.json = json;
         this.log = log;
         this.stateService = stateService;
+        this.traceScenario = traceScenario;
     }
 
     @Override
@@ -89,25 +97,39 @@ class HttpLog
         boolean handleError)
     {
         Preconditions.checkNotNull(response);
+
+        switch (traceScenario.getActive())
+        {
+        case SESSION_EXPIRED:
+            response = createSessionExpiredResponse(response);
+            break;
+        case TOKEN_NOT_FOUND:
+            response = createTokenNotFoundResponse(response);
+            break;
+        case SERVER_ERROR:
+            response = createServerErrorResponse(response);
+            break;
+        case NONE:
+        default:
+            break;
+        }
+
         var statusCode = response.statusCode();
         if (statusCode >= 200 && statusCode < 300)
         {
-            if (handleError)
-            {
-                stateService.setState(HttpLog.class.getName(), ServiceState.ONLINE);
-            }
-
+            stateService.setState(ServiceState.ONLINE);
             if (detailed)
             {
+                final HttpResponse<T> currentResponse = response;
                 if (stopwatch.elapsed().toMillis() < 1000)
                 {
-                    log.trace(TracingSources.API_CALLS, createHeader("AI response", response.uri(), ref),
-                        () -> createTrace(response, stopwatch, statusCode));
+                    log.trace(TracingSources.API_CALLS, createHeader("AI response", currentResponse.uri(), ref),
+                        () -> createTrace(currentResponse, stopwatch, statusCode));
                 }
                 else
                 {
-                    log.warning(createHeader("AI response", response.uri(), ref),
-                        () -> createTrace(response, stopwatch, statusCode));
+                    log.warning(createHeader("AI response", currentResponse.uri(), ref),
+                        () -> createTrace(currentResponse, stopwatch, statusCode));
                 }
             }
         }
@@ -125,8 +147,18 @@ class HttpLog
                     var errorResponseOpt = json.deserialize(response.body().toString(), SessionErrorResponse.class);
                     if (errorResponseOpt.isPresent()) {
                         var errorResponse = errorResponseOpt.get();
-                        if (errorResponse.errorType != null && errorResponse.errorType.equals("token_not_found")) {
-                            stateService.setState(HttpLog.class.getName(), ServiceState.TOKEN_FAILED);
+                        if (errorResponse.errorType != null)
+                        {
+                            switch (errorResponse.errorType.toLowerCase())
+                            {
+                            case "token_not_found":
+                                stateService.setState(ServiceState.TOKEN_ERROR);
+                                break;
+
+                            case "invalid_session":
+                                stateService.setState(ServiceState.SESSION_EXPIRED);
+                                break;
+                            }
                         }
                     }
                     break;
@@ -134,11 +166,11 @@ class HttpLog
                 case 500:
                 case 502:
                 case 503:
-                    stateService.setState(HttpLog.class.getName(), ServiceState.SERVER_ERROR);
+                    stateService.setState(ServiceState.SERVER_ERROR);
                     break;
 
                 default:
-                    stateService.setState(HttpLog.class.getName(), ServiceState.OFFLINE);
+                    stateService.setState(ServiceState.OFFLINE);
                     break;
                 }
             }
@@ -159,8 +191,104 @@ class HttpLog
         sb.append(System.lineSeparator());
         sb.append(response.toString());
         sb.append(System.lineSeparator());
-        sb.append(response.body());
+        var body = response.body();
+        if (body != null)
+        {
+            sb.append("size: ");
+            sb.append(body.toString().length());
+            sb.append(System.lineSeparator());
+            sb.append("body:");
+            var it = body.toString().lines().iterator();
+            while (it.hasNext())
+            {
+                sb.append(System.lineSeparator());
+                sb.append('\t');
+                sb.append(it.next());
+            }
+        }
         return sb.toString();
+    }
+
+    private <T> HttpResponse<T> createReplacementResponse(HttpResponse<T> originalResponse, int statusCode, String body)
+    {
+        return new HttpResponse<>()
+        {
+            @Override
+            public int statusCode()
+            {
+                return statusCode;
+            }
+
+            @Override
+            public HttpRequest request()
+            {
+                return originalResponse.request();
+            }
+
+            @Override
+            public Optional<HttpResponse<T>> previousResponse()
+            {
+                return originalResponse.previousResponse();
+            }
+
+            @Override
+            public java.net.http.HttpHeaders headers()
+            {
+                return originalResponse.headers();
+            }
+
+            @SuppressWarnings("unchecked")
+            @Override
+            public T body()
+            {
+                return (T)body;
+            }
+
+            @Override
+            public URI uri()
+            {
+                return originalResponse.uri();
+            }
+
+            @Override
+            public HttpClient.Version version()
+            {
+                return originalResponse.version();
+            }
+
+            @Override
+            public Optional<SSLSession> sslSession()
+            {
+                return Optional.empty();
+            }
+        };
+    }
+
+    private <T> HttpResponse<T> createSessionExpiredResponse(HttpResponse<T> originalResponse)
+    {
+        var sessionExpiredError = new SessionErrorResponse();
+        sessionExpiredError.error = "Session expired"; //$NON-NLS-1$
+        sessionExpiredError.errorType = "invalid_session"; //$NON-NLS-1$
+        var errorBody = json.serialize(sessionExpiredError);
+        return createReplacementResponse(originalResponse, 403, errorBody);
+    }
+
+    private <T> HttpResponse<T> createTokenNotFoundResponse(HttpResponse<T> originalResponse)
+    {
+        var tokenNotFoundError = new SessionErrorResponse();
+        tokenNotFoundError.error = "Token not found"; //$NON-NLS-1$
+        tokenNotFoundError.errorType = "token_not_found"; //$NON-NLS-1$
+        var errorBody = json.serialize(tokenNotFoundError);
+        return createReplacementResponse(originalResponse, 401, errorBody);
+    }
+
+    private <T> HttpResponse<T> createServerErrorResponse(HttpResponse<T> originalResponse)
+    {
+        var serverError = new SessionErrorResponse();
+        serverError.error = "Internal server error"; //$NON-NLS-1$
+        serverError.errorType = "internal_server_error"; //$NON-NLS-1$
+        var errorBody = json.serialize(serverError);
+        return createReplacementResponse(originalResponse, 500, errorBody);
     }
 
     @Override

@@ -202,6 +202,26 @@
               id="com.e1c.edt.ai.ui.commands.openChatView.ai"
               name="%command.name.openChatView ">
         </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
+                name="Session Expiration">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
+                name="Token Not Found">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.stopscenarios.ai"
+                name="Stop Scenarios">
+        </command>
+        <command
+                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+                id="com.e1c.edt.ai.ui.commands.servererror.ai"
+                name="Server Error">
+        </command>
     </extension>
 
     <extension point="org.eclipse.ui.bindings">
@@ -277,6 +297,22 @@
               class="com.e1c.edt.ui.eclipse.handlers.OpenChatViewHandler"
               commandId="com.e1c.edt.ai.ui.commands.openChatView.ai">
         </handler>
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.SessionExpirationAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.TokenNotFoundAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.StopScenarioAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.stopscenarios.ai">
+        </handler>
+        <handler
+                class="com.e1c.edt.ui.eclipse.handlers.ServerErrorAIHandler"
+                commandId="com.e1c.edt.ai.ui.commands.servererror.ai">
+        </handler>
 
     </extension>
 
@@ -350,6 +386,57 @@
             </command>
         </menuContribution>
         <menuContribution
+                locationURI="menu:org.eclipse.ui.main.menu?after=additions">
+            <menu
+                  icon="icons/obj16/ai.png"
+                  id="com.e1c.edt.ai.ui.mainMenu"
+                  label="AI">
+                <separator
+                      name="com.e1c.edt.ai.ui.separatorCases"
+                      visible="true">
+                </separator>
+                <menu
+                      id="com.e1c.edt.ai.ui.casesMenu"
+                      label="Cases">
+                    <visibleWhen
+                            checkEnabled="false">
+                        <test
+                              forcePluginActivation="true"
+                              property="com.e1c.edt.ai.ui.isTraceMode">
+                        </test>
+                    </visibleWhen>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
+                            id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai.id"
+                            label="Session Expiration"
+                            style="push">
+                    </command>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
+                            id="com.e1c.edt.ai.ui.commands.tokennotfound.ai.id"
+                            label="Token Not Found"
+                            style="push">
+                    </command>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.servererror.ai"
+                            id="com.e1c.edt.ai.ui.commands.servererror.ai.id"
+                            label="Server Error"
+                            style="push">
+                    </command>
+                    <separator
+                            name="com.e1c.edt.ai.ui.separatorStopScenarios"
+                            visible="true">
+                    </separator>
+                    <command
+                            commandId="com.e1c.edt.ai.ui.commands.stopscenarios.ai"
+                            id="com.e1c.edt.ai.ui.commands.stopscenarios.ai.id"
+                            label="Stop Scenarios"
+                            style="push">
+                    </command>
+                </menu>
+            </menu>
+        </menuContribution>
+        <menuContribution
                 allPopups="false"
                 locationURI="popup:#AbstractTextEditorContext?endof=group.open">
             <menu
@@ -397,7 +484,7 @@
               </command>
            </toolbar>
         </menuContribution>
-        
+
     </extension>
     
     <extension
@@ -414,6 +501,17 @@
                 id="com.e1c.edt.ai.ui.clientPrefs"
                 name="%page.name">
         </page>
+    </extension>
+
+    <extension
+            point="org.eclipse.core.expressions.propertyTesters">
+        <propertyTester
+              class="com.e1c.edt.ui.eclipse.TraceModePropertyTester"
+              id="com.e1c.edt.ui.eclipse.traceModePropertyTester"
+              namespace="com.e1c.edt.ai.ui"
+              properties="isTraceMode"
+              type="java.lang.Object">
+        </propertyTester>
     </extension>
 
     <extension

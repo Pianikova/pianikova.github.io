@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -29,7 +28,6 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.ui.PlatformUI;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IFileDocument;
@@ -192,8 +190,7 @@ public class Chat implements IChat, IChatDialog
         }
 
         chatInJob(ctx, () -> {
-            stateService.setState(Chat.class.getName(), ActionState.BUSY);
-            try
+            try (var busyToken = stateService.busy())
             {
                 var messagesJson = result.messages != null
                     ? json.serialize(result.messages) : null;
@@ -234,10 +231,6 @@ public class Chat implements IChat, IChatDialog
             {
                 log.logError(error);
             }
-            finally
-            {
-                stateService.setState(Chat.class.getName(), ActionState.INACTIVE);
-            }
         });
     }
 
@@ -252,8 +245,7 @@ public class Chat implements IChat, IChatDialog
         }
 
         chatInJob(ctx, () -> {
-            stateService.setState(Chat.class.getName(), ActionState.BUSY);
-            try
+            try (var busyToken = stateService.busy())
             {
                 var script = new StringBuilder();
                 script.append("window.chatApi.continue_chat(");
@@ -272,10 +264,6 @@ public class Chat implements IChat, IChatDialog
             catch (Throwable error)
             {
                 log.logError(error);
-            }
-            finally
-            {
-                stateService.setState(Chat.class.getName(), ActionState.INACTIVE);
             }
         });
     }
@@ -338,8 +326,8 @@ public class Chat implements IChat, IChatDialog
     {
         ui.showView(BaseChatView.ID);
         chatInJob(Optional.ofNullable(ctx), () -> {
-            stateService.setState(Chat.class.getName(), ActionState.BUSY);
-            try {
+            try (var busyToken = stateService.busy())
+            {
                 var projectId = ProjectId.Default;
                 if (ctx != null)
                 {
@@ -454,13 +442,9 @@ public class Chat implements IChat, IChatDialog
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
                 });
             }
-            catch (InterruptedException | ExecutionException error)
+            catch (Exception error)
             {
                 log.logError(error);
-            }
-            finally
-            {
-                stateService.setState(Chat.class.getName(), ActionState.INACTIVE);
             }
         });
     }

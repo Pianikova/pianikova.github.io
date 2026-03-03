@@ -148,7 +148,7 @@ public class GetCommandsMcpTool
     @Override
     public boolean isExperimental()
     {
-        return true;
+        return false;
     }
 
     @Override
