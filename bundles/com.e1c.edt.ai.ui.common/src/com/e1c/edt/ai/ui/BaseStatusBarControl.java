@@ -304,33 +304,39 @@ public class BaseStatusBarControl
         gc.fillRoundRectangle(0, iconY, ICON_SIZE, ICON_SIZE, ICON_CORNER_RADIUS, ICON_CORNER_RADIUS);
 
         // Draw status text (color adapts to theme)
-        Color brightForeground;
-        if (themeManager.isDarkTheme())
-        {
-            brightForeground = new Color(display, 220, 220, 220); // Light gray for dark theme
-        }
-        else
-        {
-            brightForeground = display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND); // System color for light theme
-        }
-        gc.setForeground(brightForeground);
-        gc.setFont(font);
-
-        // Ensure font is set
-        if (font != null && !font.isDisposed())
-        {
-            gc.setFont(font);
-        }
-
+        Color brightForeground = null;
         var textExtent = gc.textExtent(statusText);
         int textX = ICON_SIZE + STATUS_TEXT_MARGIN;
-        int textY = centerY - textExtent.y / 2;
 
-        gc.drawText(statusText, textX, textY, SWT.DRAW_TRANSPARENT);
-
-        if (themeManager.isDarkTheme())
+        try
         {
-            brightForeground.dispose(); // Dispose temporary color only if we created it
+            if (themeManager.isDarkTheme())
+            {
+                brightForeground = new Color(display, 220, 220, 220); // Light gray for dark theme
+            }
+            else
+            {
+                brightForeground = display.getSystemColor(SWT.COLOR_WIDGET_FOREGROUND); // System color for light theme
+            }
+            gc.setForeground(brightForeground);
+            gc.setFont(font);
+
+            // Ensure font is set
+            if (font != null && !font.isDisposed())
+            {
+                gc.setFont(font);
+            }
+
+            int textY = centerY - textExtent.y / 2;
+
+            gc.drawText(statusText, textX, textY, SWT.DRAW_TRANSPARENT);
+        }
+        finally
+        {
+            if (brightForeground != null && !brightForeground.isDisposed() && themeManager.isDarkTheme())
+            {
+                brightForeground.dispose(); // Dispose temporary color only if we created it
+            }
         }
 
         // Draw policy text and dropdown indicator (or activation link when error state)
@@ -371,15 +377,23 @@ public class BaseStatusBarControl
         {
             // Show policy text as usual
             var policy = settings.getCodeCompletionPolicy();
-            String policyName = policy.getName().toLowerCase();
-            if (policyName.contains(":"))
+            String policyName = policy.getName();
+            if (policyName != null)
             {
-                // Get text after last colon
-                policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+                policyName = policyName.toLowerCase();
+                if (policyName.contains(":"))
+                {
+                    // Get text after last colon
+                    policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+                }
+                else
+                {
+                    policyText = policyName;
+                }
             }
             else
             {
-                policyText = policyName;
+                policyText = "";
             }
 
             policyTextExtent = gc.textExtent(policyText);
@@ -486,29 +500,18 @@ public class BaseStatusBarControl
             font.dispose();
         }
 
-        if (colorOnline != null && !colorOnline.isDisposed())
-        {
-            colorOnline.dispose();
-        }
+        disposeColorIfNotDisposed(colorOnline);
+        disposeColorIfNotDisposed(colorSettingsChanged);
+        disposeColorIfNotDisposed(colorBusy);
+        disposeColorIfNotDisposed(colorOff);
+        disposeColorIfNotDisposed(colorDisabled);
+    }
 
-        if (colorSettingsChanged != null && !colorSettingsChanged.isDisposed())
+    private void disposeColorIfNotDisposed(Color color)
+    {
+        if (color != null && !color.isDisposed())
         {
-            colorSettingsChanged.dispose();
-        }
-
-        if (colorBusy != null && !colorBusy.isDisposed())
-        {
-            colorBusy.dispose();
-        }
-
-        if (colorOff != null && !colorOff.isDisposed())
-        {
-            colorOff.dispose();
-        }
-
-        if (colorDisabled != null && !colorDisabled.isDisposed())
-        {
-            colorDisabled.dispose();
+            color.dispose();
         }
     }
 
@@ -575,7 +578,7 @@ public class BaseStatusBarControl
     {
         policyTooltip.hide();
         var index = policyCombo.getSelectionIndex();
-        if (index < 0 && index >= policies.length)
+        if (index < 0 || index >= policies.length)
         {
             return;
         }
