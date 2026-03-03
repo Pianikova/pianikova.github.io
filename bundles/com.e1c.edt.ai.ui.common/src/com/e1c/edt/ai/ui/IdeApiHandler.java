@@ -186,6 +186,12 @@ public class IdeApiHandler
     {
         var safeHref = href != null ? href.trim() : "";
 
+        // For relative paths like "/chat-list", return false
+        if (safeHref.startsWith("/"))
+        {
+            return false;
+        }
+
         // Decode URL-encoded characters (e.g., %3A -> :, %D0 -> Cyrillic letters)
         var decodedHref = markdownUtils.decodeUrl(safeHref);
 
