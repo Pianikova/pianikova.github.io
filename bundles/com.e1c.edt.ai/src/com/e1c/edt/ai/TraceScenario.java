@@ -31,6 +31,7 @@ public class TraceScenario
         {
             scenarios.get(scenarioType).set(scenarioType == type);
         }
+
         if (type == TraceScenarioType.SSL_ERROR)
         {
             stateService.setState(ServiceState.SETTINGS_CHANGED);
@@ -54,9 +55,15 @@ public class TraceScenario
     @Override
     public void deactivate()
     {
+        var activeType = getActive();
         for (TraceScenarioType type : TraceScenarioType.values())
         {
             scenarios.get(type).set(false);
+        }
+
+        if (activeType == TraceScenarioType.SSL_ERROR)
+        {
+            stateService.setState(ServiceState.SETTINGS_CHANGED);
         }
     }
 }

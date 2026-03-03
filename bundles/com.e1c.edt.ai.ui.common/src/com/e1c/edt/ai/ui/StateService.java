@@ -29,7 +29,7 @@ class StateService
     private static final ListenerList<IStateListener> listeners = new ListenerList<>(ListenerList.IDENTITY);
     private final ILog log;
     private final ISettings settings;
-    private ServiceState serviceState = ServiceState.OFFLINE;
+    private ServiceState serviceState = ServiceState.NONE;
     private ActionState actionState = ActionState.INACTIVE;
     private AtomicInteger _busy = new AtomicInteger(0);
 
@@ -47,6 +47,7 @@ class StateService
     public void addListener(IStateListener newListener)
     {
         listeners.add(newListener);
+        refresh();
     }
 
     @Override
@@ -58,22 +59,28 @@ class StateService
     @Override
     public AIState getState()
     {
+        var curState = serviceState;
         if (!settings.hasClientToken())
         {
-            serviceState = ServiceState.MISSING_TOKEN;
+            curState = ServiceState.MISSING_TOKEN;
         }
 
-        return new AIState(serviceState, actionState);
+        return new AIState(curState, actionState);
     }
 
     @Override
     public void setState(ServiceState serviceState)
     {
         Preconditions.checkNotNull(serviceState);
+        if (!settings.hasClientToken())
+        {
+            serviceState = ServiceState.MISSING_TOKEN;
+        }
+
         if (this.serviceState != serviceState || serviceState.isAllowDuplicates())
         {
             this.serviceState = serviceState;
-            refresh();
+            notifyServiceStateChanged();
         }
     }
 
@@ -82,18 +89,8 @@ class StateService
     {
         var state = getState();
         log.trace(TracingSources.API_CALLS, "StateService", () -> state.toString()); //$NON-NLS-1$
-        for (var listener : listeners)
-        {
-            try
-            {
-                listener.onServiceStateChange(state.getServiceState());
-                listener.onActionStateChange(state.getActionState());
-            }
-            catch (Throwable error)
-            {
-                log.logError(error);
-            }
-        }
+        notifyServiceStateChanged();
+        notifyActionStateChanged();
     }
 
     @Override
@@ -118,7 +115,39 @@ class StateService
         if (this.actionState != actionState)
         {
             this.actionState = actionState;
-            refresh();
+            notifyActionStateChanged();
+        }
+    }
+
+    private void notifyServiceStateChanged()
+    {
+        var serviceState = getState().getServiceState();
+        for (var listener : listeners)
+        {
+            try
+            {
+                listener.onServiceStateChange(serviceState);
+            }
+            catch (Throwable error)
+            {
+                log.logError(error);
+            }
+        }
+    }
+
+    private void notifyActionStateChanged()
+    {
+        var actionState = getState().getActionState();
+        for (var listener : listeners)
+        {
+            try
+            {
+                listener.onActionStateChange(actionState);
+            }
+            catch (Throwable error)
+            {
+                log.logError(error);
+            }
         }
     }
 }

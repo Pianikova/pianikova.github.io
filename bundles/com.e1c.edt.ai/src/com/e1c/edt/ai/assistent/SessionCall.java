@@ -15,6 +15,7 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
@@ -116,7 +117,7 @@ public class SessionCall
                     int nextAttempt = attemptCount + 1;
                     long delaySeconds = calculateRetryDelay(attemptCount);
 
-                    log.warning("ApiCallRepeater",
+                    log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
                         () -> "Retrying request due to null sessionId. Attempt: " + nextAttempt + "/"
                             + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
 
@@ -142,7 +143,7 @@ public class SessionCall
                         int nextAttempt = attemptCount + 1;
                         long delaySeconds = calculateRetryDelay(attemptCount);
 
-                        log.warning("ApiCallRepeater",
+                        log.trace(TracingSources.API_CALLS, "ApiCallRepeater",
                             () -> "Retrying request due to unexpected response status code. Attempt: " + nextAttempt
                                 + "/" + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
 

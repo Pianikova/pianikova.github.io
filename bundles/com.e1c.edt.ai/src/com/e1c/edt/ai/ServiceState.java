@@ -9,6 +9,7 @@ package com.e1c.edt.ai;
  */
 public enum ServiceState
 {
+    NONE(false, "", ""), //$NON-NLS-1$ //$NON-NLS-2$
     MISSING_TOKEN(false, Messages.StatusMissingToken, ""), //$NON-NLS-1$
     TOKEN_ERROR(false, Messages.StatusTokenFailed, "troubleshooting/#issue_missing_token"), //$NON-NLS-1$
     SERVER_ERROR(false, Messages.StatusServerError, "troubleshooting/#issue_server_error"), //$NON-NLS-1$

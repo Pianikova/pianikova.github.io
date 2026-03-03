@@ -271,9 +271,6 @@ public class BaseStatusBarControl
         });
 
         stateService.addListener(this);
-        var state = stateService.getState();
-        onServiceStateChange(state.getServiceState());
-        onActionStateChange(state.getActionState());
         return composite;
     }
 
@@ -344,75 +341,78 @@ public class BaseStatusBarControl
         int policyTextX = textX + textExtent.x;
         var policyTextExtent = gc.textExtent(policyText);
 
-        if (isErrorStateWithLink)
+        if (lastAIState != null)
         {
-            // Show link text instead of policy
-            if (isMissingTokenState)
+            if (isErrorStateWithLink)
             {
-                policyText = Messages.Activate;
-            }
-            else
-            {
-                policyText = Messages.Details;
-            }
-            policyTextExtent = gc.textExtent(policyText);
-            int policyTextY = centerY - policyTextExtent.y / 2;
-
-            // Store bounds for click detection
-            this.policyTextX = policyTextX;
-            this.policyTextWidth = policyTextExtent.x;
-
-            // Draw support text as link (bright blue visible in dark theme)
-            Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
-            gc.setForeground(brightLink);
-            gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
-
-            // Draw underline for link effect
-            int underlineY = policyTextY + policyTextExtent.y - 2;
-            gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
-
-            brightLink.dispose(); // Dispose temporary color
-        }
-        else
-        {
-            // Show policy text as usual
-            var policy = settings.getCodeCompletionPolicy();
-            String policyName = policy.getName();
-            if (policyName != null)
-            {
-                policyName = policyName.toLowerCase();
-                if (policyName.contains(":"))
+                // Show link text instead of policy
+                if (isMissingTokenState)
                 {
-                    // Get text after last colon
-                    policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+                    policyText = Messages.Activate;
                 }
                 else
                 {
-                    policyText = policyName;
+                    policyText = Messages.Details;
                 }
+                policyTextExtent = gc.textExtent(policyText);
+                int policyTextY = centerY - policyTextExtent.y / 2;
+
+                // Store bounds for click detection
+                this.policyTextX = policyTextX;
+                this.policyTextWidth = policyTextExtent.x;
+
+                // Draw support text as link (bright blue visible in dark theme)
+                Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
+                gc.setForeground(brightLink);
+                gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
+
+                // Draw underline for link effect
+                int underlineY = policyTextY + policyTextExtent.y - 2;
+                gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
+
+                brightLink.dispose(); // Dispose temporary color
             }
             else
             {
-                policyText = "";
+                // Show policy text as usual
+                var policy = settings.getCodeCompletionPolicy();
+                String policyName = policy.getName();
+                if (policyName != null)
+                {
+                    policyName = policyName.toLowerCase();
+                    if (policyName.contains(":"))
+                    {
+                        // Get text after last colon
+                        policyText = policyName.substring(policyName.lastIndexOf(":") + 1).trim();
+                    }
+                    else
+                    {
+                        policyText = policyName;
+                    }
+                }
+                else
+                {
+                    policyText = "";
+                }
+
+                policyTextExtent = gc.textExtent(policyText);
+                int policyTextY = centerY - policyTextExtent.y / 2;
+
+                // Store bounds for click detection
+                this.policyTextX = policyTextX;
+                this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
+
+                // Draw policy text as link (bright blue visible in dark theme)
+                Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
+                gc.setForeground(brightLink);
+                gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
+
+                // Draw underline for link effect
+                int underlineY = policyTextY + policyTextExtent.y - 2;
+                gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
+
+                brightLink.dispose(); // Dispose temporary color
             }
-
-            policyTextExtent = gc.textExtent(policyText);
-            int policyTextY = centerY - policyTextExtent.y / 2;
-
-            // Store bounds for click detection
-            this.policyTextX = policyTextX;
-            this.policyTextWidth = policyTextExtent.x; // Text width only (no triangle)
-
-            // Draw policy text as link (bright blue visible in dark theme)
-            Color brightLink = new Color(display, 100, 200, 255); // Bright cyan/blue
-            gc.setForeground(brightLink);
-            gc.drawText(policyText, policyTextX, policyTextY, SWT.DRAW_TRANSPARENT);
-
-            // Draw underline for link effect
-            int underlineY = policyTextY + policyTextExtent.y - 2;
-            gc.drawLine(policyTextX, underlineY, policyTextX + policyTextExtent.x, underlineY);
-
-            brightLink.dispose(); // Dispose temporary color
         }
 
         // Reset foreground color
@@ -473,6 +473,7 @@ public class BaseStatusBarControl
             }
             return colorOnline;
 
+        case NONE:
         case MISSING_TOKEN:
             return colorDisabled;
 
@@ -530,13 +531,13 @@ public class BaseStatusBarControl
     private void changeState(AIState state)
     {
         var info = versionProvider.getPluginVersion().toString();
-        ServiceState serviceState = state.getServiceState();
+        var serviceState = state.getServiceState();
 
         // Check if we're in MISSING_TOKEN state
         isMissingTokenState = serviceState == ServiceState.MISSING_TOKEN;
 
         // Check if we're in an error state with a link (including MISSING_TOKEN)
-        String urlPath = serviceState.getUrlPath();
+        var urlPath = serviceState.getUrlPath();
         isErrorStateWithLink = !urlPath.isEmpty() || isMissingTokenState;
         currentUrlPath = urlPath;
 
