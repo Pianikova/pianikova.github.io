@@ -28,8 +28,8 @@ public class Notificator
     private final IClock clock;
     private final Object lock = new Object();
     private ServiceState lastServiceState;
-    ServiceState lastShownServiceState;
-    LocalDateTime lastShownTime;
+    public ServiceState lastShownServiceState;
+    public LocalDateTime lastShownTime;
 
     @Inject
     public Notificator(IStateService stateService, INotifications notifications, IDispatcher dispatcher, IClock clock)
@@ -109,7 +109,7 @@ public class Notificator
         updateJob.schedule(delayMs);
     }
 
-    boolean shouldShowNotification(ServiceState serviceState)
+    public boolean shouldShowNotification(ServiceState serviceState)
     {
         synchronized (lock)
         {
