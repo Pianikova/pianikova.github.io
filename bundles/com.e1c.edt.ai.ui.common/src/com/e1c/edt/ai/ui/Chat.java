@@ -100,6 +100,7 @@ public class Chat implements IChat, IChatDialog
     private String lastDialogPath;
     private ChangeListener<Number> widthListener;
     private ChangeListener<Number> heightListener;
+    private ScrollPane currentPane;
 
     @Inject
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
@@ -481,9 +482,33 @@ public class Chat implements IChat, IChatDialog
 
         pane.widthProperty().addListener(widthListener);
         pane.heightProperty().addListener(heightListener);
+        currentPane = pane;
 
         chatInJob(Optional.empty(), () -> { /* warming up */
         });
+    }
+
+    @Override
+    public void dispose()
+    {
+        if (currentPane != null)
+        {
+            if (widthListener != null)
+            {
+                currentPane.widthProperty().removeListener(widthListener);
+            }
+            if (heightListener != null)
+            {
+                currentPane.heightProperty().removeListener(heightListener);
+            }
+            currentPane = null;
+        }
+        widthListener = null;
+        heightListener = null;
+        contexts.clear();
+        handler.reset();
+        lastChatKey = null;
+        initializing = CompletableFuture.completedFuture(true);
     }
 
     private void ensureWebViewExists()
