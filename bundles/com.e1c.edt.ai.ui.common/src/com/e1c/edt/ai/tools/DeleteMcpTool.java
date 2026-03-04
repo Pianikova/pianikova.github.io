@@ -90,7 +90,7 @@ public class DeleteMcpTool
     @Override
     public boolean isExperimental()
     {
-        return false;
+        return true;
     }
 
     @Override

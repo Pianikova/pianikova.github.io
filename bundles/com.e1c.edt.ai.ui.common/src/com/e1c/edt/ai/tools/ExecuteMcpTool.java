@@ -65,7 +65,7 @@ public class ExecuteMcpTool
     @Override
     public boolean isExperimental()
     {
-        return false;
+        return true;
     }
 
     @Override

@@ -102,7 +102,7 @@ public class WriteMcpTool
     @Override
     public boolean isExperimental()
     {
-        return false;
+        return true;
     }
 
     @Override
