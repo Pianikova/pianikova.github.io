@@ -202,16 +202,21 @@
                 id="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
                 name="%command.label.addfilestochat">
         </command>
-        <command
-                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
-                id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
-                name="Session Expiration">
-        </command>
-        <command
-                categoryId="com.e1c.edt.ai.ui.commands.category.ai"
-                id="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
-                name="Token Not Found">
-        </command>
+		<command
+				categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+				id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
+				name="Session Expiration">
+		</command>
+		<command
+				categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+				id="com.e1c.edt.ai.ui.commands.sessionexpiredstream.ai"
+				name="Session Expired Stream">
+		</command>
+		<command
+				categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+				id="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
+				name="Token Not Found">
+		</command>
         <command
                 categoryId="com.e1c.edt.ai.ui.commands.category.ai"
                 id="com.e1c.edt.ai.ui.commands.stopscenarios.ai"
@@ -311,14 +316,18 @@
               class="com.e1c.edt.ai.ui.handlers.OpenChatViewHandler"
               commandId="com.e1c.edt.ai.ui.commands.openChatView.ai">
         </handler>
-        <handler
-                class="com.e1c.edt.ai.ui.handlers.SessionExpirationAIHandler"
-                commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai">
-        </handler>
-        <handler
-                class="com.e1c.edt.ai.ui.handlers.TokenNotFoundAIHandler"
-                commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai">
-        </handler>
+		<handler
+				class="com.e1c.edt.ai.ui.handlers.SessionExpirationAIHandler"
+				commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai">
+		</handler>
+		<handler
+				class="com.e1c.edt.ai.ui.handlers.SessionExpiredStreamAIHandler"
+				commandId="com.e1c.edt.ai.ui.commands.sessionexpiredstream.ai">
+		</handler>
+		<handler
+				class="com.e1c.edt.ai.ui.handlers.TokenNotFoundAIHandler"
+				commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai">
+		</handler>
         <handler
                 class="com.e1c.edt.ai.ui.handlers.StopScenarioAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.stopscenarios.ai">
@@ -424,18 +433,24 @@
                               property="com.e1c.edt.ai.ui.isTraceMode">
                         </test>
                     </visibleWhen>
-                    <command
-                            commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
-                            id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai.id"
-                            label="Session Expiration"
-                            style="push">
-                    </command>
-                    <command
-                            commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
-                            id="com.e1c.edt.ai.ui.commands.tokennotfound.ai.id"
-                            label="Token Not Found"
-                            style="push">
-                    </command>
+			<command
+					commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai"
+					id="com.e1c.edt.ai.ui.commands.sessionexpiration.ai.id"
+					label="Session Expiration"
+					style="push">
+			</command>
+			<command
+					commandId="com.e1c.edt.ai.ui.commands.sessionexpiredstream.ai"
+					id="com.e1c.edt.ai.ui.commands.sessionexpiredstream.ai.id"
+					label="Session Expired Stream"
+					style="push">
+			</command>
+			<command
+					commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai"
+					id="com.e1c.edt.ai.ui.commands.tokennotfound.ai.id"
+					label="Token Not Found"
+					style="push">
+			</command>
                     <command
                             commandId="com.e1c.edt.ai.ui.commands.servererror.ai"
                             id="com.e1c.edt.ai.ui.commands.servererror.ai.id"

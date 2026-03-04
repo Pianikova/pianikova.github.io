@@ -174,8 +174,13 @@ class CodeAssistant
         call.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApply(response -> log.response(response, null, stopwatch, true, true))
             .thenApply(response -> checkResponse(response, observer, cancellationToken))
-            .thenApply(HttpResponse::body)
-            .thenAccept(stream -> processStream(stream, observer, cancellationToken))
+            .thenAccept(response -> {
+                var statusCode = response.statusCode();
+                if (statusCode >= 200 && statusCode < 300)
+                {
+                    processStream(response.body(), observer, cancellationToken);
+                }
+            })
             .whenComplete((r, error) -> {
                 if (error != null)
                 {

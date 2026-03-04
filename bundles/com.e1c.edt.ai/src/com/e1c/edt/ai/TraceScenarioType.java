@@ -7,6 +7,7 @@ public enum TraceScenarioType
 {
     NONE,
     SESSION_EXPIRED,
+    SESSION_EXPIRED_STREAM,
     TOKEN_NOT_FOUND,
     SERVER_ERROR,
     SSL_ERROR

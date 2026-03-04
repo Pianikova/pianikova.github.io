@@ -297,14 +297,18 @@
               class="com.e1c.edt.ui.eclipse.handlers.OpenChatViewHandler"
               commandId="com.e1c.edt.ai.ui.commands.openChatView.ai">
         </handler>
-        <handler
-                class="com.e1c.edt.ui.eclipse.handlers.SessionExpirationAIHandler"
-                commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai">
-        </handler>
-        <handler
-                class="com.e1c.edt.ui.eclipse.handlers.TokenNotFoundAIHandler"
-                commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai">
-        </handler>
+		<handler
+				class="com.e1c.edt.ui.eclipse.handlers.SessionExpirationAIHandler"
+				commandId="com.e1c.edt.ai.ui.commands.sessionexpiration.ai">
+		</handler>
+		<handler
+				class="com.e1c.edt.ui.eclipse.handlers.SessionExpiredStreamAIHandler"
+				commandId="com.e1c.edt.ai.ui.commands.sessionexpiredstream.ai">
+		</handler>
+		<handler
+				class="com.e1c.edt.ui.eclipse.handlers.TokenNotFoundAIHandler"
+				commandId="com.e1c.edt.ai.ui.commands.tokennotfound.ai">
+		</handler>
         <handler
                 class="com.e1c.edt.ui.eclipse.handlers.StopScenarioAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.stopscenarios.ai">
