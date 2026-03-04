@@ -6,7 +6,6 @@ package com.e1c.edt.ai.tools;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,6 +17,7 @@ import java.util.stream.Stream;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Path;
 
 import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationProgressMonitor;
@@ -38,7 +38,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -85,25 +84,22 @@ public class SearchFilesMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Provider<ICancellationProgressMonitor> cancellationProgressMonitor;
     private final IMarkdownUtils markdownUtils;
-    private final IFileSystem fileSystem;
     private final IProjectTools projectTools;
 
     @Inject
     public SearchFilesMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IMarkdownUtils markdownUtils,
-        IFileSystem fileSystem, IProjectTools projectTools)
+        IProjectTools projectTools)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(cancellationProgressMonitor);
         Preconditions.checkNotNull(markdownUtils);
-        Preconditions.checkNotNull(fileSystem);
         Preconditions.checkNotNull(projectTools);
         this.json = json;
         this.messageFactory = messageFactory;
         this.cancellationProgressMonitor = cancellationProgressMonitor;
         this.markdownUtils = markdownUtils;
-        this.fileSystem = fileSystem;
         this.projectTools = projectTools;
         spec = createSpecification();
     }
@@ -201,9 +197,18 @@ public class SearchFilesMcpTool
                             }
                         }
 
-                        // Search for files matching the pattern in the project
-                        searchFiles(project, searchPattern, includeSubfolders, foundFiles, maxResults, monitor,
-                            cancellationToken);
+                        // Get the container resource from the path to search from that specific location
+                        var container = root.getContainerForLocation(new Path(path));
+                        if (container != null)
+                        {
+                            // Search for files matching the pattern starting from the specific path
+                            searchFiles(container, searchPattern, includeSubfolders, foundFiles, maxResults, monitor,
+                                cancellationToken);
+                        }
+                        else
+                        {
+                            throw new ToolException("The directory \"" + path + "\" does not exist.");
+                        }
                     }
                     else
                     {
@@ -383,7 +388,8 @@ public class SearchFilesMcpTool
             return;
         }
 
-        try (Stream<Path> stream = includeSubfolders ? Files.walk(baseDir.toPath()) : Files.list(baseDir.toPath()))
+        try (Stream<java.nio.file.Path> stream =
+            includeSubfolders ? Files.walk(baseDir.toPath()) : Files.list(baseDir.toPath()))
         {
             stream.filter(path -> !Files.isDirectory(path)).filter(path -> {
                 if (cancellationToken.isCanceled() || foundFiles.size() >= maxResults)
