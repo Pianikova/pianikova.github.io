@@ -342,9 +342,7 @@ public class EditMcpTool
 
             var response = new StringBuilder();
             var displayPath = actualFile.getProjectRelativePath().toPortableString();
-            response.append("File updated: \"").append(displayPath).append("\".\n");
-            response.append(
-                "ACTION REQUIRED: verify project errors and warnings. Use `" + GetMarkersMcpTool.TOOL_NAME + "` tool.");
+            response.append("File updated: \"").append(displayPath).append("\".");
 
             // Add response markdown with diff details
             var responseMarkdown = new StringBuilder();

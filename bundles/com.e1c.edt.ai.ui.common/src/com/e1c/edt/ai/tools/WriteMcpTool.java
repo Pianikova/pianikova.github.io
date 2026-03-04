@@ -288,9 +288,6 @@ public class WriteMcpTool
                         }
                     }
 
-                    response.append("ACTION REQUIRED: verify project errors and warnings. Use `"
-                        + GetMarkersMcpTool.TOOL_NAME + "` tool.");
-
                     // Add response markdown with content details
                     var newLines = content.split("\\r?\\n", -1).length;
                     var changes = new StringBuilder();

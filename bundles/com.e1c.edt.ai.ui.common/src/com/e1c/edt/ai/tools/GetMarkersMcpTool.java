@@ -414,7 +414,7 @@ public class GetMarkersMcpTool implements IMcpTool
 
         var maxCountProp = new McpToolCallProperty();
         maxCountProp.type = "integer";
-        maxCountProp.description = "Maximum number of elements to return. Default: 64";
+        maxCountProp.description = "Maximum number of elements to return. Default: 32";
         properties.put("max_count", maxCountProp);
 
         var markerTypeProp = new McpToolCallProperty();

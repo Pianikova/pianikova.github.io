@@ -230,9 +230,7 @@ public class DeleteMcpTool
             }
 
                 var response = new StringBuilder();
-                response.append("File deleted: \"").append(displayPath).append("\".\n");
-                response.append("ACTION REQUIRED: verify project errors and warnings. Use `"
-                    + GetMarkersMcpTool.TOOL_NAME + "` tool.");
+                response.append("File deleted: \"").append(displayPath).append("\".");
 
                 // Add response markdown
                 var changes = new StringBuilder();
