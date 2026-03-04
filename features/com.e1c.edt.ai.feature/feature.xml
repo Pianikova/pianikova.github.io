@@ -5,10 +5,10 @@
 <feature
       id="com.e1c.edt.ai.feature"
       label="1C:Workmate"
-      version="1.0.2.qualifier"
+      version="1.0.3.qualifier"
       provider-name="1C-Soft LLC"
       license-feature="com.e1c.edt.ai.license"
-      license-feature-version="1.0.2.v1">
+      license-feature-version="1.0.3.v1">
 
    <copyright>
       %copyright
@@ -24,8 +24,8 @@
       <import plugin="org.eclipse.core.resources" version="3.13.400" match="greaterOrEqual"/>
       <import plugin="com.google.inject" version="5.0.1" match="greaterOrEqual"/>
       <import plugin="org.eclipse.xtext"/>
-      <import plugin="com.e1c.edt.ai.context" version="1.0.2" match="greaterOrEqual"/>
-      <import plugin="com.e1c.edt.ai.ui.common" version="1.0.2" match="greaterOrEqual"/>
+      <import plugin="com.e1c.edt.ai.context" version="1.0.3" match="greaterOrEqual"/>
+      <import plugin="com.e1c.edt.ai.ui.common" version="1.0.3" match="greaterOrEqual"/>
       <import plugin="org.eclipse.xtext.ui" version="2.26.0" match="greaterOrEqual"/>
       <import plugin="org.eclipse.handly.xtext.ui" version="1.6.1" match="greaterOrEqual"/>
       <import plugin="com._1c.g5.wiring" version="2.3.0" match="greaterOrEqual"/>
