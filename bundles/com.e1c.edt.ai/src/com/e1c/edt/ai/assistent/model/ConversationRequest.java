@@ -5,6 +5,7 @@ package com.e1c.edt.ai.assistent.model;
 
 import com.google.gson.annotations.SerializedName;
 
+
 /**
  * @author Bogdan Sushkov
  *
