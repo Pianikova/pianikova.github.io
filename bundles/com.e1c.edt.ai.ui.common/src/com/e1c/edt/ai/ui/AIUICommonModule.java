@@ -65,7 +65,7 @@ public class AIUICommonModule
 
         bind(IDispatcher.class).to(Dispatcher.class).in(Singleton.class);
         bind(ISettingsStore.class).to(PreferenceStoreToSettingsStoreAdapter.class).in(Singleton.class);
-        bind(IdeApiHandler.class).in(Singleton.class);
+        bind(IdeApiHandler.class);
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);

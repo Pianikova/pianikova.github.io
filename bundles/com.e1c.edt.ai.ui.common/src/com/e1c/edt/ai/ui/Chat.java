@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (C) 2025, 1C
  */
 package com.e1c.edt.ai.ui;
@@ -10,9 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -42,19 +45,15 @@ import com.e1c.edt.ai.McpCallToolsResult;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.ChatContext;
+import com.e1c.edt.ai.assistent.model.LocalContext;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Worker.State;
-import javafx.event.EventHandler;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.web.WebEngine;
-import javafx.scene.web.WebErrorEvent;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
 
@@ -73,6 +72,9 @@ public class Chat implements IChat, IChatDialog
     private static final String EMPTY_STRING = "``"; //$NON-NLS-1$
     private static final String NULL_VALUE = "null"; //$NON-NLS-1$
     private static final Character ARGS_SEPARATOR = ',';
+    private static final String WINDOW_CHAT_API_SET_TOOLS = "window.chatApi.set_tools("; //$NON-NLS-1$
+    private static final String WINDOW = "window"; //$NON-NLS-1$
+    private static final String TOPIC_INSERT_CODE = "insert_code"; //$NON-NLS-1$
 
     private final ILog log;
     private final ISettings settings;
@@ -84,25 +86,28 @@ public class Chat implements IChat, IChatDialog
     private final IStateService stateService;
     private final ISessionService sessionService;
     private final IModuleNameProvider moduleNameProvider;
-    private final IFileSystem fileSystem;
     private final ILocalContext localContext;
     private final IProposalsProvider proposalsProvider;
     private final IJson json;
     private final IMcpTools mcpTools;
     private final IEdtLinkHandler linkHandler;
-    private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).build();
+    private final Map<String, AIContext> contexts = new ConcurrentHashMap<>(256);
+    private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
 
     private WebView webView;
     private ChatKey lastChatKey;
     private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
     private String lastDialogPath;
+    private ChangeListener<Number> widthListener;
+    private ChangeListener<Number> heightListener;
+    private ScrollPane currentPane;
 
     @Inject
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
         IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
         ISessionService sessionService, IModuleNameProvider moduleNameProvider,
-        IFileSystem fileSystem, ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json,
-        IMcpTools mcpTools, IEdtLinkHandler linkHandler)
+        ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools,
+        IEdtLinkHandler linkHandler)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -113,7 +118,6 @@ public class Chat implements IChat, IChatDialog
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(moduleNameProvider);
-        Preconditions.checkNotNull(fileSystem);
         Preconditions.checkNotNull(localContext);
         Preconditions.checkNotNull(proposalsProvider);
         Preconditions.checkNotNull(json);
@@ -129,7 +133,6 @@ public class Chat implements IChat, IChatDialog
         this.stateService = stateService;
         this.sessionService = sessionService;
         this.moduleNameProvider = moduleNameProvider;
-        this.fileSystem = fileSystem;
         this.localContext = localContext;
         this.proposalsProvider = proposalsProvider;
         this.json = json;
@@ -176,18 +179,14 @@ public class Chat implements IChat, IChatDialog
     public void addCode(AIContext ctx, String codeSnippet)
     {
         Preconditions.checkNotNull(codeSnippet);
-        chat("insert_code", codeSnippet, null, ctx); //$NON-NLS-1$
+        chat(TOPIC_INSERT_CODE, codeSnippet, null, ctx);
     }
 
     @SuppressWarnings("nls")
     @Override
     public void addToolsResult(String chatId, String messageId, McpCallToolsResult result)
     {
-        Optional<AIContext> ctx;
-        synchronized (contexts)
-        {
-            ctx = Optional.ofNullable(contexts.getIfPresent(chatId));
-        }
+        Optional<AIContext> ctx = Optional.ofNullable(contexts.get(chatId));
 
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
@@ -198,36 +197,22 @@ public class Chat implements IChat, IChatDialog
                 var unknownCallsJson = result.unknownCalls != null
                     ? json.serialize(result.unknownCalls) : null;
 
-                var script = new StringBuilder();
-                script.append("window.chatApi.add_tool_calls_result(");
-                script.append(javaScript.escape(chatId, EMPTY_STRING));
-                script.append(ARGS_SEPARATOR);
-
-                script.append(javaScript.escape(messageId, EMPTY_STRING));
-                script.append(ARGS_SEPARATOR);
-
-                script.append("window.calls_messages");
-                script.append(ARGS_SEPARATOR);
-
-                script.append("window.unknown_messages");
-
-                script.append(");");
-                var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
-                    var webEngine = getEgine();
-                    var window = (JSObject)webEngine.executeScript("window");
+                    var webEngine = getEngine();
+                    var window = (JSObject)webEngine.executeScript(WINDOW);
                     if (window != null)
                     {
                         window.setMember("calls_messages", messagesJson);
                         window.setMember("unknown_messages", unknownCallsJson);
                     }
 
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
-                    var executeScriptResult = getEgine().executeScript(scriptText);
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
+                    var script = String.format(
+                        "window.chatApi.add_tool_calls_result(%s, %s, window.calls_messages, window.unknown_messages);",
+                        javaScript.escape(chatId, EMPTY_STRING), javaScript.escape(messageId, EMPTY_STRING));
+                    executeScriptWithLogging(script);
                 });
             }
-            catch (Throwable error)
+            catch (Exception error)
             {
                 log.logError(error);
             }
@@ -238,81 +223,81 @@ public class Chat implements IChat, IChatDialog
     @Override
     public void continueChat(String chatId, String text)
     {
-        Optional<AIContext> ctx;
-        synchronized (contexts)
-        {
-            ctx = Optional.ofNullable(contexts.getIfPresent(chatId));
-        }
+        Optional<AIContext> ctx = Optional.ofNullable(contexts.get(chatId));
 
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
             {
-                var script = new StringBuilder();
-                script.append("window.chatApi.continue_chat(");
-                script.append(javaScript.escape(text, EMPTY_STRING));
-                script.append(ARGS_SEPARATOR);
-
-                script.append(javaScript.escape(chatId, NULL_VALUE));
-                script.append(");");
-                var scriptText = script.toString();
-                dispatcher.dispatchAsync(() -> {
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
-                    var executeScriptResult = getEgine().executeScript(scriptText);
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
-                });
+                var script = String.format("window.chatApi.continue_chat(%s, %s);",
+                    javaScript.escape(text, EMPTY_STRING), javaScript.escape(chatId, NULL_VALUE));
+                dispatcher.dispatchAsync(() -> executeScriptWithLogging(script));
             }
-            catch (Throwable error)
+            catch (Exception error)
             {
                 log.logError(error);
             }
         });
     }
 
-    @SuppressWarnings("nls")
     @Override
     public void addFiles(List<IFileDocument> documents)
     {
         var errorReadingFile = new StringBuilder();
         if (documents == null)
         {
-            var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-            var dialog = new FileDialog(shell, SWT.OPEN | SWT.MULTI);
-            dialog.setText(Messages.AddFilesToChatDialogName);
-            dialog.setFilterPath(lastDialogPath);
-            var file = dialog.open();
-            if (file == null)
+            documents = openFilesAndCreateDocuments(errorReadingFile);
+            if (documents == null || documents.isEmpty())
             {
+                showErrorIfAny(errorReadingFile);
                 return;
-            }
-
-            lastDialogPath = dialog.getFilterPath();
-            documents = new ArrayList<>();
-            for (var fileName : dialog.getFileNames())
-            {
-                var filePath =
-                    lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
-                try
-                {
-                    var bytes = Files.readAllBytes(filePath);
-                    var content = new String(bytes, StandardCharsets.UTF_8);
-                    var ctx = new AIContext(ProjectId.Default, filePath.toString(), null);
-                    chat("insert_code", content, null, ctx);
-                }
-                catch (IOException e)
-                {
-                    errorReadingFile.append("Error reading file ");
-                    errorReadingFile.append(fileName);
-                    errorReadingFile.append(System.lineSeparator());
-                }
             }
         }
 
         for (var document : documents)
         {
             var ctx = new AIContext(document.getProjectId(), document.getFile().getLocation().toPortableString(), null);
-            chat("insert_code", document.getDocument().get(), null, ctx);
+            chat(TOPIC_INSERT_CODE, document.getDocument().get(), null, ctx);
         }
 
+        showErrorIfAny(errorReadingFile);
+    }
+
+    private List<IFileDocument> openFilesAndCreateDocuments(StringBuilder errorReadingFile)
+    {
+        var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+        var dialog = new FileDialog(shell, SWT.OPEN | SWT.MULTI);
+        dialog.setText(Messages.AddFilesToChatDialogName);
+        dialog.setFilterPath(lastDialogPath);
+        var file = dialog.open();
+        if (file == null)
+        {
+            return null;
+        }
+
+        lastDialogPath = dialog.getFilterPath();
+        var documents = new ArrayList<IFileDocument>();
+        for (var fileName : dialog.getFileNames())
+        {
+            var filePath = lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
+            try
+            {
+                var bytes = Files.readAllBytes(filePath);
+                var content = new String(bytes, StandardCharsets.UTF_8);
+                var ctx = new AIContext(ProjectId.Default, filePath.toString(), null);
+                chat(TOPIC_INSERT_CODE, content, null, ctx);
+            }
+            catch (IOException e)
+            {
+                errorReadingFile.append("Error reading file "); //$NON-NLS-1$
+                errorReadingFile.append(fileName);
+                errorReadingFile.append(System.lineSeparator());
+            }
+        }
+        return documents;
+    }
+
+    private void showErrorIfAny(StringBuilder errorReadingFile)
+    {
         if (errorReadingFile.length() > 0)
         {
             var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
@@ -328,118 +313,23 @@ public class Chat implements IChat, IChatDialog
         chatInJob(Optional.ofNullable(ctx), () -> {
             try (var busyToken = stateService.busy())
             {
-                var projectId = ProjectId.Default;
-                if (ctx != null)
-                {
-                    projectId = ctx.getProjectId();
-                }
-
-                var sessionId = sessionService.getSessionAsync(projectId).get().map(i -> i.sessionId);
+                var sessionId = getSessionId(ctx);
                 if (sessionId.isEmpty())
                 {
                     log.warning(AI_CHAT, () -> "Cannot get session id");
                     return;
                 }
 
-                String scriptLanguage = null;
-                String programingLanguage = null;
-                var title = NULL_VALUE;
-                if (ctx != null)
-                {
-                    title = moduleNameProvider.getModuleName(ctx.getPath()).orElseGet(() -> ctx.getPath());
-                    var chatContext = new ChatContext();
-                    var doc = ctx.getDocument();
-                    contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
-                    scriptLanguage = chatContext.scriptLanguage;
-                    programingLanguage = chatContext.programingLanguage;
-                    if (doc instanceof DiffDocument)
-                    {
-                        programingLanguage = "git diff";
-                    }
-                }
+                var contextInfo = buildContextInfo(ctx);
+                var script = buildChatScript(topic, subject, details, ctx, sessionId.get(), contextInfo);
 
-                var script = new StringBuilder();
-                script.append("window.chatApi.");
-                script.append(topic);
-                script.append('(');
-                script.append(javaScript.escape(subject, EMPTY_STRING));
-                script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(scriptLanguage, EMPTY_STRING));
-                script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(programingLanguage, EMPTY_STRING));
-                if (details != null)
-                {
-                    script.append(ARGS_SEPARATOR);
-                    script.append(javaScript.escape(details, EMPTY_STRING));
-                }
-
-                script.append(ARGS_SEPARATOR);
-                var path = Optional.ofNullable(ctx).map(i -> i.getPath()).orElse(null);
-                if ("insert_code".equals(topic))
-                {
-                    path = linkHandler.getFullPathForInsertCode(ctx);
-                    path = linkHandler.formatInsertCodePath(ctx, path);
-                }
-
-                script.append(javaScript.escape(path, NULL_VALUE));
-                if (topic.equals("insert_code"))
-                {
-                    var document = ctx.getDocument();
-                    Integer startLine = null, endLine = null;
-                    if (document != null)
-                    {
-                        try
-                        {
-                            startLine = document.getLineOfOffset(ctx.getStart());
-                            endLine = document.getLineOfOffset(ctx.getFinish());
-                        }
-                        catch (BadLocationException error)
-                        {
-                            log.logError(error);
-                        }
-                    }
-
-                    script.append(ARGS_SEPARATOR);
-                    script.append(startLine != null ? startLine.toString() : NULL_VALUE);
-                    script.append(ARGS_SEPARATOR);
-                    script.append(endLine != null ? endLine.toString() : NULL_VALUE);
-                }
-
-                script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(sessionId.get(), NULL_VALUE));
-
-                final var curTitle = title;
-                log.trace(TracingSources.CHAT, AI_CHAT, () -> "title: " + curTitle);
-                script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(curTitle, NULL_VALUE));
-
-                var context = localContext.create(ctx, IStatistics.Empty, CancellationTokens.NONE);
-                var sourceViewer = ui.getLastSourceViewer();
-                if (sourceViewer.isPresent())
-                {
-                    context.proposals =
-                        proposalsProvider.getProposals(ctx, sourceViewer.get(), 600, CancellationTokens.NONE)
-                            .orElse(null);
-                }
-
-                var contextJson = json.serialize(context);
-                script.append(ARGS_SEPARATOR);
-                script.append(javaScript.escape(contextJson, NULL_VALUE));
-
-                script.append(");");
-                var scriptText = script.toString();
                 dispatcher.dispatchAsync(() -> {
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + scriptText);
-                    var executeScriptResult = getEgine().executeScript(scriptText);
+                    var executeScriptResult = executeScriptWithLogging(script);
                     if (executeScriptResult instanceof String)
                     {
                         var chatId = (String)executeScriptResult;
-                        synchronized (contexts)
-                        {
-                            contexts.put(chatId, ctx);
-                        }
+                        contexts.put(chatId, ctx);
                     }
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
                 });
             }
             catch (Exception error)
@@ -447,6 +337,135 @@ public class Chat implements IChat, IChatDialog
                 log.logError(error);
             }
         });
+    }
+
+    private Optional<String> getSessionId(AIContext ctx)
+    {
+        var projectId = Optional.ofNullable(ctx).map(AIContext::getProjectId).orElse(ProjectId.Default);
+        try
+        {
+            return sessionService.getSessionAsync(projectId).get().map(i -> i.sessionId);
+        }
+        catch (InterruptedException | ExecutionException e)
+        {
+            return Optional.empty();
+        }
+    }
+
+    private ContextInfo buildContextInfo(AIContext ctx)
+    {
+        var info = new ContextInfo();
+        if (ctx == null)
+        {
+            info.title = NULL_VALUE;
+            return info;
+        }
+
+        info.title = moduleNameProvider.getModuleName(ctx.getPath()).orElseGet(() -> ctx.getPath());
+        var chatContext = new ChatContext();
+        var doc = ctx.getDocument();
+        contextEntities.fill(ctx, chatContext, IStatistics.Empty, CancellationTokens.NONE);
+        info.scriptLanguage = chatContext.scriptLanguage;
+        info.programingLanguage = chatContext.programingLanguage;
+
+        if (doc instanceof DiffDocument)
+        {
+            info.programingLanguage = "git diff"; //$NON-NLS-1$
+        }
+
+        return info;
+    }
+
+    @SuppressWarnings("nls")
+    private String buildChatScript(String topic, String subject, String details, AIContext ctx, String sessionId,
+        ContextInfo contextInfo)
+    {
+        var script = new StringBuilder();
+        script.append("window.chatApi.");
+        script.append(topic);
+        script.append('(');
+        script.append(javaScript.escape(subject, EMPTY_STRING));
+        script.append(ARGS_SEPARATOR);
+        script.append(javaScript.escape(contextInfo.scriptLanguage, EMPTY_STRING));
+        script.append(ARGS_SEPARATOR);
+        script.append(javaScript.escape(contextInfo.programingLanguage, EMPTY_STRING));
+
+        if (details != null)
+        {
+            script.append(ARGS_SEPARATOR);
+            script.append(javaScript.escape(details, EMPTY_STRING));
+        }
+
+        script.append(ARGS_SEPARATOR);
+        var path = Optional.ofNullable(ctx).map(AIContext::getPath).orElse(null);
+        if (TOPIC_INSERT_CODE.equals(topic))
+        {
+            path = linkHandler.getFullPathForInsertCode(ctx);
+            path = linkHandler.formatInsertCodePath(ctx, path);
+        }
+
+        script.append(javaScript.escape(path, NULL_VALUE));
+
+        if (topic.equals(TOPIC_INSERT_CODE))
+        {
+            appendLineNumbers(script, ctx);
+        }
+
+        script.append(ARGS_SEPARATOR);
+        script.append(javaScript.escape(sessionId, NULL_VALUE));
+        script.append(ARGS_SEPARATOR);
+        script.append(javaScript.escape(contextInfo.title, NULL_VALUE));
+
+        var contextJson = json.serialize(buildContext(ctx));
+        script.append(ARGS_SEPARATOR);
+        script.append(javaScript.escape(contextJson, NULL_VALUE));
+        script.append(");");
+
+        return script.toString();
+    }
+
+    private LocalContext buildContext(AIContext ctx)
+    {
+        var context = localContext.create(ctx, IStatistics.Empty, CancellationTokens.NONE);
+        var sourceViewer = ui.getLastSourceViewer();
+        if (sourceViewer.isPresent())
+        {
+            context.proposals =
+                proposalsProvider.getProposals(ctx, sourceViewer.get(), 600, CancellationTokens.NONE).orElse(null);
+        }
+        return context;
+    }
+
+    private void appendLineNumbers(StringBuilder script, AIContext ctx)
+    {
+        var document = Optional.ofNullable(ctx).map(AIContext::getDocument).orElse(null);
+        Integer startLine = null, endLine = null;
+        if (document != null)
+        {
+            try
+            {
+                startLine = document.getLineOfOffset(ctx.getStart());
+                endLine = document.getLineOfOffset(ctx.getFinish());
+            }
+            catch (BadLocationException error)
+            {
+                log.logError(error);
+            }
+        }
+
+        script.append(ARGS_SEPARATOR);
+        script.append(startLine != null ? startLine.toString() : NULL_VALUE);
+        script.append(ARGS_SEPARATOR);
+        script.append(endLine != null ? endLine.toString() : NULL_VALUE);
+    }
+
+    @SuppressWarnings("nls")
+    private Object executeScriptWithLogging(String script)
+    {
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "executing script: " + script);
+        var executeScriptResult = getEngine().executeScript(script);
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "script executed: " + executeScriptResult);
+        return executeScriptResult;
     }
 
     @Override
@@ -457,39 +476,45 @@ public class Chat implements IChat, IChatDialog
         webView.setFocusTraversable(true);
         webView.setPrefWidth(pane.getWidth());
         webView.setPrefHeight(pane.getHeight());
-        pane.widthProperty().addListener(new ChangeListener<Object>()
-        {
-            @Override
-            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
-            {
-                Double width = (Double)newValue;
-                webView.setPrefWidth(width);
-            }
-        });
 
-        pane.heightProperty().addListener(new ChangeListener<Object>()
-        {
-            @Override
-            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue)
-            {
-                Double height = (Double)newValue;
-                webView.setPrefHeight(height);
-            }
-        });
+        widthListener = (observable, oldValue, newValue) -> webView.setPrefWidth((Double)newValue);
+        heightListener = (observable, oldValue, newValue) -> webView.setPrefHeight((Double)newValue);
 
-        chatInJob(Optional.empty(), () -> {
-            /**/ });
+        pane.widthProperty().addListener(widthListener);
+        pane.heightProperty().addListener(heightListener);
+        currentPane = pane;
+
+        chatInJob(Optional.empty(), () -> { /* warming up */
+        });
+    }
+
+    @Override
+    public void dispose()
+    {
+        if (currentPane != null)
+        {
+            if (widthListener != null)
+            {
+                currentPane.widthProperty().removeListener(widthListener);
+            }
+            if (heightListener != null)
+            {
+                currentPane.heightProperty().removeListener(heightListener);
+            }
+            currentPane = null;
+        }
+        widthListener = null;
+        heightListener = null;
+        contexts.clear();
+        handler.reset();
+        lastChatKey = null;
+        initializing = CompletableFuture.completedFuture(true);
     }
 
     private void ensureWebViewExists()
     {
         if (webView != null)
         {
-            if (webView.isVisible())
-            {
-                webView.setVisible(true);
-            }
-
             return;
         }
 
@@ -498,28 +523,17 @@ public class Chat implements IChat, IChatDialog
         view.setLayoutX(-1);
         view.setLayoutY(-1);
 
-        var webEngine = getEgine();
+        var webEngine = getEngine();
         webEngine.setUserDataDirectory(getUserDataDirectory().toFile());
-        webEngine.setOnError(new EventHandler<WebErrorEvent>()
-        {
-            @Override
-            public void handle(WebErrorEvent event)
-            {
-                log.logError(event.getMessage());
-                log.logError(event.getException());
-            }
+        webEngine.setOnError(event -> {
+            log.logError(event.getMessage());
+            log.logError(event.getException());
         });
 
         var worker = webEngine.getLoadWorker();
-        worker.runningProperty().addListener(new ChangeListener<Boolean>()
-        {
-            @SuppressWarnings("nls")
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue)
-            {
-                log.trace(TracingSources.CHAT, AI_CHAT, () -> "is running: " + newValue);
-            }
-        });
+        worker.runningProperty()
+            .addListener((observable, oldValue, newValue) -> log.trace(TracingSources.CHAT, AI_CHAT,
+                () -> "is running: " + newValue)); //$NON-NLS-1$
     }
 
     private static Path getUserDataDirectory()
@@ -552,7 +566,7 @@ public class Chat implements IChat, IChatDialog
                 handler.reset();
                 lastChatKey = newChatKey;
                 initializing = dispatcher.dispatch(() -> {
-                    var webEngine = getEgine();
+                    var webEngine = getEngine();
                     return initialize(webEngine, () -> webEngine.load(chatUrl.toString()));
                 }).get();
             }
@@ -575,39 +589,43 @@ public class Chat implements IChat, IChatDialog
         var worker = webEngine.getLoadWorker();
         log.trace(TracingSources.CHAT, AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
         var result = new CompletableFuture<Boolean>();
-        var listeners = new ArrayList<ChangeListener<State>>();
-        var stateListener = new ChangeListener<State>()
-        {
-            @Override
-            public void changed(ObservableValue<? extends State> observable, State oldValue, State newValue)
+
+        ChangeListener<State> stateListener = (observable, oldValue, newValue) -> {
+            log.trace(TracingSources.CHAT, AI_CHAT, () -> "new state: " + newValue);
+            switch (newValue)
             {
-                log.trace(TracingSources.CHAT, AI_CHAT, () -> "new state: " + newValue);
-                switch (newValue)
-                {
-                case SUCCEEDED:
-                    for (var listener : listeners)
-                    {
-                        worker.stateProperty().removeListener(listener);
-                    }
+            case SUCCEEDED:
+            case FAILED:
+            case CANCELLED:
+                cleanupInitializationListeners(worker);
+                result.complete(newValue == State.SUCCEEDED);
+                break;
 
-                    listeners.clear();
-                    result.complete(true);
-                    break;
-
-                default:
-                    break;
-                }
+            default:
+                break;
             }
         };
 
-
-        listeners.add(stateListener);
-        worker.stateProperty().addListener(stateListener);
+        synchronized (initializationListeners)
+        {
+            initializationListeners.add(stateListener);
+            worker.stateProperty().addListener(stateListener);
+        }
         loader.run();
         return result.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS).exceptionally(error -> {
+            cleanupInitializationListeners(worker);
             log.logError(error);
             return false;
         });
+    }
+
+    private void cleanupInitializationListeners(javafx.concurrent.Worker<?> worker)
+    {
+        synchronized (initializationListeners)
+        {
+            initializationListeners.forEach(listener -> worker.stateProperty().removeListener(listener));
+            initializationListeners.clear();
+        }
     }
 
     @SuppressWarnings("nls")
@@ -621,40 +639,10 @@ public class Chat implements IChat, IChatDialog
         var tools = mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
         var toolsJson = json.serialize(tools);
 
-        var webEngine = getEgine();
+        var webEngine = getEngine();
         while (true)
         {
-            dispatcher.dispatch(() -> {
-                try
-                {
-                    var window = (JSObject)webEngine.executeScript("window");
-                    if (window != null)
-                    {
-                        window.setMember(IDE_API, handler);
-                        log.trace(TracingSources.CHAT, AI_CHAT,
-                            () -> "set callback handler " + window.getMember(IDE_API));
-                        var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
-                            settings.getClientUniqueId(), settings.getLanguage(), settings.getTheme());
-                        log.trace(TracingSources.CHAT, AI_CHAT, () -> "wink script: " + winkScript);
-                        var winkResult = webEngine.executeScript(winkScript);
-                        log.trace(TracingSources.CHAT, AI_CHAT,
-                            () -> "wink script executed, winked: " + handler.isReady() + ", result: " + winkResult);
-                        webEngine
-                            .executeScript(
-                                "if (typeof window.chatApi['set_tools'] === 'function') { window.chatApi.set_tools("
-                                    + javaScript.escape(toolsJson, EMPTY_STRING) + "); }");
-                    }
-                    else
-                    {
-                        log.warning(AI_CHAT, () -> "cannot find a chat window");
-                    }
-                }
-                catch (Throwable error)
-                {
-                    handler.reset();
-                    log.logError(error);
-                }
-            });
+            executeWink(webEngine, toolsJson);
 
             if (handler.isReady() || attempts-- == 0)
             {
@@ -665,14 +653,49 @@ public class Chat implements IChat, IChatDialog
             {
                 Thread.sleep(settings.getMinRequestDelay().toMillis());
             }
-            catch (Throwable error)
+            catch (InterruptedException error)
             {
-                //
+                Thread.currentThread().interrupt();
+                log.warning(AI_CHAT, () -> "Wink loop interrupted");
+                break;
             }
         }
     }
 
-    private WebEngine getEgine()
+    @SuppressWarnings("nls")
+    private void executeWink(WebEngine webEngine, String toolsJson)
+    {
+        dispatcher.dispatch(() -> {
+            try
+            {
+                var window = (JSObject)webEngine.executeScript(WINDOW);
+                if (window != null)
+                {
+                    window.setMember(IDE_API, handler);
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
+                    var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
+                        settings.getClientUniqueId(), settings.getLanguage(), settings.getTheme());
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "wink script: " + winkScript);
+                    var winkResult = webEngine.executeScript(winkScript);
+                    log.trace(TracingSources.CHAT, AI_CHAT,
+                        () -> "wink script executed, winked: " + handler.isReady() + ", result: " + winkResult);
+                    webEngine.executeScript("if (typeof window.chatApi['set_tools'] === 'function') { "
+                        + WINDOW_CHAT_API_SET_TOOLS + javaScript.escape(toolsJson, EMPTY_STRING) + "); }");
+                }
+                else
+                {
+                    log.warning(AI_CHAT, () -> "cannot find a chat window");
+                }
+            }
+            catch (Throwable error)
+            {
+                handler.reset();
+                log.logError(error);
+            }
+        });
+    }
+
+    private WebEngine getEngine()
     {
         var webEngine = webView.getEngine();
         webEngine.setJavaScriptEnabled(true);
@@ -682,6 +705,13 @@ public class Chat implements IChat, IChatDialog
     private interface IChatAction
     {
         void run();
+    }
+
+    private static class ContextInfo
+    {
+        String title;
+        String scriptLanguage;
+        String programingLanguage;
     }
 
     private static class ChatKey

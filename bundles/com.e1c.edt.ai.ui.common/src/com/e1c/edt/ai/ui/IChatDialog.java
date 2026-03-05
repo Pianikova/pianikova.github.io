@@ -8,4 +8,6 @@ import javafx.scene.control.ScrollPane;
 public interface IChatDialog
 {
     void show(ScrollPane pane);
+
+    void dispose();
 }

@@ -83,4 +83,15 @@ public class BaseChatView
     {
         canvas.setFocus();
     }
+
+    @Override
+    public void dispose()
+    {
+        if (chatDialog != null)
+        {
+            chatDialog.dispose();
+        }
+
+        super.dispose();
+    }
 }
