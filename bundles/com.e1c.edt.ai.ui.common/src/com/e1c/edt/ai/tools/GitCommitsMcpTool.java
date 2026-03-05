@@ -54,18 +54,21 @@ public class GitCommitsMcpTool
 
 	@SuppressWarnings("nls")
 	private static String AnswerExample =
-		"[\n"
-		+ "  {\n"
-		+ "    \"hash\": \"a1b2c3d4e5f6g7h8i9j0\",\n"
-		+ "    \"short_hash\": \"a1b2c3d4\",\n"
-		+ "    \"author_name\": \"John Doe\",\n"
-		+ "    \"author_email\": \"john@example.com\",\n"
-		+ "    \"commit_time\": 1642678800000,\n"
-		+ "    \"formatted_time\": \"2022-01-20T10:30:00+03:00\",\n"
-		+ "    \"message\": \"Fix bug in user authentication\",\n"
-		+ "    \"changed_files\": [\"src/auth/UserService.java\", \"src/auth/UserController.java\"]\n"
-		+ "  }\n"
-		+ "]";
+		"{\n"
+		+ "  \"commits\": [\n"
+		+ "    {\n"
+		+ "      \"hash\": \"a1b2c3d4e5f6g7h8i9j0\",\n"
+		+ "      \"short_hash\": \"a1b2c3d4\",\n"
+		+ "      \"author_name\": \"John Doe\",\n"
+		+ "      \"author_email\": \"john@example.com\",\n"
+		+ "      \"commit_time\": 1642678800000,\n"
+		+ "      \"formatted_time\": \"2022-01-20T10:30:00+03:00\",\n"
+		+ "      \"message\": \"Fix bug in user authentication\",\n"
+		+ "      \"changed_files\": [\"src/auth/UserService.java\", \"src/auth/UserController.java\"]\n"
+		+ "    }\n"
+		+ "  ],\n"
+		+ "  \"has_more\": true\n"
+		+ "}";
 	// @formatter:on
 
 	private final IJson json;
@@ -195,7 +198,7 @@ public class GitCommitsMcpTool
 
 			try
 			{
-				// Get commit history
+				// Get commit history limited to requested number
 				var gitCommits = gitTools.getCommitHistory(repository, maxCommits);
 				var commitInfos = new ArrayList<CommitInfo>();
 
@@ -215,8 +218,16 @@ public class GitCommitsMcpTool
 					commitInfos.add(commitInfo);
 				}
 
+				// Determine if there are more commits
+				boolean hasMore = commitInfos.size() == maxCommits;
+
+				// Create response object with commits and has_more flag
+				var response = new GitCommitsResponse();
+				response.commits = commitInfos;
+				response.hasMore = hasMore;
+
 				// Prepare response
-				var content = json.serialize(commitInfos);
+				var content = json.serialize(response);
 
 				// Create response markdown
 				var responseMarkdown = new StringBuilder();
@@ -316,6 +327,7 @@ public class GitCommitsMcpTool
 		description.append("\n- Requires the project to be a Git repository.");
 		description.append("\n- Supports limiting the number of commits.");
 		description.append("\n- Returns hash, author, date, message, and changed files.");
+		description.append("\n- Response includes has_more flag indicating if more commits are available.");
 		description.append("\n\nRelated tools:");
 		description.append("\n- Inspect diffs: `" + GitDiffMcpTool.TOOL_NAME + "`.");
 		description.append("\n\nExample:");
@@ -417,4 +429,20 @@ public class GitCommitsMcpTool
 		@SerializedName("changed_files_count")
 		public int changedFilesCount;
 	}
+
+	private static class GitCommitsResponse
+	{
+		/**
+		 * List of commits returned.
+		 */
+		@SerializedName("commits")
+		public List<CommitInfo> commits;
+
+		/**
+		 * Indicates whether there are more commits available to retrieve.
+		 */
+		@SerializedName("has_more")
+		public boolean hasMore;
+	}
 }
+
