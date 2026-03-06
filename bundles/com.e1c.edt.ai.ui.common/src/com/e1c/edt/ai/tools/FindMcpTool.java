@@ -66,18 +66,21 @@ public class FindMcpTool
         + "}";
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "[\n"
-        + "  {\n"
-        + "    \"project_name\": \"core-api\",\n"
-        + "    \"path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
-        + "    \"offset\": 243,\n"
-        + "    \"length\": 16,\n"
-        + "    \"line_offset\": 15,\n"
-        + "    \"line_length\": 16,\n"
-        + "    \"line_number\": 12,\n"
-        + "    \"line_content\": \"function TestUserService()\"\n"
-        + "  }\n"
-        + "]";
+        "{\n"
+        + "  \"results\": [\n"
+        + "    {\n"
+        + "      \"project_name\": \"core-api\",\n"
+        + "      \"path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
+        + "      \"offset\": 243,\n"
+        + "      \"length\": 16,\n"
+        + "      \"line_offset\": 15,\n"
+        + "      \"line_length\": 16,\n"
+        + "      \"line_number\": 12,\n"
+        + "      \"line_content\": \"function TestUserService()\"\n"
+        + "    }\n"
+        + "  ],\n"
+        + "  \"total_results\": 245\n"
+        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -280,11 +283,6 @@ public class FindMcpTool
                         {
                             for (Match match : matchEvent.getMatches())
                             {
-                                if (allElements.size() >= firstIndex + maxCount)
-                                {
-                                    return;
-                                }
-
                                 if (match instanceof FileMatch)
                                 {
                                     FileMatch fileMatch = (FileMatch)match;
@@ -351,12 +349,17 @@ public class FindMcpTool
                 elements = allElements.subList(firstIndex, endIndex);
             }
 
-            var content = json.serialize(elements);
+            // Create FindResponse with paginated results and total count
+            FindResponse response = new FindResponse();
+            response.results = elements;
+            response.totalResults = allElements.size();
+
+            var content = json.serialize(response);
 
             // Create detailed response markdown with search result information
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
-                markdownUtils.createStyledText(String.valueOf(elements.size()), TextColor.GREEN, FontWeight.BOLD)))
+                markdownUtils.createStyledText(elements.size() + "/" + response.totalResults, TextColor.GREEN, FontWeight.BOLD)))
                 .append("\n\n") //$NON-NLS-1$
                 .append(Messages.SearchQuery)
                 .append(": ") //$NON-NLS-1$
@@ -448,6 +451,7 @@ public class FindMcpTool
         description.append("\n- For content search, searches all projects if `search_project_names` is not specified.");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Narrow scope with project/file parameters to reduce noise.");
+        description.append("\n- Use `first_index` and `max_count` for pagination. Response includes `total_results` for all matches.");
         description.append("\n\nRelated tools:");
         description.append("\n- Open/edit results: `" + ReadMcpTool.TOOL_NAME + "`, `" + EditMcpTool.TOOL_NAME + "`.");
         description.append("\n\nExample (content search):");
@@ -499,12 +503,12 @@ public class FindMcpTool
 
         var firstIndexProp = new McpToolCallProperty();
         firstIndexProp.type = "integer";
-        firstIndexProp.description = "Index of first element to return (0-based). Default: 0";
+        firstIndexProp.description = "Index of first element to return (0-based). Use for pagination with max_count. Response includes total_results for all matches. Default: 0";
         properties.put("first_index", firstIndexProp);
 
         var maxCountProp = new McpToolCallProperty();
         maxCountProp.type = "integer";
-        maxCountProp.description = "Maximum number of elements to return. Default: 64";
+        maxCountProp.description = "Maximum number of elements to return. Use for pagination with first_index. Response includes total_results for all matches. Default: 64";
         properties.put("max_count", maxCountProp);
 
         parameters.properties = properties;
@@ -593,6 +597,15 @@ public class FindMcpTool
 
         @SerializedName("line_number")
         public int lineNumber;
+    }
+
+    private static class FindResponse
+    {
+        @SerializedName("results")
+        public List<Element> results;
+
+        @SerializedName("total_results")
+        public int totalResults;
     }
 
     /**

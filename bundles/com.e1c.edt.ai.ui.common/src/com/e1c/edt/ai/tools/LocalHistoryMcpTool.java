@@ -23,14 +23,14 @@ import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.ToolErrorType;
-import com.e1c.edt.ai.ToolException;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -53,18 +53,21 @@ public class LocalHistoryMcpTool
 
 	@SuppressWarnings("nls")
 	private static String AnswerExample =
-		"[\n"
-		+ "  {\n"
-		+ "    \"index\": 0,\n"
-		+ "    \"revision_id\": \"current\",\n"
-		+ "    \"timestamp\": 1642678800000,\n"
-		+ "    \"formatted_time\": \"2022-01-20T10:30:45+03:00\",\n"
-		+ "    \"file_size\": 1024,\n"
-		+ "    \"location\": \"/path/to/file\",\n"
-		+ "    \"is_current\": true,\n"
-		+ "    \"is_oldest\": false\n"
-		+ "  }\n"
-		+ "]";
+		"{\n"
+		+ "  \"entries\": [\n"
+		+ "    {\n"
+		+ "      \"index\": 0,\n"
+		+ "      \"revision_id\": \"current\",\n"
+		+ "      \"timestamp\": 1642678800000,\n"
+		+ "      \"formatted_time\": \"2022-01-20T10:30:45+03:00\",\n"
+		+ "      \"file_size\": 1024,\n"
+		+ "      \"location\": \"/path/to/file\",\n"
+		+ "      \"is_current\": true,\n"
+		+ "      \"is_oldest\": false\n"
+		+ "    }\n"
+		+ "  ],\n"
+		+ "  \"total_entries\": 15\n"
+		+ "}";
 
 	// @formatter:on
 
@@ -204,7 +207,7 @@ public class LocalHistoryMcpTool
 					throw new ToolException("Operation was cancelled before retrieving history.");
 				}
 
-				// Retrieve local history
+				// Retrieve local history limited to requested number
 				List<LocalHistoryEntry> historyEntries;
 				try
 				{
@@ -230,7 +233,14 @@ public class LocalHistoryMcpTool
 				entry.isOldest = i == lastIndex;
 			}
 
-			var content = json.serialize(historyEntries);
+                // Determine if there are more history entries
+                boolean hasMore = historyEntries.size() == maxEntries && maxEntries != Integer.MAX_VALUE;
+
+			var response = new LocalHistoryResponse();
+			response.entries = historyEntries;
+                response.hasMore = hasMore;
+
+			var content = json.serialize(response);
 
 			// Build response markdown
 			var responseMarkdown = new StringBuilder();
@@ -303,6 +313,7 @@ public class LocalHistoryMcpTool
 		description.append("\n- `location` is a virtual id (`local_history:<revision_id>`) for history entries.");
 		description.append("\n- Set `max_entries` to 0 to return all available history.");
 		description.append("\n- Works with Eclipse local history when available.");
+		description.append("\n- Response includes has_more flag indicating if more history entries are available.");
 		description.append("\n\nRelated tools:");
 		description.append("\n- Diff revisions: `" + LocalChangesMcpTool.TOOL_NAME + "`.");
 		description.append("\n\nExample:");
@@ -350,4 +361,12 @@ public class LocalHistoryMcpTool
 		public Integer maxEntries;
 	}
 
+	private static class LocalHistoryResponse
+	{
+		@SerializedName("entries")
+		public List<LocalHistoryEntry> entries;
+
+		@SerializedName("has_more")
+		public boolean hasMore;
+	}
 }

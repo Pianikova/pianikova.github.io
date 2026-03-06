@@ -56,15 +56,18 @@ public class NavigationHistoryMcpTool
 
     @SuppressWarnings("nls")
     private static String AnswerExample =
-        "[\n"
-        + "  {\n"
-        + "    \"index\": 5,\n"
-        + "    \"text\": \"Module.bsl\",\n"
-        + "    \"project_name\": \"MyProject\",\n"
-        + "    \"path\": \"C:\\Projects\\MyProject\\src\\CommonModules\\Module.bsl\",\n"
-        + "    \"is_current\": true\n"
-        + "  }\n"
-        + "]";
+        "{\n"
+        + "  \"entries\": [\n"
+        + "    {\n"
+        + "      \"index\": 5,\n"
+        + "      \"text\": \"Module.bsl\",\n"
+        + "      \"project_name\": \"MyProject\",\n"
+        + "      \"path\": \"C:\\\\\\\\Projects\\\\\\\\MyProject\\\\\\\\src\\\\\\\\CommonModules\\\\\\\\Module.bsl\",\n"
+        + "      \"is_current\": true\n"
+        + "    }\n"
+        + "  ],\n"
+        + "  \"has_more\": false\n"
+        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -132,7 +135,11 @@ public class NavigationHistoryMcpTool
             var entries = dispatcher.dispatch(() -> collectHistory(maxEntries))
                 .orElseGet(() -> new ArrayList<>());
 
-            var content = json.serialize(entries);
+            var response = new NavigationHistoryResponse();
+            response.entries = entries;
+            response.hasMore = entries.size() == maxEntries;
+
+            var content = json.serialize(response);
 
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.NavigationHistoryFoundTemplate,
@@ -282,6 +289,7 @@ public class NavigationHistoryMcpTool
         description.append("\n- Returns recent navigation locations in editor history.");
         description.append("\n- Each entry includes text plus file info when available.");
         description.append("\n- The last visited entry is marked as current.");
+        description.append("\n- Response includes has_more flag indicating if more navigation entries are available.");
         description.append("\n\nRelated tools:");
         description.append("\n- Read file: `" + ReadMcpTool.TOOL_NAME + "`.");
         description.append("\n- Open files in context: `" + GetProjectsMcpTool.TOOL_NAME + "`.");
@@ -328,5 +336,14 @@ public class NavigationHistoryMcpTool
 
         @SerializedName("is_current")
         public Boolean isCurrent;
+    }
+
+    private static class NavigationHistoryResponse
+    {
+        @SerializedName("entries")
+        public List<NavigationEntry> entries;
+
+        @SerializedName("has_more")
+        public boolean hasMore;
     }
 }
