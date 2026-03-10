@@ -10,11 +10,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -31,6 +29,7 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.ui.PlatformUI;
 
 import com.e1c.edt.ai.AIContext;
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IFileDocument;
@@ -42,12 +41,16 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.McpCallToolsResult;
+import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
+import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.LocalContext;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 import javafx.beans.value.ChangeListener;
@@ -62,7 +65,8 @@ import netscape.javascript.JSObject;
  *
  */
 @SuppressWarnings("restriction")
-public class Chat implements IChat, IChatDialog
+public class Chat
+    implements IChat, IChatDialog, IStateListener
 {
     private static final String AI_CHAT_DIR = "ai.chat"; //$NON-NLS-1$
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
@@ -91,7 +95,7 @@ public class Chat implements IChat, IChatDialog
     private final IJson json;
     private final IMcpTools mcpTools;
     private final IEdtLinkHandler linkHandler;
-    private final Map<String, AIContext> contexts = new ConcurrentHashMap<>(256);
+    private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).weakKeys().build();
     private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
 
     private WebView webView;
@@ -138,6 +142,8 @@ public class Chat implements IChat, IChatDialog
         this.json = json;
         this.mcpTools = mcpTools;
         this.linkHandler = linkHandler;
+
+        stateService.addListener(this);
     }
 
     @Override
@@ -186,8 +192,7 @@ public class Chat implements IChat, IChatDialog
     @Override
     public void addToolsResult(String chatId, String messageId, McpCallToolsResult result)
     {
-        Optional<AIContext> ctx = Optional.ofNullable(contexts.get(chatId));
-
+        var ctx = getContext(chatId);
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
             {
@@ -223,8 +228,7 @@ public class Chat implements IChat, IChatDialog
     @Override
     public void continueChat(String chatId, String text)
     {
-        Optional<AIContext> ctx = Optional.ofNullable(contexts.get(chatId));
-
+        var ctx = getContext(chatId);
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
             {
@@ -505,7 +509,7 @@ public class Chat implements IChat, IChatDialog
         }
         widthListener = null;
         heightListener = null;
-        contexts.clear();
+        contexts.invalidateAll();
         handler.reset();
         lastChatKey = null;
         initializing = CompletableFuture.completedFuture(true);
@@ -702,6 +706,11 @@ public class Chat implements IChat, IChatDialog
         return webEngine;
     }
 
+    private Optional<AIContext> getContext(String chatId)
+    {
+        return Optional.ofNullable(contexts.getIfPresent(chatId));
+    }
+
     private interface IChatAction
     {
         void run();
@@ -743,5 +752,18 @@ public class Chat implements IChat, IChatDialog
             ChatKey other = (ChatKey)obj;
             return Objects.equals(token, other.token) && Objects.equals(url, other.url);
         }
+    }
+
+    @Override
+    public void onServiceStateChange(ServiceState serviceState)
+    {
+        contexts.invalidateAll();
+        lastChatKey = null;
+    }
+
+    @Override
+    public void onActionStateChange(ActionState actionState)
+    {
+        // Do nothing
     }
 }
