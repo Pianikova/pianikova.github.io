@@ -13,28 +13,36 @@ import org.eclipse.core.runtime.jobs.Job;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.ServiceState;
+import com.e1c.edt.ai.assistent.IStateListener;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
 class GlobalContextTracker
-    implements IGlobalContextTracker
+    implements IGlobalContextTracker, IStateListener
 {
     private final ISettings settings;
     private final IDispatcher dispatcher;
+    private final IStateService stateService;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
     private final HashMap<String, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
 
     @Inject
-    public GlobalContextTracker(ISettings settings, IDispatcher dispatcher,
+    public GlobalContextTracker(ISettings settings, IDispatcher dispatcher, IStateService stateService,
         Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider)
     {
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(projectTrackingWorkflowProvider);
         this.settings = settings;
         this.dispatcher = dispatcher;
+        this.stateService = stateService;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
+
+        stateService.addListener(this);
     }
 
     @Override
@@ -108,5 +116,20 @@ class GlobalContextTracker
         {
             scheduleTracking(workflowKey, workflow, delay.toMillis());
         }
+    }
+
+    @Override
+    public void onServiceStateChange(ServiceState serviceState)
+    {
+        synchronized (projectWorkflows)
+        {
+            projectWorkflows.clear();
+        }
+    }
+
+    @Override
+    public void onActionStateChange(com.e1c.edt.ai.ActionState actionState)
+    {
+        // Do nothing
     }
 }

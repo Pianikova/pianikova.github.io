@@ -48,6 +48,7 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(ResourceListener.class);
         initializableBinder.addBinding().to(UpdateService.class);
         initializableBinder.addBinding().to(Notificator.class);
+        initializableBinder.addBinding().to(ActiveProjectTracker.class);
 
         bind(UI.class).in(Singleton.class);
         bind(IUI.class).to(UI.class);
@@ -58,6 +59,7 @@ public class AIUICommonModule
         bind(ResourceListener.class).in(Singleton.class);
         bind(UpdateService.class).in(Singleton.class);
         bind(Notificator.class).in(Singleton.class);
+        bind(ActiveProjectTracker.class).in(Singleton.class);
 
         // view enhancers
         var viewEnhancerBinder = Multibinder.newSetBinder(binder(), IViewEnhancer.class);
