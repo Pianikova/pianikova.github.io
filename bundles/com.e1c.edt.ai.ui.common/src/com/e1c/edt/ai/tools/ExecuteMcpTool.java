@@ -79,6 +79,7 @@ public class ExecuteMcpTool
         return TOOL_NAME;
     }
 
+    @SuppressWarnings("nls")
     @Override
     protected String getToolDescription()
     {
@@ -90,6 +91,7 @@ public class ExecuteMcpTool
         return description.toString();
     }
 
+    @SuppressWarnings("nls")
     @Override
     protected void addToolSpecificProperties(HashMap<String, McpToolCallProperty> properties)
     {
@@ -99,6 +101,7 @@ public class ExecuteMcpTool
         properties.put("executable", executableProp);
     }
 
+    @SuppressWarnings("nls")
     @Override
     protected List<String> getRequiredParameters()
     {
