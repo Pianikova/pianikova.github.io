@@ -5,6 +5,8 @@ package com.e1c.edt.ai.tools;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
@@ -97,12 +99,19 @@ public class GitMcpTool
 	@Override
 	public boolean isExperimental()
 	{
-		return true;
+        return false;
 	}
 
 	@Override
 	public McpToolCallSpecification getSpecification()
 	{
 		return spec;
+    }
+
+    @Override
+    public CompletableFuture<Boolean> getIsAvailable()
+    {
+        return processRunner.executeProcess("git", null, List.of("--version"), 5L, TimeUnit.SECONDS, null) //$NON-NLS-1$ //$NON-NLS-2$
+            .thenApply(result -> result.isPresent() && result.get().exitCode == 0);
     }
 }
