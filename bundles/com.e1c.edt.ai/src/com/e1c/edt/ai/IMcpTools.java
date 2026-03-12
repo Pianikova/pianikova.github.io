@@ -11,7 +11,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCalls;
 
 public interface IMcpTools
 {
-    List<McpToolCallSpecification> getSpecifications();
+    CompletableFuture<List<McpToolCallSpecification>> getSpecifications();
 
     CompletableFuture<McpCallToolsResult> callTools(McpToolCalls calls, ICancellationToken сancellationToken);
 }

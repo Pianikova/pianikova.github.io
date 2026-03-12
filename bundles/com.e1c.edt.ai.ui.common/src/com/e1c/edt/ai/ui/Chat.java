@@ -640,7 +640,7 @@ public class Chat
             return;
         }
 
-        var tools = mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
+        var tools = mcpTools.getSpecifications().join().stream().map(i -> i.function).collect(Collectors.toList());
         var toolsJson = json.serialize(tools);
 
         var webEngine = getEngine();

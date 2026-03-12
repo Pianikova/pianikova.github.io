@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -18,6 +19,8 @@ import com.e1c.edt.ai.assistent.model.McpToolCalls;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 
 public class McpTools
@@ -32,6 +35,8 @@ public class McpTools
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IJson json;
+    private final Cache<String, List<McpToolCallSpecification>> specsCache =
+        CacheBuilder.newBuilder().maximumSize(1).expireAfterWrite(1, TimeUnit.HOURS).build();
 
     @Inject
     public McpTools(ILog log, ISettings settings, Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory,
@@ -81,9 +86,63 @@ public class McpTools
     }
 
     @Override
-    public List<McpToolCallSpecification> getSpecifications()
+    public CompletableFuture<List<McpToolCallSpecification>> getSpecifications()
     {
-        return specs;
+        var cachedSpecs = specsCache.getIfPresent("specs"); //$NON-NLS-1$
+        if (cachedSpecs != null)
+        {
+            return CompletableFuture.completedFuture(cachedSpecs);
+        }
+
+        var availabilityFutures = new ArrayList<CompletableFuture<AvailableTool>>();
+        for (var entry : tools.entrySet())
+        {
+            var tool = entry.getValue();
+
+            availabilityFutures.add(tool.getIsAvailable().thenApply(available -> {
+                var availableTool = new AvailableTool();
+                availableTool.tool = tool;
+                availableTool.isAvailable = available;
+                return availableTool;
+            }));
+        }
+
+        CompletableFuture<Void> allOfFuture =
+            CompletableFuture.allOf(availabilityFutures.toArray(new CompletableFuture[0]));
+        return allOfFuture.thenApply(v -> {
+            var resultSpecs = new ArrayList<McpToolCallSpecification>();
+
+            for (var future : availabilityFutures)
+            {
+                try
+                {
+                    var availableTool = future.join();
+                    if (!availableTool.isAvailable)
+                    {
+                        continue;
+                    }
+
+                    var spec = availableTool.tool.getSpecification();
+                    if (spec != null && spec.function != null && spec.function.name != null)
+                    {
+                        resultSpecs.add(spec);
+                    }
+                }
+                catch (Exception e)
+                {
+                    log.logError(e);
+                }
+            }
+
+            specsCache.put("specs", resultSpecs); //$NON-NLS-1$
+            return resultSpecs;
+        });
+    }
+
+    private static class AvailableTool
+    {
+        IMcpTool tool;
+        boolean isAvailable;
     }
 
     @Override
