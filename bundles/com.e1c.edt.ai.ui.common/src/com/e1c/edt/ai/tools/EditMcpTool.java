@@ -52,8 +52,8 @@ public class EditMcpTool
     private static String QuestionExample =
         "{\n"
         + "  \"path\": \"C:/Projects/AccountingSystem/src/MainModule.bsl\",\n"
-        + "  \"old_content\": \"Procedure Test()\\n    Message(\\\"Hello\\\");\\nEndProcedure\",\n"
-        + "  \"new_content\": \"Procedure Test()\\n    Message(\\\"Hi\\\");\\nEndProcedure\",\n"
+        + "  \"old_content\": \"Procedure Test()\\n    SetId(1);\\nEndProcedure\",\n"
+        + "  \"new_content\": \"Procedure Test()\\n    SetId(9);\\nEndProcedure\",\n"
         + "  \"replace_all\": false\n"
         + "}";
     @SuppressWarnings("nls")

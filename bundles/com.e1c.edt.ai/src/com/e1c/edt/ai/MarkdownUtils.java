@@ -38,8 +38,22 @@ public class MarkdownUtils implements IMarkdownUtils
 		{
 			return "";
 		}
-		// Replace backticks with escaped backticks to prevent markdown formatting issues
-		return content.replace("`", "\\`");
+        // Replace special Markdown characters to prevent formatting issues
+        return content.replace("\\", "\\\\")
+            .replace("`", "\\`")
+            .replace("*", "\\*")
+            .replace("_", "\\_")
+            .replace("#", "\\#")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+            .replace("(", "\\(")
+            .replace(")", "\\)")
+            .replace("{", "\\{")
+            .replace("}", "\\}")
+            .replace("-", "\\-")
+            .replace("+", "\\+")
+            .replace(".", "\\.")
+            .replace("!", "\\!");
 	}
 
     @Override
