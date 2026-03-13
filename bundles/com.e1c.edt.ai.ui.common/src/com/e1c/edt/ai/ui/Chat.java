@@ -100,18 +100,16 @@ public class Chat
 
     private WebView webView;
     private ChatKey lastChatKey;
-    private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
     private String lastDialogPath;
     private ChangeListener<Number> widthListener;
     private ChangeListener<Number> heightListener;
-    private ScrollPane currentPane;
+    private boolean isFirst = true;
 
     @Inject
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
         IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
-        ISessionService sessionService, IModuleNameProvider moduleNameProvider,
-        ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools,
-        IEdtLinkHandler linkHandler)
+        ISessionService sessionService, IModuleNameProvider moduleNameProvider, ILocalContext localContext,
+        IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools, IEdtLinkHandler linkHandler)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -196,11 +194,9 @@ public class Chat
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
             {
-                var messagesJson = result.messages != null
-                    ? json.serialize(result.messages) : null;
+                var messagesJson = result.messages != null ? json.serialize(result.messages) : null;
 
-                var unknownCallsJson = result.unknownCalls != null
-                    ? json.serialize(result.unknownCalls) : null;
+                var unknownCallsJson = result.unknownCalls != null ? json.serialize(result.unknownCalls) : null;
 
                 dispatcher.dispatchAsync(() -> {
                     var webEngine = getEngine();
@@ -486,33 +482,8 @@ public class Chat
 
         pane.widthProperty().addListener(widthListener);
         pane.heightProperty().addListener(heightListener);
-        currentPane = pane;
 
-        chatInJob(Optional.empty(), () -> { /* warming up */
-        });
-    }
-
-    @Override
-    public void dispose()
-    {
-        if (currentPane != null)
-        {
-            if (widthListener != null)
-            {
-                currentPane.widthProperty().removeListener(widthListener);
-            }
-            if (heightListener != null)
-            {
-                currentPane.heightProperty().removeListener(heightListener);
-            }
-            currentPane = null;
-        }
-        widthListener = null;
-        heightListener = null;
-        contexts.invalidateAll();
-        handler.reset();
-        lastChatKey = null;
-        initializing = CompletableFuture.completedFuture(true);
+        warmUp();
     }
 
     private void ensureWebViewExists()
@@ -528,6 +499,7 @@ public class Chat
         view.setLayoutY(-1);
 
         var webEngine = getEngine();
+        webEngine.loadContent(createLoadingPage());
         webEngine.setUserDataDirectory(getUserDataDirectory().toFile());
         webEngine.setOnError(event -> {
             log.logError(event.getMessage());
@@ -538,6 +510,80 @@ public class Chat
         worker.runningProperty()
             .addListener((observable, oldValue, newValue) -> log.trace(TracingSources.CHAT, AI_CHAT,
                 () -> "is running: " + newValue)); //$NON-NLS-1$
+    }
+
+    @SuppressWarnings("nls")
+    private String createLoadingPage()
+    {
+        var theme = settings.getTheme();
+        var isDark = "dark".equalsIgnoreCase(theme);
+
+        var title = Messages.ChatLoadingTitle;
+        var message = Messages.ChatLoadingMessage;
+
+        var backgroundColor = isDark ? "#1e1e1e" : "#ffffff";
+        var textColor = isDark ? "#cccccc" : "#333333";
+        var spinnerColor = isDark ? "#4fc3f7" : "#0288d1";
+        var spinnerBg = isDark ? "rgba(79, 195, 247, 0.2)" : "rgba(2, 136, 209, 0.2)";
+
+        var html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html>");
+        html.append("<head>");
+        html.append("<meta charset=\"UTF-8\">");
+        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+        html.append("<style>");
+        html.append("* { margin: 0; padding: 0; box-sizing: border-box; }");
+        html.append("body {");
+        html.append(
+            "    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;");
+        html.append("    background-color: ").append(backgroundColor).append(";");
+        html.append("    color: ").append(textColor).append(";");
+        html.append("    display: flex;");
+        html.append("    flex-direction: column;");
+        html.append("    justify-content: center;");
+        html.append("    align-items: center;");
+        html.append("    min-height: 100vh;");
+        html.append("    margin: 0;");
+        html.append("}");
+        html.append(".container {");
+        html.append("    text-align: center;");
+        html.append("    padding: 40px;");
+        html.append("}");
+        html.append(".spinner {");
+        html.append("    width: 50px;");
+        html.append("    height: 50px;");
+        html.append("    border: 4px solid ").append(spinnerBg).append(";");
+        html.append("    border-top-color: ").append(spinnerColor).append(";");
+        html.append("    border-radius: 50%;");
+        html.append("    animation: spin 1s linear infinite;");
+        html.append("    margin: 0 auto 24px;");
+        html.append("}");
+        html.append("@keyframes spin {");
+        html.append("    to { transform: rotate(360deg); }");
+        html.append("}");
+        html.append("h1 {");
+        html.append("    font-size: 28px;");
+        html.append("    font-weight: 600;");
+        html.append("    margin-bottom: 12px;");
+        html.append("    letter-spacing: -0.5px;");
+        html.append("}");
+        html.append(".message {");
+        html.append("    font-size: 16px;");
+        html.append("    opacity: 0.7;");
+        html.append("}");
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body>");
+        html.append("<div class=\"container\">");
+        html.append("<div class=\"spinner\"></div>");
+        html.append("<h1>").append(title).append("</h1>");
+        html.append("<div class=\"message\">").append(message).append("</div>");
+        html.append("</div>");
+        html.append("</body>");
+        html.append("</html>");
+
+        return html.toString();
     }
 
     private static Path getUserDataDirectory()
@@ -552,8 +598,8 @@ public class Chat
     private void chatInJob(Optional<AIContext> ctx, IChatAction chatAction)
     {
         ensureWebViewExists();
-        var job = dispatcher.createJob(Messages.ChatInteractionJobName, jobCtx -> chat(ctx, chatAction),
-            false, CancellationTokens.NONE);
+        var job = dispatcher.createJob(Messages.ChatInteractionJobName, jobCtx -> chat(ctx, chatAction), false,
+            CancellationTokens.NONE);
         job.setPriority(Job.INTERACTIVE);
         job.schedule();
     }
@@ -569,14 +615,14 @@ public class Chat
             {
                 handler.reset();
                 lastChatKey = newChatKey;
-                initializing = dispatcher.dispatch(() -> {
+                dispatcher.dispatch(() -> {
                     var webEngine = getEngine();
                     return initialize(webEngine, () -> webEngine.load(chatUrl.toString()));
-                }).get();
+                }).get().join();
+
+                wink(32);
             }
 
-            initializing.get();
-            wink(32);
             chatAction.run();
         }
         catch (Throwable error)
@@ -593,7 +639,6 @@ public class Chat
         var worker = webEngine.getLoadWorker();
         log.trace(TracingSources.CHAT, AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
         var result = new CompletableFuture<Boolean>();
-
         ChangeListener<State> stateListener = (observable, oldValue, newValue) -> {
             log.trace(TracingSources.CHAT, AI_CHAT, () -> "new state: " + newValue);
             switch (newValue)
@@ -757,13 +802,37 @@ public class Chat
     @Override
     public void onServiceStateChange(ServiceState serviceState)
     {
-        contexts.invalidateAll();
-        lastChatKey = null;
+        // Skip first settings change
+        if (!isFirst && serviceState == ServiceState.SETTINGS_CHANGED)
+        {
+            isFirst = false;
+            reset();
+            warmUp();
+        }
     }
 
     @Override
     public void onActionStateChange(ActionState actionState)
     {
         // Do nothing
+    }
+
+    @Override
+    public void hide()
+    {
+        reset();
+        warmUp();
+    }
+
+    private void warmUp()
+    {
+        chatInJob(Optional.empty(), () -> { /* warming up */
+        });
+    }
+
+    private void reset()
+    {
+        contexts.invalidateAll();
+        lastChatKey = null;
     }
 }

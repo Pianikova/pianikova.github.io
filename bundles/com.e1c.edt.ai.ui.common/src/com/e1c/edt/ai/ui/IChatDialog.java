@@ -9,5 +9,5 @@ public interface IChatDialog
 {
     void show(ScrollPane pane);
 
-    void dispose();
+    void hide();
 }

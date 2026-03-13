@@ -58,6 +58,8 @@ public class Messages
     public static String ImproveStyle;
     public static String Activate;
     public static String Details;
+    public static String ChatLoadingTitle;
+    public static String ChatLoadingMessage;
 
     static
     {
