@@ -89,7 +89,7 @@ public class BaseChatView
     {
         if (chatDialog != null)
         {
-            chatDialog.dispose();
+            chatDialog.hide();
         }
 
         super.dispose();

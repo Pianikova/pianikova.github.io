@@ -38,8 +38,22 @@ public class MarkdownUtils implements IMarkdownUtils
 		{
 			return "";
 		}
-		// Replace backticks with escaped backticks to prevent markdown formatting issues
-		return content.replace("`", "\\`");
+        // Replace special Markdown characters to prevent formatting issues
+        return content.replace("\\", "\\\\")
+            .replace("`", "\\`")
+            .replace("*", "\\*")
+            .replace("_", "\\_")
+            .replace("#", "\\#")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+            .replace("(", "\\(")
+            .replace(")", "\\)")
+            .replace("{", "\\{")
+            .replace("}", "\\}")
+            .replace("-", "\\-")
+            .replace("+", "\\+")
+            .replace(".", "\\.")
+            .replace("!", "\\!");
 	}
 
     @Override
@@ -146,21 +160,8 @@ public class MarkdownUtils implements IMarkdownUtils
             }
             else
             {
-                boolean contextOmitted = false;
-                int lastRightEnd = 0;
-
                 for (RangeDifference diffInfo : differences)
                 {
-                    // Add context placeholder if there was a gap
-                    if (diffInfo.rightStart() > lastRightEnd)
-                    {
-                        if (contextOmitted)
-                        {
-                            appendContextLine(diff);
-                        }
-                        contextOmitted = true;
-                    }
-
                     // Show removed lines (from left)
                     for (int i = diffInfo.leftStart(); i < diffInfo.leftEnd(); i++)
                     {
@@ -178,15 +179,6 @@ public class MarkdownUtils implements IMarkdownUtils
                             appendStyledLine(diff, "+" + escapeHtml(newLines[i]), TextColor.GREEN, null);
                         }
                     }
-
-                    contextOmitted = false;
-                    lastRightEnd = diffInfo.rightEnd();
-                }
-
-                // Add context placeholder at the end if needed
-                if (lastRightEnd < newLines.length)
-                {
-                    appendContextLine(diff);
                 }
             }
         }
@@ -218,7 +210,6 @@ public class MarkdownUtils implements IMarkdownUtils
             {
                 if (omittedContext && omittedVisible)
                 {
-                    appendContextLine(diff);
                     omittedContext = false;
                     omittedVisible = false;
                 }
@@ -229,7 +220,6 @@ public class MarkdownUtils implements IMarkdownUtils
             {
                 if (omittedContext && omittedVisible)
                 {
-                    appendContextLine(diff);
                     omittedContext = false;
                     omittedVisible = false;
                 }
@@ -241,7 +231,6 @@ public class MarkdownUtils implements IMarkdownUtils
             {
                 if (omittedContext && omittedVisible)
                 {
-                    appendContextLine(diff);
                     omittedContext = false;
                     omittedVisible = false;
                 }
@@ -258,7 +247,6 @@ public class MarkdownUtils implements IMarkdownUtils
 
         if (omittedContext && omittedVisible)
         {
-            appendContextLine(diff);
         }
 
         diff.append("</code></pre>");
@@ -431,11 +419,6 @@ public class MarkdownUtils implements IMarkdownUtils
         return text.replace("&", "&amp;")
             .replace("<", "&lt;")
             .replace(">", "&gt;");
-    }
-
-    private void appendContextLine(StringBuilder diff)
-    {
-        appendStyledLine(diff, escapeHtml(Messages.DiffContextPlaceholder), TextColor.GRAY, null);
     }
 
     @SuppressWarnings("nls")

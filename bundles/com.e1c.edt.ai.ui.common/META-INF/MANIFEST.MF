@@ -32,4 +32,5 @@ Automatic-Module-Name: com.e1c.edt.ai.ui.common
 Export-Package: com.e1c.edt.ai.ui,
  com.e1c.edt.ai.ui.handlers,
  com.e1c.edt.ai.ui.preferences,
- com.e1c.edt.ai.ui.quickaccess
+ com.e1c.edt.ai.ui.quickaccess,
+ com.e1c.edt.ai.tools

@@ -8,6 +8,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,6 +18,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
@@ -31,12 +33,14 @@ import org.eclipse.ui.PlatformUI;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTools;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IStatistics;
@@ -56,6 +60,8 @@ import com.google.inject.Inject;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker.State;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
@@ -95,23 +101,25 @@ public class Chat
     private final IJson json;
     private final IMcpTools mcpTools;
     private final IEdtLinkHandler linkHandler;
+    private final IProjectTools projectTools;
+    private final IContentSourceProvider contentSourceProvider;
+    private final IFileSystem fileSystem;
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).weakKeys().build();
     private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
 
     private WebView webView;
     private ChatKey lastChatKey;
-    private CompletableFuture<Boolean> initializing = CompletableFuture.completedFuture(true);
     private String lastDialogPath;
     private ChangeListener<Number> widthListener;
     private ChangeListener<Number> heightListener;
-    private ScrollPane currentPane;
+    private boolean isFirst = true;
 
     @Inject
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
         IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
-        ISessionService sessionService, IModuleNameProvider moduleNameProvider,
-        ILocalContext localContext, IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools,
-        IEdtLinkHandler linkHandler)
+        ISessionService sessionService, IModuleNameProvider moduleNameProvider, ILocalContext localContext,
+        IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools, IEdtLinkHandler linkHandler,
+        IProjectTools projectTools, IContentSourceProvider contentSourceProvider, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -127,6 +135,9 @@ public class Chat
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(linkHandler);
+        Preconditions.checkNotNull(projectTools);
+        Preconditions.checkNotNull(contentSourceProvider);
+        Preconditions.checkNotNull(fileSystem);
         this.log = log;
         this.settings = settings;
         this.ui = ui;
@@ -142,6 +153,9 @@ public class Chat
         this.json = json;
         this.mcpTools = mcpTools;
         this.linkHandler = linkHandler;
+        this.projectTools = projectTools;
+        this.contentSourceProvider = contentSourceProvider;
+        this.fileSystem = fileSystem;
 
         stateService.addListener(this);
     }
@@ -196,11 +210,9 @@ public class Chat
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
             {
-                var messagesJson = result.messages != null
-                    ? json.serialize(result.messages) : null;
+                var messagesJson = result.messages != null ? json.serialize(result.messages) : null;
 
-                var unknownCallsJson = result.unknownCalls != null
-                    ? json.serialize(result.unknownCalls) : null;
+                var unknownCallsJson = result.unknownCalls != null ? json.serialize(result.unknownCalls) : null;
 
                 dispatcher.dispatchAsync(() -> {
                     var webEngine = getEngine();
@@ -283,21 +295,76 @@ public class Chat
         for (var fileName : dialog.getFileNames())
         {
             var filePath = lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
-            try
-            {
-                var bytes = Files.readAllBytes(filePath);
-                var content = new String(bytes, StandardCharsets.UTF_8);
-                var ctx = new AIContext(ProjectId.Default, filePath.toString(), null);
-                chat(TOPIC_INSERT_CODE, content, null, ctx);
-            }
-            catch (IOException e)
-            {
-                errorReadingFile.append("Error reading file "); //$NON-NLS-1$
-                errorReadingFile.append(fileName);
-                errorReadingFile.append(System.lineSeparator());
-            }
+            readFileContent(filePath, fileName, errorReadingFile);
         }
         return documents;
+    }
+
+    private void readFileContent(Path filePath, String fileName, StringBuilder errorReadingFile)
+    {
+        var pathString = filePath.toString();
+
+        try
+        {
+            String content;
+            AIContext ctx;
+
+            var projectName = projectTools.determineProjectName(pathString);
+            var isProjectFile = projectName != null && !projectName.isBlank();
+
+            if (isProjectFile)
+            {
+                var root = ResourcesPlugin.getWorkspace().getRoot();
+                var project = root.getProject(projectName);
+
+                if (project != null && project.exists())
+                {
+                    var optionalFile = projectTools.getProjectFile(project, pathString);
+                    if (optionalFile.isPresent())
+                    {
+                        var optionalDocument = contentSourceProvider.getFileDocument(optionalFile.get());
+                        if (optionalDocument.isPresent())
+                        {
+                            var document = optionalDocument.get();
+                            content = document.getDocument().get();
+                            ctx = new AIContext(new ProjectId(project), pathString, document.getDocument());
+                        }
+                        else
+                        {
+                            throw new IOException("Cannot get document for project file"); //$NON-NLS-1$
+                        }
+                    }
+                    else
+                    {
+                        throw new IOException("Cannot get IFile for project"); //$NON-NLS-1$
+                    }
+                }
+                else
+                {
+                    throw new IOException("Project does not exist or is not accessible"); //$NON-NLS-1$
+                }
+            }
+            else
+            {
+                var bytes = Files.readAllBytes(filePath);
+                content = new String(bytes, StandardCharsets.UTF_8);
+                ctx = new AIContext(ProjectId.Default, pathString, null);
+            }
+
+            if (!fileSystem.isPrintable(content, 90.0))
+            {
+                errorReadingFile.append(MessageFormat.format(Messages.FileNotTextFormat, fileName));
+                errorReadingFile.append(System.lineSeparator());
+                return;
+            }
+
+            chat(TOPIC_INSERT_CODE, content, null, ctx);
+        }
+        catch (IOException e)
+        {
+            errorReadingFile.append(MessageFormat.format(Messages.ErrorReadingFile, fileName));
+            errorReadingFile.append(System.lineSeparator());
+        }
     }
 
     private void showErrorIfAny(StringBuilder errorReadingFile)
@@ -305,8 +372,7 @@ public class Chat
         if (errorReadingFile.length() > 0)
         {
             var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-            MessageDialog.openError(shell, Messages.ErrorReadingTextFile,
-                errorReadingFile + Messages.ErrorReadingTextFile);
+            MessageDialog.openError(shell, Messages.ErrorReadingTextFile, errorReadingFile.toString());
         }
     }
 
@@ -486,33 +552,8 @@ public class Chat
 
         pane.widthProperty().addListener(widthListener);
         pane.heightProperty().addListener(heightListener);
-        currentPane = pane;
 
-        chatInJob(Optional.empty(), () -> { /* warming up */
-        });
-    }
-
-    @Override
-    public void dispose()
-    {
-        if (currentPane != null)
-        {
-            if (widthListener != null)
-            {
-                currentPane.widthProperty().removeListener(widthListener);
-            }
-            if (heightListener != null)
-            {
-                currentPane.heightProperty().removeListener(heightListener);
-            }
-            currentPane = null;
-        }
-        widthListener = null;
-        heightListener = null;
-        contexts.invalidateAll();
-        handler.reset();
-        lastChatKey = null;
-        initializing = CompletableFuture.completedFuture(true);
+        warmUp();
     }
 
     private void ensureWebViewExists()
@@ -534,10 +575,116 @@ public class Chat
             log.logError(event.getException());
         });
 
+        view.setOnDragOver(event -> {
+            Dragboard dragboard = event.getDragboard();
+            if (dragboard.hasFiles())
+            {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+
+            event.consume();
+        });
+
+        view.setOnDragDropped(event -> {
+            Dragboard dragboard = event.getDragboard();
+            if (dragboard.hasFiles())
+            {
+                var errorReadingFile = new StringBuilder();
+                for (var file : dragboard.getFiles())
+                {
+                    readFileContent(file.toPath(), file.getName(), errorReadingFile);
+                }
+                showErrorIfAny(errorReadingFile);
+                event.setDropCompleted(true);
+            }
+            else
+            {
+                event.setDropCompleted(false);
+            }
+
+            event.consume();
+        });
+
+        webEngine.loadContent(createLoadingPage());
+
         var worker = webEngine.getLoadWorker();
         worker.runningProperty()
             .addListener((observable, oldValue, newValue) -> log.trace(TracingSources.CHAT, AI_CHAT,
                 () -> "is running: " + newValue)); //$NON-NLS-1$
+    }
+
+    @SuppressWarnings("nls")
+    private String createLoadingPage()
+    {
+        var theme = settings.getTheme();
+        var isDark = "dark".equalsIgnoreCase(theme);
+
+        var title = Messages.ChatLoadingTitle;
+        var message = Messages.ChatLoadingMessage;
+
+        var backgroundColor = isDark ? "#1e1e1e" : "#ffffff";
+        var textColor = isDark ? "#cccccc" : "#333333";
+        var spinnerColor = isDark ? "#4fc3f7" : "#0288d1";
+        var spinnerBg = isDark ? "rgba(79, 195, 247, 0.2)" : "rgba(2, 136, 209, 0.2)";
+
+        var html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html>");
+        html.append("<head>");
+        html.append("<meta charset=\"UTF-8\">");
+        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
+        html.append("<style>");
+        html.append("* { margin: 0; padding: 0; box-sizing: border-box; }");
+        html.append("body {");
+        html.append(
+            "    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;");
+        html.append("    background-color: ").append(backgroundColor).append(";");
+        html.append("    color: ").append(textColor).append(";");
+        html.append("    display: flex;");
+        html.append("    flex-direction: column;");
+        html.append("    justify-content: center;");
+        html.append("    align-items: center;");
+        html.append("    min-height: 100vh;");
+        html.append("    margin: 0;");
+        html.append("}");
+        html.append(".container {");
+        html.append("    text-align: center;");
+        html.append("    padding: 40px;");
+        html.append("}");
+        html.append(".spinner {");
+        html.append("    width: 50px;");
+        html.append("    height: 50px;");
+        html.append("    border: 4px solid ").append(spinnerBg).append(";");
+        html.append("    border-top-color: ").append(spinnerColor).append(";");
+        html.append("    border-radius: 50%;");
+        html.append("    animation: spin 1s linear infinite;");
+        html.append("    margin: 0 auto 24px;");
+        html.append("}");
+        html.append("@keyframes spin {");
+        html.append("    to { transform: rotate(360deg); }");
+        html.append("}");
+        html.append("h1 {");
+        html.append("    font-size: 28px;");
+        html.append("    font-weight: 600;");
+        html.append("    margin-bottom: 12px;");
+        html.append("    letter-spacing: -0.5px;");
+        html.append("}");
+        html.append(".message {");
+        html.append("    font-size: 16px;");
+        html.append("    opacity: 0.7;");
+        html.append("}");
+        html.append("</style>");
+        html.append("</head>");
+        html.append("<body>");
+        html.append("<div class=\"container\">");
+        html.append("<div class=\"spinner\"></div>");
+        html.append("<h1>").append(title).append("</h1>");
+        html.append("<div class=\"message\">").append(message).append("</div>");
+        html.append("</div>");
+        html.append("</body>");
+        html.append("</html>");
+
+        return html.toString();
     }
 
     private static Path getUserDataDirectory()
@@ -552,8 +699,8 @@ public class Chat
     private void chatInJob(Optional<AIContext> ctx, IChatAction chatAction)
     {
         ensureWebViewExists();
-        var job = dispatcher.createJob(Messages.ChatInteractionJobName, jobCtx -> chat(ctx, chatAction),
-            false, CancellationTokens.NONE);
+        var job = dispatcher.createJob(Messages.ChatInteractionJobName, jobCtx -> chat(ctx, chatAction), false,
+            CancellationTokens.NONE);
         job.setPriority(Job.INTERACTIVE);
         job.schedule();
     }
@@ -569,14 +716,16 @@ public class Chat
             {
                 handler.reset();
                 lastChatKey = newChatKey;
-                initializing = dispatcher.dispatch(() -> {
+                dispatcher.dispatch(() -> {
                     var webEngine = getEngine();
-                    return initialize(webEngine, () -> webEngine.load(chatUrl.toString()));
-                }).get();
+                    return initialize(webEngine, () -> {
+                        webEngine.load(chatUrl.toString());
+                    });
+                }).get().join();
+
+                wink(32);
             }
 
-            initializing.get();
-            wink(32);
             chatAction.run();
         }
         catch (Throwable error)
@@ -593,7 +742,6 @@ public class Chat
         var worker = webEngine.getLoadWorker();
         log.trace(TracingSources.CHAT, AI_CHAT, () -> "user agent: " + webEngine.getUserAgent());
         var result = new CompletableFuture<Boolean>();
-
         ChangeListener<State> stateListener = (observable, oldValue, newValue) -> {
             log.trace(TracingSources.CHAT, AI_CHAT, () -> "new state: " + newValue);
             switch (newValue)
@@ -640,7 +788,7 @@ public class Chat
             return;
         }
 
-        var tools = mcpTools.getSpecifications().stream().map(i -> i.function).collect(Collectors.toList());
+        var tools = mcpTools.getSpecifications().join().stream().map(i -> i.function).collect(Collectors.toList());
         var toolsJson = json.serialize(tools);
 
         var webEngine = getEngine();
@@ -757,13 +905,37 @@ public class Chat
     @Override
     public void onServiceStateChange(ServiceState serviceState)
     {
-        contexts.invalidateAll();
-        lastChatKey = null;
+        // Skip first settings change
+        if (!isFirst && serviceState == ServiceState.SETTINGS_CHANGED)
+        {
+            isFirst = false;
+            reset();
+            warmUp();
+        }
     }
 
     @Override
     public void onActionStateChange(ActionState actionState)
     {
         // Do nothing
+    }
+
+    @Override
+    public void hide()
+    {
+        reset();
+        warmUp();
+    }
+
+    private void warmUp()
+    {
+        chatInJob(Optional.empty(), () -> { /* warming up */
+        });
+    }
+
+    private void reset()
+    {
+        contexts.invalidateAll();
+        lastChatKey = null;
     }
 }

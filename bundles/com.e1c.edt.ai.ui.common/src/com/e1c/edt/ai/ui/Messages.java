@@ -58,6 +58,11 @@ public class Messages
     public static String ImproveStyle;
     public static String Activate;
     public static String Details;
+    public static String ChatLoadingTitle;
+    public static String ChatLoadingMessage;
+    public static String FileNotText;
+    public static String ErrorReadingFile;
+    public static String FileNotTextFormat;
 
     static
     {

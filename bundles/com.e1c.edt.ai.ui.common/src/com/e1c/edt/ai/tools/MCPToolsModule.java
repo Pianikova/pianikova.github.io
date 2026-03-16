@@ -23,6 +23,7 @@ public class MCPToolsModule
         bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
         toolBinder.addBinding().to(ExecuteMcpTool.class);
+        toolBinder.addBinding().to(GitMcpTool.class);
         toolBinder.addBinding().to(GetProjectsMcpTool.class);
         toolBinder.addBinding().to(GetCommandCategoriesMcpTool.class);
         toolBinder.addBinding().to(GetCommandsMcpTool.class);
@@ -30,9 +31,10 @@ public class MCPToolsModule
         toolBinder.addBinding().to(ReadMcpTool.class);
         toolBinder.addBinding().to(FindMcpTool.class);
         toolBinder.addBinding().to(SearchTextMcpTool.class);
-        toolBinder.addBinding().to(SearchFilesMcpTool.class);
-        toolBinder.addBinding().to(GitCommitsMcpTool.class);
-        toolBinder.addBinding().to(GitDiffMcpTool.class);
+        // toolBinder.addBinding().to(SearchFilesMcpTool.class);
+        toolBinder.addBinding().to(GlobMcpTool.class);
+        // toolBinder.addBinding().to(GitCommitsMcpTool.class);
+        // toolBinder.addBinding().to(GitDiffMcpTool.class);
         toolBinder.addBinding().to(LocalHistoryMcpTool.class);
         toolBinder.addBinding().to(LocalChangesMcpTool.class);
         toolBinder.addBinding().to(NavigationHistoryMcpTool.class);
@@ -48,6 +50,7 @@ public class MCPToolsModule
         bind(IMcpToolsCallMessageFactory.class).to(McpToolsCallMessageFactory.class).in(Singleton.class);
         bind(IMarkdownUtils.class).to(com.e1c.edt.ai.MarkdownUtils.class).in(Singleton.class);
         bind(ILocalHistoryUtils.class).to(LocalHistoryUtils.class).in(Singleton.class);
+        bind(IPatternMatcher.class).to(PatternMatcher.class).in(Singleton.class);
 
         // Markers providers
         var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);

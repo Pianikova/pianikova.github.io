@@ -23,8 +23,14 @@ import com.google.inject.Inject;
 public class ProcessRunner
     implements IProcessRunner
 {
+    private static final String CONSOLE_CHARSET;
     private final ILog log;
     private final ExecutorService executor;
+
+    static
+    {
+        CONSOLE_CHARSET = detectConsoleCharset();
+    }
 
     @Inject
     public ProcessRunner(ILog log)
@@ -159,40 +165,35 @@ public class ProcessRunner
     private CompletableFuture<StreamReadResult> readStreamAsync(InputStream inputStream, int maxLines)
     {
         return CompletableFuture.supplyAsync(() -> {
-            try (InputStreamReader isr = new InputStreamReader(inputStream))
+            try
             {
-                char[] buffer = new char[1024];
-                int bytesRead;
-                int lineCount = 0;
+                java.io.BufferedReader reader =
+                    new java.io.BufferedReader(new InputStreamReader(inputStream, CONSOLE_CHARSET));
+
                 StringBuilder lineBuffer = new StringBuilder();
+                int lineCount = 0;
                 boolean truncated = false;
+                String line;
 
-                // Read stream until EOF or line limit reached
-                while ((bytesRead = isr.read(buffer)) != -1 && lineCount < maxLines)
+                // Read line by line until EOF or line limit reached
+                while ((line = reader.readLine()) != null && lineCount < maxLines)
                 {
-                    String chunk = new String(buffer, 0, bytesRead);
-                    lineBuffer.append(chunk);
-
-                    // Count lines in the chunk
-                    int lineIndex = chunk.indexOf('\n');
-                    while (lineIndex != -1)
+                    if (lineCount > 0)
                     {
-                        lineCount++;
-                        if (lineCount >= maxLines)
-                        {
-                            break;
-                        }
-                        lineIndex = chunk.indexOf('\n', lineIndex + 1);
+                        lineBuffer.append('\n');
                     }
+                    lineBuffer.append(line);
+                    lineCount++;
                 }
 
                 // Check if we stopped due to line limit
-                if (lineCount >= maxLines && bytesRead != -1)
+                if (line != null)
                 {
                     truncated = true;
                 }
 
-                return new StreamReadResult(lineBuffer.toString(), truncated);
+                String content = lineBuffer.toString();
+                return new StreamReadResult(content, truncated);
             }
             catch (IOException e)
             {
@@ -200,5 +201,43 @@ public class ProcessRunner
                 throw new UncheckedIOException("Error reading process stream", e); //$NON-NLS-1$
             }
         }, executor);
+    }
+
+    @SuppressWarnings("nls")
+    private static String detectConsoleCharset()
+    {
+        var os = System.getProperty("os.name", "").toLowerCase();
+        if (os.contains("win"))
+        {
+            // On Windows, try Java 10+ console charset
+            try
+            {
+                var charsetMethod = java.io.Console.class.getMethod("charset");
+                var console = System.console();
+                if (console != null)
+                {
+                    var charset = (java.nio.charset.Charset)charsetMethod.invoke(console);
+                    return charset.name();
+                }
+            }
+            catch (Exception e)
+            {
+                // Not Java 10+ or no console
+            }
+
+            // Try sun.stdout.encoding
+            String encoding = System.getProperty("sun.stdout.encoding");
+            if (encoding != null && !encoding.isEmpty())
+            {
+                return encoding;
+            }
+
+            // Fallback based on language
+            String lang = System.getProperty("user.language", "en").toLowerCase();
+            return lang.equals("ru") ? "CP866" : "CP437";
+        }
+
+        // Unix/Linux
+        return "UTF-8";
     }
 }

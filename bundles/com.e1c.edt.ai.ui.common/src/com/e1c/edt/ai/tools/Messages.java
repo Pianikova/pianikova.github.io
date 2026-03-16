@@ -48,6 +48,13 @@ public class Messages
     public static String MaxCommits;
     public static String CurrentProject;
     public static String SelectedFile;
+    public static String GlobTitleTemplate;
+    public static String GlobTemplate;
+    public static String GlobPattern;
+    public static String GlobPath;
+    public static String GlobDepth;
+    public static String GlobFilesFound;
+    public static String GlobDirectoriesFound;
     public static String GitCommitsTitleTemplate;
     public static String GitCommitsFoundTemplate;
     public static String CommitsList;
