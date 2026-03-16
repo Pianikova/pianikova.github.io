@@ -8,6 +8,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -17,6 +18,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
@@ -31,12 +33,14 @@ import org.eclipse.ui.PlatformUI;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.IContextEntities;
 import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILocalContext;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMcpTools;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.IStatistics;
@@ -56,6 +60,8 @@ import com.google.inject.Inject;
 import javafx.beans.value.ChangeListener;
 import javafx.concurrent.Worker.State;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
@@ -95,6 +101,9 @@ public class Chat
     private final IJson json;
     private final IMcpTools mcpTools;
     private final IEdtLinkHandler linkHandler;
+    private final IProjectTools projectTools;
+    private final IContentSourceProvider contentSourceProvider;
+    private final IFileSystem fileSystem;
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).weakKeys().build();
     private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
 
@@ -109,7 +118,8 @@ public class Chat
     public Chat(ILog log, ISettings settings, IUI ui, IDispatcher dispatcher, IdeApiHandler handler,
         IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
         ISessionService sessionService, IModuleNameProvider moduleNameProvider, ILocalContext localContext,
-        IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools, IEdtLinkHandler linkHandler)
+        IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools, IEdtLinkHandler linkHandler,
+        IProjectTools projectTools, IContentSourceProvider contentSourceProvider, IFileSystem fileSystem)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -125,6 +135,9 @@ public class Chat
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(linkHandler);
+        Preconditions.checkNotNull(projectTools);
+        Preconditions.checkNotNull(contentSourceProvider);
+        Preconditions.checkNotNull(fileSystem);
         this.log = log;
         this.settings = settings;
         this.ui = ui;
@@ -140,6 +153,9 @@ public class Chat
         this.json = json;
         this.mcpTools = mcpTools;
         this.linkHandler = linkHandler;
+        this.projectTools = projectTools;
+        this.contentSourceProvider = contentSourceProvider;
+        this.fileSystem = fileSystem;
 
         stateService.addListener(this);
     }
@@ -279,21 +295,76 @@ public class Chat
         for (var fileName : dialog.getFileNames())
         {
             var filePath = lastDialogPath != null ? Path.of(lastDialogPath, fileName) : Path.of(fileName.toString());
-            try
-            {
-                var bytes = Files.readAllBytes(filePath);
-                var content = new String(bytes, StandardCharsets.UTF_8);
-                var ctx = new AIContext(ProjectId.Default, filePath.toString(), null);
-                chat(TOPIC_INSERT_CODE, content, null, ctx);
-            }
-            catch (IOException e)
-            {
-                errorReadingFile.append("Error reading file "); //$NON-NLS-1$
-                errorReadingFile.append(fileName);
-                errorReadingFile.append(System.lineSeparator());
-            }
+            readFileContent(filePath, fileName, errorReadingFile);
         }
         return documents;
+    }
+
+    private void readFileContent(Path filePath, String fileName, StringBuilder errorReadingFile)
+    {
+        var pathString = filePath.toString();
+
+        try
+        {
+            String content;
+            AIContext ctx;
+
+            var projectName = projectTools.determineProjectName(pathString);
+            var isProjectFile = projectName != null && !projectName.isBlank();
+
+            if (isProjectFile)
+            {
+                var root = ResourcesPlugin.getWorkspace().getRoot();
+                var project = root.getProject(projectName);
+
+                if (project != null && project.exists())
+                {
+                    var optionalFile = projectTools.getProjectFile(project, pathString);
+                    if (optionalFile.isPresent())
+                    {
+                        var optionalDocument = contentSourceProvider.getFileDocument(optionalFile.get());
+                        if (optionalDocument.isPresent())
+                        {
+                            var document = optionalDocument.get();
+                            content = document.getDocument().get();
+                            ctx = new AIContext(new ProjectId(project), pathString, document.getDocument());
+                        }
+                        else
+                        {
+                            throw new IOException("Cannot get document for project file"); //$NON-NLS-1$
+                        }
+                    }
+                    else
+                    {
+                        throw new IOException("Cannot get IFile for project"); //$NON-NLS-1$
+                    }
+                }
+                else
+                {
+                    throw new IOException("Project does not exist or is not accessible"); //$NON-NLS-1$
+                }
+            }
+            else
+            {
+                var bytes = Files.readAllBytes(filePath);
+                content = new String(bytes, StandardCharsets.UTF_8);
+                ctx = new AIContext(ProjectId.Default, pathString, null);
+            }
+
+            if (!fileSystem.isPrintable(content, 90.0))
+            {
+                errorReadingFile.append(MessageFormat.format(Messages.FileNotTextFormat, fileName));
+                errorReadingFile.append(System.lineSeparator());
+                return;
+            }
+
+            chat(TOPIC_INSERT_CODE, content, null, ctx);
+        }
+        catch (IOException e)
+        {
+            errorReadingFile.append(MessageFormat.format(Messages.ErrorReadingFile, fileName));
+            errorReadingFile.append(System.lineSeparator());
+        }
     }
 
     private void showErrorIfAny(StringBuilder errorReadingFile)
@@ -301,8 +372,7 @@ public class Chat
         if (errorReadingFile.length() > 0)
         {
             var shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
-            MessageDialog.openError(shell, Messages.ErrorReadingTextFile,
-                errorReadingFile + Messages.ErrorReadingTextFile);
+            MessageDialog.openError(shell, Messages.ErrorReadingTextFile, errorReadingFile.toString());
         }
     }
 
@@ -499,12 +569,43 @@ public class Chat
         view.setLayoutY(-1);
 
         var webEngine = getEngine();
-        webEngine.loadContent(createLoadingPage());
         webEngine.setUserDataDirectory(getUserDataDirectory().toFile());
         webEngine.setOnError(event -> {
             log.logError(event.getMessage());
             log.logError(event.getException());
         });
+
+        view.setOnDragOver(event -> {
+            Dragboard dragboard = event.getDragboard();
+            if (dragboard.hasFiles())
+            {
+                event.acceptTransferModes(TransferMode.COPY);
+            }
+
+            event.consume();
+        });
+
+        view.setOnDragDropped(event -> {
+            Dragboard dragboard = event.getDragboard();
+            if (dragboard.hasFiles())
+            {
+                var errorReadingFile = new StringBuilder();
+                for (var file : dragboard.getFiles())
+                {
+                    readFileContent(file.toPath(), file.getName(), errorReadingFile);
+                }
+                showErrorIfAny(errorReadingFile);
+                event.setDropCompleted(true);
+            }
+            else
+            {
+                event.setDropCompleted(false);
+            }
+
+            event.consume();
+        });
+
+        webEngine.loadContent(createLoadingPage());
 
         var worker = webEngine.getLoadWorker();
         worker.runningProperty()
@@ -617,7 +718,9 @@ public class Chat
                 lastChatKey = newChatKey;
                 dispatcher.dispatch(() -> {
                     var webEngine = getEngine();
-                    return initialize(webEngine, () -> webEngine.load(chatUrl.toString()));
+                    return initialize(webEngine, () -> {
+                        webEngine.load(chatUrl.toString());
+                    });
                 }).get().join();
 
                 wink(32);
