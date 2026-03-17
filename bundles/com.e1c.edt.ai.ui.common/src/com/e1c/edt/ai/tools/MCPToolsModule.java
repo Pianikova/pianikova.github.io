@@ -44,6 +44,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(GetMarkersMcpTool.class);
         toolBinder.addBinding().to(SetMarkersMcpTool.class);
         toolBinder.addBinding().to(DeleteMarkersMcpTool.class);
+        toolBinder.addBinding().to(JShellMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
         bind(IBuildWaiter.class).to(BuildWaiter.class).in(Singleton.class);
@@ -51,9 +52,15 @@ public class MCPToolsModule
         bind(IMarkdownUtils.class).to(com.e1c.edt.ai.MarkdownUtils.class).in(Singleton.class);
         bind(ILocalHistoryUtils.class).to(LocalHistoryUtils.class).in(Singleton.class);
         bind(IPatternMatcher.class).to(PatternMatcher.class).in(Singleton.class);
+        bind(IJShellSessionCache.class).to(JShellSessionCache.class).in(Singleton.class);
 
         // Markers providers
         var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
         markersProviderBinder.addBinding().to(CommonMarkersProvider.class);
+
+        // JShell binding providers
+        var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
+        jshellBindingProviderBinder.addBinding().to(EclipsePlatformBindingProvider.class);
+        jshellBindingProviderBinder.addBinding().to(ExampleUtilsBindingProvider.class);
     }
 }
