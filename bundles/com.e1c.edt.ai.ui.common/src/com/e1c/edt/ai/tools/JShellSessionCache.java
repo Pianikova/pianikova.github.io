@@ -23,21 +23,25 @@ import jdk.jshell.JShell;
  */
 @Singleton
 class JShellSessionCache
-    implements IJShellSessionCache
+	implements IJShellSessionCache
 {
 	private final Cache<String, JShellSession> sessionCache;
-    private final ILog log;
-    private final Set<IJShellBindingProvider> bindingProviders;
+	private final ILog log;
+	private final Set<IJShellBindingProvider> bindingProviders;
+    private final IRestrictedTypesValidator restrictedTypesValidator;
 	private final Map<String, Object> bindingRegistry = new ConcurrentHashMap<>();
 
 	@Inject
-    public JShellSessionCache(ILog log, Set<IJShellBindingProvider> bindingProviders)
+	public JShellSessionCache(ILog log, Set<IJShellBindingProvider> bindingProviders,
+        IRestrictedTypesValidator restrictedTypesValidator)
 	{
-        Preconditions.checkNotNull(log);
-        Preconditions.checkNotNull(bindingProviders);
+		Preconditions.checkNotNull(log);
+		Preconditions.checkNotNull(bindingProviders);
+        Preconditions.checkNotNull(restrictedTypesValidator);
 
-        this.log = log;
+		this.log = log;
 		this.bindingProviders = bindingProviders;
+        this.restrictedTypesValidator = restrictedTypesValidator;
 		JShellSessionCacheHolder.setInstance(this);
 
 		// Cache with maximum of 64 sessions and 30 minutes expiration after access
@@ -55,7 +59,7 @@ class JShellSessionCache
 	}
 
 	@Override
-    public IJShellSession getOrCreateSession(String sessionId)
+	public IJShellSession getOrCreateSession(String sessionId)
 	{
 		if (sessionId == null || sessionId.isBlank())
 		{
@@ -64,7 +68,7 @@ class JShellSessionCache
 		}
 
 		// Get existing session
-        IJShellSession session = sessionCache.getIfPresent(sessionId);
+		IJShellSession session = sessionCache.getIfPresent(sessionId);
 		if (session != null)
 		{
 			return session;
@@ -74,8 +78,8 @@ class JShellSessionCache
 		return createSession();
 	}
 
-    @SuppressWarnings("nls")
-    private JShellSession createSession()
+	@SuppressWarnings("nls")
+	private JShellSession createSession()
 	{
 		var outBuffer = new ByteArrayOutputStream();
 		var errBuffer = new ByteArrayOutputStream();
@@ -101,12 +105,12 @@ class JShellSessionCache
 				}
 				catch (Exception e)
 				{
-                    log.logError("Failed to bind " + entry.getKey() + ": " + e.getMessage());
+					log.logError("Failed to bind " + entry.getKey() + ": " + e.getMessage());
 				}
 			}
 		}
 
-		var session = new JShellSession(shell, outBuffer, errBuffer);
+		var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
 		sessionCache.put(session.getSessionId(), session);
 		return session;
 	}
@@ -117,13 +121,13 @@ class JShellSessionCache
 	}
 
 	@Override
-    public void invalidateSession(String sessionId)
+	public void invalidateSession(String sessionId)
 	{
 		sessionCache.invalidate(sessionId);
 	}
 
 	@Override
-    public void invalidateAll()
+	public void invalidateAll()
 	{
 		sessionCache.invalidateAll();
 	}
@@ -143,4 +147,3 @@ class JShellSessionCache
 		}
 	}
 }
-

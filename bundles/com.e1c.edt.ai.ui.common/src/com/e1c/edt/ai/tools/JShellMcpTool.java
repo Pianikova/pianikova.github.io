@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -44,22 +45,26 @@ public class JShellMcpTool
     private final IJShellSessionCache sessionCache;
     private final Set<IJShellBindingProvider> bindingProviders;
     private final IMarkdownUtils markdownUtils;
+    private final IRestrictedTypesProvider restrictedTypesProvider;
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IJShellSessionCache sessionCache, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils)
+        IJShellSessionCache sessionCache, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
+        IRestrictedTypesProvider restrictedTypesProvider)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(sessionCache);
 		Preconditions.checkNotNull(bindingProviders);
         Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(restrictedTypesProvider);
 
 		this.json = json;
 		this.messageFactory = messageFactory;
         this.sessionCache = sessionCache;
 		this.bindingProviders = bindingProviders;
         this.markdownUtils = markdownUtils;
+        this.restrictedTypesProvider = restrictedTypesProvider;
 		this.spec = createSpecification();
 	}
 
@@ -201,6 +206,18 @@ public class JShellMcpTool
 				}
 			}
 		}
+
+        // Add restricted types information
+        Set<String> restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
+        if (!restrictedTypes.isEmpty())
+        {
+            description.append("\n\n**Restricted Types:**\n");
+            description.append("The following types are strictly forbidden and will throw a ToolException if used:\n");
+            for (String type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
+            {
+                description.append("- `").append(type).append("`\n");
+            }
+        }
 
 		description.append("\n\nExample:");
 		description.append("\n  Q: ").append(QuestionExample);

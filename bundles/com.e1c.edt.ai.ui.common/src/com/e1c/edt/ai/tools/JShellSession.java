@@ -7,6 +7,8 @@ import java.io.ByteArrayOutputStream;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.e1c.edt.ai.ToolException;
+
 import jdk.jshell.Diag;
 import jdk.jshell.JShell;
 import jdk.jshell.Snippet;
@@ -22,13 +24,16 @@ class JShellSession
 	private final JShell shell;
 	private final ByteArrayOutputStream outBuffer;
 	private final ByteArrayOutputStream errBuffer;
+    private final IRestrictedTypesValidator restrictedTypesValidator;
 
-	JShellSession(JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer)
+    JShellSession(JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
+        IRestrictedTypesValidator restrictedTypesValidator)
 	{
 		this.sessionId = UUID.randomUUID().toString();
 		this.shell = shell;
 		this.outBuffer = outBuffer;
 		this.errBuffer = errBuffer;
+        this.restrictedTypesValidator = restrictedTypesValidator;
 	}
 
 	@Override
@@ -41,6 +46,30 @@ class JShellSession
     @Override
     public JShellExecutionResult execute(String code)
 	{
+        // Validate code for restricted types
+        if (restrictedTypesValidator != null)
+        {
+            try
+            {
+                restrictedTypesValidator.validate(code);
+            }
+            catch (ToolException e)
+            {
+                var result = new JShellExecutionResult();
+                result.sessionId = sessionId;
+                result.compilationErrors = new java.util.ArrayList<>();
+                result.runtimeErrors = new java.util.ArrayList<>();
+
+                // Add as compilation error
+                var error = new CompilationError();
+                error.isError = true;
+                error.message = e.getMessage();
+                result.compilationErrors.add(error);
+
+                return result;
+            }
+        }
+
 		// Clear buffers
 		outBuffer.reset();
 		errBuffer.reset();

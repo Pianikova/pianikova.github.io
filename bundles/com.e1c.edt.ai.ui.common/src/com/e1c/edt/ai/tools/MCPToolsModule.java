@@ -53,6 +53,8 @@ public class MCPToolsModule
         bind(ILocalHistoryUtils.class).to(LocalHistoryUtils.class).in(Singleton.class);
         bind(IPatternMatcher.class).to(PatternMatcher.class).in(Singleton.class);
         bind(IJShellSessionCache.class).to(JShellSessionCache.class).in(Singleton.class);
+        bind(IRestrictedTypesProvider.class).to(RestrictedTypesProvider.class).in(Singleton.class);
+        bind(IRestrictedTypesValidator.class).to(RestrictedTypesValidator.class).in(Singleton.class);
 
         // Markers providers
         var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
