@@ -91,12 +91,10 @@ public class RestrictedTypesProvider
 
 			for (String key : properties.stringPropertyNames())
 			{
-				String value = properties.getProperty(key).trim();
-
-				// Skip comments and empty lines
-				if (!value.isEmpty() && !value.startsWith("#"))
+				// Skip comments (keys starting with #)
+				if (key != null && !key.trim().isEmpty() && !key.trim().startsWith("#"))
 				{
-					types.add(value);
+					types.add(key.trim());
 				}
 			}
 		}
