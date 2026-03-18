@@ -153,7 +153,7 @@ public class SearchTextMcpTool
             final List<Element> allElements = Collections.synchronizedList(new ArrayList<>());
             var query = new QuickTextQuery(searchQuery, false);
 
-            var searcher = new QuickTextSearcher(query, 
+            var searcher = new QuickTextSearcher(query,
                 new PriorityFunction()
                 {
                     @Override
@@ -264,18 +264,19 @@ public class SearchTextMcpTool
             String resultCountText;
             if (response.totalResults > maxCount || firstIndex > 0)
             {
-                resultCountText = elements.size() + " of " + response.totalResults;
+                resultCountText = response.totalResults + "/" + elements.size();
             }
             else
             {
                 resultCountText = String.valueOf(elements.size());
             }
+
             responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
-                markdownUtils.createStyledText(resultCountText, TextColor.GREEN, FontWeight.BOLD)))
+                markdownUtils.createStyledText(resultCountText, TextColor.GREEN, FontWeight.BOLD, false)))
                 .append("\n\n")
                 .append(Messages.SearchQuery)
                 .append(": `")
-                .append(markdownUtils.escapeForMarkdown(searchQuery))
+                .append(searchQuery)
                 .append("`");
 
             if (filePathPatterns != null && !filePathPatterns.isEmpty())

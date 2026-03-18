@@ -143,7 +143,8 @@ public class NavigationHistoryMcpTool
 
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.NavigationHistoryFoundTemplate,
-                markdownUtils.createStyledText(String.valueOf(entries.size()), TextColor.GREEN, FontWeight.BOLD)));
+                markdownUtils.createStyledText(String.valueOf(entries.size()), TextColor.GREEN, FontWeight.BOLD,
+                    false)));
 
             if (!entries.isEmpty())
             {

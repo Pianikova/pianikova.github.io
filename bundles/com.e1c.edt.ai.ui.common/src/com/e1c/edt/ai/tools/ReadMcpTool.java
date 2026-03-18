@@ -190,7 +190,7 @@ public class ReadMcpTool
 
                     details.responseMarkdown =
                         MessageFormat.format(Messages.ReadTemplate, files.getDisplayedFileName(new File(path)),
-                            markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD));
+                            markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD, false, .3));
 
                     return messageFactory.createMessage(this, call, json.serialize(response), details);
                 }
@@ -206,7 +206,7 @@ public class ReadMcpTool
 
                         details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
                             files.getDisplayedFileName(new File(path)),
-                            markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD));
+                            markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD, false, .3));
 
                         return messageFactory.createMessage(this, call, json.serialize(response), details);
                     }
@@ -247,7 +247,7 @@ public class ReadMcpTool
                         // Add response markdown
                         var styledLineNumber = markdownUtils.createStyledText(
                             String.valueOf(String.format("%d/%d", linesRead, totalLines)),
-                            TextColor.GREEN, FontWeight.BOLD);
+                            TextColor.GREEN, FontWeight.BOLD, false);
 
                         var href = markdownUtils.formatFilePath(path, finalFirstLineNumber - 1, 0,
                             finalFirstLineNumber + linesRead - 1, lastLineSize);
@@ -298,7 +298,7 @@ public class ReadMcpTool
 
                 details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
                     files.getDisplayedFileName(new File(path)),
-                    markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD));
+                    markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD, false, .3));
 
                 return messageFactory.createMessage(this, call, json.serialize(response), details);
             }
@@ -336,7 +336,7 @@ public class ReadMcpTool
             // Add response markdown
             String styledLineNumber =
                 markdownUtils.createStyledText(String.format("%d/%d", linesRead, totalLines), TextColor.GREEN,
-                    FontWeight.BOLD);
+                    FontWeight.BOLD, false);
 
             var href = markdownUtils.formatFilePath(path, finalFirstLineNumber - 1, 0,
                 finalFirstLineNumber + linesRead - 1,

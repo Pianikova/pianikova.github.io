@@ -232,7 +232,8 @@ public class GitCommitsMcpTool
 				// Create response markdown
 				var responseMarkdown = new StringBuilder();
 				responseMarkdown.append(MessageFormat.format(Messages.GitCommitsFoundTemplate,
-					markdownUtils.createStyledText(String.valueOf(commitInfos.size()), TextColor.GREEN, FontWeight.BOLD),
+                    markdownUtils.createStyledText(String.valueOf(commitInfos.size()), TextColor.GREEN, FontWeight.BOLD,
+                        false),
 					markdownUtils.escapeForMarkdown(projectName)))
 					.append("\n\n") //$NON-NLS-1$
 					.append(Messages.ProjectName)
@@ -252,7 +253,8 @@ public class GitCommitsMcpTool
 				for (var commit : commitInfos)
 				{
 					responseMarkdown.append("### **") //$NON-NLS-1$
-                        .append(markdownUtils.createStyledText(commit.shortHash, TextColor.BLUE, FontWeight.NORMAL))
+                        .append(
+                            markdownUtils.createStyledText(commit.shortHash, TextColor.BLUE, FontWeight.NORMAL, true))
 						.append("** - ") //$NON-NLS-1$
 						.append(markdownUtils.escapeForMarkdown(commit.message))
 						.append("\n\n"); //$NON-NLS-1$

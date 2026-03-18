@@ -408,7 +408,7 @@ public class EditMcpTool
         var changes = new StringBuilder();
         if (addedLines > 0)
         {
-            changes.append(markdownUtils.createStyledText("+" + addedLines, TextColor.GREEN, FontWeight.BOLD));
+            changes.append(markdownUtils.createStyledText("+" + addedLines, TextColor.GREEN, FontWeight.BOLD, false));
         }
 
         if (removedLines > 0)
@@ -418,7 +418,7 @@ public class EditMcpTool
                 changes.append(' ');
             }
 
-            changes.append(markdownUtils.createStyledText("-" + removedLines, TextColor.RED, FontWeight.BOLD));
+            changes.append(markdownUtils.createStyledText("-" + removedLines, TextColor.RED, FontWeight.BOLD, false));
         }
 
         return changes.toString();

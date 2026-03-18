@@ -359,12 +359,13 @@ public class FindMcpTool
             // Create detailed response markdown with search result information
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
-                markdownUtils.createStyledText(elements.size() + "/" + response.totalResults, TextColor.GREEN, FontWeight.BOLD)))
+                markdownUtils.createStyledText(elements.size() + "/" + response.totalResults, TextColor.GREEN,
+                    FontWeight.BOLD, false)))
                 .append("\n\n") //$NON-NLS-1$
                 .append(Messages.SearchQuery)
                 .append(": ") //$NON-NLS-1$
                 .append("`") //$NON-NLS-1$
-                .append(markdownUtils.escapeForMarkdown(searchQuery))
+                .append(searchQuery)
                 .append("`") //$NON-NLS-1$
                 .append("\n\n") //$NON-NLS-1$
                 .append(Messages.FileNamePatterns)
@@ -688,18 +689,19 @@ public class FindMcpTool
             // Create response markdown
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.FilesFoundTemplate,
-                markdownUtils.createStyledText(String.valueOf(allElements.size()), TextColor.GREEN, FontWeight.BOLD)))
+                markdownUtils.createStyledText(String.valueOf(allElements.size()), TextColor.GREEN, FontWeight.BOLD,
+                    false)))
                 .append("\n\n") //$NON-NLS-1$
                 .append(Messages.SearchQuery)
                 .append(": ") //$NON-NLS-1$
                 .append("`") //$NON-NLS-1$
-                .append(markdownUtils.escapeForMarkdown(isDefaultSearch ? "*" : searchPattern)) //$NON-NLS-1$
+                .append(isDefaultSearch ? "*" : searchPattern) //$NON-NLS-1$
                 .append("`") //$NON-NLS-1$
                 .append("\n\n") //$NON-NLS-1$
                 .append(Messages.FileNamePatterns)
                 .append(": ") //$NON-NLS-1$
                 .append("`") //$NON-NLS-1$
-                .append(markdownUtils.escapeForMarkdown(isDefaultSearch ? "*" : searchPattern)) //$NON-NLS-1$
+                .append(isDefaultSearch ? "*" : searchPattern) //$NON-NLS-1$
                 .append("`"); //$NON-NLS-1$
 
             // Add search results in collapsible section

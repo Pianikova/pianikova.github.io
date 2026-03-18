@@ -157,7 +157,7 @@ public class JShellMcpTool
         md.append("\n\n");
 
         // Show the executed code
-        md.append("```java\n").append(markdownUtils.escapeForMarkdown(code)).append("\n```\n");
+        md.append("```java\n").append(code).append("\n```\n");
 
         // Show return value if any
 		if (result.returnValue != null && !result.returnValue.isEmpty())

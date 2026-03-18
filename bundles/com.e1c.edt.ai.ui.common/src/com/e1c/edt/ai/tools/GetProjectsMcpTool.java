@@ -227,7 +227,7 @@ public class GetProjectsMcpTool
             // Create detailed response markdown with project information
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.ProjectsLoadedTemplate,
-                markdownUtils.createStyledText(String.valueOf(projectCount), TextColor.GREEN, FontWeight.BOLD)));
+                markdownUtils.createStyledText(String.valueOf(projectCount), TextColor.GREEN, FontWeight.BOLD, false)));
 
             // Add project details in collapsible section
             responseMarkdown.append("\n\n<details><summary>").append(Messages.ProjectsDetailsTitle).append("</summary>\n\n");

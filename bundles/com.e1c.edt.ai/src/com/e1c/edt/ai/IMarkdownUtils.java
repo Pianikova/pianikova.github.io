@@ -30,7 +30,7 @@ public interface IMarkdownUtils
      * @param weight The font weight
      * @return Styled HTML text
      */
-    String createStyledText(String content, TextColor color, FontWeight weight);
+    String createStyledText(String content, TextColor color, FontWeight weight, boolean escape);
 
 	/**
      * Creates styled text with specified color, weight, and opacity for HTML display
@@ -40,7 +40,7 @@ public interface IMarkdownUtils
      * @param opacity The opacity value (0.0 to 1.0), or null to not set opacity
      * @return Styled HTML text
      */
-    String createStyledText(String content, TextColor color, FontWeight weight, Double opacity);
+    String createStyledText(String content, TextColor color, FontWeight weight, boolean escape, Double opacity);
 
 	/**
 	 * Builds a markdown-friendly diff view between original and new content.

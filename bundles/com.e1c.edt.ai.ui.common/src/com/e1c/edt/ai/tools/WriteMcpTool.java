@@ -291,7 +291,8 @@ public class WriteMcpTool
                     // Add response markdown with content details
                     var newLines = content.split("\\r?\\n", -1).length;
                     var changes = new StringBuilder();
-                    changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
+                    changes.append(
+                        markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD, false));
 
                     var responseMarkdown = new StringBuilder();
                     responseMarkdown.append(
@@ -327,7 +328,7 @@ public class WriteMcpTool
                 // Add response markdown with content details
                 var newLines = content.split("\\r?\\n", -1).length;
                 var changes = new StringBuilder();
-                changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD));
+                changes.append(markdownUtils.createStyledText("+" + newLines, TextColor.GREEN, FontWeight.BOLD, false));
 
                 var responseMarkdown = new StringBuilder();
                 responseMarkdown.append(

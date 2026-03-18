@@ -158,7 +158,8 @@ public class GetCommandCategoriesMcpTool
                 // Add response markdown
                 int categoryCount = categories.size();
                 String styledCategoryCount =
-                    markdownUtils.createStyledText(String.valueOf(categoryCount), TextColor.GREEN, FontWeight.BOLD);
+                    markdownUtils.createStyledText(String.valueOf(categoryCount), TextColor.GREEN, FontWeight.BOLD,
+                        false);
                 details.responseMarkdown =
                     MessageFormat.format(Messages.CommandCategoriesLoadedTemplate, styledCategoryCount);
 

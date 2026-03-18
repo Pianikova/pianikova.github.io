@@ -263,12 +263,12 @@ public class SearchFilesMcpTool
             responseMarkdown
                 .append(MessageFormat.format(Messages.FilesFoundTemplate,
                     markdownUtils.createStyledText(String.valueOf(foundFiles.size()), TextColor.GREEN,
-                        FontWeight.BOLD)))
+                        FontWeight.BOLD, false)))
                 .append("\n\n") //$NON-NLS-1$
                 .append(Messages.SearchQuery)
                 .append(": ") //$NON-NLS-1$
                 .append("`") //$NON-NLS-1$
-                .append(markdownUtils.escapeForMarkdown(searchPattern))
+                .append(searchPattern)
                 .append("`"); //$NON-NLS-1$
 
             // Add search results in collapsible section

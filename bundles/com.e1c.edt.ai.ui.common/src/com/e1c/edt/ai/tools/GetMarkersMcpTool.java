@@ -299,7 +299,7 @@ public class GetMarkersMcpTool implements IMcpTool
             // Add response markdown
             var styledMarkerCount =
                 markdownUtils.createStyledText(String.format("%d/%d", markersPage.size(), allMarkersList.size()),
-                    TextColor.GREEN, FontWeight.BOLD);
+                    TextColor.GREEN, FontWeight.BOLD, true);
             details.responseMarkdown = MessageFormat.format(Messages.MarkersLoadedTemplate, styledMarkerCount);
             details.hideAfter = markersPage.size() == 0;
             return messageFactory.createMessage(this, call, content, details);
