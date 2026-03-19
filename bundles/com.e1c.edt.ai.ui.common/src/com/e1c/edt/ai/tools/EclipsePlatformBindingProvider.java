@@ -6,8 +6,6 @@ package com.e1c.edt.ai.tools;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 
 import com.google.inject.Singleton;
@@ -24,13 +22,11 @@ public class EclipsePlatformBindingProvider
 	public Map<String, Object> getBindings()
 	{
 		var bindings = new HashMap<String, Object>();
-
-		IWorkbench workbench = PlatformUI.getWorkbench();
+        var workbench = PlatformUI.getWorkbench();
 		if (workbench != null)
 		{
 			bindings.put("workbench", workbench);
-
-			Display display = workbench.getDisplay();
+            var display = workbench.getDisplay();
 			if (display != null)
 			{
 				bindings.put("display", display);

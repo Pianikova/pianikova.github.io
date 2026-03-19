@@ -4,12 +4,20 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.PrintStream;
+import java.net.URI;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+
+import org.eclipse.core.runtime.FileLocator;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.FrameworkUtil;
 
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ToolErrorType;
+import com.e1c.edt.ai.ToolException;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -29,7 +37,6 @@ class JShellSessionManager
 	private final ILog log;
 	private final Set<IJShellBindingProvider> bindingProviders;
     private final IRestrictedTypesValidator restrictedTypesValidator;
-	private final Map<String, Object> bindingRegistry = new ConcurrentHashMap<>();
 
 	@Inject
 	public JShellSessionManager(ILog log, Set<IJShellBindingProvider> bindingProviders,
@@ -42,7 +49,6 @@ class JShellSessionManager
 		this.log = log;
 		this.bindingProviders = bindingProviders;
         this.restrictedTypesValidator = restrictedTypesValidator;
-		JShellSessionCacheHolder.setInstance(this);
 
 		// Cache with maximum of 64 sessions and 30 minutes expiration after access
 		this.cache = CacheBuilder.newBuilder()
@@ -95,23 +101,41 @@ class JShellSessionManager
 		var errBuffer = new ByteArrayOutputStream();
 
         var shell = JShell.builder()
+            .executionEngine(new SharedExecutionControlProvider(JShellSessionManager.class.getClassLoader()), Map.of())
 			.out(new PrintStream(outBuffer))
 			.err(new PrintStream(errBuffer))
 			.build();
 
+        String classpath = System.getProperty("java.class.path");
+        shell.addToClasspath(classpath);
+        addClassPathFor(shell, JShellSessionManager.class);
+        addClassPathFor(shell, JShellObjectBridge.class);
+
+        var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
+
 		// Store bindings in registry
-		for (var provider : bindingProviders)
+        for (var provider : bindingProviders)
 		{
 			var bindings = provider.getBindings();
 			for (var entry : bindings.entrySet())
 			{
 				try
 				{
-					bindingRegistry.put(entry.getKey(), entry.getValue());
-					var className = entry.getValue().getClass().getName();
-					shell.eval(String.format("import %s;", className));
-					shell.eval(String.format("%s %s = (%s) com.e1c.edt.ai.tools.JShellSessionCache.getBinding(\"%s\");",
-						className, entry.getKey(), className, entry.getKey()));
+                    int objectId = JShellObjectBridge.store(entry.getValue());
+                    var value = entry.getValue();
+                    var type = value.getClass();
+                    var className = type.getName();
+                    var varName = entry.getKey();
+                    addClassPathFor(shell, type);
+                    var bindCode = String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(%d);",
+                        className, varName, className, objectId);
+                    var result = session.execute(bindCode);
+                    if (!result.compilationErrors.isEmpty() || !result.runtimeErrors.isEmpty())
+                    {
+                        throw new ToolException(
+                            "JShell session creation failed, сannot bind: ```java\n" + bindCode + "\n```",
+                            ToolErrorType.RETRYABLE);
+                    }
 				}
 				catch (Exception e)
 				{
@@ -120,15 +144,93 @@ class JShellSessionManager
 			}
 		}
 
-		var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
+
 		cache.put(session.getSessionId(), session);
 		return session;
 	}
 
-	public static Object getBinding(String name)
-	{
-		return JShellSessionCacheHolder.getBinding(name);
-	}
+    private void addClassPathFor(JShell shell, Class<?> clazz)
+    {
+        try
+        {
+            var protectionDomain = clazz.getProtectionDomain();
+            if (protectionDomain == null)
+            {
+                return;
+            }
+            var codeSource = protectionDomain.getCodeSource();
+            if (codeSource == null || codeSource.getLocation() == null)
+            {
+                addBundleClassPathFor(shell, clazz);
+                return;
+            }
+            URI location = codeSource.getLocation().toURI();
+            var path = Paths.get(location);
+            shell.addToClasspath(path.toString());
+            addBinIfPresent(shell, path);
+        }
+        catch (Exception e)
+        {
+            log.logError("Failed to add classpath for " + clazz.getName() + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+    }
+
+    private void addBundleClassPathFor(JShell shell, Class<?> clazz)
+    {
+        try
+        {
+            Bundle bundle = FrameworkUtil.getBundle(clazz);
+            if (bundle == null)
+            {
+                return;
+            }
+            File bundleFile = FileLocator.getBundleFile(bundle);
+            if (bundleFile == null)
+            {
+                return;
+            }
+            shell.addToClasspath(bundleFile.getAbsolutePath());
+            addBinIfPresent(shell, bundleFile.toPath());
+        }
+        catch (Exception e)
+        {
+            log.logError("Failed to add OSGi classpath for " + clazz.getName() + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+    }
+
+    private void addBinIfPresent(JShell shell, java.nio.file.Path root)
+    {
+        try
+        {
+            if (root == null)
+            {
+                return;
+            }
+            java.nio.file.Path candidate = root;
+            if (java.nio.file.Files.isRegularFile(root))
+            {
+                return;
+            }
+            if (root.endsWith("bin") || root.endsWith("target\\classes") || root.endsWith("target/classes"))
+            {
+                return;
+            }
+            candidate = root.resolve("bin");
+            if (java.nio.file.Files.isDirectory(candidate))
+            {
+                shell.addToClasspath(candidate.toString());
+            }
+            candidate = root.resolve("target").resolve("classes");
+            if (java.nio.file.Files.isDirectory(candidate))
+            {
+                shell.addToClasspath(candidate.toString());
+            }
+        }
+        catch (Exception e)
+        {
+            log.logError("Failed to add bin classpath: " + e.getMessage()); //$NON-NLS-1$
+        }
+    }
 
 	@Override
 	public void invalidateSession(String sessionId)
@@ -140,20 +242,5 @@ class JShellSessionManager
 	public void invalidateAll()
 	{
 		cache.invalidateAll();
-	}
-
-	private static class JShellSessionCacheHolder
-	{
-		private static JShellSessionManager instance;
-
-		static void setInstance(JShellSessionManager cache)
-		{
-			instance = cache;
-		}
-
-		static Object getBinding(String name)
-		{
-			return instance != null ? instance.bindingRegistry.get(name) : null;
-		}
-	}
+    }
 }

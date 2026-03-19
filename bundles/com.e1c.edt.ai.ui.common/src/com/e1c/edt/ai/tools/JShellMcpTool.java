@@ -263,7 +263,12 @@ public class JShellMcpTool
 
 		var codeProp = new McpToolCallProperty();
 		codeProp.type = "string";
-        codeProp.description = "Java code to execute (required)";
+        codeProp.description = "Java code to execute (required). "
+            + "The input must be exactly one complete snippet: expression, statement, variable/method/class declaration, or import. "
+            + "No package/module declarations. "
+            + "Modifiers public/protected/private/static/final are ignored with warning. "
+            + "synchronized/native/abstract/default are errors on top-level methods. "
+            + "Single top-level class per snippet. " + "Semicolons required. " + "Incomplete snippets fail.";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();

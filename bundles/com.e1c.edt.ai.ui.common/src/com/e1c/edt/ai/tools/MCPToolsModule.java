@@ -64,6 +64,5 @@ public class MCPToolsModule
         // JShell binding providers
         var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
         jshellBindingProviderBinder.addBinding().to(EclipsePlatformBindingProvider.class);
-        jshellBindingProviderBinder.addBinding().to(ExampleUtilsBindingProvider.class);
     }
 }
