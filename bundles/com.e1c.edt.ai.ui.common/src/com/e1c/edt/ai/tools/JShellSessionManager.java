@@ -78,6 +78,16 @@ class JShellSessionManager
 		return createSession();
 	}
 
+    @Override
+    public IJShellSession getSession(String sessionId)
+    {
+        if (sessionId == null || sessionId.isBlank())
+        {
+            return null;
+        }
+        return cache.getIfPresent(sessionId);
+    }
+
 	@SuppressWarnings("nls")
 	private JShellSession createSession()
 	{

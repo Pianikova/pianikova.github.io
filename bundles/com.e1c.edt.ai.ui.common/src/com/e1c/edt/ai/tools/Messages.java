@@ -98,6 +98,8 @@ public class Messages
     public static String JShellErrorTemplate;
     public static String JShellSessionCreated;
     public static String JShellSessionCodeHistory;
+    public static String JShellAvailableBindings;
+    public static String JShellSessionCreating;
 
     // Marker operations
     public static String MarkersTitle;

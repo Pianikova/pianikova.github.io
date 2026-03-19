@@ -34,10 +34,10 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-		"{\"code\":\"2 + 3\"}"; //$NON-NLS-1$
+        "{\"code\":\"2 + 3\",\"repl_session_id\":\"uuid-123\"}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
-        "{\"return_value\":\"5\",\"repl_session_id\":\"uuid-123\",\"std_out\":\"\",\"std_err\":\"\"}"; //$NON-NLS-1$
+        "{\"return_value\":\"5\",\"std_out\":\"\",\"std_err\":\"\"}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
@@ -98,16 +98,9 @@ public class JShellMcpTool
 		if (call.callKind == ToolCallKind.RENDER)
 		{
             var requestMarkdown = new StringBuilder();
-            if (request.code != null && !request.code.isBlank())
-            {
-                requestMarkdown.append(Messages.JShellExecutingTemplate);
-                requestMarkdown.append("\n\n");
-                requestMarkdown.append("```java\n").append(request.code).append("\n```");
-            }
-            else
-            {
-                requestMarkdown.append(Messages.JShellSessionCreated);
-            }
+            requestMarkdown.append(Messages.JShellExecutingTemplate);
+            requestMarkdown.append("\n\n");
+            requestMarkdown.append("```java\n").append(request.code).append("\n```");
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
@@ -126,63 +119,32 @@ public class JShellMcpTool
 
         try
 		{
-            IJShellSession session = sessions.getOrCreateSession(request.sessionId);
-
-            JShellExecutionResult result;
-            String responseMarkdown;
-
-            if (request.code == null || request.code.isBlank())
+            IJShellSession session = sessions.getSession(request.sessionId);
+            if (session == null)
             {
-                // Just return session info with execution history
-                result = new JShellExecutionResult();
-                result.sessionId = session.getSessionId();
-                result.executionHistory = session.getExecutionHistory();
-                responseMarkdown = buildSessionInfoMarkdown(session);
+                throw new ToolException(
+                    "Session not found. Use " + JShellSessionMcpTool.TOOL_NAME + " tool to create a session first.",
+                    null,
+                    ToolErrorType.RETRYABLE);
             }
-            else
-            {
-                // Execute code
-                result = session.execute(request.code);
-                responseMarkdown = buildResponseMarkdown(request.code, result);
-            }
+
+            JShellExecutionResult result = session.execute(request.code);
+            String responseMarkdown = buildResponseMarkdown(request.code, result);
 
             var content = json.serialize(result);
             details.responseMarkdown = responseMarkdown;
 
             return messageFactory.createMessage(this, call, content, details);
         }
+        catch (ToolException e)
+        {
+            throw e;
+        }
         catch (Exception e)
 		{
             throw new ToolException("JShell execution failed: " + e.getMessage(), e, ToolErrorType.RETRYABLE);
 		}
 	}
-
-	@SuppressWarnings("nls")
-    private String buildSessionInfoMarkdown(IJShellSession session)
-    {
-        var md = new StringBuilder();
-        md.append(Messages.JShellSessionCreated);
-        md.append("\n\n");
-
-        var executionHistory = session.getExecutionHistory();
-        if (!executionHistory.isEmpty())
-        {
-            md.append(Messages.JShellSessionCodeHistory);
-            md.append("\n\n");
-
-            for (String code : executionHistory)
-            {
-                md.append("```java\n").append(code).append("\n```");
-                md.append("\n\n");
-            }
-        }
-        else
-        {
-            md.append("No code has been executed in this session yet.\n");
-        }
-
-        return md.toString();
-    }
 
     @SuppressWarnings("nls")
 	private String buildResponseMarkdown(String code, JShellExecutionResult result)
@@ -225,21 +187,27 @@ public class JShellMcpTool
 		description.append("Executes Java code using JShell REPL (Read-Eval-Print Loop).");
 		description.append("\n\nUsage:");
 		description.append("\n- Arguments must be a single JSON object.");
-        description.append("\n- Supports sessions - provide same repl_session_id to continue REPL state.");
-        description.append(
-            "\n- **Recommendation:** Use sessions to preserve state between code executions. Save the repl_session_id from the response and reuse it for subsequent calls to maintain variables and context.");
+        description.append("\n- **IMPORTANT:** Both `code` and `repl_session_id` parameters are **required**.");
+        description.append("\n- Use `")
+            .append(JShellSessionMcpTool.TOOL_NAME)
+            .append("` tool first to create a REPL session and get session ID.");
         description.append("\n- Variable state is preserved across code executions within the same session.");
-        description.append("\n- If repl_session_id is not provided, a new session will be created.");
-        description.append("\n- Returns execution result including repl_session_id, return value, stdout, stderr.");
+        description.append("\n- Returns execution result including return value, stdout, stderr.");
 		description.append("\n- Compilation and runtime errors are clearly identified.");
-        description.append(
-            "\n- **Important:** Call without `code` parameter to create a REPL session and get all previously executed code including bindings.");
 
 		// Recommended workflow
         description.append("\n\n### Recommended workflow:");
-        description.append("\n1. First call: `{}` - creates session and shows available bindings (like `display`, `workbench`, `Math`, `System`)");
+        description.append(
+            "\n1. First call `")
+            .append(JShellSessionMcpTool.TOOL_NAME)
+            .append(
+                "` tool to create a session - returns session ID and available bindings (like `display`, `workbench`, `Math`, `System`)");
         description.append("\n2. Save `repl_session_id` from the response");
-        description.append("\n3. Subsequent calls: `{\"repl_session_id\": \"...\", \"code\": \"...\"}` - execute code using available bindings");
+        description.append(
+            "\n3. Use `")
+            .append(TOOL_NAME)
+            .append(
+                "` tool: `{\"repl_session_id\": \"...\", \"code\": \"...\"}` - execute code using available bindings");
         description.append("\n4. Always reuse the same `repl_session_id` to maintain state between executions");
 
 		// Add bindings information
@@ -295,19 +263,20 @@ public class JShellMcpTool
 
 		var codeProp = new McpToolCallProperty();
 		codeProp.type = "string";
-        codeProp.description =
-            "Java code to execute (optional, if not provided returns session info with execution history)";
+        codeProp.description = "Java code to execute (required)";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();
 		sessionIdProp.type = "string";
         sessionIdProp.description =
-            "Session ID for maintaining REPL state (optional, if not provided a new session will be created)";
+            "Session ID for maintaining REPL state (required, must be obtained from " + JShellSessionMcpTool.TOOL_NAME
+                + " tool)";
         properties.put("repl_session_id", sessionIdProp);
 
 		parameters.properties = properties;
 		var required = new ArrayList<String>();
-        // code is now optional
+        required.add("code");
+        required.add("repl_session_id");
 		parameters.required = required;
 
 		spec.function.parameters = parameters;
