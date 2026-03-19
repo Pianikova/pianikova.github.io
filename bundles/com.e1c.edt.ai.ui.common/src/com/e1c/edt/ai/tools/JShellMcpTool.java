@@ -235,6 +235,13 @@ public class JShellMcpTool
         description.append(
             "\n- **Important:** Call without `code` parameter to create a REPL session and get all previously executed code including bindings.");
 
+		// Recommended workflow
+        description.append("\n\n### Recommended workflow:");
+        description.append("\n1. First call: `{}` - creates session and shows available bindings (like `display`, `workbench`, `Math`, `System`)");
+        description.append("\n2. Save `repl_session_id` from the response");
+        description.append("\n3. Subsequent calls: `{\"repl_session_id\": \"...\", \"code\": \"...\"}` - execute code using available bindings");
+        description.append("\n4. Always reuse the same `repl_session_id` to maintain state between executions");
+
 		// Add bindings information
 		if (!bindingProviders.isEmpty())
 		{
@@ -257,8 +264,8 @@ public class JShellMcpTool
         Set<String> restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
         if (!restrictedTypes.isEmpty())
         {
-            description.append("\n\n**Restricted Types:**\n");
-            description.append("The following types are strictly forbidden and will throw a ToolException if used:\n");
+            description.append("\n\n### ⚠️ **RESTRICTED TYPES** ⚠️");
+            description.append("\n**The following types are STRICTLY FORBIDDEN** and will cause ToolException if used:");
             for (String type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
             {
                 description.append("- `").append(type).append("`\n");
