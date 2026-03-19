@@ -95,17 +95,19 @@ public class JShellMcpTool
 
 		var request = optionalRequest.get();
 
-		if (request.code == null || request.code.isBlank())
-		{
-			throw new ToolException("`code` cannot be empty.");
-		}
-
 		if (call.callKind == ToolCallKind.RENDER)
 		{
             var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(Messages.JShellExecutingTemplate);
-            requestMarkdown.append("\n\n");
-            requestMarkdown.append("```java\n").append(request.code).append("\n```");
+            if (request.code != null && !request.code.isBlank())
+            {
+                requestMarkdown.append(Messages.JShellExecutingTemplate);
+                requestMarkdown.append("\n\n");
+                requestMarkdown.append("```java\n").append(request.code).append("\n```");
+            }
+            else
+            {
+                requestMarkdown.append(Messages.JShellSessionCreated);
+            }
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
@@ -125,11 +127,26 @@ public class JShellMcpTool
         try
 		{
             IJShellSession session = sessions.getOrCreateSession(request.sessionId);
-            JShellExecutionResult result = session.execute(request.code);
+
+            JShellExecutionResult result;
+            String responseMarkdown;
+
+            if (request.code == null || request.code.isBlank())
+            {
+                // Just return session info with execution history
+                result = new JShellExecutionResult();
+                result.sessionId = session.getSessionId();
+                result.executionHistory = session.getExecutionHistory();
+                responseMarkdown = buildSessionInfoMarkdown(session);
+            }
+            else
+            {
+                // Execute code
+                result = session.execute(request.code);
+                responseMarkdown = buildResponseMarkdown(request.code, result);
+            }
 
             var content = json.serialize(result);
-
-            var responseMarkdown = buildResponseMarkdown(request.code, result);
             details.responseMarkdown = responseMarkdown;
 
             return messageFactory.createMessage(this, call, content, details);
@@ -141,6 +158,33 @@ public class JShellMcpTool
 	}
 
 	@SuppressWarnings("nls")
+    private String buildSessionInfoMarkdown(IJShellSession session)
+    {
+        var md = new StringBuilder();
+        md.append(Messages.JShellSessionCreated);
+        md.append("\n\n");
+
+        var executionHistory = session.getExecutionHistory();
+        if (!executionHistory.isEmpty())
+        {
+            md.append(Messages.JShellSessionCodeHistory);
+            md.append("\n\n");
+
+            for (String code : executionHistory)
+            {
+                md.append("```java\n").append(code).append("\n```");
+                md.append("\n\n");
+            }
+        }
+        else
+        {
+            md.append("No code has been executed in this session yet.\n");
+        }
+
+        return md.toString();
+    }
+
+    @SuppressWarnings("nls")
 	private String buildResponseMarkdown(String code, JShellExecutionResult result)
 	{
 		var md = new StringBuilder();
@@ -188,6 +232,8 @@ public class JShellMcpTool
         description.append("\n- If repl_session_id is not provided, a new session will be created.");
         description.append("\n- Returns execution result including repl_session_id, return value, stdout, stderr.");
 		description.append("\n- Compilation and runtime errors are clearly identified.");
+        description.append(
+            "\n- **Important:** Call without `code` parameter to create a REPL session and get all previously executed code including bindings.");
 
 		// Add bindings information
 		if (!bindingProviders.isEmpty())
@@ -231,7 +277,8 @@ public class JShellMcpTool
 
 		var codeProp = new McpToolCallProperty();
 		codeProp.type = "string";
-		codeProp.description = "Java code to execute";
+        codeProp.description =
+            "Java code to execute (optional, if not provided returns session info with execution history)";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();
@@ -242,7 +289,7 @@ public class JShellMcpTool
 
 		parameters.properties = properties;
 		var required = new ArrayList<String>();
-		required.add("code");
+        // code is now optional
 		parameters.required = required;
 
 		spec.function.parameters = parameters;

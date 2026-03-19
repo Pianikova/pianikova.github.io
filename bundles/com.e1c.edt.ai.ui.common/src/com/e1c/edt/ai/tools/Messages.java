@@ -96,6 +96,8 @@ public class Messages
     public static String JShellExecutingTemplate;
     public static String JShellExecutedTemplate;
     public static String JShellErrorTemplate;
+    public static String JShellSessionCreated;
+    public static String JShellSessionCodeHistory;
 
     // Marker operations
     public static String MarkersTitle;

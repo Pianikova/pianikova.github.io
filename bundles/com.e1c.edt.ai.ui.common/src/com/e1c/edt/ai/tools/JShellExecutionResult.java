@@ -27,4 +27,7 @@ class JShellExecutionResult
 
     @SerializedName("runtime_errors")
     public java.util.List<RuntimeError> runtimeErrors;
+
+    @SerializedName("execution_history")
+    public java.util.List<String> executionHistory;
 }

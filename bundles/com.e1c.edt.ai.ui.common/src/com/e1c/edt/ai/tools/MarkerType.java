@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.e1c.edt.ai.tools;
 
 import org.eclipse.core.resources.IMarker;

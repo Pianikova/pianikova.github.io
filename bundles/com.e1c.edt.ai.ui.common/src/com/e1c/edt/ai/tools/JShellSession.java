@@ -4,6 +4,8 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,6 +27,7 @@ class JShellSession
 	private final ByteArrayOutputStream outBuffer;
 	private final ByteArrayOutputStream errBuffer;
     private final IRestrictedTypesValidator restrictedTypesValidator;
+    private final List<String> executionHistory = new ArrayList<>();
 
     JShellSession(JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
         IRestrictedTypesValidator restrictedTypesValidator)
@@ -81,6 +84,8 @@ class JShellSession
 
 		// Execute the code
         var events = shell.eval(code);
+        boolean codeCompiled = false;
+
 		if (!events.isEmpty())
 		{
             var returnValues = new StringBuilder();
@@ -121,6 +126,8 @@ class JShellSession
 				}
                 else if (status == Snippet.Status.VALID)
 				{
+                    codeCompiled = true;
+
                     // Check for runtime exceptions
                     if (event.exception() != null)
                     {
@@ -154,6 +161,12 @@ class JShellSession
             {
                 result.returnValue = returnValues.toString();
 			}
+
+            // Add to execution history only if code successfully compiled
+            if (codeCompiled)
+            {
+                executionHistory.add(code);
+            }
 		}
 
 		// Capture stdout and stderr
@@ -164,6 +177,12 @@ class JShellSession
 	}
 
 	@Override
+    public List<String> getExecutionHistory()
+    {
+        return new ArrayList<>(executionHistory);
+    }
+
+    @Override
     public void close()
 	{
 		shell.close();
