@@ -22,17 +22,17 @@ import jdk.jshell.JShell;
  * Cache for JShell REPL sessions.
  */
 @Singleton
-class JShellSessionCache
-	implements IJShellSessionCache
+class JShellSessionManager
+	implements IJShellSessionManager
 {
-	private final Cache<String, JShellSession> sessionCache;
+	private final Cache<String, JShellSession> cache;
 	private final ILog log;
 	private final Set<IJShellBindingProvider> bindingProviders;
     private final IRestrictedTypesValidator restrictedTypesValidator;
 	private final Map<String, Object> bindingRegistry = new ConcurrentHashMap<>();
 
 	@Inject
-	public JShellSessionCache(ILog log, Set<IJShellBindingProvider> bindingProviders,
+	public JShellSessionManager(ILog log, Set<IJShellBindingProvider> bindingProviders,
         IRestrictedTypesValidator restrictedTypesValidator)
 	{
 		Preconditions.checkNotNull(log);
@@ -45,9 +45,9 @@ class JShellSessionCache
 		JShellSessionCacheHolder.setInstance(this);
 
 		// Cache with maximum of 64 sessions and 30 minutes expiration after access
-		this.sessionCache = CacheBuilder.newBuilder()
+		this.cache = CacheBuilder.newBuilder()
 			.maximumSize(64)
-			.expireAfterAccess(30, java.util.concurrent.TimeUnit.MINUTES)
+            .expireAfterAccess(1, java.util.concurrent.TimeUnit.HOURS)
 			.removalListener(notification -> {
 				JShellSession session = (JShellSession)notification.getValue();
 				if (session != null)
@@ -68,7 +68,7 @@ class JShellSessionCache
 		}
 
 		// Get existing session
-		IJShellSession session = sessionCache.getIfPresent(sessionId);
+        var session = cache.getIfPresent(sessionId);
 		if (session != null)
 		{
 			return session;
@@ -84,7 +84,7 @@ class JShellSessionCache
 		var outBuffer = new ByteArrayOutputStream();
 		var errBuffer = new ByteArrayOutputStream();
 
-		JShell shell = JShell.builder()
+        var shell = JShell.builder()
 			.out(new PrintStream(outBuffer))
 			.err(new PrintStream(errBuffer))
 			.build();
@@ -111,7 +111,7 @@ class JShellSessionCache
 		}
 
 		var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
-		sessionCache.put(session.getSessionId(), session);
+		cache.put(session.getSessionId(), session);
 		return session;
 	}
 
@@ -123,20 +123,20 @@ class JShellSessionCache
 	@Override
 	public void invalidateSession(String sessionId)
 	{
-		sessionCache.invalidate(sessionId);
+		cache.invalidate(sessionId);
 	}
 
 	@Override
 	public void invalidateAll()
 	{
-		sessionCache.invalidateAll();
+		cache.invalidateAll();
 	}
 
 	private static class JShellSessionCacheHolder
 	{
-		private static JShellSessionCache instance;
+		private static JShellSessionManager instance;
 
-		static void setInstance(JShellSessionCache cache)
+		static void setInstance(JShellSessionManager cache)
 		{
 			instance = cache;
 		}

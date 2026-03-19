@@ -6,7 +6,7 @@ package com.e1c.edt.ai.tools;
 /**
  * Interface for JShell REPL session cache.
  */
-public interface IJShellSessionCache
+public interface IJShellSessionManager
 {
 	/**
 	 * Gets an existing session by ID or creates a new one.

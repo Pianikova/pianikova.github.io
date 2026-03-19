@@ -52,7 +52,7 @@ public class MCPToolsModule
         bind(IMarkdownUtils.class).to(com.e1c.edt.ai.MarkdownUtils.class).in(Singleton.class);
         bind(ILocalHistoryUtils.class).to(LocalHistoryUtils.class).in(Singleton.class);
         bind(IPatternMatcher.class).to(PatternMatcher.class).in(Singleton.class);
-        bind(IJShellSessionCache.class).to(JShellSessionCache.class).in(Singleton.class);
+        bind(IJShellSessionManager.class).to(JShellSessionManager.class).in(Singleton.class);
         bind(IRestrictedTypesProvider.class).to(RestrictedTypesProvider.class).in(Singleton.class);
         bind(IRestrictedTypesValidator.class).to(RestrictedTypesValidator.class).in(Singleton.class);
 

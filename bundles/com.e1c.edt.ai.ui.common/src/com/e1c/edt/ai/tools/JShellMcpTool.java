@@ -42,26 +42,26 @@ public class JShellMcpTool
 	private final IJson json;
 	private final McpToolCallSpecification spec;
 	private final IMcpToolsCallMessageFactory messageFactory;
-    private final IJShellSessionCache sessionCache;
+    private final IJShellSessionManager sessions;
     private final Set<IJShellBindingProvider> bindingProviders;
     private final IMarkdownUtils markdownUtils;
     private final IRestrictedTypesProvider restrictedTypesProvider;
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IJShellSessionCache sessionCache, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
+        IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
         IRestrictedTypesProvider restrictedTypesProvider)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(sessionCache);
+        Preconditions.checkNotNull(sessions);
 		Preconditions.checkNotNull(bindingProviders);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(restrictedTypesProvider);
 
 		this.json = json;
 		this.messageFactory = messageFactory;
-        this.sessionCache = sessionCache;
+        this.sessions = sessions;
 		this.bindingProviders = bindingProviders;
         this.markdownUtils = markdownUtils;
         this.restrictedTypesProvider = restrictedTypesProvider;
@@ -124,7 +124,7 @@ public class JShellMcpTool
 
         try
 		{
-            IJShellSession session = sessionCache.getOrCreateSession(request.sessionId);
+            IJShellSession session = sessions.getOrCreateSession(request.sessionId);
             JShellExecutionResult result = session.execute(request.code);
 
             var content = json.serialize(result);
