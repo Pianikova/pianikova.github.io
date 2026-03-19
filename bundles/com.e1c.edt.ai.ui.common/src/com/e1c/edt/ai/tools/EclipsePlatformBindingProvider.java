@@ -42,11 +42,13 @@ public class EclipsePlatformBindingProvider
 
     @SuppressWarnings("nls")
     @Override
-	public Map<String, String> getBindingDescriptions()
+	public Map<String, JShellBindingDescription> getBindingInfos()
 	{
-		var descriptions = new HashMap<String, String>();
-		descriptions.put("workbench", "Eclipse workbench instance");
-		descriptions.put("display", "Eclipse display instance");
-		return descriptions;
+		var infos = new HashMap<String, JShellBindingDescription>();
+		infos.put("workbench", new JShellBindingDescription("Eclipse workbench instance",
+			"var activeWindow = workbench.getActiveWorkbenchWindow();\nvar activePage = activeWindow.getActivePage();"));
+		infos.put("display", new JShellBindingDescription("Eclipse display instance",
+			"display.asyncExec(() -> {\n    // UI operations here\n    System.out.println(\"UI Thread: \" + Display.getCurrent());\n});"));
+		return infos;
 	}
 }

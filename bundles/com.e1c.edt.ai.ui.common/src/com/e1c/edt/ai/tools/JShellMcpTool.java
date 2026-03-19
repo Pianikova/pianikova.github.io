@@ -245,16 +245,27 @@ public class JShellMcpTool
 		// Add bindings information
 		if (!bindingProviders.isEmpty())
 		{
-			description.append("\n\nAvailable bindings:");
+			description.append("\n\n### Available bindings:");
 			for (var provider : bindingProviders)
 			{
-				var descriptions = provider.getBindingDescriptions();
-				if (!descriptions.isEmpty())
+				var infos = provider.getBindingInfos();
+				if (!infos.isEmpty())
 				{
-					for (var entry : descriptions.entrySet())
+					for (var entry : infos.entrySet())
 					{
-						description.append("\n- `").append(entry.getKey()).append("` - ")
-							.append(entry.getValue());
+						String bindingName = entry.getKey();
+						JShellBindingDescription bindingInfo = entry.getValue();
+						String bindingDesc = bindingInfo.getDescription();
+						String bindingExample = bindingInfo.getExample();
+
+						description.append("\n\n**`").append(bindingName).append("`**");
+						description.append("\n- ").append(bindingDesc);
+
+						if (bindingExample != null && !bindingExample.isEmpty())
+						{
+							description.append("\n- **Example usage:**");
+							description.append("\n```java\n").append(bindingExample).append("\n```");
+						}
 					}
 				}
 			}

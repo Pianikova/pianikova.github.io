@@ -27,11 +27,13 @@ public class ExampleUtilsBindingProvider
 
     @SuppressWarnings("nls")
     @Override
-	public Map<String, String> getBindingDescriptions()
+	public Map<String, JShellBindingDescription> getBindingInfos()
 	{
-		var descriptions = new HashMap<String, String>();
-		descriptions.put("Math", "Java Math class with mathematical functions");
-		descriptions.put("System", "Java System class for system utilities");
-		return descriptions;
+		var infos = new HashMap<String, JShellBindingDescription>();
+		infos.put("Math", new JShellBindingDescription("Java Math class with mathematical functions",
+			"var result = Math.sqrt(25.0);\nvar pi = Math.PI;\nvar random = Math.random();"));
+		infos.put("System", new JShellBindingDescription("Java System class for system utilities",
+			"System.out.println(\"Hello from JShell\");\nvar properties = System.getProperties();\nSystem.setProperty(\"my.property\", \"value\");"));
+		return infos;
 	}
 }
