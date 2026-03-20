@@ -195,6 +195,33 @@ public class JShellMcpTool
         description.append("\n- Returns execution result including return value, stdout, stderr.");
 		description.append("\n- Compilation and runtime errors are clearly identified.");
 
+		// Code structure requirements
+        description.append("\n\n### Code structure requirements:");
+        description.append("\n- **Variables:** Must be declared or bound from previous executions");
+        description.append("\n- **Statements:** Must end with semicolon `;` (e.g., `int x = 10;`)");
+        description.append("\n- **Multi-line:** Each statement must be on separate line or separated by `;`");
+        description.append("\n- **Assignments:** Store in local variables to persist (e.g., `String info = \"value\";`)");
+
+		// Common patterns
+        description.append("\n\n### Common patterns:");
+        description.append("\n**Variable assignment:**");
+        description.append("\n```java");
+        description.append("\nint count = 10;");
+        description.append("\nString name = \"test\";");
+        description.append("\n```");
+        description.append("\n**Output to console:**");
+        description.append("\n```java");
+        description.append("\nSystem.out.println(\"Value: \" + count);");
+        description.append("\nSystem.err.println(\"Error message\");");
+        description.append("\n```");
+        description.append("\n⚠️ System.out and System.err output must be used in the main JShell thread only. Output from spawned threads won't be captured.");
+
+        description.append("\n**Access bindings:**");
+        description.append("\n```java");
+        description.append("\nvar windows = workbench.getWorkbenchWindows();");
+        description.append("\nSystem.out.println(\"Windows: \" + windows.length);");
+        description.append("\n```");
+
 		// Recommended workflow
         description.append("\n\n### Recommended workflow:");
         description.append(
@@ -264,14 +291,14 @@ public class JShellMcpTool
 		var codeProp = new McpToolCallProperty();
 		codeProp.type = "string";
         codeProp.description = "Java code to execute (required). "
-            + "The input must be exactly one complete snippet: expression, statement, variable/method/class declaration, or import. "
-            + "No package/module declarations. "
+            + "Must be valid Java statements ending with semicolon `;`. "
+            + "For output, use `System.out.println()` or `System.err.println()`. "
+            + "Examples: `int x = 10;`, `System.out.println(workbench.getActiveWorkbenchWindow());`."
+            + "No package/module declarations allowed. "
             + "Modifiers public/protected/private/static/final are ignored with warning. "
             + "synchronized/native/abstract/default are errors on top-level methods. "
-            + "Single top-level class per snippet. " + "Semicolons required. " + "Incomplete snippets fail. "
-            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass())."
-            + "\n\n**IMPORTANT:** For expressions, either assign to a variable or ensure it's a standalone expression. "
-            + "Example: 'var x = 2 + 3;' or '2 + 3' (as last statement)";
+            + "Single top-level class per snippet. "
+            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass()).";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();

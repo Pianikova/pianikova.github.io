@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -34,5 +35,13 @@ public interface IJShellBindingProvider
      *
      * @return Collection of significant classes
      */
-    java.util.Collection<Class<?>> getSignificantClasses();
+    Collection<Class<?>> getSignificantClasses();
+
+    /**
+     * Returns array of import statements that should be pre-imported in JShell sessions.
+     * This allows providers to contribute commonly used imports for their specific context.
+     *
+     * @return Array of import statements, or empty array if none
+     */
+    Collection<String> getImports();
 }

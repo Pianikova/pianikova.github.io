@@ -3,26 +3,45 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import jdk.jshell.execution.LoaderDelegate;
 import jdk.jshell.execution.LocalExecutionControl;
 import jdk.jshell.spi.ExecutionControl;
+import jdk.jshell.spi.ExecutionControl.ClassBytecodes;
+import jdk.jshell.spi.ExecutionControl.ClassInstallException;
+import jdk.jshell.spi.ExecutionControl.EngineTerminationException;
+import jdk.jshell.spi.ExecutionControl.InternalException;
+import jdk.jshell.spi.ExecutionControl.NotImplementedException;
 import jdk.jshell.spi.ExecutionControlProvider;
+import jdk.jshell.spi.ExecutionControl.RunException;
 import jdk.jshell.spi.ExecutionEnv;
 
 public final class SharedExecutionControlProvider
     implements ExecutionControlProvider
 {
     private final ClassLoader parent;
+    private ByteArrayOutputStream outBuffer;
+    private ByteArrayOutputStream errBuffer;
 
     public SharedExecutionControlProvider(ClassLoader parent)
     {
         this.parent = parent;
+        this.outBuffer = null;
+        this.errBuffer = null;
+    }
+
+    public void setOutputBuffers(ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer)
+    {
+        this.outBuffer = outBuffer;
+        this.errBuffer = errBuffer;
     }
 
     @Override
@@ -34,14 +53,21 @@ public final class SharedExecutionControlProvider
     @Override
     public ExecutionControl generate(ExecutionEnv env, Map<String, String> parameters)
     {
-        return new LocalExecutionControl(new SharedLoaderDelegate(parent));
+        var control = new LocalExecutionControl(new SharedLoaderDelegate(parent));
+
+        if (outBuffer != null && errBuffer != null)
+        {
+            return new CapturingExecutionControl(control, outBuffer, errBuffer);
+        }
+
+        return control;
     }
 
     private static final class SharedLoaderDelegate
         implements LoaderDelegate
     {
         private final SharedClassLoader loader;
-        private final Map<String, Class<?>> klasses = new HashMap<>();
+        private final Map<String, Class<?>> klasses = new ConcurrentHashMap<>();
 
         private SharedLoaderDelegate(ClassLoader parent)
         {
@@ -122,7 +148,7 @@ public final class SharedExecutionControlProvider
     private static final class SharedClassLoader
         extends URLClassLoader
     {
-        private final Map<String, byte[]> classBytes = new HashMap<>();
+        private final Map<String, byte[]> classBytes = new ConcurrentHashMap<>();
         private final ClassLoader osgiClassLoader;
 
         private SharedClassLoader(ClassLoader parent)
@@ -161,6 +187,7 @@ public final class SharedExecutionControlProvider
                 }
                 catch (ClassNotFoundException e)
                 {
+                    //
                 }
 
                 byte[] bytes = classBytes.get(name);
@@ -193,6 +220,96 @@ public final class SharedExecutionControlProvider
         public void addURL(URL url)
         {
             super.addURL(url);
+        }
+    }
+
+    private static final class CapturingExecutionControl implements ExecutionControl
+    {
+        private static final Object GLOBAL_STREAM_LOCK = new Object();
+
+        private final ExecutionControl delegate;
+        private final ByteArrayOutputStream outBuffer;
+        private final ByteArrayOutputStream errBuffer;
+
+        CapturingExecutionControl(
+                ExecutionControl delegate,
+                ByteArrayOutputStream outBuffer,
+                ByteArrayOutputStream errBuffer)
+        {
+            this.delegate = delegate;
+            this.outBuffer = outBuffer;
+            this.errBuffer = errBuffer;
+        }
+
+        @Override
+        public void close()
+        {
+            delegate.close();
+        }
+
+        @Override
+        public String invoke(String className, String methodName)
+                throws RunException, EngineTerminationException, InternalException
+        {
+            synchronized(GLOBAL_STREAM_LOCK)
+            {
+                PrintStream originalOut = System.out;
+                PrintStream originalErr = System.err;
+
+                try
+                {
+                    System.setOut(new PrintStream(outBuffer, true));
+                    System.setErr(new PrintStream(errBuffer, true));
+
+                    return delegate.invoke(className, methodName);
+                }
+                finally
+                {
+                    System.setOut(originalOut);
+                    System.setErr(originalErr);
+                }
+            }
+        }
+
+        @Override
+        public Object extensionCommand(String command, Object arg)
+                throws RunException, EngineTerminationException, InternalException
+        {
+            return delegate.extensionCommand(command, arg);
+        }
+
+        @Override
+        public void load(ClassBytecodes[] cbcs)
+                throws ClassInstallException, NotImplementedException, EngineTerminationException
+        {
+            delegate.load(cbcs);
+        }
+
+        @Override
+        public void redefine(ClassBytecodes[] cbcs)
+                throws ClassInstallException, NotImplementedException, EngineTerminationException
+        {
+            delegate.redefine(cbcs);
+        }
+
+        @Override
+        public void addToClasspath(String path)
+                throws EngineTerminationException, InternalException
+        {
+            delegate.addToClasspath(path);
+        }
+
+        @Override
+        public void stop() throws EngineTerminationException, InternalException
+        {
+            delegate.stop();
+        }
+
+        @Override
+        public String varValue(String className, String varName)
+            throws EngineTerminationException, InternalException, RunException
+        {
+            return delegate.varValue(className, varName);
         }
     }
 }

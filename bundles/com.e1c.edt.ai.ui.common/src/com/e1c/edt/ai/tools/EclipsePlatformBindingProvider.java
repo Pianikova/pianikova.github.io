@@ -66,4 +66,20 @@ public class EclipsePlatformBindingProvider
             org.eclipse.core.commands.common.EventManager.class
         );
     }
+
+    @SuppressWarnings("nls")
+    @Override
+    public Collection<String> getImports()
+    {
+        // @formatter:off
+		return List.of(
+            "import org.eclipse.swt.widgets.*;",
+			"import org.eclipse.swt.*;",
+			"import org.eclipse.ui.*;",
+			"import org.eclipse.jface.operation.*;",
+			"import org.eclipse.core.runtime.*;",
+			"import org.eclipse.core.commands.common.*;"
+		);
+		// @formatter:on
+    }
 }

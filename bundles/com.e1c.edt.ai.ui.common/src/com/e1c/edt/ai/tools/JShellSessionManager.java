@@ -4,15 +4,12 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.PrintStream;
-import java.net.URI;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.core.runtime.FileLocator;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 
 import com.e1c.edt.ai.ILog;
@@ -100,10 +97,11 @@ class JShellSessionManager
 		var outBuffer = new ByteArrayOutputStream();
 		var errBuffer = new ByteArrayOutputStream();
 
+        var executionControlProvider = new SharedExecutionControlProvider(JShellSessionManager.class.getClassLoader());
+        executionControlProvider.setOutputBuffers(outBuffer, errBuffer);
+
         var shell = JShell.builder()
-            .executionEngine(new SharedExecutionControlProvider(JShellSessionManager.class.getClassLoader()), Map.of())
-			.out(new PrintStream(outBuffer))
-			.err(new PrintStream(errBuffer))
+            .executionEngine(executionControlProvider, Map.of())
 			.build();
 
         String classpath = System.getProperty("java.class.path");
@@ -120,8 +118,25 @@ class JShellSessionManager
 
         var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
 
-        // Pre-import commonly used packages
-        importCommonPackages(shell, session);
+        // Pre-import commonly used packages from providers
+        for (var provider : bindingProviders)
+        {
+            for (String imp : provider.getImports())
+            {
+                try
+                {
+                    var result = session.execute(imp);
+                    if (!result.compilationErrors.isEmpty())
+                    {
+                        log.logError("Failed to import: " + imp);
+                    }
+                }
+                catch (Exception e)
+                {
+                    log.logError("Failed to import package: " + e.getMessage());
+                }
+            }
+        }
 
 		// Store bindings in registry
         for (var provider : bindingProviders)
@@ -154,7 +169,6 @@ class JShellSessionManager
 			}
 		}
 
-
 		cache.put(session.getSessionId(), session);
 		return session;
 	}
@@ -169,13 +183,15 @@ class JShellSessionManager
                 addBundleClassPathFor(shell, clazz);
                 return;
             }
+
             var codeSource = protectionDomain.getCodeSource();
             if (codeSource == null || codeSource.getLocation() == null)
             {
                 addBundleClassPathFor(shell, clazz);
                 return;
             }
-            URI location = codeSource.getLocation().toURI();
+
+            var location = codeSource.getLocation().toURI();
             var path = Paths.get(location);
             shell.addToClasspath(path.toString());
             addBinIfPresent(shell, path);
@@ -190,16 +206,18 @@ class JShellSessionManager
     {
         try
         {
-            Bundle bundle = FrameworkUtil.getBundle(clazz);
+            var bundle = FrameworkUtil.getBundle(clazz);
             if (bundle == null)
             {
                 return;
             }
-            File bundleFile = FileLocator.getBundleFile(bundle);
+
+            var bundleFile = FileLocator.getBundleFile(bundle);
             if (bundleFile == null)
             {
                 return;
             }
+
             shell.addToClasspath(bundleFile.getAbsolutePath());
             addBinIfPresent(shell, bundleFile.toPath());
         }
@@ -209,6 +227,7 @@ class JShellSessionManager
         }
     }
 
+    @SuppressWarnings({ "nls" })
     private void addBinIfPresent(JShell shell, java.nio.file.Path root)
     {
         try
@@ -217,20 +236,25 @@ class JShellSessionManager
             {
                 return;
             }
+
             java.nio.file.Path candidate = root;
+
             if (java.nio.file.Files.isRegularFile(root))
             {
                 return;
             }
+
             if (root.endsWith("bin") || root.endsWith("target\\classes") || root.endsWith("target/classes"))
             {
                 return;
             }
+
             candidate = root.resolve("bin");
             if (java.nio.file.Files.isDirectory(candidate))
             {
                 shell.addToClasspath(candidate.toString());
             }
+
             candidate = root.resolve("target").resolve("classes");
             if (java.nio.file.Files.isDirectory(candidate))
             {
@@ -333,39 +357,6 @@ class JShellSessionManager
         catch (Exception e)
         {
             log.logError("Failed to add required bundles for " + bundle.getSymbolicName() + ": " + e.getMessage());
-        }
-    }
-
-    @SuppressWarnings("nls")
-    private void importCommonPackages(JShell shell, IJShellSession session)
-    {
-        String[] commonImports = {
-            "import java.util.*;",
-            "import java.util.stream.*;",
-            "import java.io.*;",
-            "import java.nio.file.*;",
-            "import org.eclipse.swt.widgets.*;",
-            "import org.eclipse.swt.*;",
-            "import org.eclipse.ui.*;",
-            "import org.eclipse.jface.operation.*;",
-            "import org.eclipse.core.runtime.*;",
-            "import org.eclipse.core.commands.common.*;"
-        };
-
-        for (String importStmt : commonImports)
-        {
-            try
-            {
-                var result = session.execute(importStmt);
-                if (!result.compilationErrors.isEmpty())
-                {
-                    log.logError("Failed to import: " + importStmt);
-                }
-            }
-            catch (Exception e)
-            {
-                log.logError("Failed to import package: " + e.getMessage());
-            }
         }
     }
 

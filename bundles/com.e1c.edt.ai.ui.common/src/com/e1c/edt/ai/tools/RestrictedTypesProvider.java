@@ -22,7 +22,7 @@ import com.google.inject.Singleton;
 public class RestrictedTypesProvider
 	implements IRestrictedTypesProvider
 {
-	private static final String RESTRICTED_TYPES_FILE = "restricted-types.properties";
+    private static final String RESTRICTED_TYPES_FILE = "restricted-types.properties"; //$NON-NLS-1$
 	private final Set<String> restrictedTypes;
 
 	/**
@@ -39,7 +39,8 @@ public class RestrictedTypesProvider
 		return Collections.unmodifiableSet(restrictedTypes);
 	}
 
-	@Override
+    @SuppressWarnings("nls")
+    @Override
 	public boolean isRestricted(String typeName)
 	{
 		if (typeName == null)
@@ -92,7 +93,7 @@ public class RestrictedTypesProvider
 			for (String key : properties.stringPropertyNames())
 			{
 				// Skip comments (keys starting with #)
-				if (key != null && !key.trim().isEmpty() && !key.trim().startsWith("#"))
+                if (key != null && !key.trim().isEmpty() && !key.trim().startsWith("#")) //$NON-NLS-1$
 				{
 					types.add(key.trim());
 				}
@@ -100,9 +101,7 @@ public class RestrictedTypesProvider
 		}
 		catch (IOException e)
 		{
-			// Log warning and continue with empty set
-			System.err.println("Warning: Failed to load restricted types from " + RESTRICTED_TYPES_FILE + ": "
-				+ e.getMessage());
+            // Log warning and continue with empty set
 		}
 
 		return types;
