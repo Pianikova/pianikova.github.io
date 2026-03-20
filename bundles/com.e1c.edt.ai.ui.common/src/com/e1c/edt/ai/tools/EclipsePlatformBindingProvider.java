@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.core.runtime.IAdaptable;
-import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 
 import com.google.inject.Singleton;
@@ -55,6 +53,17 @@ public class EclipsePlatformBindingProvider
     @Override
     public Collection<Class<?>> getSignificantClasses()
     {
-        return List.of(IAdaptable.class, IWorkbench.class);
+        return List.of(
+            org.eclipse.core.runtime.IAdaptable.class, org.eclipse.ui.IWorkbench.class,
+            org.eclipse.swt.widgets.Display.class,
+            org.eclipse.swt.widgets.Shell.class,
+            org.eclipse.ui.IWorkbenchWindow.class,
+            org.eclipse.ui.IWorkbenchPage.class,
+            org.eclipse.ui.IEditorPart.class,
+            org.eclipse.jface.operation.IRunnableContext.class,
+            org.eclipse.core.runtime.IAdaptable.class,
+            org.eclipse.core.runtime.IProgressMonitor.class,
+            org.eclipse.core.commands.common.EventManager.class
+        );
     }
 }

@@ -116,8 +116,12 @@ class JShellSessionManager
                 addClassPathFor(shell, clazz);
             }
         }
+        addAllBundleClassPaths(shell);
 
         var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
+
+        // Pre-import commonly used packages
+        importCommonPackages(shell, session);
 
 		// Store bindings in registry
         for (var provider : bindingProviders)
@@ -162,6 +166,7 @@ class JShellSessionManager
             var protectionDomain = clazz.getProtectionDomain();
             if (protectionDomain == null)
             {
+                addBundleClassPathFor(shell, clazz);
                 return;
             }
             var codeSource = protectionDomain.getCodeSource();
@@ -235,6 +240,132 @@ class JShellSessionManager
         catch (Exception e)
         {
             log.logError("Failed to add bin classpath: " + e.getMessage()); //$NON-NLS-1$
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private void addAllBundleClassPaths(JShell shell)
+    {
+        try
+        {
+            var context = FrameworkUtil.getBundle(JShellSessionManager.class).getBundleContext();
+            if (context != null)
+            {
+                var bundles = context.getBundles();
+                java.util.Set<String> addedBundles = new java.util.HashSet<>();
+                for (var bundle : bundles)
+                {
+                    addBundleClassPathWithDependencies(shell, bundle, addedBundles);
+                }
+                log.logError("Added " + addedBundles.size() + " bundles to JShell classpath");
+            }
+        }
+        catch (Exception e)
+        {
+            log.logError("Failed to add all bundle classpaths: " + e.getMessage());
+        }
+    }
+
+    private void addBundleClassPathWithDependencies(JShell shell, org.osgi.framework.Bundle bundle,
+        java.util.Set<String> addedBundles)
+    {
+        if (bundle == null || addedBundles.contains(bundle.getSymbolicName()))
+        {
+            return;
+        }
+
+        try
+        {
+            if (bundle.getState() == org.osgi.framework.Bundle.ACTIVE || bundle.getState() == org.osgi.framework.Bundle.RESOLVED)
+            {
+                var bundleFile = FileLocator.getBundleFile(bundle);
+                if (bundleFile != null)
+                {
+                    shell.addToClasspath(bundleFile.getAbsolutePath());
+                    addBinIfPresent(shell, bundleFile.toPath());
+                    addedBundles.add(bundle.getSymbolicName());
+
+                    // Add required bundles from Require-Bundle header
+                    addRequiredBundles(shell, bundle, addedBundles);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            log.logError("Failed to add bundle classpath for " + bundle.getSymbolicName() + ": " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private void addRequiredBundles(JShell shell, org.osgi.framework.Bundle bundle,
+        java.util.Set<String> addedBundles)
+    {
+        try
+        {
+            var headers = bundle.getHeaders();
+            var requireBundle = headers.get(org.osgi.framework.Constants.REQUIRE_BUNDLE);
+            if (requireBundle != null)
+            {
+                String[] requiredBundleNames = requireBundle.toString().split(",");
+                var context = FrameworkUtil.getBundle(JShellSessionManager.class).getBundleContext();
+                if (context != null)
+                {
+                    var bundles = context.getBundles();
+                    for (String requiredName : requiredBundleNames)
+                    {
+                        String bundleName = requiredName.trim();
+                        if (bundleName.contains(";"))
+                        {
+                            bundleName = bundleName.substring(0, bundleName.indexOf(";"));
+                        }
+                        for (var reqBundle : bundles)
+                        {
+                            if (reqBundle.getSymbolicName().equals(bundleName))
+                            {
+                                addBundleClassPathWithDependencies(shell, reqBundle, addedBundles);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            log.logError("Failed to add required bundles for " + bundle.getSymbolicName() + ": " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("nls")
+    private void importCommonPackages(JShell shell, IJShellSession session)
+    {
+        String[] commonImports = {
+            "import java.util.*;",
+            "import java.util.stream.*;",
+            "import java.io.*;",
+            "import java.nio.file.*;",
+            "import org.eclipse.swt.widgets.*;",
+            "import org.eclipse.swt.*;",
+            "import org.eclipse.ui.*;",
+            "import org.eclipse.jface.operation.*;",
+            "import org.eclipse.core.runtime.*;",
+            "import org.eclipse.core.commands.common.*;"
+        };
+
+        for (String importStmt : commonImports)
+        {
+            try
+            {
+                var result = session.execute(importStmt);
+                if (!result.compilationErrors.isEmpty())
+                {
+                    log.logError("Failed to import: " + importStmt);
+                }
+            }
+            catch (Exception e)
+            {
+                log.logError("Failed to import package: " + e.getMessage());
+            }
         }
     }
 

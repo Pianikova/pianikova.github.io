@@ -169,7 +169,7 @@ class JShellSession
             }
 		}
 
-		// Capture stdout and stderr
+
 		result.stdOut = outBuffer.toString();
 		result.stdErr = errBuffer.toString();
 

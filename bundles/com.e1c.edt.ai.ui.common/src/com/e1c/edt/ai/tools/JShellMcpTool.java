@@ -151,7 +151,7 @@ public class JShellMcpTool
 	{
 		var md = new StringBuilder();
 
-        if (!result.compilationErrors.isEmpty() || !result.runtimeErrors.isEmpty())
+        if (!result.compilationErrors.isEmpty())
         {
             md.append(Messages.JShellErrorTemplate);
         }
@@ -269,7 +269,9 @@ public class JShellMcpTool
             + "Modifiers public/protected/private/static/final are ignored with warning. "
             + "synchronized/native/abstract/default are errors on top-level methods. "
             + "Single top-level class per snippet. " + "Semicolons required. " + "Incomplete snippets fail. "
-            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass()).";
+            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass())."
+            + "\n\n**IMPORTANT:** For expressions, either assign to a variable or ensure it's a standalone expression. "
+            + "Example: 'var x = 2 + 3;' or '2 + 3' (as last statement)";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();

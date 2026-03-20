@@ -46,7 +46,6 @@ public final class SharedExecutionControlProvider
         private SharedLoaderDelegate(ClassLoader parent)
         {
             this.loader = new SharedClassLoader(parent);
-            Thread.currentThread().setContextClassLoader(loader);
         }
 
         @Override
@@ -63,10 +62,17 @@ public final class SharedExecutionControlProvider
                 for (int i = 0; i < cbcs.length; ++i)
                 {
                     ExecutionControl.ClassBytecodes cbc = cbcs[i];
-                    Class<?> klass = loader.loadClass(cbc.name());
-                    klasses.put(cbc.name(), klass);
-                    loaded[i] = true;
-                    klass.getDeclaredMethods();
+                    try
+                    {
+                        Class<?> klass = loader.loadClass(cbc.name());
+                        klasses.put(cbc.name(), klass);
+                        loaded[i] = true;
+                        klass.getDeclaredMethods();
+                    }
+                    catch (NoClassDefFoundError | ClassNotFoundException e)
+                    {
+                        // System.err.println("Cannot load class " + cbc.name() + ": " + e.getMessage());
+                    }
                 }
             }
             catch (Throwable ex)
@@ -117,15 +123,59 @@ public final class SharedExecutionControlProvider
         extends URLClassLoader
     {
         private final Map<String, byte[]> classBytes = new HashMap<>();
+        private final ClassLoader osgiClassLoader;
 
         private SharedClassLoader(ClassLoader parent)
         {
             super(new URL[0], parent);
+            this.osgiClassLoader = parent;
         }
 
         private void declare(String name, byte[] bytes)
         {
             classBytes.put(name, bytes);
+        }
+
+        @Override
+        protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException
+        {
+            synchronized (getClassLoadingLock(name))
+            {
+                Class<?> loadedClass = findLoadedClass(name);
+                if (loadedClass != null)
+                {
+                    return loadedClass;
+                }
+
+                try
+                {
+                    loadedClass = osgiClassLoader.loadClass(name);
+                    if (loadedClass != null)
+                    {
+                        if (resolve)
+                        {
+                            resolveClass(loadedClass);
+                        }
+                        return loadedClass;
+                    }
+                }
+                catch (ClassNotFoundException e)
+                {
+                }
+
+                byte[] bytes = classBytes.get(name);
+                if (bytes != null)
+                {
+                    loadedClass = defineClass(name, bytes, 0, bytes.length);
+                    if (resolve)
+                    {
+                        resolveClass(loadedClass);
+                    }
+                    return loadedClass;
+                }
+
+                return super.loadClass(name, resolve);
+            }
         }
 
         @Override
