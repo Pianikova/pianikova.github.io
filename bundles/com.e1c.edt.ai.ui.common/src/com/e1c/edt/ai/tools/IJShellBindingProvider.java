@@ -26,8 +26,13 @@ public interface IJShellBindingProvider
      *
      * @return Map of variable names to binding descriptions
      */
-	default Map<String, JShellBindingDescription> getBindingInfos()
-	{
-		return new java.util.HashMap<>();
-	}
+    Map<String, JShellBindingDescription> getBindingInfos();
+
+    /**
+     * Returns a collection of significant classes that should be added to JShell classpath.
+     * These classes are important for the bindings provided by this provider.
+     *
+     * @return Collection of significant classes
+     */
+    java.util.Collection<Class<?>> getSignificantClasses();
 }

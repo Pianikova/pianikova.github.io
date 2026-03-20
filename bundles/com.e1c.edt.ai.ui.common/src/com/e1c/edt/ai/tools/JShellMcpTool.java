@@ -268,7 +268,8 @@ public class JShellMcpTool
             + "No package/module declarations. "
             + "Modifiers public/protected/private/static/final are ignored with warning. "
             + "synchronized/native/abstract/default are errors on top-level methods. "
-            + "Single top-level class per snippet. " + "Semicolons required. " + "Incomplete snippets fail.";
+            + "Single top-level class per snippet. " + "Semicolons required. " + "Incomplete snippets fail. "
+            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass()).";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();

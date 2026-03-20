@@ -109,7 +109,13 @@ class JShellSessionManager
         String classpath = System.getProperty("java.class.path");
         shell.addToClasspath(classpath);
         addClassPathFor(shell, JShellSessionManager.class);
-        addClassPathFor(shell, JShellObjectBridge.class);
+        for (var provider : bindingProviders)
+        {
+            for (var clazz : provider.getSignificantClasses())
+            {
+                addClassPathFor(shell, clazz);
+            }
+        }
 
         var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
 

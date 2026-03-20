@@ -3,9 +3,13 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.IAdaptable;
+import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 
 import com.google.inject.Singleton;
@@ -47,4 +51,10 @@ public class EclipsePlatformBindingProvider
 			"display.asyncExec(() -> {\n    // UI operations here\n    System.out.println(\"UI Thread: \" + Display.getCurrent());\n});"));
 		return infos;
 	}
+
+    @Override
+    public Collection<Class<?>> getSignificantClasses()
+    {
+        return List.of(IAdaptable.class, IWorkbench.class);
+    }
 }
