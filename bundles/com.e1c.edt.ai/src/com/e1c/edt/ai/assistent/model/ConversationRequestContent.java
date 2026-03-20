@@ -5,15 +5,20 @@ package com.e1c.edt.ai.assistent.model;
 
 import java.util.List;
 
+import com.google.gson.JsonElement;
+
+/**
+ * Содержимое запроса для отправки сообщения в API
+ */
 public class ConversationRequestContent
 {
-    /**
-     * Команда пользователя (наличие поля зависит от tool_name)
-     */
-    public String instruction;
+	/**
+	 * Дополнительные данные для контента (новая структура API)
+	 */
+    public JsonElement content;
 
-    /**
-     * Код пользователя
+	/**
+     * Список доступных инструментов (ClientServerTool | ClientTool)
      */
-    public List<ConversationCode> code;
+	public List<ToolDefinition> tools;
 }

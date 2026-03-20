@@ -14,7 +14,7 @@ public class ConversationAskResponse
     public String uuid;
 
     /**
-     * Источник сообщения.
+     * Источник сообщения ("user" | "assistant" | "tool")
      */
     public String role;
 
@@ -27,16 +27,16 @@ public class ConversationAskResponse
     /**
      * Содержимое ответа
      */
-    public ConversationResponseContent content;
+    public AssistantMessageContent content;
 
     /**
-     * Время создания сообщения
+     * Дельта контента (для потоковой передачи)
      */
-    @SerializedName("create_time")
-    public String createTime;
+    @SerializedName("content_delta")
+    public AssistantMessageContentDelta contentDelta;
 
     /**
      * Флаг завершения генерации сообщения
      */
-    public boolean finished;
+    public Boolean finished;
 }
