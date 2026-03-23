@@ -27,12 +27,7 @@ public class EclipsePlatformBindingProvider
         var workbench = PlatformUI.getWorkbench();
 		if (workbench != null)
 		{
-			bindings.put("workbench", workbench);
-            var display = workbench.getDisplay();
-			if (display != null)
-			{
-				bindings.put("display", display);
-			}
+            bindings.put("workbench", workbench);
 		}
 
 		return bindings;
@@ -45,8 +40,6 @@ public class EclipsePlatformBindingProvider
 		var infos = new HashMap<String, JShellBindingDescription>();
 		infos.put("workbench", new JShellBindingDescription("Eclipse workbench instance",
             "var activeWindow = workbench.getActiveWorkbenchWindow();\nSystem.out.println(\"Active window: \" + activeWindow);\nvar activePage = activeWindow != null ? activeWindow.getActivePage() : null;\nSystem.out.println(\"Active page: \" + activePage);"));
-		infos.put("display", new JShellBindingDescription("Eclipse display instance",
-            "String[] result = new String[1];\ndisplay.syncExec(() -> {\n    result[0] = Display.getCurrent().toString();\n});\nSystem.out.println(\"UI Thread: \" + result[0]);"));
 		return infos;
 	}
 

@@ -6,22 +6,18 @@ package com.e1c.edt.ai.tools;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.base.Preconditions;
+
 import jdk.jshell.execution.LoaderDelegate;
-import jdk.jshell.execution.LocalExecutionControl;
 import jdk.jshell.spi.ExecutionControl;
-import jdk.jshell.spi.ExecutionControl.ClassBytecodes;
-import jdk.jshell.spi.ExecutionControl.ClassInstallException;
-import jdk.jshell.spi.ExecutionControl.EngineTerminationException;
-import jdk.jshell.spi.ExecutionControl.InternalException;
-import jdk.jshell.spi.ExecutionControl.NotImplementedException;
 import jdk.jshell.spi.ExecutionControlProvider;
-import jdk.jshell.spi.ExecutionControl.RunException;
 import jdk.jshell.spi.ExecutionEnv;
 
 public final class JShellSharedExecutionControlProvider
@@ -53,14 +49,7 @@ public final class JShellSharedExecutionControlProvider
     @Override
     public ExecutionControl generate(ExecutionEnv env, Map<String, String> parameters)
     {
-        var control = new LocalExecutionControl(new SharedLoaderDelegate(parent));
-
-        if (outBuffer != null && errBuffer != null)
-        {
-            return new CapturingExecutionControl(control, outBuffer, errBuffer);
-        }
-
-        return control;
+        return new CapturingExecutionControl(new SharedLoaderDelegate(parent), outBuffer, errBuffer);
     }
 
     private static final class SharedLoaderDelegate
@@ -217,20 +206,21 @@ public final class JShellSharedExecutionControlProvider
         }
     }
 
-    private static final class CapturingExecutionControl implements ExecutionControl
+    private static final class CapturingExecutionControl
+        implements ExecutionControl
     {
-        private static final Object GLOBAL_STREAM_LOCK = new Object();
-
-        private final ExecutionControl delegate;
+        private final LoaderDelegate loaderDelegate;
         private final ByteArrayOutputStream outBuffer;
         private final ByteArrayOutputStream errBuffer;
 
-        CapturingExecutionControl(
-                ExecutionControl delegate,
-                ByteArrayOutputStream outBuffer,
-                ByteArrayOutputStream errBuffer)
+        CapturingExecutionControl(LoaderDelegate loaderDelegate, ByteArrayOutputStream outBuffer,
+            ByteArrayOutputStream errBuffer)
         {
-            this.delegate = delegate;
+            Preconditions.checkNotNull(loaderDelegate);
+            Preconditions.checkNotNull(outBuffer);
+            Preconditions.checkNotNull(errBuffer);
+
+            this.loaderDelegate = loaderDelegate;
             this.outBuffer = outBuffer;
             this.errBuffer = errBuffer;
         }
@@ -238,30 +228,43 @@ public final class JShellSharedExecutionControlProvider
         @Override
         public void close()
         {
-            delegate.close();
+            //
         }
 
         @Override
         public String invoke(String className, String methodName)
                 throws RunException, EngineTerminationException, InternalException
         {
-            synchronized(GLOBAL_STREAM_LOCK)
+            PrintStream originalOut = System.out;
+            PrintStream originalErr = System.err;
+            try
             {
-                PrintStream originalOut = System.out;
-                PrintStream originalErr = System.err;
-
-                try
+                System.setOut(new PrintStream(outBuffer, true));
+                System.setErr(new PrintStream(errBuffer, true));
+                Class<?> klass = loaderDelegate.findClass(className);
+                Method method = klass.getDeclaredMethod(methodName);
+                method.setAccessible(true);
+                Object result = method.invoke(null);
+                return result == null ? null : result.toString();
+            }
+            catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e)
+            {
+                throw new InternalException(e.toString());
+            }
+            catch (InvocationTargetException e)
+            {
+                Throwable cause = e.getCause();
+                if (cause instanceof RuntimeException)
                 {
-                    System.setOut(new PrintStream(outBuffer, true));
-                    System.setErr(new PrintStream(errBuffer, true));
+                    throw (RuntimeException)cause;
+                }
 
-                    return delegate.invoke(className, methodName);
-                }
-                finally
-                {
-                    System.setOut(originalOut);
-                    System.setErr(originalErr);
-                }
+                throw new RuntimeException(cause);
+            }
+            finally
+            {
+                System.setOut(originalOut);
+                System.setErr(originalErr);
             }
         }
 
@@ -269,30 +272,25 @@ public final class JShellSharedExecutionControlProvider
         public Object extensionCommand(String command, Object arg)
                 throws RunException, EngineTerminationException, InternalException
         {
-            return delegate.extensionCommand(command, arg);
+            throw new NotImplementedException("extensionCommand"); //$NON-NLS-1$
         }
 
         @Override
         public void load(ClassBytecodes[] cbcs)
                 throws ClassInstallException, NotImplementedException, EngineTerminationException
         {
-            synchronized(GLOBAL_STREAM_LOCK)
+            PrintStream originalOut = System.out;
+            PrintStream originalErr = System.err;
+            try
             {
-                PrintStream originalOut = System.out;
-                PrintStream originalErr = System.err;
-
-                try
-                {
-                    System.setOut(new PrintStream(outBuffer, true));
-                    System.setErr(new PrintStream(errBuffer, true));
-
-                    delegate.load(cbcs);
-                }
-                finally
-                {
-                    System.setOut(originalOut);
-                    System.setErr(originalErr);
-                }
+                System.setOut(new PrintStream(outBuffer, true));
+                System.setErr(new PrintStream(errBuffer, true));
+                loaderDelegate.load(cbcs);
+            }
+            finally
+            {
+                System.setOut(originalOut);
+                System.setErr(originalErr);
             }
         }
 
@@ -300,27 +298,27 @@ public final class JShellSharedExecutionControlProvider
         public void redefine(ClassBytecodes[] cbcs)
                 throws ClassInstallException, NotImplementedException, EngineTerminationException
         {
-            delegate.redefine(cbcs);
+            loaderDelegate.classesRedefined(cbcs);
         }
 
         @Override
         public void addToClasspath(String path)
                 throws EngineTerminationException, InternalException
         {
-            delegate.addToClasspath(path);
+            loaderDelegate.addToClasspath(path);
         }
 
         @Override
         public void stop() throws EngineTerminationException, InternalException
         {
-            delegate.stop();
+            throw new NotImplementedException("stop"); //$NON-NLS-1$
         }
 
         @Override
         public String varValue(String className, String varName)
             throws EngineTerminationException, InternalException, RunException
         {
-            return delegate.varValue(className, varName);
+            throw new NotImplementedException("varValue"); //$NON-NLS-1$
         }
     }
 }

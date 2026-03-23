@@ -34,7 +34,7 @@ public class JShellSessionMcpTool
 	private static final String QuestionExample = "{}"; //$NON-NLS-1$
 
 	private static final String AnswerExample =
-		"{\"repl_session_id\":\"uuid-123\",\"available_bindings\":[\"display\",\"workbench\",\"Math\",\"System\"]}"; //$NON-NLS-1$
+        "{\"repl_session_id\":\"uuid-123\",\"available_bindings\":[\"workbench\"]}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
@@ -91,7 +91,7 @@ public class JShellSessionMcpTool
 			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
 
-		return CompletableFuture.completedFuture(createSession(request, call, details, cancellationToken));
+        return CompletableFuture.supplyAsync(() -> createSession(request, call, details, cancellationToken));
 	}
 
 	@SuppressWarnings("nls")

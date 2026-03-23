@@ -24,6 +24,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.ui.IDispatcher;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -46,11 +47,12 @@ public class JShellMcpTool
 	private final Set<IJShellBindingProvider> bindingProviders;
 	private final IMarkdownUtils markdownUtils;
 	private final IRestrictedTypesProvider restrictedTypesProvider;
+    private final IDispatcher dispatcher;
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
 		IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
-		IRestrictedTypesProvider restrictedTypesProvider)
+        IRestrictedTypesProvider restrictedTypesProvider, IDispatcher dispatcher)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
@@ -58,6 +60,7 @@ public class JShellMcpTool
 		Preconditions.checkNotNull(bindingProviders);
 		Preconditions.checkNotNull(markdownUtils);
 		Preconditions.checkNotNull(restrictedTypesProvider);
+        Preconditions.checkNotNull(dispatcher);
 
 		this.json = json;
 		this.messageFactory = messageFactory;
@@ -65,6 +68,7 @@ public class JShellMcpTool
 		this.bindingProviders = bindingProviders;
 		this.markdownUtils = markdownUtils;
 		this.restrictedTypesProvider = restrictedTypesProvider;
+        this.dispatcher = dispatcher;
 		this.spec = createSpecification();
 	}
 
@@ -105,7 +109,7 @@ public class JShellMcpTool
 			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
 
-		return CompletableFuture.completedFuture(executeCode(request, call, details, cancellationToken));
+        return CompletableFuture.supplyAsync(() -> executeCode(request, call, details, cancellationToken));
 	}
 
 	@SuppressWarnings("nls")
@@ -128,11 +132,16 @@ public class JShellMcpTool
 					ToolErrorType.RETRYABLE);
 			}
 
-			var result = session.execute(request.code);
+            var optionalResult = dispatcher.dispatch(() -> session.execute(request.code));
+            if (optionalResult.isEmpty())
+            {
+                throw new ToolException("Can't execute code.", null, ToolErrorType.RETRYABLE);
+            }
+
+            var result = optionalResult.get();
 			var content = json.serialize(result);
 			var responseMarkdown = buildResponseMarkdown(request.code, result);
 			details.responseMarkdown = responseMarkdown;
-
 			return messageFactory.createMessage(this, call, content, details);
 		}
 		catch (ToolException e)
@@ -181,21 +190,15 @@ public class JShellMcpTool
 		spec.function.name = TOOL_NAME;
 
 		var description = new StringBuilder();
-		description.append("Executes Java code using JShell REPL within Eclipse workbench context. Preserves state across executions.");
+        description
+            .append("Executes Java code using JShell REPL within Eclipse APIs. Preserves state across executions.");
 		description.append("\n\n**When to use:**");
-		description.append("\n- Use ONLY for Eclipse workbench API operations (workbench, display, editors, views)");
 		description.append("\n- Use when other IDE tools (" + GitMcpTool.TOOL_NAME + " , " + ReadMcpTool.TOOL_NAME + ", etc.) cannot accomplish the task");
-
-		description.append("\n\n**Common scenarios:**");
-		description.append("\n- Get information about editors, views, workbench windows");
-        description.append("\n- Manipulate Eclipse UI components via display.syncExec()");
-		description.append("\n- Access workbench API that's not exposed by dedicated tools");
 
 		description.append("\n\n**Key requirements:**");
 		description.append("\n- Use ONLY complete statements with `;` (e.g., `int x = 10;`)");
 		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");
-        description.append("\n- UI operations MUST use `display.syncExec()` for thread safety and result capture");
-		description.append("\n- Output MUST be in main thread for result capture");
+        description.append("\n- Output MUST be in main thread for result capture");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
