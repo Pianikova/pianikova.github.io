@@ -201,6 +201,39 @@ public class JShellMcpTool
         description.append("\n- **Statements:** Must end with semicolon `;` (e.g., `int x = 10;`)");
         description.append("\n- **Multi-line:** Each statement must be on separate line or separated by `;`");
         description.append("\n- **Assignments:** Store in local variables to persist (e.g., `String info = \"value\";`)");
+        description.append("\n- **Import statement:** Can be placed separately before code blocks, OR inside a code block with the rest of the code");
+
+        // Common mistakes
+        description.append("\n\n### Common mistakes:");
+        description.append("\n**ERROR: Import statement before code block:**");
+        description.append("\n```java");
+        description.append("\nimport org.eclipse.ui.*;");
+        description.append("\nObject obj = JShellObjectBridge.retrieve(2);");
+        description.append("\n{");
+        description.append("\n    // code with loops/conditionals");
+        description.append("\n}");
+        description.append("\n```\nThis will cause compilation error \"class, interface, or enum expected\".");
+
+        description.append("\n**CORRECT: Import inside code block:**");
+        description.append("\n```java");
+        description.append("\n{");
+        description.append("\n    import org.eclipse.ui.*;");
+        description.append("\n    Object obj = JShellObjectBridge.retrieve(2);");
+        description.append("\n    // code with loops/conditionals");
+        description.append("\n}");
+        description.append("\n```");
+
+        description.append("\n**CORRECT: Import separately, then code block:**");
+        description.append("\n```java");
+        description.append("\n// First call: only import");
+        description.append("\nimport org.eclipse.ui.*;");
+        description.append("\n");
+        description.append("\n// Second call: code block");
+        description.append("\nObject obj = JShellObjectBridge.retrieve(2);");
+        description.append("\n{");
+        description.append("\n    // code with loops/conditionals");
+        description.append("\n}");
+        description.append("\n```");
 
 		// Common patterns
         description.append("\n\n### Common patterns:");
@@ -298,7 +331,9 @@ public class JShellMcpTool
             + "Modifiers public/protected/private/static/final are ignored with warning. "
             + "synchronized/native/abstract/default are errors on top-level methods. "
             + "Single top-level class per snippet. "
-            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass()).";
+            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass()). "
+            + "IMPORTANT: If using code blocks { } with loops/conditionals, do NOT place import statements before the block. "
+            + "Either put imports inside the block, or execute imports in a separate call.";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();
