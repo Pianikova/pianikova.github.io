@@ -5,17 +5,28 @@ package com.e1c.edt.ai.tools;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class JShellObjectBridge
 {
     private static final Map<Integer, Object> objectStore = new HashMap<>();
     private static final AtomicInteger counter = new AtomicInteger(0);
+    private static final Map<String, Set<Integer>> sessionObjectIds = new ConcurrentHashMap<>();
 
     public static int store(Object obj)
     {
         int id = counter.incrementAndGet();
         objectStore.put(id, obj);
+        return id;
+    }
+
+    public static int store(String sessionId, Object obj)
+    {
+        int id = counter.incrementAndGet();
+        objectStore.put(id, obj);
+        sessionObjectIds.computeIfAbsent(sessionId, k -> ConcurrentHashMap.newKeySet()).add(id);
         return id;
     }
 
@@ -28,5 +39,15 @@ public class JShellObjectBridge
     public static void remove(int id)
     {
         objectStore.remove(id);
+        sessionObjectIds.values().forEach(set -> set.remove(id));
+    }
+
+    public static void releaseSession(String sessionId)
+    {
+        Set<Integer> ids = sessionObjectIds.remove(sessionId);
+        if (ids != null)
+        {
+            ids.forEach(objectStore::remove);
+        }
     }
 }

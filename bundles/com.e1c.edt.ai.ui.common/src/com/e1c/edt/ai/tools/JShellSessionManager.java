@@ -95,7 +95,7 @@ class JShellSessionManager
 		var outBuffer = new ByteArrayOutputStream();
 		var errBuffer = new ByteArrayOutputStream();
 
-        var executionControlProvider = new SharedExecutionControlProvider(JShellSessionManager.class.getClassLoader());
+        var executionControlProvider = new JShellSharedExecutionControlProvider(JShellSessionManager.class.getClassLoader());
         executionControlProvider.setOutputBuffers(outBuffer, errBuffer);
 
         var shell = JShell.builder()
@@ -144,7 +144,7 @@ class JShellSessionManager
 			{
 				try
 				{
-                    int objectId = JShellObjectBridge.store(entry.getValue());
+                    int objectId = JShellObjectBridge.store(session.getSessionId(), entry.getValue());
                     var value = entry.getValue();
                     var type = value.getClass();
                     var className = type.getName();

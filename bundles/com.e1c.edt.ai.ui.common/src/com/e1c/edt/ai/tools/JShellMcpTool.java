@@ -34,37 +34,37 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-        "{\"code\":\"2 + 3\",\"repl_session_id\":\"uuid-123\"}"; //$NON-NLS-1$
+        "{\"code\":\"var result = new String[1];\\ndisplay.syncExec(() -> { result[0] = \\\"Thread result\\\"; });\\nSystem.out.println(result[0]);\",\"repl_session_id\":\"uuid-123\"}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
-        "{\"return_value\":\"5\",\"std_out\":\"\",\"std_err\":\"\"}"; //$NON-NLS-1$
+        "{\"return_value\":null,\"repl_session_id\":\"uuid-123\",\"std_out\":\"Thread result\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
 	private final IMcpToolsCallMessageFactory messageFactory;
-    private final IJShellSessionManager sessions;
-    private final Set<IJShellBindingProvider> bindingProviders;
-    private final IMarkdownUtils markdownUtils;
-    private final IRestrictedTypesProvider restrictedTypesProvider;
+	private final IJShellSessionManager sessions;
+	private final Set<IJShellBindingProvider> bindingProviders;
+	private final IMarkdownUtils markdownUtils;
+	private final IRestrictedTypesProvider restrictedTypesProvider;
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
-        IRestrictedTypesProvider restrictedTypesProvider)
+		IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
+		IRestrictedTypesProvider restrictedTypesProvider)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
-        Preconditions.checkNotNull(sessions);
+		Preconditions.checkNotNull(sessions);
 		Preconditions.checkNotNull(bindingProviders);
-        Preconditions.checkNotNull(markdownUtils);
-        Preconditions.checkNotNull(restrictedTypesProvider);
+		Preconditions.checkNotNull(markdownUtils);
+		Preconditions.checkNotNull(restrictedTypesProvider);
 
 		this.json = json;
 		this.messageFactory = messageFactory;
-        this.sessions = sessions;
+		this.sessions = sessions;
 		this.bindingProviders = bindingProviders;
-        this.markdownUtils = markdownUtils;
-        this.restrictedTypesProvider = restrictedTypesProvider;
+		this.markdownUtils = markdownUtils;
+		this.restrictedTypesProvider = restrictedTypesProvider;
 		this.spec = createSpecification();
 	}
 
@@ -82,7 +82,7 @@ public class JShellMcpTool
 
 	@SuppressWarnings("nls")
 	@Override
-    public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
+	public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
 	{
 		var details = new ToolCallMessageDetails();
 		details.autoCall = false;
@@ -97,79 +97,76 @@ public class JShellMcpTool
 
 		if (call.callKind == ToolCallKind.RENDER)
 		{
-            var requestMarkdown = new StringBuilder();
-            requestMarkdown.append(Messages.JShellExecutingTemplate);
-            requestMarkdown.append("\n\n");
-            requestMarkdown.append("```java\n").append(request.code).append("\n```");
-            details.requestMarkdown = requestMarkdown.toString();
-            return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
+			var requestMarkdown = new StringBuilder();
+			requestMarkdown.append(Messages.JShellExecutingTemplate);
+			requestMarkdown.append("\n\n");
+			requestMarkdown.append("```java\n").append(request.code).append("\n```");
+			details.requestMarkdown = requestMarkdown.toString();
+			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
 
-        return CompletableFuture.completedFuture(executeCode(request, call, details, cancellationToken));
-    }
+		return CompletableFuture.completedFuture(executeCode(request, call, details, cancellationToken));
+	}
 
-    @SuppressWarnings("nls")
-    private ToolCallMessage executeCode(Request request, McpToolCall call, ToolCallMessageDetails details,
-        ICancellationToken cancellationToken)
-    {
-        if (cancellationToken.isCanceled())
+	@SuppressWarnings("nls")
+	private ToolCallMessage executeCode(Request request, McpToolCall call, ToolCallMessageDetails details,
+		ICancellationToken cancellationToken)
+	{
+		if (cancellationToken.isCanceled())
 		{
-            throw new ToolException("Operation was cancelled before execution.", null, ToolErrorType.RETRYABLE);
-        }
+			throw new ToolException("Operation was cancelled before execution.", null, ToolErrorType.RETRYABLE);
+		}
 
-        try
+		try
 		{
-            IJShellSession session = sessions.getSession(request.sessionId);
-            if (session == null)
-            {
-                throw new ToolException(
-                    "Session not found. Use " + JShellSessionMcpTool.TOOL_NAME + " tool to create a session first.",
-                    null,
-                    ToolErrorType.RETRYABLE);
-            }
+			IJShellSession session = sessions.getSession(request.sessionId);
+			if (session == null)
+			{
+				throw new ToolException(
+					"Session not found. Use " + JShellSessionMcpTool.TOOL_NAME + " tool to create a session first.",
+					null,
+					ToolErrorType.RETRYABLE);
+			}
 
-            JShellExecutionResult result = session.execute(request.code);
-            String responseMarkdown = buildResponseMarkdown(request.code, result);
+			var result = session.execute(request.code);
+			var content = json.serialize(result);
+			var responseMarkdown = buildResponseMarkdown(request.code, result);
+			details.responseMarkdown = responseMarkdown;
 
-            var content = json.serialize(result);
-            details.responseMarkdown = responseMarkdown;
-
-            return messageFactory.createMessage(this, call, content, details);
-        }
-        catch (ToolException e)
-        {
-            throw e;
-        }
-        catch (Exception e)
+			return messageFactory.createMessage(this, call, content, details);
+		}
+		catch (ToolException e)
 		{
-            throw new ToolException("JShell execution failed: " + e.getMessage(), e, ToolErrorType.RETRYABLE);
+			throw e;
+		}
+		catch (Exception e)
+		{
+			throw new ToolException("JShell execution failed: " + e.getMessage(), e, ToolErrorType.RETRYABLE);
 		}
 	}
 
-    @SuppressWarnings("nls")
+	@SuppressWarnings("nls")
 	private String buildResponseMarkdown(String code, JShellExecutionResult result)
 	{
 		var md = new StringBuilder();
 
-        if (!result.compilationErrors.isEmpty())
-        {
-            md.append(Messages.JShellErrorTemplate);
-        }
-        else
-        {
-            md.append(Messages.JShellExecutedTemplate);
-        }
-
-        md.append("\n\n");
-
-        // Show the executed code
-        md.append("```java\n").append(code).append("\n```\n");
-
-        // Show return value if any
-		if (result.returnValue != null && !result.returnValue.isEmpty())
+		if (!result.compilationErrors.isEmpty())
 		{
-            md.append(markdownUtils.escapeForMarkdown(result.returnValue));
-            md.append("\n");
+			md.append(Messages.JShellErrorTemplate);
+		}
+		else
+		{
+			md.append(Messages.JShellExecutedTemplate);
+		}
+
+		md.append("\n\n");
+
+		md.append("```java\n").append(code).append("\n```\n");
+
+		if (result.stdOut != null && !result.stdOut.isEmpty())
+		{
+			md.append(markdownUtils.escapeForMarkdown(result.stdOut));
+			md.append("\n");
 		}
 
 		return md.toString();
@@ -184,136 +181,52 @@ public class JShellMcpTool
 		spec.function.name = TOOL_NAME;
 
 		var description = new StringBuilder();
-		description.append("Executes Java code using JShell REPL (Read-Eval-Print Loop).");
-		description.append("\n\nUsage:");
-		description.append("\n- Arguments must be a single JSON object.");
-        description.append("\n- **IMPORTANT:** Both `code` and `repl_session_id` parameters are **required**.");
-        description.append("\n- Use `")
-            .append(JShellSessionMcpTool.TOOL_NAME)
-            .append("` tool first to create a REPL session and get session ID.");
-        description.append("\n- Variable state is preserved across code executions within the same session.");
-        description.append("\n- Returns execution result including return value, stdout, stderr.");
-		description.append("\n- Compilation and runtime errors are clearly identified.");
+		description.append("Executes Java code using JShell REPL within Eclipse workbench context. Preserves state across executions.");
+		description.append("\n\n**When to use:**");
+		description.append("\n- Use ONLY for Eclipse workbench API operations (workbench, display, editors, views)");
+		description.append("\n- Use when other IDE tools (" + GitMcpTool.TOOL_NAME + " , " + ReadMcpTool.TOOL_NAME + ", etc.) cannot accomplish the task");
 
-		// Code structure requirements
-        description.append("\n\n### Code structure requirements:");
-        description.append("\n- **Variables:** Must be declared or bound from previous executions");
-        description.append("\n- **Statements:** Must end with semicolon `;` (e.g., `int x = 10;`)");
-        description.append("\n- **Multi-line:** Each statement must be on separate line or separated by `;`");
-        description.append("\n- **Assignments:** Store in local variables to persist (e.g., `String info = \"value\";`)");
-        description.append("\n- **Import statement:** Can be placed separately before code blocks, OR inside a code block with the rest of the code");
+		description.append("\n\n**Common scenarios:**");
+		description.append("\n- Get information about editors, views, workbench windows");
+        description.append("\n- Manipulate Eclipse UI components via display.syncExec()");
+		description.append("\n- Access workbench API that's not exposed by dedicated tools");
 
-        // Common mistakes
-        description.append("\n\n### Common mistakes:");
-        description.append("\n**ERROR: Import statement before code block:**");
-        description.append("\n```java");
-        description.append("\nimport org.eclipse.ui.*;");
-        description.append("\nObject obj = JShellObjectBridge.retrieve(2);");
-        description.append("\n{");
-        description.append("\n    // code with loops/conditionals");
-        description.append("\n}");
-        description.append("\n```\nThis will cause compilation error \"class, interface, or enum expected\".");
+		description.append("\n\n**Key requirements:**");
+		description.append("\n- Use ONLY complete statements with `;` (e.g., `int x = 10;`)");
+		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");
+        description.append("\n- UI operations MUST use `display.syncExec()` for thread safety and result capture");
+		description.append("\n- Output MUST be in main thread for result capture");
 
-        description.append("\n**CORRECT: Import inside code block:**");
-        description.append("\n```java");
-        description.append("\n{");
-        description.append("\n    import org.eclipse.ui.*;");
-        description.append("\n    Object obj = JShellObjectBridge.retrieve(2);");
-        description.append("\n    // code with loops/conditionals");
-        description.append("\n}");
-        description.append("\n```");
-
-        description.append("\n**CORRECT: Import separately, then code block:**");
-        description.append("\n```java");
-        description.append("\n// First call: only import");
-        description.append("\nimport org.eclipse.ui.*;");
-        description.append("\n");
-        description.append("\n// Second call: code block");
-        description.append("\nObject obj = JShellObjectBridge.retrieve(2);");
-        description.append("\n{");
-        description.append("\n    // code with loops/conditionals");
-        description.append("\n}");
-        description.append("\n```");
-
-		// Common patterns
-        description.append("\n\n### Common patterns:");
-        description.append("\n**Variable assignment:**");
-        description.append("\n```java");
-        description.append("\nint count = 10;");
-        description.append("\nString name = \"test\";");
-        description.append("\n```");
-        description.append("\n**Output to console:**");
-        description.append("\n```java");
-        description.append("\nSystem.out.println(\"Value: \" + count);");
-        description.append("\nSystem.err.println(\"Error message\");");
-        description.append("\n```");
-        description.append("\n⚠️ System.out and System.err output must be used in the main JShell thread only. Output from spawned threads won't be captured.");
-
-        description.append("\n**Access bindings:**");
-        description.append("\n```java");
-        description.append("\nvar windows = workbench.getWorkbenchWindows();");
-        description.append("\nSystem.out.println(\"Windows: \" + windows.length);");
-        description.append("\n```");
-
-		// Recommended workflow
-        description.append("\n\n### Recommended workflow:");
-        description.append(
-            "\n1. First call `")
-            .append(JShellSessionMcpTool.TOOL_NAME)
-            .append(
-                "` tool to create a session - returns session ID and available bindings (like `display`, `workbench`, `Math`, `System`)");
-        description.append("\n2. Save `repl_session_id` from the response");
-        description.append(
-            "\n3. Use `")
-            .append(TOOL_NAME)
-            .append(
-                "` tool: `{\"repl_session_id\": \"...\", \"code\": \"...\"}` - execute code using available bindings");
-        description.append("\n4. Always reuse the same `repl_session_id` to maintain state between executions");
-
-		// Add bindings information
+		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
 		{
-			description.append("\n\n### Available bindings:");
-			for (var provider : bindingProviders)
+			description.append("\n- Pre-configured Eclipse objects are available in JShell");
+			description.append("\n- See ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool for detailed binding documentation with examples");
+		}
+
+		description.append("\n\n**Workflow:**");
+		description.append("\n1. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
+		description.append("\n2. Use ").append(TOOL_NAME).append(" with that ID to execute Eclipse workbench code");
+		description.append("\n3. Reuse same ID to maintain state");
+
+		// Add restricted types information
+		Set<String> restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
+		if (!restrictedTypes.isEmpty())
+		{
+			description.append("\n\n**⚠️ RESTRICTED TYPES (security restrictions):**");
+			description.append("\nThe following types are NOT ALLOWED:");
+			for (String type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
 			{
-				var infos = provider.getBindingInfos();
-				if (!infos.isEmpty())
-				{
-					for (var entry : infos.entrySet())
-					{
-						String bindingName = entry.getKey();
-						JShellBindingDescription bindingInfo = entry.getValue();
-						String bindingDesc = bindingInfo.getDescription();
-						String bindingExample = bindingInfo.getExample();
-
-						description.append("\n\n**`").append(bindingName).append("`**");
-						description.append("\n- ").append(bindingDesc);
-
-						if (bindingExample != null && !bindingExample.isEmpty())
-						{
-							description.append("\n- **Example usage:**");
-							description.append("\n```java\n").append(bindingExample).append("\n```");
-						}
-					}
-				}
+				description.append("\n- `").append(type).append("`");
 			}
 		}
 
-        // Add restricted types information
-        Set<String> restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
-        if (!restrictedTypes.isEmpty())
-        {
-            description.append("\n\n### ⚠️ **RESTRICTED TYPES** ⚠️");
-            description.append("\n**The following types are STRICTLY FORBIDDEN** and will cause ToolException if used:");
-            for (String type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
-            {
-                description.append("- `").append(type).append("`\n");
-            }
-        }
+		description.append("\n\n**Parameters:**");
+		description.append("\n- `code` (required): Complete Java statements ending with `;`");
+		description.append("\n- `repl_session_id` (required): Session ID from JShellSession tool");
 
-		description.append("\n\nExample:");
-		description.append("\n  Q: ").append(QuestionExample);
-		description.append("\n  A: ").append(AnswerExample);
+		description.append("\n\nExample: `").append(QuestionExample).append("`");
+		description.append("\nResponse: `").append(AnswerExample).append("`");
 
 		spec.function.description = description.toString();
 
@@ -323,30 +236,18 @@ public class JShellMcpTool
 
 		var codeProp = new McpToolCallProperty();
 		codeProp.type = "string";
-        codeProp.description = "Java code to execute (required). "
-            + "Must be valid Java statements ending with semicolon `;`. "
-            + "For output, use `System.out.println()` or `System.err.println()`. "
-            + "Examples: `int x = 10;`, `System.out.println(workbench.getActiveWorkbenchWindow());`."
-            + "No package/module declarations allowed. "
-            + "Modifiers public/protected/private/static/final are ignored with warning. "
-            + "synchronized/native/abstract/default are errors on top-level methods. "
-            + "Single top-level class per snippet. "
-            + "For internal Eclipse classes, JShell cannot properly resolve methods from java.lang.Object (like getClass()). "
-            + "IMPORTANT: If using code blocks { } with loops/conditionals, do NOT place import statements before the block. "
-            + "Either put imports inside the block, or execute imports in a separate call.";
+		codeProp.description = "Java code to execute (required)";
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();
 		sessionIdProp.type = "string";
-        sessionIdProp.description =
-            "Session ID for maintaining REPL state (required, must be obtained from " + JShellSessionMcpTool.TOOL_NAME
-                + " tool)";
-        properties.put("repl_session_id", sessionIdProp);
+		sessionIdProp.description = "Session ID from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
+		properties.put("repl_session_id", sessionIdProp);
 
 		parameters.properties = properties;
 		var required = new ArrayList<String>();
-        required.add("code");
-        required.add("repl_session_id");
+		required.add("code");
+		required.add("repl_session_id");
 		parameters.required = required;
 
 		spec.function.parameters = parameters;
@@ -358,8 +259,7 @@ public class JShellMcpTool
 		@SerializedName("code")
 		public String code;
 
-        @SerializedName("repl_session_id")
+		@SerializedName("repl_session_id")
 		public String sessionId;
 	}
 }
-

@@ -44,9 +44,9 @@ public class EclipsePlatformBindingProvider
 	{
 		var infos = new HashMap<String, JShellBindingDescription>();
 		infos.put("workbench", new JShellBindingDescription("Eclipse workbench instance",
-			"var activeWindow = workbench.getActiveWorkbenchWindow();\nvar activePage = activeWindow.getActivePage();"));
+            "var activeWindow = workbench.getActiveWorkbenchWindow();\nSystem.out.println(\"Active window: \" + activeWindow);\nvar activePage = activeWindow != null ? activeWindow.getActivePage() : null;\nSystem.out.println(\"Active page: \" + activePage);"));
 		infos.put("display", new JShellBindingDescription("Eclipse display instance",
-			"display.asyncExec(() -> {\n    // UI operations here\n    System.out.println(\"UI Thread: \" + Display.getCurrent());\n});"));
+            "String[] result = new String[1];\ndisplay.syncExec(() -> {\n    result[0] = Display.getCurrent().toString();\n});\nSystem.out.println(\"UI Thread: \" + result[0]);"));
 		return infos;
 	}
 

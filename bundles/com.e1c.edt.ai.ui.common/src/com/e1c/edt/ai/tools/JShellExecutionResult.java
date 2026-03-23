@@ -13,9 +13,6 @@ class JShellExecutionResult
 	@SerializedName("repl_session_id")
 	public String sessionId;
 
-	@SerializedName("return_value")
-	public String returnValue;
-
 	@SerializedName("std_out")
 	public String stdOut;
 

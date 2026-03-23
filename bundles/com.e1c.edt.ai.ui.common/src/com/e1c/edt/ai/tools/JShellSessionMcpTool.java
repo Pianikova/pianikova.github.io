@@ -138,21 +138,31 @@ public class JShellSessionMcpTool
 
 		var description = new StringBuilder();
 		description.append("Creates a new JShell REPL session or returns information about an existing session.");
-		description.append("\n\nUsage:");
-		description.append("\n- Arguments must be a single JSON object.");
-		description.append("\n- If `repl_session_id` is not provided, a new session will be created.");
-		description.append("\n- If `repl_session_id` is provided, returns information about the existing session.");
-		description.append("\n- Returns session ID, available bindings, and execution history.");
+		description.append("\n\n**Purpose:**");
+		description.append("\n- JShell provides access to Eclipse API");
+		description.append("\n- Use when you need to perform Eclipse-specific operations not available via other tools");
+		description.append("\n- Session preserves state between JShell calls");
 
-		// Add bindings information
+		description.append("\n\n**When to use:**");
+		description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" tool (required)");
+		description.append("\n- To check available bindings and execution history");
+		description.append("\n- To get session info for existing session");
+
+		description.append("\n\n**Usage:**");
+		description.append("\n- If `repl_session_id` is not provided → creates NEW session");
+		description.append("\n- If `repl_session_id` is provided → returns info about EXISTING session");
+		description.append("\n- Returns: session ID, available bindings, execution history");
+
+		description.append("\n\n### Available bindings:");
+		description.append("\nPre-configured Eclipse objects available in JShell sessions:");
 		if (!bindingProviders.isEmpty())
 		{
-			description.append("\n\n### Available bindings:");
 			for (var provider : bindingProviders)
 			{
 				var infos = provider.getBindingInfos();
 				if (!infos.isEmpty())
 				{
+					description.append("\n");
 					for (var entry : infos.entrySet())
 					{
 						String bindingName = entry.getKey();
@@ -160,12 +170,11 @@ public class JShellSessionMcpTool
 						String bindingDesc = bindingInfo.getDescription();
 						String bindingExample = bindingInfo.getExample();
 
-						description.append("\n\n**`").append(bindingName).append("`**");
-						description.append("\n- ").append(bindingDesc);
+						description.append("\n**`").append(bindingName).append("`**");
+						description.append("\n").append(bindingDesc);
 
 						if (bindingExample != null && !bindingExample.isEmpty())
 						{
-							description.append("\n- **Example usage:**");
 							description.append("\n```java\n").append(bindingExample).append("\n```");
 						}
 					}
@@ -173,9 +182,13 @@ public class JShellSessionMcpTool
 			}
 		}
 
-		description.append("\n\nExample:");
-		description.append("\n  Q: ").append(QuestionExample);
+		description.append("\n\n**Parameter:**");
+		description.append("\n- `repl_session_id` (optional): Session ID. If not provided, creates new session.");
+
+		description.append("\n\n**Examples:**");
+		description.append("\n  Create new session: Q: {}");
 		description.append("\n  A: ").append(AnswerExample);
+		description.append("\n  Get existing session: Q: {\"repl_session_id\": \"uuid-123\"}");
 
 		spec.function.description = description.toString();
 

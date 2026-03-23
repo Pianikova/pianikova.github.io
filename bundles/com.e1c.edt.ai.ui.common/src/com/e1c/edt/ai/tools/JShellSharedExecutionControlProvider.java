@@ -24,14 +24,14 @@ import jdk.jshell.spi.ExecutionControlProvider;
 import jdk.jshell.spi.ExecutionControl.RunException;
 import jdk.jshell.spi.ExecutionEnv;
 
-public final class SharedExecutionControlProvider
+public final class JShellSharedExecutionControlProvider
     implements ExecutionControlProvider
 {
     private final ClassLoader parent;
     private ByteArrayOutputStream outBuffer;
     private ByteArrayOutputStream errBuffer;
 
-    public SharedExecutionControlProvider(ClassLoader parent)
+    public JShellSharedExecutionControlProvider(ClassLoader parent)
     {
         this.parent = parent;
         this.outBuffer = null;
@@ -88,17 +88,11 @@ public final class SharedExecutionControlProvider
                 for (int i = 0; i < cbcs.length; ++i)
                 {
                     ExecutionControl.ClassBytecodes cbc = cbcs[i];
-                    try
-                    {
-                        Class<?> klass = loader.loadClass(cbc.name());
-                        klasses.put(cbc.name(), klass);
-                        loaded[i] = true;
-                        klass.getDeclaredMethods();
-                    }
-                    catch (NoClassDefFoundError | ClassNotFoundException e)
-                    {
-                        // System.err.println("Cannot load class " + cbc.name() + ": " + e.getMessage());
-                    }
+                    Class<?> klass = loader.loadClass(cbc.name());
+                    klasses.put(cbc.name(), klass);
+                    loaded[i] = true;
+                    // Force class preparation to surface linkage errors early.
+                    klass.getDeclaredMethods();
                 }
             }
             catch (Throwable ex)
@@ -173,6 +167,17 @@ public final class SharedExecutionControlProvider
                     return loadedClass;
                 }
 
+                byte[] bytes = classBytes.get(name);
+                if (bytes != null)
+                {
+                    loadedClass = defineClass(name, bytes, 0, bytes.length);
+                    if (resolve)
+                    {
+                        resolveClass(loadedClass);
+                    }
+                    return loadedClass;
+                }
+
                 try
                 {
                     loadedClass = osgiClassLoader.loadClass(name);
@@ -188,17 +193,6 @@ public final class SharedExecutionControlProvider
                 catch (ClassNotFoundException e)
                 {
                     //
-                }
-
-                byte[] bytes = classBytes.get(name);
-                if (bytes != null)
-                {
-                    loadedClass = defineClass(name, bytes, 0, bytes.length);
-                    if (resolve)
-                    {
-                        resolveClass(loadedClass);
-                    }
-                    return loadedClass;
                 }
 
                 return super.loadClass(name, resolve);
@@ -282,7 +276,24 @@ public final class SharedExecutionControlProvider
         public void load(ClassBytecodes[] cbcs)
                 throws ClassInstallException, NotImplementedException, EngineTerminationException
         {
-            delegate.load(cbcs);
+            synchronized(GLOBAL_STREAM_LOCK)
+            {
+                PrintStream originalOut = System.out;
+                PrintStream originalErr = System.err;
+
+                try
+                {
+                    System.setOut(new PrintStream(outBuffer, true));
+                    System.setErr(new PrintStream(errBuffer, true));
+
+                    delegate.load(cbcs);
+                }
+                finally
+                {
+                    System.setOut(originalOut);
+                    System.setErr(originalErr);
+                }
+            }
         }
 
         @Override
