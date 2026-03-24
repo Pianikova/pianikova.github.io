@@ -3,24 +3,36 @@ package com.e1c.edt.ai.tools;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 public class BlockAnchorReplacer implements IReplacementStrategy
 {
 	private static final double SINGLE_CANDIDATE_SIMILARITY_THRESHOLD = 0.0;
 	private static final double MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD = 0.3;
 
+	private final IReplacements replacements;
+
+	@Inject
+	public BlockAnchorReplacer(IReplacements replacements)
+	{
+		Preconditions.checkNotNull(replacements);
+		this.replacements = replacements;
+	}
+
 	@Override
 	public Iterable<String> findCandidates(String content, String find)
 	{
 		List<String> matches = new ArrayList<>();
-		String[] originalLines = ReplacementStrategyUtils.splitLines(content);
-		String[] searchLines = ReplacementStrategyUtils.splitLines(find);
+		String[] originalLines = replacements.splitLines(content);
+		String[] searchLines = replacements.splitLines(find);
 
 		if (searchLines.length < 3)
 		{
 			return matches;
 		}
 
-		searchLines = ReplacementStrategyUtils.removeTrailingEmptyLine(searchLines);
+		searchLines = replacements.removeTrailingEmptyLine(searchLines);
 		if (searchLines.length == 0)
 		{
 			return matches;
@@ -58,7 +70,7 @@ public class BlockAnchorReplacer implements IReplacementStrategy
 			Candidate candidate = candidates.get(0);
 			if (isSingleCandidateAccepted(candidate, originalLines, searchLines, searchBlockSize))
 			{
-				matches.add(ReplacementStrategyUtils.blockByLineRange(content, originalLines, candidate.startLine,
+				matches.add(replacements.blockByLineRange(content, originalLines, candidate.startLine,
 					candidate.endLine));
 			}
 			return matches;
@@ -78,7 +90,7 @@ public class BlockAnchorReplacer implements IReplacementStrategy
 
 		if (bestMatch != null && maxSimilarity >= MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD)
 		{
-			matches.add(ReplacementStrategyUtils.blockByLineRange(content, originalLines, bestMatch.startLine,
+			matches.add(replacements.blockByLineRange(content, originalLines, bestMatch.startLine,
 				bestMatch.endLine));
 		}
 

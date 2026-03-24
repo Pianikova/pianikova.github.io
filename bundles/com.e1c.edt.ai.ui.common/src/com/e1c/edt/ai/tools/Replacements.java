@@ -2,18 +2,18 @@ package com.e1c.edt.ai.tools;
 
 import java.util.Arrays;
 
-final class ReplacementStrategyUtils
+public class Replacements
+    implements IReplacements
 {
-    private ReplacementStrategyUtils()
-    {
-    }
 
-    static String[] splitLines(String text)
+    @Override
+    public String[] splitLines(String text)
     {
         return text.split("\n", -1); //$NON-NLS-1$
     }
 
-    static String[] removeTrailingEmptyLine(String[] lines)
+    @Override
+    public String[] removeTrailingEmptyLine(String[] lines)
     {
         if (lines.length == 0)
         {
@@ -28,7 +28,8 @@ final class ReplacementStrategyUtils
         return lines;
     }
 
-    static String blockByLineRange(String content, String[] lines, int startLine, int endLine)
+    @Override
+    public String blockByLineRange(String content, String[] lines, int startLine, int endLine)
     {
         int startIndex = 0;
         for (int i = 0; i < startLine; i++)

@@ -3,8 +3,20 @@ package com.e1c.edt.ai.tools;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 public class EscapeNormalizedReplacer implements IReplacementStrategy
 {
+	private final IReplacements replacements;
+
+	@Inject
+	public EscapeNormalizedReplacer(IReplacements replacements)
+	{
+		Preconditions.checkNotNull(replacements);
+		this.replacements = replacements;
+	}
+
 	@Override
 	public Iterable<String> findCandidates(String content, String find)
 	{
@@ -16,8 +28,8 @@ public class EscapeNormalizedReplacer implements IReplacementStrategy
 			matches.add(unescapedFind);
 		}
 
-		String[] lines = ReplacementStrategyUtils.splitLines(content);
-		String[] findLines = ReplacementStrategyUtils.splitLines(unescapedFind);
+		String[] lines = replacements.splitLines(content);
+		String[] findLines = replacements.splitLines(unescapedFind);
 
 		for (int i = 0; i <= lines.length - findLines.length; i++)
 		{

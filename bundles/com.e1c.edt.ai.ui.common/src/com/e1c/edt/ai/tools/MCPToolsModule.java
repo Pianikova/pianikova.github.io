@@ -57,6 +57,7 @@ public class MCPToolsModule
         bind(IJShellClassPathProvider.class).to(JShellClassPathProvider.class).in(Singleton.class);
         bind(IRestrictedTypesProvider.class).to(RestrictedTypesProvider.class).in(Singleton.class);
         bind(IRestrictedTypesValidator.class).to(RestrictedTypesValidator.class).in(Singleton.class);
+        bind(IReplacements.class).to(Replacements.class).in(Singleton.class);
         bind(IContentReplacer.class).to(ContentReplacer.class).in(Singleton.class);
 
         // Replacement strategies

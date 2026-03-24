@@ -9,10 +9,12 @@ import org.junit.Test;
 @SuppressWarnings("nls")
 public class EscapeNormalizedReplacerTest
 {
+    private final IReplacements replacements = new Replacements();
+
     @Test
     public void shouldMatchEscapedNewlineSequence()
     {
-        IReplacementStrategy replacer = new EscapeNormalizedReplacer();
+        IReplacementStrategy replacer = new EscapeNormalizedReplacer(replacements);
         String content = "line1\nline2";
 
         List<String> candidates = ReplacementStrategyTestUtils.toList(replacer.findCandidates(content, "line1\\nline2"));
@@ -24,7 +26,7 @@ public class EscapeNormalizedReplacerTest
     @Test
     public void shouldReturnNoCandidatesWhenEscapedValueIsNotPresent()
     {
-        IReplacementStrategy replacer = new EscapeNormalizedReplacer();
+        IReplacementStrategy replacer = new EscapeNormalizedReplacer(replacements);
 
         List<String> candidates = ReplacementStrategyTestUtils.toList(replacer.findCandidates("A\nB", "A\\tB"));
 
@@ -34,7 +36,7 @@ public class EscapeNormalizedReplacerTest
     @Test
     public void shouldHandleEscapedTabInsideBlock()
     {
-        IReplacementStrategy replacer = new EscapeNormalizedReplacer();
+        IReplacementStrategy replacer = new EscapeNormalizedReplacer(replacements);
         String content = "X\nleft\tright\nY";
 
         List<String> candidates =

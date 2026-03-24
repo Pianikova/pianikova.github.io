@@ -5,17 +5,29 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 public class IndentationFlexibleReplacer implements IReplacementStrategy
 {
 	private static final Pattern LEADING_WHITESPACE_PATTERN = Pattern.compile("^(\\s*)"); //$NON-NLS-1$
+
+	private final IReplacements replacements;
+
+	@Inject
+	public IndentationFlexibleReplacer(IReplacements replacements)
+	{
+		Preconditions.checkNotNull(replacements);
+		this.replacements = replacements;
+	}
 
 	@Override
 	public Iterable<String> findCandidates(String content, String find)
 	{
 		List<String> matches = new ArrayList<>();
 		String normalizedFind = removeIndentation(find);
-		String[] contentLines = ReplacementStrategyUtils.splitLines(content);
-		String[] findLines = ReplacementStrategyUtils.splitLines(find);
+		String[] contentLines = replacements.splitLines(content);
+		String[] findLines = replacements.splitLines(find);
 
 		for (int i = 0; i <= contentLines.length - findLines.length; i++)
 		{
@@ -37,7 +49,7 @@ public class IndentationFlexibleReplacer implements IReplacementStrategy
 
 	private String removeIndentation(String text)
 	{
-		String[] lines = ReplacementStrategyUtils.splitLines(text);
+		String[] lines = replacements.splitLines(text);
 
 		int minIndent = Integer.MAX_VALUE;
 		boolean hasNonEmptyLines = false;

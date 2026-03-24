@@ -8,14 +8,26 @@ import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 public class WhitespaceNormalizedReplacer implements IReplacementStrategy
 {
+	private final IReplacements replacements;
+
+	@Inject
+	public WhitespaceNormalizedReplacer(IReplacements replacements)
+	{
+		Preconditions.checkNotNull(replacements);
+		this.replacements = replacements;
+	}
+
 	@Override
 	public Iterable<String> findCandidates(String content, String find)
 	{
 		List<String> matches = new ArrayList<>();
 		String normalizedFind = normalizeWhitespace(find);
-		String[] lines = ReplacementStrategyUtils.splitLines(content);
+		String[] lines = replacements.splitLines(content);
 
 		for (String line : lines)
 		{
@@ -49,7 +61,7 @@ public class WhitespaceNormalizedReplacer implements IReplacementStrategy
 			}
 		}
 
-		String[] findLines = ReplacementStrategyUtils.splitLines(find);
+		String[] findLines = replacements.splitLines(find);
 		if (findLines.length > 1)
 		{
 			for (int i = 0; i <= lines.length - findLines.length; i++)

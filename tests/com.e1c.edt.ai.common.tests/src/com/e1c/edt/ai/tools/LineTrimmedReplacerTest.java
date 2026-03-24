@@ -10,10 +10,12 @@ import org.junit.Test;
 @SuppressWarnings("nls")
 public class LineTrimmedReplacerTest
 {
+    private final IReplacements replacements = new Replacements();
+
     @Test
     public void shouldMatchIgnoringBoundaryWhitespacePerLine()
     {
-        IReplacementStrategy replacer = new LineTrimmedReplacer();
+        IReplacementStrategy replacer = new LineTrimmedReplacer(replacements);
         String content = "A\n  target  \nB";
 
         List<String> candidates = ReplacementStrategyTestUtils.toList(replacer.findCandidates(content, "target"));
@@ -25,7 +27,7 @@ public class LineTrimmedReplacerTest
     @Test
     public void shouldReturnNoCandidatesWhenTrimmedLinesDoNotMatch()
     {
-        IReplacementStrategy replacer = new LineTrimmedReplacer();
+        IReplacementStrategy replacer = new LineTrimmedReplacer(replacements);
 
         List<String> candidates = ReplacementStrategyTestUtils.toList(replacer.findCandidates("A\nB\nC", "X\nY"));
 
@@ -35,7 +37,7 @@ public class LineTrimmedReplacerTest
     @Test
     public void shouldHandleMultilineBlockWithTrailingNewline()
     {
-        IReplacementStrategy replacer = new LineTrimmedReplacer();
+        IReplacementStrategy replacer = new LineTrimmedReplacer(replacements);
         String content = "start\n  one\n two \nend";
 
         List<String> candidates = ReplacementStrategyTestUtils.toList(replacer.findCandidates(content, "one\ntwo\n"));

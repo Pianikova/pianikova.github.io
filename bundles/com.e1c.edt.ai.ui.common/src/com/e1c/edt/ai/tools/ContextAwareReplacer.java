@@ -3,26 +3,38 @@ package com.e1c.edt.ai.tools;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 public class ContextAwareReplacer implements IReplacementStrategy
 {
+	private final IReplacements replacements;
+
+	@Inject
+	public ContextAwareReplacer(IReplacements replacements)
+	{
+		Preconditions.checkNotNull(replacements);
+		this.replacements = replacements;
+	}
+
 	@Override
 	public Iterable<String> findCandidates(String content, String find)
 	{
 		List<String> matches = new ArrayList<>();
 
-		String[] findLines = ReplacementStrategyUtils.splitLines(find);
+		String[] findLines = replacements.splitLines(find);
 		if (findLines.length < 3)
 		{
 			return matches;
 		}
 
-		findLines = ReplacementStrategyUtils.removeTrailingEmptyLine(findLines);
+		findLines = replacements.removeTrailingEmptyLine(findLines);
 		if (findLines.length == 0)
 		{
 			return matches;
 		}
 
-		String[] contentLines = ReplacementStrategyUtils.splitLines(content);
+		String[] contentLines = replacements.splitLines(content);
 		String firstLine = findLines[0].trim();
 		String lastLine = findLines[findLines.length - 1].trim();
 

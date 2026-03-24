@@ -790,8 +790,11 @@ public class ContentReplacerTest
 
     private ContentReplacer createContentReplacer()
     {
-        return new ContentReplacer(Set.of(new SimpleReplacer(), new LineTrimmedReplacer(), new BlockAnchorReplacer(),
-            new WhitespaceNormalizedReplacer(), new IndentationFlexibleReplacer(), new EscapeNormalizedReplacer(),
-            new TrimmedBoundaryReplacer(), new ContextAwareReplacer(), new MultiOccurrenceReplacer()));
+        IReplacements replacements = new Replacements();
+        return new ContentReplacer(Set.of(new SimpleReplacer(), new LineTrimmedReplacer(replacements),
+            new BlockAnchorReplacer(replacements), new WhitespaceNormalizedReplacer(replacements),
+            new IndentationFlexibleReplacer(replacements), new EscapeNormalizedReplacer(replacements),
+            new TrimmedBoundaryReplacer(replacements), new ContextAwareReplacer(replacements),
+            new MultiOccurrenceReplacer()));
     }
 }

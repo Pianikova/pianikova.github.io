@@ -10,10 +10,12 @@ import org.junit.Test;
 @SuppressWarnings("nls")
 public class TrimmedBoundaryReplacerTest
 {
+    private final IReplacements replacements = new Replacements();
+
     @Test
     public void shouldMatchWhenFindHasOuterSpaces()
     {
-        IReplacementStrategy replacer = new TrimmedBoundaryReplacer();
+        IReplacementStrategy replacer = new TrimmedBoundaryReplacer(replacements);
         String content = "before target after";
 
         List<String> candidates = ReplacementStrategyTestUtils.toList(replacer.findCandidates(content, "  target  "));
@@ -25,7 +27,7 @@ public class TrimmedBoundaryReplacerTest
     @Test
     public void shouldReturnNoCandidatesWhenFindAlreadyTrimmed()
     {
-        IReplacementStrategy replacer = new TrimmedBoundaryReplacer();
+        IReplacementStrategy replacer = new TrimmedBoundaryReplacer(replacements);
 
         List<String> candidates = ReplacementStrategyTestUtils.toList(replacer.findCandidates("target", "target"));
 
@@ -35,7 +37,7 @@ public class TrimmedBoundaryReplacerTest
     @Test
     public void shouldMatchTrimmedMultilineBlock()
     {
-        IReplacementStrategy replacer = new TrimmedBoundaryReplacer();
+        IReplacementStrategy replacer = new TrimmedBoundaryReplacer(replacements);
         String content = "A\n  block line\n  next line\nB";
         String find = "  block line\n  next line\n";
 
