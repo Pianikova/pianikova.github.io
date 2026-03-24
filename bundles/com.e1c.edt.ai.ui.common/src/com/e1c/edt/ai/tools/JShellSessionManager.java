@@ -25,7 +25,7 @@ import jdk.jshell.JShell;
 class JShellSessionManager
 	implements IJShellSessionManager
 {
-	private final Cache<String, JShellSession> cache;
+    private final Cache<Integer, JShellSession> cache;
 	private final ILog log;
 	private final Set<IJShellBindingProvider> bindingProviders;
     private final IRestrictedTypesValidator restrictedTypesValidator;
@@ -60,9 +60,9 @@ class JShellSessionManager
 	}
 
 	@Override
-	public IJShellSession getOrCreateSession(String sessionId)
+    public IJShellSession getOrCreateSession(int sessionId)
 	{
-		if (sessionId == null || sessionId.isBlank())
+        if (sessionId == 0)
 		{
 			// Create new session
 			return createSession();
@@ -80,9 +80,9 @@ class JShellSessionManager
 	}
 
     @Override
-    public IJShellSession getSession(String sessionId)
+    public IJShellSession getSession(int sessionId)
     {
-        if (sessionId == null || sessionId.isBlank())
+        if (sessionId == 0)
         {
             return null;
         }
@@ -144,14 +144,15 @@ class JShellSessionManager
 			{
 				try
 				{
-                    int objectId = JShellObjectBridge.store(session.getSessionId(), entry.getValue());
+                    var objectId = JShellObjectBridge.store(session.getSessionId(), entry.getValue());
                     var value = entry.getValue();
                     var type = value.getClass();
                     var className = type.getName();
                     var varName = entry.getKey();
                     classPathProvider.addClassPathFor(shell, type);
-                    var bindCode = String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(%d);",
-                        className, varName, className, objectId);
+                    var bindCode =
+                        String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(%d, %d);",
+                            className, varName, className, session.getSessionId(), objectId);
                     var result = session.execute(bindCode);
                     if (!result.compilationErrors.isEmpty() || !result.runtimeErrors.isEmpty())
                     {
@@ -172,7 +173,7 @@ class JShellSessionManager
 	}
 
 	@Override
-	public void invalidateSession(String sessionId)
+    public void invalidateSession(int sessionId)
 	{
 		cache.invalidate(sessionId);
 	}

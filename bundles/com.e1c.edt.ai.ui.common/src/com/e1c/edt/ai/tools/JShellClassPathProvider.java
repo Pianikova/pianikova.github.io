@@ -3,17 +3,19 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.framework.wiring.BundleWire;
 
 import com.e1c.edt.ai.ILog;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -31,6 +33,7 @@ class JShellClassPathProvider
 	@Inject
 	public JShellClassPathProvider(ILog log)
 	{
+        Preconditions.checkNotNull(log);
 		this.log = log;
 	}
 
@@ -77,13 +80,12 @@ class JShellClassPathProvider
 				for (var bundle : bundles)
 				{
 					addBundleClassPathWithDependencies(shell, bundle, addedBundles);
-				}
-				log.logError("Added " + addedBundles.size() + " bundles to JShell classpath");
+                }
 			}
 		}
 		catch (Exception e)
 		{
-			log.logError("Failed to add all bundle classpaths: " + e.getMessage());
+            log.logError("Failed to add all bundle classpaths: " + e.getMessage()); //$NON-NLS-1$
 		}
 	}
 
@@ -137,7 +139,7 @@ class JShellClassPathProvider
 		}
 		catch (Exception e)
 		{
-			log.logError("Failed to add bundle classpath for " + bundle.getSymbolicName() + ": " + e.getMessage());
+            log.logError("Failed to add bundle classpath for " + bundle.getSymbolicName() + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 
@@ -145,20 +147,20 @@ class JShellClassPathProvider
 	{
 		try
 		{
-			BundleWiring bundleWiring = bundle.adapt(BundleWiring.class);
+            var bundleWiring = bundle.adapt(BundleWiring.class);
 			if (bundleWiring == null)
 			{
 				return;
 			}
 
 			// Get all required wires (dependencies) using standard OSGi API
-			java.util.List<BundleWire> requiredWires = bundleWiring.getRequiredWires("osgi.wiring.bundle");
+            var requiredWires = bundleWiring.getRequiredWires("osgi.wiring.bundle"); //$NON-NLS-1$
 			if (requiredWires != null)
 			{
-				for (BundleWire wire : requiredWires)
+                for (var wire : requiredWires)
 				{
 					// Get the provider bundle from the wire
-					BundleWiring providerWiring = wire.getProviderWiring();
+                    var providerWiring = wire.getProviderWiring();
 					if (providerWiring != null)
 					{
 						Bundle providerBundle = providerWiring.getBundle();
@@ -172,12 +174,12 @@ class JShellClassPathProvider
 		}
 		catch (Exception e)
 		{
-			log.logError("Failed to add wiring dependencies for " + bundle.getSymbolicName() + ": " + e.getMessage());
+            log.logError("Failed to add wiring dependencies for " + bundle.getSymbolicName() + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 	}
 
 	@SuppressWarnings("nls")
-	private void addBinIfPresent(JShell shell, java.nio.file.Path root)
+    private void addBinIfPresent(JShell shell, Path root)
 	{
 		try
 		{
@@ -186,9 +188,9 @@ class JShellClassPathProvider
 				return;
 			}
 
-			java.nio.file.Path candidate = root;
+            var candidate = root;
 
-			if (java.nio.file.Files.isRegularFile(root))
+            if (Files.isRegularFile(root))
 			{
 				return;
 			}

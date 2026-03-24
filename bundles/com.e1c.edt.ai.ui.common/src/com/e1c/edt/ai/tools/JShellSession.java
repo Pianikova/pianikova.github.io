@@ -6,8 +6,8 @@ package com.e1c.edt.ai.tools;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ToolErrorType;
@@ -23,13 +23,14 @@ import jdk.jshell.SnippetEvent;
 class JShellSession
     implements IJShellSession
 {
-	private final String sessionId;
+	private final int sessionId;
 	private final JShell shell;
 	private final ByteArrayOutputStream outBuffer;
 	private final ByteArrayOutputStream errBuffer;
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final List<String> executionHistory = new ArrayList<>();
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
+    private static final AtomicInteger sessionCounter = new AtomicInteger(0);
 
     JShellSession(JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
         IRestrictedTypesValidator restrictedTypesValidator)
@@ -39,7 +40,7 @@ class JShellSession
         Preconditions.checkNotNull(errBuffer);
         Preconditions.checkNotNull(restrictedTypesValidator);
 
-		this.sessionId = UUID.randomUUID().toString();
+		this.sessionId = sessionCounter.incrementAndGet();
 		this.shell = shell;
 		this.outBuffer = outBuffer;
 		this.errBuffer = errBuffer;
@@ -47,7 +48,7 @@ class JShellSession
 	}
 
 	@Override
-    public String getSessionId()
+    public int getSessionId()
 	{
 		return sessionId;
 	}

@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.util.List;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
@@ -11,7 +13,7 @@ import com.google.gson.annotations.SerializedName;
 class JShellExecutionResult
 {
 	@SerializedName("repl_session_id")
-	public String sessionId;
+    public int sessionId;
 
 	@SerializedName("std_out")
 	public String stdOut;
@@ -20,11 +22,11 @@ class JShellExecutionResult
 	public String stdErr;
 
 	@SerializedName("compilation_errors")
-    public java.util.List<CompilationError> compilationErrors;
+    public List<CompilationError> compilationErrors;
 
     @SerializedName("runtime_errors")
-    public java.util.List<RuntimeError> runtimeErrors;
+    public List<RuntimeError> runtimeErrors;
 
     @SerializedName("execution_history")
-    public java.util.List<String> executionHistory;
+    public List<String> executionHistory;
 }

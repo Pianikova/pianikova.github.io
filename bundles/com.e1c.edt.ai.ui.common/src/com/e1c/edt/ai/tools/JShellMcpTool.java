@@ -35,10 +35,10 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-        "{\"code\":\"var result = new String[1];\\ndisplay.syncExec(() -> { result[0] = \\\"Thread result\\\"; });\\nSystem.out.println(result[0]);\",\"repl_session_id\":\"uuid-123\"}"; //$NON-NLS-1$
+        "{\"code\":\"var result = new String[1];\\ndisplay.syncExec(() -> { result[0] = \\\"Thread result\\\"; });\\nSystem.out.println(result[0]);\",\"repl_session_id\":123}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
-        "{\"return_value\":null,\"repl_session_id\":\"uuid-123\",\"std_out\":\"Thread result\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
+        "{\"return_value\":null,\"repl_session_id\":123,\"std_out\":\"Thread result\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
@@ -123,7 +123,7 @@ public class JShellMcpTool
 
 		try
 		{
-			IJShellSession session = sessions.getSession(request.sessionId);
+            var session = sessions.getSession(request.sessionId);
 			if (session == null)
 			{
 				throw new ToolException(
@@ -158,7 +158,6 @@ public class JShellMcpTool
 	private String buildResponseMarkdown(String code, JShellExecutionResult result)
 	{
 		var md = new StringBuilder();
-
 		if (!result.compilationErrors.isEmpty())
 		{
 			md.append(Messages.JShellErrorTemplate);
@@ -169,9 +168,7 @@ public class JShellMcpTool
 		}
 
 		md.append("\n\n");
-
 		md.append("```java\n").append(code).append("\n```\n");
-
 		if (result.stdOut != null && !result.stdOut.isEmpty())
 		{
 			md.append(markdownUtils.escapeForMarkdown(result.stdOut));
@@ -243,7 +240,7 @@ public class JShellMcpTool
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();
-		sessionIdProp.type = "string";
+        sessionIdProp.type = "integer";
 		sessionIdProp.description = "Session ID from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
 		properties.put("repl_session_id", sessionIdProp);
 
@@ -263,6 +260,6 @@ public class JShellMcpTool
 		public String code;
 
 		@SerializedName("repl_session_id")
-		public String sessionId;
+        public int sessionId;
 	}
 }

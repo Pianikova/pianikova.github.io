@@ -31,10 +31,8 @@ public class JShellSessionMcpTool
 {
 	public static final String TOOL_NAME = "JShellSession"; //$NON-NLS-1$
 
-	private static final String QuestionExample = "{}"; //$NON-NLS-1$
-
 	private static final String AnswerExample =
-        "{\"repl_session_id\":\"uuid-123\",\"available_bindings\":[\"workbench\"]}"; //$NON-NLS-1$
+        "{\"repl_session_id\":123,\"available_bindings\":[\"workbench\"]}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
@@ -70,32 +68,22 @@ public class JShellSessionMcpTool
 		return spec;
 	}
 
-	@SuppressWarnings("nls")
 	@Override
 	public CompletableFuture<ToolCallMessage> call(McpToolCall call, ICancellationToken cancellationToken)
 	{
 		var details = new ToolCallMessageDetails();
 		details.autoCall = false;
-
-		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
-		if (optionalRequest.isEmpty())
-		{
-			throw new ToolException("Cannot deserialize arguments. Use this example: " + QuestionExample);
-		}
-
-		var request = optionalRequest.get();
-
-		if (call.callKind == ToolCallKind.RENDER)
+        if (call.callKind == ToolCallKind.RENDER)
 		{
             details.requestMarkdown = Messages.JShellSessionCreating;
 			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
 
-        return CompletableFuture.supplyAsync(() -> createSession(request, call, details, cancellationToken));
+        return CompletableFuture.supplyAsync(() -> createSession(call, details, cancellationToken));
 	}
 
 	@SuppressWarnings("nls")
-	private ToolCallMessage createSession(Request request, McpToolCall call, ToolCallMessageDetails details,
+    private ToolCallMessage createSession(McpToolCall call, ToolCallMessageDetails details,
 		ICancellationToken cancellationToken)
 	{
 		if (cancellationToken.isCanceled())
@@ -105,7 +93,7 @@ public class JShellSessionMcpTool
 
 		try
 		{
-			IJShellSession session = sessions.getOrCreateSession(request.sessionId);
+            IJShellSession session = sessions.getOrCreateSession(0);
 
 			SessionResult result = new SessionResult();
 			result.sessionId = session.getSessionId();
@@ -137,7 +125,7 @@ public class JShellSessionMcpTool
 		spec.function.name = TOOL_NAME;
 
 		var description = new StringBuilder();
-		description.append("Creates a new JShell REPL session or returns information about an existing session.");
+        description.append("Creates a new JShell REPL session.");
 		description.append("\n\n**Purpose:**");
 		description.append("\n- JShell provides access to Eclipse API");
 		description.append("\n- Use when you need to perform Eclipse-specific operations not available via other tools");
@@ -188,7 +176,7 @@ public class JShellSessionMcpTool
 		description.append("\n\n**Examples:**");
 		description.append("\n  Create new session: Q: {}");
 		description.append("\n  A: ").append(AnswerExample);
-		description.append("\n  Get existing session: Q: {\"repl_session_id\": \"uuid-123\"}");
+		description.append("\n  Get existing session: Q: {\"repl_session_id\": 123}");
 
 		spec.function.description = description.toString();
 
@@ -197,9 +185,9 @@ public class JShellSessionMcpTool
 		var properties = new HashMap<String, McpToolCallProperty>();
 
 		var sessionIdProp = new McpToolCallProperty();
-		sessionIdProp.type = "string";
+		sessionIdProp.type = "integer";
 		sessionIdProp.description =
-			"Optional session ID. If not provided, a new session will be created. If provided, returns info about the existing session.";
+			"Optional session ID. If 0 or not provided, a new session will be created. If provided, returns info about the existing session.";
 		properties.put("repl_session_id", sessionIdProp);
 
 		parameters.properties = properties;
@@ -210,16 +198,10 @@ public class JShellSessionMcpTool
 		return spec;
 	}
 
-	private static class Request
+    private static class SessionResult
 	{
 		@SerializedName("repl_session_id")
-		public String sessionId;
-	}
-
-	private static class SessionResult
-	{
-		@SerializedName("repl_session_id")
-		public String sessionId;
+		public int sessionId;
 
 		@SerializedName("available_bindings")
 		public ArrayList<String> availableBindings;
