@@ -160,7 +160,7 @@ public class DeleteMcpTool
                     response.append(
                         "⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
-                    var changes = markdownUtils.createStyledText("-1", TextColor.RED, FontWeight.BOLD);
+                    var changes = markdownUtils.createStyledText("-1", TextColor.RED, FontWeight.BOLD, true);
                     details.responseMarkdown =
                         MessageFormat.format(Messages.DeletedTemplate, markdownUtils.formatFilePath(path), changes);
 
@@ -234,7 +234,7 @@ public class DeleteMcpTool
 
                 // Add response markdown
                 var changes = new StringBuilder();
-                changes.append(markdownUtils.createStyledText(Messages.Deleted, TextColor.RED, FontWeight.BOLD));
+                changes.append(markdownUtils.createStyledText(Messages.Deleted, TextColor.RED, FontWeight.BOLD, true));
                 details.responseMarkdown =
                     MessageFormat.format(Messages.DeletedTemplate, markdownUtils.formatFilePath(path), changes);
 

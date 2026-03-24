@@ -293,7 +293,8 @@ public class FindMcpTool
                 // Add response markdown
                 int objectCount = response.size();
                 String styledObjectCount =
-                    markdownUtils.createStyledText(String.valueOf(objectCount), TextColor.GREEN, FontWeight.BOLD);
+                    markdownUtils.createStyledText(String.valueOf(objectCount), TextColor.GREEN, FontWeight.BOLD,
+                        false);
                 details.responseMarkdown = MessageFormat.format(Messages.Found1CObjectsTemplate, styledObjectCount);
                 details.hideAfter = response.size() == 0;
                 return messageFactory.createMessage(this, call, content, details);

@@ -92,6 +92,15 @@ public class Messages
     public static String CommandsLoadedTemplate;
     public static String ExecuteCommandTitle;
 
+    // JShell operations
+    public static String JShellExecutingTemplate;
+    public static String JShellExecutedTemplate;
+    public static String JShellErrorTemplate;
+    public static String JShellSessionCreated;
+    public static String JShellSessionCodeHistory;
+    public static String JShellAvailableBindings;
+    public static String JShellSessionCreating;
+
     // Marker operations
     public static String MarkersTitle;
     public static String MarkersLoadedTemplate;

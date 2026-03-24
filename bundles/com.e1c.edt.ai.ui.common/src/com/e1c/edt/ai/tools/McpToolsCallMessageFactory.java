@@ -197,18 +197,18 @@ public class McpToolsCallMessageFactory
 
         if (iconEnd <= 0)
         {
-            return markdownUtils.createStyledText(status, color, FontWeight.NORMAL, 0.3);
+            return markdownUtils.createStyledText(status, color, FontWeight.NORMAL, true, 0.3);
         }
 
         var icon = status.substring(0, iconEnd);
         var rest = status.substring(iconEnd);
-        var styledIcon = markdownUtils.createStyledText(icon, color, FontWeight.NORMAL, 0.3);
+        var styledIcon = markdownUtils.createStyledText(icon, color, FontWeight.NORMAL, true, 0.3);
         if (!dimText)
         {
             return styledIcon + rest;
         }
 
-        var styledRest = markdownUtils.createStyledText(rest, null, FontWeight.NORMAL, 0.3);
+        var styledRest = markdownUtils.createStyledText(rest, null, FontWeight.NORMAL, true, 0.3);
         return styledIcon + styledRest;
     }
 

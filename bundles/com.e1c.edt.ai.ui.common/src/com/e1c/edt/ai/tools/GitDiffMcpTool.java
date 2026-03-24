@@ -249,22 +249,26 @@ public class GitDiffMcpTool
 					if (oldCommit != null && newCommit != null)
 					{
 						diffType = MessageFormat.format(Messages.GitCommitDiffTemplate,
-                            markdownUtils.createStyledText(oldCommit.substring(0, Math.min(8, oldCommit.length())),
-                                TextColor.BLUE, FontWeight.NORMAL),
-                            markdownUtils.createStyledText(newCommit.substring(0, Math.min(8, newCommit.length())),
-                                TextColor.BLUE, FontWeight.NORMAL),
+                            markdownUtils.createStyledText(
+                                oldCommit.substring(0, Math.min(8, oldCommit.length())), TextColor.BLUE,
+                                FontWeight.NORMAL, true),
+                            markdownUtils.createStyledText(
+                                newCommit.substring(0, Math.min(8, newCommit.length())), TextColor.BLUE,
+                                FontWeight.NORMAL, true),
 							markdownUtils.escapeForMarkdown(projectName));
 					}
 					else if (uncommittedChanges)
 					{
 						diffType = MessageFormat.format(Messages.GitUncommittedDiffTemplate,
-							markdownUtils.createStyledText(String.valueOf(contextLines), TextColor.GREEN, FontWeight.BOLD),
+                            markdownUtils.createStyledText(String.valueOf(contextLines), TextColor.GREEN,
+                                FontWeight.BOLD, false),
 							markdownUtils.escapeForMarkdown(projectName));
 					}
 					else
 					{
 						diffType = MessageFormat.format(Messages.GitDiffFoundTemplate,
-							markdownUtils.createStyledText(String.valueOf(contextLines), TextColor.GREEN, FontWeight.BOLD),
+                            markdownUtils.createStyledText(String.valueOf(contextLines), TextColor.GREEN,
+                                FontWeight.BOLD, false),
 							markdownUtils.escapeForMarkdown(projectName));
 					}
 
@@ -277,8 +281,10 @@ public class GitDiffMcpTool
 					if (oldCommit != null && newCommit != null)
 					{
 						responseMarkdown.append(MessageFormat.format(Messages.NoGitCommitChangesTemplate,
-							markdownUtils.createStyledText(oldCommit.substring(0, Math.min(8, oldCommit.length())), TextColor.BLUE, FontWeight.BOLD),
-							markdownUtils.createStyledText(newCommit.substring(0, Math.min(8, newCommit.length())), TextColor.BLUE, FontWeight.BOLD)));
+                            markdownUtils.createStyledText(oldCommit.substring(0, Math.min(8, oldCommit.length())),
+                                TextColor.BLUE, FontWeight.BOLD, true),
+                            markdownUtils.createStyledText(newCommit.substring(0, Math.min(8, newCommit.length())),
+                                TextColor.BLUE, FontWeight.BOLD, true)));
 					}
 					else if (uncommittedChanges)
 					{

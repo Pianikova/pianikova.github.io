@@ -245,7 +245,8 @@ public class LocalHistoryMcpTool
 			// Build response markdown
 			var responseMarkdown = new StringBuilder();
 			responseMarkdown.append(MessageFormat.format(Messages.LocalHistoryFoundTemplate,
-				markdownUtils.createStyledText(String.valueOf(historyEntries.size()), TextColor.GREEN, FontWeight.BOLD),
+                    markdownUtils.createStyledText(String.valueOf(historyEntries.size()), TextColor.GREEN,
+                        FontWeight.BOLD, false),
 				markdownUtils.escapeForMarkdown(filePath),
 				markdownUtils.escapeForMarkdown(projectName)));
 
@@ -256,7 +257,8 @@ public class LocalHistoryMcpTool
 				for (var entry : historyEntries)
 				{
 					responseMarkdown.append("### **")
-						.append(markdownUtils.createStyledText(entry.revisionId, TextColor.BLUE, FontWeight.NORMAL))
+                            .append(markdownUtils.createStyledText(entry.revisionId, TextColor.BLUE, FontWeight.NORMAL,
+                                false))
 						.append("**")
 						.append(entry.isCurrent ? " " + Messages.Current : "")
 						.append(" - ")

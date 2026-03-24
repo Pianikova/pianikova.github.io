@@ -177,7 +177,7 @@ public class GlobMcpTool
 			var content = json.serialize(result);
 
             var styledItemsCount = markdownUtils.createStyledText(String.valueOf(result.stats.totalItems),
-                TextColor.GREEN, FontWeight.BOLD);
+                TextColor.GREEN, FontWeight.BOLD, false);
             details.responseMarkdown =
                 MessageFormat.format(Messages.GlobTemplate, markdownUtils.escapeForMarkdown(pattern), styledItemsCount);
 			details.hideAfter = result.stats.totalItems == 0;

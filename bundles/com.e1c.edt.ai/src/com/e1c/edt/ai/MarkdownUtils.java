@@ -76,14 +76,14 @@ public class MarkdownUtils implements IMarkdownUtils
     }
 
     @Override
-    public String createStyledText(String content, TextColor color, FontWeight weight)
+    public String createStyledText(String content, TextColor color, FontWeight weight, boolean escape)
     {
-        return createStyledText(content, color, weight, null);
+        return createStyledText(content, color, weight, escape, null);
     }
 
     @Override
     @SuppressWarnings("nls")
-    public String createStyledText(String content, TextColor color, FontWeight weight, Double opacity)
+    public String createStyledText(String content, TextColor color, FontWeight weight, boolean escape, Double opacity)
     {
         if (content == null)
         {
@@ -119,7 +119,8 @@ public class MarkdownUtils implements IMarkdownUtils
             return content;
         }
 
-        return String.format("<span style=\"%s\">%s</span>", style.toString(), escapeForMarkdown(content));
+        return String.format("<span style=\"%s\">%s</span>", style.toString(),
+            escape ? escapeForMarkdown(content) : content);
     }
 
     @Override
@@ -243,10 +244,6 @@ public class MarkdownUtils implements IMarkdownUtils
             {
                 omittedVisible = true;
             }
-        }
-
-        if (omittedContext && omittedVisible)
-        {
         }
 
         diff.append("</code></pre>");
@@ -424,7 +421,7 @@ public class MarkdownUtils implements IMarkdownUtils
     @SuppressWarnings("nls")
     private void appendStyledLine(StringBuilder diff, String content, TextColor color, String background)
     {
-        var styled = createStyledText(content, color, null);
+        var styled = createStyledText(content, color, null, false);
         if (background == null || background.isBlank())
         {
             diff.append(styled).append("\n");
