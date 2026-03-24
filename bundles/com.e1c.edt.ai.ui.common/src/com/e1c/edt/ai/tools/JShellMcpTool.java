@@ -35,10 +35,10 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-        "{\"code\":\"var result = new String[1];\\ndisplay.syncExec(() -> { result[0] = \\\"Thread result\\\"; });\\nSystem.out.println(result[0]);\",\"repl_session_id\":123}"; //$NON-NLS-1$
+        "{\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":123}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
-        "{\"return_value\":null,\"repl_session_id\":123,\"std_out\":\"Thread result\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
+        "{\"return_value\":null,\"repl_session_id\":123,\"std_out\":\"Active window: Eclipse\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;

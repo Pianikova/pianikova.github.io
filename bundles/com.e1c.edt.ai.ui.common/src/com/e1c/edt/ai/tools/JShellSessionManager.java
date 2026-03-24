@@ -6,6 +6,7 @@ package com.e1c.edt.ai.tools;
 import java.io.ByteArrayOutputStream;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ToolErrorType;
@@ -25,11 +26,15 @@ import jdk.jshell.JShell;
 class JShellSessionManager
 	implements IJShellSessionManager
 {
+    private static final int MAX_SESSIONS = 64;
+    private static final int SESSION_EXPIRY_HOURS = 1;
+
     private final Cache<Integer, JShellSession> cache;
 	private final ILog log;
 	private final Set<IJShellBindingProvider> bindingProviders;
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final IJShellClassPathProvider classPathProvider;
+    private final AtomicInteger sessionCounter = new AtomicInteger(0);
 
 	@Inject
 	public JShellSessionManager(ILog log, Set<IJShellBindingProvider> bindingProviders,
@@ -45,10 +50,10 @@ class JShellSessionManager
         this.restrictedTypesValidator = restrictedTypesValidator;
         this.classPathProvider = classPathProvider;
 
-		// Cache with maximum of 64 sessions and 30 minutes expiration after access
+		// Cache with maximum sessions and expiration after access
 		this.cache = CacheBuilder.newBuilder()
-			.maximumSize(64)
-            .expireAfterAccess(1, java.util.concurrent.TimeUnit.HOURS)
+			.maximumSize(MAX_SESSIONS)
+            .expireAfterAccess(SESSION_EXPIRY_HOURS, java.util.concurrent.TimeUnit.HOURS)
 			.removalListener(notification -> {
 				JShellSession session = (JShellSession)notification.getValue();
 				if (session != null)
@@ -59,7 +64,8 @@ class JShellSessionManager
 			.build();
 	}
 
-	@Override
+    @SuppressWarnings("nls")
+    @Override
     public IJShellSession getOrCreateSession(int sessionId)
 	{
         if (sessionId == 0)
@@ -75,8 +81,11 @@ class JShellSessionManager
 			return session;
 		}
 
-		// Session not found, create new one
-		return createSession();
+		// Session not found - should not happen for existing sessions
+		throw new ToolException(
+			"Session with ID " + sessionId + " not found. Sessions expire after " + SESSION_EXPIRY_HOURS
+				+ " hour(s) of inactivity. Please create a new session first.",
+			null, ToolErrorType.RETRYABLE);
 	}
 
     @Override
@@ -114,7 +123,8 @@ class JShellSessionManager
         }
         classPathProvider.addAllBundleClassPaths(shell);
 
-        var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator, bindingProviders);
+        int sessionId = sessionCounter.incrementAndGet();
+        var session = new JShellSession(sessionId, shell, outBuffer, errBuffer, restrictedTypesValidator, bindingProviders);
 
         // Pre-import commonly used packages from providers
         for (var provider : bindingProviders)

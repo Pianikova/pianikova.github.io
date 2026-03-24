@@ -94,17 +94,7 @@ public class JShellSessionMcpTool
 		{
             IJShellSession session = sessions.getOrCreateSession(0);
 
-			SessionResult result = new SessionResult();
-			result.sessionId = session.getSessionId();
-			result.availableBindings = new ArrayList<>();
-            result.executionHistory = new ArrayList<>(session.getExecutionHistory());
-
-			for (var provider : bindingProviders)
-			{
-				var infos = provider.getBindingInfos();
-				result.availableBindings.addAll(infos.keySet());
-			}
-
+            SessionResult result = session.getSessionResult();
 			var content = json.serialize(result);
             details.responseMarkdown = Messages.JShellSessionCreated;
 			return messageFactory.createMessage(this, call, content, details);

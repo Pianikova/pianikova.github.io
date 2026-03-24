@@ -10,6 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -239,8 +240,8 @@ public final class JShellSharedExecutionControlProvider
             PrintStream originalErr = System.err;
             try
             {
-                System.setOut(new PrintStream(outBuffer, true));
-                System.setErr(new PrintStream(errBuffer, true));
+                System.setOut(new PrintStream(outBuffer, true, StandardCharsets.UTF_8));
+                System.setErr(new PrintStream(errBuffer, true, StandardCharsets.UTF_8));
                 Class<?> klass = loaderDelegate.findClass(className);
                 Method method = klass.getDeclaredMethod(methodName);
                 method.setAccessible(true);
@@ -283,8 +284,8 @@ public final class JShellSharedExecutionControlProvider
             PrintStream originalErr = System.err;
             try
             {
-                System.setOut(new PrintStream(outBuffer, true));
-                System.setErr(new PrintStream(errBuffer, true));
+                System.setOut(new PrintStream(outBuffer, true, StandardCharsets.UTF_8));
+                System.setErr(new PrintStream(errBuffer, true, StandardCharsets.UTF_8));
                 loaderDelegate.load(cbcs);
             }
             finally

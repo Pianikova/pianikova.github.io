@@ -33,7 +33,14 @@ public interface IJShellSession
 	List<String> getExecutionHistory();
 
 	/**
-	 * Closes the JShell session and releases resources.
-	 */
+     * Returns session result with available bindings and execution history.
+     *
+     * @return session result
+     */
+    SessionResult getSessionResult();
+
+    /**
+     * Closes the JShell session and releases resources.
+     */
 	void close();
 }

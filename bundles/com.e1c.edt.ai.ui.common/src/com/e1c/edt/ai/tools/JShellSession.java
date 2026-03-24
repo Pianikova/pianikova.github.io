@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ToolErrorType;
@@ -32,9 +31,10 @@ class JShellSession
     private final Set<IJShellBindingProvider> bindingProviders;
     private final List<String> executionHistory = new ArrayList<>();
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
-    private static final AtomicInteger sessionCounter = new AtomicInteger(0);
+    private ArrayList<String> cachedAvailableBindings;
+    private static final int MAX_EXECUTION_HISTORY_SIZE = 100;
 
-    JShellSession(JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
+    JShellSession(int sessionId, JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
         IRestrictedTypesValidator restrictedTypesValidator, Set<IJShellBindingProvider> bindingProviders)
 	{
         Preconditions.checkNotNull(shell);
@@ -43,13 +43,49 @@ class JShellSession
         Preconditions.checkNotNull(restrictedTypesValidator);
         Preconditions.checkNotNull(bindingProviders);
 
-		this.sessionId = sessionCounter.incrementAndGet();
+        this.sessionId = sessionId;
 		this.shell = shell;
 		this.outBuffer = outBuffer;
 		this.errBuffer = errBuffer;
         this.restrictedTypesValidator = restrictedTypesValidator;
         this.bindingProviders = bindingProviders;
+        this.cachedAvailableBindings = buildAvailableBindings();
 	}
+
+    /**
+     * Builds the list of available binding names from all providers.
+     */
+    private ArrayList<String> buildAvailableBindings()
+    {
+        var bindings = new ArrayList<String>();
+        for (var provider : bindingProviders)
+        {
+            var infos = provider.getBindingInfos();
+            bindings.addAll(infos.keySet());
+        }
+        return bindings;
+    }
+
+    /**
+     * Adds source to execution history, maintaining maximum size.
+     */
+    private void addToExecutionHistory(String source)
+    {
+        executionHistory.add(source);
+        if (executionHistory.size() > MAX_EXECUTION_HISTORY_SIZE)
+        {
+            executionHistory.remove(0);
+        }
+    }
+
+    /**
+     * Populates session result fields (available bindings and execution history).
+     */
+    private void populateSessionResult(SessionResult result)
+    {
+        result.availableBindings = new ArrayList<>(cachedAvailableBindings);
+        result.executionHistory = new ArrayList<>(executionHistory);
+    }
 
 	@Override
     public int getSessionId()
@@ -91,7 +127,9 @@ class JShellSession
         outBuffer.reset();
         errBuffer.reset();
 
-        // Split code into individual completions using analyzeCompletion
+        try
+        {
+            // Split code into individual completions using analyzeCompletion
         var analysis = shell.sourceCodeAnalysis();
         var remaining = code;
         while (result.compilationErrors.isEmpty() && remaining != null && !remaining.isBlank())
@@ -146,7 +184,7 @@ class JShellSession
                         break;
 
                     case VALID:
-                        executionHistory.add(source);
+                        addToExecutionHistory(source);
                         // Check for runtime exceptions
                         if (event.exception() != null)
                         {
@@ -166,20 +204,43 @@ class JShellSession
                 }
             }
         }
+    }
+        catch (OutOfMemoryError e)
+        {
+            var error = new RuntimeError();
+            error.exceptionType = e.getClass().getName();
+            error.message = "Out of memory during code execution. The code may have allocated too much memory.";
+            error.stackTrace = e.getMessage();
+            result.runtimeErrors.add(error);
+            result.stdOut = outBuffer.toString();
+            result.stdErr = errBuffer.toString();
+            populateSessionResult(result);
+            return result;
+        }
+        catch (ThreadDeath e)
+        {
+            throw e;
+        }
+        catch (Throwable e)
+        {
+            var error = new RuntimeError();
+            error.exceptionType = e.getClass().getName();
+            error.message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            var stackTrace = new java.io.StringWriter();
+            e.printStackTrace(new java.io.PrintWriter(stackTrace));
+            error.stackTrace = stackTrace.toString();
+            result.runtimeErrors.add(error);
+            result.stdOut = outBuffer.toString();
+            result.stdErr = errBuffer.toString();
+            populateSessionResult(result);
+            return result;
+        }
 
         result.stdOut = outBuffer.toString();
         result.stdErr = errBuffer.toString();
 
-        // Fill available bindings
-        result.availableBindings = new ArrayList<>();
-        for (var provider : bindingProviders)
-        {
-            var infos = provider.getBindingInfos();
-            result.availableBindings.addAll(infos.keySet());
-        }
-
-        // Fill execution history
-        result.executionHistory = new ArrayList<>(executionHistory);
+        // Fill session result fields
+        populateSessionResult(result);
 
         return result;
 	}
@@ -188,6 +249,15 @@ class JShellSession
     public List<String> getExecutionHistory()
     {
         return new ArrayList<>(executionHistory);
+    }
+
+    @Override
+    public SessionResult getSessionResult()
+    {
+        var result = new SessionResult();
+        result.sessionId = sessionId;
+        populateSessionResult(result);
+        return result;
     }
 
     @Override
