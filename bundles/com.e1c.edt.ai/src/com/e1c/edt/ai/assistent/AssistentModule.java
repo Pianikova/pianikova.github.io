@@ -31,6 +31,10 @@ public class AssistentModule
         bind(ICompressor.class).to(Compressor.class).in(Singleton.class);
         bind(ITools.class).to(Tools.class).in(Singleton.class);
         bind(ISessionCall.class).to(SessionCall.class).in(Singleton.class);
+        bind(IDiagnosticsFactory.class).to(DiagnosticsFactory.class).in(Singleton.class);
+        bind(IDiagnosticContext.class).to(DiagnosticContext.class).in(Singleton.class);
+        bind(IDiagnosticMapper.class).to(DiagnosticMapper.class).in(Singleton.class);
+        bind(ICACertificateReporter.class).to(CACertificateReporter.class).in(Singleton.class);
         bind(ITokenCheck.class).to(TokenCheck.class).in(Singleton.class);
         // @formatter:on
     }

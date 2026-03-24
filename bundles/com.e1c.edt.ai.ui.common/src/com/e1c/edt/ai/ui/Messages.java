@@ -57,6 +57,7 @@ public class Messages
     public static String InOtherWords;
     public static String ImproveStyle;
     public static String Activate;
+    public static String Diagnostics;
     public static String Details;
     public static String ChatLoadingTitle;
     public static String ChatLoadingMessage;

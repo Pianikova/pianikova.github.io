@@ -38,6 +38,7 @@ import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
+import com.e1c.edt.ai.ui.preferences.DiagnosticDialog;
 import com.google.inject.Inject;
 
 /**
@@ -352,7 +353,7 @@ public class BaseStatusBarControl
                 }
                 else
                 {
-                    policyText = Messages.Details;
+                    policyText = Messages.Diagnostics;
                 }
                 policyTextExtent = gc.textExtent(policyText);
                 int policyTextY = centerY - policyTextExtent.y / 2;
@@ -427,13 +428,19 @@ public class BaseStatusBarControl
         {
             if (isErrorStateWithLink)
             {
-                // Open browser to support page
-                String url = settings.getHomePage() + currentUrlPath;
-                web.browse(url);
-                // Also open preferences for MISSING_TOKEN state
-                if (lastAIState != null && lastAIState.getServiceState() == ServiceState.MISSING_TOKEN)
+                if (isMissingTokenState)
                 {
+                    // Open browser to support page
+                    String url = settings.getHomePage() + currentUrlPath;
+                    web.browse(url);
+                    // Also open preferences for MISSING_TOKEN state
                     preferences.show(IPreferences.AI);
+                }
+                else
+                {
+                    // Open diagnostics dialog
+                    var dialog = new DiagnosticDialog(statusCanvas.getShell());
+                    dialog.open();
                 }
             }
             else

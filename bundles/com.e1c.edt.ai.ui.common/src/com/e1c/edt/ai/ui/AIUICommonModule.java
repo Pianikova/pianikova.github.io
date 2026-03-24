@@ -20,6 +20,8 @@ import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
 import com.e1c.edt.ai.ui.handlers.ICodeTools;
 import com.e1c.edt.ai.ui.handlers.IFixDialog;
+import com.e1c.edt.ai.ui.preferences.DiagnosticReportDialogProvider;
+import com.e1c.edt.ai.ui.preferences.IDiagnosticReportDialogProvider;
 import com.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -117,6 +119,7 @@ public class AIUICommonModule
         bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
         bind(IEdtLinkHandler.class).to(EdtLinkHandler.class).in(Singleton.class);
         bind(IEditorPositionManager.class).to(EditorPositionManager.class).in(Singleton.class);
+        bind(IDiagnosticReportDialogProvider.class).to(DiagnosticReportDialogProvider.class).in(Singleton.class);
         bind(IThemeManager.class).to(ThemeManager.class).in(Singleton.class);
         bind(INotifications.class).to(Notifications.class).in(Singleton.class);
         bind(IWeb.class).to(Web.class).in(Singleton.class);

@@ -17,10 +17,15 @@ import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Link;
 import org.eclipse.ui.IWorkbench;
@@ -183,6 +188,8 @@ public class ClientAIPreferencePage
     {
         var control = super.createContents(parent);
 
+        createDiagnosticSection(parent);
+
         var pluginLink = new Link(parent, SWT.NONE);
         pluginLink
             .setText("<a href=\"" + defaultSettings.getHomePage() + "\">" + defaultSettings.getHomePage() + "</a>");
@@ -235,6 +242,48 @@ public class ClientAIPreferencePage
 
         this.prevToken = settings.getClientToken();
         return result;
+    }
+
+    /**
+     * Creates section with plugin diagnostic on the preference page.
+     *
+     * @param parent
+     */
+    private void createDiagnosticSection(Composite parent)
+    {
+        Group diagnosticGroup = new Group(parent, SWT.NONE);
+        diagnosticGroup.setText(Messages.ClientAIPreferencePage_Diagnostic);
+        diagnosticGroup.setLayoutData(new GridData(SWT.FILL, SWT.TOP, true, false));
+        diagnosticGroup.setLayout(new GridLayout(2, false));
+
+        GridLayout gl = (GridLayout)diagnosticGroup.getLayout();
+        gl.marginHeight = 8;
+        gl.marginWidth = 10;
+        gl.horizontalSpacing = 10;
+
+        Label info = new Label(diagnosticGroup, SWT.WRAP);
+        info.setText(Messages.ClientAIPreferencePage_Diagnostic_Title);
+        GridData infoGD = new GridData(SWT.FILL, SWT.TOP, true, false);
+        infoGD.widthHint = 300;
+        info.setLayoutData(infoGD);
+
+        Button button = new Button(diagnosticGroup, SWT.PUSH);
+        button.setText(Messages.ClientAIPreferencePage_Diagnostic_RunButton);
+        button.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+        button.addSelectionListener(new SelectionListener() {
+            @Override
+            public void widgetSelected(SelectionEvent e)
+            {
+                var dialog = new DiagnosticDialog(getShell());
+                dialog.open();
+            }
+
+            @Override
+            public void widgetDefaultSelected(SelectionEvent e)
+            {
+                // skip
+            }
+        });
     }
 
     private static Image createImage(String path)
