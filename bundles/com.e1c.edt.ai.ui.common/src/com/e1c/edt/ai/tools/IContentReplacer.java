@@ -1,7 +1,4 @@
-/**
- *
- */
-package com.e1c.edt.ai;
+package com.e1c.edt.ai.tools;
 
 public interface IContentReplacer
 {

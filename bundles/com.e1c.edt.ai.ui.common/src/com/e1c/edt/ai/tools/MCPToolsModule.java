@@ -57,6 +57,19 @@ public class MCPToolsModule
         bind(IJShellClassPathProvider.class).to(JShellClassPathProvider.class).in(Singleton.class);
         bind(IRestrictedTypesProvider.class).to(RestrictedTypesProvider.class).in(Singleton.class);
         bind(IRestrictedTypesValidator.class).to(RestrictedTypesValidator.class).in(Singleton.class);
+        bind(IContentReplacer.class).to(ContentReplacer.class).in(Singleton.class);
+
+        // Replacement strategies
+        var replacementStrategyBinder = Multibinder.newSetBinder(binder(), IReplacementStrategy.class);
+        replacementStrategyBinder.addBinding().to(SimpleReplacer.class);
+        replacementStrategyBinder.addBinding().to(LineTrimmedReplacer.class);
+        replacementStrategyBinder.addBinding().to(BlockAnchorReplacer.class);
+        replacementStrategyBinder.addBinding().to(WhitespaceNormalizedReplacer.class);
+        replacementStrategyBinder.addBinding().to(IndentationFlexibleReplacer.class);
+        replacementStrategyBinder.addBinding().to(EscapeNormalizedReplacer.class);
+        replacementStrategyBinder.addBinding().to(TrimmedBoundaryReplacer.class);
+        replacementStrategyBinder.addBinding().to(ContextAwareReplacer.class);
+        replacementStrategyBinder.addBinding().to(MultiOccurrenceReplacer.class);
 
         // Markers providers
         var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
