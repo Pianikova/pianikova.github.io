@@ -10,11 +10,9 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Result of JShell code execution.
  */
-class JShellExecutionResult
+public class JShellExecutionResult
+    extends SessionResult
 {
-	@SerializedName("repl_session_id")
-    public int sessionId;
-
 	@SerializedName("std_out")
 	public String stdOut;
 
@@ -26,7 +24,4 @@ class JShellExecutionResult
 
     @SerializedName("runtime_errors")
     public List<RuntimeError> runtimeErrors;
-
-    @SerializedName("execution_history")
-    public List<String> executionHistory;
 }

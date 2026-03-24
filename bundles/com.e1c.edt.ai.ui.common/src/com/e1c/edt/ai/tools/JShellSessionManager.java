@@ -114,7 +114,7 @@ class JShellSessionManager
         }
         classPathProvider.addAllBundleClassPaths(shell);
 
-        var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator);
+        var session = new JShellSession(shell, outBuffer, errBuffer, restrictedTypesValidator, bindingProviders);
 
         // Pre-import commonly used packages from providers
         for (var provider : bindingProviders)

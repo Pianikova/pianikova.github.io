@@ -23,7 +23,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
-import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 
 public class JShellSessionMcpTool
@@ -196,17 +195,5 @@ public class JShellSessionMcpTool
 
 		spec.function.parameters = parameters;
 		return spec;
-	}
-
-    private static class SessionResult
-	{
-		@SerializedName("repl_session_id")
-		public int sessionId;
-
-		@SerializedName("available_bindings")
-		public ArrayList<String> availableBindings;
-
-		@SerializedName("execution_history")
-		public ArrayList<String> executionHistory;
 	}
 }

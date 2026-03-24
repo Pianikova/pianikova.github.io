@@ -6,6 +6,7 @@ package com.e1c.edt.ai.tools;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -28,23 +29,26 @@ class JShellSession
 	private final ByteArrayOutputStream outBuffer;
 	private final ByteArrayOutputStream errBuffer;
     private final IRestrictedTypesValidator restrictedTypesValidator;
+    private final Set<IJShellBindingProvider> bindingProviders;
     private final List<String> executionHistory = new ArrayList<>();
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
     private static final AtomicInteger sessionCounter = new AtomicInteger(0);
 
     JShellSession(JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
-        IRestrictedTypesValidator restrictedTypesValidator)
+        IRestrictedTypesValidator restrictedTypesValidator, Set<IJShellBindingProvider> bindingProviders)
 	{
         Preconditions.checkNotNull(shell);
         Preconditions.checkNotNull(outBuffer);
         Preconditions.checkNotNull(errBuffer);
         Preconditions.checkNotNull(restrictedTypesValidator);
+        Preconditions.checkNotNull(bindingProviders);
 
 		this.sessionId = sessionCounter.incrementAndGet();
 		this.shell = shell;
 		this.outBuffer = outBuffer;
 		this.errBuffer = errBuffer;
         this.restrictedTypesValidator = restrictedTypesValidator;
+        this.bindingProviders = bindingProviders;
 	}
 
 	@Override
@@ -165,6 +169,18 @@ class JShellSession
 
         result.stdOut = outBuffer.toString();
         result.stdErr = errBuffer.toString();
+
+        // Fill available bindings
+        result.availableBindings = new ArrayList<>();
+        for (var provider : bindingProviders)
+        {
+            var infos = provider.getBindingInfos();
+            result.availableBindings.addAll(infos.keySet());
+        }
+
+        // Fill execution history
+        result.executionHistory = new ArrayList<>(executionHistory);
+
         return result;
 	}
 
