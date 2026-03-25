@@ -44,7 +44,7 @@ public class GlobMcpTool
 	implements IMcpTool
 {
 	public static final String TOOL_NAME = "Glob"; //$NON-NLS-1$
-	private static final int DEFAULT_MAX_RESULTS = 1000;
+	private static final int DEFAULT_MAX_RESULTS = 100;
 
 	@SuppressWarnings("nls")
 	private static String QuestionExample =
@@ -125,7 +125,11 @@ public class GlobMcpTool
 		}
 
 		var request = optionalRequest.get();
-		var path = request.path != null && !request.path.isBlank() ? request.path : System.getProperty("user.dir");
+		var path = request.path;
+		if (path == null || path.isBlank())
+		{
+			throw new ToolException("The \"path\" parameter is required and must be a valid directory path.");
+		}
 		var pattern = request.pattern != null ? request.pattern : "*";
         var depth = request.depth != null ? request.depth : 3;
 
@@ -351,7 +355,7 @@ public class GlobMcpTool
 
 		var pathProp = new McpToolCallProperty();
 		pathProp.type = "string";
-		pathProp.description = "The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for the default behavior. Must be a valid directory path if provided.";
+		pathProp.description = "The directory to search in. Must be a valid directory path.";
 		properties.put("path", pathProp);
 
 		var patternProp = new McpToolCallProperty();
@@ -367,7 +371,7 @@ public class GlobMcpTool
 		properties.put("depth", depthProp);
 
 		parameters.properties = properties;
-		parameters.required = Arrays.asList();
+		parameters.required = Arrays.asList("path");
 		spec.function.parameters = parameters;
 
 		return spec;
