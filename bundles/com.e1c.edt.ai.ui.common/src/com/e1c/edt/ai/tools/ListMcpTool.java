@@ -38,6 +38,7 @@ import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class ListMcpTool
 	implements IMcpTool
@@ -96,17 +97,21 @@ public class ListMcpTool
 	private final McpToolCallSpecification spec;
 	private final IMcpToolsCallMessageFactory messageFactory;
     private final IMarkdownUtils markdownUtils;
+    private final Provider<ITreeBuilder> treeBuilderProvider;
 
 	@Inject
-    public ListMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils)
+    public ListMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils,
+        Provider<ITreeBuilder> treeBuilderProvider)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
 		Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(treeBuilderProvider);
 
 		this.json = json;
 		this.messageFactory = messageFactory;
 		this.markdownUtils = markdownUtils;
+        this.treeBuilderProvider = treeBuilderProvider;
 
 		spec = createSpecification();
 	}
@@ -177,7 +182,7 @@ public class ListMcpTool
 				result.count = files.size();
 				result.truncated = files.size() >= LIMIT;
 
-				var treeBuilder = new TreeBuilder(markdownUtils);
+                ITreeBuilder treeBuilder = treeBuilderProvider.get();
 				buildTree(baseDir.toPath(), "", 0, relevantPaths, treeBuilder, ignorePatterns,
 					cancellationToken);
 				result.tree = treeBuilder.build();
@@ -278,9 +283,9 @@ public class ListMcpTool
 		}
 	}
 
-	@SuppressWarnings("nls")
-	private void buildTree(Path dir, String relativePath, int depth, Set<String> relevantPaths,
-		TreeBuilder treeBuilder, Set<String> ignorePatterns, ICancellationToken cancellationToken)
+    @SuppressWarnings("nls")
+    private void buildTree(Path dir, String relativePath, int depth, Set<String> relevantPaths,
+        ITreeBuilder treeBuilder, Set<String> ignorePatterns, ICancellationToken cancellationToken)
 			throws IOException
 	{
 		if (cancellationToken.isCanceled())
@@ -398,98 +403,5 @@ public class ListMcpTool
 
 		@SerializedName("truncated")
 		public boolean truncated;
-	}
-
-	private static class TreeBuilder
-	{
-		private final IMarkdownUtils markdownUtils;
-		private final StringBuilder tree = new StringBuilder();
-		private final List<Integer> stack = new ArrayList<>();
-
-		TreeBuilder(IMarkdownUtils markdownUtils)
-		{
-			this.markdownUtils = markdownUtils;
-		}
-
-		@SuppressWarnings("nls")
-		void addDirectory(String name, int depth)
-		{
-			if (depth > 0)
-			{
-				tree.append("\n");
-			}
-
-			for (int i = 0; i < depth; i++)
-			{
-				if (i < stack.size() && stack.get(i) > 0)
-				{
-					tree.append(" │  ");
-				}
-				else if (i < depth - 1)
-				{
-					tree.append("    ");
-				}
-			}
-
-			if (depth > 0 && stack.size() > depth - 1)
-			{
-				stack.set(depth - 1, stack.get(depth - 1) - 1);
-			}
-
-			if (depth > 0)
-			{
-				boolean hasMore = depth < stack.size() && stack.get(depth) > 0;
-				tree.append(hasMore ? " ├── " : " └── ");
-			}
-
-			tree.append(markdownUtils.escapeForMarkdown(name)).append("/");
-
-			while (stack.size() <= depth)
-			{
-				stack.add(0);
-			}
-			stack.set(depth, stack.get(depth) + 1);
-		}
-
-		@SuppressWarnings("nls")
-		void addFile(String name, int depth)
-		{
-			tree.append("\n");
-
-			for (int i = 0; i < depth; i++)
-			{
-				if (i < stack.size() && stack.get(i) > 0)
-				{
-					tree.append(" │  ");
-				}
-				else
-				{
-					tree.append("    ");
-				}
-			}
-
-			if (stack.size() > depth)
-			{
-				stack.set(depth, stack.get(depth) - 1);
-				boolean hasMore = stack.get(depth) > 0;
-				tree.append(hasMore ? " ├── " : " └── ");
-			}
-			else
-			{
-				tree.append("  ├── ");
-			}
-
-			tree.append(markdownUtils.escapeForMarkdown(name));
-		}
-
-		void endDirectory()
-		{
-			//
-		}
-
-		String build()
-		{
-			return tree.toString();
-		}
 	}
 }
