@@ -33,6 +33,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(SearchTextMcpTool.class);
         // toolBinder.addBinding().to(SearchFilesMcpTool.class);
         toolBinder.addBinding().to(GlobMcpTool.class);
+        toolBinder.addBinding().to(ListMcpTool.class);
         // toolBinder.addBinding().to(GitCommitsMcpTool.class);
         // toolBinder.addBinding().to(GitDiffMcpTool.class);
         toolBinder.addBinding().to(LocalHistoryMcpTool.class);
