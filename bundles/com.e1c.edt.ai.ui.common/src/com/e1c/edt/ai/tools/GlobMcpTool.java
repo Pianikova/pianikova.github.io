@@ -157,21 +157,29 @@ public class GlobMcpTool
 			result.items = new ArrayList<>();
 			result.stats = new Stats();
 
-			try
+				try
 			{
                 var relevantPaths = new HashSet<String>();
                 var treeBuilder = new TreeBuilder(markdownUtils);
-				scanDirectory(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, cancellationToken);
+			scanDirectory(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, cancellationToken);
                 if (!relevantPaths.isEmpty())
                 {
                     relevantPaths.add(baseDir.getAbsolutePath());
                 }
-				scanDirectoryForTree(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
-				result.tree = treeBuilder.build();
+			scanDirectoryForTree(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
+			result.tree = treeBuilder.build();
 
                 result.items.sort((a, b) -> Long.compare(b.modified, a.modified));
 
-				result.items = limitResults(result.items, DEFAULT_MAX_RESULTS);
+                if (result.items.size() > DEFAULT_MAX_RESULTS)
+                {
+                    result.items = result.items.subList(0, DEFAULT_MAX_RESULTS);
+                    result.stats.truncated = true;
+                }
+                else
+                {
+                    result.stats.truncated = false;
+                }
 			}
 			catch (IOException e)
 			{
@@ -309,16 +317,11 @@ public class GlobMcpTool
 				{
                     //
 				}
-			});
-		}
+		});
 	}
+}
 
-	private <T> List<T> limitResults(List<T> list, int limit)
-	{
-		return list.size() > limit ? list.subList(0, limit) : list;
-	}
-
-	@SuppressWarnings("nls")
+@SuppressWarnings("nls")
 	private static McpToolCallSpecification createSpecification()
 	{
 		var spec = new McpToolCallSpecification();
@@ -408,6 +411,9 @@ public class GlobMcpTool
 
 		@SerializedName("max_depth_reached")
 		public int maxDepthReached;
+
+		@SerializedName("truncated")
+		public boolean truncated;
 	}
 
 	private static class Result
