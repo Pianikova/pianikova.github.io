@@ -136,11 +136,11 @@ public class JShellSessionMcpTool
 		{
 			for (var provider : bindingProviders)
 			{
-				var infos = provider.getBindingInfos();
-				if (!infos.isEmpty())
+				var descriptions = provider.getBindingDescriptions();
+				if (!descriptions.isEmpty())
 				{
 					description.append("\n");
-					for (var entry : infos.entrySet())
+					for (var entry : descriptions.entrySet())
 					{
 						String bindingName = entry.getKey();
 						JShellBindingDescription bindingInfo = entry.getValue();

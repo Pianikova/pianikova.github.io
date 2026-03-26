@@ -27,7 +27,15 @@ public interface IJShellBindingProvider
      *
      * @return Map of variable names to binding descriptions
      */
-    Map<String, JShellBindingDescription> getBindingInfos();
+    Map<String, JShellBindingDescription> getBindingDescriptions();
+
+    /**
+     * Returns a brief description of this binding provider.
+     * This describes what kind of bindings this provider offers.
+     *
+     * @return Brief description of the provider
+     */
+    String getDescription();
 
     /**
      * Returns a collection of significant classes that should be added to JShell classpath.

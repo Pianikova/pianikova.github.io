@@ -179,6 +179,59 @@ public class JShellMcpTool
 	}
 
 	@SuppressWarnings("nls")
+	private String getBindingVariableNamesExample()
+	{
+		var bindingNames = new ArrayList<String>();
+		for (IJShellBindingProvider provider : bindingProviders)
+		{
+            var bindings = provider.getBindings();
+			if (bindings != null)
+			{
+				bindingNames.addAll(bindings.keySet());
+			}
+		}
+
+		if (bindingNames.isEmpty())
+		{
+			return "";
+		}
+
+		// Sort and limit to first 3-4 variable names
+		bindingNames.sort(String::compareTo);
+		var exampleNames = new ArrayList<String>();
+		for (int i = 0; i < Math.min(3, bindingNames.size()); i++)
+		{
+			exampleNames.add("`" + bindingNames.get(i) + "`");
+		}
+
+		return String.join(", ", exampleNames);
+	}
+
+	@SuppressWarnings("nls")
+    private String getProviderUseCases(String providerDescription)
+    {
+        var useCases = new StringBuilder();
+
+        if (providerDescription.contains("Eclipse"))
+        {
+            useCases.append("- Access Eclipse workbench and UI components");
+            useCases.append("\n- Get active editor, windows, pages");
+            useCases.append("\n- Execute Eclipse commands programmatically");
+            useCases.append("\n- Access Eclipse resources and preferences");
+        }
+        else if (providerDescription.contains("1C") || providerDescription.contains("metadata"))
+        {
+            useCases.append("- Create or modify 1C metadata objects (Catalogs, Documents, Registers)");
+            useCases.append("\n- Generate FQNs for metadata objects");
+            useCases.append("\n- Access BM model and execute transactions");
+            useCases.append("\n- Work with 1C projects and configurations");
+            useCases.append("\n- Programmatically modify .mdo files");
+        }
+
+        return useCases.toString();
+    }
+
+    @SuppressWarnings("nls")
 	private McpToolCallSpecification createSpecification()
 	{
 		var spec = new McpToolCallSpecification();
@@ -187,8 +240,7 @@ public class JShellMcpTool
 		spec.function.name = TOOL_NAME;
 
 		var description = new StringBuilder();
-        description
-            .append("Executes Java code using JShell REPL within Eclipse APIs. Preserves state across executions.");
+        description.append("Executes Java code using JShell REPL. Preserves state across executions.");
 		description.append("\n\n**When to use:**");
 		description.append("\n- Use when other IDE tools (" + GitMcpTool.TOOL_NAME + " , " + ReadMcpTool.TOOL_NAME + ", etc.) cannot accomplish the task");
 
@@ -200,13 +252,49 @@ public class JShellMcpTool
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
 		{
-			description.append("\n- Pre-configured Eclipse objects are available in JShell");
+            description.append("\n- Pre-configured objects are available in JShell");
 			description.append("\n- See ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool for detailed binding documentation with examples");
+			String bindingExamples = getBindingVariableNamesExample();
+			description.append("\\n- **IMPORTANT:** Bindings are already available as variables (e.g., ").append(bindingExamples).append("). DO NOT use `JShellObjectBridge.retrieve()` - it's for internal use only.");
+
+            description.append("\n\n**Binding providers:**");
+            for (var provider : bindingProviders)
+            {
+                var descriptions = provider.getBindingDescriptions();
+                if (!descriptions.isEmpty())
+                {
+                    description.append("\n\n**");
+                    description.append(provider.getDescription());
+                    description.append("**");
+                    description.append("\nUse for:");
+                    description.append("\n").append(getProviderUseCases(provider.getDescription()));
+                    description.append("\n\nAvailable bindings:");
+                    int count = 0;
+                    for (var entry : descriptions.entrySet())
+                    {
+                        if (count < 3)
+                        {
+                            String bindingName = entry.getKey();
+                            JShellBindingDescription bindingInfo = entry.getValue();
+                            description.append("\n- `")
+                                .append(bindingName)
+                                .append("`: ")
+                                .append(bindingInfo.getDescription());
+                            count++;
+                        }
+                        else
+                        {
+                            description.append("\n- ... and more (see JShellSession tool)");
+                            break;
+                        }
+                    }
+                }
+            }
 		}
 
 		description.append("\n\n**Workflow:**");
 		description.append("\n1. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
-		description.append("\n2. Use ").append(TOOL_NAME).append(" with that ID to execute Eclipse workbench code");
+        description.append("\n2. Use ").append(TOOL_NAME).append(" with that ID to execute code");
 		description.append("\n3. Reuse same ID to maintain state");
 
 		// Add restricted types information
@@ -263,3 +351,5 @@ public class JShellMcpTool
         public int sessionId;
 	}
 }
+
+

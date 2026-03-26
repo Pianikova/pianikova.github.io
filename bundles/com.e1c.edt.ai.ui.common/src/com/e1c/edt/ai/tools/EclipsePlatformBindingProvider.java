@@ -35,13 +35,19 @@ public class EclipsePlatformBindingProvider
 
     @SuppressWarnings("nls")
     @Override
-	public Map<String, JShellBindingDescription> getBindingInfos()
+	public Map<String, JShellBindingDescription> getBindingDescriptions()
 	{
 		var infos = new HashMap<String, JShellBindingDescription>();
 		infos.put("workbench", new JShellBindingDescription("Eclipse workbench instance",
             "var activeWindow = workbench.getActiveWorkbenchWindow();\nSystem.out.println(\"Active window: \" + activeWindow);\nvar activePage = activeWindow != null ? activeWindow.getActivePage() : null;\nSystem.out.println(\"Active page: \" + activePage);"));
 		return infos;
 	}
+
+    @Override
+    public String getDescription()
+    {
+        return "Eclipse platform services (workbench, UI, resources)";
+    }
 
     @Override
     public Collection<Class<?>> getSignificantClasses()
