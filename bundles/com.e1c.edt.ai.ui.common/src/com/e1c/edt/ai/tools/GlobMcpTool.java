@@ -39,12 +39,13 @@ import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 
 public class GlobMcpTool
 	implements IMcpTool
 {
 	public static final String TOOL_NAME = "Glob"; //$NON-NLS-1$
-	private static final int DEFAULT_MAX_RESULTS = 1000;
+    private static final int LIMIT = 100;
 
 	@SuppressWarnings("nls")
 	private static String QuestionExample =
@@ -82,19 +83,22 @@ public class GlobMcpTool
 	private final IMcpToolsCallMessageFactory messageFactory;
 	private final IMarkdownUtils markdownUtils;
     private final IPatternMatcher patternMatcher;
+    private final Provider<ITreeBuilder> treeBuilderProvider;
 
 	@Inject
     public GlobMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils,
-        IPatternMatcher patternMatcher)
+        IPatternMatcher patternMatcher, Provider<ITreeBuilder> treeBuilderProvider)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
 		Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(patternMatcher);
+        Preconditions.checkNotNull(treeBuilderProvider);
 		this.json = json;
 		this.messageFactory = messageFactory;
 		this.markdownUtils = markdownUtils;
         this.patternMatcher = patternMatcher;
+        this.treeBuilderProvider = treeBuilderProvider;
 		spec = createSpecification();
 	}
 
@@ -125,7 +129,11 @@ public class GlobMcpTool
 		}
 
 		var request = optionalRequest.get();
-		var path = request.path != null && !request.path.isBlank() ? request.path : System.getProperty("user.dir");
+		var path = request.path;
+		if (path == null || path.isBlank())
+		{
+			throw new ToolException("The \"path\" parameter is required and must be a valid directory path.");
+		}
 		var pattern = request.pattern != null ? request.pattern : "*";
         var depth = request.depth != null ? request.depth : 3;
 
@@ -153,21 +161,20 @@ public class GlobMcpTool
 			result.items = new ArrayList<>();
 			result.stats = new Stats();
 
-			try
+				try
 			{
                 var relevantPaths = new HashSet<String>();
-                var treeBuilder = new TreeBuilder(markdownUtils);
-				scanDirectory(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, cancellationToken);
+                ITreeBuilder treeBuilder = treeBuilderProvider.get();
+                scanDirectory(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, cancellationToken, LIMIT);
                 if (!relevantPaths.isEmpty())
                 {
                     relevantPaths.add(baseDir.getAbsolutePath());
                 }
-				scanDirectoryForTree(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
-				result.tree = treeBuilder.build();
+			scanDirectoryForTree(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
+			result.tree = treeBuilder.build();
 
                 result.items.sort((a, b) -> Long.compare(b.modified, a.modified));
-
-				result.items = limitResults(result.items, DEFAULT_MAX_RESULTS);
+                result.stats.truncated = result.items.size() >= LIMIT;
 			}
 			catch (IOException e)
 			{
@@ -188,9 +195,9 @@ public class GlobMcpTool
 
     @SuppressWarnings("nls")
     private void scanDirectory(Path dir, String pattern, int maxDepth, int currentDepth, Result result,
-		Set<String> relevantPaths, ICancellationToken cancellationToken) throws IOException
+        Set<String> relevantPaths, ICancellationToken cancellationToken, int limit) throws IOException
 	{
-		if (cancellationToken.isCanceled() || currentDepth > maxDepth)
+        if (cancellationToken.isCanceled() || currentDepth > maxDepth || result.items.size() >= limit)
 		{
 			return;
 		}
@@ -198,7 +205,7 @@ public class GlobMcpTool
 		try (Stream<Path> stream = Files.list(dir))
 		{
 			stream.sorted(Comparator.comparing(Path::getFileName)).forEach(path -> {
-				if (cancellationToken.isCanceled())
+                if (cancellationToken.isCanceled() || result.items.size() >= limit)
 				{
 					return;
 				}
@@ -222,8 +229,8 @@ public class GlobMcpTool
                             relevantPaths.add(path.toAbsolutePath().toString());
                         }
                         var beforeCount = relevantPaths.size();
-						scanDirectory(path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
-							cancellationToken);
+                        scanDirectory(path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
+                            cancellationToken, limit);
                         var afterCount = relevantPaths.size();
 
                         if (afterCount > beforeCount)
@@ -262,7 +269,7 @@ public class GlobMcpTool
 
     @SuppressWarnings("nls")
     private void scanDirectoryForTree(Path dir, String pattern, int maxDepth, int currentDepth, Result result,
-		Set<String> relevantPaths, TreeBuilder treeBuilder, ICancellationToken cancellationToken) throws IOException
+        Set<String> relevantPaths, ITreeBuilder treeBuilder, ICancellationToken cancellationToken) throws IOException
 	{
 		if (cancellationToken.isCanceled() || currentDepth > maxDepth)
 		{
@@ -305,16 +312,11 @@ public class GlobMcpTool
 				{
                     //
 				}
-			});
-		}
+		});
 	}
+}
 
-	private <T> List<T> limitResults(List<T> list, int limit)
-	{
-		return list.size() > limit ? list.subList(0, limit) : list;
-	}
-
-	@SuppressWarnings("nls")
+@SuppressWarnings("nls")
 	private static McpToolCallSpecification createSpecification()
 	{
 		var spec = new McpToolCallSpecification();
@@ -351,7 +353,7 @@ public class GlobMcpTool
 
 		var pathProp = new McpToolCallProperty();
 		pathProp.type = "string";
-		pathProp.description = "The directory to search in. If not specified, the current working directory will be used. IMPORTANT: Omit this field to use the default directory. DO NOT enter \"undefined\" or \"null\" - simply omit it for the default behavior. Must be a valid directory path if provided.";
+		pathProp.description = "The directory to search in. Must be a valid directory path.";
 		properties.put("path", pathProp);
 
 		var patternProp = new McpToolCallProperty();
@@ -367,7 +369,7 @@ public class GlobMcpTool
 		properties.put("depth", depthProp);
 
 		parameters.properties = properties;
-		parameters.required = Arrays.asList();
+		parameters.required = Arrays.asList("path");
 		spec.function.parameters = parameters;
 
 		return spec;
@@ -404,6 +406,9 @@ public class GlobMcpTool
 
 		@SerializedName("max_depth_reached")
 		public int maxDepthReached;
+
+		@SerializedName("truncated")
+		public boolean truncated;
 	}
 
 	private static class Result
@@ -416,98 +421,5 @@ public class GlobMcpTool
 
 		@SerializedName("stats")
 		public Stats stats;
-	}
-
-	private static class TreeBuilder
-	{
-		private final IMarkdownUtils markdownUtils;
-		private final StringBuilder tree = new StringBuilder();
-		private final List<Integer> stack = new ArrayList<>();
-
-        TreeBuilder(IMarkdownUtils markdownUtils)
-		{
-			this.markdownUtils = markdownUtils;
-		}
-
-        @SuppressWarnings("nls")
-        void addDirectory(String relativePath, int depth)
-		{
-			if (depth > 0)
-			{
-				tree.append("\n");
-			}
-
-			for (int i = 0; i < depth; i++)
-			{
-				if (i < stack.size() && stack.get(i) > 0)
-				{
-					tree.append(" │  ");
-				}
-				else if (i < depth - 1)
-				{
-					tree.append("    ");
-				}
-			}
-
-			if (depth > 0 && stack.size() > depth - 1)
-			{
-				stack.set(depth - 1, stack.get(depth - 1) - 1);
-			}
-
-			if (depth > 0)
-			{
-				boolean hasMore = depth < stack.size() && stack.get(depth) > 0;
-				tree.append(hasMore ? " ├── " : " └── ");
-			}
-
-			tree.append(markdownUtils.escapeForMarkdown(relativePath)).append("/");
-
-			while (stack.size() <= depth)
-			{
-				stack.add(0);
-			}
-			stack.set(depth, stack.get(depth) + 1);
-		}
-
-        @SuppressWarnings("nls")
-        void addFile(String relativePath, int depth)
-		{
-			tree.append("\n");
-
-			for (int i = 0; i < depth; i++)
-			{
-				if (i < stack.size() && stack.get(i) > 0)
-				{
-					tree.append(" │  ");
-				}
-				else
-				{
-					tree.append("    ");
-				}
-			}
-
-			if (stack.size() > depth)
-			{
-				stack.set(depth, stack.get(depth) - 1);
-				boolean hasMore = stack.get(depth) > 0;
-				tree.append(hasMore ? " ├── " : " └── ");
-			}
-			else
-			{
-				tree.append("  ├── ");
-			}
-
-			tree.append(markdownUtils.escapeForMarkdown(relativePath));
-		}
-
-		void endDirectory()
-		{
-            //
-		}
-
-		String build()
-		{
-			return tree.toString();
-		}
 	}
 }
