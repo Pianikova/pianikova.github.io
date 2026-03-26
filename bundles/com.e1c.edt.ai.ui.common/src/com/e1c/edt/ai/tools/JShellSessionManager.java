@@ -149,32 +149,52 @@ class JShellSessionManager
 		// Store bindings in registry
         for (var provider : bindingProviders)
 		{
-			var bindings = provider.getBindings();
+            var bindings = provider.getBindings();
 			for (var entry : bindings.entrySet())
 			{
-				try
-				{
-                    var objectId = JShellObjectBridge.store(session.getSessionId(), entry.getValue());
-                    var value = entry.getValue();
-                    var type = value.getClass();
-                    var className = type.getName();
-                    var varName = entry.getKey();
-                    classPathProvider.addClassPathFor(shell, type);
-                    var bindCode =
-                        String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(%d, %d);",
-                            className, varName, className, session.getSessionId(), objectId);
-                    var result = session.execute(bindCode);
-                    if (!result.compilationErrors.isEmpty() || !result.runtimeErrors.isEmpty())
+                var description = entry.getValue();
+                var value = description.getValue();
+                var explicitType = description.getExplicitType();
+                var varName = entry.getKey();
+
+                // Skip null bindings (e.g., documentation strings)
+                if (value == null)
+                {
+                    continue;
+                }
+
+                var objectId = JShellObjectBridge.store(session.getSessionId(), value);
+                var className = explicitType.getName();
+                classPathProvider.addClassPathFor(shell, explicitType);
+                var bindCode =
+                    String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(%d, %d);",
+                        className, varName, className, session.getSessionId(), objectId);
+                var result = session.execute(bindCode);
+
+                if (!result.compilationErrors.isEmpty() || !result.runtimeErrors.isEmpty())
+                {
+                    StringBuilder errorMessage = new StringBuilder();
+                    errorMessage.append("JShell session creation failed, cannot bind: ```java\n");
+                    errorMessage.append(bindCode);
+                    errorMessage.append("\n```\n");
+                    if (!result.compilationErrors.isEmpty())
                     {
-                        throw new ToolException(
-                            "JShell session creation failed, сannot bind: ```java\n" + bindCode + "\n```",
-                            ToolErrorType.RETRYABLE);
+                        errorMessage.append("\nCompilation errors:\n");
+                        for (var error : result.compilationErrors)
+                        {
+                            errorMessage.append("  - ").append(error).append("\n");
+                        }
                     }
-				}
-				catch (Exception e)
-				{
-					log.logError("Failed to bind " + entry.getKey() + ": " + e.getMessage());
-				}
+                    if (!result.runtimeErrors.isEmpty())
+                    {
+                        errorMessage.append("\nRuntime errors:\n");
+                        for (var error : result.runtimeErrors)
+                        {
+                            errorMessage.append("  - ").append(error).append("\n");
+                        }
+                    }
+                    throw new ToolException(errorMessage.toString(), null, ToolErrorType.RETRYABLE);
+                }
 			}
 		}
 

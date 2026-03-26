@@ -207,28 +207,10 @@ public class JShellMcpTool
 		return String.join(", ", exampleNames);
 	}
 
-	@SuppressWarnings("nls")
-    private String getProviderUseCases(String providerDescription)
+    @SuppressWarnings("nls")
+    private String getProviderUseCases(IJShellBindingProvider provider)
     {
-        var useCases = new StringBuilder();
-
-        if (providerDescription.contains("Eclipse"))
-        {
-            useCases.append("- Access Eclipse workbench and UI components");
-            useCases.append("\n- Get active editor, windows, pages");
-            useCases.append("\n- Execute Eclipse commands programmatically");
-            useCases.append("\n- Access Eclipse resources and preferences");
-        }
-        else if (providerDescription.contains("1C") || providerDescription.contains("metadata"))
-        {
-            useCases.append("- Create or modify 1C metadata objects (Catalogs, Documents, Registers)");
-            useCases.append("\n- Generate FQNs for metadata objects");
-            useCases.append("\n- Access BM model and execute transactions");
-            useCases.append("\n- Work with 1C projects and configurations");
-            useCases.append("\n- Programmatically modify .mdo files");
-        }
-
-        return useCases.toString();
+        return provider.getUseCases();
     }
 
     @SuppressWarnings("nls")
@@ -260,14 +242,18 @@ public class JShellMcpTool
             description.append("\n\n**Binding providers:**");
             for (var provider : bindingProviders)
             {
-                var descriptions = provider.getBindingDescriptions();
+                var descriptions = provider.getBindings();
                 if (!descriptions.isEmpty())
                 {
                     description.append("\n\n**");
                     description.append(provider.getDescription());
                     description.append("**");
-                    description.append("\nUse for:");
-                    description.append("\n").append(getProviderUseCases(provider.getDescription()));
+                    String useCases = getProviderUseCases(provider);
+                    if (!useCases.isEmpty())
+                    {
+                        description.append("\n\n");
+                        description.append(useCases);
+                    }
                     description.append("\n\nAvailable bindings:");
                     int count = 0;
                     for (var entry : descriptions.entrySet())

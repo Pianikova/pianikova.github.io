@@ -60,7 +60,7 @@ class JShellSession
         var bindings = new ArrayList<String>();
         for (var provider : bindingProviders)
         {
-            var descriptions = provider.getBindingDescriptions();
+            var descriptions = provider.getBindings();
             bindings.addAll(descriptions.keySet());
         }
         return bindings;

@@ -136,7 +136,7 @@ public class JShellSessionMcpTool
 		{
 			for (var provider : bindingProviders)
 			{
-				var descriptions = provider.getBindingDescriptions();
+				var descriptions = provider.getBindings();
 				if (!descriptions.isEmpty())
 				{
 					description.append("\n");

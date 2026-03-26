@@ -10,12 +10,10 @@ import java.util.Map;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspaceRoot;
-import org.eclipse.core.resources.ResourcesPlugin;
 
 import com._1c.g5.v8.bm.core.IBmNamespace;
 import com._1c.g5.v8.bm.core.IBmTransaction;
 import com._1c.g5.v8.bm.integration.IBmEditingContext;
-import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
 import com._1c.g5.v8.bm.integration.IBmModel;
 import com._1c.g5.v8.bm.integration.IBmTask;
 import com._1c.g5.v8.dt.core.model.IModelObjectFactory;
@@ -81,6 +79,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.Task;
 import com._1c.g5.v8.dt.metadata.mdclass.Template;
 import com.e1c.edt.ai.tools.IJShellBindingProvider;
 import com.e1c.edt.ai.tools.JShellBindingDescription;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -102,105 +101,86 @@ import com.google.inject.Singleton;
 public class MetadataBindingProvider
     implements IJShellBindingProvider
 {
-    @Inject
     private IV8ProjectManager v8projectManager;
-
-    @Inject
     private IBmModelManager modelManager;
-
-    @Inject
     private ITopObjectFqnGenerator topObjectFqnGenerator;
-
-    @Inject
     private IResourceLookup resourceLookup;
+    private IModelObjectFactory modelObjectFactory;
 
     @Inject
-    private IModelObjectFactory modelObjectFactory;
+    public MetadataBindingProvider(IV8ProjectManager v8projectManager, IBmModelManager modelManager,
+        ITopObjectFqnGenerator topObjectFqnGenerator, IResourceLookup resourceLookup,
+        IModelObjectFactory modelObjectFactory)
+    {
+        Preconditions.checkNotNull(v8projectManager);
+        Preconditions.checkNotNull(modelManager);
+        Preconditions.checkNotNull(topObjectFqnGenerator);
+        Preconditions.checkNotNull(resourceLookup);
+        Preconditions.checkNotNull(modelObjectFactory);
+
+        this.v8projectManager = v8projectManager;
+        this.modelManager = modelManager;
+        this.topObjectFqnGenerator = topObjectFqnGenerator;
+        this.resourceLookup = resourceLookup;
+        this.modelObjectFactory = modelObjectFactory;
+    }
 
     @SuppressWarnings("nls")
     @Override
-    public Map<String, Object> getBindings()
+    public Map<String, JShellBindingDescription> getBindings()
     {
-        var bindings = new HashMap<String, Object>();
+        var bindings = new HashMap<String, JShellBindingDescription>();
 
-        // Core factories and generators
-        bindings.put("mdFactory", MdClassFactory.eINSTANCE);
-        bindings.put("fqnGenerator", topObjectFqnGenerator);
-        bindings.put("modelFactory", modelObjectFactory);
-        bindings.put("projectManager", v8projectManager);
-        bindings.put("modelManager", modelManager);
-        bindings.put("resourceLookup", resourceLookup);
+        // MdClassFactory
+        bindings.put("mdFactory", new JShellBindingDescription(
+            "Factory for creating 1C metadata objects (Catalogs, Documents, Reports, etc.)",
+            buildMdFactoryDescription(), MdClassFactory.eINSTANCE,
+            com._1c.g5.v8.dt.metadata.mdclass.MdClassFactory.class));
 
-        // Workspace access
-        IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-        bindings.put("workspaceRoot", root);
+        // FQN Generator
+        bindings.put("fqnGenerator", new JShellBindingDescription(
+            "Generates FQNs (Fully Qualified Names) for metadata objects",
+            buildFqnGeneratorDescription(), topObjectFqnGenerator, ITopObjectFqnGenerator.class));
+
+        // Model Factory
+        bindings.put("modelFactory", new JShellBindingDescription(
+            "Factory for creating model objects with proper initialization and context",
+            buildModelFactoryDescription(), modelObjectFactory, IModelObjectFactory.class));
+
+        // Project Manager
+        bindings.put("projectManager", new JShellBindingDescription(
+            "Manages 1C projects (configurations) in the workspace",
+            buildProjectManagerDescription(), v8projectManager, IV8ProjectManager.class));
+
+        // Model Manager
+        bindings.put("modelManager", new JShellBindingDescription(
+            "Provides access to BM (Business Model) for 1C projects",
+            buildModelManagerDescription(), modelManager, IBmModelManager.class));
+
+        // Resource Lookup
+        bindings.put("resourceLookup", new JShellBindingDescription(
+            "Looks up Eclipse resources (IProject, IFile) for 1C objects",
+            buildResourceLookupDescription(), resourceLookup, IResourceLookup.class));
 
         return bindings;
     }
 
     @SuppressWarnings("nls")
     @Override
-    public Map<String, JShellBindingDescription> getBindingDescriptions()
-    {
-        var infos = new HashMap<String, JShellBindingDescription>();
-
-        // MdClassFactory
-        infos.put("mdFactory", new JShellBindingDescription(
-            "Factory for creating 1C metadata objects (Catalogs, Documents, Reports, etc.)",
-            buildMdFactoryDescription()));
-
-        // FQN Generator
-        infos.put("fqnGenerator", new JShellBindingDescription(
-            "Generates FQNs (Fully Qualified Names) for metadata objects",
-            buildFqnGeneratorDescription()));
-
-        // Model Factory
-        infos.put("modelFactory", new JShellBindingDescription(
-            "Factory for creating model objects with proper initialization and context",
-            buildModelFactoryDescription()));
-
-        // Project Manager
-        infos.put("projectManager", new JShellBindingDescription(
-            "Manages 1C projects (configurations) in the workspace",
-            buildProjectManagerDescription()));
-
-        // Model Manager
-        infos.put("modelManager", new JShellBindingDescription(
-            "Provides access to BM (Business Model) for 1C projects",
-            buildModelManagerDescription()));
-
-        // Resource Lookup
-        infos.put("resourceLookup", new JShellBindingDescription(
-            "Looks up Eclipse resources (IProject, IFile) for 1C objects",
-            buildResourceLookupDescription()));
-
-        // Workspace Root
-        infos.put("workspaceRoot", new JShellBindingDescription(
-            "Eclipse workspace root for accessing all projects",
-            buildWorkspaceRootDescription()));
-
-        // Metadata Types and Features
-        infos.put("metadataTypes", new JShellBindingDescription(
-            "Complete guide to metadata types and their features",
-            buildMetadataTypesAndFeatures()));
-
-        // Complete Examples
-        infos.put("completeExamples", new JShellBindingDescription(
-            "Full examples of creating, editing, and deleting metadata",
-            buildCompleteExamples()));
-
-        // Workflows
-        infos.put("workflows", new JShellBindingDescription(
-            "Detailed workflows for metadata operations",
-            buildWorkflows()));
-
-        return infos;
-    }
-
-    @Override
     public String getDescription()
     {
         return "1C metadata API (factories, project manager, BM model)";
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String getUseCases()
+    {
+        return buildMetadataTypesAndFeatures() +
+                "\n\n" +
+                buildCompleteExamples() +
+                "\n\n" +
+                buildWorkflows();
     }
 
     @Override
@@ -593,33 +573,6 @@ public class MetadataBindingProvider
         desc.append("IFile file = resourceLookup.getFile(catalog);\n");
         desc.append("if (file != null) {\n");
         desc.append("    System.out.println(\"File: \" + file.getFullPath());\n");
-        desc.append("}\n");
-        desc.append("```\n\n");
-
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildWorkspaceRootDescription()
-    {
-        var desc = new StringBuilder();
-        desc.append("## IWorkspaceRoot - Workspace Root\n\n");
-        desc.append("Eclipse workspace root for accessing all projects.\n\n");
-        desc.append("### Get Project by Name\n");
-        desc.append("```java\n");
-        desc.append("// Get project by name\n");
-        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
-        desc.append("if (project.exists()) {\n");
-        desc.append("    System.out.println(\"Project exists: \" + project.getName());\n");
-        desc.append("}\n");
-        desc.append("```\n\n");
-
-        desc.append("### Get All Projects\n");
-        desc.append("```java\n");
-        desc.append("// Get all projects in workspace\n");
-        desc.append("IProject[] projects = workspaceRoot.getProjects();\n");
-        desc.append("for (IProject project : projects) {\n");
-        desc.append("    System.out.println(\"Project: \" + project.getName());\n");
         desc.append("}\n");
         desc.append("```\n\n");
 

@@ -12,22 +12,13 @@ import java.util.Map;
  */
 public interface IJShellBindingProvider
 {
-	/**
-	 * Returns a map of variable names to objects that should be bound to JShell.
-	 * The map keys are variable names (as they will appear in JShell),
-	 * and values are the actual objects.
-	 *
-	 * @return Map of variable names to objects
-	 */
-	Map<String, Object> getBindings();
-
     /**
      * Returns description and usage examples for each binding.
      * This will be used to enrich the tool description.
      *
      * @return Map of variable names to binding descriptions
      */
-    Map<String, JShellBindingDescription> getBindingDescriptions();
+    Map<String, JShellBindingDescription> getBindings();
 
     /**
      * Returns a brief description of this binding provider.
@@ -52,4 +43,12 @@ public interface IJShellBindingProvider
      * @return Array of import statements, or empty array if none
      */
     Collection<String> getImports();
+
+    /**
+     * Returns use cases description for this binding provider.
+     * This describes the typical scenarios and workflows where this provider's bindings are useful.
+     *
+     * @return Use cases description string, or empty string if none
+     */
+    String getUseCases();
 }
