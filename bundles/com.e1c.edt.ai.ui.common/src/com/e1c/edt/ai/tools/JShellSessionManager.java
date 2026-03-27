@@ -4,6 +4,11 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -101,10 +106,13 @@ class JShellSessionManager
 	@SuppressWarnings("nls")
 	private JShellSession createSession()
 	{
+        var snapshot = buildSessionSnapshot();
 		var outBuffer = new ByteArrayOutputStream();
 		var errBuffer = new ByteArrayOutputStream();
 
-        var executionControlProvider = new JShellSharedExecutionControlProvider(JShellSessionManager.class.getClassLoader());
+        var sessionClassLoader = new DelegatingClassLoader(JShellSessionManager.class.getClassLoader(),
+            snapshot.classLoaders);
+        var executionControlProvider = new JShellSharedExecutionControlProvider(sessionClassLoader);
         executionControlProvider.setOutputBuffers(outBuffer, errBuffer);
 
         var shell = JShell.builder()
@@ -114,9 +122,9 @@ class JShellSessionManager
         String classpath = System.getProperty("java.class.path");
         shell.addToClasspath(classpath);
         classPathProvider.addClassPathFor(shell, JShellSessionManager.class);
-        for (var provider : bindingProviders)
+        for (var significantClasses : snapshot.significantClassesByProvider.values())
         {
-            for (var clazz : provider.getSignificantClasses())
+            for (var clazz : significantClasses)
             {
                 classPathProvider.addClassPathFor(shell, clazz);
             }
@@ -127,9 +135,9 @@ class JShellSessionManager
         var session = new JShellSession(sessionId, shell, outBuffer, errBuffer, restrictedTypesValidator, bindingProviders);
 
         // Pre-import commonly used packages from providers
-        for (var provider : bindingProviders)
+        for (var imports : snapshot.importsByProvider.values())
         {
-            for (String imp : provider.getImports())
+            for (String imp : imports)
             {
                 try
                 {
@@ -147,9 +155,8 @@ class JShellSessionManager
         }
 
 		// Store bindings in registry
-        for (var provider : bindingProviders)
+        for (var bindings : snapshot.bindingsByProvider.values())
 		{
-            var bindings = provider.getBindings();
 			for (var entry : bindings.entrySet())
 			{
                 var description = entry.getValue();
@@ -163,9 +170,10 @@ class JShellSessionManager
                     continue;
                 }
 
+                var bindingType = explicitType != null ? explicitType : value.getClass();
                 var objectId = JShellObjectBridge.store(session.getSessionId(), value);
-                var className = explicitType.getName();
-                classPathProvider.addClassPathFor(shell, explicitType);
+                var className = bindingType.getName();
+                classPathProvider.addClassPathFor(shell, bindingType);
                 var bindCode =
                     String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(%d, %d);",
                         className, varName, className, session.getSessionId(), objectId);
@@ -182,18 +190,61 @@ class JShellSessionManager
                         errorMessage.append("\nCompilation errors:\n");
                         for (var error : result.compilationErrors)
                         {
-                            errorMessage.append("  - ").append(error).append("\n");
+                            errorMessage.append("  - Message: ").append(error.message).append("\n");
+                            if (error.code != null)
+                            {
+                                errorMessage.append("    Error code: ").append(error.code).append("\n");
+                            }
+                            if (error.position >= 0)
+                            {
+                                errorMessage.append("    Position: ").append(error.position).append("\n");
+                            }
+                            if (error.startPosition >= 0)
+                            {
+                                errorMessage.append("    Start position: ").append(error.startPosition).append("\n");
+                            }
+                            if (error.endPosition >= 0)
+                            {
+                                errorMessage.append("    End position: ").append(error.endPosition).append("\n");
+                            }
+                            if (error.isResolutionError)
+                            {
+                                errorMessage.append("    Type: Resolution error\n");
+                            }
+                            if (error.isUnreachableError)
+                            {
+                                errorMessage.append("    Type: Unreachable code error\n");
+                            }
+                            if (error.isNotAStatementError)
+                            {
+                                errorMessage.append("    Type: Not a statement error\n");
+                            }
                         }
                     }
+
                     if (!result.runtimeErrors.isEmpty())
                     {
                         errorMessage.append("\nRuntime errors:\n");
                         for (var error : result.runtimeErrors)
                         {
-                            errorMessage.append("  - ").append(error).append("\n");
+                            if (error.exceptionType != null)
+                            {
+                                errorMessage.append("  - Exception type: ").append(error.exceptionType).append("\n");
+                            }
+                            if (error.message != null)
+                            {
+                                errorMessage.append("    Message: ").append(error.message).append("\n");
+                            }
+                            if (error.stackTrace != null && !error.stackTrace.isBlank())
+                            {
+                                errorMessage.append("    Stack trace:\n").append(error.stackTrace).append("\n");
+                            }
                         }
                     }
-                    throw new ToolException(errorMessage.toString(), null, ToolErrorType.RETRYABLE);
+
+                    var error = errorMessage.toString();
+                    log.logError(error);
+                    throw new ToolException(error, null, ToolErrorType.RETRYABLE);
                 }
 			}
 		}
@@ -202,7 +253,139 @@ class JShellSessionManager
 		return session;
 	}
 
-	@Override
+    private SessionSnapshot buildSessionSnapshot()
+    {
+        var snapshot = new SessionSnapshot();
+        addClassLoader(snapshot.classLoaders, Thread.currentThread().getContextClassLoader());
+        addClassLoader(snapshot.classLoaders, JShellSessionManager.class.getClassLoader());
+
+        for (var provider : bindingProviders)
+        {
+            addClassLoader(snapshot.classLoaders, provider.getClass().getClassLoader());
+
+            var bindings = provider.getBindings();
+            if (bindings == null)
+            {
+                bindings = Map.of();
+            }
+            snapshot.bindingsByProvider.put(provider, bindings);
+            for (var description : bindings.values())
+            {
+                if (description == null)
+                {
+                    continue;
+                }
+
+                addClassLoader(snapshot.classLoaders, description.getExplicitType());
+                var value = description.getValue();
+                if (value != null)
+                {
+                    addClassLoader(snapshot.classLoaders, value.getClass().getClassLoader());
+                }
+            }
+
+            var significantClasses = provider.getSignificantClasses();
+            if (significantClasses == null)
+            {
+                significantClasses = List.of();
+            }
+            snapshot.significantClassesByProvider.put(provider, significantClasses);
+            for (var clazz : significantClasses)
+            {
+                addClassLoader(snapshot.classLoaders, clazz);
+            }
+
+            var imports = provider.getImports();
+            snapshot.importsByProvider.put(provider, imports != null ? imports : List.of());
+        }
+
+        return snapshot;
+    }
+
+    private static void addClassLoader(Set<ClassLoader> classLoaders, Class<?> clazz)
+    {
+        if (clazz == null)
+        {
+            return;
+        }
+        addClassLoader(classLoaders, clazz.getClassLoader());
+    }
+
+    private static void addClassLoader(Set<ClassLoader> classLoaders, ClassLoader classLoader)
+    {
+        if (classLoader != null)
+        {
+            classLoaders.add(classLoader);
+        }
+    }
+
+    private static final class SessionSnapshot
+    {
+        private final Map<IJShellBindingProvider, Map<String, JShellBindingDescription>> bindingsByProvider =
+            new LinkedHashMap<>();
+        private final Map<IJShellBindingProvider, Collection<Class<?>>> significantClassesByProvider =
+            new LinkedHashMap<>();
+        private final Map<IJShellBindingProvider, Collection<String>> importsByProvider = new LinkedHashMap<>();
+        private final Set<ClassLoader> classLoaders = new LinkedHashSet<>();
+    }
+
+    /**
+     * Resolves classes through multiple OSGi-aware classloaders before JShell falls back to URL classpath loading.
+     */
+    private static final class DelegatingClassLoader
+        extends ClassLoader
+    {
+        private final List<ClassLoader> delegates;
+
+        private DelegatingClassLoader(ClassLoader parent, Set<ClassLoader> classLoaders)
+        {
+            super(parent);
+            this.delegates = new ArrayList<>();
+            for (var classLoader : classLoaders)
+            {
+                if (classLoader == null || classLoader == parent)
+                {
+                    continue;
+                }
+                this.delegates.add(classLoader);
+            }
+        }
+
+        @Override
+        protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException
+        {
+            synchronized (getClassLoadingLock(name))
+            {
+                var alreadyLoaded = findLoadedClass(name);
+                if (alreadyLoaded != null)
+                {
+                    return alreadyLoaded;
+                }
+
+                try
+                {
+                    return super.loadClass(name, resolve);
+                }
+                catch (ClassNotFoundException e)
+                {
+                    for (var delegate : delegates)
+                    {
+                        try
+                        {
+                            return delegate.loadClass(name);
+                        }
+                        catch (ClassNotFoundException ignored)
+                        {
+                            // Try the next classloader.
+                        }
+                    }
+                    throw e;
+                }
+            }
+        }
+    }
+
+    @Override
     public void invalidateSession(int sessionId)
 	{
 		cache.invalidate(sessionId);

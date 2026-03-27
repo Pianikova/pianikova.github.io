@@ -246,7 +246,7 @@ public final class JShellSharedExecutionControlProvider
                 Method method = klass.getDeclaredMethod(methodName);
                 method.setAccessible(true);
                 Object result = method.invoke(null);
-                return result == null ? null : result.toString();
+                return formatResultValue(result);
             }
             catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e)
             {
@@ -320,6 +320,25 @@ public final class JShellSharedExecutionControlProvider
             throws EngineTerminationException, InternalException, RunException
         {
             throw new NotImplementedException("varValue"); //$NON-NLS-1$
+        }
+
+        private String formatResultValue(Object result)
+        {
+            if (result == null)
+            {
+                return "null"; //$NON-NLS-1$
+            }
+
+            Class<?> resultClass = result.getClass();
+            if (result instanceof String || result instanceof Number || result instanceof Boolean
+                || result instanceof Character || resultClass.isEnum())
+            {
+                return result.toString();
+            }
+
+            // Avoid invoking toString() on dynamic OSGi/Peaberry proxies:
+            // for some services it triggers blocking lookup with timeout.
+            return resultClass.getName() + "@" + Integer.toHexString(System.identityHashCode(result)); //$NON-NLS-1$
         }
     }
 }
