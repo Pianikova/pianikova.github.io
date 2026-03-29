@@ -55,23 +55,26 @@ public class MetadataBindingProvider
     private final ITopObjectFqnGenerator topObjectFqnGenerator;
     private final IResourceLookup resourceLookup;
     private final IModelObjectFactory modelObjectFactory;
+    private final IMethodListProvider methodListProvider;
 
     @Inject
     public MetadataBindingProvider(IV8ProjectManager v8projectManager, IBmModelManager modelManager,
         ITopObjectFqnGenerator topObjectFqnGenerator, IResourceLookup resourceLookup,
-        IModelObjectFactory modelObjectFactory)
+        IModelObjectFactory modelObjectFactory, IMethodListProvider methodListProvider)
     {
         Preconditions.checkNotNull(v8projectManager);
         Preconditions.checkNotNull(modelManager);
         Preconditions.checkNotNull(topObjectFqnGenerator);
         Preconditions.checkNotNull(resourceLookup);
         Preconditions.checkNotNull(modelObjectFactory);
+        Preconditions.checkNotNull(methodListProvider);
 
         this.v8projectManager = v8projectManager;
         this.modelManager = modelManager;
         this.topObjectFqnGenerator = topObjectFqnGenerator;
         this.resourceLookup = resourceLookup;
         this.modelObjectFactory = modelObjectFactory;
+        this.methodListProvider = methodListProvider;
     }
 
     @SuppressWarnings("nls")
@@ -84,7 +87,9 @@ public class MetadataBindingProvider
         if (mdClassFactory != null)
         {
             bindings.put("mdFactory", new JShellBindingDescription("Factory for creating 1C metadata objects",
-                buildMdFactoryDescription(), mdClassFactory, MdClassFactory.class));
+                buildMdFactoryDescription(), mdClassFactory, MdClassFactory.class,
+                "**⚠️ RESTRICTION: Cannot be used inside BM transaction.** Use `mdFactory` for object creation in "
+                    + "AbstractBmTask.execute() body, where IBmTransaction is available."));
         }
 
         bindings.put("fqnGenerator", new JShellBindingDescription(
@@ -264,6 +269,8 @@ public class MetadataBindingProvider
         var desc = new StringBuilder();
         desc.append("## MdClassFactory\n\n");
         desc.append("Use `mdFactory` for direct creation of metadata objects and object parts.\n\n");
+        desc.append("**⚠️ IMPORTANT:** `mdFactory` cannot be used inside BM transaction. Use it only in "
+            + "`AbstractBmTask.execute()` body where `IBmTransaction` is available.\n\n");
         desc.append("```java\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
@@ -275,6 +282,15 @@ public class MetadataBindingProvider
         desc.append("attribute.getSynonym().put(\"ru\", \"Article\");\n");
         desc.append("catalog.getAttributes().add(attribute);\n");
         desc.append("```\n");
+        desc.append("\n");
+        desc.append("### Available Public Methods:\n\n");
+
+        var methodSignatures = methodListProvider.getPublicMethodSignatures(MdClassFactory.class);
+        for (String signature : methodSignatures)
+        {
+            desc.append("- `").append(signature).append("`\n");
+        }
+
         desc.append("\n");
         desc.append("For top-level objects in project context, prefer `modelFactory` inside BM transaction.");
         return desc.toString();

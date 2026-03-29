@@ -265,10 +265,15 @@ public class JShellMcpTool
                         {
                             String bindingName = entry.getKey();
                             JShellBindingDescription bindingInfo = entry.getValue();
+                            String bindingRestriction = bindingInfo.getRestriction();
                             description.append("\n- `")
                                 .append(bindingName)
                                 .append("`: ")
                                 .append(bindingInfo.getDescription());
+                            if (bindingRestriction != null && !bindingRestriction.isEmpty())
+                            {
+                                description.append(" (has restriction)");
+                            }
                             count++;
                         }
                         else

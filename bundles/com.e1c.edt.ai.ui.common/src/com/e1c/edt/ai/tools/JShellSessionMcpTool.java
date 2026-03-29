@@ -146,9 +146,15 @@ public class JShellSessionMcpTool
 						JShellBindingDescription bindingInfo = entry.getValue();
 						String bindingDesc = bindingInfo.getDescription();
 						String bindingExample = bindingInfo.getExample();
+                        String bindingRestriction = bindingInfo.getRestriction();
 
 						description.append("\n**`").append(bindingName).append("`**");
 						description.append("\n").append(bindingDesc);
+
+                        if (bindingRestriction != null && !bindingRestriction.isEmpty())
+                        {
+                            description.append("\n\n").append(bindingRestriction);
+                        }
 
 						if (bindingExample != null && !bindingExample.isEmpty())
 						{
