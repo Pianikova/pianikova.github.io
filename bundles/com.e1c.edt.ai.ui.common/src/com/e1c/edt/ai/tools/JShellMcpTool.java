@@ -207,7 +207,6 @@ public class JShellMcpTool
 		return String.join(", ", exampleNames);
 	}
 
-    @SuppressWarnings("nls")
     private String getProviderUseCases(IJShellBindingProvider provider)
     {
         return provider.getUseCases();

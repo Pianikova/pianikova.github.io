@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.ui.PlatformUI;
 
@@ -35,9 +34,13 @@ public class EclipsePlatformBindingProvider
 		}
 
         // Workspace access
-        IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
-        bindings.put("workspaceRoot", new JShellBindingDescription("Eclipse workspace root for accessing all projects",
-            buildWorkspaceRootDescription(), root, org.eclipse.core.resources.IWorkspaceRoot.class));
+        var root = ResourcesPlugin.getWorkspace().getRoot();
+        if (root != null)
+        {
+            bindings.put("workspaceRoot",
+                new JShellBindingDescription("Eclipse workspace root for accessing all projects",
+                    buildWorkspaceRootDescription(), root, org.eclipse.core.resources.IWorkspaceRoot.class));
+        }
 
 		return bindings;
 	}
@@ -45,7 +48,7 @@ public class EclipsePlatformBindingProvider
     @Override
     public String getDescription()
     {
-        return "Eclipse platform services (workbench, UI, resources)";
+        return "Eclipse platform services (workbench, UI, resources)"; //$NON-NLS-1$
     }
 
     @Override

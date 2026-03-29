@@ -80,11 +80,12 @@ public class MetadataBindingProvider
     {
         var bindings = new HashMap<String, JShellBindingDescription>();
 
-        bindings.put("mdFactory", new JShellBindingDescription(
-            "Factory for creating 1C metadata objects",
-            buildMdFactoryDescription(),
-            MdClassFactory.eINSTANCE,
-            MdClassFactory.class));
+        var mdClassFactory = MdClassFactory.eINSTANCE;
+        if (mdClassFactory != null)
+        {
+            bindings.put("mdFactory", new JShellBindingDescription("Factory for creating 1C metadata objects",
+                buildMdFactoryDescription(), mdClassFactory, MdClassFactory.class));
+        }
 
         bindings.put("fqnGenerator", new JShellBindingDescription(
             "Generates FQNs (Fully Qualified Names) for top-level metadata objects",
