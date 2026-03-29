@@ -223,6 +223,10 @@ public class JShellMcpTool
 
 		var description = new StringBuilder();
         description.append("Executes Java code using JShell REPL. Preserves state across executions.");
+		description.append("\n\n**IMPORTANT:**");
+        description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
+        description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
+
 		description.append("\n\n**When to use:**");
 		description.append("\n- Use when other IDE tools (" + GitMcpTool.TOOL_NAME + " , " + ReadMcpTool.TOOL_NAME + ", etc.) cannot accomplish the task");
 
