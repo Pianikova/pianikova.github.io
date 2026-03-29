@@ -250,6 +250,7 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.platform.*;",
             "import com._1c.g5.v8.dt.mcore.*;",
             "import com._1c.g5.v8.dt.platform.core.typeinfo.*;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.*;",
             "import org.eclipse.core.resources.*;",
             "import org.eclipse.core.runtime.*;"
         );
