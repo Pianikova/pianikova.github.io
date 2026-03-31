@@ -106,7 +106,7 @@ public class EditMcpTool
     @Override
     public boolean isExperimental()
     {
-        return true;
+        return false;
     }
 
     @Override

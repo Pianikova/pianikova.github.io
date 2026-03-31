@@ -13,7 +13,6 @@ public class EditingSupport
     @Override
     public boolean canEdit(IFile file)
     {
-        var project = file.getProject();
         return true;
     }
 
