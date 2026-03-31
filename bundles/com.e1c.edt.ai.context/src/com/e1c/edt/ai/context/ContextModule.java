@@ -12,6 +12,8 @@ import com._1c.g5.v8.dt.bsl.documentation.comment.BslMultiLineCommentDocumentati
 import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
 import com._1c.g5.v8.dt.core.model.IModelEditingSupport;
+import com._1c.g5.v8.dt.core.model.IModelObjectFactory;
+import com._1c.g5.v8.dt.core.naming.ITopObjectFqnGenerator;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
@@ -35,7 +37,11 @@ import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.MarkdownUtils;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
 import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
+import com.e1c.edt.ai.context.tools.IMethodListProvider;
 import com.e1c.edt.ai.context.tools.MarkersProvider;
+import com.e1c.edt.ai.context.tools.MetadataBindingProvider;
+import com.e1c.edt.ai.context.tools.MethodListProvider;
+import com.e1c.edt.ai.tools.IJShellBindingProvider;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -71,6 +77,7 @@ class ContextModule
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IEditingSupport.class).to(EditingSupport.class).in(Singleton.class);
         bind(IMarkdownUtils.class).to(MarkdownUtils.class).in(Singleton.class);
+        bind(IMethodListProvider.class).to(MethodListProvider.class).in(Singleton.class);
         var projectDetailsProviderBinder = Multibinder.newSetBinder(binder(), IProjectDetailsProvider.class);
         projectDetailsProviderBinder.addBinding().to(ConfigurationParametersProvider.class);
         bind(MessageDigest.class).toProvider(() -> {
@@ -95,6 +102,10 @@ class ContextModule
         var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
         markersProviderBinder.addBinding().to(MarkersProvider.class);
 
+        // JShell binding providers
+        var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
+        jshellBindingProviderBinder.addBinding().to(MetadataBindingProvider.class);
+
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();
         bind(IBmModelManager.class).toService();
@@ -107,6 +118,8 @@ class ContextModule
         bind(ITextSearchIndexProvider.class).toService();
         bind(IModelEditingSupport.class).toService();
         bind(IMarkerManagerV2.class).toService();
+        bind(ITopObjectFqnGenerator.class).toService();
+        bind(IModelObjectFactory.class).toService();
         // @formatter:on
     }
 }

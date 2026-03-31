@@ -50,7 +50,7 @@ public final class JShellSharedExecutionControlProvider
     @Override
     public ExecutionControl generate(ExecutionEnv env, Map<String, String> parameters)
     {
-        return new CapturingExecutionControl(new SharedLoaderDelegate(parent), outBuffer, errBuffer);
+        return new CapturingExecutionControl(new SharedLoaderDelegate(parent), outBuffer, errBuffer, parent);
     }
 
     private static final class SharedLoaderDelegate
@@ -213,9 +213,10 @@ public final class JShellSharedExecutionControlProvider
         private final LoaderDelegate loaderDelegate;
         private final ByteArrayOutputStream outBuffer;
         private final ByteArrayOutputStream errBuffer;
+        private final ClassLoader contextClassLoader;
 
         CapturingExecutionControl(LoaderDelegate loaderDelegate, ByteArrayOutputStream outBuffer,
-            ByteArrayOutputStream errBuffer)
+            ByteArrayOutputStream errBuffer, ClassLoader contextClassLoader)
         {
             Preconditions.checkNotNull(loaderDelegate);
             Preconditions.checkNotNull(outBuffer);
@@ -224,6 +225,7 @@ public final class JShellSharedExecutionControlProvider
             this.loaderDelegate = loaderDelegate;
             this.outBuffer = outBuffer;
             this.errBuffer = errBuffer;
+            this.contextClassLoader = contextClassLoader;
         }
 
         @Override
@@ -238,15 +240,21 @@ public final class JShellSharedExecutionControlProvider
         {
             PrintStream originalOut = System.out;
             PrintStream originalErr = System.err;
+            Thread currentThread = Thread.currentThread();
+            ClassLoader originalContextClassLoader = currentThread.getContextClassLoader();
             try
             {
+                if (contextClassLoader != null)
+                {
+                    currentThread.setContextClassLoader(contextClassLoader);
+                }
                 System.setOut(new PrintStream(outBuffer, true, StandardCharsets.UTF_8));
                 System.setErr(new PrintStream(errBuffer, true, StandardCharsets.UTF_8));
                 Class<?> klass = loaderDelegate.findClass(className);
                 Method method = klass.getDeclaredMethod(methodName);
                 method.setAccessible(true);
                 Object result = method.invoke(null);
-                return result == null ? null : result.toString();
+                return formatResultValue(result);
             }
             catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException e)
             {
@@ -264,6 +272,7 @@ public final class JShellSharedExecutionControlProvider
             }
             finally
             {
+                currentThread.setContextClassLoader(originalContextClassLoader);
                 System.setOut(originalOut);
                 System.setErr(originalErr);
             }
@@ -282,14 +291,21 @@ public final class JShellSharedExecutionControlProvider
         {
             PrintStream originalOut = System.out;
             PrintStream originalErr = System.err;
+            Thread currentThread = Thread.currentThread();
+            ClassLoader originalContextClassLoader = currentThread.getContextClassLoader();
             try
             {
+                if (contextClassLoader != null)
+                {
+                    currentThread.setContextClassLoader(contextClassLoader);
+                }
                 System.setOut(new PrintStream(outBuffer, true, StandardCharsets.UTF_8));
                 System.setErr(new PrintStream(errBuffer, true, StandardCharsets.UTF_8));
                 loaderDelegate.load(cbcs);
             }
             finally
             {
+                currentThread.setContextClassLoader(originalContextClassLoader);
                 System.setOut(originalOut);
                 System.setErr(originalErr);
             }
@@ -320,6 +336,25 @@ public final class JShellSharedExecutionControlProvider
             throws EngineTerminationException, InternalException, RunException
         {
             throw new NotImplementedException("varValue"); //$NON-NLS-1$
+        }
+
+        private String formatResultValue(Object result)
+        {
+            if (result == null)
+            {
+                return "null"; //$NON-NLS-1$
+            }
+
+            Class<?> resultClass = result.getClass();
+            if (result instanceof String || result instanceof Number || result instanceof Boolean
+                || result instanceof Character || resultClass.isEnum())
+            {
+                return result.toString();
+            }
+
+            // Avoid invoking toString() on dynamic OSGi/Peaberry proxies:
+            // for some services it triggers blocking lookup with timeout.
+            return resultClass.getName() + "@" + Integer.toHexString(System.identityHashCode(result)); //$NON-NLS-1$
         }
     }
 }
