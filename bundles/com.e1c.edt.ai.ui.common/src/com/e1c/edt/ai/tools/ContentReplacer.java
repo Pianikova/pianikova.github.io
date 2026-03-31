@@ -5,9 +5,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.inject.Inject;
-
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
 public class ContentReplacer implements IContentReplacer
 {
