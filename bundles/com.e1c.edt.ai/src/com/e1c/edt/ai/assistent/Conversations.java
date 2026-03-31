@@ -328,13 +328,17 @@ public class Conversations implements IConversations
                 continue;
             }
 
-            call.sourceChatId = conversationId;
-            call.sourceMessageId = response.uuid;
-            result.add(call);
+            McpToolCall newCall = new McpToolCall();
+            newCall.id = call.id;
+            newCall.function = call.function;
+            newCall.sourceChatId = conversationId;
+            newCall.sourceMessageId = response.uuid;
+            result.add(newCall);
         }
 
         return result;
     }
+
 
     private CompletableFuture<AskRoundResult> askSingleRound(Session session, String conversationId,
         ConversationAskRequest conversationRequest,
@@ -347,6 +351,10 @@ public class Conversations implements IConversations
         {
             future.complete(new AskRoundResult());
             return future;
+        }
+        if (cancellationToken.isCanceled())
+        {
+            future.complete(new AskRoundResult());
         }
         var requestBuilder = optionalRequest.get().header("Session-Id", session.sessionId); //$NON-NLS-1$
         var requestBody = serializeWithNull(conversationRequest);

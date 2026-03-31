@@ -28,8 +28,14 @@ import com.google.gson.JsonObject;
 import com.google.inject.Inject;
 
 /**
- * @author Bogdan Sushkov
+ * Фасад для управления диалогами с AI-ассистентом в среде разработки EDT.
+ * <p>
+ * Предоставляет возможность отправлять сообщения ассистенту, создавать новые диалоги,
+ * выполнять скиллы перед отправкой сообщения, обрабатывать потоковые ответы ассистента.
+ * Интегрируется с MCP-инструментами для предоставления ассистенту контекста работы.
+ * </p>
  *
+ * @author Bogdan Sushkov
  */
 public class ConversationFacade
     implements IConversationFacade
@@ -38,22 +44,67 @@ public class ConversationFacade
     private final IJson json;
     private final IMcpTools mcpTools;
     private final ISettings settings;
+    private final ISkillFacade skillFacade;
 
     @Inject
-    public ConversationFacade(IConversations conversations, IJson json, IMcpTools mcpTools, ISettings settings)
+    public ConversationFacade(IConversations conversations, IJson json, IMcpTools mcpTools, ISettings settings,
+        ISkillFacade skillFacade)
     {
         Preconditions.checkNotNull(conversations);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(skillFacade);
+        this.skillFacade = skillFacade;
         this.settings = settings;
         this.conversations = conversations;
         this.json = json;
         this.mcpTools = mcpTools;
     }
 
+    /**
+     * Асинхронно отправляет сообщение ассистенту.
+     * <p>
+     * Если запрос помечен как запрос скилла, сначала выполняет скилл через {@link ISkillFacade},
+     * используя результат как подготовленное сообщение. Затем отправляет сообщение в диалог,
+     * создавая новый диалог при необходимости или продолжая существующий.
+     * </p>
+     *
+     * @param request запрос пользователя с сообщением, проектом и сессией диалога
+     * @param cancellationToken токен для отмены асинхронной операции
+     * @return {@link CompletableFuture} с результатом отправки, содержащим текст ответа и сессию
+     */
     @Override
     public CompletableFuture<SendMessageResult> sendAsync(SendUserMessageRequest request,
+        ICancellationToken cancellationToken)
+    {
+        CompletableFuture<SendUserMessageRequest> result;
+        if (request.isSkillRequest())
+        {
+            result = skillFacade.execute(request, cancellationToken).thenApply(prepared ->
+                 new SendUserMessageRequest(request.getProjectId(), prepared, request.getConversationSession(),
+                     request.isForceNewConversation()));
+        }
+        else
+        {
+            result = CompletableFuture.completedFuture(request);
+        }
+        return result.thenCompose(preparedRequest -> send(preparedRequest, cancellationToken));
+    }
+
+    /**
+     * Отправляет сообщение в диалог.
+     * <p>
+     * Определяет необходимость создания нового диалога на основе флага {@code forceNewConversation}
+     * или состояния сессии. Создаёт диалог при необходимости, формирует запрос к ассистенту
+     * с инструкцией и инструментами, затем собирает ответ.
+     * </p>
+     *
+     * @param request подготовленный запрос пользователя
+     * @param cancellationToken токен для отмены операции
+     * @return {@link CompletableFuture} с результатом отправки
+     */
+    private CompletableFuture<SendMessageResult> send(SendUserMessageRequest request,
         ICancellationToken cancellationToken)
     {
         boolean isNewConversation = request.isForceNewConversation() || request.getConversationSession() == null
@@ -69,6 +120,17 @@ public class ConversationFacade
         });
     }
 
+    /**
+     * Асинхронно создаёт новый диалог с настройками по умолчанию.
+     * <p>
+     * Использует настройки языка из {@link ISettings}, программный язык "1c",
+     * скилл "custom". Диалог создаётся как скрытый (не отображается в списке чатов).
+     * </p>
+     *
+     * @param projectId идентификатор проекта
+     * @param cancellationToken токен для отмены операции
+     * @return {@link CompletableFuture} с UUID созданного диалога
+     */
     private CompletableFuture<String> createConversationAsync(ProjectId projectId, ICancellationToken cancellationToken)
     {
         if (cancellationToken.isCanceled())
@@ -94,6 +156,17 @@ public class ConversationFacade
     }
 
 
+    /**
+     * Формирует запрос к ассистенту с инструкцией и инструментами.
+     * <p>
+     * Создаёт структуру JSON с инструкцией и пустым массивом кода,
+     * добавляет определения всех доступных MCP-инструментов.
+     * </p>
+     *
+     * @param instruction текст инструкции для ассистента
+     * @param parentUuid UUID родительского сообщения (для продолжения диалога) или null
+     * @return сформированный {@link ConversationAskRequest}
+     */
     private ConversationAskRequest createAskRequest(String instruction, String parentUuid)
     {
         var skillContent = new JsonObject();
@@ -101,7 +174,7 @@ public class ConversationFacade
         skillContent.add("code", new JsonArray()); //$NON-NLS-1$
 
         ConversationRequestContent requestContent = new ConversationRequestContent();
-        requestContent.content = json.deserialize(json.serialize(skillContent), JsonElement.class).orElse(null);
+        requestContent.content = skillContent;
         requestContent.tools = getToolsDefinitions();
 
         ConversationAskRequest askRequest = new ConversationAskRequest();
@@ -111,6 +184,15 @@ public class ConversationFacade
         return askRequest;
     }
 
+    /**
+     * Получает определения всех доступных MCP-инструментов.
+     * <p>
+     * Запрашивает спецификации инструментов через {@link IMcpTools}, фильтрует
+     * инструменты без имени, преобразует в {@link ToolDefinition}.
+     * </p>
+     *
+     * @return список определений инструментов
+     */
     private List<ToolDefinition> getToolsDefinitions()
     {
         ArrayList<ToolDefinition> toolDefinitions = new ArrayList<>();
@@ -136,6 +218,25 @@ public class ConversationFacade
         return toolDefinitions;
     }
 
+    /**
+     * Подписывается на поток ответов ассистента и собирает полный результат.
+     * <p>
+     * Обрабатывает три типа событий:
+     * <ul>
+     *   <li>Начало сообщения ассистента - создаёт буфер для текста</li>
+     *   <li>Дельты (поступающие части текста) - добавляет в буфер</li>
+     *   <li>Завершение сообщения - фиксирует финальный текст</li>
+     * </ul>
+     * При завершении потока возвращает результат с текстом последнего сообщения
+     * и сессией диалога для продолжения.
+     * </p>
+     *
+     * @param projectId идентификатор проекта
+     * @param conversationUuid UUID диалога
+     * @param askRequest запрос к ассистенту
+     * @param cancellationToken токен для отмены операции
+     * @return {@link CompletableFuture} с результатом, содержащим текст ответа и сессию
+     */
     private CompletableFuture<SendMessageResult> collectAssistantResult(ProjectId projectId, String conversationUuid,
         ConversationAskRequest askRequest, ICancellationToken cancellationToken)
     {
@@ -217,6 +318,13 @@ public class ConversationFacade
     }
 
 
+    /**
+     * Создаёт неуспешное {@link CompletableFuture} с исключением.
+     *
+     * @param throwable исключение для завершения
+     * @param <T> тип результата
+     * @return CompletableFuture, завершённый exceptionally
+     */
     private <T> CompletableFuture<T> failedFuture(Throwable throwable)
     {
         CompletableFuture<T> future = new CompletableFuture<>();
