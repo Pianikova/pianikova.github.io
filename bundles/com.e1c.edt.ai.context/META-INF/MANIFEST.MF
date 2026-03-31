@@ -40,7 +40,7 @@ Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.ui.forms;bundle-version="[3.11.300,4.0.0)",
  com._1c.g5.v8.dt.ui;bundle-version="[19.0.0,100.0.0)",
  com._1c.g5.lwt;bundle-version="[5.4.100,6.0.0)",
- com._1c.g5.v8.dt.search.core;bundle-version="[12.1.100,13.0.0)",
+ com._1c.g5.v8.dt.search.core;bundle-version="[12.1.100,14.0.0)",
  com._1c.g5.v8.dt.validation;bundle-version="[8.0.0,13.0.0)",
  com._1c.g5.v8.dt.platform;bundle-version="[11.1.0,14.0.0)",
  com._1c.g5.v8.dt.platform.core;bundle-version="[8.0.200,14.0.0)"
