@@ -97,16 +97,10 @@ public class GitMcpTool
 	}
 
 	@Override
-	public boolean isExperimental()
-	{
-        return false;
-	}
-
-	@Override
 	public McpToolCallSpecification getSpecification()
 	{
 		return spec;
-    }
+	}
 
     @Override
     public CompletableFuture<Boolean> getIsAvailable()
