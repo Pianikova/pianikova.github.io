@@ -2,6 +2,8 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.context.tools;
+
+import java.lang.reflect.Constructor;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -249,10 +251,9 @@ public class FindMcpTool
                 var resultCollector = new SimpleSearchResultCollector();
                 var monitor = new NullProgressMonitor();
 
-                var searcher =
-                    new TextSearcher(request.searchQuery, request.matchCase, searchSettings, resultCollector,
-                        searchModelManager, textSearchIndexProvider, externalPropertyManagerRegistry,
-                        hostResourceManager);
+                var searcher = createTextSearcher(request.searchQuery, request.matchCase, searchSettings,
+                    resultCollector, searchModelManager, textSearchIndexProvider, externalPropertyManagerRegistry,
+                    hostResourceManager);
 
                 searcher.search(monitor);
 
@@ -401,6 +402,51 @@ public class FindMcpTool
         }
 
         return elements;
+    }
+
+    @SuppressWarnings({ "unchecked", "nls" })
+    private TextSearcher createTextSearcher(String searchQuery, boolean matchCase,
+        TextSearchScopeSettings searchSettings, SimpleSearchResultCollector resultCollector,
+        IBmModelManager searchModelManager, ITextSearchIndexProvider textSearchIndexProvider,
+        IExternalPropertyManagerRegistry externalPropertyManagerRegistry, IDtHostResourceManager hostResourceManager)
+    {
+        Constructor<TextSearcher> constructor = null;
+        Object[] args = null;
+
+        for (Constructor<?> ctor : TextSearcher.class.getConstructors())
+        {
+            switch (ctor.getParameterCount())
+            {
+            case 7:
+                constructor = (Constructor<TextSearcher>)ctor;
+                args = new Object[] { searchQuery, searchSettings, resultCollector, searchModelManager,
+                    textSearchIndexProvider, externalPropertyManagerRegistry, hostResourceManager };
+                break;
+
+            case 8:
+                constructor = (Constructor<TextSearcher>)ctor;
+                args = new Object[] { searchQuery, matchCase, searchSettings, resultCollector, searchModelManager,
+                    textSearchIndexProvider, externalPropertyManagerRegistry, hostResourceManager };
+                break;
+
+            default:
+                continue;
+            }
+        }
+
+        if (constructor == null)
+        {
+            throw new ToolException("Search failed. Please try again later.", ToolErrorType.RETRYABLE);
+        }
+
+        try
+        {
+            return constructor.newInstance(args);
+        }
+        catch (ReflectiveOperationException e)
+        {
+            throw new ToolException("Search failed. Please try again later.", e, ToolErrorType.RETRYABLE);
+        }
     }
 
     @SuppressWarnings("nls")
