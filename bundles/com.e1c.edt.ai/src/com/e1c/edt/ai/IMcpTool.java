@@ -10,7 +10,10 @@ import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 
 public interface IMcpTool
 {
-    boolean isExperimental();
+    default boolean isExperimental()
+    {
+        return false;
+    }
 
     McpToolCallSpecification getSpecification();
 

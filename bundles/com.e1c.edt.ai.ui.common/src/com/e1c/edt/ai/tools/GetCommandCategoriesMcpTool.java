@@ -85,12 +85,6 @@ public class GetCommandCategoriesMcpTool
     }
 
     @Override
-    public boolean isExperimental()
-    {
-        return false;
-    }
-
-    @Override
     public McpToolCallSpecification getSpecification()
     {
         return spec;

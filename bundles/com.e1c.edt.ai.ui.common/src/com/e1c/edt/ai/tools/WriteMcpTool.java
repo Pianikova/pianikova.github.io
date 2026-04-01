@@ -100,12 +100,6 @@ public class WriteMcpTool
     }
 
     @Override
-    public boolean isExperimental()
-    {
-        return true;
-    }
-
-    @Override
     public McpToolCallSpecification getSpecification()
     {
         return spec;

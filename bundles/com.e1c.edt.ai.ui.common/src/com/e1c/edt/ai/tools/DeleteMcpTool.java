@@ -88,12 +88,6 @@ public class DeleteMcpTool
     }
 
     @Override
-    public boolean isExperimental()
-    {
-        return true;
-    }
-
-    @Override
     public McpToolCallSpecification getSpecification()
     {
         return spec;
