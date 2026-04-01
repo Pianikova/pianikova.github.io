@@ -91,7 +91,9 @@ public class MetadataBindingProvider
             bindings.put("mdFactory", new JShellBindingDescription("Factory for creating 1C metadata objects",
                 buildMdFactoryDescription(), mdClassFactory, MdClassFactory.class,
                 "**⚠️ RESTRICTION: Cannot be used outside BM transaction.** Use `mdFactory` ONLY in "
-                    + "AbstractBmTask.execute() body, where IBmTransaction is available. Do not use attachTopObject() for existing objects."));
+                    + "AbstractBmTask.execute() body, where IBmTransaction is available. Do not use attachTopObject() for existing objects. "
+                    + "**IMPORTANT**: Objects created with mdFactory MUST have UUIDs set via "
+                    + "`modelFactory.fillDefaultReferences(object)` or manual assignment."));
         }
 
         bindings.put("fqnGenerator", new JShellBindingDescription(
@@ -141,6 +143,8 @@ public class MetadataBindingProvider
         var desc = new StringBuilder();
         desc.append(buildApiCompatibilityNotes());
         desc.append("\n\n");
+        desc.append(buildUuidHandlingWorkflow());
+        desc.append("\n\n");
         desc.append(buildTransactionManagementScenarios());
         desc.append("\n\n");
         desc.append(buildSafeCatalogWorkflow());
@@ -161,7 +165,7 @@ public class MetadataBindingProvider
     private String buildApiCompatibilityNotes()
     {
         var desc = new StringBuilder();
-        desc.append("## API Compatibility Notes (EDT 8.3.24)\n\n");
+        desc.append("## API Compatibility Notes\n\n");
         desc.append("Use these rules in JShell to avoid frequent compile/runtime failures:\n\n");
         desc.append("- Use `globalContext.execute(new AbstractBmTask<...>(\"Task name\") { ... })`.\n");
         desc.append("- Do not use `executeReadonlyTask(...)` for metadata creation.\n");
@@ -179,6 +183,10 @@ public class MetadataBindingProvider
             "- For tabular section attributes, use `TabularSectionAttribute` with `mdFactory.createTabularSectionAttribute()`.\n");
         desc.append(
             "- Type qualifiers (String/Number) are abstract classes and cannot be instantiated directly in JShell. Use TypeDescriptionBuilder without qualifiers or use default types.\n");
+        desc.append(
+            "- **IMPORTANT**: When using `mdFactory` to create objects, UUIDs must be set. ");
+        desc.append("Use `modelFactory.fillDefaultReferences(catalog)` or manually set UUIDs. ");
+        desc.append("See UUID handling section below.\n");
         return desc.toString();
     }
 
@@ -219,6 +227,9 @@ public class MetadataBindingProvider
         desc.append("        article.setType(articleType);\n");
         desc.append("        catalog.getAttributes().add(article);\n");
         desc.append("\n");
+        desc.append("        // Generate UUIDs for catalog and all child objects\n");
+        desc.append("        modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("\n");
         desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("        transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("        configuration.getCatalogs().add(catalog);\n");
@@ -227,6 +238,52 @@ public class MetadataBindingProvider
         desc.append("});\n");
         desc.append("```\n\n");
         desc.append("If attribute value types are required, create `TypeDescription` via EDT mcore type utilities for current project version.");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildUuidHandlingWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## UUID Handling for Metadata Objects\n\n");
+        desc.append("**IMPORTANT:** All metadata objects (catalogs, documents, attributes, forms, etc.) ");
+        desc.append("must have a unique UUID. Failure to set UUIDs causes validation errors (SU45).\n\n");
+
+        desc.append("### Option 1: Use modelFactory.fillDefaultReferences() (RECOMMENDED)\n");
+        desc.append("```java\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("catalog.getSynonym().put(\"ru\", \"Products\");\n");
+        desc.append("// ... set other properties ...\n\n");
+        desc.append("// Generate UUIDs for catalog and all children\n");
+        desc.append("modelFactory.fillDefaultReferences(catalog);\n\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("```\n\n");
+
+        desc.append("### Option 2: Manual UUID assignment\n");
+        desc.append("```java\n");
+        desc.append("import java.util.UUID;\n\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("// ...\n\n");
+        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
+        desc.append("attr.setName(\"Article\");\n");
+        desc.append("attr.setUuid(UUID.randomUUID());\n");
+        desc.append("catalog.getAttributes().add(attr);\n\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("```\n\n");
+
+        desc.append("### Common Mistake: Not setting UUIDs\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG - UUIDs not set, validation fails\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("// Error: SU45 - UUID required\n");
+        desc.append("```\n");
         return desc.toString();
     }
 
@@ -687,8 +744,25 @@ public class MetadataBindingProvider
         desc.append("    Catalog newCatalog = mdFactory.createCatalog();\n");
         desc.append("    transaction.attachTopObject((IBmObject)newCatalog, fqn); // ✅ OK\n");
         desc.append("}\n");
-        desc.append("```\n\n");
-        desc.append("### Summary of Best Practices\n\n");
+        desc.append("```\\n\\n");
+        desc.append("### ⚠️ IMPORTANT: Validate 1C Errors After Entity Operations\\n\\n");
+        desc.append("After creating, editing, or deleting metadata entities, you **MUST** use ");
+        desc.append("`GetMarkersMcpTool.TOOL_NAME` (GetMarkers tool) to check for 1C validation errors.\\n\\n");
+        desc.append("```java\\n");
+        desc.append("// After creating/editing/deleting metadata objects, always check for errors:\\n");
+        desc.append("GetMarkersMcpTool.TOOL_NAME // Tool name: \\\"GetMarkers\\\"\\n");
+        desc.append("\\n");
+        desc.append("// Example usage:\\n");
+        desc.append(
+            "var markers = toolCall(\\\"GetMarkers\\\", Map.of(\\\"project_name\\\", projectName, \\\"marker_type\\\", \\\"1c\\\"));\\n");
+        desc.append("// Check for critical validation errors and handle them appropriately\\n");
+        desc.append("```\\n\\n");
+        desc.append("**This validation step is mandatory** after any metadata modification operation to ensure:\\n");
+        desc.append("- Metadata structure integrity\\n");
+        desc.append("- No SU45 (UUID required) errors\\n");
+        desc.append("- No reference resolution errors\\n");
+        desc.append("- Proper configuration consistency\\n\\n");
+        desc.append("### Summary of Best Practices\\n\\n");
         desc.append("1. **Create once, attach once:** Use `attachTopObject()` only when creating a NEW object\n");
         desc.append("2. **Get, don't attach:** Use `getTopObjectByFqn()` to edit existing objects\n");
         desc.append("3. **Check before create:** Verify FQN doesn't exist before attaching\n");
