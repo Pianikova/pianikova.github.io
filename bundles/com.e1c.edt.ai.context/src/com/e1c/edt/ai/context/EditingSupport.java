@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.context;
 
 import java.util.Optional;
+import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
 
@@ -17,6 +18,9 @@ import com.google.inject.Inject;
 public class EditingSupport
     implements IEditingSupport
 {
+    @SuppressWarnings("nls")
+    private static final Set<String> RESTRICTED_EXTENSIONS = Set.of(".form", ".mdo");
+
     private final IBmObjectProvider bmObjectProvider;
     private final IModelEditingSupport modelEditingSupport;
 
@@ -33,13 +37,26 @@ public class EditingSupport
     @Override
     public boolean canEdit(IFile file)
     {
-        return getObject(file).map(obj -> canEdit(obj)).orElse(true);
+        return !isRestrictedFile(file) && getObject(file).map(obj -> canEdit(obj)).orElse(true);
     }
 
     @Override
     public boolean canDelete(IFile file)
     {
-        return getObject(file).map(obj -> canDelete(obj)).orElse(true);
+        return !isRestrictedFile(file) && getObject(file).map(obj -> canDelete(obj)).orElse(true);
+    }
+
+    private boolean isRestrictedFile(IFile file)
+    {
+        var fileName = file.getName();
+        var lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex < 0)
+        {
+            return false;
+        }
+
+        var extension = fileName.substring(lastDotIndex);
+        return RESTRICTED_EXTENSIONS.contains(extension);
     }
 
     private boolean canEdit(IBmObject obj)
