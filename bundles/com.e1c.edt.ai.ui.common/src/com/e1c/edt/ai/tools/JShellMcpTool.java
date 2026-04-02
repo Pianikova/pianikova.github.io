@@ -72,7 +72,13 @@ public class JShellMcpTool
 		this.spec = createSpecification();
 	}
 
-	@Override
+    @Override
+    public boolean isExperimental()
+    {
+        return true;
+    }
+
+    @Override
 	public McpToolCallSpecification getSpecification()
 	{
 		return spec;

@@ -55,6 +55,12 @@ public class JShellSessionMcpTool
 		this.spec = createSpecification();
 	}
 
+    @Override
+    public boolean isExperimental()
+    {
+        return true;
+    }
+
 	@Override
 	public McpToolCallSpecification getSpecification()
 	{
