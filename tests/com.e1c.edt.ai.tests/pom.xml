@@ -6,9 +6,9 @@
   <parent>
     <groupId>com.e1c.edt.ai</groupId>
     <artifactId>tests</artifactId>
-    <version>1.0.3-SNAPSHOT</version>
+    <version>1.0.4-SNAPSHOT</version>
   </parent>
   <artifactId>com.e1c.edt.ai.tests</artifactId>
-  <version>1.0.3-SNAPSHOT</version>
+  <version>1.0.4-SNAPSHOT</version>
   <packaging>eclipse-test-plugin</packaging>
 </project>
