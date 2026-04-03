@@ -85,6 +85,7 @@ public class McpTools
         }
     }
 
+    @SuppressWarnings("nls")
     @Override
     public CompletableFuture<List<McpToolCallSpecification>> getSpecifications()
     {
@@ -99,7 +100,25 @@ public class McpTools
         {
             var tool = entry.getValue();
 
-            availabilityFutures.add(tool.getIsAvailable().thenApply(available -> {
+            availabilityFutures.add(tool.getIsAvailable().handle((available, ex) -> {
+                if (ex != null)
+                {
+                    try
+                    {
+                        var spec = tool.getSpecification();
+                        var toolName = spec != null && spec.function != null ? spec.function.name : "unknown";
+                        log.warning("Tool '" + toolName + "' availability check failed", () -> ex.toString());
+                    }
+                    catch (Exception e)
+                    {
+                        log.warning("Tool availability check failed", () -> ex.toString()); //$NON-NLS-1$
+                    }
+
+                    return false;
+                }
+
+                return available;
+            }).thenApply(available -> {
                 var availableTool = new AvailableTool();
                 availableTool.tool = tool;
                 availableTool.isAvailable = available;
@@ -114,23 +133,16 @@ public class McpTools
 
             for (var future : availabilityFutures)
             {
-                try
+                var availableTool = future.join();
+                if (!availableTool.isAvailable)
                 {
-                    var availableTool = future.join();
-                    if (!availableTool.isAvailable)
-                    {
-                        continue;
-                    }
-
-                    var spec = availableTool.tool.getSpecification();
-                    if (spec != null && spec.function != null && spec.function.name != null)
-                    {
-                        resultSpecs.add(spec);
-                    }
+                    continue;
                 }
-                catch (Exception e)
+
+                var spec = availableTool.tool.getSpecification();
+                if (spec != null && spec.function != null && spec.function.name != null)
                 {
-                    log.logError(e);
+                    resultSpecs.add(spec);
                 }
             }
 

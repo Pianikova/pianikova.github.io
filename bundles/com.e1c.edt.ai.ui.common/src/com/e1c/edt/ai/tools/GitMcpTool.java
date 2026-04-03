@@ -106,6 +106,7 @@ public class GitMcpTool
     public CompletableFuture<Boolean> getIsAvailable()
     {
         return processRunner.executeProcess("git", null, List.of("--version"), 5L, TimeUnit.SECONDS, null) //$NON-NLS-1$ //$NON-NLS-2$
-            .thenApply(result -> result.isPresent() && result.get().exitCode == 0);
+            .thenApply(result -> result.isPresent() && result.get().exitCode == 0)
+            .exceptionally(ex -> false); // Handle exception - Git is not available
     }
 }
