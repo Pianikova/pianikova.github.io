@@ -326,25 +326,34 @@ public abstract class BaseActivator
             createImageDescriptorFromKey(IModelUIPluginImages.OBJS_AI_ICON));
     }*/
 
-    private synchronized Injector getInjector()
+    private Injector getInjector()
     {
         var defaultActivator = getDefault();
-        if (defaultActivator.injector == null)
+        var localInjector = defaultActivator.injector;
+        if (localInjector == null)
         {
-            try
+            synchronized (this)
             {
-                defaultActivator.injector = createInjector();
-            }
-            catch (Exception e)
-            {
-                log(createErrorStatus("Failed to create injector for " //$NON-NLS-1$
-                    + getBundle().getSymbolicName(), e));
-                throw new RuntimeException("Failed to create injector for " //$NON-NLS-1$
-                    + getBundle().getSymbolicName(), e);
+                localInjector = defaultActivator.injector;
+                if (localInjector == null)
+                {
+                    try
+                    {
+                        localInjector = createInjector();
+                        defaultActivator.injector = localInjector;
+                    }
+                    catch (Exception e)
+                    {
+                        log(createErrorStatus("Failed to create injector for " //$NON-NLS-1$
+                            + getBundle().getSymbolicName(), e));
+                        throw new RuntimeException("Failed to create injector for " //$NON-NLS-1$
+                            + getBundle().getSymbolicName(), e);
+                    }
+                }
             }
         }
 
-        return injector;
+        return localInjector;
     }
 
     protected abstract Injector createInjector();

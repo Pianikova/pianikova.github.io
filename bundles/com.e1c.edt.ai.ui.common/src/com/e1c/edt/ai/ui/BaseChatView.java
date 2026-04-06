@@ -40,13 +40,19 @@ public class BaseChatView
 
     public BaseChatView()
     {
-        BaseActivator.injectMembers(this);
     }
 
     @Override
     public void createPartControl(Composite parent)
     {
         Preconditions.checkNotNull(parent);
+        if (chatDialog == null)
+        {
+            BaseActivator.injectMembers(this);
+        }
+
+        Preconditions.checkNotNull(chatDialog, "chatDialog should be injected");
+
         parent.setLayout(new GridLayout());
         GridLayoutFactory.fillDefaults().spacing(0, 0).applyTo(parent);
         GridDataFactory.fillDefaults().grab(true, true).applyTo(parent);

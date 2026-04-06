@@ -8,6 +8,7 @@ import java.util.Set;
 import org.eclipse.ui.IStartup;
 
 import com.e1c.edt.ai.TracingSources;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 /**
@@ -27,7 +28,18 @@ public class BasePluginStartup
 
     public BasePluginStartup()
     {
-        BaseActivator.injectMembers(this);
+    }
+
+    @Override
+    public void earlyStartup()
+    {
+        if (initializables == null)
+        {
+            BaseActivator.injectMembers(this);
+        }
+
+        Preconditions.checkNotNull(initializables, "initializables should be injected");
+
         var activator = BaseActivator.getDefault();
         var pluginVersion = activator.getPluginVersion();
         var platformVersion = activator.getPlatformVersion();
@@ -37,11 +49,7 @@ public class BasePluginStartup
             () -> ""); //$NON-NLS-1$
         activator.trace(TracingSources.COMMON,
             pluginVersion == null ? "" : "Plugin version: " + pluginVersion.toString(), () -> ""); //$NON-NLS-1$//$NON-NLS-2$//$NON-NLS-3$
-    }
 
-    @Override
-    public void earlyStartup()
-    {
         for (var initializable : initializables)
         {
             initializable.initialize();
