@@ -124,16 +124,8 @@ class HttpLog
             if (detailed)
             {
                 final HttpResponse<T> currentResponse = response;
-                if (stopwatch.elapsed().toMillis() < 1000)
-                {
-                    log.trace(TracingSources.API_CALLS, createHeader("AI response", currentResponse.uri(), ref),
-                        () -> createTrace(currentResponse, stopwatch, statusCode));
-                }
-                else
-                {
-                    log.warning(createHeader("AI response", currentResponse.uri(), ref),
-                        () -> createTrace(currentResponse, stopwatch, statusCode));
-                }
+                log.trace(TracingSources.API_CALLS, createHeader("AI response", currentResponse.uri(), ref),
+                    () -> createTrace(currentResponse, stopwatch, statusCode));
             }
         }
         else
@@ -317,13 +309,13 @@ class HttpLog
     @Override
     public void error(Throwable error, String ref)
     {
-        log.logError(error);
+        log.trace(TracingSources.API_CALLS, "API error", () -> error.toString()); //$NON-NLS-1$
     }
 
     @Override
     public void error(String error, String ref)
     {
-        log.logError(error);
+        log.trace(TracingSources.API_CALLS, "API error", () -> error); //$NON-NLS-1$
     }
 
     private Optional<String> extractBody(Object body)

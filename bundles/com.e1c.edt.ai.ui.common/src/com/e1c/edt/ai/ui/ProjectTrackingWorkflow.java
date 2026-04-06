@@ -138,7 +138,7 @@ class ProjectTrackingWorkflow
         }
         catch (Exception error)
         {
-            log.logError(error);
+            log.trace(TracingSources.API_CALLS, "Sync error", () -> error.toString()); //$NON-NLS-1$
             return LongDelay;
         }
 

@@ -766,7 +766,7 @@ public class Chat
         loader.run();
         return result.orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS).exceptionally(error -> {
             cleanupInitializationListeners(worker);
-            log.logError(error);
+            log.trace(TracingSources.CHAT, "API error", () -> error.toString()); //$NON-NLS-1$
             return false;
         });
     }
