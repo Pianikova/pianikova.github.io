@@ -166,27 +166,111 @@ public class MetadataBindingProvider
     {
         var desc = new StringBuilder();
         desc.append("## API Compatibility Notes\n\n");
-        desc.append("Use these rules in JShell to avoid frequent compile/runtime failures:\n\n");
-        desc.append("- Use `globalContext.execute(new AbstractBmTask<...>(\"Task name\") { ... })`.\n");
-        desc.append("- Do not use `executeReadonlyTask(...)` for metadata creation.\n");
-        desc.append("- Use `v8project.getVersion()`, not `getRuntimeVersion()`.\n");
-        desc.append("- Localized fields are `EMap<String, String>`: use `put(\"ru\", \"...\")`.\n");
-        desc.append("- Use `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` or `HierarchyType.HIERARCHY_OF_ITEMS`.\n");
-        desc.append("- Catalog has `setDescriptionLength(...)`; `setNameLength(...)` is unavailable.\n");
-        desc.append("- For catalog attributes use `CatalogAttribute` (`createCatalogAttribute` or `modelFactory` + EClass).\n");
-        desc.append("- Do not override final methods `getId()` / `getServiceId()` in `AbstractBmTask`.\n");
-        desc.append(
-            "- Create top object, generate FQN, call `attachTopObject`, then add object to configuration collection.\n");
-        desc.append(
-            "- **WARNING**: `modelFactory` may have timeout issues in JShell due to OSGi service dependencies. Prefer `mdFactory` for simpler operations.\n");
-        desc.append(
-            "- For tabular section attributes, use `TabularSectionAttribute` with `mdFactory.createTabularSectionAttribute()`.\n");
-        desc.append(
-            "- Type qualifiers (String/Number) are abstract classes and cannot be instantiated directly in JShell. Use TypeDescriptionBuilder without qualifiers or use default types.\n");
-        desc.append(
-            "- **IMPORTANT**: When using `mdFactory` to create objects, UUIDs must be set. ");
-        desc.append("Use `modelFactory.fillDefaultReferences(catalog)` or manually set UUIDs. ");
-        desc.append("See UUID handling section below.\n");
+        desc.append("### ⚠️ CRITICAL RULES - Follow These to Avoid Failures\n\n");
+
+        desc.append("#### Transaction Management\n\n");
+        desc.append("**✅ REQUIRED:**\n");
+        desc.append("- Use `globalContext.execute(new AbstractBmTask<...>(\"Task name\") { ... })` for ALL read/write operations\n");
+        desc.append("- Access `IBmTransaction` parameter in `execute()` method for metadata operations\n");
+        desc.append("- Use `getTopObjectByFqn()` to READ existing objects\n");
+        desc.append("- Use `mdFactory.createXxx()` + `attachTopObject()` to CREATE new objects\n");
+        desc.append("- Modify existing objects directly (no `attachTopObject()` needed)\n\n");
+
+        desc.append("**❌ PROHIBITED:**\n");
+        desc.append("- Do NOT use `executeReadonlyTask(...)` for metadata creation/modification\n");
+        desc.append("- Do NOT override final methods `getId()` / `getServiceId()` in `AbstractBmTask`\n");
+        desc.append("- Do NOT use `attachTopObject()` on existing objects (causes `BmFqnAlreadyInUseException`)\n\n");
+
+        desc.append("#### Version and Type Handling\n\n");
+        desc.append("- Use `v8project.getVersion()` (returns `Version` object), NOT `getRuntimeVersion()`\n");
+        desc.append("- Localized fields (`synonym`, `comment`, `toolTip`) are `EMap<String, String>`: use `put(\"ru\", \"...\")`\n");
+        desc.append("- Type qualifiers (StringQualifiers, NumberQualifiers) are ABSTRACT classes - CANNOT instantiate directly\n");
+        desc.append("- For type handling: use `TypeDescriptionBuilder` WITHOUT qualifiers or use default types\n\n");
+
+        desc.append("#### Metadata Object-Specific Rules\n\n");
+        desc.append("**Catalog (Справочник):**\n");
+        desc.append("- Use `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` or `HierarchyType.HIERARCHY_OF_ITEMS`\n");
+        desc.append("- Use `setDescriptionLength(...)` - `setNameLength(...)` is NOT AVAILABLE\n");
+        desc.append("- For attributes: use `CatalogAttribute` via `createCatalogAttribute()` or `modelFactory` + EClass\n");
+        desc.append("- Supports: hierarchical, codeType (Number/String), checkUnique, autonumbering\n\n");
+
+        desc.append("**Document (Документ):**\n");
+        desc.append("- Use `DocumentNumberType.Number` or `DocumentNumberType.String`\n");
+        desc.append("- Use `DocumentNumberPeriodicity` (Nonperiodical, Year, Quarter, Month, Day)\n");
+        desc.append("- Supports: posting, realTimePosting, registerRecordsDeletion, sequenceFilling\n");
+        desc.append("- May reference: numerator, registerRecords (array of BasicRegister)\n\n");
+
+        desc.append("**InformationRegister (РегистрСведений):**\n");
+        desc.append("- Use `InformationRegisterPeriodicity` (Nonperiodical, Second, Day, Month, Quarter, Year)\n");
+        desc.append("- Use `RegisterWriteMode` (Independent, RecorderSubordinate)\n");
+        desc.append("- Contains: resources, attributes, dimensions (all require types)\n\n");
+
+        desc.append("**Enum (Перечисление):**\n");
+        desc.append("- Contains `EnumValue[] enumValues` - create with `createEnumValue()`\n");
+        desc.append("- Each EnumValue has: name, description, color (since 8.5.1)\n");
+        desc.append("- NO attributes or tabular sections\n\n");
+
+        desc.append("**ChartOfCharacteristicTypes (ПланВидовХарактеристик):**\n");
+        desc.append("- Has its own type (TypeDescription) for characteristic values\n");
+        desc.append("- Supports: hierarchical, codeSeries, checkUnique, autonumbering\n");
+        desc.append("- May reference: characteristicExtValues (Catalog)\n\n");
+
+        desc.append("**Tabular Sections:**\n");
+        desc.append("- Use `TabularSectionAttribute` with `createTabularSectionAttribute()`\n");
+        desc.append("- Attributes: name, synonym, type (TypeDescription), indexing, fillChecking\n");
+        desc.append("- Line number length configurable (since 8.3.27)\n\n");
+
+        desc.append("#### Factory Selection Guidelines\n\n");
+        desc.append("**Prefer `mdFactory` for most operations:**\n");
+        desc.append("- More reliable in JShell context (no OSGi timeout issues)\n");
+        desc.append("- Simpler API for creating metadata objects\n");
+        desc.append("- Consistent with 1C metadata creation patterns\n\n");
+
+        desc.append("**Use `modelFactory` when needed:**\n");
+        desc.append("- For project/version context operations\n");
+        desc.append("- For `fillDefaultReferences()` - CRITICAL for UUID generation\n");
+        desc.append("- May have timeout issues due to OSGi service dependencies in JShell\n\n");
+
+        desc.append("#### Object Creation Workflow (Required Order)\n\n");
+        desc.append("1. Create object with `mdFactory.createXxx()`\n");
+        desc.append("2. Set required properties: name, synonym, type-specific settings\n");
+        desc.append("3. Add children (attributes, tabular sections, etc.) if needed\n");
+        desc.append("4. **CRITICAL:** Call `modelFactory.fillDefaultReferences(object)` to set UUIDs\n");
+        desc.append("5. Generate FQN: `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\n");
+        desc.append("6. Attach: `transaction.attachTopObject((IBmObject)object, fqn)`\n");
+        desc.append("7. Add to parent collection: `configuration.getXxxs().add(object)`\n\n");
+
+        desc.append("#### Common Property Setting Patterns\n\n");
+        desc.append("**Names and Synonyms:**\n");
+        desc.append("```java\n");
+        desc.append("object.setName(\"ObjectName\");\n");
+        desc.append("object.getSynonym().put(\"ru\", \"Объект\");\n");
+        desc.append("object.getComment().put(\"ru\", \"Комментарий\");\n");
+        desc.append("```\n\n");
+
+        desc.append("**Setting Types:**\n");
+        desc.append("```java\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        desc.append("attribute.setType(typeDesc);\n");
+        desc.append("```\n\n");
+
+        desc.append("**UUID Handling (CRITICAL):**\n");
+        desc.append("```java\n");
+        desc.append("// Option 1: RECOMMENDED - auto-generate all UUIDs\n");
+        desc.append("modelFactory.fillDefaultReferences(object);\n");
+        desc.append("\n");
+        desc.append("// Option 2: Manual UUID assignment\n");
+        desc.append("import java.util.UUID;\n");
+        desc.append("object.setUuid(UUID.randomUUID());\n");
+        desc.append("// For children, also set UUIDs:\n");
+        desc.append("childObject.setUuid(UUID.randomUUID());\n");
+        desc.append("```\n\n");
+
         return desc.toString();
     }
 
@@ -351,38 +435,123 @@ public class MetadataBindingProvider
     {
         var desc = new StringBuilder();
         desc.append("## MdClassFactory\n\n");
-        desc.append("Use `mdFactory` for direct creation of metadata objects and object parts.\n\n");
-        desc.append("**⚠️ IMPORTANT:** `mdFactory` MUST be used ONLY inside BM transaction (`AbstractBmTask.execute()`). "
-            + "Do not use for editing existing objects - use `getTopObjectByFqn()` instead.\n\n");
+        desc.append("**Primary Purpose:** Factory for creating 1C metadata objects (catalogs, documents, registers, etc.).\n");
+        desc.append("**Use Case:** Create NEW metadata objects inside BM transactions.\n\n");
+
+        desc.append("### ⚠️ CRITICAL RESTRICTIONS:\n\n");
+        desc.append("1. **MUST be used ONLY inside BM transaction** (`AbstractBmTask.execute()` body)\n");
+        desc.append("2. **Do NOT use for editing existing objects** - use `getTopObjectByFqn()` instead\n");
+        desc.append("3. **Objects MUST have UUIDs set** - use `modelFactory.fillDefaultReferences(object)` or manual UUID assignment\n");
+        desc.append("4. **Do NOT use `attachTopObject()` for existing objects** - causes `BmFqnAlreadyInUseException`\n\n");
+
+        desc.append("### Supported Metadata Object Types:\n\n");
+        desc.append("| Type | Factory Method | FQN Prefix |\n");
+        desc.append("|------|----------------|------------|\n");
+        desc.append("| Catalog (Справочник) | `createCatalog()` | `Catalog.` |\n");
+        desc.append("| Document (Документ) | `createDocument()` | `Document.` |\n");
+        desc.append("| InformationRegister (РегистрСведений) | `createInformationRegister()` | `InformationRegister.` |\n");
+        desc.append("| AccumulationRegister (РегистрНакопления) | `createAccumulationRegister()` | `AccumulationRegister.` |\n");
+        desc.append("| AccountingRegister (РегистрБухгалтерии) | `createAccountingRegister()` | `AccountingRegister.` |\n");
+        desc.append("| CalculationRegister (РегистрРасчета) | `createCalculationRegister()` | `CalculationRegister.` |\n");
+        desc.append("| Enum (Перечисление) | `createEnum()` | `Enum.` |\n");
+        desc.append("| ChartOfCharacteristicTypes (ПланВидовХарактеристик) | `createChartOfCharacteristicTypes()` | `ChartOfCharacteristicTypes.` |\n");
+        desc.append("| ChartOfAccounts (ПланСчетов) | `createChartOfAccounts()` | `ChartOfAccounts.` |\n");
+        desc.append("| ChartOfCalculationTypes (ПланВидовРасчета) | `createChartOfCalculationTypes()` | `ChartOfCalculationTypes.` |\n");
+        desc.append("| Report (Отчет) | `createReport()` | `Report.` |\n");
+        desc.append("| DataProcessor (Обработка) | `createDataProcessor()` | `DataProcessor.` |\n");
+        desc.append("| CommonModule (ОбщийМодуль) | `createCommonModule()` | `CommonModule.` |\n");
+        desc.append("| Constant (Константа) | `createConstant()` | `Constant.` |\n");
+        desc.append("| CommonAttribute (ОбщийРеквизит) | `createCommonAttribute()` | N/A |\n");
+        desc.append("| ExchangePlan (ПланОбмена) | `createExchangePlan()` | `ExchangePlan.` |\n");
+        desc.append("| EventSubscription (ПодпискаНаСобытие) | `createEventSubscription()` | N/A |\n");
+        desc.append("| ScheduledJob (РегламентноеЗадание) | `createScheduledJob()` | N/A |\n");
+        desc.append("| FilterCriterion (КритерийОтбора) | `createFilterCriterion()` | N/A |\n");
+        desc.append("| FunctionalOption (ФункциональнаяОпция) | `createFunctionalOption()` | N/A |\n");
+        desc.append("| WSReference (WSСсылка) | `createWSReference()` | `WSReference.` |\n");
+        desc.append("| HTTPService (HTTPСервис) | `createHTTPService()` | `HTTPService.` |\n");
+        desc.append("| WebService (Web-сервис) | `createWebService()` | `WebService.` |\n");
+        desc.append("| IntegrationService (СервисИнтеграции) | `createIntegrationService()` | `IntegrationService.` |\n\n");
+
+        desc.append("### Supported Attribute/Section Types:\n\n");
+        desc.append("| Type | Factory Method | Parent Object |\n");
+        desc.append("|------|----------------|---------------|\n");
+        desc.append("| CatalogAttribute | `createCatalogAttribute()` | Catalog |\n");
+        desc.append("| DocumentAttribute | `createDocumentAttribute()` | Document |\n");
+        desc.append("| RegisterAttribute | `createRegisterAttribute()` | Register |\n");
+        desc.append("| RegisterDimension | `createRegisterDimension()` | Register |\n");
+        desc.append("| RegisterResource | `createRegisterResource()` | Register |\n");
+        desc.append("| TabularSectionAttribute | `createTabularSectionAttribute()` | TabularSection |\n");
+        desc.append("| CatalogTabularSection | `createCatalogTabularSection()` | Catalog |\n");
+        desc.append("| DocumentTabularSection | `createDocumentTabularSection()` | Document |\n");
+        desc.append("| BasicForm | `createBasicForm()` | Any metadata object |\n");
+        desc.append("| BasicCommand | `createBasicCommand()` | Any metadata object |\n");
+        desc.append("| Template | `createTemplate()` | Any metadata object |\n");
+        desc.append("| EnumValue | `createEnumValue()` | Enum |\n");
+        desc.append("| PredefinedItem | `createPredefinedItem()` | Catalog, ChartOfCharacteristicTypes |\n");
+        desc.append("| Method | `createMethod()` | CommonModule |\n");
+        desc.append("| Parameter | `createParameter()` | Method |\n");
+        desc.append("| Operation | `createOperation()` | WebService |\n");
+        desc.append("| Column | `createColumn()` | Cube, Table |\n");
+        desc.append("| DimensionTable | `createDimensionTable()` | Cube |\n");
+        desc.append("| Table | `createTable()` | Cube |\n\n");
+
+        desc.append("### Correct Usage Example:\n\n");
         desc.append("```java\n");
-        desc.append("// CORRECT: Creating a new catalog\n");
+        desc.append("// ✅ CORRECT: Creating a new catalog\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("catalog.getSynonym().put(\"ru\", \"Products\");\n");
         desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);\n");
+        desc.append("catalog.setCodeLength(9);\n");
+        desc.append("catalog.setDescriptionLength(150);\n");
         desc.append("\n");
+        desc.append("// Add attribute\n");
         desc.append("CatalogAttribute attribute = mdFactory.createCatalogAttribute();\n");
         desc.append("attribute.setName(\"Article\");\n");
         desc.append("attribute.getSynonym().put(\"ru\", \"Article\");\n");
+        desc.append("// Set attribute type using TypeDescriptionBuilder...\n");
         desc.append("catalog.getAttributes().add(attribute);\n");
         desc.append("\n");
-        desc.append("// Generate FQN and attach\n");
+        desc.append("// CRITICAL: Generate UUIDs for catalog and all children\n");
+        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("\n");
+        desc.append("// Generate FQN and attach to transaction\n");
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
-        desc.append("```\n");
         desc.append("\n");
-        desc.append("**❌ WRONG: Using mdFactory to edit existing object**\n");
+        desc.append("// Add to configuration\n");
+        desc.append("Configuration config = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("config.getCatalogs().add(catalog);\n");
+        desc.append("```\n\n");
+
+        desc.append("### Common Mistakes:\n\n");
+        desc.append("**❌ WRONG #1: Using mdFactory to edit existing object**\n");
         desc.append("```java\n");
-        desc.append("// Don't do this!\n");
         desc.append("Catalog catalog = mdFactory.createCatalog(); // Creates NEW object\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, \"Catalog.Products\"); // ❌ FQN already exists!\n");
         desc.append("```\n\n");
+        desc.append("**❌ WRONG #2: Not setting UUIDs**\n");
+        desc.append("```java\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("// Error: SU45 - UUID required for all metadata objects\n");
+        desc.append("```\n\n");
+        desc.append("**❌ WRONG #3: Using mdFactory outside transaction**\n");
+        desc.append("```java\n");
+        desc.append("// ❌ This will fail!\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog(); // Outside transaction\n");
+        desc.append("```\n\n");
+
         desc.append("**✅ CORRECT: Edit existing object**\n");
         desc.append("```java\n");
-        desc.append("// Get existing object\n");
+        desc.append("// Get EXISTING object - do NOT use mdFactory\n");
         desc.append("Catalog catalog = (Catalog)transaction.getTopObjectByFqn(\"Catalog.Products\");\n");
-        desc.append("catalog.setDescriptionLength(200); // Modify directly\n");
+        desc.append("if (catalog != null) {\n");
+        desc.append("    catalog.setDescriptionLength(200); // Modify directly\n");
+        desc.append("}\n");
         desc.append("```\n\n");
+
         desc.append("### Available Public Methods:\n\n");
 
         var methodSignatures = methodListProvider.getPublicMethodSignatures(MdClassFactory.class);
@@ -392,7 +561,8 @@ public class MetadataBindingProvider
         }
 
         desc.append("\n");
-        desc.append("For top-level objects in project context, prefer `modelFactory` inside BM transaction.");
+        desc.append("**Note:** For top-level objects in project context, `modelFactory` is preferred but may have OSGi timeout issues.\n");
+        desc.append("`mdFactory` is recommended for most operations due to better reliability in JShell context.");
         return desc.toString();
     }
 
@@ -719,55 +889,199 @@ public class MetadataBindingProvider
     {
         var desc = new StringBuilder();
         desc.append("## Common Pitfalls and Solutions\n\n");
-        desc.append("### ❌ WRONG: attachTopObject on existing object\n");
+        desc.append("This section covers the most frequent mistakes when working with metadata creation and editing.\n\n");
+
+        desc.append("### ❌ Pitfall #1: attachTopObject on existing object\n\n");
+        desc.append("**Error:** `BmFqnAlreadyInUseException`\n\n");
+        desc.append("**Problem:** Trying to attach an object that already exists in the transaction.\n\n");
         desc.append("```java\n");
+        desc.append("// ❌ WRONG CODE\n");
         desc.append("Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
-        desc.append("// ... modifications ...\n");
-        desc.append("transaction.attachTopObject((IBmObject)document, fqn); // ❌ BmFqnAlreadyInUseException!\n");
+        desc.append("document.setDescriptionLength(200); // Modification\n");
+        desc.append("transaction.attachTopObject((IBmObject)document, fqn); // ❌ Exception!\n");
         desc.append("```\n\n");
-        desc.append("### ✅ CORRECT: Modify existing object directly\n");
         desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE\n");
         desc.append("Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
-        desc.append("document.setDescriptionLength(200); // ✅ OK\n");
-        desc.append("// No attachTopObject() call\n");
+        desc.append("if (document != null) {\n");
+        desc.append("    document.setDescriptionLength(200); // Direct modification\n");
+        desc.append("    // NO attachTopObject() call needed for existing objects!\n");
+        desc.append("}\n");
         desc.append("```\n\n");
-        desc.append("### ❌ WRONG: Trying to create with existing FQN\n");
+
+        desc.append("### ❌ Pitfall #2: Creating object with existing FQN\n\n");
+        desc.append("**Error:** `BmFqnAlreadyInUseException` or validation error\n\n");
+        desc.append("**Problem:** Creating new object with FQN that already exists.\n\n");
         desc.append("```java\n");
-        desc.append("String fqn = \"Catalog.Products\"; // Already exists!\n");
+        desc.append("// ❌ WRONG CODE\n");
+        desc.append("String fqn = \"Catalog.Products\"; // Already exists in configuration!\n");
         desc.append("Catalog newCatalog = mdFactory.createCatalog();\n");
         desc.append("transaction.attachTopObject((IBmObject)newCatalog, fqn); // ❌ Exception!\n");
         desc.append("```\n\n");
-        desc.append("### ✅ CORRECT: Check before creating\n");
         desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE - Check before creating\n");
         desc.append("String fqn = \"Catalog.NewProducts\";\n");
         desc.append("if (transaction.getTopObjectByFqn(fqn) == null) {\n");
         desc.append("    Catalog newCatalog = mdFactory.createCatalog();\n");
-        desc.append("    transaction.attachTopObject((IBmObject)newCatalog, fqn); // ✅ OK\n");
+        desc.append("    newCatalog.setName(\"NewProducts\");\n");
+        desc.append("    modelFactory.fillDefaultReferences(newCatalog); // Set UUIDs\n");
+        desc.append("    String generatedFqn = fqnGenerator.generateStandaloneObjectFqn(\n");
+        desc.append("        newCatalog.eClass(), newCatalog.getName()).toString();\n");
+        desc.append("    transaction.attachTopObject((IBmObject)newCatalog, generatedFqn); // ✅ OK\n");
+        desc.append("    configuration.getCatalogs().add(newCatalog);\n");
+        desc.append("} else {\n");
+        desc.append("    // Object already exists - handle appropriately\n");
         desc.append("}\n");
-        desc.append("```\\n\\n");
-        desc.append("### ⚠️ IMPORTANT: Validate 1C Errors After Entity Operations\\n\\n");
-        desc.append("After creating, editing, or deleting metadata entities, you **MUST** use ");
-        desc.append("`GetMarkersMcpTool.TOOL_NAME` (GetMarkers tool) to check for 1C validation errors.\\n\\n");
-        desc.append("```java\\n");
-        desc.append("// After creating/editing/deleting metadata objects, always check for errors:\\n");
-        desc.append("GetMarkersMcpTool.TOOL_NAME // Tool name: \\\"GetMarkers\\\"\\n");
-        desc.append("\\n");
-        desc.append("// Example usage:\\n");
-        desc.append(
-            "var markers = toolCall(\\\"GetMarkers\\\", Map.of(\\\"project_name\\\", projectName, \\\"marker_type\\\", \\\"1c\\\"));\\n");
-        desc.append("// Check for critical validation errors and handle them appropriately\\n");
-        desc.append("```\\n\\n");
-        desc.append("**This validation step is mandatory** after any metadata modification operation to ensure:\\n");
-        desc.append("- Metadata structure integrity\\n");
-        desc.append("- No SU45 (UUID required) errors\\n");
-        desc.append("- No reference resolution errors\\n");
-        desc.append("- Proper configuration consistency\\n\\n");
-        desc.append("### Summary of Best Practices\\n\\n");
-        desc.append("1. **Create once, attach once:** Use `attachTopObject()` only when creating a NEW object\n");
-        desc.append("2. **Get, don't attach:** Use `getTopObjectByFqn()` to edit existing objects\n");
-        desc.append("3. **Check before create:** Verify FQN doesn't exist before attaching\n");
-        desc.append("4. **Use proper renaming:** Use `updateTopObjectFqn()` for FQN changes\n");
-        desc.append("5. **Complete structure:** Create entire object structure (including tabular sections) in one transaction\n");
+        desc.append("```\n\n");
+
+        desc.append("### ❌ Pitfall #3: Not setting UUIDs\n\n");
+        desc.append("**Error:** SU45 - UUID required for all metadata objects\n\n");
+        desc.append("**Problem:** Creating metadata objects without UUIDs.\n\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG CODE\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
+        desc.append("attr.setName(\"Article\");\n");
+        desc.append("catalog.getAttributes().add(attr);\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("// Error: SU45 - UUID required for catalog and attributes!\n");
+        desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE - Option 1: Auto-generate (RECOMMENDED)\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
+        desc.append("attr.setName(\"Article\");\n");
+        desc.append("catalog.getAttributes().add(attr);\n");
+        desc.append("// Generate UUIDs for catalog and ALL children\n");
+        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE - Option 2: Manual UUID assignment\n");
+        desc.append("import java.util.UUID;\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
+        desc.append("attr.setUuid(UUID.randomUUID()); // Must set UUID for children too!\n");
+        desc.append("attr.setName(\"Article\");\n");
+        desc.append("catalog.getAttributes().add(attr);\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("```\n\n");
+
+        desc.append("### ❌ Pitfall #4: Using mdFactory outside transaction\n\n");
+        desc.append("**Error:** Runtime exception or incorrect behavior\n\n");
+        desc.append("**Problem:** Trying to use mdFactory outside AbstractBmTask.execute().\n\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG CODE\n");
+        desc.append("// Outside of transaction - this will fail!\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE - Always inside transaction\n");
+        desc.append("Catalog result = globalContext.execute(new AbstractBmTask<Catalog>(\"Create catalog\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Catalog execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        // mdFactory MUST be used inside execute() method\n");
+        desc.append("        Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("        catalog.setName(\"Products\");\n");
+        desc.append("        modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("        transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("        configuration.getCatalogs().add(catalog);\n");
+        desc.append("        return catalog;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+
+        desc.append("### ❌ Pitfall #5: Forgetting to add to parent collection\n\n");
+        desc.append("**Error:** Object created but not visible in configuration\n\n");
+        desc.append("**Problem:** Creating object but not adding it to configuration collection.\n\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG CODE\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("// ❌ Missing: configuration.getCatalogs().add(catalog);\n");
+        desc.append("// Object is in transaction but not part of configuration!\n");
+        desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE\n");
+        desc.append("Configuration config = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("configuration.getCatalogs().add(catalog); // ✅ Critical step!\n");
+        desc.append("```\n\n");
+
+        desc.append("### ❌ Pitfall #6: Setting non-existent properties\n\n");
+        desc.append("**Error:** Compilation error or runtime exception\n\n");
+        desc.append("**Problem:** Trying to set properties that don't exist on the object type.\n\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG CODE\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setNameLength(25); // ❌ setNameLength() doesn't exist!\n");
+        desc.append("catalog.setDescriptionLength(150); // ✅ This exists\n");
+        desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setDescriptionLength(150); // ✅ Correct property\n");
+        desc.append("catalog.setCodeLength(9); // ✅ Correct property\n");
+        desc.append("// Catalog has: name, synonym, comment, hierarchical, hierarchyType,\n");
+        desc.append("// codeLength, descriptionLength, codeType, etc.\n");
+        desc.append("```\n\n");
+
+        desc.append("### ⚠️ CRITICAL: Validate After Entity Operations\n\n");
+        desc.append("After creating, editing, or deleting metadata entities, you **MUST** check for validation errors.\n\n");
+        desc.append("```java\n");
+        desc.append("// After ANY metadata modification, always validate:\n");
+        desc.append("// 1. Create/edit/delete metadata objects\n");
+        desc.append("// 2. Use GetMarkers tool to check for errors\n");
+        desc.append("// 3. Handle critical validation errors\n\n");
+        desc.append("// Example: Check for 1C validation errors\n");
+        desc.append("var markers = toolCall(\"GetMarkers\", Map.of(\n");
+        desc.append("    \"project_name\", projectName,\n");
+        desc.append("    \"marker_type\", \"1c\"\n");
+        desc.append("));\n");
+        desc.append("// Check for critical errors (SU45, reference errors, etc.)\n");
+        desc.append("```\n\n");
+        desc.append("**This validation step is MANDATORY** to ensure:\n");
+        desc.append("- ✅ Metadata structure integrity\n");
+        desc.append("- ✅ No SU45 (UUID required) errors\n");
+        desc.append("- ✅ No reference resolution errors\n");
+        desc.append("- ✅ Proper configuration consistency\n");
+        desc.append("- ✅ No duplicate FQN errors\n\n");
+
+        desc.append("### ✅ Best Practices Checklist\n\n");
+        desc.append("When creating metadata objects:\n\n");
+        desc.append("1. **✅ Use transaction:** Always wrap operations in `globalContext.execute(new AbstractBmTask<...>())`\n");
+        desc.append("2. **✅ Check existence:** Verify `getTopObjectByFqn(fqn) == null` before creating\n");
+        desc.append("3. **✅ Set UUIDs:** Call `modelFactory.fillDefaultReferences(object)` for all objects\n");
+        desc.append("4. **✅ Generate FQN:** Use `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\n");
+        desc.append("5. **✅ Attach once:** Call `transaction.attachTopObject()` ONLY for new objects\n");
+        desc.append("6. **✅ Add to collection:** Add object to parent: `configuration.getXxxs().add(object)`\n");
+        desc.append("7. **✅ Validate:** Always check markers after operations\n\n");
+        desc.append("When editing existing objects:\n\n");
+        desc.append("1. **✅ Use getTopObjectByFqn:** Retrieve existing object with FQN\n");
+        desc.append("2. **✅ Modify directly:** Change properties without `attachTopObject()`\n");
+        desc.append("3. **✅ No attachTopObject:** NEVER call `attachTopObject()` on existing objects\n");
+        desc.append("4. **✅ Validate:** Always check markers after operations\n\n");
+        desc.append("When renaming objects:\n\n");
+        desc.append("1. **✅ Use updateTopObjectFqn:** Call `transaction.updateTopObjectFqn(object, newFqn)`\n");
+        desc.append("2. **✅ Update name:** Also change the object name property\n");
+        desc.append("3. **✅ No attachTopObject:** NEVER use `attachTopObject()` for renaming\n");
+        desc.append("4. **✅ Validate:** Always check markers after operations\n\n");
+
         return desc.toString();
     }
 }
