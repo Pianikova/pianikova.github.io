@@ -125,6 +125,16 @@ public class Messages
     public static String ErrorArguments;
     public static String ErrorContent;
 
+    // JGit operations
+    public static String JGitTitleTemplate;
+    public static String JGitExecutedTemplate;
+    public static String JGitSuccess;
+    public static String JGitFailed;
+    public static String JGitWorkingDir;
+    public static String JGitArguments;
+    public static String JGitOutput;
+    public static String JGitErrors;
+
     static
     {
         // initialize resource bundle

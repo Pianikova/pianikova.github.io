@@ -171,8 +171,7 @@ public class JShellMcpTool
 		md.append("```java\n").append(code).append("\n```\n");
 		if (result.stdOut != null && !result.stdOut.isEmpty())
 		{
-			md.append(markdownUtils.escapeForMarkdown(result.stdOut));
-			md.append("\n");
+            md.append("```\n").append(result.stdOut).append("\n```\n");
 		}
 
 		return md.toString();

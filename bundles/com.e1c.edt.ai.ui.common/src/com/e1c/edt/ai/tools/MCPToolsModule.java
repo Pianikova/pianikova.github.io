@@ -34,8 +34,10 @@ public class MCPToolsModule
         toolBinder.addBinding().to(SearchFilesMcpTool.class);
         toolBinder.addBinding().to(GlobMcpTool.class);
         toolBinder.addBinding().to(ListMcpTool.class);
-        toolBinder.addBinding().to(GitCommitsMcpTool.class);
-        toolBinder.addBinding().to(GitDiffMcpTool.class);
+        // toolBinder.addBinding().to(GitMcpTool.class);
+        toolBinder.addBinding().to(JGitMcpTool.class);
+        // toolBinder.addBinding().to(GitCommitsMcpTool.class);
+        // toolBinder.addBinding().to(GitDiffMcpTool.class);
         toolBinder.addBinding().to(LocalHistoryMcpTool.class);
         toolBinder.addBinding().to(LocalChangesMcpTool.class);
         toolBinder.addBinding().to(NavigationHistoryMcpTool.class);
@@ -62,6 +64,7 @@ public class MCPToolsModule
         bind(IRestrictedTypesValidator.class).to(RestrictedTypesValidator.class).in(Singleton.class);
         bind(IReplacements.class).to(Replacements.class).in(Singleton.class);
         bind(IContentReplacer.class).to(ContentReplacer.class).in(Singleton.class);
+        bind(IJGitCommonHelper.class).to(JGitCommonHelper.class).in(Singleton.class);
 
         // Replacement strategies
         var replacementStrategyBinder = Multibinder.newSetBinder(binder(), IReplacementStrategy.class);
@@ -82,5 +85,37 @@ public class MCPToolsModule
         // JShell binding providers
         var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
         jshellBindingProviderBinder.addBinding().to(EclipsePlatformBindingProvider.class);
+
+        // JGit command implementations
+        var jgitCommandBinder = Multibinder.newSetBinder(binder(), IJGitCommand.class);
+        jgitCommandBinder.addBinding().to(JGitAdd.class);
+        jgitCommandBinder.addBinding().to(JGitApply.class);
+        jgitCommandBinder.addBinding().to(JGitBlame.class);
+        jgitCommandBinder.addBinding().to(JGitBranch.class);
+        jgitCommandBinder.addBinding().to(JGitCheckout.class);
+        jgitCommandBinder.addBinding().to(JGitCherryPick.class);
+        jgitCommandBinder.addBinding().to(JGitClean.class);
+        jgitCommandBinder.addBinding().to(JGitClone.class); //
+        jgitCommandBinder.addBinding().to(JGitCommit.class);
+        jgitCommandBinder.addBinding().to(JGitConfig.class);
+        jgitCommandBinder.addBinding().to(JGitDescribe.class); //
+        jgitCommandBinder.addBinding().to(JGitDiff.class);
+        jgitCommandBinder.addBinding().to(JGitFetch.class);
+        jgitCommandBinder.addBinding().to(JGitLog.class);
+        jgitCommandBinder.addBinding().to(JGitLsFiles.class); //
+        jgitCommandBinder.addBinding().to(JGitMerge.class); //
+        jgitCommandBinder.addBinding().to(JGitMv.class);
+        jgitCommandBinder.addBinding().to(JGitPull.class);
+        jgitCommandBinder.addBinding().to(JGitPush.class);
+        jgitCommandBinder.addBinding().to(JGitRebase.class); //
+        jgitCommandBinder.addBinding().to(JGitRemote.class); //
+        jgitCommandBinder.addBinding().to(JGitReset.class);
+        jgitCommandBinder.addBinding().to(JGitRevert.class);
+        jgitCommandBinder.addBinding().to(JGitRm.class);
+        jgitCommandBinder.addBinding().to(JGitShow.class);
+        jgitCommandBinder.addBinding().to(JGitShowBranch.class);
+        jgitCommandBinder.addBinding().to(JGitStash.class);
+        jgitCommandBinder.addBinding().to(JGitStatus.class);
+        jgitCommandBinder.addBinding().to(JGitTag.class);
     }
 }
