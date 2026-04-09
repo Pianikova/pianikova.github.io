@@ -86,15 +86,13 @@ public class MetadataBindingProvider
         var bindings = new HashMap<String, JShellBindingDescription>();
 
         var mdClassFactory = MdClassFactory.eINSTANCE;
-        if (mdClassFactory != null)
-        {
-            bindings.put("mdFactory", new JShellBindingDescription("Factory for creating 1C metadata objects",
-                buildMdFactoryDescription(), mdClassFactory, MdClassFactory.class,
-                "**⚠️ RESTRICTION: Cannot be used outside BM transaction.** Use `mdFactory` ONLY in "
-                    + "AbstractBmTask.execute() body, where IBmTransaction is available. Do not use attachTopObject() for existing objects. "
-                    + "**IMPORTANT**: Objects created with mdFactory MUST have UUIDs set via "
-                    + "`modelFactory.fillDefaultReferences(object)` or manual assignment."));
-        }
+        bindings.put("mdFactory", new JShellBindingDescription("Factory for creating 1C metadata objects",
+            buildMdFactoryDescription(), mdClassFactory, MdClassFactory.class,
+            "**⚠️ RESTRICTION: Cannot be used outside BM transaction.** Use `mdFactory` ONLY in "
+                + "AbstractBmTask.execute() body, where IBmTransaction is available. Do not use attachTopObject() for existing objects. "
+                + "**IMPORTANT**: Objects created with mdFactory MUST have UUIDs set via "
+                + "manual assignment: `object.setUuid(UUID.randomUUID())`. "
+                + "NOTE: `modelFactory.fillDefaultReferences()` may timeout in JShell due to OSGi service limitations."));
 
         bindings.put("fqnGenerator", new JShellBindingDescription(
             "Generates FQNs (Fully Qualified Names) for top-level metadata objects. Required before attachTopObject().",
@@ -228,14 +226,16 @@ public class MetadataBindingProvider
 
         desc.append("**Use `modelFactory` when needed:**\n");
         desc.append("- For project/version context operations\n");
-        desc.append("- For `fillDefaultReferences()` - CRITICAL for UUID generation\n");
-        desc.append("- May have timeout issues due to OSGi service dependencies in JShell\n\n");
+        desc.append("- NOTE: `fillDefaultReferences()` may timeout in JShell due to OSGi service limitations\n");
+        desc.append("- **RECOMMENDED for JShell:** Use manual UUID assignment: `object.setUuid(UUID.randomUUID())`\n\n");
 
         desc.append("#### Object Creation Workflow (Required Order)\n\n");
         desc.append("1. Create object with `mdFactory.createXxx()`\n");
         desc.append("2. Set required properties: name, synonym, type-specific settings\n");
         desc.append("3. Add children (attributes, tabular sections, etc.) if needed\n");
-        desc.append("4. **CRITICAL:** Call `modelFactory.fillDefaultReferences(object)` to set UUIDs\n");
+        desc.append("4. **CRITICAL for JShell:** Set UUID manually: `object.setUuid(UUID.randomUUID())`\n");
+        desc.append("   - For children, set UUIDs: `childObject.setUuid(UUID.randomUUID())`\n");
+        desc.append("   - NOTE: `modelFactory.fillDefaultReferences()` may timeout in JShell\n");
         desc.append("5. Generate FQN: `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\n");
         desc.append("6. Attach: `transaction.attachTopObject((IBmObject)object, fqn)`\n");
         desc.append("7. Add to parent collection: `configuration.getXxxs().add(object)`\n\n");
@@ -261,14 +261,14 @@ public class MetadataBindingProvider
 
         desc.append("**UUID Handling (CRITICAL):**\n");
         desc.append("```java\n");
-        desc.append("// Option 1: RECOMMENDED - auto-generate all UUIDs\n");
-        desc.append("modelFactory.fillDefaultReferences(object);\n");
-        desc.append("\n");
-        desc.append("// Option 2: Manual UUID assignment\n");
+        desc.append("// Option 1: RECOMMENDED for JShell - manual UUID assignment\n");
         desc.append("import java.util.UUID;\n");
         desc.append("object.setUuid(UUID.randomUUID());\n");
         desc.append("// For children, also set UUIDs:\n");
         desc.append("childObject.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
+        desc.append("// Option 2: auto-generate all UUIDs (may timeout in JShell)\n");
+        desc.append("// modelFactory.fillDefaultReferences(object);\n");
         desc.append("```\n\n");
 
         return desc.toString();
@@ -311,8 +311,9 @@ public class MetadataBindingProvider
         desc.append("        article.setType(articleType);\n");
         desc.append("        catalog.getAttributes().add(article);\n");
         desc.append("\n");
-        desc.append("        // Generate UUIDs for catalog and all child objects\n");
-        desc.append("        modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
+        desc.append("        catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("        article.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
         desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("        transaction.attachTopObject((IBmObject)catalog, fqn);\n");
@@ -333,19 +334,27 @@ public class MetadataBindingProvider
         desc.append("**IMPORTANT:** All metadata objects (catalogs, documents, attributes, forms, etc.) ");
         desc.append("must have a unique UUID. Failure to set UUIDs causes validation errors (SU45).\n\n");
 
-        desc.append("### Option 1: Use modelFactory.fillDefaultReferences() (RECOMMENDED)\n");
+        desc.append("### Option 1: Manual UUID assignment (RECOMMENDED for JShell)\n");
         desc.append("```java\n");
+        desc.append("import java.util.UUID;\n\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
         desc.append("catalog.getSynonym().put(\"ru\", \"Products\");\n");
         desc.append("// ... set other properties ...\n\n");
-        desc.append("// Generate UUIDs for catalog and all children\n");
-        desc.append("modelFactory.fillDefaultReferences(catalog);\n\n");
-        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("// For child objects, set UUIDs manually\n");
+        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
+        desc.append("attr.setName(\"Article\");\n");
+        desc.append("attr.setUuid(UUID.randomUUID());\n");
+        desc.append("catalog.getAttributes().add(attr);\n\n");
+        desc.append(
+            "String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("```\n\n");
 
-        desc.append("### Option 2: Manual UUID assignment\n");
+        desc.append("### Option 2: Use modelFactory.fillDefaultReferences()\n");
+        desc.append("⚠️ **WARNING:** This method may timeout in JShell due to OSGi service limitations.\n");
+        desc.append("Use manual UUID assignment (Option 1) for reliable JShell execution.\n\n");
         desc.append("```java\n");
         desc.append("import java.util.UUID;\n\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
@@ -414,6 +423,7 @@ public class MetadataBindingProvider
     {
         // @formatter:off
         return List.of(
+            "import org.eclipse.core.resources.*;",
             "import com._1c.g5.v8.dt.metadata.mdclass.*;",
             "import com._1c.g5.v8.bm.core.*;",
             "import com._1c.g5.v8.bm.integration.*;",
@@ -422,10 +432,7 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.core.platform.*;",
             "import com._1c.g5.v8.dt.platform.*;",
             "import com._1c.g5.v8.dt.mcore.*;",
-            "import com._1c.g5.v8.dt.platform.core.typeinfo.*;",
-            "import com._1c.g5.v8.dt.metadata.mdclass.*;",
-            "import org.eclipse.core.resources.*;",
-            "import org.eclipse.core.runtime.*;"
+            "import com._1c.g5.v8.dt.platform.core.typeinfo.*;"
         );
         // @formatter:on
     }
@@ -441,7 +448,8 @@ public class MetadataBindingProvider
         desc.append("### ⚠️ CRITICAL RESTRICTIONS:\n\n");
         desc.append("1. **MUST be used ONLY inside BM transaction** (`AbstractBmTask.execute()` body)\n");
         desc.append("2. **Do NOT use for editing existing objects** - use `getTopObjectByFqn()` instead\n");
-        desc.append("3. **Objects MUST have UUIDs set** - use `modelFactory.fillDefaultReferences(object)` or manual UUID assignment\n");
+        desc.append(
+            "3. **Objects MUST have UUIDs set** - use manual assignment `object.setUuid(UUID.randomUUID())` for JShell (RECOMMENDED) or `modelFactory.fillDefaultReferences(object)`\n");
         desc.append("4. **Do NOT use `attachTopObject()` for existing objects** - causes `BmFqnAlreadyInUseException`\n\n");
 
         desc.append("### Supported Metadata Object Types:\n\n");
@@ -512,8 +520,10 @@ public class MetadataBindingProvider
         desc.append("// Set attribute type using TypeDescriptionBuilder...\n");
         desc.append("catalog.getAttributes().add(attribute);\n");
         desc.append("\n");
-        desc.append("// CRITICAL: Generate UUIDs for catalog and all children\n");
-        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("// CRITICAL: Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
+        desc.append("import java.util.UUID;\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("attribute.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
         desc.append("// Generate FQN and attach to transaction\n");
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
@@ -763,6 +773,11 @@ public class MetadataBindingProvider
         desc.append("        warehouse.setType(warehouseType);\n");
         desc.append("        document.getAttributes().add(warehouse);\n");
         desc.append("\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
+        desc.append("        import java.util.UUID;\n");
+        desc.append("        document.setUuid(UUID.randomUUID());\n");
+        desc.append("        warehouse.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
         desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(document.eClass(), document.getName()).toString();\n");
         desc.append("        transaction.attachTopObject((IBmObject)document, fqn);\n");
         desc.append("        configuration.getDocuments().add(document);\n");
@@ -795,6 +810,7 @@ public class MetadataBindingProvider
         desc.append("            // Add new attribute\n");
         desc.append("            CatalogAttribute newAttr = mdFactory.createCatalogAttribute();\n");
         desc.append("            newAttr.setName(\"Brand\");\n");
+        desc.append("            newAttr.setUuid(UUID.randomUUID());\n");
         desc.append("            catalog.getAttributes().add(newAttr);\n");
         desc.append("\n");
         desc.append("            return catalog;\n");
@@ -826,11 +842,13 @@ public class MetadataBindingProvider
         desc.append("            DocumentTabularSection products = mdFactory.createDocumentTabularSection();\n");
         desc.append("            products.setName(\"Products\");\n");
         desc.append("            products.getSynonym().put(\"ru\", \"Products\");\n");
+        desc.append("            products.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
         desc.append("            // Create tabular section attributes\n");
         desc.append("            TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();\n");
         desc.append("            product.setName(\"Product\");\n");
         desc.append("            product.getSynonym().put(\"ru\", \"Product\");\n");
+        desc.append("            product.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
         desc.append("            IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
         desc.append("                .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
@@ -924,7 +942,7 @@ public class MetadataBindingProvider
         desc.append("if (transaction.getTopObjectByFqn(fqn) == null) {\n");
         desc.append("    Catalog newCatalog = mdFactory.createCatalog();\n");
         desc.append("    newCatalog.setName(\"NewProducts\");\n");
-        desc.append("    modelFactory.fillDefaultReferences(newCatalog); // Set UUIDs\n");
+        desc.append("    newCatalog.setUuid(UUID.randomUUID()); // Set UUID\n");
         desc.append("    String generatedFqn = fqnGenerator.generateStandaloneObjectFqn(\n");
         desc.append("        newCatalog.eClass(), newCatalog.getName()).toString();\n");
         desc.append("    transaction.attachTopObject((IBmObject)newCatalog, generatedFqn); // ✅ OK\n");
@@ -949,19 +967,7 @@ public class MetadataBindingProvider
         desc.append("// Error: SU45 - UUID required for catalog and attributes!\n");
         desc.append("```\n\n");
         desc.append("```java\n");
-        desc.append("// ✅ CORRECT CODE - Option 1: Auto-generate (RECOMMENDED)\n");
-        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
-        desc.append("catalog.setName(\"Products\");\n");
-        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
-        desc.append("attr.setName(\"Article\");\n");
-        desc.append("catalog.getAttributes().add(attr);\n");
-        desc.append("// Generate UUIDs for catalog and ALL children\n");
-        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
-        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
-        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
-        desc.append("```\n\n");
-        desc.append("```java\n");
-        desc.append("// ✅ CORRECT CODE - Option 2: Manual UUID assignment\n");
+        desc.append("// ✅ CORRECT CODE - Option 1: Manual UUID assignment (RECOMMENDED for JShell)\n");
         desc.append("import java.util.UUID;\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setUuid(UUID.randomUUID());\n");
@@ -973,6 +979,17 @@ public class MetadataBindingProvider
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ❌ PROHIBITED - Do NOT use fillDefaultReferences() in JShell\n");
+        desc.append("// This method will timeout due to OSGi service limitations\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
+        desc.append("attr.setName(\"Article\");\n");
+        desc.append("catalog.getAttributes().add(attr);\n");
+        desc.append("// ❌ modelFactory.fillDefaultReferences(catalog); // DO NOT USE!\n");
+        desc.append("```\n\n");
+        desc.append("**Always use manual UUID assignment instead.**\n\n");
 
         desc.append("### ❌ Pitfall #4: Using mdFactory outside transaction\n\n");
         desc.append("**Error:** Runtime exception or incorrect behavior\n\n");
@@ -990,7 +1007,7 @@ public class MetadataBindingProvider
         desc.append("        // mdFactory MUST be used inside execute() method\n");
         desc.append("        Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("        catalog.setName(\"Products\");\n");
-        desc.append("        modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("        catalog.setUuid(UUID.randomUUID()); // Set UUID\n");
         desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("        transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("        configuration.getCatalogs().add(catalog);\n");
@@ -1006,7 +1023,7 @@ public class MetadataBindingProvider
         desc.append("// ❌ WRONG CODE\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
-        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("// ❌ Missing: configuration.getCatalogs().add(catalog);\n");
@@ -1017,7 +1034,7 @@ public class MetadataBindingProvider
         desc.append("Configuration config = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
-        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("configuration.getCatalogs().add(catalog); // ✅ Critical step!\n");
@@ -1063,14 +1080,14 @@ public class MetadataBindingProvider
         desc.append("- ✅ No duplicate FQN errors\n\n");
 
         desc.append("### ✅ Best Practices Checklist\n\n");
-        desc.append("When creating metadata objects:\n\n");
-        desc.append("1. **✅ Use transaction:** Always wrap operations in `globalContext.execute(new AbstractBmTask<...>())`\n");
-        desc.append("2. **✅ Check existence:** Verify `getTopObjectByFqn(fqn) == null` before creating\n");
-        desc.append("3. **✅ Set UUIDs:** Call `modelFactory.fillDefaultReferences(object)` for all objects\n");
-        desc.append("4. **✅ Generate FQN:** Use `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\n");
-        desc.append("5. **✅ Attach once:** Call `transaction.attachTopObject()` ONLY for new objects\n");
-        desc.append("6. **✅ Add to collection:** Add object to parent: `configuration.getXxxs().add(object)`\n");
-        desc.append("7. **✅ Validate:** Always check markers after operations\n\n");
+        desc.append("When creating metadata objects:\\n\\n");
+        desc.append("1. **✅ Use transaction:** Always wrap operations in `globalContext.execute(new AbstractBmTask<...>())`\\n");
+        desc.append("2. **✅ Check existence:** Verify `getTopObjectByFqn(fqn) == null` before creating\\n");
+        desc.append("3. **✅ Set UUIDs:** Call `object.setUuid(UUID.randomUUID())` for all objects\\n");
+        desc.append("4. **✅ Generate FQN:** Use `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\\n");
+        desc.append("5. **✅ Attach once:** Call `transaction.attachTopObject()` ONLY for new objects\\n");
+        desc.append("6. **✅ Add to collection:** Add object to parent: `configuration.getXxxs().add(object)`\\n");
+        desc.append("7. **✅ Validate:** Always check markers after operations\\n\\n");
         desc.append("When editing existing objects:\n\n");
         desc.append("1. **✅ Use getTopObjectByFqn:** Retrieve existing object with FQN\n");
         desc.append("2. **✅ Modify directly:** Change properties without `attachTopObject()`\n");

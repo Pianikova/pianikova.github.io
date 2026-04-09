@@ -89,7 +89,8 @@ public class EclipsePlatformBindingProvider
 			"import org.eclipse.ui.*;",
 			"import org.eclipse.jface.operation.*;",
 			"import org.eclipse.core.runtime.*;",
-			"import org.eclipse.core.commands.common.*;"
+			"import org.eclipse.core.commands.common.*;",
+			"import java.util.UUID;"
 		);
 		// @formatter:on
     }
