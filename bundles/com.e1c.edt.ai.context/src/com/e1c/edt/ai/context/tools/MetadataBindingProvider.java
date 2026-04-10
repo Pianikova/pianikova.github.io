@@ -301,14 +301,10 @@ public class MetadataBindingProvider
         desc.append("        article.setName(\"Article\");\n");
         desc.append("        article.getSynonym().put(\"ru\", \"Article\");\n");
         desc.append("\n");
-        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
-        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
-        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
-        desc.append("        TypeDescription articleType = new TypeDescriptionBuilder()\n");
-        desc.append("            .addType(stringType)\n");
-        desc.append("            .build();\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        "));
+        desc.append("\n");
         desc.append("        // Note: String/Number qualifiers can be set via TypeDescriptionBuilder if needed\n");
-        desc.append("        article.setType(articleType);\n");
+        desc.append("        article.setType(typeDesc);\n");
         desc.append("        catalog.getAttributes().add(article);\n");
         desc.append("\n");
         desc.append("        // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
@@ -695,6 +691,32 @@ public class MetadataBindingProvider
     }
 
     @SuppressWarnings("nls")
+    private String buildStringTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildCatalogRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(catalogRefType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
     private String buildTransactionManagementScenarios()
     {
         var desc = new StringBuilder();
@@ -764,13 +786,9 @@ public class MetadataBindingProvider
         desc.append("        warehouse.setName(\"Warehouse\");\n");
         desc.append("        warehouse.getSynonym().put(\"ru\", \"Warehouse\");\n");
         desc.append("\n");
-        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
-        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
-        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
-        desc.append("        TypeDescription warehouseType = new TypeDescriptionBuilder()\n");
-        desc.append("            .addType(stringType)\n");
-        desc.append("            .build();\n");
-        desc.append("        warehouse.setType(warehouseType);\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        "));
+        desc.append("\n");
+        desc.append("        warehouse.setType(typeDesc);\n");
         desc.append("        document.getAttributes().add(warehouse);\n");
         desc.append("\n");
         desc.append("        // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
@@ -845,21 +863,16 @@ public class MetadataBindingProvider
         desc.append("            products.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
         desc.append("            // Create tabular section attributes\n");
-        desc.append("            TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();\n");
-        desc.append("            product.setName(\"Product\");\n");
-        desc.append("            product.getSynonym().put(\"ru\", \"Product\");\n");
-        desc.append("            product.setUuid(UUID.randomUUID());\n");
-        desc.append("\n");
-        desc.append("            IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
-        desc.append("                .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
-        desc.append("\n");
-        desc.append("            TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
-        desc.append("            TypeDescription productType = new TypeDescriptionBuilder()\n");
-        desc.append("                .addType(catalogRefType)\n");
-        desc.append("                .build();\n");
-        desc.append("            product.setType(productType);\n");
-        desc.append("\n");
-        desc.append("            products.getAttributes().add(product);\n");
+            desc.append("            TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();\n");
+            desc.append("            product.setName(\"Product\");\n");
+            desc.append("            product.getSynonym().put(\"ru\", \"Product\");\n");
+            desc.append("            product.setUuid(UUID.randomUUID());\n");
+            desc.append("\n");
+            desc.append("            ").append(buildCatalogRefTypeDescription().replace("\n", "\n            "));
+            desc.append("\n");
+            desc.append("            product.setType(typeDesc);\n");
+            desc.append("\n");
+            desc.append("            products.getAttributes().add(product);\n");
         desc.append("            document.getTabularSections().add(products);\n");
         desc.append("\n");
         desc.append("            return document;\n");
@@ -1080,14 +1093,15 @@ public class MetadataBindingProvider
         desc.append("- ✅ No duplicate FQN errors\n\n");
 
         desc.append("### ✅ Best Practices Checklist\n\n");
-        desc.append("When creating metadata objects:\\n\\n");
-        desc.append("1. **✅ Use transaction:** Always wrap operations in `globalContext.execute(new AbstractBmTask<...>())`\\n");
-        desc.append("2. **✅ Check existence:** Verify `getTopObjectByFqn(fqn) == null` before creating\\n");
-        desc.append("3. **✅ Set UUIDs:** Call `object.setUuid(UUID.randomUUID())` for all objects\\n");
-        desc.append("4. **✅ Generate FQN:** Use `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\\n");
-        desc.append("5. **✅ Attach once:** Call `transaction.attachTopObject()` ONLY for new objects\\n");
-        desc.append("6. **✅ Add to collection:** Add object to parent: `configuration.getXxxs().add(object)`\\n");
-        desc.append("7. **✅ Validate:** Always check markers after operations\\n\\n");
+        desc.append("When creating metadata objects:\n\n");
+        desc.append(
+            "1. **✅ Use transaction:** Always wrap operations in `globalContext.execute(new AbstractBmTask<...>())`\n");
+        desc.append("2. **✅ Check existence:** Verify `getTopObjectByFqn(fqn) == null` before creating\n");
+        desc.append("3. **✅ Set UUIDs:** Call `object.setUuid(UUID.randomUUID())` for all objects\n");
+        desc.append("4. **✅ Generate FQN:** Use `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\n");
+        desc.append("5. **✅ Attach once:** Call `transaction.attachTopObject()` ONLY for new objects\n");
+        desc.append("6. **✅ Add to collection:** Add object to parent: `configuration.getXxxs().add(object)`\n");
+        desc.append("7. **✅ Validate:** Always check markers after operations\n\n");
         desc.append("When editing existing objects:\n\n");
         desc.append("1. **✅ Use getTopObjectByFqn:** Retrieve existing object with FQN\n");
         desc.append("2. **✅ Modify directly:** Change properties without `attachTopObject()`\n");
