@@ -38,6 +38,7 @@ public class JShellSessionManager
 {
     private static final int MAX_SESSIONS = 16;
     private static final int SESSION_EXPIRY_HOURS = 12;
+    private static final int PREWARM_WAIT_TIMEOUT_MS = 30000;
 
     private final Cache<Integer, JShellSession> cache;
 	private final ILog log;
@@ -96,6 +97,29 @@ public class JShellSessionManager
             {
                 preWarmSessionAsync();
                 return preWarmed;
+            }
+
+            synchronized (sessionLock)
+            {
+                preWarmed = preWarmedSession.get();
+                if (preWarmed == null)
+                {
+                    try
+                    {
+                        sessionLock.wait(PREWARM_WAIT_TIMEOUT_MS);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+
+                    preWarmed = preWarmedSession.getAndSet(null);
+                    if (preWarmed != null)
+                    {
+                        preWarmSessionAsync();
+                        return preWarmed;
+                    }
+                }
             }
 
             var session = createSession();
@@ -302,11 +326,16 @@ public class JShellSessionManager
                 // Create new session
                 var session = createSession();
                 preWarmedSession.set(session);
+                sessionLock.notifyAll();
             }
         }
         catch (Exception e)
         {
             log.logError("Failed to pre-warm JShell session: " + e.getMessage()); //$NON-NLS-1$
+            synchronized (sessionLock)
+            {
+                sessionLock.notifyAll();
+            }
         }
     }
 
