@@ -92,9 +92,8 @@ public class JShellSessionMcpTool
 
 		try
 		{
-            IJShellSession session = sessions.getOrCreateSession(0);
-
-            SessionResult result = session.getSessionResult();
+            var session = sessions.getOrCreateSession(0);
+            var result = session.getSessionResult();
 			var content = json.serialize(result);
             details.responseMarkdown = Messages.JShellSessionCreated;
 			return messageFactory.createMessage(this, call, content, details);
@@ -142,11 +141,11 @@ public class JShellSessionMcpTool
 					description.append("\n");
 					for (var entry : descriptions.entrySet())
 					{
-						String bindingName = entry.getKey();
-						JShellBindingDescription bindingInfo = entry.getValue();
-						String bindingDesc = bindingInfo.getDescription();
-						String bindingExample = bindingInfo.getExample();
-                        String bindingRestriction = bindingInfo.getRestriction();
+                        var bindingName = entry.getKey();
+                        var bindingInfo = entry.getValue();
+                        var bindingDesc = bindingInfo.getDescription();
+                        var bindingExample = bindingInfo.getExample();
+                        var bindingRestriction = bindingInfo.getRestriction();
 
 						description.append("\n**`").append(bindingName).append("`**");
 						description.append("\n").append(bindingDesc);

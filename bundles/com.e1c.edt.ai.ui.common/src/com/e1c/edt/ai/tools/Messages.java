@@ -102,6 +102,7 @@ public class Messages
     public static String JShellSessionCodeHistory;
     public static String JShellAvailableBindings;
     public static String JShellSessionCreating;
+    public static String JShellSessionPreWarming;
 
     // Marker operations
     public static String MarkersTitle;

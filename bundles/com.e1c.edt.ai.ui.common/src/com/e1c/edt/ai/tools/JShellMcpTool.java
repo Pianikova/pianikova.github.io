@@ -90,7 +90,6 @@ public class JShellMcpTool
 	{
 		var details = new ToolCallMessageDetails();
 		details.autoCall = false;
-
 		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
 		if (optionalRequest.isEmpty())
 		{
@@ -98,7 +97,6 @@ public class JShellMcpTool
 		}
 
 		var request = optionalRequest.get();
-
 		if (call.callKind == ToolCallKind.RENDER)
 		{
 			var requestMarkdown = new StringBuilder();
@@ -181,7 +179,7 @@ public class JShellMcpTool
 	private String getBindingVariableNamesExample()
 	{
 		var bindingNames = new ArrayList<String>();
-		for (IJShellBindingProvider provider : bindingProviders)
+        for (var provider : bindingProviders)
 		{
             var bindings = provider.getBindings();
 			if (bindings != null)
@@ -250,21 +248,22 @@ public class JShellMcpTool
                     description.append("\n\n**");
                     description.append(provider.getDescription());
                     description.append("**");
-                    String useCases = getProviderUseCases(provider);
+                    var useCases = getProviderUseCases(provider);
                     if (!useCases.isEmpty())
                     {
                         description.append("\n\n");
                         description.append(useCases);
                     }
+
                     description.append("\n\nAvailable bindings:");
-                    int count = 0;
+                    var count = 0;
                     for (var entry : descriptions.entrySet())
                     {
                         if (count < 3)
                         {
-                            String bindingName = entry.getKey();
-                            JShellBindingDescription bindingInfo = entry.getValue();
-                            String bindingRestriction = bindingInfo.getRestriction();
+                            var bindingName = entry.getKey();
+                            var bindingInfo = entry.getValue();
+                            var bindingRestriction = bindingInfo.getRestriction();
                             description.append("\n- `")
                                 .append(bindingName)
                                 .append("`: ")
@@ -291,12 +290,12 @@ public class JShellMcpTool
 		description.append("\n3. Reuse same ID to maintain state");
 
 		// Add restricted types information
-		Set<String> restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
+        var restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
 		if (!restrictedTypes.isEmpty())
 		{
 			description.append("\n\n**⚠️ RESTRICTED TYPES (security restrictions):**");
 			description.append("\nThe following types are NOT ALLOWED:");
-			for (String type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
+            for (var type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
 			{
 				description.append("\n- `").append(type).append("`");
 			}

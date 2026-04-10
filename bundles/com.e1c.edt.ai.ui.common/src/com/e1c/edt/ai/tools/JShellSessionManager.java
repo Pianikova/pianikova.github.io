@@ -11,11 +11,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ToolErrorType;
 import com.e1c.edt.ai.ToolException;
+import com.e1c.edt.ai.ui.IDispatcher;
+import com.e1c.edt.ai.ui.IInitializable;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -28,39 +33,44 @@ import jdk.jshell.JShell;
  * Cache for JShell REPL sessions.
  */
 @Singleton
-class JShellSessionManager
-	implements IJShellSessionManager
+public class JShellSessionManager
+    implements IJShellSessionManager, IInitializable
 {
-    private static final int MAX_SESSIONS = 64;
-    private static final int SESSION_EXPIRY_HOURS = 1;
+    private static final int MAX_SESSIONS = 16;
+    private static final int SESSION_EXPIRY_HOURS = 12;
 
     private final Cache<Integer, JShellSession> cache;
 	private final ILog log;
 	private final Set<IJShellBindingProvider> bindingProviders;
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final IJShellClassPathProvider classPathProvider;
+    private final IDispatcher dispatcher;
     private final AtomicInteger sessionCounter = new AtomicInteger(0);
+    private final AtomicReference<JShellSession> preWarmedSession = new AtomicReference<>();
+    private final Object sessionLock = new Object();
 
 	@Inject
 	public JShellSessionManager(ILog log, Set<IJShellBindingProvider> bindingProviders,
-        IRestrictedTypesValidator restrictedTypesValidator, IJShellClassPathProvider classPathProvider)
+        IRestrictedTypesValidator restrictedTypesValidator, IJShellClassPathProvider classPathProvider,
+        IDispatcher dispatcher)
 	{
 		Preconditions.checkNotNull(log);
 		Preconditions.checkNotNull(bindingProviders);
         Preconditions.checkNotNull(restrictedTypesValidator);
         Preconditions.checkNotNull(classPathProvider);
+        Preconditions.checkNotNull(dispatcher);
 
 		this.log = log;
 		this.bindingProviders = bindingProviders;
         this.restrictedTypesValidator = restrictedTypesValidator;
         this.classPathProvider = classPathProvider;
+        this.dispatcher = dispatcher;
 
-		// Cache with maximum sessions and expiration after access
 		this.cache = CacheBuilder.newBuilder()
 			.maximumSize(MAX_SESSIONS)
-            .expireAfterAccess(SESSION_EXPIRY_HOURS, java.util.concurrent.TimeUnit.HOURS)
-			.removalListener(notification -> {
-				JShellSession session = (JShellSession)notification.getValue();
+            .expireAfterAccess(SESSION_EXPIRY_HOURS, TimeUnit.HOURS)
+            .removalListener(notification -> {
+                var session = (JShellSession)notification.getValue();
 				if (session != null)
 				{
 					session.close();
@@ -69,24 +79,35 @@ class JShellSessionManager
 			.build();
 	}
 
+    @Override
+    public void initialize()
+    {
+        preWarmSessionAsync();
+    }
+
     @SuppressWarnings("nls")
     @Override
     public IJShellSession getOrCreateSession(int sessionId)
 	{
         if (sessionId == 0)
 		{
-			// Create new session
-			return createSession();
-		}
+            var preWarmed = preWarmedSession.getAndSet(null);
+            if (preWarmed != null)
+            {
+                preWarmSessionAsync();
+                return preWarmed;
+            }
 
-		// Get existing session
+            var session = createSession();
+            return session;
+        }
+
         var session = cache.getIfPresent(sessionId);
 		if (session != null)
 		{
 			return session;
 		}
 
-		// Session not found - should not happen for existing sessions
 		throw new ToolException(
 			"Session with ID " + sessionId + " not found. Sessions expire after " + SESSION_EXPIRY_HOURS
 				+ " hour(s) of inactivity. Please create a new session first.",
@@ -100,6 +121,7 @@ class JShellSessionManager
         {
             return null;
         }
+
         return cache.getIfPresent(sessionId);
     }
 
@@ -253,6 +275,48 @@ class JShellSessionManager
 		return session;
 	}
 
+    @Override
+    public void invalidateSession(int sessionId)
+    {
+        cache.invalidate(sessionId);
+    }
+
+    @Override
+    public void invalidateAll()
+    {
+        cache.invalidateAll();
+    }
+
+    private void preWarmSession()
+    {
+        try
+        {
+            synchronized (sessionLock)
+            {
+                // Check if we already have a pre-warmed session
+                if (preWarmedSession.get() != null)
+                {
+                    return;
+                }
+
+                // Create new session
+                var session = createSession();
+                preWarmedSession.set(session);
+            }
+        }
+        catch (Exception e)
+        {
+            log.logError("Failed to pre-warm JShell session: " + e.getMessage()); //$NON-NLS-1$
+        }
+    }
+
+    private void preWarmSessionAsync()
+    {
+        dispatcher.createJob(Messages.JShellSessionPreWarming, context -> {
+            preWarmSession();
+        }, true, CancellationTokens.NONE).schedule();
+    }
+
     private SessionSnapshot buildSessionSnapshot()
     {
         var snapshot = new SessionSnapshot();
@@ -262,12 +326,12 @@ class JShellSessionManager
         for (var provider : bindingProviders)
         {
             addClassLoader(snapshot.classLoaders, provider.getClass().getClassLoader());
-
             var bindings = provider.getBindings();
             if (bindings == null)
             {
                 bindings = Map.of();
             }
+
             snapshot.bindingsByProvider.put(provider, bindings);
             for (var description : bindings.values())
             {
@@ -289,6 +353,7 @@ class JShellSessionManager
             {
                 significantClasses = List.of();
             }
+
             snapshot.significantClassesByProvider.put(provider, significantClasses);
             for (var clazz : significantClasses)
             {
@@ -308,6 +373,7 @@ class JShellSessionManager
         {
             return;
         }
+
         addClassLoader(classLoaders, clazz.getClassLoader());
     }
 
@@ -383,17 +449,5 @@ class JShellSessionManager
                 }
             }
         }
-    }
-
-    @Override
-    public void invalidateSession(int sessionId)
-	{
-		cache.invalidate(sessionId);
-	}
-
-	@Override
-	public void invalidateAll()
-	{
-		cache.invalidateAll();
     }
 }
