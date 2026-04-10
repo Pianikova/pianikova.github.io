@@ -44,6 +44,7 @@ import com.e1c.edt.ai.tools.JShellBindingDescription;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
+import org.eclipse.emf.ecore.util.EcoreUtil;
 
 /**
  * Provides JShell bindings for 1C metadata creation and editing operations.
@@ -155,6 +156,8 @@ public class MetadataBindingProvider
         desc.append("\n\n");
         desc.append(buildRenameObjectWorkflow());
         desc.append("\n\n");
+        desc.append(buildDeleteAttributeWorkflow());
+        desc.append("\n\n");
         desc.append(buildCommonPitfalls());
         return desc.toString();
     }
@@ -262,7 +265,6 @@ public class MetadataBindingProvider
         desc.append("**UUID Handling (CRITICAL):**\n");
         desc.append("```java\n");
         desc.append("// Option 1: RECOMMENDED for JShell - manual UUID assignment\n");
-        desc.append("import java.util.UUID;\n");
         desc.append("object.setUuid(UUID.randomUUID());\n");
         desc.append("// For children, also set UUIDs:\n");
         desc.append("childObject.setUuid(UUID.randomUUID());\n");
@@ -332,7 +334,6 @@ public class MetadataBindingProvider
 
         desc.append("### Option 1: Manual UUID assignment (RECOMMENDED for JShell)\n");
         desc.append("```java\n");
-        desc.append("import java.util.UUID;\n\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("catalog.setUuid(UUID.randomUUID());\n");
@@ -352,7 +353,6 @@ public class MetadataBindingProvider
         desc.append("⚠️ **WARNING:** This method may timeout in JShell due to OSGi service limitations.\n");
         desc.append("Use manual UUID assignment (Option 1) for reliable JShell execution.\n\n");
         desc.append("```java\n");
-        desc.append("import java.util.UUID;\n\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("catalog.setUuid(UUID.randomUUID());\n");
@@ -409,7 +409,8 @@ public class MetadataBindingProvider
             TypeItem.class,
             TypeDescriptionBuilder.class,
             IProject.class,
-            IWorkspaceRoot.class
+            IWorkspaceRoot.class,
+            EcoreUtil.class
         );
     }
 
@@ -428,7 +429,8 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.core.platform.*;",
             "import com._1c.g5.v8.dt.platform.*;",
             "import com._1c.g5.v8.dt.mcore.*;",
-            "import com._1c.g5.v8.dt.platform.core.typeinfo.*;"
+            "import com._1c.g5.v8.dt.platform.core.typeinfo.*;",
+            "import org.eclipse.emf.ecore.util.EcoreUtil;"
         );
         // @formatter:on
     }
@@ -453,6 +455,12 @@ public class MetadataBindingProvider
         desc.append("|------|----------------|------------|\n");
         desc.append("| Catalog (Справочник) | `createCatalog()` | `Catalog.` |\n");
         desc.append("| Document (Документ) | `createDocument()` | `Document.` |\n");
+        desc.append("| BusinessProcess (Бизнес-процесс) | `createBusinessProcess()` | `BusinessProcess.` |\n");
+        desc.append("| Task (Задача) | `createTask()` | `Task.` |\n");
+        desc.append("| Sequence (Последовательность) | `createSequence()` | `Sequence.` |\n");
+        desc.append("| DocumentJournal (ЖурналДокументов) | `createDocumentJournal()` | `DocumentJournal.` |\n");
+        desc.append("| DocumentNumerator (НумераторДокументов) | `createDocumentNumerator()` | `DocumentNumerator.` |\n");
+        desc.append("| DefinedType (ОпределяемыйТип) | `createDefinedType()` | `DefinedType.` |\n");
         desc.append("| InformationRegister (РегистрСведений) | `createInformationRegister()` | `InformationRegister.` |\n");
         desc.append("| AccumulationRegister (РегистрНакопления) | `createAccumulationRegister()` | `AccumulationRegister.` |\n");
         desc.append("| AccountingRegister (РегистрБухгалтерии) | `createAccountingRegister()` | `AccountingRegister.` |\n");
@@ -481,12 +489,16 @@ public class MetadataBindingProvider
         desc.append("|------|----------------|---------------|\n");
         desc.append("| CatalogAttribute | `createCatalogAttribute()` | Catalog |\n");
         desc.append("| DocumentAttribute | `createDocumentAttribute()` | Document |\n");
+        desc.append("| BusinessProcessAttribute | `createBusinessProcessAttribute()` | BusinessProcess |\n");
+        desc.append("| TaskAttribute | `createTaskAttribute()` | Task |\n");
         desc.append("| RegisterAttribute | `createRegisterAttribute()` | Register |\n");
         desc.append("| RegisterDimension | `createRegisterDimension()` | Register |\n");
         desc.append("| RegisterResource | `createRegisterResource()` | Register |\n");
         desc.append("| TabularSectionAttribute | `createTabularSectionAttribute()` | TabularSection |\n");
         desc.append("| CatalogTabularSection | `createCatalogTabularSection()` | Catalog |\n");
         desc.append("| DocumentTabularSection | `createDocumentTabularSection()` | Document |\n");
+        desc.append("| BusinessProcessTabularSection | `createBusinessProcessTabularSection()` | BusinessProcess |\n");
+        desc.append("| TaskTabularSection | `createTaskTabularSection()` | Task |\n");
         desc.append("| BasicForm | `createBasicForm()` | Any metadata object |\n");
         desc.append("| BasicCommand | `createBasicCommand()` | Any metadata object |\n");
         desc.append("| Template | `createTemplate()` | Any metadata object |\n");
@@ -497,7 +509,9 @@ public class MetadataBindingProvider
         desc.append("| Operation | `createOperation()` | WebService |\n");
         desc.append("| Column | `createColumn()` | Cube, Table |\n");
         desc.append("| DimensionTable | `createDimensionTable()` | Cube |\n");
-        desc.append("| Table | `createTable()` | Cube |\n\n");
+        desc.append("| Table | `createTable()` | Cube |\n");
+        desc.append("| Recalculation | `createRecalculation()` | CalculationRegister |\n");
+        desc.append("| RecalculationDimension | `createRecalculationDimension()` | Recalculation |\n\n");
 
         desc.append("### Correct Usage Example:\n\n");
         desc.append("```java\n");
@@ -517,7 +531,6 @@ public class MetadataBindingProvider
         desc.append("catalog.getAttributes().add(attribute);\n");
         desc.append("\n");
         desc.append("// CRITICAL: Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
-        desc.append("import java.util.UUID;\n");
         desc.append("catalog.setUuid(UUID.randomUUID());\n");
         desc.append("attribute.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
@@ -792,7 +805,6 @@ public class MetadataBindingProvider
         desc.append("        document.getAttributes().add(warehouse);\n");
         desc.append("\n");
         desc.append("        // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
-        desc.append("        import java.util.UUID;\n");
         desc.append("        document.setUuid(UUID.randomUUID());\n");
         desc.append("        warehouse.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
@@ -912,6 +924,41 @@ public class MetadataBindingProvider
         desc.append("    }\n");
         desc.append("});\n");
         desc.append("```\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteAttributeWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Delete Attribute from Catalog\n\n");
+        desc.append("```java\n");
+        desc.append("Catalog result = globalContext.execute(new AbstractBmTask<Catalog>(\"Delete attribute\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Catalog execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Catalog catalog = (Catalog)transaction.getTopObjectByFqn(\"Catalog.Товары\");\n");
+        desc.append("        \n");
+        desc.append("        if (catalog != null) {\n");
+        desc.append("            // Find attribute by name\n");
+        desc.append("            CatalogAttribute attrToRemove = null;\n");
+        desc.append("            for (CatalogAttribute attr : catalog.getAttributes()) {\n");
+        desc.append("                if (\"ПолноеНаименование\".equals(attr.getName())) {\n");
+        desc.append("                    attrToRemove = attr;\n");
+        desc.append("                    break;\n");
+        desc.append("                }\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            // ⚠️ WARNING: simple remove() may not work correctly!\n");
+        desc.append("            // Use EcoreUtil.delete() instead\n");
+        desc.append("            if (attrToRemove != null) {\n");
+        desc.append("                EcoreUtil.delete(attrToRemove);\n");
+        desc.append("            }\n");
+        desc.append("        }\n");
+        desc.append("        return catalog;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**NOTE:** Always use `EcoreUtil.delete()` instead of `getAttributes().remove()` for proper entity deletion.\n");
         return desc.toString();
     }
 
@@ -1071,6 +1118,20 @@ public class MetadataBindingProvider
         desc.append("// codeLength, descriptionLength, codeType, etc.\n");
         desc.append("```\n\n");
 
+        desc.append("### ❌ Pitfall #7: Incorrect attribute deletion\n\n");
+        desc.append("**Error:** Attributes not removed or duplicated\n\n");
+        desc.append("**Problem:** Using `collection.remove()` for BM entities doesn't work correctly.\n\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG CODE\n");
+        desc.append("catalog.getAttributes().remove(attr);\n");
+        desc.append("// Attribute may not be properly deleted from model\n");
+        desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE\n");
+        desc.append("EcoreUtil.delete(attr);\n");
+        desc.append("// Properly removes entity and its references\n");
+        desc.append("```\n\n");
+
         desc.append("### ⚠️ CRITICAL: Validate After Entity Operations\n\n");
         desc.append("After creating, editing, or deleting metadata entities, you **MUST** check for validation errors.\n\n");
         desc.append("```java\n");
@@ -1112,6 +1173,10 @@ public class MetadataBindingProvider
         desc.append("2. **✅ Update name:** Also change the object name property\n");
         desc.append("3. **✅ No attachTopObject:** NEVER use `attachTopObject()` for renaming\n");
         desc.append("4. **✅ Validate:** Always check markers after operations\n\n");
+        desc.append("When deleting objects:\n");
+        desc.append("1. **✅ Use EcoreUtil.delete():** Call `EcoreUtil.delete(entity)` for proper deletion\n");
+        desc.append("2. **❌ Avoid collection.remove():** Don't use `getAttributes().remove()`\n");
+        desc.append("3. **✅ Validate:** Always check markers after deletion\n\n");
 
         return desc.toString();
     }
