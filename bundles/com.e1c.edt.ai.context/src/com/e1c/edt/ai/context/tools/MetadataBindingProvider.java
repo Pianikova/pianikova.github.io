@@ -61,7 +61,34 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 /**
- * Provides JShell bindings for 1C metadata creation and editing operations.
+ * Provides JShell bindings for 1C metadata creation, editing, and deletion operations.
+ * <p>
+ * This provider offers access to:
+ * <ul>
+ *   <li>{@link MdClassFactory} - Factory for creating metadata objects</li>
+ *   <li>{@link ITopObjectFqnGenerator} - Generates FQNs for top-level objects</li>
+ *   <li>{@link IModelObjectFactory} - Creates model objects in project context</li>
+ *   <li>{@link IV8ProjectManager} - Resolves IV8Project from Eclipse projects</li>
+ *   <li>{@link IBmModelManager} - Provides BM model and editing contexts for read/write operations</li>
+ *   <li>{@link IResourceLookup} - Maps metadata objects to Eclipse resources</li>
+ * </ul>
+ * <p>
+ * <b>Key Operations:</b>
+ * <ul>
+ *   <li>Create new metadata objects (Catalog, Document, Register, etc.)</li>
+ *   <li>Edit existing metadata objects</li>
+ *   <li>Delete metadata objects by removing from parent collection and detaching from transaction</li>
+ *   <li>Manage UUIDs for new objects</li>
+ *   <li>Transaction-based modifications</li>
+ * </ul>
+ * <p>
+ * <b>Important Notes:</b>
+ * <ul>
+ *   <li>Always use BM transactions ({@link IBmGlobalEditingContext#execute()}) for modifications</li>
+ *   <li>For deletion: remove from parent collection and detach from transaction - NEVER use collection {@code remove()} alone or {@code EcoreUtil.delete()} for top-level objects</li>
+ *   <li>New objects MUST have UUIDs set via {@code object.setUuid(UUID.randomUUID())}</li>
+ *   <li>{@code mdFactory} can only be used inside BM transaction</li>
+ * </ul>
  */
 @Singleton
 public class MetadataBindingProvider
@@ -146,7 +173,9 @@ public class MetadataBindingProvider
     @Override
     public String getDescription()
     {
-        return "1C metadata API (factories, project manager, BM model)";
+        return "1C metadata API: Create, edit, and delete Catalog, Document, Register, and other metadata objects. "
+            + "Includes factories (mdFactory, modelFactory), FQN generator, BM model with transactions, "
+            + "and resource lookup for Eclipse integration.";
     }
 
     @Override
@@ -173,12 +202,36 @@ public class MetadataBindingProvider
         desc.append(buildDeleteAttributeWorkflow());
         desc.append("\n\n");
         desc.append(buildCommonPitfalls());
-        desc.append("\\n\\n");
+        desc.append("\n\n");
         desc.append(buildAccumulationRegisterWorkflow());
-        desc.append("\\n\\n");
+        desc.append("\n\n");
         desc.append(buildAccountingRegisterWorkflow());
-        desc.append("\\n\\n");
+        desc.append("\n\n");
         desc.append(buildCalculationRegisterWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteCatalogWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteDocumentWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteAccumulationRegisterWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteAccountingRegisterWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteCalculationRegisterWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteInformationRegisterWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteEnumWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteReportWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteDataProcessorWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteCommonModuleWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteConstantWorkflow());
+        desc.append("\n\n");
+        desc.append(buildDeleteRegisterObjectsWorkflow());
         return desc.toString();
     }
 
@@ -186,62 +239,62 @@ public class MetadataBindingProvider
     private String buildAccumulationRegisterWorkflow()
     {
         var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Create AccumulationRegister\\n\\n");
-        desc.append("```java\\n");
-        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\\n");
-        desc.append("IV8Project v8project = projectManager.getProject(project);\\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\\n");
-        desc.append("\\n");
+        desc.append("## Safe Workflow: Create AccumulationRegister\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
         desc.append(
-            "AccumulationRegister register = globalContext.execute(new AbstractBmTask<AccumulationRegister>(\\\"Create register\\\") {\\n");
-        desc.append("    @Override\\n");
+            "AccumulationRegister register = globalContext.execute(new AbstractBmTask<AccumulationRegister>(\\\"Create register\\\") {\n");
+        desc.append("    @Override\n");
         desc.append(
-            "    public AccumulationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+            "    public AccumulationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
         desc.append(
-            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\\n");
-        desc.append("\\n");
-        desc.append("        AccumulationRegister register = mdFactory.createAccumulationRegister();\\n");
-        desc.append("        register.setName(\\\"GoodsInStock\\\");\\n");
-        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Goods In Stock\\\");\\n");
-        desc.append("        register.setRegisterType(AccumulationRegisterType.Balance);\\n");
-        desc.append("\\n");
-        desc.append("        // Add dimension\\n");
+            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\n");
+        desc.append("\n");
+        desc.append("        AccumulationRegister register = mdFactory.createAccumulationRegister();\n");
+        desc.append("        register.setName(\\\"GoodsInStock\\\");\n");
+        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Goods In Stock\\\");\n");
+        desc.append("        register.setRegisterType(AccumulationRegisterType.Balance);\n");
+        desc.append("\n");
+        desc.append("        // Add dimension\n");
         desc.append(
-            "        AccumulationRegisterDimension warehouse = mdFactory.createAccumulationRegisterDimension();\\n");
-        desc.append("        warehouse.setName(\\\"Warehouse\\\");\\n");
-        desc.append("        warehouse.getSynonym().put(\\\"ru\\\", \\\"Warehouse\\\");\\n");
-        desc.append("        warehouse.setBalance(true);\\n");
-        desc.append("\\n");
-        desc.append("        ").append(buildCatalogRefTypeDescription().replace("\\n", "\\n        "));
-        desc.append("\\n");
-        desc.append("        warehouse.setType(typeDesc);\\n");
-        desc.append("        register.getDimensions().add(warehouse);\\n");
-        desc.append("\\n");
-        desc.append("        // Add resource\\n");
+            "        AccumulationRegisterDimension warehouse = mdFactory.createAccumulationRegisterDimension();\n");
+        desc.append("        warehouse.setName(\\\"Warehouse\\\");\n");
+        desc.append("        warehouse.getSynonym().put(\\\"ru\\\", \\\"Warehouse\\\");\n");
+        desc.append("        warehouse.setBalance(true);\n");
+        desc.append("\n");
+        desc.append("        ").append(buildCatalogRefTypeDescription().replace("\n", "\n        "));
+        desc.append("\n");
+        desc.append("        warehouse.setType(typeDesc);\n");
+        desc.append("        register.getDimensions().add(warehouse);\n");
+        desc.append("\n");
+        desc.append("        // Add resource\n");
         desc.append(
-            "        AccumulationRegisterResource quantity = mdFactory.createAccumulationRegisterResource();\\n");
-        desc.append("        quantity.setName(\\\"Quantity\\\");\\n");
-        desc.append("        quantity.getSynonym().put(\\\"ru\\\", \\\"Quantity\\\");\\n");
-        desc.append("\\n");
-        desc.append("        // Set type for resource (Number or other)\\n");
-        desc.append("        quantity.setType(typeDesc);\\n");
-        desc.append("        register.getResources().add(quantity);\\n");
-        desc.append("\\n");
-        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\\n");
-        desc.append("        register.setUuid(UUID.randomUUID());\\n");
-        desc.append("        warehouse.setUuid(UUID.randomUUID());\\n");
-        desc.append("        quantity.setUuid(UUID.randomUUID());\\n");
-        desc.append("\\n");
+            "        AccumulationRegisterResource quantity = mdFactory.createAccumulationRegisterResource();\n");
+        desc.append("        quantity.setName(\\\"Quantity\\\");\n");
+        desc.append("        quantity.getSynonym().put(\\\"ru\\\", \\\"Quantity\\\");\n");
+        desc.append("\n");
+        desc.append("        // Set type for resource (Number or other)\n");
+        desc.append("        quantity.setType(typeDesc);\n");
+        desc.append("        register.getResources().add(quantity);\n");
+        desc.append("\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\n");
+        desc.append("        register.setUuid(UUID.randomUUID());\n");
+        desc.append("        warehouse.setUuid(UUID.randomUUID());\n");
+        desc.append("        quantity.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
         desc.append(
-            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\\n");
-        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\\n");
-        desc.append("        configuration.getAccumulationRegisters().add(register);\\n");
-        desc.append("        return register;\\n");
-        desc.append("    }\\n");
-        desc.append("});\\n");
-        desc.append("```\\n");
-        desc.append("**Note:** Registers require at least one Dimension. Resources are optional but recommended.\\n");
+            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\n");
+        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\n");
+        desc.append("        configuration.getAccumulationRegisters().add(register);\n");
+        desc.append("        return register;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**Note:** Registers require at least one Dimension. Resources are optional but recommended.\n");
         return desc.toString();
     }
 
@@ -249,66 +302,66 @@ public class MetadataBindingProvider
     private String buildAccountingRegisterWorkflow()
     {
         var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Create AccountingRegister\\n\\n");
-        desc.append("```java\\n");
-        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\\n");
-        desc.append("IV8Project v8project = projectManager.getProject(project);\\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\\n");
-        desc.append("\\n");
+        desc.append("## Safe Workflow: Create AccountingRegister\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
         desc.append(
-            "AccountingRegister register = globalContext.execute(new AbstractBmTask<AccountingRegister>(\\\"Create register\\\") {\\n");
-        desc.append("    @Override\\n");
-        desc.append("    public AccountingRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+            "AccountingRegister register = globalContext.execute(new AbstractBmTask<AccountingRegister>(\\\"Create register\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public AccountingRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
         desc.append(
-            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\\n");
-        desc.append("\\n");
-        desc.append("        AccountingRegister register = mdFactory.createAccountingRegister();\\n");
-        desc.append("        register.setName(\\\"Accounting\\\");\\n");
-        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Accounting\\\");\\n");
-        desc.append("        register.setCorrespondence(true);\\n");
-        desc.append("        register.setPeriodAdjustmentLength(2);\\n");
-        desc.append("\\n");
-        desc.append("        // Set ChartOfAccounts reference\\n");
+            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\n");
+        desc.append("\n");
+        desc.append("        AccountingRegister register = mdFactory.createAccountingRegister();\n");
+        desc.append("        register.setName(\\\"Accounting\\\");\n");
+        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Accounting\\\");\n");
+        desc.append("        register.setCorrespondence(true);\n");
+        desc.append("        register.setPeriodAdjustmentLength(2);\n");
+        desc.append("\n");
+        desc.append("        // Set ChartOfAccounts reference\n");
         desc.append(
-            "        ChartOfAccounts chartOfAccounts = (ChartOfAccounts)transaction.getTopObjectByFqn(\\\"ChartOfAccounts.ПланСчетов\\\");\\n");
-        desc.append("        register.setChartOfAccounts(chartOfAccounts);\\n");
-        desc.append("\\n");
-        desc.append("        // Add dimension\\n");
-        desc.append("        AccountingRegisterDimension account = mdFactory.createAccountingRegisterDimension();\\n");
-        desc.append("        account.setName(\\\"Account\\\");\\n");
-        desc.append("        account.getSynonym().put(\\\"ru\\\", \\\"Account\\\");\\n");
-        desc.append("        account.setBalance(true);\\n");
-        desc.append("\\n");
-        desc.append("        ").append(buildStringTypeDescription().replace("\\n", "\\n        "));
-        desc.append("\\n");
-        desc.append("        account.setType(typeDesc);\\n");
-        desc.append("        register.getDimensions().add(account);\\n");
-        desc.append("\\n");
-        desc.append("        // Add resource\\n");
-        desc.append("        AccountingRegisterResource amount = mdFactory.createAccountingRegisterResource();\\n");
-        desc.append("        amount.setName(\\\"Amount\\\");\\n");
-        desc.append("        amount.getSynonym().put(\\\"ru\\\", \\\"Amount\\\");\\n");
-        desc.append("        amount.setBalance(true);\\n");
-        desc.append("\\n");
-        desc.append("        amount.setType(typeDesc);\\n");
-        desc.append("        register.getResources().add(amount);\\n");
-        desc.append("\\n");
-        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\\n");
-        desc.append("        register.setUuid(UUID.randomUUID());\\n");
-        desc.append("        account.setUuid(UUID.randomUUID());\\n");
-        desc.append("        amount.setUuid(UUID.randomUUID());\\n");
-        desc.append("\\n");
+            "        ChartOfAccounts chartOfAccounts = (ChartOfAccounts)transaction.getTopObjectByFqn(\\\"ChartOfAccounts.ПланСчетов\\\");\n");
+        desc.append("        register.setChartOfAccounts(chartOfAccounts);\n");
+        desc.append("\n");
+        desc.append("        // Add dimension\n");
+        desc.append("        AccountingRegisterDimension account = mdFactory.createAccountingRegisterDimension();\n");
+        desc.append("        account.setName(\\\"Account\\\");\n");
+        desc.append("        account.getSynonym().put(\\\"ru\\\", \\\"Account\\\");\n");
+        desc.append("        account.setBalance(true);\n");
+        desc.append("\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        "));
+        desc.append("\n");
+        desc.append("        account.setType(typeDesc);\n");
+        desc.append("        register.getDimensions().add(account);\n");
+        desc.append("\n");
+        desc.append("        // Add resource\n");
+        desc.append("        AccountingRegisterResource amount = mdFactory.createAccountingRegisterResource();\n");
+        desc.append("        amount.setName(\\\"Amount\\\");\n");
+        desc.append("        amount.getSynonym().put(\\\"ru\\\", \\\"Amount\\\");\n");
+        desc.append("        amount.setBalance(true);\n");
+        desc.append("\n");
+        desc.append("        amount.setType(typeDesc);\n");
+        desc.append("        register.getResources().add(amount);\n");
+        desc.append("\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\n");
+        desc.append("        register.setUuid(UUID.randomUUID());\n");
+        desc.append("        account.setUuid(UUID.randomUUID());\n");
+        desc.append("        amount.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
         desc.append(
-            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\\n");
-        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\\n");
-        desc.append("        configuration.getAccountingRegisters().add(register);\\n");
-        desc.append("        return register;\\n");
-        desc.append("    }\\n");
-        desc.append("});\\n");
-        desc.append("```\\n");
+            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\n");
+        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\n");
+        desc.append("        configuration.getAccountingRegisters().add(register);\n");
+        desc.append("        return register;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
         desc.append(
-            "**Note:** AccountingRegister requires ChartOfAccounts reference and at least one Dimension with Account type.\\n");
+            "**Note:** AccountingRegister requires ChartOfAccounts reference and at least one Dimension with Account type.\n");
         return desc.toString();
     }
 
@@ -316,74 +369,74 @@ public class MetadataBindingProvider
     private String buildCalculationRegisterWorkflow()
     {
         var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Create CalculationRegister\\n\\n");
-        desc.append("```java\\n");
-        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\\n");
-        desc.append("IV8Project v8project = projectManager.getProject(project);\\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\\n");
-        desc.append("\\n");
+        desc.append("## Safe Workflow: Create CalculationRegister\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
         desc.append(
-            "CalculationRegister register = globalContext.execute(new AbstractBmTask<CalculationRegister>(\\\"Create register\\\") {\\n");
-        desc.append("    @Override\\n");
+            "CalculationRegister register = globalContext.execute(new AbstractBmTask<CalculationRegister>(\\\"Create register\\\") {\n");
+        desc.append("    @Override\n");
         desc.append(
-            "    public CalculationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+            "    public CalculationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
         desc.append(
-            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\\n");
-        desc.append("\\n");
-        desc.append("        CalculationRegister register = mdFactory.createCalculationRegister();\\n");
-        desc.append("        register.setName(\\\"SalaryCalculation\\\");\\n");
-        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Salary Calculation\\\");\\n");
-        desc.append("        register.setPeriodicity(CalculationRegisterPeriodicity.Month);\\n");
-        desc.append("        register.setActionPeriod(true);\\n");
-        desc.append("        register.setBasePeriod(false);\\n");
-        desc.append("\\n");
-        desc.append("        // Set ChartOfCalculationTypes reference\\n");
+            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\n");
+        desc.append("\n");
+        desc.append("        CalculationRegister register = mdFactory.createCalculationRegister();\n");
+        desc.append("        register.setName(\\\"SalaryCalculation\\\");\n");
+        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Salary Calculation\\\");\n");
+        desc.append("        register.setPeriodicity(CalculationRegisterPeriodicity.Month);\n");
+        desc.append("        register.setActionPeriod(true);\n");
+        desc.append("        register.setBasePeriod(false);\n");
+        desc.append("\n");
+        desc.append("        // Set ChartOfCalculationTypes reference\n");
         desc.append(
-            "        ChartOfCalculationTypes chart = (ChartOfCalculationTypes)transaction.getTopObjectByFqn(\\\"ChartOfCalculationTypes.ВидыРасчетов\\\");\\n");
-        desc.append("        register.setChartOfCalculationTypes(chart);\\n");
-        desc.append("\\n");
-        desc.append("        // Add dimension (base dimension)\\n");
+            "        ChartOfCalculationTypes chart = (ChartOfCalculationTypes)transaction.getTopObjectByFqn(\\\"ChartOfCalculationTypes.ВидыРасчетов\\\");\n");
+        desc.append("        register.setChartOfCalculationTypes(chart);\n");
+        desc.append("\n");
+        desc.append("        // Add dimension (base dimension)\n");
         desc.append(
-            "        CalculationRegisterDimension employee = mdFactory.createCalculationRegisterDimension();\\n");
-        desc.append("        employee.setName(\\\"Employee\\\");\\n");
-        desc.append("        employee.getSynonym().put(\\\"ru\\\", \\\"Employee\\\");\\n");
-        desc.append("        employee.setBaseDimension(true);\\n");
-        desc.append("\\n");
-        desc.append("        ").append(buildCatalogRefTypeDescription().replace("\\n", "\\n        "));
-        desc.append("\\n");
-        desc.append("        employee.setType(typeDesc);\\n");
-        desc.append("        register.getDimensions().add(employee);\\n");
-        desc.append("\\n");
-        desc.append("        // Add resource\\n");
-        desc.append("        CalculationRegisterResource amount = mdFactory.createCalculationRegisterResource();\\n");
-        desc.append("        amount.setName(\\\"Amount\\\");\\n");
-        desc.append("        amount.getSynonym().put(\\\"ru\\\", \\\"Amount\\\");\\n");
-        desc.append("\\n");
-        desc.append("        amount.setType(typeDesc);\\n");
-        desc.append("        register.getResources().add(amount);\\n");
-        desc.append("\\n");
-        desc.append("        // Add recalculation rule\\n");
-        desc.append("        Recalculation recalculation = mdFactory.createRecalculation();\\n");
-        desc.append("        recalculation.setName(\\\"Recalculation\\\");\\n");
-        desc.append("        register.getRecalculations().add(recalculation);\\n");
-        desc.append("\\n");
-        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\\n");
-        desc.append("        register.setUuid(UUID.randomUUID());\\n");
-        desc.append("        employee.setUuid(UUID.randomUUID());\\n");
-        desc.append("        amount.setUuid(UUID.randomUUID());\\n");
-        desc.append("        recalculation.setUuid(UUID.randomUUID());\\n");
-        desc.append("\\n");
+            "        CalculationRegisterDimension employee = mdFactory.createCalculationRegisterDimension();\n");
+        desc.append("        employee.setName(\\\"Employee\\\");\n");
+        desc.append("        employee.getSynonym().put(\\\"ru\\\", \\\"Employee\\\");\n");
+        desc.append("        employee.setBaseDimension(true);\n");
+        desc.append("\n");
+        desc.append("        ").append(buildCatalogRefTypeDescription().replace("\n", "\n        "));
+        desc.append("\n");
+        desc.append("        employee.setType(typeDesc);\n");
+        desc.append("        register.getDimensions().add(employee);\n");
+        desc.append("\n");
+        desc.append("        // Add resource\n");
+        desc.append("        CalculationRegisterResource amount = mdFactory.createCalculationRegisterResource();\n");
+        desc.append("        amount.setName(\\\"Amount\\\");\n");
+        desc.append("        amount.getSynonym().put(\\\"ru\\\", \\\"Amount\\\");\n");
+        desc.append("\n");
+        desc.append("        amount.setType(typeDesc);\n");
+        desc.append("        register.getResources().add(amount);\n");
+        desc.append("\n");
+        desc.append("        // Add recalculation rule\n");
+        desc.append("        Recalculation recalculation = mdFactory.createRecalculation();\n");
+        desc.append("        recalculation.setName(\\\"Recalculation\\\");\n");
+        desc.append("        register.getRecalculations().add(recalculation);\n");
+        desc.append("\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\n");
+        desc.append("        register.setUuid(UUID.randomUUID());\n");
+        desc.append("        employee.setUuid(UUID.randomUUID());\n");
+        desc.append("        amount.setUuid(UUID.randomUUID());\n");
+        desc.append("        recalculation.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
         desc.append(
-            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\\n");
-        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\\n");
-        desc.append("        configuration.getCalculationRegisters().add(register);\\n");
-        desc.append("        return register;\\n");
-        desc.append("    }\\n");
-        desc.append("});\\n");
-        desc.append("```\\n");
+            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\n");
+        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\n");
+        desc.append("        configuration.getCalculationRegisters().add(register);\n");
+        desc.append("        return register;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
         desc.append(
-            "**Note:** CalculationRegister requires ChartOfCalculationTypes reference and at least one base Dimension.\\n");
+            "**Note:** CalculationRegister requires ChartOfCalculationTypes reference and at least one base Dimension.\n");
         return desc.toString();
     }
 
@@ -1259,7 +1312,7 @@ public class MetadataBindingProvider
         desc.append("```java\n");
         desc.append("// ✅ CORRECT CODE - Option 1: Manual UUID assignment (RECOMMENDED for JShell)\n");
         desc.append("import java.util.UUID;\n");
-        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("Catalog catalog = mdFactory.cr eateCatalog();\n");
         desc.append("catalog.setUuid(UUID.randomUUID());\n");
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
@@ -1348,66 +1401,454 @@ public class MetadataBindingProvider
         desc.append("// codeLength, descriptionLength, codeType, etc.\n");
         desc.append("```\n\n");
 
-        desc.append("### ❌ Pitfall #7: Incorrect attribute deletion\n\n");
-        desc.append("**Error:** Attributes not removed or duplicated\n\n");
-        desc.append("**Problem:** Using `collection.remove()` for BM entities doesn't work correctly.\n\n");
+        desc.append("### ❌ Pitfall #7: Incorrect top-level object deletion\n\n");
+        desc.append("**Error:** `UnsupportedOperationException`\n\n");
+        desc.append("**Problem:** Using `EcoreUtil.delete()` for top-level metadata objects causes exception.\n\n");
         desc.append("```java\n");
-        desc.append("// ❌ WRONG CODE\n");
-        desc.append("catalog.getAttributes().remove(attr);\n");
-        desc.append("// Attribute may not be properly deleted from model\n");
-        desc.append("```\n\n");
+        desc.append("// ❌ WRONG CODE for top-level objects\n");
+        desc.append("EcoreUtil.delete(catalog); // UnsupportedOperationException!\n");
+        desc.append("```");
         desc.append("```java\n");
-        desc.append("// ✅ CORRECT CODE\n");
-        desc.append("EcoreUtil.delete(attr);\n");
-        desc.append("// Properly removes entity and its references\n");
-        desc.append("```\n\n");
-
-        desc.append("### ⚠️ CRITICAL: Validate After Entity Operations\n\n");
-        desc.append("After creating, editing, or deleting metadata entities, you **MUST** check for validation errors.\n\n");
+        desc.append("// ✅ CORRECT CODE for top-level objects\n");
+        desc.append("Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("configuration.getCatalogs().remove(catalog);\n");
+        desc.append("transaction.detachTopObject((IBmObject)catalog);\n");
+        desc.append("```");
         desc.append("```java\n");
-        desc.append("// After ANY metadata modification, always validate:\n");
-        desc.append("// 1. Create/edit/delete metadata objects\n");
-        desc.append("// 2. Use GetMarkers tool to check for errors\n");
-        desc.append("// 3. Handle critical validation errors\n\n");
-        desc.append("// Example: Check for 1C validation errors\n");
-        desc.append("var markers = toolCall(\"GetMarkers\", Map.of(\n");
-        desc.append("    \"project_name\", projectName,\n");
-        desc.append("    \"marker_type\", \"1c\"\n");
-        desc.append("));\n");
-        desc.append("// Check for critical errors (SU45, reference errors, etc.)\n");
-        desc.append("```\n\n");
-        desc.append("**This validation step is MANDATORY** to ensure:\n");
-        desc.append("- ✅ Metadata structure integrity\n");
-        desc.append("- ✅ No SU45 (UUID required) errors\n");
-        desc.append("- ✅ No reference resolution errors\n");
-        desc.append("- ✅ Proper configuration consistency\n");
-        desc.append("- ✅ No duplicate FQN errors\n\n");
+        desc.append("// ✅ CORRECT CODE for child objects (attributes, etc.)\n");
+        desc.append("EcoreUtil.delete(attr); // Works correctly for child objects\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a catalog will cascade delete all its attributes, tabular sections, forms, and templates.\n");
+        return desc.toString();
+    }
 
-        desc.append("### ✅ Best Practices Checklist\n\n");
-        desc.append("When creating metadata objects:\n\n");
-        desc.append(
-            "1. **✅ Use transaction:** Always wrap operations in `globalContext.execute(new AbstractBmTask<...>())`\n");
-        desc.append("2. **✅ Check existence:** Verify `getTopObjectByFqn(fqn) == null` before creating\n");
-        desc.append("3. **✅ Set UUIDs:** Call `object.setUuid(UUID.randomUUID())` for all objects\n");
-        desc.append("4. **✅ Generate FQN:** Use `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`\n");
-        desc.append("5. **✅ Attach once:** Call `transaction.attachTopObject()` ONLY for new objects\n");
-        desc.append("6. **✅ Add to collection:** Add object to parent: `configuration.getXxxs().add(object)`\n");
-        desc.append("7. **✅ Validate:** Always check markers after operations\n\n");
-        desc.append("When editing existing objects:\n\n");
-        desc.append("1. **✅ Use getTopObjectByFqn:** Retrieve existing object with FQN\n");
-        desc.append("2. **✅ Modify directly:** Change properties without `attachTopObject()`\n");
-        desc.append("3. **✅ No attachTopObject:** NEVER call `attachTopObject()` on existing objects\n");
-        desc.append("4. **✅ Validate:** Always check markers after operations\n\n");
-        desc.append("When renaming objects:\n\n");
-        desc.append("1. **✅ Use updateTopObjectFqn:** Call `transaction.updateTopObjectFqn(object, newFqn)`\n");
-        desc.append("2. **✅ Update name:** Also change the object name property\n");
-        desc.append("3. **✅ No attachTopObject:** NEVER use `attachTopObject()` for renaming\n");
-        desc.append("4. **✅ Validate:** Always check markers after operations\n\n");
-        desc.append("When deleting objects:\n");
-        desc.append("1. **✅ Use EcoreUtil.delete():** Call `EcoreUtil.delete(entity)` for proper deletion\n");
-        desc.append("2. **❌ Avoid collection.remove():** Don't use `getAttributes().remove()`\n");
-        desc.append("3. **✅ Validate:** Always check markers after deletion\n\n");
+    @SuppressWarnings("nls")
+    private String buildDeleteCatalogWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete Catalog\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete catalog\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Catalog catalog = (Catalog)transaction.getTopObjectByFqn(\\\"Catalog.Products\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (catalog != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getCatalogs().remove(catalog);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)catalog);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a catalog will cascade delete all its attributes, tabular sections, forms, and templates.\n");
+        return desc.toString();
+    }
 
+    @SuppressWarnings("nls")
+    private String buildDeleteDocumentWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete Document\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete document\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Document document = (Document)transaction.getTopObjectByFqn(\\\"Document.GoodsReceipt\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (document != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getDocuments().remove(document);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)document);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a document will also delete all its attributes, tabular sections, forms, templates, and related register records.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteAccumulationRegisterWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete AccumulationRegister\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete accumulation register\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        AccumulationRegister register = (AccumulationRegister)transaction.getTopObjectByFqn(\\\"AccumulationRegister.GoodsInStock\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (register != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getAccumulationRegisters().remove(register);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting an accumulation register will also delete all its dimensions, resources, forms, and templates.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteAccountingRegisterWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete AccountingRegister\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete accounting register\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        AccountingRegister register = (AccountingRegister)transaction.getTopObjectByFqn(\\\"AccountingRegister.Accounting\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (register != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getAccountingRegisters().remove(register);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting an accounting register will also delete all its dimensions, resources, forms, and templates.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteCalculationRegisterWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete CalculationRegister\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete calculation register\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        CalculationRegister register = (CalculationRegister)transaction.getTopObjectByFqn(\\\"CalculationRegister.SalaryCalculation\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (register != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getCalculationRegisters().remove(register);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a calculation register will also delete all its dimensions, resources, recalculations, forms, and templates.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteInformationRegisterWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete InformationRegister\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete information register\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        InformationRegister register = (InformationRegister)transaction.getTopObjectByFqn(\\\"InformationRegister.ExchangeRates\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (register != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getInformationRegisters().remove(register);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting an information register will also delete all its dimensions, resources, attributes, forms, and templates.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteEnumWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete Enum\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete enum\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Enum enumObj = (Enum)transaction.getTopObjectByFqn(\\\"Enum.Status\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (enumObj != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getEnums().remove(enumObj);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)enumObj);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting an enum will also delete all its enum values, forms, and templates.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteReportWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete Report\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete report\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Report report = (Report)transaction.getTopObjectByFqn(\\\"Report.SalesReport\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (report != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getReports().remove(report);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)report);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a report will also delete all its forms, templates, commands, and attributes.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteDataProcessorWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete DataProcessor\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete data processor\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        DataProcessor dataProcessor = (DataProcessor)transaction.getTopObjectByFqn(\\\"DataProcessor.ImportData\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (dataProcessor != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getDataProcessors().remove(dataProcessor);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)dataProcessor);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a data processor will also delete all its forms, templates, commands, attributes, and tabular sections.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteCommonModuleWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete CommonModule\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete common module\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        CommonModule commonModule = (CommonModule)transaction.getTopObjectByFqn(\\\"CommonModule.WorkingWithData\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (commonModule != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getCommonModules().remove(commonModule);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)commonModule);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a common module will also delete all its methods and properties. Check that no other objects reference this module.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteConstantWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete Constant\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete constant\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Constant constant = (Constant)transaction.getTopObjectByFqn(\\\"Constant.DefaultWarehouse\\\"\");\n");
+        desc.append("        \n");
+        desc.append("        if (constant != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            configuration.getConstants().remove(constant);\n");
+        desc.append("            transaction.detachTopObject((IBmObject)constant);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
+        desc.append("**Note:** Deleting a constant will also delete its value manager if defined. Check that no other objects reference this constant.\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDeleteRegisterObjectsWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Delete Any Metadata Object\n\n");
+        desc.append("This workflow demonstrates how to delete any metadata object by its FQN.\n\n");
+        desc.append("```java\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete metadata object\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        \n");
+        desc.append("        // Example: Delete ChartOfCharacteristicTypes\n");
+        desc.append("        String objectFqn = \\\"ChartOfCharacteristicTypes.Properties\\\";\n");
+        desc.append("        MdObject objectToDelete = (MdObject)transaction.getTopObjectByFqn(objectFqn);\n");
+        desc.append("        \n");
+        desc.append("        if (objectToDelete != null) {\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            \n");
+        desc.append("            // Remove from appropriate collection based on object type\n");
+        desc.append("            if (objectToDelete instanceof Catalog) {\n");
+        desc.append("                configuration.getCatalogs().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof Document) {\n");
+        desc.append("                configuration.getDocuments().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof AccumulationRegister) {\n");
+        desc.append("                configuration.getAccumulationRegisters().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof AccountingRegister) {\n");
+        desc.append("                configuration.getAccountingRegisters().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof CalculationRegister) {\n");
+        desc.append("                configuration.getCalculationRegisters().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof InformationRegister) {\n");
+        desc.append("                configuration.getInformationRegisters().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof Enum) {\n");
+        desc.append("                configuration.getEnums().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof Report) {\n");
+        desc.append("                configuration.getReports().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof DataProcessor) {\n");
+        desc.append("                configuration.getDataProcessors().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof CommonModule) {\n");
+        desc.append("                configuration.getCommonModules().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof Constant) {\n");
+        desc.append("                configuration.getConstants().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof ChartOfCharacteristicTypes) {\n");
+        desc.append("                configuration.getChartsOfCharacteristicTypes().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof ChartOfAccounts) {\n");
+        desc.append("                configuration.getChartsOfAccounts().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof ChartOfCalculationTypes) {\n");
+        desc.append("                configuration.getChartsOfCalculationTypes().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof ExchangePlan) {\n");
+        desc.append("                configuration.getExchangePlans().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof BusinessProcess) {\n");
+        desc.append("                configuration.getBusinessProcesses().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof Task) {\n");
+        desc.append("                configuration.getTasks().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof DocumentJournal) {\n");
+        desc.append("                configuration.getDocumentJournals().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof DocumentNumerator) {\n");
+        desc.append("                configuration.getDocumentNumerators().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof Sequence) {\n");
+        desc.append("                configuration.getSequences().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof DefinedType) {\n");
+        desc.append("                configuration.getDefinedTypes().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof SettingsStorage) {\n");
+        desc.append("                configuration.getSettingsStorages().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof FilterCriterion) {\n");
+        desc.append("                configuration.getFilterCriteria().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof EventSubscription) {\n");
+        desc.append("                configuration.getEventSubscriptions().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof ScheduledJob) {\n");
+        desc.append("                configuration.getScheduledJobs().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof FunctionalOption) {\n");
+        desc.append("                configuration.getFunctionalOptions().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof CommonAttribute) {\n");
+        desc.append("                configuration.getCommonAttributes().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof CommonForm) {\n");
+        desc.append("                configuration.getCommonForms().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof CommonTemplate) {\n");
+        desc.append("                configuration.getCommonTemplates().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof CommonCommand) {\n");
+        desc.append("                configuration.getCommonCommands().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof WebService) {\n");
+        desc.append("                configuration.getWebServices().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof HTTPService) {\n");
+        desc.append("                configuration.getHTTPServices().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof IntegrationService) {\n");
+        desc.append("                configuration.getIntegrationServices().remove(objectToDelete);\n");
+        desc.append("            } else if (objectToDelete instanceof WSReference) {\n");
+        desc.append("                configuration.getWSReferences().remove(objectToDelete);\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            transaction.detachTopObject((IBmObject)objectToDelete);\n");
+        desc.append("        }\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("**IMPORTANT:**\n");
+        desc.append("1. Remove object from the appropriate parent collection based on its type\n");
+        desc.append("2. Then detach from transaction: `transaction.detachTopObject((IBmObject)object)`\n");
+        desc.append("3. Do NOT use `EcoreUtil.delete()` for top-level objects - causes `UnsupportedOperationException`\n");
+        desc.append("4. Deleting an object will cascade delete all its child objects (attributes, forms, templates, etc.)\n");
+        desc.append("5. Check that no other objects reference the object being deleted\n");
+        desc.append("6. Always validate after deletion to check for reference errors\n");
+        desc.append("**Supported object types for deletion:** Catalog, Document, AccumulationRegister, AccountingRegister, CalculationRegister, InformationRegister, ChartOfCharacteristicTypes, ChartOfAccounts, ChartOfCalculationTypes, Enum, Report, DataProcessor, ExternalReport, ExternalDataProcessor, CommonModule, Constant, ExchangePlan, BusinessProcess, Task, Sequence, DocumentJournal, DocumentNumerator, DefinedType, SettingsStorage, FilterCriterion, EventSubscription, ScheduledJob, FunctionalOption, CommonAttribute, CommonForm, CommonTemplate, CommonCommand, WebService, HTTPService, IntegrationService, WSReference, and others.\n");
         return desc.toString();
     }
 }
