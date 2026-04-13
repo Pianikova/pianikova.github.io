@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.emf.ecore.util.EcoreUtil;
 
 import com._1c.g5.v8.bm.core.IBmNamespace;
 import com._1c.g5.v8.bm.core.IBmTransaction;
@@ -26,14 +27,28 @@ import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.mcore.McorePackage;
 import com._1c.g5.v8.dt.mcore.TypeDescription;
 import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegisterResource;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterResource;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegisterPeriodicity;
+import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegisterResource;
 import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
 import com._1c.g5.v8.dt.metadata.mdclass.CatalogAttribute;
+import com._1c.g5.v8.dt.metadata.mdclass.ChartOfAccounts;
+import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCalculationTypes;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
 import com._1c.g5.v8.dt.metadata.mdclass.Document;
 import com._1c.g5.v8.dt.metadata.mdclass.DocumentTabularSection;
 import com._1c.g5.v8.dt.metadata.mdclass.MdClassFactory;
 import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
+import com._1c.g5.v8.dt.metadata.mdclass.Recalculation;
 import com._1c.g5.v8.dt.metadata.mdclass.Report;
 import com._1c.g5.v8.dt.metadata.mdclass.TabularSectionAttribute;
 import com._1c.g5.v8.dt.platform.IEObjectProvider;
@@ -44,7 +59,6 @@ import com.e1c.edt.ai.tools.JShellBindingDescription;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import org.eclipse.emf.ecore.util.EcoreUtil;
 
 /**
  * Provides JShell bindings for 1C metadata creation and editing operations.
@@ -159,6 +173,217 @@ public class MetadataBindingProvider
         desc.append(buildDeleteAttributeWorkflow());
         desc.append("\n\n");
         desc.append(buildCommonPitfalls());
+        desc.append("\\n\\n");
+        desc.append(buildAccumulationRegisterWorkflow());
+        desc.append("\\n\\n");
+        desc.append(buildAccountingRegisterWorkflow());
+        desc.append("\\n\\n");
+        desc.append(buildCalculationRegisterWorkflow());
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildAccumulationRegisterWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Create AccumulationRegister\\n\\n");
+        desc.append("```java\\n");
+        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\\n");
+        desc.append("\\n");
+        desc.append(
+            "AccumulationRegister register = globalContext.execute(new AbstractBmTask<AccumulationRegister>(\\\"Create register\\\") {\\n");
+        desc.append("    @Override\\n");
+        desc.append(
+            "    public AccumulationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+        desc.append(
+            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\\n");
+        desc.append("\\n");
+        desc.append("        AccumulationRegister register = mdFactory.createAccumulationRegister();\\n");
+        desc.append("        register.setName(\\\"GoodsInStock\\\");\\n");
+        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Goods In Stock\\\");\\n");
+        desc.append("        register.setRegisterType(AccumulationRegisterType.Balance);\\n");
+        desc.append("\\n");
+        desc.append("        // Add dimension\\n");
+        desc.append(
+            "        AccumulationRegisterDimension warehouse = mdFactory.createAccumulationRegisterDimension();\\n");
+        desc.append("        warehouse.setName(\\\"Warehouse\\\");\\n");
+        desc.append("        warehouse.getSynonym().put(\\\"ru\\\", \\\"Warehouse\\\");\\n");
+        desc.append("        warehouse.setBalance(true);\\n");
+        desc.append("\\n");
+        desc.append("        ").append(buildCatalogRefTypeDescription().replace("\\n", "\\n        "));
+        desc.append("\\n");
+        desc.append("        warehouse.setType(typeDesc);\\n");
+        desc.append("        register.getDimensions().add(warehouse);\\n");
+        desc.append("\\n");
+        desc.append("        // Add resource\\n");
+        desc.append(
+            "        AccumulationRegisterResource quantity = mdFactory.createAccumulationRegisterResource();\\n");
+        desc.append("        quantity.setName(\\\"Quantity\\\");\\n");
+        desc.append("        quantity.getSynonym().put(\\\"ru\\\", \\\"Quantity\\\");\\n");
+        desc.append("\\n");
+        desc.append("        // Set type for resource (Number or other)\\n");
+        desc.append("        quantity.setType(typeDesc);\\n");
+        desc.append("        register.getResources().add(quantity);\\n");
+        desc.append("\\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\\n");
+        desc.append("        register.setUuid(UUID.randomUUID());\\n");
+        desc.append("        warehouse.setUuid(UUID.randomUUID());\\n");
+        desc.append("        quantity.setUuid(UUID.randomUUID());\\n");
+        desc.append("\\n");
+        desc.append(
+            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\\n");
+        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\\n");
+        desc.append("        configuration.getAccumulationRegisters().add(register);\\n");
+        desc.append("        return register;\\n");
+        desc.append("    }\\n");
+        desc.append("});\\n");
+        desc.append("```\\n");
+        desc.append("**Note:** Registers require at least one Dimension. Resources are optional but recommended.\\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildAccountingRegisterWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Create AccountingRegister\\n\\n");
+        desc.append("```java\\n");
+        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\\n");
+        desc.append("\\n");
+        desc.append(
+            "AccountingRegister register = globalContext.execute(new AbstractBmTask<AccountingRegister>(\\\"Create register\\\") {\\n");
+        desc.append("    @Override\\n");
+        desc.append("    public AccountingRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+        desc.append(
+            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\\n");
+        desc.append("\\n");
+        desc.append("        AccountingRegister register = mdFactory.createAccountingRegister();\\n");
+        desc.append("        register.setName(\\\"Accounting\\\");\\n");
+        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Accounting\\\");\\n");
+        desc.append("        register.setCorrespondence(true);\\n");
+        desc.append("        register.setPeriodAdjustmentLength(2);\\n");
+        desc.append("\\n");
+        desc.append("        // Set ChartOfAccounts reference\\n");
+        desc.append(
+            "        ChartOfAccounts chartOfAccounts = (ChartOfAccounts)transaction.getTopObjectByFqn(\\\"ChartOfAccounts.ПланСчетов\\\");\\n");
+        desc.append("        register.setChartOfAccounts(chartOfAccounts);\\n");
+        desc.append("\\n");
+        desc.append("        // Add dimension\\n");
+        desc.append("        AccountingRegisterDimension account = mdFactory.createAccountingRegisterDimension();\\n");
+        desc.append("        account.setName(\\\"Account\\\");\\n");
+        desc.append("        account.getSynonym().put(\\\"ru\\\", \\\"Account\\\");\\n");
+        desc.append("        account.setBalance(true);\\n");
+        desc.append("\\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\\n", "\\n        "));
+        desc.append("\\n");
+        desc.append("        account.setType(typeDesc);\\n");
+        desc.append("        register.getDimensions().add(account);\\n");
+        desc.append("\\n");
+        desc.append("        // Add resource\\n");
+        desc.append("        AccountingRegisterResource amount = mdFactory.createAccountingRegisterResource();\\n");
+        desc.append("        amount.setName(\\\"Amount\\\");\\n");
+        desc.append("        amount.getSynonym().put(\\\"ru\\\", \\\"Amount\\\");\\n");
+        desc.append("        amount.setBalance(true);\\n");
+        desc.append("\\n");
+        desc.append("        amount.setType(typeDesc);\\n");
+        desc.append("        register.getResources().add(amount);\\n");
+        desc.append("\\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\\n");
+        desc.append("        register.setUuid(UUID.randomUUID());\\n");
+        desc.append("        account.setUuid(UUID.randomUUID());\\n");
+        desc.append("        amount.setUuid(UUID.randomUUID());\\n");
+        desc.append("\\n");
+        desc.append(
+            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\\n");
+        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\\n");
+        desc.append("        configuration.getAccountingRegisters().add(register);\\n");
+        desc.append("        return register;\\n");
+        desc.append("    }\\n");
+        desc.append("});\\n");
+        desc.append("```\\n");
+        desc.append(
+            "**Note:** AccountingRegister requires ChartOfAccounts reference and at least one Dimension with Account type.\\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildCalculationRegisterWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Create CalculationRegister\\n\\n");
+        desc.append("```java\\n");
+        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\\n");
+        desc.append("\\n");
+        desc.append(
+            "CalculationRegister register = globalContext.execute(new AbstractBmTask<CalculationRegister>(\\\"Create register\\\") {\\n");
+        desc.append("    @Override\\n");
+        desc.append(
+            "    public CalculationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+        desc.append(
+            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\\n");
+        desc.append("\\n");
+        desc.append("        CalculationRegister register = mdFactory.createCalculationRegister();\\n");
+        desc.append("        register.setName(\\\"SalaryCalculation\\\");\\n");
+        desc.append("        register.getSynonym().put(\\\"ru\\\", \\\"Salary Calculation\\\");\\n");
+        desc.append("        register.setPeriodicity(CalculationRegisterPeriodicity.Month);\\n");
+        desc.append("        register.setActionPeriod(true);\\n");
+        desc.append("        register.setBasePeriod(false);\\n");
+        desc.append("\\n");
+        desc.append("        // Set ChartOfCalculationTypes reference\\n");
+        desc.append(
+            "        ChartOfCalculationTypes chart = (ChartOfCalculationTypes)transaction.getTopObjectByFqn(\\\"ChartOfCalculationTypes.ВидыРасчетов\\\");\\n");
+        desc.append("        register.setChartOfCalculationTypes(chart);\\n");
+        desc.append("\\n");
+        desc.append("        // Add dimension (base dimension)\\n");
+        desc.append(
+            "        CalculationRegisterDimension employee = mdFactory.createCalculationRegisterDimension();\\n");
+        desc.append("        employee.setName(\\\"Employee\\\");\\n");
+        desc.append("        employee.getSynonym().put(\\\"ru\\\", \\\"Employee\\\");\\n");
+        desc.append("        employee.setBaseDimension(true);\\n");
+        desc.append("\\n");
+        desc.append("        ").append(buildCatalogRefTypeDescription().replace("\\n", "\\n        "));
+        desc.append("\\n");
+        desc.append("        employee.setType(typeDesc);\\n");
+        desc.append("        register.getDimensions().add(employee);\\n");
+        desc.append("\\n");
+        desc.append("        // Add resource\\n");
+        desc.append("        CalculationRegisterResource amount = mdFactory.createCalculationRegisterResource();\\n");
+        desc.append("        amount.setName(\\\"Amount\\\");\\n");
+        desc.append("        amount.getSynonym().put(\\\"ru\\\", \\\"Amount\\\");\\n");
+        desc.append("\\n");
+        desc.append("        amount.setType(typeDesc);\\n");
+        desc.append("        register.getResources().add(amount);\\n");
+        desc.append("\\n");
+        desc.append("        // Add recalculation rule\\n");
+        desc.append("        Recalculation recalculation = mdFactory.createRecalculation();\\n");
+        desc.append("        recalculation.setName(\\\"Recalculation\\\");\\n");
+        desc.append("        register.getRecalculations().add(recalculation);\\n");
+        desc.append("\\n");
+        desc.append("        // Set UUIDs manually (RECOMMENDED for JShell)\\n");
+        desc.append("        register.setUuid(UUID.randomUUID());\\n");
+        desc.append("        employee.setUuid(UUID.randomUUID());\\n");
+        desc.append("        amount.setUuid(UUID.randomUUID());\\n");
+        desc.append("        recalculation.setUuid(UUID.randomUUID());\\n");
+        desc.append("\\n");
+        desc.append(
+            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\\n");
+        desc.append("        transaction.attachTopObject((IBmObject)register, fqn);\\n");
+        desc.append("        configuration.getCalculationRegisters().add(register);\\n");
+        desc.append("        return register;\\n");
+        desc.append("    }\\n");
+        desc.append("});\\n");
+        desc.append("```\\n");
+        desc.append(
+            "**Note:** CalculationRegister requires ChartOfCalculationTypes reference and at least one base Dimension.\\n");
         return desc.toString();
     }
 
@@ -390,6 +615,11 @@ public class MetadataBindingProvider
             Report.class,
             TabularSectionAttribute.class,
             BasicFeature.class,
+            AccumulationRegister.class, AccumulationRegisterDimension.class, AccumulationRegisterResource.class,
+            AccountingRegister.class, AccountingRegisterDimension.class, AccountingRegisterResource.class,
+            CalculationRegister.class, CalculationRegisterDimension.class, CalculationRegisterResource.class,
+            ChartOfAccounts.class, ChartOfCalculationTypes.class, Recalculation.class, AccumulationRegisterType.class,
+            CalculationRegisterPeriodicity.class,
             IBmNamespace.class,
             IBmTransaction.class,
             IBmModel.class,
