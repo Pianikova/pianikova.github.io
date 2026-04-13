@@ -44,17 +44,14 @@ class ResponseCache
         Preconditions.checkNotNull(taskSupplier);
         try
         {
-            synchronized (responseCache)
-            {
-                return responseCache.get(projectId, () -> {
-                    return taskSupplier.get().whenComplete((r, e) -> {
-                        if (e != null || r.isEmpty())
-                        {
-                            responseCache.invalidate(projectId);
-                        }
-                    });
+            return responseCache.get(projectId, () -> {
+                return taskSupplier.get().whenComplete((r, e) -> {
+                    if (e != null || r.isEmpty())
+                    {
+                        responseCache.invalidate(projectId);
+                    }
                 });
-            }
+            });
         }
         catch (ExecutionException error)
         {
@@ -72,11 +69,7 @@ class ResponseCache
         {
         case SETTINGS_CHANGED:
         case SESSION_EXPIRED:
-            synchronized (responseCache)
-            {
-                responseCache.invalidateAll();
-            }
-
+            responseCache.invalidateAll();
             log.trace(TracingSources.API_CALLS, "ResponseCache", () -> "cleared");
             break;
         }
