@@ -230,6 +230,7 @@ public class JShellMcpTool
 		description.append("\n- Use ONLY complete statements with `;` (e.g., `int x = 10;`)");
 		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");
         description.append("\n- Output MUST be in main thread for result capture");
+        description.append("\n- DO NOT use `return;` - always return a value (e.g., `return \"\";`)");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())

@@ -74,7 +74,7 @@ public class EclipsePlatformBindingProvider
             org.eclipse.jface.operation.IRunnableContext.class,
             org.eclipse.core.runtime.IAdaptable.class,
             org.eclipse.core.runtime.IProgressMonitor.class,
-            org.eclipse.core.commands.common.EventManager.class
+            org.eclipse.core.commands.common.EventManager.class, java.io.ByteArrayInputStream.class
         );
     }
 
@@ -90,7 +90,9 @@ public class EclipsePlatformBindingProvider
 			"import org.eclipse.jface.operation.*;",
 			"import org.eclipse.core.runtime.*;",
 			"import org.eclipse.core.commands.common.*;",
-			"import java.util.UUID;"
+			"import java.util.UUID;",
+			"import java.io.ByteArrayInputStream;",
+            "import java.io.UnsupportedEncodingException;"
 		);
 		// @formatter:on
     }
