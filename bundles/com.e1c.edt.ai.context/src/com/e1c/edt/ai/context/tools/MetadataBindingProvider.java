@@ -42,6 +42,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegisterResource;
 import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
 import com._1c.g5.v8.dt.metadata.mdclass.CatalogAttribute;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfAccounts;
+import com._1c.g5.v8.dt.metadata.mdclass.CommonModule;
 import com._1c.g5.v8.dt.metadata.mdclass.ChartOfCalculationTypes;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
 import com._1c.g5.v8.dt.metadata.mdclass.Document;
@@ -190,6 +191,8 @@ public class MetadataBindingProvider
         desc.append(buildTransactionManagementScenarios());
         desc.append("\n\n");
         desc.append(buildSafeCatalogWorkflow());
+        desc.append("\n\n");
+        desc.append(buildCommonModuleWorkflow());
         desc.append("\n\n");
         desc.append(buildDocumentWorkflow());
         desc.append("\n\n");
@@ -603,6 +606,60 @@ public class MetadataBindingProvider
     }
 
     @SuppressWarnings("nls")
+    private String buildCommonModuleWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe Workflow: Create CommonModule\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\\\"MyProject\\\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("CommonModule result = globalContext.execute(new AbstractBmTask<CommonModule>(\\\"Create common module\\\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public CommonModule execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\");\n");
+        desc.append("\n");
+        desc.append("        CommonModule module = mdFactory.createCommonModule();\n");
+        desc.append("        module.setName(\\\"MyCommonModule\\\");\n");
+        desc.append("        module.getSynonym().put(\\\"ru\\\", \\\"Мой общий модуль\\\");\n");
+        desc.append("\n");
+        desc.append("        // Set execution properties\n");
+        desc.append("        module.setServer(true);        // Server execution\n");
+        desc.append("        module.setClientManagedApplication(false);        // Client execution (managed application)\n");
+        desc.append("        module.setClientOrdinaryApplication(false);\n");
+        desc.append("        module.setServerCall(false);    // Calls from client to server\n");
+        desc.append("        module.setExternalConnection(false);\n");
+        desc.append("        module.setPrivileged(false);    // Privileged mode\n");
+        desc.append("        module.setGlobal(false);       // Global context\n");
+        desc.append("\n");
+        desc.append("        // Set UUID manually (RECOMMENDED for JShell)\n");
+        desc.append("        module.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
+        desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(module.eClass(), module.getName()).toString();\n");
+        desc.append("        transaction.attachTopObject((IBmObject)module, fqn);\n");
+        desc.append("        configuration.getCommonModules().add(module);\n");
+        desc.append("        return module;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\\n");
+        desc.append("**Note:** After creating the common module metadata, create the corresponding Module.bsl file\\n");
+        desc.append("in the project: `src/CommonModules/<ModuleName>/Module.bsl`\\n\\n");
+        desc.append("**Deletion:** Common modules can be deleted by removing from configuration.getCommonModules()\\n");
+        desc.append("and detaching from transaction. See buildDeleteCommonModuleWorkflow() for details.\\n\\n");
+        desc.append("**Properties explanation:**\\n");
+        desc.append("- `server`: Execution on server side\\n");
+        desc.append("- `clientManagedApplication`: Execution in managed application client\\n");
+        desc.append("- `clientOrdinaryApplication`: Execution in ordinary application client\\n");
+        desc.append("- `serverCall`: Allow calls from client to server\\n");
+        desc.append("- `externalConnection`: Execution in external connection\\n");
+        desc.append("- `privileged`: Execution in privileged mode\\n");
+        desc.append("- `global`: Export module functions to global context\\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
     private String buildUuidHandlingWorkflow()
     {
         var desc = new StringBuilder();
@@ -668,6 +725,7 @@ public class MetadataBindingProvider
             Report.class,
             TabularSectionAttribute.class,
             BasicFeature.class,
+            CommonModule.class,
             AccumulationRegister.class, AccumulationRegisterDimension.class, AccumulationRegisterResource.class,
             AccountingRegister.class, AccountingRegisterDimension.class, AccountingRegisterResource.class,
             CalculationRegister.class, CalculationRegisterDimension.class, CalculationRegisterResource.class,
