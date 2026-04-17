@@ -80,6 +80,7 @@ import com.google.inject.Singleton;
  *   <li>Edit existing metadata objects</li>
  *   <li>Delete metadata objects by removing from parent collection and detaching from transaction</li>
  *   <li>Manage UUIDs for new objects</li>
+ *   <li>Create TypeDescription for attributes using {@link TypeDescriptionBuilder}</li>
  *   <li>Transaction-based modifications</li>
  * </ul>
  * <p>
@@ -89,6 +90,7 @@ import com.google.inject.Singleton;
  *   <li>For deletion: remove from parent collection and detach from transaction - NEVER use collection {@code remove()} alone or {@code EcoreUtil.delete()} for top-level objects</li>
  *   <li>New objects MUST have UUIDs set via {@code object.setUuid(UUID.randomUUID())}</li>
  *   <li>{@code mdFactory} can only be used inside BM transaction</li>
+ *   <li>Use {@link TypeDescriptionBuilder} and {@link IEObjectProvider} for type handling - see TypeDescription Handling Guide</li>
  * </ul>
  */
 @Singleton
@@ -186,13 +188,11 @@ public class MetadataBindingProvider
         var desc = new StringBuilder();
         desc.append(buildApiCompatibilityNotes());
         desc.append("\n\n");
-        desc.append(buildUuidHandlingWorkflow());
+        desc.append(buildTypeDescriptionHandling());
         desc.append("\n\n");
         desc.append(buildTransactionManagementScenarios());
         desc.append("\n\n");
         desc.append(buildSafeCatalogWorkflow());
-        desc.append("\n\n");
-        desc.append(buildCommonModuleWorkflow());
         desc.append("\n\n");
         desc.append(buildDocumentWorkflow());
         desc.append("\n\n");
@@ -206,6 +206,10 @@ public class MetadataBindingProvider
         desc.append("\n\n");
         desc.append(buildCommonPitfalls());
         desc.append("\n\n");
+
+        desc.append(buildMetadataValidationErrors());
+        desc.append("\n\n");
+
         desc.append(buildAccumulationRegisterWorkflow());
         desc.append("\n\n");
         desc.append(buildAccountingRegisterWorkflow());
@@ -224,20 +228,28 @@ public class MetadataBindingProvider
         desc.append("\n\n");
         desc.append(buildDeleteInformationRegisterWorkflow());
         desc.append("\n\n");
+
         desc.append(buildDeleteEnumWorkflow());
         desc.append("\n\n");
+
         desc.append(buildDeleteReportWorkflow());
         desc.append("\n\n");
+
         desc.append(buildDeleteDataProcessorWorkflow());
         desc.append("\n\n");
+
         desc.append(buildDeleteCommonModuleWorkflow());
         desc.append("\n\n");
+
         desc.append(buildDeleteConstantWorkflow());
         desc.append("\n\n");
+
         desc.append(buildDeleteRegisterObjectsWorkflow());
         desc.append("\n\n");
+
         desc.append(buildCreateConfigurationWorkflow());
         desc.append("\n\n");
+
         desc.append(buildDeleteConfigurationWorkflow());
         return desc.toString();
     }
@@ -475,16 +487,16 @@ public class MetadataBindingProvider
 
         desc.append("#### Metadata Object-Specific Rules\n\n");
         desc.append("**Catalog (Справочник):**\n");
-        desc.append("- Use `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` or `HierarchyType.HIERARCHY_OF_ITEMS`\n");
-        desc.append("- Use `setDescriptionLength(...)` - `setNameLength(...)` is NOT AVAILABLE\n");
-        desc.append("- For attributes: use `CatalogAttribute` via `createCatalogAttribute()` or `modelFactory` + EClass\n");
-        desc.append("- Supports: hierarchical, codeType (Number/String), checkUnique, autonumbering\n\n");
+        desc.append("- Use `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` or `HierarchyType.HIERARCHY_OF_ITEMS` (correct enum constants)\\n");
+        desc.append("- Use `setDescriptionLength(...)` - `setNameLength(...)` is NOT AVAILABLE\\n");
+        desc.append("- For attributes: use `CatalogAttribute` via `createCatalogAttribute()` or `modelFactory` + EClass\\n");
+        desc.append("- Supports: hierarchical, codeType (Number/String), checkUnique, autonumbering\\n\\n");
 
         desc.append("**Document (Документ):**\n");
-        desc.append("- Use `DocumentNumberType.Number` or `DocumentNumberType.String`\n");
-        desc.append("- Use `DocumentNumberPeriodicity` (Nonperiodical, Year, Quarter, Month, Day)\n");
-        desc.append("- Supports: posting, realTimePosting, registerRecordsDeletion, sequenceFilling\n");
-        desc.append("- May reference: numerator, registerRecords (array of BasicRegister)\n\n");
+        desc.append("- Use `DocumentNumberType.NUMBER` or `DocumentNumberType.STRING`\\n");
+        desc.append("- Use `DocumentNumberPeriodicity.NONPERIODICAL` (correct enum constant)\\n");
+        desc.append("- Supports: posting, realTimePosting, registerRecordsDeletion, sequenceFilling\\n");
+        desc.append("- May reference: numerator, registerRecords (array of BasicRegister)\\n\\n");
 
         desc.append("**InformationRegister (РегистрСведений):**\n");
         desc.append("- Use `InformationRegisterPeriodicity` (Nonperiodical, Second, Day, Month, Quarter, Year)\n");
@@ -562,6 +574,482 @@ public class MetadataBindingProvider
     }
 
     @SuppressWarnings("nls")
+    private String buildTypeDescriptionHandling()
+    {
+        var desc = new StringBuilder();
+        desc.append("## TypeDescription Handling Guide\n\n");
+
+        desc.append("### Overview\n");
+        desc.append(
+            "TypeDescription is the EDT API representation of 1C types for metadata attributes and properties. ");
+        desc.append(
+            "Use `TypeDescriptionBuilder` from `com._1c.g5.v8.dt.platform.core.typeinfo` package to create type descriptions.\n\n");
+
+        desc.append("### Key Components\n\n");
+        desc.append("**1. IEObjectProvider Registry**\n");
+        desc.append("Access platform type registry for current project version:\n");
+        desc.append("```java\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("```\n\n");
+
+        desc.append("**⚠️ CRITICAL: Context Requirements**\n");
+        desc.append("**MUST be created INSIDE BM transaction context:**\n");
+        desc.append("- IEObjectProvider MUST use `v8project.getVersion()` from a properly initialized IV8Project\n");
+        desc.append("- TypeItem proxies MUST be obtained and used within the SAME IBmTransaction\n");
+        desc.append("- DO NOT obtain v8project outside transaction and use it inside\n");
+        desc.append("- DO NOT reuse TypeDescription created in a different transaction context\n\n");
+        desc.append("**Correct usage pattern:**\n");
+        desc.append("```java\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Create metadata\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        // Get typeProvider INSIDE transaction\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("        \n");
+        desc.append("        // Get TypeItem INSIDE transaction\n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(stringType)\n");
+        desc.append("            .build();\n");
+        desc.append("        \n");
+        desc.append("        // Set TypeDescription to attribute INSIDE transaction\n");
+        desc.append("        attribute.setType(typeDesc);\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("**❌ WRONG Pattern - causes NullPointerException:**\n");
+        desc.append("```java\n");
+        desc.append("// Getting typeProvider OUTSIDE transaction\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Create metadata\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        // Using TypeItem created OUTSIDE transaction context\n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(stringType)\n");
+        desc.append("            .build();\n");
+        desc.append("        attribute.setType(typeDesc); // ❌ May cause NullPointerException\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("**2. TypeItem Proxy Retrieval**\n");
+        desc.append("Get type proxy by name from `IEObjectTypeNames`:\n");
+        desc.append("```java\n");
+        desc.append("// Basic types\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("TypeItem dateType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DATE);\n");
+        desc.append("TypeItem booleanType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.BOOLEAN);\n");
+        desc.append("TypeItem undefinedType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UNDEFINED);\n");
+        desc.append("TypeItem valueType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.VALUESTORAGE);\n");
+        desc.append("TypeItem uuidType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UUID);\n");
+        desc.append("\n");
+        desc.append("// Primary metadata reference types\n");
+        desc.append("TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("TypeItem documentRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DOCUMENT_REF);\n");
+        desc.append("TypeItem enumRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ENUM_REF);\n");
+        desc.append(
+            "TypeItem businessProcessRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.BUSINESS_PROCESS_REF);\n");
+        desc.append("TypeItem taskRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.TASK_REF);\n");
+        desc.append("\n");
+        desc.append("// Register reference types\n");
+        desc.append(
+            "TypeItem accumulationRegisterRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ACCUMULATION_REGISTER_REF);\n");
+        desc.append(
+            "TypeItem accountingRegisterRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ACCOUNTING_REGISTER_REF);\n");
+        desc.append(
+            "TypeItem informationRegisterRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.INFORMATION_REGISTER_REF);\n");
+        desc.append(
+            "TypeItem calculationRegisterRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CALCULATION_REGISTER_REF);\n");
+        desc.append("\n");
+        desc.append("// Chart/Plan reference types\n");
+        desc.append(
+            "TypeItem chartOfAccountsRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHART_OF_ACCOUNTS_REF);\n");
+        desc.append(
+            "TypeItem chartOfCalcTypesRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHART_OF_CALCULATION_TYPES_REF);\n");
+        desc.append(
+            "TypeItem chartOfCharTypesRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHART_OF_CHARACTERISTIC_TYPES_REF);\n");
+        desc.append(
+            "TypeItem exchangePlanRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.EXCHANGE_PLAN_REF);\n");
+        desc.append("\n");
+        desc.append("// Special types\n");
+        desc.append("TypeItem anyRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ANY_REF);\n");
+        desc.append("TypeItem characteristic = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHARACTERISTIC);\n");
+        desc.append("```\n\n");
+
+        desc.append("**3. TypeDescriptionBuilder**\n");
+        desc.append("Builder pattern for creating TypeDescription:\n");
+        desc.append("```java\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Multiple types (composite type)\n");
+        desc.append("TypeDescription compositeType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .addType(numberType)\n");
+        desc.append("    .build();\n");
+        desc.append("```\n\n");
+
+        desc.append("### Common Type Patterns\n\n");
+
+        desc.append("**Basic Types:**\n");
+        desc.append("```java\n");
+        desc.append("// String type\n");
+        desc.append(buildStringTypeDescription());
+        desc.append("\n");
+
+        desc.append("// String type with length qualifier (recommended for INN, codes, etc.)\n");
+        desc.append(buildStringTypeWithQualifiersDescription());
+        desc.append("\n");
+
+        desc.append("// Number type\n");
+        desc.append(buildNumberTypeDescription());
+        desc.append("\n");
+
+        desc.append("// Number type with precision and scale (recommended for amounts, prices, etc.)\n");
+        desc.append(buildNumberTypeWithQualifiersDescription());
+        desc.append("\n");
+
+        desc.append("// Date type\n");
+        desc.append(buildDateTypeDescription());
+        desc.append("\n");
+
+        desc.append("// Boolean type\n");
+        desc.append(buildBooleanTypeDescription());
+        desc.append("```\n\n");
+
+        desc.append("**Reference Types:**\n");
+        desc.append("```java\n");
+        desc.append("// Catalog reference (generic)\n");
+        desc.append(buildCatalogRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Specific catalog reference (requires existing catalog)\n");
+        desc.append("TypeItem catalogType = (TypeItem)typeProvider.getProxy(\"Catalog.Products\");\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(catalogType)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Document reference (generic)\n");
+        desc.append(buildDocumentRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Specific document reference\n");
+        desc.append("TypeItem documentType = (TypeItem)typeProvider.getProxy(\"Document.GoodsReceipt\");\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(documentType)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Enum reference\n");
+        desc.append(buildEnumRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Specific enum reference\n");
+        desc.append("TypeItem enumType = (TypeItem)typeProvider.getProxy(\"Enum.OrderStatus\");\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(enumType)\n");
+        desc.append("    .build();\n");
+        desc.append("```\n\n");
+
+        desc.append("**Other Special Types:**\n");
+        desc.append("```java\n");
+        desc.append("// ValueStorage\n");
+        desc.append(buildValueStorageTypeDescription());
+        desc.append("\n");
+        desc.append("// UUID\n");
+        desc.append(buildUuidTypeDescription());
+        desc.append("\n");
+        desc.append("// Undefined\n");
+        desc.append(buildUndefinedTypeDescription());
+        desc.append("\n");
+        desc.append("// Any reference (generic)\n");
+        desc.append(buildAnyRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Universal characteristic\n");
+        desc.append(buildCharacteristicTypeDescription());
+        desc.append("```\n\n");
+
+        desc.append("**Register Reference Types:**\n");
+        desc.append("```java\n");
+        desc.append("// Accumulation register (generic)\n");
+        desc.append(buildAccumulationRegisterRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Specific accumulation register\n");
+        desc.append("TypeItem accReg = (TypeItem)typeProvider.getProxy(\"AccumulationRegister.GoodsInStock\");\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(accReg)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Accounting register (generic)\n");
+        desc.append(buildAccountingRegisterRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Information register (generic)\n");
+        desc.append(buildInformationRegisterRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Calculation register (generic)\n");
+        desc.append(buildCalculationRegisterRefTypeDescription());
+        desc.append("```\n\n");
+
+        desc.append("**Chart/Plan Reference Types:**\n");
+        desc.append("```java\n");
+        desc.append("// Chart of accounts (generic)\n");
+        desc.append(buildChartOfAccountsRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Specific chart of accounts\n");
+        desc.append("TypeItem coa = (TypeItem)typeProvider.getProxy(\"ChartOfAccounts.ПланСчетов\");\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(coa)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Chart of calculation types (generic)\n");
+        desc.append(buildChartOfCalcTypesRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Chart of characteristic types (generic)\n");
+        desc.append(buildChartOfCharTypesRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Exchange plan (generic)\n");
+        desc.append(buildExchangePlanRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Business process (generic)\n");
+        desc.append(buildBusinessProcessRefTypeDescription());
+        desc.append("\n");
+        desc.append("// Task (generic)\n");
+        desc.append(buildTaskRefTypeDescription());
+        desc.append("```\n\n");
+
+        desc.append("### All Available IEObjectTypeNames Constants\n\n");
+        desc.append("**Basic Types:**\n");
+        desc.append("- `UNDEFINED` - Неопределено\n");
+        desc.append("- `NULL` - Null value\n");
+        desc.append("- `BOOLEAN` - Булево\n");
+        desc.append("- `NUMBER` - Число\n");
+        desc.append("- `STRING` - Строка\n");
+        desc.append("- `DATE` - Дата\n");
+        desc.append("- `TYPE` - Тип\n");
+        desc.append("- `VALUESTORAGE` - ХранилищеЗначения\n");
+        desc.append("- `UUID` - UUID/GUID\n");
+        desc.append("- `BINARY_DATA` - ДвоичныеДанные\n\n");
+
+        desc.append("**Primary Metadata Reference Types:**\n");
+        desc.append("- `CATALOG_REF` - СправочникСсылка\n");
+        desc.append("- `CATALOG_OBJ` - СправочникОбъект\n");
+        desc.append("- `DOCUMENT_REF` - ДокументСсылка\n");
+        desc.append("- `DOCUMENT_OBJ` - ДокументОбъект\n");
+        desc.append("- `ENUM_REF` - ПеречислениеСсылка\n");
+        desc.append("- `BUSINESS_PROCESS_REF` - БизнесПроцессСсылка\n");
+        desc.append("- `TASK_REF` - ЗадачаСсылка\n\n");
+
+        desc.append("**Register Reference Types:**\n");
+        desc.append("- `ACCUMULATION_REGISTER_REF` - РегистрНакопленияСсылка\n");
+        desc.append("- `ACCOUNTING_REGISTER_REF` - РегистрБухгалтерииСсылка\n");
+        desc.append("- `INFORMATION_REGISTER_REF` - РегистрСведенийСсылка\n");
+        desc.append("- `CALCULATION_REGISTER_REF` - РегистрРасчетаСсылка\n\n");
+
+        desc.append("**Chart/Plan Reference Types:**\n");
+        desc.append("- `CHART_OF_ACCOUNTS_REF` - ПланСчетовСсылка\n");
+        desc.append("- `CHART_OF_CALCULATION_TYPES_REF` - ПланВидовРасчетаСсылка\n");
+        desc.append("- `CHART_OF_CHARACTERISTIC_TYPES_REF` - ПланВидовХарактеристикСсылка\n");
+        desc.append("- `EXCHANGE_PLAN_REF` - ПланОбменаСсылка\n\n");
+
+        desc.append("**Special Types:**\n");
+        desc.append("- `ANY_REF` - ЛюбаяСсылка (generic reference)\n");
+        desc.append("- `CHARACTERISTIC` - Характеристика (universal)\n");
+        desc.append("- `DEFINED_TYPE` - DefinedType (user-defined)\n\n");
+
+        desc.append("### Specific Metadata Type References\n\n");
+        desc.append("To reference specific metadata objects, use fully qualified names (FQN):\n");
+        desc.append("```java\n");
+        desc.append("// Specific catalog\n");
+        desc.append("TypeItem productsRef = (TypeItem)typeProvider.getProxy(\"Catalog.Products\");\n");
+        desc.append("TypeItem nomenclatureRef = (TypeItem)typeProvider.getProxy(\"Catalog.Номенклатура\");\n");
+        desc.append("\n");
+        desc.append("// Specific document\n");
+        desc.append("TypeItem goodsReceiptRef = (TypeItem)typeProvider.getProxy(\"Document.GoodsReceipt\");\n");
+        desc.append("TypeItem salesOrderRef = (TypeItem)typeProvider.getProxy(\"Document.ЗаказКлиента\");\n");
+        desc.append("\n");
+        desc.append("// Specific enum\n");
+        desc.append("TypeItem orderStatusRef = (TypeItem)typeProvider.getProxy(\"Enum.OrderStatus\");\n");
+        desc.append("TypeItem sexRef = (TypeItem)typeProvider.getProxy(\"Enum.Пол\");\n");
+        desc.append("\n");
+        desc.append("// Specific registers\n");
+        desc.append(
+            "TypeItem goodsStockRef = (TypeItem)typeProvider.getProxy(\"AccumulationRegister.GoodsInStock\");\n");
+        desc.append("TypeItem pricesRef = (TypeItem)typeProvider.getProxy(\"InformationRegister.Prices\");\n");
+        desc.append("\n");
+        desc.append("// Specific charts/plans\n");
+        desc.append("TypeItem planOfAccounts = (TypeItem)typeProvider.getProxy(\"ChartOfAccounts.ПланСчетов\");\n");
+        desc.append(
+            "TypeItem chartOfCalc = (TypeItem)typeProvider.getProxy(\"ChartOfCalculationTypes.ВидыРасчетов\");\n");
+        desc.append("```\n\n");
+
+        desc.append("### Type Qualifiers (Advanced)\\n\\n");
+        desc.append("**⚠️ IMPORTANT RESTRICTION:**\\n");
+        desc.append(
+            "Type qualifiers (StringQualifiers, NumberQualifiers) are ABSTRACT classes and CANNOT be instantiated directly.\\n");
+        desc.append("For most use cases, use TypeDescriptionBuilder WITHOUT qualifiers or use default types.\\n\\n");
+
+        desc.append("**⚠️ CRITICAL: Always use IEObjectProvider inside transaction!**\\n");
+        desc.append("```java\\n");
+        desc.append("// ✅ CORRECT: Create typeProvider INSIDE transaction\\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\\n");
+        desc.append("\\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\\n");
+        desc.append("    .addType(stringType)\\n");
+        desc.append("    .build();\\n");
+        desc.append("```\\n");
+
+        desc.append("If qualifiers are required, use modelFactory to create them:\\n");
+        desc.append("```java\\n");
+        desc.append("// NOTE: This requires modelFactory context and may timeout in JShell\\n");
+        desc.append("// For JShell, prefer simple types without qualifiers\\n");
+        desc.append("\\n");
+        desc.append("// If needed, create qualifiers via modelFactory:\\n");
+        desc.append("// StringQualifiers stringQuals = modelFactory.createStringQualifiers();\\n");
+        desc.append("// stringQuals.setLength(150);\\n");
+        desc.append("// NumberQualifiers numberQuals = modelFactory.createNumberQualifiers();\\n");
+        desc.append("// numberQuals.setPrecision(10);\\n");
+        desc.append("// numberQuals.setScale(2);\\n");
+        desc.append("```\\n");
+
+        desc.append("### Best Practices\n\n");
+
+        desc.append("**1. Always use typeProvider for version compatibility**\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT - uses project version\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem type = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("\n");
+        desc.append("// ❌ WRONG - doesn't account for version\n");
+        desc.append("// TypeItem type = TypeItem.eINSTANCE; // Do NOT do this\n");
+        desc.append("```\n\n");
+
+        desc.append("**2. Create TypeDescription once, reuse when possible**\n");
+        desc.append("```java\n");
+        desc.append("// Create type description outside loop\n");
+        desc.append("TypeDescription stringTypeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Reuse for multiple attributes\n");
+        desc.append("for (CatalogAttribute attr : attributes) {\n");
+        desc.append("    attr.setType(stringTypeDesc);\n");
+        desc.append("}\n");
+        desc.append("```\n\n");
+
+        desc.append("**3. Handle composite types correctly**\n");
+        desc.append("```java\n");
+        desc.append("// Composite type (String or Number)\n");
+        desc.append("TypeDescription compositeType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .addType(numberType)\n");
+        desc.append("    .build();\n");
+        desc.append("attribute.setType(compositeType);\n");
+        desc.append("```\n\n");
+
+        desc.append("**4. Type-specific considerations**\n");
+        desc.append(
+            "- **Catalog/Document references**: Use generic `*_REF` types when specific metadata may not exist\n");
+        desc.append("- **Number types**: Consider precision/scale requirements. ⚠️ CRITICAL: Scale MUST be <= Precision (SU8 error)\n");
+        desc.append("  - Precision: total number of digits (integer + decimal)\n");
+        desc.append("  - Scale: number of digits after decimal point\n");
+        desc.append("  - Example: Number(10, 2) = up to 10 total digits, 2 after decimal\n");
+        desc.append("  - Example: 12345678.90 has 8 integer digits + 2 decimal = 10 total digits\n");
+        desc.append("- **String types**: Consider length requirements (use StringQualifiers)\n");
+        desc.append("- **Date types**: May need DateQualifiers in advanced scenarios\n");
+        desc.append("- **Enum references**: Enum must exist in configuration\n");
+        desc.append("- **Composite types**: Order affects type priority in some contexts\n");
+        desc.append(
+            "- **Register references**: Use `ACCUMULATION_REGISTER_REF`, `ACCOUNTING_REGISTER_REF`, `INFORMATION_REGISTER_REF`, `CALCULATION_REGISTER_REF` for generic register references\n");
+        desc.append(
+            "- **Chart/Plan references**: Use `CHART_OF_ACCOUNTS_REF`, `CHART_OF_CALCULATION_TYPES_REF`, `CHART_OF_CHARACTERISTIC_TYPES_REF`, `EXCHANGE_PLAN_REF` for generic chart/plan references\n");
+        desc.append(
+            "- **Business Process/Task references**: Use `BUSINESS_PROCESS_REF` and `TASK_REF` for workflow metadata\n");
+        desc.append("- **ANY_REF**: Universal reference type - use when any reference type is acceptable\n");
+        desc.append("- **CHARACTERISTIC**: Universal characteristic type for flexible attribute handling\n");
+        desc.append(
+            "- **Specific metadata references**: Use FQN like `\"Catalog.Products\"` - requires metadata to exist in configuration\n\n");
+
+        desc.append("### Complete Example\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Create catalog with types\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append(
+            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("\n");
+        desc.append("        Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("        catalog.setName(\"Products\");\n");
+        desc.append("        catalog.getSynonym().put(\"ru\", \"Товары\");\n");
+        desc.append("        catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);\n");
+        desc.append("\n");
+        desc.append("        // Create type provider\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("\n");
+        desc.append("        // Create attributes with different types\n");
+        desc.append("        CatalogAttribute code = mdFactory.createCatalogAttribute();\n");
+        desc.append("        code.setName(\"Code\");\n");
+        desc.append("        code.getSynonym().put(\"ru\", \"Код\");\n");
+        desc.append("        TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("        TypeDescription codeType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(numberType)\n");
+        desc.append("            .build();\n");
+        desc.append("        code.setType(codeType);\n");
+        desc.append("        catalog.getAttributes().add(code);\n");
+        desc.append("\n");
+        desc.append("        CatalogAttribute description = mdFactory.createCatalogAttribute();\n");
+        desc.append("        description.setName(\"Description\");\n");
+        desc.append("        description.getSynonym().put(\"ru\", \"Наименование\");\n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        TypeDescription descType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(stringType)\n");
+        desc.append("            .build();\n");
+        desc.append("        description.setType(descType);\n");
+        desc.append("        catalog.getAttributes().add(description);\n");
+        desc.append("\n");
+        desc.append("        CatalogAttribute category = mdFactory.createCatalogAttribute();\n");
+        desc.append("        category.setName(\"Category\");\n");
+        desc.append("        category.getSynonym().put(\"ru\", \"Категория\");\n");
+        desc.append(
+            "        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("        TypeDescription catType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(catalogRefType)\n");
+        desc.append("            .build();\n");
+        desc.append("        category.setType(catType);\n");
+        desc.append("        catalog.getAttributes().add(category);\n");
+        desc.append("\n");
+        desc.append("        // Set UUIDs\n");
+        desc.append("        catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("        code.setUuid(UUID.randomUUID());\n");
+        desc.append("        description.setUuid(UUID.randomUUID());\n");
+        desc.append("        category.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
+        desc.append(
+            "        String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("        transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("        configuration.getCatalogs().add(catalog);\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
     private String buildSafeCatalogWorkflow()
     {
         var desc = new StringBuilder();
@@ -602,92 +1090,70 @@ public class MetadataBindingProvider
         desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("        transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("        configuration.getCatalogs().add(catalog);\n");
-        desc.append("        return catalog;\n");
+        desc.append("        return null;\n");
         desc.append("    }\n");
         desc.append("});\n");
-        desc.append("```\n");
-        desc.append("If attribute value types are required, create `TypeDescription` via EDT mcore type utilities for current project version.");
-        return desc.toString();
-    }
+        desc.append("```\n\n");
 
-    @SuppressWarnings("nls")
-    private String buildCommonModuleWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Create CommonModule\n\n");
+        desc.append("### Register Type Example\n\n");
         desc.append("```java\n");
-        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
-        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("// Create information register with dimensions of different types\n");
+        desc.append("InformationRegister prices = mdFactory.createInformationRegister();\n");
+        desc.append("prices.setName(\"Prices\");\n");
+        desc.append("prices.getSynonym().put(\"ru\", \"Цены\");\n");
         desc.append("\n");
-        desc.append("CommonModule result = globalContext.execute(new AbstractBmTask<CommonModule>(\"Create common module\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public CommonModule execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append(
-            "        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
         desc.append("\n");
-        desc.append("        CommonModule module = mdFactory.createCommonModule();\n");
-        desc.append("        module.setName(\"MyCommonModule\");\n");
-        desc.append("        module.getSynonym().put(\"ru\", \"Мой общий модуль\");\n");
+        desc.append("// Dimension 1: Product (specific catalog reference)\n");
+        desc.append("InformationRegisterDimension productDim = mdFactory.createInformationRegisterDimension();\n");
+        desc.append("productDim.setName(\"Product\");\n");
+        desc.append("TypeItem productsRef = (TypeItem)typeProvider.getProxy(\"Catalog.Products\");\n");
+        desc.append("TypeDescription productType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(productsRef)\n");
+        desc.append("    .build();\n");
+        desc.append("productDim.setType(productType);\n");
+        desc.append("prices.getDimensions().add(productDim);\n");
         desc.append("\n");
-        desc.append("        // Set execution properties\n");
-        desc.append("        module.setServer(true);        // Server execution\n");
-        desc.append("        module.setClientManagedApplication(false);        // Client execution (managed application)\n");
-        desc.append("        module.setClientOrdinaryApplication(false);\n");
-        desc.append("        module.setServerCall(false);    // Calls from client to server\n");
-        desc.append("        module.setExternalConnection(false);\n");
-        desc.append("        module.setPrivileged(false);    // Privileged mode\n");
-        desc.append("        module.setGlobal(false);       // Global context\n");
+        desc.append("// Dimension 2: PriceType (generic catalog reference)\n");
+        desc.append("InformationRegisterDimension priceTypeDim = mdFactory.createInformationRegisterDimension();\n");
+        desc.append("priceTypeDim.setName(\"PriceType\");\n");
+        desc.append("TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("TypeDescription catalogRefType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(catalogRef)\n");
+        desc.append("    .build();\n");
+        desc.append("priceTypeDim.setType(catalogRefType);\n");
+        desc.append("prices.getDimensions().add(priceTypeDim);\n");
         desc.append("\n");
-        desc.append("        // Set UUID manually (RECOMMENDED for JShell)\n");
-        desc.append("        module.setUuid(UUID.randomUUID());\n");
-        desc.append("\n");
-        desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(module.eClass(), module.getName()).toString();\n");
-        desc.append("        transaction.attachTopObject((IBmObject)module, fqn);\n");
-        desc.append("        configuration.getCommonModules().add(module);\n");
-        desc.append("        return module;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**Note:** After creating the common module metadata, create the corresponding Module.bsl file\n");
-        desc.append("in the project: `src/CommonModules/<ModuleName>/Module.bsl`\n\n");
-        desc.append("**Deletion:** Common modules can be deleted by removing from configuration.getCommonModules()\n");
-        desc.append("and detaching from transaction. See buildDeleteCommonModuleWorkflow() for details.\n\n");
-        desc.append("**Properties explanation:**\n");
-        desc.append("- `server`: Execution on server side\n");
-        desc.append("- `clientManagedApplication`: Execution in managed application client\n");
-        desc.append("- `clientOrdinaryApplication`: Execution in ordinary application client\n");
-        desc.append("- `serverCall`: Allow calls from client to server\n");
-        desc.append("- `externalConnection`: Execution in external connection\n");
-        desc.append("- `privileged`: Execution in privileged mode\n");
-        desc.append("- `global`: Export module functions to global context\n");
-        return desc.toString();
-    }
+        desc.append("// Resource: Price (Number type)\n");
+        desc.append("InformationRegisterResource price = mdFactory.createInformationRegisterResource();\n");
+        desc.append("price.setName(\"Price\");\n");
+        desc.append("TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("TypeDescription numberTypeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(numberType)\n");
+        desc.append("    .build();\n");
+        desc.append("price.setType(numberTypeDesc);\n");
+        desc.append("prices.getResources().add(price);\n");
+        desc.append("```\n\n");
 
-    @SuppressWarnings("nls")
-    private String buildUuidHandlingWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## UUID Handling for Metadata Objects\n\n");
-        desc.append("**IMPORTANT:** All metadata objects (catalogs, documents, attributes, forms, etc.) ");
-        desc.append("must have a unique UUID. Failure to set UUIDs causes validation errors (SU45).\n\n");
-
-        desc.append("### Option 1: Manual UUID assignment (RECOMMENDED for JShell)\n");
+        desc.append("### Chart of Accounts Type Example\n\n");
         desc.append("```java\n");
-        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
-        desc.append("catalog.setName(\"Products\");\n");
-        desc.append("catalog.setUuid(UUID.randomUUID());\n");
-        desc.append("catalog.getSynonym().put(\"ru\", \"Products\");\n");
-        desc.append("// ... set other properties ...\n\n");
-        desc.append("// For child objects, set UUIDs manually\n");
-        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
-        desc.append("attr.setName(\"Article\");\n");
-        desc.append("attr.setUuid(UUID.randomUUID());\n");
-        desc.append("catalog.getAttributes().add(attr);\n\n");
-        desc.append(
-            "String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
-        desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("// Create accounting register with ChartOfAccounts reference\n");
+        desc.append("AccountingRegister accReg = mdFactory.createAccountingRegister();\n");
+        desc.append("accReg.setName(\"Accounting\");\n");
+        desc.append("\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("\n");
+        desc.append("// Dimension: Account (specific ChartOfAccounts reference)\n");
+        desc.append("AccountingRegisterDimension accountDim = mdFactory.createAccountingRegisterDimension();\n");
+        desc.append("accountDim.setName(\"Account\");\n");
+        desc.append("TypeItem coaRef = (TypeItem)typeProvider.getProxy(\"ChartOfAccounts.ПланСчетов\");\n");
+        desc.append("TypeDescription coaType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(coaRef)\n");
+        desc.append("    .build();\n");
+        desc.append("accountDim.setType(coaType);\n");
+        desc.append("accReg.getDimensions().add(accountDim);\n");
         desc.append("```\n\n");
 
         desc.append("### Option 2: Use modelFactory.fillDefaultReferences()\n");
@@ -1051,6 +1517,110 @@ public class MetadataBindingProvider
     }
 
     @SuppressWarnings("nls")
+    private String buildStringTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildNumberTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(numberType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildStringTypeWithQualifiersDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("// Create String type with length qualifier\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Set string qualifiers (length)\n");
+        desc.append("// Note: StringQualifiers must be set on the TypeDescription, not passed to builder\n");
+        desc.append("// StringQualifiers stringQualifiers = modelFactory.createStringQualifiers();\n");
+        desc.append("// stringQualifiers.setLength(50);\n");
+        desc.append("// typeDesc.setStringQualifiers(stringQualifiers);\n");
+        desc.append("\n");
+        desc.append("// Simplified: just set length on TypeDescription's qualifiers\n");
+        desc.append("if (typeDesc.getStringQualifiers() == null) {\n");
+        desc.append("    typeDesc.setStringQualifiers(modelFactory.createStringQualifiers());\n");
+        desc.append("}\n");
+        desc.append("typeDesc.getStringQualifiers().setLength(50);\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildNumberTypeWithQualifiersDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("// Create Number type with precision and scale qualifiers\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(numberType)\n");
+        desc.append("    .build();\n");
+        desc.append("\n");
+        desc.append("// Set number qualifiers (precision, scale)\n");
+        desc.append("// ⚠️ CRITICAL: Scale must be <= Precision, otherwise SU8 error occurs\n");
+        desc.append("// Precision = total number of digits (including decimal places)\n");
+        desc.append("// Scale = number of digits after decimal point\n");
+        desc.append("if (typeDesc.getNumberQualifiers() == null) {\n");
+        desc.append("    typeDesc.setNumberQualifiers(modelFactory.createNumberQualifiers());\n");
+        desc.append("}\n");
+        desc.append("typeDesc.getNumberQualifiers().setPrecision(10);\n");
+        desc.append("typeDesc.getNumberQualifiers().setScale(2);\n");
+        desc.append("// This creates a Number(10, 2) type: up to 10 total digits, 2 after decimal point\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDateTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem dateType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DATE);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(dateType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildBooleanTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem booleanType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.BOOLEAN);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(booleanType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+
+    @SuppressWarnings("nls")
     private String buildCatalogRefTypeDescription()
     {
         var desc = new StringBuilder();
@@ -1064,14 +1634,230 @@ public class MetadataBindingProvider
     }
 
     @SuppressWarnings("nls")
-    private String buildStringTypeDescription()
+    private String buildDocumentRefTypeDescription()
     {
         var desc = new StringBuilder();
         desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
         desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
-        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeItem documentRefType = typeProvider.getProxy(IEObjectTypeNames.DOCUMENT_REF);\n");
         desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
-        desc.append("    .addType(stringType)\n");
+        desc.append("    .addType(documentRefType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildEnumRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem enumRefType = typeProvider.getProxy(IEObjectTypeNames.ENUM_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(enumRefType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildValueStorageTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem valueType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.VALUESTORAGE);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(valueType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildUuidTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem uuidType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UUID);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(uuidType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildUndefinedTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem undefinedType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UNDEFINED);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(undefinedType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildAnyRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem anyRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ANY_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(anyRefType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildCharacteristicTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem characteristicType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHARACTERISTIC);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(characteristicType)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildAccumulationRegisterRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem accRegRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ACCUMULATION_REGISTER_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(accRegRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildAccountingRegisterRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem accRegRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ACCOUNTING_REGISTER_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(accRegRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildInformationRegisterRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem infoRegRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.INFORMATION_REGISTER_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(infoRegRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildCalculationRegisterRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem calcRegRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CALCULATION_REGISTER_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(calcRegRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildChartOfAccountsRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem coaRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHART_OF_ACCOUNTS_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(coaRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildChartOfCalcTypesRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem cctRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHART_OF_CALCULATION_TYPES_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(cctRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildChartOfCharTypesRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem cchtRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CHART_OF_CHARACTERISTIC_TYPES_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(cchtRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildExchangePlanRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append(
+            "TypeItem exchangePlanRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.EXCHANGE_PLAN_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(exchangePlanRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildBusinessProcessRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem bpRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.BUSINESS_PROCESS_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(bpRef)\n");
+        desc.append("    .build();\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildTaskRefTypeDescription()
+    {
+        var desc = new StringBuilder();
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem taskRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.TASK_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(taskRef)\n");
         desc.append("    .build();\n");
         return desc.toString();
     }
@@ -1137,31 +1923,73 @@ public class MetadataBindingProvider
         desc.append("    public Document execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
         desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
         desc.append("\n");
+        desc.append("        // Check if document already exists to avoid BmFqnAlreadyInUseException\n");
+        desc.append("        String documentFqn = \"Document.GoodsReceipt\";\n");
+        desc.append("        if (transaction.getTopObjectByFqn(documentFqn) != null) {\n");
+        desc.append("            System.out.println(\"Document already exists: \" + documentFqn);\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("\n");
+        desc.append("        // Create document\n");
         desc.append("        Document document = mdFactory.createDocument();\n");
         desc.append("        document.setName(\"GoodsReceipt\");\n");
-        desc.append("        document.getSynonym().put(\"ru\", \"Goods Receipt\");\n");
-        desc.append("        document.setNumberLength(9);\n");
+        desc.append("        document.getSynonym().put(\"ru\", \"Приход товаров\");\n");
         desc.append("\n");
+        desc.append("        // Set document number type - IMPORTANT: use correct enum constant\n");
+        desc.append("        document.setNumberType(DocumentNumberType.NUMBER);\n");
+        desc.append("        document.setNumberLength(9);\n");
+        desc.append("        document.setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL);\n");
+        desc.append("        document.setPosted(true);\n");
+        desc.append("        document.setRealTimePosting(true);\n");
+        desc.append("\n");
+        desc.append("        // Create type provider INSIDE transaction\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("\n");
+        desc.append("        // Add warehouse attribute (Catalog reference)\n");
         desc.append("        DocumentAttribute warehouse = mdFactory.createDocumentAttribute();\n");
         desc.append("        warehouse.setName(\"Warehouse\");\n");
-        desc.append("        warehouse.getSynonym().put(\"ru\", \"Warehouse\");\n");
-        desc.append("\n");
-        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        "));
-        desc.append("\n");
-        desc.append("        warehouse.setType(typeDesc);\n");
+        desc.append("        warehouse.getSynonym().put(\"ru\", \"Склад\");\n");
+        desc.append("        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("        TypeDescription warehouseType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(catalogRefType)\n");
+        desc.append("            .build();\n");
+        desc.append("        warehouse.setType(warehouseType);\n");
         desc.append("        document.getAttributes().add(warehouse);\n");
+        desc.append("\n");
+        desc.append("        // Add date attribute\n");
+        desc.append("        DocumentAttribute dateAttr = mdFactory.createDocumentAttribute();\n");
+        desc.append("        dateAttr.setName(\"Date\");\n");
+        desc.append("        dateAttr.getSynonym().put(\"ru\", \"Дата\");\n");
+        desc.append("        TypeItem dateType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DATE);\n");
+        desc.append("        TypeDescription dateTypeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(dateType)\n");
+        desc.append("            .build();\n");
+        desc.append("        dateAttr.setType(dateTypeDesc);\n");
+        desc.append("        document.getAttributes().add(dateAttr);\n");
         desc.append("\n");
         desc.append("        // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
         desc.append("        document.setUuid(UUID.randomUUID());\n");
         desc.append("        warehouse.setUuid(UUID.randomUUID());\n");
+        desc.append("        dateAttr.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
+        desc.append("        // Generate FQN and attach to transaction\n");
         desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(document.eClass(), document.getName()).toString();\n");
         desc.append("        transaction.attachTopObject((IBmObject)document, fqn);\n");
         desc.append("        configuration.getDocuments().add(document);\n");
+        desc.append("\n");
+        desc.append("        System.out.println(\"Document created successfully: \" + fqn);\n");
         desc.append("        return document;\n");
         desc.append("    }\n");
         desc.append("});\n");
         desc.append("```\n");
+        desc.append("**IMPORTANT Notes:**\n");
+        desc.append("- **DocumentNumberType.NUMBER** (not `Number`) - use correct enum constant\n");
+        desc.append("- **DocumentNumberPeriodicity.NONPERIODICAL** (not `Nonperiodical`) - use correct enum constant\n");
+        desc.append("- **TypeDescriptionBuilder** must be used INSIDE the transaction\n");
+        desc.append("- **IEObjectProvider** must use `v8project.getVersion()` for version compatibility\n");
+        desc.append("- **UUIDs** MUST be set for document and all attributes to avoid SU45 errors\n");
+        desc.append("- **Check before creating** to avoid `BmFqnAlreadyInUseException`\n");
         return desc.toString();
     }
 
@@ -1482,9 +2310,243 @@ public class MetadataBindingProvider
         desc.append("// ✅ CORRECT CODE for child objects (attributes, etc.)\n");
         desc.append("EcoreUtil.delete(attr); // Works correctly for child objects\n");
         desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a catalog will cascade delete all its attributes, tabular sections, forms, and templates.\n");
+        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\\n");
+        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\\n");
+        desc.append("**Note:** Deleting a catalog will cascade delete all its attributes, tabular sections, forms, and templates.\\n");
+
+        desc.append("### ❌ Pitfall #8: Incorrect Enum Constants in JShell\\n\\n");
+        desc.append("**Error:** Compilation error - cannot find symbol or type mismatch\\n\\n");
+        desc.append("**Problem:** Using incorrect enum constant names (wrong case or format).\\n\\n");
+        desc.append("```java\\n");
+        desc.append("// ❌ WRONG CODE - Incorrect enum constants\\n");
+        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS); // Wrong name\\n");
+        desc.append("document.setNumberType(DocumentNumberType.Number); // Wrong case\\n");
+        desc.append("document.setNumberPeriodicity(DocumentNumberPeriodicity.Nonperiodical); // Wrong case\\n");
+        desc.append("```\\n\\n");
+        desc.append("```java\\n");
+        desc.append("// ✅ CORRECT CODE - Use correct enum constants\\n");
+        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_OF_ITEMS); // ✅ Correct\\n");
+        desc.append("document.setNumberType(DocumentNumberType.NUMBER); // ✅ Correct case\\n");
+        desc.append("document.setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL); // ✅ Correct case\\n");
+        desc.append("```\\n\\n");
+
+        desc.append("### ❌ Pitfall #9: Incorrect TypeDescription Usage in JShell\\n\\n");
+        desc.append("**Error:** Type mismatch or NullPointerException\\n\\n");
+        desc.append("**Problem:** Passing wrong types to TypeDescriptionBuilder or using it outside transaction.\\n\\n");
+        desc.append("```java\\n");
+        desc.append("// ❌ WRONG CODE - String type cannot be passed directly\\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\\n");
+        desc.append("    .addType(\"Date\") // ❌ Wrong! Must use TypeItem\\n");
+        desc.append("    .build();\\n");
+        desc.append("\\n");
+        desc.append("// ❌ WRONG CODE - Catalog object cannot be passed directly\\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\\n");
+        desc.append("    .addType(catalogKontragenty) // ❌ Wrong! Must use TypeItem\\n");
+        desc.append("    .build();\\n");
+        desc.append("\\n");
+        desc.append("// ❌ WRONG CODE - typeProvider outside transaction\\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\\n");
+        desc.append("TypeItem type = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\\n");
+        desc.append("\\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Test\") {\\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+        desc.append("        attribute.setType(new TypeDescriptionBuilder().addType(type).build());\\n");
+        desc.append("        // ❌ TypeItem created OUTSIDE transaction - may cause NPE\\n");
+        desc.append("        return null;\\n");
+        desc.append("    }\\n");
+        desc.append("});\\n");
+        desc.append("```\\n\\n");
+        desc.append("```java\\n");
+        desc.append("// ✅ CORRECT CODE - Use IEObjectProvider inside transaction\\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Create metadata\") {\\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
+        desc.append("        // Create typeProvider INSIDE transaction\\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\\n");
+        desc.append("        \\n");
+        desc.append("        // Get TypeItem INSIDE transaction\\n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\\n");
+        desc.append("        TypeItem dateType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DATE);\\n");
+        desc.append("        TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\\n");
+        desc.append("        \\n");
+        desc.append("        // Build TypeDescription INSIDE transaction\\n");
+        desc.append("        TypeDescription typeDesc = new TypeDescriptionBuilder()\\n");
+        desc.append("            .addType(stringType)\\n");
+        desc.append("            .build();\\n");
+        desc.append("        \\n");
+        desc.append("        attribute.setType(typeDesc);\\n");
+        desc.append("        return null;\\n");
+        desc.append("    }\\n");
+        desc.append("});\\n");
+        desc.append("```\\n\\n");
+
+        desc.append("### ❌ Pitfall #10: Runtime BmFqnAlreadyInUseException\\n\\n");
+        desc.append("**Error:** `com._1c.g5.v8.bm.core.BmFqnAlreadyInUseException`\\n");
+        desc.append("**Problem:** Trying to create object with FQN that already exists.\\n\\n");
+        desc.append("**Solution:** Always check if object exists before creating.\\n\\n");
+        desc.append("```java\\n");
+        desc.append("// ✅ CORRECT CODE - Check before creating\\n");
+        desc.append("String fqn = \"Catalog.Products\";\\n");
+        desc.append("if (transaction.getTopObjectByFqn(fqn) == null) {\\n");
+        desc.append("    Catalog catalog = mdFactory.createCatalog();\\n");
+        desc.append("    catalog.setName(\"Products\");\\n");
+        desc.append("    catalog.setUuid(UUID.randomUUID());\\n");
+        desc.append("    String generatedFqn = fqnGenerator.generateStandaloneObjectFqn(\\n");
+        desc.append("        catalog.eClass(), catalog.getName()).toString();\\n");
+        desc.append("    transaction.attachTopObject((IBmObject)catalog, generatedFqn);\\n");
+        desc.append("    configuration.getCatalogs().add(catalog);\\n");
+        desc.append("} else {\\n");
+        desc.append("    System.out.println(\"Object already exists: \" + fqn);\\n");
+        desc.append("}\\n");
+        desc.append("```\\n\\n");
+
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildMetadataValidationErrors()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Metadata Validation Errors - Common Fixes\n\n");
+        desc.append("### SU45: UUID Required for Metadata Objects\n\n");
+        desc.append("**Error Message:** \"Должна быть задана сущность 'type', необходимая для...\" or \"Тип не указан\"\n\n");
+        desc.append("**Problem:** An attribute or metadata object is missing a required type definition.\n\n");
+        desc.append("**Common Causes:**\n");
+        desc.append("- Attribute created without TypeDescription set\n");
+        desc.append("- TypeDescription created but type not specified\n");
+        desc.append("- String/Number qualifiers missing or incorrectly configured\n\n");
+        desc.append("**Fix Pattern:**\n");
+        desc.append("```java\n");
+        desc.append("// Get the attribute and set its type\n");
+        desc.append("Catalog catalog = (Catalog)transaction.getTopObjectByFqn(\"Catalog.Контрагенты\");\n");
+        desc.append("if (catalog != null) {\n");
+        desc.append("    for (CatalogAttribute attr : catalog.getAttributes()) {\n");
+        desc.append("        if (\"ИНН\".equals(attr.getName())) {\n");
+        desc.append("            IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("                .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("            TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("            TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("                .addType(stringType)\n");
+        desc.append("                .build();\n");
+        desc.append("            attr.setType(typeDesc);\n");
+        desc.append("            System.out.println(\"Fixed attribute type\");\n");
+        desc.append("        }\n");
+        desc.append("    }\n");
+        desc.append("}\n");
+        desc.append("```\n\n");
+        desc.append("**Important Notes:**\n");
+        desc.append("- Always get typeProvider INSIDE the transaction\n");
+        desc.append("- TypeItem proxies must be obtained and used within the SAME IBmTransaction\n");
+        desc.append("- For String types, use buildStringTypeDescription() or buildStringTypeWithQualifiersDescription()\n");
+        desc.append("- For Number types, use buildNumberTypeDescription() or buildNumberTypeWithQualifiersDescription()\n\n");
+
+        desc.append("### SU8: Scale Cannot Exceed Precision\n\n");
+        desc.append("**Error Message:** \"Точность числа не может быть больше его длины\"\n\n");
+        desc.append("**Problem:** NumberQualifiers has Scale > Precision, which is invalid.\n\n");
+        desc.append("**Understanding Precision and Scale:**\n");
+        desc.append("- **Precision**: Total number of digits (integer part + decimal part)\n");
+        desc.append("- **Scale**: Number of digits after the decimal point\n");
+        desc.append("- **Rule**: Scale MUST be <= Precision\n\n");
+        desc.append("**Examples:**\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT: Number(10, 2) - 10 total digits, 2 after decimal\n");
+        desc.append("// Values: 12345678.90 (8 + 2 = 10 digits)\n");
+        desc.append("typeDesc.getNumberQualifiers().setPrecision(10);\n");
+        desc.append("typeDesc.getNumberQualifiers().setScale(2);\n\n");
+        desc.append("// ❌ WRONG: Number(2, 10) - Scale (10) > Precision (2)\n");
+        desc.append("// This causes SU8 error\n");
+        desc.append("typeDesc.getNumberQualifiers().setPrecision(2);\n");
+        desc.append("typeDesc.getNumberQualifiers().setScale(10); // ❌ SU8 error!\n\n");
+        desc.append("// ✅ CORRECT: Number(15, 4) - 15 total digits, 4 after decimal\n");
+        desc.append("// Values: 1234567890123.4567 (11 + 4 = 15 digits)\n");
+        desc.append("typeDesc.getNumberQualifiers().setPrecision(15);\n");
+        desc.append("typeDesc.getNumberQualifiers().setScale(4);\n\n");
+        desc.append("// ✅ CORRECT: Number(20, 0) - 20 total digits, 0 after decimal\n");
+        desc.append("// Integer only: 12345678901234567890 (20 digits)\n");
+        desc.append("typeDesc.getNumberQualifiers().setPrecision(20);\n");
+        desc.append("typeDesc.getNumberQualifiers().setScale(0);\n");
+        desc.append("```\n\n");
+        desc.append("**Fix Pattern - Find and Correct All SU8 Errors:**\n");
+        desc.append("```java\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Fix SU8 errors\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration config = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("        \n");
+        desc.append("        // Fix catalogs\n");
+        desc.append("        for (Catalog catalog : config.getCatalogs()) {\n");
+        desc.append("            for (CatalogAttribute attr : catalog.getAttributes()) {\n");
+        desc.append("                if (attr.getType() != null && attr.getType().getNumberQualifiers() != null) {\n");
+        desc.append("                    NumberQualifiers nq = attr.getType().getNumberQualifiers();\n");
+        desc.append("                    if (nq.getScale() > nq.getPrecision()) {\n");
+        desc.append("                        System.out.println(\"Fixing \" + catalog.getName() + \".\" + attr.getName());\n");
+        desc.append("                        // Swap precision and scale to fix the error\n");
+        desc.append("                        int temp = nq.getPrecision();\n");
+        desc.append("                        nq.setPrecision(nq.getScale());\n");
+        desc.append("                        nq.setScale(temp);\n");
+        desc.append("                    }\n");
+        desc.append("                }\n");
+        desc.append("            }\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // Fix documents\n");
+        desc.append("        for (Document document : config.getDocuments()) {\n");
+        desc.append("            for (DocumentAttribute attr : document.getAttributes()) {\n");
+        desc.append("                if (attr.getType() != null && attr.getType().getNumberQualifiers() != null) {\n");
+        desc.append("                    NumberQualifiers nq = attr.getType().getNumberQualifiers();\n");
+        desc.append("                    if (nq.getScale() > nq.getPrecision()) {\n");
+        desc.append("                        int temp = nq.getPrecision();\n");
+        desc.append("                        nq.setPrecision(nq.getScale());\n");
+        desc.append("                        nq.setScale(temp);\n");
+        desc.append("                    }\n");
+        desc.append("                }\n");
+        desc.append("            }\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // Fix registers (Accumulation, Information, Accounting, Calculation)\n");
+        desc.append("        // Similar pattern for dimensions and resources...\n");
+        desc.append("        \n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("**Common Mistakes to Avoid:**\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG: Trying to access non-existent methods\n");
+        desc.append("// NumberQualifiers nq = attr.getType().getNumberQualifiers();\n");
+        desc.append("// nq.getLength(); // ❌ This method does NOT exist!\n");
+        desc.append("\n");
+        desc.append("// ✅ CORRECT: Use correct methods\n");
+        desc.append("int precision = nq.getPrecision();\n");
+        desc.append("int scale = nq.getScale();\n");
+        desc.append("```\n\n");
+        desc.append("### General Workflow for Fixing Metadata Validation Errors\n\n");
+        desc.append("**Step 1: Identify the error**\n");
+        desc.append("- Check EDT markers/problems view\n");
+        desc.append("- Note the error code (SU45, SU8, etc.)\n");
+        desc.append("- Note the object path (Catalog.Контрагенты, Document.ПриходТовара, etc.)\n\n");
+        desc.append("**Step 2: Understand the requirement**\n");
+        desc.append("- SU45: Type must be specified - use TypeDescriptionBuilder\n");
+        desc.append("- SU8: Scale <= Precision for Number types\n\n");
+        desc.append("**Step 3: Implement fix inside BM transaction**\n");
+        desc.append("- Always use `globalContext.execute(new AbstractBmTask<Void>(...) {...})`\n");
+        desc.append("- Get object by FQN: `transaction.getTopObjectByFqn(\"Catalog.Имя\")`\n");
+        desc.append("- Modify directly (no attachTopObject needed for existing objects)\n");
+        desc.append("- Set type or qualifiers using modelFactory\n\n");
+        desc.append("**Step 4: Verify fix**\n");
+        desc.append("- Refresh/Rebuild project in EDT\n");
+        desc.append("- Check markers view for remaining errors\n\n");
+        desc.append("**Step 5: Consider project-wide fixes**\n");
+        desc.append("- If multiple objects have same error, iterate through collections\n");
+        desc.append("- Use Configuration object to access all catalogs, documents, registers\n\n");
+        desc.append("**Important Reminders:**\n");
+        desc.append("- TypeDescription and TypeItem must be created INSIDE the transaction\n");
+        desc.append("- Use `modelFactory` for creating qualifiers in JShell context\n");
+        desc.append("- Set UUIDs manually when creating new metadata objects\n");
+        desc.append("- For existing objects: modify directly, don't use attachTopObject()\n");
+        desc.append("- Check that Scale <= Precision for all Number types\n");
+        desc.append("- Verify that all attributes have valid TypeDescription set\n");
         return desc.toString();
     }
 
@@ -1700,13 +2762,13 @@ public class MetadataBindingProvider
         desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
         desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
         desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete report\\\") {\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete report\") {\n");
         desc.append("    @Override\n");
         desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        Report report = (Report)transaction.getTopObjectByFqn(\\\"Report.SalesReport\\\"\");\n");
+        desc.append("        Report report = (Report)transaction.getTopObjectByFqn(\"Report.SalesReport\");\n");
         desc.append("        \n");
         desc.append("        if (report != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
         desc.append("            configuration.getReports().remove(report);\n");
         desc.append("            transaction.detachTopObject((IBmObject)report);\n");
         desc.append("        }\n");
@@ -1729,13 +2791,13 @@ public class MetadataBindingProvider
         desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
         desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
         desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete data processor\\\") {\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete data processor\") {\n");
         desc.append("    @Override\n");
         desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        DataProcessor dataProcessor = (DataProcessor)transaction.getTopObjectByFqn(\\\"DataProcessor.ImportData\\\"\");\n");
+        desc.append("        DataProcessor dataProcessor = (DataProcessor)transaction.getTopObjectByFqn(\"DataProcessor.ImportData\");\n");
         desc.append("        \n");
         desc.append("        if (dataProcessor != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
         desc.append("            configuration.getDataProcessors().remove(dataProcessor);\n");
         desc.append("            transaction.detachTopObject((IBmObject)dataProcessor);\n");
         desc.append("        }\n");
@@ -1758,13 +2820,13 @@ public class MetadataBindingProvider
         desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
         desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
         desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete common module\\\") {\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete common module\") {\n");
         desc.append("    @Override\n");
         desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        CommonModule commonModule = (CommonModule)transaction.getTopObjectByFqn(\\\"CommonModule.WorkingWithData\\\"\");\n");
+        desc.append("        CommonModule commonModule = (CommonModule)transaction.getTopObjectByFqn(\"CommonModule.WorkingWithData\");\n");
         desc.append("        \n");
         desc.append("        if (commonModule != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
         desc.append("            configuration.getCommonModules().remove(commonModule);\n");
         desc.append("            transaction.detachTopObject((IBmObject)commonModule);\n");
         desc.append("        }\n");
@@ -1787,13 +2849,13 @@ public class MetadataBindingProvider
         desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
         desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
         desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete constant\\\") {\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete constant\") {\n");
         desc.append("    @Override\n");
         desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        Constant constant = (Constant)transaction.getTopObjectByFqn(\\\"Constant.DefaultWarehouse\\\"\");\n");
+        desc.append("        Constant constant = (Constant)transaction.getTopObjectByFqn(\"Constant.DefaultWarehouse\");\n");
         desc.append("        \n");
         desc.append("        if (constant != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
         desc.append("            configuration.getConstants().remove(constant);\n");
         desc.append("            transaction.detachTopObject((IBmObject)constant);\n");
         desc.append("        }\n");
@@ -1817,12 +2879,12 @@ public class MetadataBindingProvider
         desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
         desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
         desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\\\"Delete metadata object\\\") {\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete metadata object\") {\n");
         desc.append("    @Override\n");
         desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
         desc.append("        \n");
         desc.append("        // Example: Delete ChartOfCharacteristicTypes\n");
-        desc.append("        String objectFqn = \\\"ChartOfCharacteristicTypes.Properties\\\";\n");
+        desc.append("        String objectFqn = \"ChartOfCharacteristicTypes.Properties\";\n");
         desc.append("        MdObject objectToDelete = (MdObject)transaction.getTopObjectByFqn(objectFqn);\n");
         desc.append("        \n");
         desc.append("        if (objectToDelete != null) {\n");
