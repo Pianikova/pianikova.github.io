@@ -42,6 +42,7 @@ import com.e1c.edt.ai.context.tools.MarkersProvider;
 import com.e1c.edt.ai.context.tools.MetadataBindingProvider;
 import com.e1c.edt.ai.context.tools.MethodListProvider;
 import com.e1c.edt.ai.tools.IJShellBindingProvider;
+import com.e1c.edt.ai.tools.IJShellManualProvider;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -105,6 +106,8 @@ class ContextModule
         // JShell binding providers
         var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
         jshellBindingProviderBinder.addBinding().to(MetadataBindingProvider.class);
+        var jshellManualProviderBinder = Multibinder.newSetBinder(binder(), IJShellManualProvider.class);
+        jshellManualProviderBinder.addBinding().to(MetadataBindingProvider.class);
 
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();

@@ -120,7 +120,8 @@ public class JShellSessionMcpTool
 		description.append("\n- Session preserves state between JShell calls");
 
 		description.append("\n\n**When to use:**");
-		description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" tool (required)");
+        description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" for execution");
+        description.append("\n- After calling ").append(JShellManualMcpTool.TOOL_NAME).append(" to get a scenario-specific template");
 		description.append("\n- To check available bindings and execution history");
 		description.append("\n- To get session info for existing session");
 
