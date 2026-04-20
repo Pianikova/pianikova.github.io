@@ -179,7 +179,7 @@ public class MetadataBindingProvider
     @Override
     public String getDescription()
     {
-        return "1C metadata API: Create, edit, and delete Catalog, Document, Register, and other metadata objects. "
+        return "1C metadata API: Create, edit, and delete top-level 1C metadata entities and common child objects. "
             + "Includes factories (mdFactory, modelFactory), FQN generator, BM model with transactions, "
             + "and resource lookup for Eclipse integration.";
     }
@@ -189,7 +189,7 @@ public class MetadataBindingProvider
     public String getUseCases()
     {
         return "- Create and edit 1C metadata objects in BM transactions"
-            + "\n- Resolve IV8Project, BM model, and top-level objects"
+            + "\n- Resolve IV8Project, BM model, and all top-level configuration entities"
             + "\n- Build TypeDescription for attributes, dimensions, and resources"
             + "\n- Attach new top-level objects with generated FQN"
             + "\n- Remove existing objects through parent collections and transaction detach"
@@ -304,6 +304,26 @@ public class MetadataBindingProvider
             "Create CommonCommand metadata and add it to configuration command collections.", buildCommonCommandWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             List.of("common command", "command"))); //$NON-NLS-1$ //$NON-NLS-2$
+        entries.add(new JShellManualEntry("create_common_attribute", "edt", "Create Common Attribute", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create CommonAttribute metadata with mandatory TypeDescription.", buildCommonAttributeWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("common attribute", "attribute", "type description"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_common_template", "edt", "Create Common Template", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create CommonTemplate metadata and fill template content afterwards.", buildCommonTemplateWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("common template", "template", "макет"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_common_picture", "edt", "Create Common Picture", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create CommonPicture metadata and assign picture content later.", buildCommonPictureWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("common picture", "picture", "image"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_interface", "edt", "Create Interface", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create Interface metadata and configure command interface content afterwards.", buildInterfaceWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("interface", "ui interface"))); //$NON-NLS-1$ //$NON-NLS-2$
+        entries.add(new JShellManualEntry("create_session_parameter", "edt", "Create Session Parameter", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create SessionParameter metadata with mandatory TypeDescription.", buildSessionParameterWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("session parameter", "parameter", "type description"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         entries.add(new JShellManualEntry("create_ws_reference", "edt", "Create WS Reference", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Create WSReference metadata and configure service connection details later.", buildWSReferenceWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
@@ -324,6 +344,14 @@ public class MetadataBindingProvider
             "Create SettingsStorage metadata and bind configuration references to it later.", buildSettingsStorageWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             List.of("settings storage", "storage"))); //$NON-NLS-1$ //$NON-NLS-2$
+        entries.add(new JShellManualEntry("create_functional_option", "edt", "Create Functional Option", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create FunctionalOption metadata and bind controlled objects later.", buildFunctionalOptionWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("functional option", "feature flag", "option"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_functional_options_parameter", "edt", "Create Functional Options Parameter", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create FunctionalOptionsParameter metadata and connect it to functional options afterwards.", buildFunctionalOptionsParameterWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("functional options parameter", "feature parameter", "parameter"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         entries.add(new JShellManualEntry("create_subsystem", "edt", "Create Subsystem", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Create Subsystem metadata and then link objects through references or command interfaces.", buildSubsystemWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
@@ -332,14 +360,42 @@ public class MetadataBindingProvider
             "Create Role metadata and then configure rights separately.", buildRoleWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             List.of("role", "rights", "security"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_command_group", "edt", "Create Command Group", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create CommandGroup metadata and then place commands in it.", buildCommandGroupWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("command group", "group", "commands"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         entries.add(new JShellManualEntry("create_language", "edt", "Create Language", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Create Language metadata and then configure default language references in configuration.", buildLanguageWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             List.of("language", "localization"))); //$NON-NLS-1$ //$NON-NLS-2$
+        entries.add(new JShellManualEntry("create_style", "edt", "Create Style", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create Style metadata and then add style items or assign it as default style.", buildStyleWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("style", "theme", "ui style"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_style_item", "edt", "Create Style Item", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create StyleItem metadata and configure its visual type afterwards.", buildStyleItemWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("style item", "style element"))); //$NON-NLS-1$ //$NON-NLS-2$
         entries.add(new JShellManualEntry("create_external_data_source", "edt", "Create External Data Source", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Create ExternalDataSource metadata and then add tables, cubes, and fields.", buildExternalDataSourceWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             List.of("external data source", "data source", "integration"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_sequence", "edt", "Create Sequence", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create Sequence metadata and then add dimension rules for ordering logic.", buildSequenceWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("sequence", "ordering", "последовательность"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_xdto_package", "edt", "Create XDTO Package", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create XDTOPackage metadata and then add package content or schema definitions.", buildXDTOPackageWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("xdto package", "xdto", "schema"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_chart_of_characteristic_types", "edt", "Create Chart Of Characteristic Types", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create ChartOfCharacteristicTypes metadata with code, description, and value type settings.", buildChartOfCharacteristicTypesWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("chart of characteristic types", "characteristics", "plan видов характеристик"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("create_bot", "edt", "Create Bot", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create Bot metadata and configure its conversation logic afterwards.", buildBotWorkflowSafe(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("bot", "assistant", "chat bot"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         entries.add(new JShellManualEntry("create_table", "edt", "Create Table", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Create Table inside ExternalDataSource with fields and command sources added afterwards.", buildTableWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
@@ -371,37 +427,43 @@ public class MetadataBindingProvider
             List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             List.of("edit", "existing object", "update metadata"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         entries.add(new JShellManualEntry("edit_information_register", "edt", "Edit Information Register", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            "Edit InformationRegister by loading it from BM transaction and changing only existing features.", buildGenericEditWorkflow("InformationRegister", "InformationRegister.Prices", //$NON-NLS-1$ //$NON-NLS-2$
+            "Edit InformationRegister by loading it from BM transaction and changing only existing features.", //$NON-NLS-1$
+            buildGenericEditWorkflow("InformationRegister", "InformationRegister.Prices", //$NON-NLS-1$ //$NON-NLS-2$
                 "register.setInformationRegisterPeriodicity(InformationRegisterPeriodicity.DAY);\n        register.setUseStandardCommands(true);", //$NON-NLS-1$
                 "Do not call attachTopObject() for an existing register. Add or remove child objects through the existing collections."), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             List.of("edit information register", "information register"))); //$NON-NLS-1$ //$NON-NLS-2$
         entries.add(new JShellManualEntry("edit_enum", "edt", "Edit Enum", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            "Edit Enum and its enum values by loading the existing top-level object.", buildGenericEditWorkflow("Enum", "Enum.Statuses", //$NON-NLS-1$ //$NON-NLS-2$
+            "Edit Enum and its enum values by loading the existing top-level object.", //$NON-NLS-1$
+            buildGenericEditWorkflow("Enum", "Enum.Statuses", //$NON-NLS-1$ //$NON-NLS-2$
                 "enumObject.getEnumValues().get(0).setName(\"Active\");", //$NON-NLS-1$
                 "Prefer changing value names/descriptions in-place. For deleted values, remove them from enumObject.getEnumValues()."), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             List.of("edit enum", "enum value"))); //$NON-NLS-1$ //$NON-NLS-2$
         entries.add(new JShellManualEntry("edit_common_module", "edt", "Edit Common Module", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            "Edit CommonModule flags and metadata separately from Module.bsl content.", buildGenericEditWorkflow("CommonModule", "CommonModule.WorkingWithData", //$NON-NLS-1$ //$NON-NLS-2$
+            "Edit CommonModule flags and metadata separately from Module.bsl content.", //$NON-NLS-1$
+            buildGenericEditWorkflow("CommonModule", "CommonModule.WorkingWithData", //$NON-NLS-1$ //$NON-NLS-2$
                 "commonModule.setServer(true);\n        commonModule.setClientManagedApplication(false);", //$NON-NLS-1$
                 "Metadata flags and BSL source are separate concerns. Update Module.bsl through file tools, not through mdFactory."), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "resourceLookup"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             List.of("edit common module", "module flags"))); //$NON-NLS-1$ //$NON-NLS-2$
         entries.add(new JShellManualEntry("edit_chart_of_accounts", "edt", "Edit Chart Of Accounts", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            "Edit ChartOfAccounts by loading existing object and mutating supported features.", buildGenericEditWorkflow("ChartOfAccounts", "ChartOfAccounts.MainChart", //$NON-NLS-1$ //$NON-NLS-2$
-                "chart.setCodeLength(10);\n        chart.setDescriptionLength(100);", //$NON-NLS-1$
+            "Edit ChartOfAccounts by loading existing object and mutating supported features.", //$NON-NLS-1$
+            buildGenericEditWorkflow("ChartOfAccounts", "ChartOfAccounts.MainChart", //$NON-NLS-1$ //$NON-NLS-2$
+                "chart.setCodeLength(10);\\n        chart.setDescriptionLength(100);", //$NON-NLS-1$
                 "Be careful with references from AccountingRegister and dependent objects when renaming or restructuring the chart."), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             List.of("edit chart of accounts", "accounts chart"))); //$NON-NLS-1$ //$NON-NLS-2$
         entries.add(new JShellManualEntry("edit_business_process", "edt", "Edit Business Process", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            "Edit BusinessProcess in BM transaction and keep child objects in the right collections.", buildGenericEditWorkflow("BusinessProcess", "BusinessProcess.Approval", //$NON-NLS-1$ //$NON-NLS-2$
+            "Edit BusinessProcess in BM transaction and keep child objects in the right collections.", //$NON-NLS-1$
+            buildGenericEditWorkflow("BusinessProcess", "BusinessProcess.Approval", //$NON-NLS-1$ //$NON-NLS-2$
                 "businessProcess.setNumberLength(11);\n        businessProcess.setAutonumbering(true);", //$NON-NLS-1$
                 "Add attributes and tabular sections through their dedicated collections and set TypeDescription on new features."), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             List.of("edit business process", "business process"))); //$NON-NLS-1$ //$NON-NLS-2$
         entries.add(new JShellManualEntry("edit_task", "edt", "Edit Task", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            "Edit Task metadata in BM transaction without recreating the object.", buildGenericEditWorkflow("Task", "Task.SupportRequest", //$NON-NLS-1$ //$NON-NLS-2$
+            "Edit Task metadata in BM transaction without recreating the object.", //$NON-NLS-1$
+            buildGenericEditWorkflow("Task", "Task.SupportRequest", //$NON-NLS-1$ //$NON-NLS-2$
                 "InformationRegister addressing = (InformationRegister)transaction.getTopObjectByFqn(\"InformationRegister.TaskAddressing\");\n        task.setAddressing(addressing);\n        task.setAutonumbering(true);", //$NON-NLS-1$
                 "Use the generic attribute/tabular-section scenarios when you need to modify child collections."), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
@@ -539,7 +601,6 @@ public class MetadataBindingProvider
         return desc.toString();
     }
 
-    @SuppressWarnings("nls")
     private String buildCommonModuleWorkflow()
     {
         var desc = new StringBuilder();
@@ -550,7 +611,6 @@ public class MetadataBindingProvider
         return desc.toString();
     }
 
-    @SuppressWarnings("nls")
     private String buildChartOfAccountsWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -559,7 +619,6 @@ public class MetadataBindingProvider
             "ChartOfAccounts is commonly referenced by AccountingRegister. Create the chart first if registers depend on it."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildChartOfCalculationTypesWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -568,7 +627,6 @@ public class MetadataBindingProvider
             "CalculationRegister frequently depends on ChartOfCalculationTypes. Create the chart before assigning register references."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildBusinessProcessWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -577,7 +635,6 @@ public class MetadataBindingProvider
             "Add attributes and tabular sections using the generic attribute and tabular section scenarios."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildTaskWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -586,7 +643,6 @@ public class MetadataBindingProvider
             "Tasks often mirror BusinessProcess patterns. Use TaskAttribute/TaskTabularSection for child objects."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildExchangePlanWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -595,7 +651,6 @@ public class MetadataBindingProvider
             "Exchange plans are top-level objects; node definitions and related metadata can be added afterwards."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildConstantWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -604,7 +659,6 @@ public class MetadataBindingProvider
             "Constants implement TypeDescriptionProvider, so `setType(...)` is mandatory."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildDefinedTypeWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -613,7 +667,6 @@ public class MetadataBindingProvider
             "DefinedType is usually used as a reusable alias; choose qualifiers deliberately to avoid broad runtime types."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildDocumentJournalWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -622,7 +675,6 @@ public class MetadataBindingProvider
             "DocumentJournal collects document views; related columns and commands can be configured later."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildDocumentNumeratorWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -631,7 +683,6 @@ public class MetadataBindingProvider
             "Attach documents to the numerator later through document properties inside a BM transaction."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildReportWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -640,7 +691,6 @@ public class MetadataBindingProvider
             "Metadata object creation does not create layouts, forms, or module code automatically."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildDataProcessorWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -649,7 +699,6 @@ public class MetadataBindingProvider
             "For executable behavior, add forms or module content separately after metadata creation."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildWebServiceWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -658,7 +707,6 @@ public class MetadataBindingProvider
             "Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildHttpServiceWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -667,7 +715,6 @@ public class MetadataBindingProvider
             "URL templates and HTTP methods are child objects. Keep routing details in follow-up steps."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildIntegrationServiceWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -676,7 +723,6 @@ public class MetadataBindingProvider
             "Add `IntegrationServiceChannel` objects after the parent service is attached to configuration."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildCommonFormWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -685,7 +731,6 @@ public class MetadataBindingProvider
             "Form structure and controls are separate layers. Start by creating the top-level metadata object."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildCommonCommandWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -694,7 +739,46 @@ public class MetadataBindingProvider
             "Command groups and UI placement are configured separately after command creation."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
+    private String buildCommonAttributeWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "CommonAttribute", "CommonAttribute", "attribute", "createCommonAttribute()", "getCommonAttributes()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            buildStringTypeDescription().replace("\n", "\n        ") + "\n        attribute.setType(typeDesc);", //$NON-NLS-1$
+            "CommonAttribute extends BasicFeature, so assign `TypeDescription` before adding it to configuration."); //$NON-NLS-1$
+    }
+
+    private String buildCommonTemplateWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "CommonTemplate", "CommonTemplate", "template", "createCommonTemplate()", "getCommonTemplates()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "template.setName(\"PrintLayout\");", //$NON-NLS-1$
+            "Template binary or text content is maintained separately after the metadata object exists."); //$NON-NLS-1$
+    }
+
+    private String buildCommonPictureWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "CommonPicture", "CommonPicture", "picture", "createCommonPicture()", "getCommonPictures()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "picture.setName(\"Logo\");", //$NON-NLS-1$
+            "After creation, assign the actual picture resource or content through the corresponding picture APIs."); //$NON-NLS-1$
+    }
+
+    private String buildInterfaceWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "Interface", "Interface", "interfaceObject", "createInterface()", "getInterfaces()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "interfaceObject.setName(\"MainInterface\");", //$NON-NLS-1$
+            "Configure sections, command interface, and navigation structure after the top-level interface is attached."); //$NON-NLS-1$
+    }
+
+    private String buildSessionParameterWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "SessionParameter", "SessionParameter", "parameter", "createSessionParameter()", "getSessionParameters()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            buildStringTypeDescription().replace("\n", "\n        ") + "\n        parameter.setType(typeDesc);", //$NON-NLS-1$
+            "SessionParameter implements TypeDescriptionProvider, so set `type` before the object is used in session logic."); //$NON-NLS-1$
+    }
+
     private String buildWSReferenceWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -703,7 +787,6 @@ public class MetadataBindingProvider
             "After creation, fill endpoint and service metadata according to the referenced WSDL contract."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildEventSubscriptionWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -712,7 +795,6 @@ public class MetadataBindingProvider
             "After creation, configure source object, event, and handler module explicitly."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildScheduledJobWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -721,16 +803,14 @@ public class MetadataBindingProvider
             "Add schedule details and called method configuration after the top-level job object exists."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildFilterCriterionWorkflow()
     {
         return buildTopLevelCreateWorkflow(
             "FilterCriterion", "FilterCriterion", "criterion", "createFilterCriterion()", "getFilterCriteria()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
-            buildCatalogRefTypeDescription().replace("\n", "\n        ") + "\n        criterion.setType(typeDesc);", //$NON-NLS-1$
+            buildCatalogRefTypeDescription().replace("\\n", "\\n        ") + "\\n        criterion.setType(typeDesc);", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "FilterCriterion implements TypeDescriptionProvider. Make the type narrow and intentional."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildSettingsStorageWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -739,7 +819,22 @@ public class MetadataBindingProvider
             "Configuration references such as commonSettingsStorage or reportsVariantsStorage should point to this object afterwards."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
+    private String buildFunctionalOptionWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "FunctionalOption", "FunctionalOption", "option", "createFunctionalOption()", "getFunctionalOptions()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "option.setName(\"UseAdvancedPricing\");", //$NON-NLS-1$
+            "Bind commands, forms, or object availability to the option after it is created."); //$NON-NLS-1$
+    }
+
+    private String buildFunctionalOptionsParameterWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "FunctionalOptionsParameter", "FunctionalOptionsParameter", "parameter", "createFunctionalOptionsParameter()", "getFunctionalOptionsParameters()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "parameter.setName(\"CurrentCompany\");", //$NON-NLS-1$
+            "After creation, link the parameter to functional options and configure dependent expressions."); //$NON-NLS-1$
+    }
+
     private String buildSubsystemWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -748,7 +843,6 @@ public class MetadataBindingProvider
             "Configuration keeps subsystem references; command interfaces and object composition are follow-up steps."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildRoleWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -757,7 +851,14 @@ public class MetadataBindingProvider
             "Rights matrices and permissions are configured after the role object exists."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
+    private String buildCommandGroupWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "CommandGroup", "CommandGroup", "group", "createCommandGroup()", "getCommandGroups()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "group.setName(\"SalesCommands\");", //$NON-NLS-1$
+            "Use command groups to organize common commands and UI navigation after the group object exists."); //$NON-NLS-1$
+    }
+
     private String buildLanguageWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -766,13 +867,61 @@ public class MetadataBindingProvider
             "After creation, set configuration default language and local string entries appropriately."); //$NON-NLS-1$
     }
 
-    @SuppressWarnings("nls")
     private String buildExternalDataSourceWorkflow()
     {
         return buildTopLevelCreateWorkflow(
             "ExternalDataSource", "ExternalDataSource", "source", "createExternalDataSource()", "getExternalDataSources()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "source.setName(\"WarehouseDwh\");", //$NON-NLS-1$
             "Tables, cubes, fields, dimensions, and resources are child objects created after the source."); //$NON-NLS-1$
+    }
+
+    private String buildStyleWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "Style", "Style", "style", "createStyle()", "getStyles()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "style.setName(\"CorporateStyle\");", //$NON-NLS-1$
+            "After creation, assign the style in configuration defaults or reference it from forms and UI elements."); //$NON-NLS-1$
+    }
+
+    private String buildStyleItemWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "StyleItem", "StyleItem", "styleItem", "createStyleItem()", "getStyleItems()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "styleItem.setName(\"PrimaryButton\");", //$NON-NLS-1$
+            "StyleItem visual type and concrete appearance settings should be configured explicitly after creation."); //$NON-NLS-1$
+    }
+
+    private String buildSequenceWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "Sequence", "Sequence", "sequence", "createSequence()", "getSequences()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "sequence.setName(\"DocumentsSequence\");", //$NON-NLS-1$
+            "After sequence creation, add dimensions and connect participating objects through sequence settings."); //$NON-NLS-1$
+    }
+
+    private String buildXDTOPackageWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "XDTOPackage", "XDTOPackage", "packageObject", "createXDTOPackage()", "getXDTOPackages()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "packageObject.setName(\"CommonSchema\");", //$NON-NLS-1$
+            "Add XDTO package content and imported types after the package metadata object exists."); //$NON-NLS-1$
+    }
+
+    private String buildChartOfCharacteristicTypesWorkflow()
+    {
+        return buildTopLevelCreateWorkflow(
+            "ChartOfCharacteristicTypes", "ChartOfCharacteristicTypes", "chart", "createChartOfCharacteristicTypes()", "getChartsOfCharacteristicTypes()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "chart.setCodeLength(10);\n        chart.setDescriptionLength(100);\n        "
+                + buildStringTypeDescription().replace("\n", "\n        ") + "\n        chart.setType(typeDesc);", //$NON-NLS-1$
+            "ChartOfCharacteristicTypes requires a value `TypeDescription`; replace the sample string type with the actual allowed characteristic value types."); //$NON-NLS-1$
+    }
+
+    private String buildBotWorkflowSafe()
+    {
+        return buildTopLevelCreateWorkflow(
+            "Bot", "Bot", "bot", "createBot()", "getBots()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "bot.setName(\"SupportBot\");", //$NON-NLS-1$
+            "Conversation scenarios, commands, and integration endpoints are configured after the bot metadata object is attached."); //$NON-NLS-1$
     }
 
     @SuppressWarnings("nls")
@@ -3454,434 +3603,6 @@ public class MetadataBindingProvider
     }
 
     @SuppressWarnings("nls")
-    private String buildDeleteCatalogWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete Catalog\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete catalog\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        Catalog catalog = (Catalog)transaction.getTopObjectByFqn(\"Catalog.Products\");\n");
-        desc.append("        \n");
-        desc.append("        if (catalog != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getCatalogs().remove(catalog);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)catalog);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a catalog will cascade delete all its attributes, tabular sections, forms, and templates.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteDocumentWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete Document\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete document\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
-        desc.append("        \n");
-        desc.append("        if (document != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getDocuments().remove(document);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)document);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a document will also delete all its attributes, tabular sections, forms, templates, and related register records.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteAccumulationRegisterWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete AccumulationRegister\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete accumulation register\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        AccumulationRegister register = (AccumulationRegister)transaction.getTopObjectByFqn(\"AccumulationRegister.GoodsInStock\");\n");
-        desc.append("        \n");
-        desc.append("        if (register != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getAccumulationRegisters().remove(register);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting an accumulation register will also delete all its dimensions, resources, forms, and templates.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteAccountingRegisterWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete AccountingRegister\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete accounting register\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        AccountingRegister register = (AccountingRegister)transaction.getTopObjectByFqn(\"AccountingRegister.Accounting\");\n");
-        desc.append("        \n");
-        desc.append("        if (register != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getAccountingRegisters().remove(register);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting an accounting register will also delete all its dimensions, resources, forms, and templates.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteCalculationRegisterWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete CalculationRegister\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete calculation register\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        CalculationRegister register = (CalculationRegister)transaction.getTopObjectByFqn(\"CalculationRegister.SalaryCalculation\");\n");
-        desc.append("        \n");
-        desc.append("        if (register != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getCalculationRegisters().remove(register);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a calculation register will also delete all its dimensions, resources, recalculations, forms, and templates.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteInformationRegisterWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete InformationRegister\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete information register\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        InformationRegister register = (InformationRegister)transaction.getTopObjectByFqn(\"InformationRegister.ExchangeRates\");\n");
-        desc.append("        \n");
-        desc.append("        if (register != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getInformationRegisters().remove(register);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)register);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting an information register will also delete all its dimensions, resources, attributes, forms, and templates.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteEnumWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete Enum\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete enum\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        Enum enumObj = (Enum)transaction.getTopObjectByFqn(\"Enum.Status\");\n");
-        desc.append("        \n");
-        desc.append("        if (enumObj != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getEnums().remove(enumObj);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)enumObj);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting an enum will also delete all its enum values, forms, and templates.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteReportWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete Report\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete report\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        Report report = (Report)transaction.getTopObjectByFqn(\"Report.SalesReport\");\n");
-        desc.append("        \n");
-        desc.append("        if (report != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getReports().remove(report);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)report);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a report will also delete all its forms, templates, commands, and attributes.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteDataProcessorWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete DataProcessor\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete data processor\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        DataProcessor dataProcessor = (DataProcessor)transaction.getTopObjectByFqn(\"DataProcessor.ImportData\");\n");
-        desc.append("        \n");
-        desc.append("        if (dataProcessor != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getDataProcessors().remove(dataProcessor);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)dataProcessor);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a data processor will also delete all its forms, templates, commands, attributes, and tabular sections.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteCommonModuleWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete CommonModule\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete common module\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        CommonModule commonModule = (CommonModule)transaction.getTopObjectByFqn(\"CommonModule.WorkingWithData\");\n");
-        desc.append("        \n");
-        desc.append("        if (commonModule != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getCommonModules().remove(commonModule);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)commonModule);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a common module will also delete all its methods and properties. Check that no other objects reference this module.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteConstantWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete Constant\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete constant\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        Constant constant = (Constant)transaction.getTopObjectByFqn(\"Constant.DefaultWarehouse\");\n");
-        desc.append("        \n");
-        desc.append("        if (constant != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            configuration.getConstants().remove(constant);\n");
-        desc.append("            transaction.detachTopObject((IBmObject)constant);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:** Remove from parent collection and detach from transaction.\n");
-        desc.append("**Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.\n");
-        desc.append("**Note:** Deleting a constant will also delete its value manager if defined. Check that no other objects reference this constant.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
-    private String buildDeleteRegisterObjectsWorkflow()
-    {
-        var desc = new StringBuilder();
-        desc.append("## Safe Workflow: Delete Any Metadata Object\n\n");
-        desc.append("This workflow demonstrates how to delete any metadata object by its FQN.\n\n");
-        desc.append("```java\n");
-        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
-        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
-        desc.append("\n");
-        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Delete metadata object\") {\n");
-        desc.append("    @Override\n");
-        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
-        desc.append("        \n");
-        desc.append("        // Example: Delete ChartOfCharacteristicTypes\n");
-        desc.append("        String objectFqn = \"ChartOfCharacteristicTypes.Properties\";\n");
-        desc.append("        MdObject objectToDelete = (MdObject)transaction.getTopObjectByFqn(objectFqn);\n");
-        desc.append("        \n");
-        desc.append("        if (objectToDelete != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("            \n");
-        desc.append("            // Remove from appropriate collection based on object type\n");
-        desc.append("            if (objectToDelete instanceof Catalog) {\n");
-        desc.append("                configuration.getCatalogs().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof Document) {\n");
-        desc.append("                configuration.getDocuments().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof AccumulationRegister) {\n");
-        desc.append("                configuration.getAccumulationRegisters().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof AccountingRegister) {\n");
-        desc.append("                configuration.getAccountingRegisters().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof CalculationRegister) {\n");
-        desc.append("                configuration.getCalculationRegisters().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof InformationRegister) {\n");
-        desc.append("                configuration.getInformationRegisters().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof Enum) {\n");
-        desc.append("                configuration.getEnums().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof Report) {\n");
-        desc.append("                configuration.getReports().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof DataProcessor) {\n");
-        desc.append("                configuration.getDataProcessors().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof CommonModule) {\n");
-        desc.append("                configuration.getCommonModules().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof Constant) {\n");
-        desc.append("                configuration.getConstants().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof ChartOfCharacteristicTypes) {\n");
-        desc.append("                configuration.getChartsOfCharacteristicTypes().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof ChartOfAccounts) {\n");
-        desc.append("                configuration.getChartsOfAccounts().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof ChartOfCalculationTypes) {\n");
-        desc.append("                configuration.getChartsOfCalculationTypes().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof ExchangePlan) {\n");
-        desc.append("                configuration.getExchangePlans().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof BusinessProcess) {\n");
-        desc.append("                configuration.getBusinessProcesses().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof Task) {\n");
-        desc.append("                configuration.getTasks().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof DocumentJournal) {\n");
-        desc.append("                configuration.getDocumentJournals().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof DocumentNumerator) {\n");
-        desc.append("                configuration.getDocumentNumerators().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof Sequence) {\n");
-        desc.append("                configuration.getSequences().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof DefinedType) {\n");
-        desc.append("                configuration.getDefinedTypes().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof SettingsStorage) {\n");
-        desc.append("                configuration.getSettingsStorages().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof FilterCriterion) {\n");
-        desc.append("                configuration.getFilterCriteria().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof EventSubscription) {\n");
-        desc.append("                configuration.getEventSubscriptions().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof ScheduledJob) {\n");
-        desc.append("                configuration.getScheduledJobs().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof FunctionalOption) {\n");
-        desc.append("                configuration.getFunctionalOptions().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof CommonAttribute) {\n");
-        desc.append("                configuration.getCommonAttributes().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof CommonForm) {\n");
-        desc.append("                configuration.getCommonForms().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof CommonTemplate) {\n");
-        desc.append("                configuration.getCommonTemplates().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof CommonCommand) {\n");
-        desc.append("                configuration.getCommonCommands().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof WebService) {\n");
-        desc.append("                configuration.getWebServices().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof HTTPService) {\n");
-        desc.append("                configuration.getHttpServices().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof IntegrationService) {\n");
-        desc.append("                configuration.getIntegrationServices().remove(objectToDelete);\n");
-        desc.append("            } else if (objectToDelete instanceof WSReference) {\n");
-        desc.append("                configuration.getWsReferences().remove(objectToDelete);\n");
-        desc.append("            }\n");
-        desc.append("            \n");
-        desc.append("            transaction.detachTopObject((IBmObject)objectToDelete);\n");
-        desc.append("        }\n");
-        desc.append("        return null;\n");
-        desc.append("    }\n");
-        desc.append("});\n");
-        desc.append("```\n");
-        desc.append("**IMPORTANT:**\n");
-        desc.append("1. Remove object from the appropriate parent collection based on its type\n");
-        desc.append("2. Then detach from transaction: `transaction.detachTopObject((IBmObject)object)`\n");
-        desc.append("3. Do NOT use `EcoreUtil.delete()` for top-level objects - causes `UnsupportedOperationException`\n");
-        desc.append("4. Deleting an object will cascade delete all its child objects (attributes, forms, templates, etc.)\n");
-        desc.append("5. Check that no other objects reference the object being deleted\n");
-        desc.append("6. Always validate after deletion to check for reference errors\n");
-        desc.append("**Supported object types for deletion:** Catalog, Document, AccumulationRegister, AccountingRegister, CalculationRegister, InformationRegister, ChartOfCharacteristicTypes, ChartOfAccounts, ChartOfCalculationTypes, Enum, Report, DataProcessor, ExternalReport, ExternalDataProcessor, CommonModule, Constant, ExchangePlan, BusinessProcess, Task, Sequence, DocumentJournal, DocumentNumerator, DefinedType, SettingsStorage, FilterCriterion, EventSubscription, ScheduledJob, FunctionalOption, CommonAttribute, CommonForm, CommonTemplate, CommonCommand, WebService, HTTPService, IntegrationService, WSReference, and others.\n");
-        return desc.toString();
-    }
-
-    @SuppressWarnings("nls")
     private String buildCreateConfigurationWorkflow()
     {
         var desc = new StringBuilder();
@@ -4218,7 +3939,7 @@ public class MetadataBindingProvider
         desc.append("**Note:** After creating the common module metadata, create the corresponding Module.bsl file\n");
         desc.append("in the project: `src/CommonModules/<ModuleName>/Module.bsl`\n");
         desc.append("**Deletion:** Common modules can be deleted by removing from configuration.getCommonModules()\n");
-        desc.append("and detaching from transaction. See buildDeleteCommonModuleWorkflow() for details.\n");
+        desc.append("and detaching from transaction. Remove the module from configuration.getCommonModules() and detach it from the transaction.\n");
         desc.append("**Properties explanation:**\n");
         desc.append("- `server`: Execution on server side\n");
         desc.append("- `clientManagedApplication`: Execution in managed application client\n");
