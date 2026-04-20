@@ -215,7 +215,8 @@ public class JShellMcpTool
 		var description = new StringBuilder();
         description.append("Executes Java code using JShell REPL. Preserves state across executions.");
 		description.append("\n\n**IMPORTANT:**");
-        description.append("\n- For EDT metadata or Eclipse API code generation, call ").append(JShellManualMcpTool.TOOL_NAME)
+        description.append("\n- For EDT metadata or Eclipse API code generation, you MUST call ")
+            .append(JShellManualMcpTool.TOOL_NAME)
             .append(" first to get a scenario-specific template");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
@@ -245,7 +246,8 @@ public class JShellMcpTool
 		}
 
 		description.append("\n\n**Workflow:**");
-        description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME).append(" to get guidance for the scenario");
+        description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" to get guidance for the scenario");
 		description.append("\n2. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
         description.append("\n3. Use ").append(TOOL_NAME).append(" with that ID to execute code");
 		description.append("\n4. Reuse same ID to maintain state");

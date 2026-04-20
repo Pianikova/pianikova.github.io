@@ -209,6 +209,16 @@ public class MetadataBindingProvider
             buildOverviewManual(),
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             List.of("edt", "metadata", "transaction", "types", "pitfalls"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+        entries.add(new JShellManualEntry("create_configuration_project", "edt", "Create Configuration Project", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create a new 1C configuration project in the Eclipse workspace with the required project structure.", //$NON-NLS-1$
+            buildCreateConfigurationWorkflow(),
+            List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            List.of("configuration", "configuration project", "create configuration", "create project"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("delete_configuration_project", "edt", "Delete Configuration Project", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Delete an existing 1C configuration project from the workspace and clean up associated resources.", //$NON-NLS-1$
+            buildDeleteConfigurationWorkflow(),
+            List.of("workspaceRoot", "projectManager"), //$NON-NLS-1$ //$NON-NLS-2$
+            List.of("configuration", "configuration project", "delete configuration", "delete project"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 
         entries.add(new JShellManualEntry("create_catalog", "edt", "Create Catalog", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Create a top-level Catalog safely inside a BM transaction.", buildSafeCatalogWorkflow(), //$NON-NLS-1$
@@ -859,10 +869,24 @@ public class MetadataBindingProvider
         desc.append(buildDocumentRefTypeDescription()).append("\n");
         desc.append("### Enum reference\n");
         desc.append(buildEnumRefTypeDescription()).append("\n");
+        desc.append("### Validate proxy before addType\n");
+        desc.append("```java\n");
+        desc.append("TypeItem unitsRef = (TypeItem)typeProvider.getProxy(\"Catalog.Units\");\n");
+        desc.append("if (unitsRef == null) {\n");
+        desc.append("    System.err.println(\"ERROR: Cannot resolve type proxy Catalog.Units\");\n");
+        desc.append("    return null;\n");
+        desc.append("}\n");
+        desc.append("TypeDescription unitsType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(unitsRef)\n");
+        desc.append("    .build();\n");
+        desc.append("```\n");
         desc.append("### Rules\n");
         desc.append("- Prefer a specific proxy like `Catalog.Products` when the business rule is narrow\n");
         desc.append("- Use generic IEObjectTypeNames only when polymorphism is desired\n");
         desc.append("- Build the type before assigning it to attributes, dimensions, resources, constants, or defined types\n");
+        desc.append("- Always validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`\n");
+        desc.append("- Specific references only work for metadata objects that already exist and are visible to the current transaction\n");
+        desc.append("- When a specific proxy is unavailable, fall back to a generic type like `IEObjectTypeNames.CATALOG_REF`\n");
         return desc.toString();
     }
 
@@ -1827,6 +1851,30 @@ public class MetadataBindingProvider
         desc.append("});\n");
         desc.append("```\n\n");
 
+        desc.append("### HierarchyType constants\n\n");
+        desc.append("- `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` is available and safe as a default\n");
+        desc.append("- `HierarchyType.HIERARCHY_OF_ITEMS` is available when folders are not needed\n");
+        desc.append("- `HierarchyType.HIERARCHY_GROUPS` does not exist in EDT API\n");
+        desc.append("- `HierarchyType.HIERARCHY_HIERARCHICAL` does not exist in EDT API\n\n");
+
+        desc.append("### Safe reference type pattern\n\n");
+        desc.append("```java\n");
+        desc.append("TypeItem unitsRef = (TypeItem)typeProvider.getProxy(\"Catalog.Units\");\n");
+        desc.append("if (unitsRef == null) {\n");
+        desc.append("    System.err.println(\"ERROR: Cannot resolve Catalog.Units\");\n");
+        desc.append("    TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("    TypeDescription fallbackType = new TypeDescriptionBuilder()\n");
+        desc.append("        .addType(catalogRef)\n");
+        desc.append("        .build();\n");
+        desc.append("    article.setType(fallbackType);\n");
+        desc.append("} else {\n");
+        desc.append("    TypeDescription strictType = new TypeDescriptionBuilder()\n");
+        desc.append("        .addType(unitsRef)\n");
+        desc.append("        .build();\n");
+        desc.append("    article.setType(strictType);\n");
+        desc.append("}\n");
+        desc.append("```\n\n");
+
         desc.append("### Register Type Example\n\n");
         desc.append("```java\n");
         desc.append("// Create information register with dimensions of different types\n");
@@ -1912,6 +1960,9 @@ public class MetadataBindingProvider
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
         desc.append("// Error: SU45 - UUID required\n");
         desc.append("```\n");
+        desc.append("\n### Important notes\n");
+        desc.append("- Validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`\n");
+        desc.append("- References to metadata objects created in the same unfinished scenario may be unavailable; use a generic reference type or split work into steps\n");
         return desc.toString();
     }
 
@@ -2875,6 +2926,23 @@ public class MetadataBindingProvider
         var desc = new StringBuilder();
         desc.append("## Common Pitfalls and Solutions\n\n");
         desc.append("This section covers the most frequent mistakes when working with metadata creation and editing.\n\n");
+        desc.append("### ❌ Pitfall #0: `return;` inside task code that expects a value\n\n");
+        desc.append("**Error:** `incompatible types: missing return value`\n\n");
+        desc.append("**Problem:** Using `return;` inside `AbstractBmTask.execute()` when the method returns `Void` or another value.\n\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG CODE\n");
+        desc.append("if (projectHandle.exists()) {\n");
+        desc.append("    System.err.println(\"ERROR: Project already exists\");\n");
+        desc.append("    // Stop here in JShell and choose another project name.\n");
+        desc.append("}\n");
+        desc.append("```\n\n");
+        desc.append("```java\n");
+        desc.append("// ✅ CORRECT CODE\n");
+        desc.append("if (projectHandle.exists()) {\n");
+        desc.append("    System.err.println(\"ERROR: Project already exists\");\n");
+        desc.append("    return null;\n");
+        desc.append("}\n");
+        desc.append("```\n\n");
 
         desc.append("### ❌ Pitfall #1: attachTopObject on existing object\n\n");
         desc.append("**Error:** `BmFqnAlreadyInUseException`\n\n");
@@ -2936,7 +3004,7 @@ public class MetadataBindingProvider
         desc.append("```java\n");
         desc.append("// ✅ CORRECT CODE - Option 1: Manual UUID assignment (RECOMMENDED for JShell)\n");
         desc.append("import java.util.UUID;\n");
-        desc.append("Catalog catalog = mdFactory.cr eateCatalog();\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setUuid(UUID.randomUUID());\n");
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
@@ -3112,6 +3180,27 @@ public class MetadataBindingProvider
         desc.append("    }\\n");
         desc.append("});\\n");
         desc.append("```\\n\\n");
+
+        desc.append("### Updated guidance: enum constants and TypeDescription proxies\n\n");
+        desc.append("**HierarchyType:** use only `HIERARCHY_FOLDERS_AND_ITEMS` or `HIERARCHY_OF_ITEMS`.\n");
+        desc.append("`HIERARCHY_GROUPS` and `HIERARCHY_HIERARCHICAL` are not present in EDT API.\n\n");
+        desc.append("```java\n");
+        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);\n");
+        desc.append("// or\n");
+        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_OF_ITEMS);\n");
+        desc.append("```\n\n");
+        desc.append("**TypeDescriptionBuilder:** always validate `typeProvider.getProxy(...)` before `addType(...)`.\n");
+        desc.append("Unresolved specific proxies may happen for typos, non-existent metadata, or references to objects that are not yet visible.\n\n");
+        desc.append("```java\n");
+        desc.append("TypeItem proxy = (TypeItem)typeProvider.getProxy(\"Catalog.Units\");\n");
+        desc.append("if (proxy == null) {\n");
+        desc.append("    System.err.println(\"ERROR: Cannot resolve Catalog.Units\");\n");
+        desc.append("    return null;\n");
+        desc.append("}\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(proxy)\n");
+        desc.append("    .build();\n");
+        desc.append("```\n\n");
 
         desc.append("### ❌ Pitfall #10: Runtime BmFqnAlreadyInUseException\\n\\n");
         desc.append("**Error:** `com._1c.g5.v8.bm.core.BmFqnAlreadyInUseException`\\n");
@@ -3725,7 +3814,7 @@ public class MetadataBindingProvider
         desc.append("// Step 2: Check if project already exists\n");
         desc.append("if (projectHandle.exists()) {\n");
         desc.append("    System.err.println(\"ERROR: Project already exists: \" + projectName);\n");
-        desc.append("    return;\n");
+        desc.append("    // Stop here in JShell and choose another project name.\n");
         desc.append("}\n");
         desc.append("\n");
         desc.append("try {\n");
@@ -3834,7 +3923,7 @@ public class MetadataBindingProvider
         desc.append("    if (!initialized) {\n");
         desc.append("        System.err.println(\"ERROR: Project initialization failed after \" + maxAttempts + \" attempts\");\n");
         desc.append("        System.err.println(\"Please check project logs for details\");\n");
-        desc.append("        return;\n");
+        desc.append("        // Stop here in JShell and inspect project logs before continuing.\n");
         desc.append("    }\n");
         desc.append("\n");
         desc.append("} catch (CoreException | UnsupportedEncodingException e) {\n");
@@ -4005,7 +4094,7 @@ public class MetadataBindingProvider
         desc.append("    \n");
         desc.append("    if (!project.exists()) {\n");
         desc.append("        System.out.println(\"Project does not exist: \" + projectName);\n");
-        desc.append("        return;\n");
+        desc.append("        // Stop here in JShell because the project does not exist.\n");
         desc.append("    }\n");
         desc.append("    \n");
         desc.append("    try {\n");

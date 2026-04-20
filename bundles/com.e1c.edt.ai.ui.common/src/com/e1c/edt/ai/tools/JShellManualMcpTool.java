@@ -290,8 +290,9 @@ public class JShellManualMcpTool
         var description = new StringBuilder();
         description.append("Provides scenario-oriented guidance for writing Java code for ")
             .append(JShellMcpTool.TOOL_NAME).append(".\n\n");
-        description.append("Use this tool before ").append(JShellMcpTool.TOOL_NAME)
-            .append(" when working with EDT metadata API or Eclipse platform API.\n\n");
+        description.append("You MUST use this tool before ").append(JShellMcpTool.TOOL_NAME)
+            .append(" when working with EDT metadata API or Eclipse platform API.\n");
+        description.append("Use it for create/edit/delete/look-up scenarios, for workbench/editor/workspace code, and for any code that uses bindings like `mdFactory`, `modelManager`, `projectManager`, `workspaceRoot`, `workbench`, `resourceLookup`, or `fqnGenerator`.\n\n");
         description.append("What it returns:\n");
         description.append("- recommended bindings\n");
         description.append("- workflow and safety rules\n");
@@ -301,6 +302,9 @@ public class JShellManualMcpTool
         description.append("1. Call ").append(TOOL_NAME).append(" with a scenario like `create_catalog`.\n");
         description.append("2. Create or reuse a session with ").append(JShellSessionMcpTool.TOOL_NAME).append(".\n");
         description.append("3. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
+        description.append("4. If ").append(JShellMcpTool.TOOL_NAME)
+            .append(" returns an EDT/Eclipse preflight error, come back to ").append(TOOL_NAME)
+            .append(" with a better matching scenario.\n");
 
         spec.function.description = description.toString();
 

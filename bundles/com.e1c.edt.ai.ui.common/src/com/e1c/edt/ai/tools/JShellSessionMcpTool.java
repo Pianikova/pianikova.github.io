@@ -121,9 +121,15 @@ public class JShellSessionMcpTool
 
 		description.append("\n\n**When to use:**");
         description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" for execution");
-        description.append("\n- After calling ").append(JShellManualMcpTool.TOOL_NAME).append(" to get a scenario-specific template");
-		description.append("\n- To check available bindings and execution history");
+        description.append("\n- After calling ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" to get a scenario-specific template");
+        description.append("\n- To check available bindings and execution history");
 		description.append("\n- To get session info for existing session");
+
+        description.append("\n\n**Required flow for EDT/Eclipse scenarios:**");
+        description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME).append(" first");
+        description.append("\n2. Call ").append(TOOL_NAME).append(" to get a session");
+        description.append("\n3. Call ").append(JShellMcpTool.TOOL_NAME).append(" to execute the prepared code");
 
 		description.append("\n\n**Usage:**");
 		description.append("\n- If `repl_session_id` is not provided → creates NEW session");
