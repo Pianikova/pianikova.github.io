@@ -843,9 +843,49 @@ public class MetadataBindingProvider
         desc.append("article.setType(typeDesc);\n");
         desc.append("catalog.getAttributes().add(article);\n");
         desc.append("```\n\n");
+        desc.append("### Safe checklist\n");
+        desc.append("1. Choose the exact child class for the parent (`CatalogAttribute`, `DocumentAttribute`, `TabularSectionAttribute`, ...)\n");
+        desc.append("2. Set `name` and `uuid` on the new child object\n");
+        desc.append("3. Resolve `IEObjectProvider` INSIDE the current transaction\n");
+        desc.append("4. Build `TypeDescription` BEFORE adding the object to the parent collection\n");
+        desc.append("5. Call `setType(typeDesc)` on every object derived from `BasicFeature`\n");
+        desc.append("6. Only after `setType(...)` add the object to `getAttributes()` / `getDimensions()` / `getResources()`\n\n");
+        desc.append("### Wrong vs correct\n");
+        desc.append("```java\n");
+        desc.append("// WRONG: adding BasicFeature child without type\n");
+        desc.append("DocumentAttribute counterparty = mdFactory.createDocumentAttribute();\n");
+        desc.append("counterparty.setName(\"Counterparty\");\n");
+        desc.append("counterparty.setUuid(UUID.randomUUID());\n");
+        desc.append("document.getAttributes().add(counterparty); // md-legacy-emf-check: type is required\n\n");
+        desc.append("// CORRECT: build and assign TypeDescription first\n");
+        desc.append("DocumentAttribute counterparty = mdFactory.createDocumentAttribute();\n");
+        desc.append("counterparty.setName(\"Counterparty\");\n");
+        desc.append("counterparty.setUuid(UUID.randomUUID());\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("TypeDescription counterpartyType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(catalogRefType)\n");
+        desc.append("    .build();\n");
+        desc.append("counterparty.setType(counterpartyType);\n");
+        desc.append("document.getAttributes().add(counterparty);\n");
+        desc.append("```\n\n");
+        desc.append("### Tabular section example\n");
+        desc.append("```java\n");
+        desc.append("TabularSectionAttribute quantity = mdFactory.createTabularSectionAttribute();\n");
+        desc.append("quantity.setName(\"Quantity\");\n");
+        desc.append("quantity.setUuid(UUID.randomUUID());\n");
+        desc.append("TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("TypeDescription quantityType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(numberType)\n");
+        desc.append("    .build();\n");
+        desc.append("quantity.setType(quantityType);\n");
+        desc.append("products.getAttributes().add(quantity);\n");
+        desc.append("```\n\n");
         desc.append("### Rules\n");
         desc.append("- Always choose the child class that matches the parent entity\n");
-        desc.append("- Every attribute derived from `BasicFeature` must have `setType(...)`\n");
+        desc.append("- Every attribute derived from `BasicFeature` must have `setType(...)` before it is added to the parent collection\n");
+        desc.append("- `CatalogAttribute`, `DocumentAttribute`, and `TabularSectionAttribute` are the most common sources of `md-legacy-emf-check` when `type` is omitted\n");
         desc.append("- For child objects, UUID is still recommended in JShell\n");
         return desc.toString();
     }
@@ -1032,7 +1072,7 @@ public class MetadataBindingProvider
         desc.append("        AccumulationRegister register = mdFactory.createAccumulationRegister();\n");
         desc.append("        register.setName(\"GoodsInStock\");\n");
         desc.append("        register.getSynonym().put(\"ru\", \"Goods In Stock\");\n");
-        desc.append("        register.setRegisterType(AccumulationRegisterType.Balance);\n");
+        desc.append("        register.setRegisterType(AccumulationRegisterType.BALANCE);\n");
         desc.append("\n");
         desc.append("        // Add dimension\n");
         desc.append(
@@ -1051,7 +1091,9 @@ public class MetadataBindingProvider
         desc.append("        quantity.setName(\"Quantity\");\n");
         desc.append("        quantity.getSynonym().put(\"ru\", \"Quantity\");\n");
         desc.append("\n");
-        desc.append("        // Set type for resource (Number or other)\n");
+        desc.append("        // Set numeric type for resource\n");
+        desc.append("        ").append(buildNumberTypeDescription().replace("\n", "\n        "));
+        desc.append("\n");
         desc.append("        quantity.setType(typeDesc);\n");
         desc.append("        register.getResources().add(quantity);\n");
         desc.append("\n");
@@ -1108,7 +1150,7 @@ public class MetadataBindingProvider
         desc.append("        account.getSynonym().put(\"ru\", \"Account\");\n");
         desc.append("        account.setBalance(true);\n");
         desc.append("\n");
-        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        "));
+        desc.append("        ").append(buildChartOfAccountsRefTypeDescription().replace("\n", "\n        "));
         desc.append("\n");
         desc.append("        account.setType(typeDesc);\n");
         desc.append("        register.getDimensions().add(account);\n");
@@ -1118,6 +1160,8 @@ public class MetadataBindingProvider
         desc.append("        amount.setName(\"Amount\");\n");
         desc.append("        amount.getSynonym().put(\"ru\", \"Amount\");\n");
         desc.append("        amount.setBalance(true);\n");
+        desc.append("\n");
+        desc.append("        ").append(buildNumberTypeDescription().replace("\n", "\n        "));
         desc.append("\n");
         desc.append("        amount.setType(typeDesc);\n");
         desc.append("        register.getResources().add(amount);\n");
@@ -1136,7 +1180,8 @@ public class MetadataBindingProvider
         desc.append("});\n");
         desc.append("```\n");
         desc.append(
-            "**Note:** AccountingRegister requires ChartOfAccounts reference and at least one Dimension with Account type.\n");
+            "**Note:** AccountingRegister requires ChartOfAccounts reference and at least one Dimension with account reference type.\n");
+        desc.append("**Note:** `AccountingRegisterDimension` and `AccountingRegisterResource` support `setBalance(boolean)` in EDT API.\n");
         return desc.toString();
     }
 
@@ -1162,7 +1207,7 @@ public class MetadataBindingProvider
         desc.append("        CalculationRegister register = mdFactory.createCalculationRegister();\n");
         desc.append("        register.setName(\"SalaryCalculation\");\n");
         desc.append("        register.getSynonym().put(\"ru\", \"Salary Calculation\");\n");
-        desc.append("        register.setPeriodicity(CalculationRegisterPeriodicity.Month);\n");
+        desc.append("        register.setPeriodicity(CalculationRegisterPeriodicity.MONTH);\n");
         desc.append("        register.setActionPeriod(true);\n");
         desc.append("        register.setBasePeriod(false);\n");
         desc.append("\n");
@@ -1188,6 +1233,8 @@ public class MetadataBindingProvider
         desc.append("        amount.setName(\"Amount\");\n");
         desc.append("        amount.getSynonym().put(\"ru\", \"Amount\");\n");
         desc.append("\n");
+        desc.append("        ").append(buildNumberTypeDescription().replace("\n", "\n        "));
+        desc.append("\n");
         desc.append("        amount.setType(typeDesc);\n");
         desc.append("        register.getResources().add(amount);\n");
         desc.append("\n");
@@ -1212,6 +1259,7 @@ public class MetadataBindingProvider
         desc.append("```\n");
         desc.append(
             "**Note:** CalculationRegister requires ChartOfCalculationTypes reference and at least one base Dimension.\n");
+        desc.append("**Note:** Use a numeric type for calculation resources such as amount; do not reuse a reference type from a dimension.\n");
         return desc.toString();
     }
 
@@ -1240,6 +1288,7 @@ public class MetadataBindingProvider
         desc.append("- Localized fields (`synonym`, `comment`, `toolTip`) are `EMap<String, String>`: use `put(\"ru\", \"...\")`\n");
         desc.append("- Type qualifiers (StringQualifiers, NumberQualifiers) are ABSTRACT classes - CANNOT instantiate directly\n");
         desc.append("- For type handling: use `TypeDescriptionBuilder` WITHOUT qualifiers or use default types\n\n");
+        desc.append("- If the new child object extends `BasicFeature`, treat `setType(...)` as mandatory, not optional\n\n");
 
         desc.append("#### Metadata Object-Specific Rules\n\n");
         desc.append("**Catalog (Справочник):**\n");
@@ -1251,12 +1300,13 @@ public class MetadataBindingProvider
         desc.append("**Document (Документ):**\n");
         desc.append("- Use `DocumentNumberType.NUMBER` or `DocumentNumberType.STRING`\\n");
         desc.append("- Use `DocumentNumberPeriodicity.NONPERIODICAL` (correct enum constant)\\n");
-        desc.append("- Supports: posting, realTimePosting, registerRecordsDeletion, sequenceFilling\\n");
+        desc.append("- Supports: realTimePosting, registerRecordsDeletion, sequenceFilling\\n");
+        desc.append("- Do not use `setPosted(...)` - this setter is not present in EDT API\\n\\n");
         desc.append("- May reference: numerator, registerRecords (array of BasicRegister)\\n\\n");
 
         desc.append("**InformationRegister (РегистрСведений):**\n");
-        desc.append("- Use `InformationRegisterPeriodicity` (Nonperiodical, Second, Day, Month, Quarter, Year)\n");
-        desc.append("- Use `RegisterWriteMode` (Independent, RecorderSubordinate)\n");
+        desc.append("- Use `InformationRegisterPeriodicity.NONPERIODICAL`, `SECOND`, `DAY`, `MONTH`, `QUARTER`, `YEAR`, `RECORDER_POSITION`\n");
+        desc.append("- Use `RegisterWriteMode.INDEPENDENT` or `RegisterWriteMode.RECORDER_SUBORDINATE`\n");
         desc.append("- Contains: resources, attributes, dimensions (all require types)\n\n");
 
         desc.append("**Enum (Перечисление):**\n");
@@ -1353,7 +1403,7 @@ public class MetadataBindingProvider
         desc.append("**MUST be created INSIDE BM transaction context:**\n");
         desc.append("- IEObjectProvider MUST use `v8project.getVersion()` from a properly initialized IV8Project\n");
         desc.append("- TypeItem proxies MUST be obtained and used within the SAME IBmTransaction\n");
-        desc.append("- DO NOT obtain v8project outside transaction and use it inside\n");
+        desc.append("- It is safe to reuse the already resolved `v8project`, but resolve `TypeItem` and build `TypeDescription` inside the current transaction\n");
         desc.append("- DO NOT reuse TypeDescription created in a different transaction context\n\n");
         desc.append("**Correct usage pattern:**\n");
         desc.append("```java\n");
@@ -1936,9 +1986,9 @@ public class MetadataBindingProvider
         desc.append("accReg.getDimensions().add(accountDim);\n");
         desc.append("```\n\n");
 
-        desc.append("### Option 2: Use modelFactory.fillDefaultReferences()\n");
-        desc.append("⚠️ **WARNING:** This method may timeout in JShell due to OSGi service limitations.\n");
-        desc.append("Use manual UUID assignment (Option 1) for reliable JShell execution.\n\n");
+        desc.append("### JShell-safe UUID strategy\n");
+        desc.append("⚠️ **WARNING:** `modelFactory.fillDefaultReferences()` may timeout in JShell due to OSGi service limitations.\n");
+        desc.append("Prefer manual UUID assignment (Option 1) for reliable JShell execution.\n\n");
         desc.append("```java\n");
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
@@ -2043,7 +2093,7 @@ public class MetadataBindingProvider
         desc.append("1. **MUST be used ONLY inside BM transaction** (`AbstractBmTask.execute()` body)\n");
         desc.append("2. **Do NOT use for editing existing objects** - use `getTopObjectByFqn()` instead\n");
         desc.append(
-            "3. **Objects MUST have UUIDs set** - use manual assignment `object.setUuid(UUID.randomUUID())` for JShell (RECOMMENDED) or `modelFactory.fillDefaultReferences(object)`\n");
+            "3. **Objects MUST have UUIDs set** - use manual assignment `object.setUuid(UUID.randomUUID())` for JShell (RECOMMENDED); avoid `modelFactory.fillDefaultReferences(object)` in JShell because it may timeout\n");
         desc.append("4. **Do NOT use `attachTopObject()` for existing objects** - causes `BmFqnAlreadyInUseException`\n\n");
 
         desc.append("### Supported Metadata Object Types:\n\n");
@@ -2176,8 +2226,8 @@ public class MetadataBindingProvider
         }
 
         desc.append("\n");
-        desc.append("**Note:** For top-level objects in project context, `modelFactory` is preferred but may have OSGi timeout issues.\n");
-        desc.append("`mdFactory` is recommended for most operations due to better reliability in JShell context.");
+        desc.append("**Note:** In JShell, prefer `mdFactory` plus manual UUID assignment for new metadata objects.\n");
+        desc.append("Use `modelFactory` only when you specifically need its higher-level behavior and can tolerate possible OSGi timeout issues.");
         return desc.toString();
     }
 
@@ -2216,7 +2266,8 @@ public class MetadataBindingProvider
     {
         var desc = new StringBuilder();
         desc.append("## IModelObjectFactory\n\n");
-        desc.append("Preferred way to create objects in project/version context.\n\n");
+        desc.append("Higher-level creation API for project/version context.\n");
+        desc.append("For JShell, prefer `mdFactory` plus manual UUID assignment because `fillDefaultReferences(...)` may timeout.\n\n");
         desc.append("```java\n");
         desc.append("Catalog catalog = (Catalog)modelFactory.create(MdClassPackage.Literals.CATALOG, v8project);\n");
         desc.append("catalog.setName(\"Products\");\n");
@@ -2226,7 +2277,7 @@ public class MetadataBindingProvider
         desc.append("attribute.setName(\"Article\");\n");
         desc.append("catalog.getAttributes().add(attribute);\n");
         desc.append("\n");
-        desc.append("modelFactory.fillDefaultReferences(catalog);\n");
+        desc.append("// modelFactory.fillDefaultReferences(catalog); // Avoid in JShell\n");
         desc.append("```\n");
         return desc.toString();
     }
@@ -2750,6 +2801,34 @@ public class MetadataBindingProvider
         desc.append("        dateAttr.setType(dateTypeDesc);\n");
         desc.append("        document.getAttributes().add(dateAttr);\n");
         desc.append("\n");
+        desc.append("        // Add tabular section with typed line attributes\n");
+        desc.append("        DocumentTabularSection products = mdFactory.createDocumentTabularSection();\n");
+        desc.append("        products.setName(\"Products\");\n");
+        desc.append("        products.getSynonym().put(\"ru\", \"РўРѕРІР°СЂС‹\");\n");
+        desc.append("        products.setUuid(UUID.randomUUID());\n");
+        desc.append("\n");
+        desc.append("        TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();\n");
+        desc.append("        product.setName(\"Product\");\n");
+        desc.append("        product.getSynonym().put(\"ru\", \"РќРѕРјРµРЅРєР»Р°С‚СѓСЂР°\");\n");
+        desc.append("        TypeDescription productType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(catalogRefType)\n");
+        desc.append("            .build();\n");
+        desc.append("        product.setType(productType);\n");
+        desc.append("        product.setUuid(UUID.randomUUID());\n");
+        desc.append("        products.getAttributes().add(product);\n");
+        desc.append("\n");
+        desc.append("        TabularSectionAttribute quantity = mdFactory.createTabularSectionAttribute();\n");
+        desc.append("        quantity.setName(\"Quantity\");\n");
+        desc.append("        quantity.getSynonym().put(\"ru\", \"РљРѕР»РёС‡РµСЃС‚РІРѕ\");\n");
+        desc.append("        TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("        TypeDescription quantityType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(numberType)\n");
+        desc.append("            .build();\n");
+        desc.append("        quantity.setType(quantityType);\n");
+        desc.append("        quantity.setUuid(UUID.randomUUID());\n");
+        desc.append("        products.getAttributes().add(quantity);\n");
+        desc.append("        document.getTabularSections().add(products);\n");
+        desc.append("\n");
         desc.append("        // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
         desc.append("        document.setUuid(UUID.randomUUID());\n");
         desc.append("        warehouse.setUuid(UUID.randomUUID());\n");
@@ -2773,6 +2852,7 @@ public class MetadataBindingProvider
         desc.append("- **TypeDescriptionBuilder** must be used INSIDE the transaction\n");
         desc.append("- **IEObjectProvider** must use `v8project.getVersion()` for version compatibility\n");
         desc.append("- **UUIDs** MUST be set for document and all attributes to avoid SU45 errors\n");
+        desc.append("- **Every `DocumentAttribute` and `TabularSectionAttribute` must call `setType(...)`** before `add(...)`; otherwise EDT reports `md-legacy-emf-check` / `type is required`\n");
         desc.append("- **Check before creating** to avoid `BmFqnAlreadyInUseException`\n");
         return desc.toString();
     }
@@ -3117,7 +3197,7 @@ public class MetadataBindingProvider
 
         desc.append("### ❌ Pitfall #8: Incorrect Enum Constants in JShell\\n\\n");
         desc.append("**Error:** Compilation error - cannot find symbol or type mismatch\\n\\n");
-        desc.append("**Problem:** Using incorrect enum constant names (wrong case or format).\\n\\n");
+        desc.append("**Problem:** Using outdated enum constants or passing the wrong parameter type.\\n\\n");
         desc.append("```java\\n");
         desc.append("// ❌ WRONG CODE - Incorrect enum constants\\n");
         desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS); // Does not exist\\n");
@@ -3231,13 +3311,14 @@ public class MetadataBindingProvider
     {
         var desc = new StringBuilder();
         desc.append("## Metadata Validation Errors - Common Fixes\n\n");
-        desc.append("### SU45: UUID Required for Metadata Objects\n\n");
+        desc.append("### Missing `type` on `BasicFeature` (`md-legacy-emf-check`)\n\n");
         desc.append("**Error Message:** \"Должна быть задана сущность 'type', необходимая для...\" or \"Тип не указан\"\n\n");
-        desc.append("**Problem:** An attribute or metadata object is missing a required type definition.\n\n");
+        desc.append("**Problem:** A metadata object derived from `BasicFeature` is missing a required type definition.\n\n");
         desc.append("**Common Causes:**\n");
-        desc.append("- Attribute created without TypeDescription set\n");
-        desc.append("- TypeDescription created but type not specified\n");
-        desc.append("- String/Number qualifiers missing or incorrectly configured\n\n");
+        desc.append("- `CatalogAttribute` added without TypeDescription\n");
+        desc.append("- `DocumentAttribute` added without TypeDescription\n");
+        desc.append("- `TabularSectionAttribute` added without TypeDescription\n");
+        desc.append("- TypeDescription created with `null` proxy or not assigned via `setType(...)`\n\n");
         desc.append("**Fix Pattern:**\n");
         desc.append("```java\n");
         desc.append("// Get the attribute and set its type\n");
@@ -3710,7 +3791,7 @@ public class MetadataBindingProvider
         desc.append("        MdObject objectToDelete = (MdObject)transaction.getTopObjectByFqn(objectFqn);\n");
         desc.append("        \n");
         desc.append("        if (objectToDelete != null) {\n");
-        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\\\"Configuration\\\"\");\n");
+        desc.append("            Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
         desc.append("            \n");
         desc.append("            // Remove from appropriate collection based on object type\n");
         desc.append("            if (objectToDelete instanceof Catalog) {\n");
