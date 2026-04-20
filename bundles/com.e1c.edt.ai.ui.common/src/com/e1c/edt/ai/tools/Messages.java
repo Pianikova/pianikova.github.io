@@ -103,6 +103,8 @@ public class Messages
     public static String JShellAvailableBindings;
     public static String JShellSessionCreating;
     public static String JShellSessionPreWarming;
+    public static String JShellManualRequest;
+    public static String JShellManualResponse;
 
     // Marker operations
     public static String MarkersTitle;

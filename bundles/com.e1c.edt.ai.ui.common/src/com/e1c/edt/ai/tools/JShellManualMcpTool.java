@@ -191,55 +191,13 @@ public class JShellManualMcpTool
 
     private String buildRequestMarkdown(Request request)
     {
-        if (request.scenario == null || request.scenario.isBlank())
-        {
-            return "Collecting JShell manual scenarios."; //$NON-NLS-1$
-        }
-        return "Preparing JShell manual for scenario `" + request.scenario + "`."; //$NON-NLS-1$ //$NON-NLS-2$
+        return Messages.JShellManualRequest;
     }
 
-    @SuppressWarnings("nls")
     private String buildResponseMarkdown(Request request, List<JShellManualEntry> matchedEntries,
         List<JShellManualEntry> allEntries)
     {
-        var markdown = new StringBuilder();
-        var scope = normalizeScope(request.apiScope);
-        if (request.scenario == null || request.scenario.isBlank())
-        {
-            markdown.append("## JShellManual\n\n");
-            markdown.append("Use this tool before `").append(JShellMcpTool.TOOL_NAME)
-                .append("` when you need scenario-specific guidance for Eclipse or EDT code.\n\n");
-            markdown.append("### Available scenarios\n");
-            for (var entry : allEntries)
-            {
-                if ("both".equals(scope) || scope.equals(entry.getScope()))
-                {
-                    markdown.append("- `").append(entry.getId()).append("` (`").append(entry.getScope()).append("`): ")
-                        .append(entry.getSummary()).append("\n");
-                }
-            }
-            markdown.append("\nExample: `{\"scenario\":\"create_catalog\"}`");
-            return markdown.toString();
-        }
-
-        markdown.append("## JShellManual Results\n\n");
-        for (var entry : matchedEntries)
-        {
-            markdown.append("### ").append(markdownUtils.escapeForMarkdown(entry.getTitle())).append("\n");
-            markdown.append("- Scenario: `").append(entry.getId()).append("`\n");
-            markdown.append("- Scope: `").append(entry.getScope()).append("`\n");
-            if (!entry.getRecommendedBindings().isEmpty())
-            {
-                markdown.append("- Recommended bindings: ");
-                markdown.append(entry.getRecommendedBindings().stream()
-                    .map(binding -> "`" + binding + "`")
-                    .collect(Collectors.joining(", ")));
-                markdown.append("\n");
-            }
-            markdown.append("\n");
-            markdown.append(entry.getGuide()).append("\n\n");
-        }
-        return markdown.toString();
+        return Messages.JShellManualResponse;
     }
 
     private Summary toSummary(JShellManualEntry entry)
@@ -264,6 +222,7 @@ public class JShellManualMcpTool
         return details;
     }
 
+    @SuppressWarnings("nls")
     private String normalizeScope(String scope)
     {
         var normalized = normalize(scope);
