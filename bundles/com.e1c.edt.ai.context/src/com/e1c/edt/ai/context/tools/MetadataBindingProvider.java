@@ -1039,7 +1039,6 @@ public class MetadataBindingProvider
             "        AccumulationRegisterDimension warehouse = mdFactory.createAccumulationRegisterDimension();\n");
         desc.append("        warehouse.setName(\"Warehouse\");\n");
         desc.append("        warehouse.getSynonym().put(\"ru\", \"Warehouse\");\n");
-        desc.append("        warehouse.setBalance(true);\n");
         desc.append("\n");
         desc.append("        ").append(buildCatalogRefTypeDescription().replace("\n", "\n        "));
         desc.append("\n");
@@ -1070,6 +1069,7 @@ public class MetadataBindingProvider
         desc.append("});\n");
         desc.append("```\n");
         desc.append("**Note:** Registers require at least one Dimension. Resources are optional but recommended.\n");
+        desc.append("**Note:** `AccumulationRegisterDimension` does not have `setBalance(...)`; do not call it in JShell examples.\n");
         return desc.toString();
     }
 
@@ -2722,8 +2722,7 @@ public class MetadataBindingProvider
         desc.append("        document.setNumberType(DocumentNumberType.NUMBER);\n");
         desc.append("        document.setNumberLength(9);\n");
         desc.append("        document.setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL);\n");
-        desc.append("        document.setPosted(true);\n");
-        desc.append("        document.setRealTimePosting(true);\n");
+        desc.append("        document.setRealTimePosting(RealTimePosting.DENY);\n");
         desc.append("\n");
         desc.append("        // Create type provider INSIDE transaction\n");
         desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
@@ -2769,6 +2768,8 @@ public class MetadataBindingProvider
         desc.append("**IMPORTANT Notes:**\n");
         desc.append("- **DocumentNumberType.NUMBER** (not `Number`) - use correct enum constant\n");
         desc.append("- **DocumentNumberPeriodicity.NONPERIODICAL** (not `Nonperiodical`) - use correct enum constant\n");
+        desc.append("- **Do not call `document.setPosted(...)`** - this method is not present in EDT API\n");
+        desc.append("- **`setRealTimePosting(...)` expects `RealTimePosting` enum** such as `RealTimePosting.DENY` or `RealTimePosting.ALLOW`\n");
         desc.append("- **TypeDescriptionBuilder** must be used INSIDE the transaction\n");
         desc.append("- **IEObjectProvider** must use `v8project.getVersion()` for version compatibility\n");
         desc.append("- **UUIDs** MUST be set for document and all attributes to avoid SU45 errors\n");
@@ -2933,7 +2934,7 @@ public class MetadataBindingProvider
         desc.append("// ❌ WRONG CODE\n");
         desc.append("if (projectHandle.exists()) {\n");
         desc.append("    System.err.println(\"ERROR: Project already exists\");\n");
-        desc.append("    // Stop here in JShell and choose another project name.\n");
+        desc.append("    return;\n");
         desc.append("}\n");
         desc.append("```\n\n");
         desc.append("```java\n");
@@ -3119,20 +3120,20 @@ public class MetadataBindingProvider
         desc.append("**Problem:** Using incorrect enum constant names (wrong case or format).\\n\\n");
         desc.append("```java\\n");
         desc.append("// ❌ WRONG CODE - Incorrect enum constants\\n");
-        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS); // Wrong name\\n");
-        desc.append("document.setNumberType(DocumentNumberType.Number); // Wrong case\\n");
-        desc.append("document.setNumberPeriodicity(DocumentNumberPeriodicity.Nonperiodical); // Wrong case\\n");
+        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS); // Does not exist\\n");
+        desc.append("document.setPosted(true); // Method does not exist\\n");
+        desc.append("document.setRealTimePosting(true); // Expects RealTimePosting enum\\n");
         desc.append("```\\n\\n");
         desc.append("```java\\n");
         desc.append("// ✅ CORRECT CODE - Use correct enum constants\\n");
-        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_OF_ITEMS); // ✅ Correct\\n");
-        desc.append("document.setNumberType(DocumentNumberType.NUMBER); // ✅ Correct case\\n");
-        desc.append("document.setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL); // ✅ Correct case\\n");
+        desc.append("catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);\\n");
+        desc.append("document.setNumberType(DocumentNumberType.NUMBER);\\n");
+        desc.append("document.setRealTimePosting(RealTimePosting.DENY);\\n");
         desc.append("```\\n\\n");
 
         desc.append("### ❌ Pitfall #9: Incorrect TypeDescription Usage in JShell\\n\\n");
         desc.append("**Error:** Type mismatch or NullPointerException\\n\\n");
-        desc.append("**Problem:** Passing wrong types to TypeDescriptionBuilder or using it outside transaction.\\n\\n");
+        desc.append("**Problem:** Passing wrong values to TypeDescriptionBuilder or using a proxy that resolved to null.\\n\\n");
         desc.append("```java\\n");
         desc.append("// ❌ WRONG CODE - String type cannot be passed directly\\n");
         desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder()\\n");
@@ -3152,7 +3153,7 @@ public class MetadataBindingProvider
         desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Test\") {\\n");
         desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\\n");
         desc.append("        attribute.setType(new TypeDescriptionBuilder().addType(type).build());\\n");
-        desc.append("        // ❌ TypeItem created OUTSIDE transaction - may cause NPE\\n");
+        desc.append("        // ❌ TypeItem/proxy may be invalid for the current transaction\\n");
         desc.append("        return null;\\n");
         desc.append("    }\\n");
         desc.append("});\\n");
