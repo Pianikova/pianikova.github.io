@@ -177,15 +177,6 @@ public class MetadataBindingProvider
 
     @SuppressWarnings("nls")
     @Override
-    public String getDescription()
-    {
-        return "1C metadata API: Create, edit, and delete top-level 1C metadata entities and common child objects. "
-            + "Includes factories (mdFactory, modelFactory), FQN generator, BM model with transactions, "
-            + "and resource lookup for Eclipse integration.";
-    }
-
-    @Override
-    @SuppressWarnings("nls")
     public String getUseCases()
     {
         return "- Create and edit 1C metadata objects in BM transactions"
@@ -193,7 +184,17 @@ public class MetadataBindingProvider
             + "\n- Build TypeDescription for attributes, dimensions, and resources"
             + "\n- Attach new top-level objects with generated FQN"
             + "\n- Remove existing objects through parent collections and transaction detach"
-            + "\n- For detailed workflows and templates, use `JShellManual`";
+            + "\n- For detailed workflows and templates, use `JShellManual`"
+            + "\n- Use enhanced methods with object existence checks and error handling";
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public String getDescription()
+    {
+        return "1C metadata API: Create, edit, and delete top-level 1C metadata entities and common child objects. "
+                + "Includes factories (mdFactory, modelFactory), FQN generator, BM model with transactions, "
+                + "and resource lookup for Eclipse integration.";
     }
 
     @Override
@@ -409,18 +410,38 @@ public class MetadataBindingProvider
             "Add a tabular section and its attributes to an existing metadata object.", buildTabularSectionWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             List.of("tabular section", "document tabular section", "catalog tabular section"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        entries.add(new JShellManualEntry("add_document_registers", "edt", "Add Document Registers", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Configure which registers a document can write to (set up registrars on document side).", buildDocumentRegistersWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            List.of("document register", "registrar", "register records"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+
         entries.add(new JShellManualEntry("create_attribute_for_entity", "edt", "Create Attribute For Entity", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Create entity-specific attributes with the correct child type and TypeDescription.", buildCreateAttributeForEntityWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             List.of("attribute", "catalog attribute", "document attribute", "register attribute"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("add_registered_documents_to_journal", "edt", "Add Registered Documents To Journal", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Configure which documents appear in a document journal (set up on journal side).", buildDocumentJournalDocumentsWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            List.of("document journal", "registered documents", "journal"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+
         entries.add(new JShellManualEntry("create_type_description", "edt", "Create TypeDescription", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Build primitive, reference, union, and qualified TypeDescription values.", buildCreateTypeDescriptionWorkflow(), //$NON-NLS-1$
             List.of("modelManager"), //$NON-NLS-1$
             List.of("type description", "typedescription", "qualifiers", "reference type"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("set_exchange_plan_thisnode", "edt", "Set Exchange Plan ThisNode", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Set the current node UUID for an exchange plan to participate in replication.", buildExchangePlanThisNodeWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            List.of("exchange plan", "this node", "replication", "exchange"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+
         entries.add(new JShellManualEntry("resolve_top_object_and_parent_collection", "edt", "Resolve Top Object And Parent Collection", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Resolve top objects by FQN and choose the correct parent collection before mutation.", buildResolveTopObjectWorkflow(), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             List.of("top object", "fqn", "parent collection", "containment"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+
+        entries.add(new JShellManualEntry("edit_existing_metadata", "edt", "Edit Existing Metadata", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Generic workflow for editing any existing metadata object correctly.", buildEditExistingMetadataWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            List.of("edit", "existing object", "update metadata", "modification"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 
         entries.add(new JShellManualEntry("edit_existing_object", "edt", "Edit Existing Object", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Modify an existing metadata object without reattaching it as a new top object.", buildEditExistingObjectWorkflow(), //$NON-NLS-1$
@@ -443,7 +464,7 @@ public class MetadataBindingProvider
         entries.add(new JShellManualEntry("edit_common_module", "edt", "Edit Common Module", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "Edit CommonModule flags and metadata separately from Module.bsl content.", //$NON-NLS-1$
             buildGenericEditWorkflow("CommonModule", "CommonModule.WorkingWithData", //$NON-NLS-1$ //$NON-NLS-2$
-                "commonModule.setServer(true);\n        commonModule.setClientManagedApplication(false);", //$NON-NLS-1$
+                "commonModule.setServer(true);\n        commonModule.setServerCall(true);", //$NON-NLS-1$
                 "Metadata flags and BSL source are separate concerns. Update Module.bsl through file tools, not through mdFactory."), //$NON-NLS-1$
             List.of("workspaceRoot", "projectManager", "modelManager", "resourceLookup"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             List.of("edit common module", "module flags"))); //$NON-NLS-1$ //$NON-NLS-2$
@@ -498,6 +519,31 @@ public class MetadataBindingProvider
             "Interpret common metadata validation failures and missing required fields.", buildMetadataValidationErrors(), //$NON-NLS-1$
             List.of("modelManager", "mdFactory"), //$NON-NLS-1$ //$NON-NLS-2$
             List.of("validation", "error", "metadata validation"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+
+        entries.add(new JShellManualEntry("enhanced_catalog_creation", "edt", "Enhanced Catalog Creation", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create catalog with existence check and UUID error handling.", buildEnhancedCatalogCreationWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("enhanced catalog", "safe creation", "existence check", "UUID handling"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("safe_uuid_assignment", "edt", "Safe UUID Assignment", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Safe UUID assignment patterns for all metadata objects and child elements.", buildSafeUuidAssignmentWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            List.of("UUID", "SU45 error", "child objects UUID", "UUID assignment"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("typedescription_best_practices", "edt", "TypeDescriptionBuilder Best Practices", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Best practices for using TypeDescriptionBuilder inside transactions.", buildTypeDescriptionBuilderBestPractices(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            List.of("TypeDescriptionBuilder", "transaction context", "IEObjectProvider", "best practices"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("enhanced_document_creation", "edt", "Enhanced Document Creation", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create document with full validation and UUID error handling.", buildEnhancedDocumentCreationWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("enhanced document", "safe creation", "UUID handling", "tabular sections"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("enhanced_register_creation", "edt", "Enhanced Register Creation", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "Create registers (Information, Accumulation, Accounting, Calculation) with full validation.", buildEnhancedRegisterCreationWorkflow(), //$NON-NLS-1$
+            List.of("workspaceRoot", "projectManager", "modelManager", "mdFactory", "fqnGenerator"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            List.of("enhanced register", "safe creation", "UUID handling", "dimensions resources"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        entries.add(new JShellManualEntry("child_elements_uuid_importance", "edt", "Child Elements UUID Importance", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            "CRITICAL: Importance of UUIDs for all child elements (attributes, tabular sections, etc.).", buildChildElementsUuidImportance(), //$NON-NLS-1$
+            List.of("mdFactory"), //$NON-NLS-1$
+            List.of("UUID importance", "child objects", "SU45 error", "UUID assignment"))); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 
         return entries;
     }
@@ -580,10 +626,10 @@ public class MetadataBindingProvider
         desc.append("    @Override\n");
         desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
         desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
-        desc.append("        Enum enumObject = mdFactory.createEnum();\n");
+        desc.append("        com._1c.g5.v8.dt.metadata.mdclass.Enum enumObject = mdFactory.createEnum();\n");
         desc.append("        enumObject.setName(\"Statuses\");\n");
         desc.append("        enumObject.setUuid(UUID.randomUUID());\n");
-        desc.append("        EnumValue active = mdFactory.createEnumValue();\n");
+        desc.append("        com._1c.g5.v8.dt.metadata.mdclass.EnumValue active = mdFactory.createEnumValue();\n");
         desc.append("        active.setName(\"Active\");\n");
         desc.append("        active.setUuid(UUID.randomUUID());\n");
         desc.append("        enumObject.getEnumValues().add(active);\n");
@@ -606,7 +652,7 @@ public class MetadataBindingProvider
         var desc = new StringBuilder();
         desc.append(buildTopLevelCreateWorkflow(
             "CommonModule", "CommonModule", "commonModule", "createCommonModule()", "getCommonModules()", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
-            "commonModule.setServer(true);\n        commonModule.setClientManagedApplication(false);", //$NON-NLS-1$
+            "commonModule.setServer(true);\n        commonModule.setServerCall(true);", //$NON-NLS-1$
             "After metadata creation, create or update the corresponding Module.bsl file through file tools. Metadata flags and BSL text are separate layers.")); //$NON-NLS-1$
         return desc.toString();
     }
@@ -651,6 +697,7 @@ public class MetadataBindingProvider
             "Exchange plans are top-level objects; node definitions and related metadata can be added afterwards."); //$NON-NLS-1$
     }
 
+    @SuppressWarnings("nls")
     private String buildConstantWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -659,6 +706,7 @@ public class MetadataBindingProvider
             "Constants implement TypeDescriptionProvider, so `setType(...)` is mandatory."); //$NON-NLS-1$
     }
 
+    @SuppressWarnings("nls")
     private String buildDefinedTypeWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -739,6 +787,7 @@ public class MetadataBindingProvider
             "Command groups and UI placement are configured separately after command creation."); //$NON-NLS-1$
     }
 
+    @SuppressWarnings("nls")
     private String buildCommonAttributeWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -771,6 +820,7 @@ public class MetadataBindingProvider
             "Configure sections, command interface, and navigation structure after the top-level interface is attached."); //$NON-NLS-1$
     }
 
+    @SuppressWarnings("nls")
     private String buildSessionParameterWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -907,6 +957,7 @@ public class MetadataBindingProvider
             "Add XDTO package content and imported types after the package metadata object exists."); //$NON-NLS-1$
     }
 
+    @SuppressWarnings("nls")
     private String buildChartOfCharacteristicTypesWorkflow()
     {
         return buildTopLevelCreateWorkflow(
@@ -1030,6 +1081,31 @@ public class MetadataBindingProvider
         desc.append("    .build();\n");
         desc.append("quantity.setType(quantityType);\n");
         desc.append("products.getAttributes().add(quantity);\n");
+        desc.append("```\n\n");
+        desc.append("### Recovery pattern for real error (`Catalog.Авторы` -> `Страна`)\n");
+        desc.append("```java\n");
+        desc.append("Catalog authors = (Catalog)transaction.getTopObjectByFqn(\"Catalog.Авторы\");\n");
+        desc.append("if (authors != null) {\n");
+        desc.append("    IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("        .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("    CatalogAttribute country = authors.getAttributes().stream()\n");
+        desc.append("        .filter(a -> \"Страна\".equals(a.getName()))\n");
+        desc.append("        .findFirst()\n");
+        desc.append("        .orElse(null);\n");
+        desc.append("    if (country == null) {\n");
+        desc.append("        country = mdFactory.createCatalogAttribute();\n");
+        desc.append("        country.setName(\"Страна\");\n");
+        desc.append("        country.setUuid(UUID.randomUUID());\n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        TypeDescription countryType = new TypeDescriptionBuilder().addType(stringType).build();\n");
+        desc.append("        country.setType(countryType);\n");
+        desc.append("        authors.getAttributes().add(country);\n");
+        desc.append("    } else if (country.getType() == null || country.getType().getTypes().isEmpty()) {\n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        TypeDescription countryType = new TypeDescriptionBuilder().addType(stringType).build();\n");
+        desc.append("        country.setType(countryType);\n");
+        desc.append("    }\n");
+        desc.append("}\n");
         desc.append("```\n\n");
         desc.append("### Rules\n");
         desc.append("- Always choose the child class that matches the parent entity\n");
@@ -1438,6 +1514,7 @@ public class MetadataBindingProvider
         desc.append("- Type qualifiers (StringQualifiers, NumberQualifiers) are ABSTRACT classes - CANNOT instantiate directly\n");
         desc.append("- For type handling: use `TypeDescriptionBuilder` WITHOUT qualifiers or use default types\n\n");
         desc.append("- If the new child object extends `BasicFeature`, treat `setType(...)` as mandatory, not optional\n\n");
+        desc.append("- Before finishing transaction, verify every new `BasicFeature` has non-null/non-empty `type` to avoid `MdTypeSetInferrer` NPE during derived rebuild\n\n");
 
         desc.append("#### Metadata Object-Specific Rules\n\n");
         desc.append("**Catalog (Справочник):**\n");
@@ -1455,13 +1532,26 @@ public class MetadataBindingProvider
 
         desc.append("**InformationRegister (РегистрСведений):**\n");
         desc.append("- Use `InformationRegisterPeriodicity.NONPERIODICAL`, `SECOND`, `DAY`, `MONTH`, `QUARTER`, `YEAR`, `RECORDER_POSITION`\n");
+        desc.append("- Use setter `setInformationRegisterPeriodicity(...)` (not `setPeriodicity(...)`)\n");
         desc.append("- Use `RegisterWriteMode.INDEPENDENT` or `RegisterWriteMode.RECORDER_SUBORDINATE`\n");
+        desc.append("- Use specific child factories (`createInformationRegisterDimension/Resource`); generic `createRegisterDimension/Resource` is not valid in mdFactory\n");
         desc.append("- Contains: resources, attributes, dimensions (all require types)\n\n");
+
+        desc.append("**AccumulationRegister (РегистрНакопления):**\n");
+        desc.append("- Use `AccumulationRegisterType.BALANCE` or `AccumulationRegisterType.TURNOVERS`\n");
+        desc.append("- Do NOT use non-existing constants like `REMAINS` or `TURNOVER`\n");
+        desc.append("- Use specific child factories: `createAccumulationRegisterDimension()` and `createAccumulationRegisterResource()`\n\n");
 
         desc.append("**Enum (Перечисление):**\n");
         desc.append("- Contains `EnumValue[] enumValues` - create with `createEnumValue()`\n");
+        desc.append("- Use `enumObject.getEnumValues()` for collection access; do NOT use `getValues()`\n");
+        desc.append("- In JShell snippets prefer fully-qualified `com._1c.g5.v8.dt.metadata.mdclass.Enum` and `EnumValue` to avoid ambiguous imports\n");
         desc.append("- Each EnumValue has: name, description, color (since 8.5.1)\n");
         desc.append("- NO attributes or tabular sections\n\n");
+
+        desc.append("**CommonModule (ОбщийМодуль):**\n");
+        desc.append("- Safe baseline flags: `setServer(true)` and `setServerCall(true)`\n");
+        desc.append("- Do NOT use `setClient(...)` in EDT API snippets unless you verified the exact method exists in this version\n\n");
 
         desc.append("**ChartOfCharacteristicTypes (ПланВидовХарактеристик):**\n");
         desc.append("- Has its own type (TypeDescription) for characteristic values\n");
@@ -2142,10 +2232,17 @@ public class MetadataBindingProvider
         desc.append("Catalog catalog = mdFactory.createCatalog();\n");
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
         desc.append("// ...\n\n");
         desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
         desc.append("attr.setName(\"Article\");\n");
         desc.append("attr.setUuid(UUID.randomUUID());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeDescription attrType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        desc.append("attr.setType(attrType);\n");
         desc.append("catalog.getAttributes().add(attr);\n\n");
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
@@ -2223,7 +2320,9 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.core.naming.*;",
             "import com._1c.g5.v8.dt.core.platform.*;",
             "import com._1c.g5.v8.dt.platform.*;",
-            "import com._1c.g5.v8.dt.mcore.*;",
+            "import com._1c.g5.v8.dt.mcore.McorePackage;",
+            "import com._1c.g5.v8.dt.mcore.TypeDescription;",
+            "import com._1c.g5.v8.dt.mcore.TypeItem;",
             "import com._1c.g5.v8.dt.platform.core.typeinfo.*;",
             "import org.eclipse.emf.ecore.util.EcoreUtil;"
         );
@@ -2287,8 +2386,14 @@ public class MetadataBindingProvider
         desc.append("| BusinessProcessAttribute | `createBusinessProcessAttribute()` | BusinessProcess |\n");
         desc.append("| TaskAttribute | `createTaskAttribute()` | Task |\n");
         desc.append("| RegisterAttribute | `createRegisterAttribute()` | Register |\n");
-        desc.append("| RegisterDimension | `createRegisterDimension()` | Register |\n");
-        desc.append("| RegisterResource | `createRegisterResource()` | Register |\n");
+        desc.append("| InformationRegisterDimension | `createInformationRegisterDimension()` | InformationRegister |\n");
+        desc.append("| InformationRegisterResource | `createInformationRegisterResource()` | InformationRegister |\n");
+        desc.append("| AccumulationRegisterDimension | `createAccumulationRegisterDimension()` | AccumulationRegister |\n");
+        desc.append("| AccumulationRegisterResource | `createAccumulationRegisterResource()` | AccumulationRegister |\n");
+        desc.append("| AccountingRegisterDimension | `createAccountingRegisterDimension()` | AccountingRegister |\n");
+        desc.append("| AccountingRegisterResource | `createAccountingRegisterResource()` | AccountingRegister |\n");
+        desc.append("| CalculationRegisterDimension | `createCalculationRegisterDimension()` | CalculationRegister |\n");
+        desc.append("| CalculationRegisterResource | `createCalculationRegisterResource()` | CalculationRegister |\n");
         desc.append("| TabularSectionAttribute | `createTabularSectionAttribute()` | TabularSection |\n");
         desc.append("| CatalogTabularSection | `createCatalogTabularSection()` | Catalog |\n");
         desc.append("| DocumentTabularSection | `createDocumentTabularSection()` | Document |\n");
@@ -2322,7 +2427,13 @@ public class MetadataBindingProvider
         desc.append("CatalogAttribute attribute = mdFactory.createCatalogAttribute();\n");
         desc.append("attribute.setName(\"Article\");\n");
         desc.append("attribute.getSynonym().put(\"ru\", \"Article\");\n");
-        desc.append("// Set attribute type using TypeDescriptionBuilder...\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeDescription attrType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .build();\n");
+        desc.append("attribute.setType(attrType);\n");
         desc.append("catalog.getAttributes().add(attribute);\n");
         desc.append("\n");
         desc.append("// CRITICAL: Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)\n");
@@ -2424,6 +2535,8 @@ public class MetadataBindingProvider
         desc.append("CatalogAttribute attribute = (CatalogAttribute)modelFactory.create(\n");
         desc.append("    MdClassPackage.Literals.CATALOG_ATTRIBUTE, catalog, v8project.getVersion());\n");
         desc.append("attribute.setName(\"Article\");\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        ")).append("\n");
+        desc.append("attribute.setType(typeDesc);\n");
         desc.append("catalog.getAttributes().add(attribute);\n");
         desc.append("\n");
         desc.append("// modelFactory.fillDefaultReferences(catalog); // Avoid in JShell\n");
@@ -2953,12 +3066,12 @@ public class MetadataBindingProvider
         desc.append("        // Add tabular section with typed line attributes\n");
         desc.append("        DocumentTabularSection products = mdFactory.createDocumentTabularSection();\n");
         desc.append("        products.setName(\"Products\");\n");
-        desc.append("        products.getSynonym().put(\"ru\", \"РўРѕРІР°СЂС‹\");\n");
+        desc.append("        products.getSynonym().put(\"ru\", \"Товары\");\n");
         desc.append("        products.setUuid(UUID.randomUUID());\n");
         desc.append("\n");
         desc.append("        TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();\n");
         desc.append("        product.setName(\"Product\");\n");
-        desc.append("        product.getSynonym().put(\"ru\", \"РќРѕРјРµРЅРєР»Р°С‚СѓСЂР°\");\n");
+        desc.append("        product.getSynonym().put(\"ru\", \"Номенклатура\");\n");
         desc.append("        TypeDescription productType = new TypeDescriptionBuilder()\n");
         desc.append("            .addType(catalogRefType)\n");
         desc.append("            .build();\n");
@@ -2968,7 +3081,7 @@ public class MetadataBindingProvider
         desc.append("\n");
         desc.append("        TabularSectionAttribute quantity = mdFactory.createTabularSectionAttribute();\n");
         desc.append("        quantity.setName(\"Quantity\");\n");
-        desc.append("        quantity.getSynonym().put(\"ru\", \"РљРѕР»РёС‡РµСЃС‚РІРѕ\");\n");
+        desc.append("        quantity.getSynonym().put(\"ru\", \"Количество\");\n");
         desc.append("        TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
         desc.append("        TypeDescription quantityType = new TypeDescriptionBuilder()\n");
         desc.append("            .addType(numberType)\n");
@@ -3029,6 +3142,9 @@ public class MetadataBindingProvider
         desc.append("            CatalogAttribute newAttr = mdFactory.createCatalogAttribute();\n");
         desc.append("            newAttr.setName(\"Brand\");\n");
         desc.append("            newAttr.setUuid(UUID.randomUUID());\n");
+        desc.append("            ").append(buildStringTypeDescription().replace("\n", "\n            "));
+        desc.append("\n");
+        desc.append("            newAttr.setType(typeDesc);\n");
         desc.append("            catalog.getAttributes().add(newAttr);\n");
         desc.append("\n");
         desc.append("            return catalog;\n");
@@ -3226,6 +3342,8 @@ public class MetadataBindingProvider
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
         desc.append("attr.setName(\"Article\");\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        ")).append("\n");
+        desc.append("attr.setType(typeDesc);\n");
         desc.append("catalog.getAttributes().add(attr);\n");
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
@@ -3240,6 +3358,8 @@ public class MetadataBindingProvider
         desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
         desc.append("attr.setUuid(UUID.randomUUID()); // Must set UUID for children too!\n");
         desc.append("attr.setName(\"Article\");\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        ")).append("\n");
+        desc.append("attr.setType(typeDesc);\n");
         desc.append("catalog.getAttributes().add(attr);\n");
         desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
         desc.append("transaction.attachTopObject((IBmObject)catalog, fqn);\n");
@@ -3251,6 +3371,8 @@ public class MetadataBindingProvider
         desc.append("catalog.setName(\"Products\");\n");
         desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
         desc.append("attr.setName(\"Article\");\n");
+        desc.append("        ").append(buildStringTypeDescription().replace("\n", "\n        ")).append("\n");
+        desc.append("attr.setType(typeDesc);\n");
         desc.append("catalog.getAttributes().add(attr);\n");
         desc.append("// ❌ modelFactory.fillDefaultReferences(catalog); // DO NOT USE!\n");
         desc.append("```\n\n");
@@ -3948,6 +4070,1213 @@ public class MetadataBindingProvider
         desc.append("- `externalConnection`: Execution in external connection\n");
         desc.append("- `privileged`: Execution in privileged mode\n");
         desc.append("- `global`: Export module functions to global context\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildEnhancedCatalogCreationWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Enhanced Workflow: Create Catalog with Existence Check and UUID Error Handling\n\n");
+        desc.append("This workflow provides a more robust approach with:\n");
+        desc.append("- Pre-creation existence check (prevents BmFqnAlreadyInUseException)\n");
+        desc.append("- UUID assignment with try-catch error handling\n");
+        desc.append("- Comprehensive validation before attachment\n");
+        desc.append("- Detailed error reporting\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("Catalog result = globalContext.execute(new AbstractBmTask<Catalog>(\"Create catalog safely\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Catalog execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("        \n");
+        desc.append("        // STEP 1: Check if catalog already exists BEFORE creation\n");
+        desc.append("        String catalogFqn = \"Catalog.Products\";\n");
+        desc.append("        if (transaction.getTopObjectByFqn(catalogFqn) != null) {\n");
+        desc.append("            System.err.println(\"ERROR: Catalog already exists: \" + catalogFqn);\n");
+        desc.append("            return null; // Stop creation\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // STEP 2: Create catalog object\n");
+        desc.append("        Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("        catalog.setName(\"Products\");\n");
+        desc.append("        catalog.getSynonym().put(\"ru\", \"Products\");\n");
+        desc.append("        catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);\n");
+        desc.append("        catalog.setCodeLength(9);\n");
+        desc.append("        catalog.setDescriptionLength(150);\n");
+        desc.append("        \n");
+        desc.append("        // STEP 3: Set UUID with error handling\n");
+        desc.append("        try {\n");
+        desc.append("            catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for catalog: \" + e.getMessage());\n");
+        desc.append("            return null; // Stop creation if UUID cannot be set\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // STEP 4: Create type provider INSIDE transaction\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("        \n");
+        desc.append("        // STEP 5: Create attributes with UUID error handling\n");
+        desc.append("        CatalogAttribute code = mdFactory.createCatalogAttribute();\n");
+        desc.append("        code.setName(\"Code\");\n");
+        desc.append("        code.getSynonym().put(\"ru\", \"Code\");\n");
+        desc.append("        try {\n");
+        desc.append("            code.setUuid(UUID.randomUUID()); // CRITICAL: UUID required for all child objects\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for attribute Code: \" + e.getMessage());\n");
+        desc.append("            return null; // Stop creation if UUID cannot be set\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // Create type description INSIDE transaction\n");
+        desc.append("        TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("        TypeDescription codeType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(numberType)\n");
+        desc.append("            .build();\n");
+        desc.append("        code.setType(codeType);\n");
+        desc.append("        catalog.getAttributes().add(code);\n");
+        desc.append("        \n");
+        desc.append("        CatalogAttribute name = mdFactory.createCatalogAttribute();\n");
+        desc.append("        name.setName(\"Name\");\n");
+        desc.append("        name.getSynonym().put(\"ru\", \"Name\");\n");
+        desc.append("        try {\n");
+        desc.append("            name.setUuid(UUID.randomUUID()); // CRITICAL: UUID required for all child objects\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for attribute Name: \" + e.getMessage());\n");
+        desc.append("            return null; // Stop creation if UUID cannot be set\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        TypeDescription nameType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(stringType)\n");
+        desc.append("            .build();\n");
+        desc.append("        name.setType(nameType);\n");
+        desc.append("        catalog.getAttributes().add(name);\n");
+        desc.append("        \n");
+        desc.append("        // STEP 6: Validate before attachment\n");
+        desc.append("        if (catalog.getAttributes().isEmpty()) {\n");
+        desc.append("            System.err.println(\"ERROR: Catalog has no attributes - this may cause validation issues\");\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // STEP 7: Generate FQN and attach to transaction\n");
+        desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();\n");
+        desc.append("        \n");
+        desc.append("        try {\n");
+        desc.append("            transaction.attachTopObject((IBmObject)catalog, fqn);\n");
+        desc.append("            configuration.getCatalogs().add(catalog);\n");
+        desc.append("            System.out.println(\"SUCCESS: Catalog created: \" + fqn);\n");
+        desc.append("            return catalog;\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to attach catalog: \" + e.getMessage());\n");
+        desc.append("            e.printStackTrace();\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### Key Improvements:\n\n");
+        desc.append("**1. Pre-creation existence check**\n");
+        desc.append("- Uses `transaction.getTopObjectByFqn()` BEFORE creating object\n");
+        desc.append("- Prevents `BmFqnAlreadyInUseException` runtime errors\n");
+        desc.append("- Provides clear error message about why creation stopped\n\n");
+        desc.append("**2. UUID assignment with error handling**\n");
+        desc.append("- Every UUID assignment wrapped in try-catch block\n");
+        desc.append("- Critical for catalog and ALL child objects (attributes, tabular sections)\n");
+        desc.append("- Prevents SU45 validation errors (UUID required for all metadata objects)\n");
+        desc.append("- Stops creation gracefully if UUID cannot be set\n\n");
+        desc.append("**3. Comprehensive validation**\n");
+        desc.append("- Checks for empty attribute lists before attachment\n");
+        desc.append("- Validates TypeDescription creation inside transaction\n");
+        desc.append("- Attachment operation wrapped in try-catch for robustness\n\n");
+        desc.append("**4. Detailed error reporting**\n");
+        desc.append("- Clear error messages at each failure point\n");
+        desc.append("- Stack traces for unexpected exceptions\n");
+        desc.append("- Success confirmation message\n\n");
+        desc.append("### When to use this workflow:\n");
+        desc.append("- Creating new catalogs in production code\n");
+        desc.append("- When object existence might be uncertain\n");
+        desc.append("- When UUID assignment failures are possible\n");
+        desc.append("- For scripts that need reliable error handling\n\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildSafeUuidAssignmentWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Safe UUID Assignment for All Metadata Objects\n\n");
+        desc.append("UUIDs are CRITICAL for all metadata objects and their child elements.\n");
+        desc.append("Missing UUIDs cause SU45 validation errors. This workflow provides safe UUID assignment.\n\n");
+        desc.append("### Why UUIDs are critical:\n\n");
+        desc.append("- **Top-level objects**: Catalogs, Documents, Registers, etc. MUST have UUIDs\n");
+        desc.append("- **Child objects**: Attributes, Tabular sections, Dimensions, Resources MUST also have UUIDs\n");
+        desc.append("- **Validation**: SU45 error occurs if any object lacks a UUID\n");
+        desc.append("- **JShell**: Manual UUID assignment is RECOMMENDED (avoids OSGi timeout from fillDefaultReferences)\n\n");
+        desc.append("### Safe UUID Assignment Pattern:\n\n");
+        desc.append("```java\n");
+        desc.append("// Pattern 1: Safe UUID assignment with error handling\n");
+        desc.append("public boolean assignUuidSafely(MdObject object, String objectName) {\n");
+        desc.append("    try {\n");
+        desc.append("        object.setUuid(UUID.randomUUID());\n");
+        desc.append("        return true; // Success\n");
+        desc.append("    } catch (Exception e) {\n");
+        desc.append("        System.err.println(\"ERROR: Failed to set UUID for \" + objectName + \": \" + e.getMessage());\n");
+        desc.append("        e.printStackTrace();\n");
+        desc.append("        return false; // Failure\n");
+        desc.append("    }\n");
+        desc.append("}\n");
+        desc.append("\n");
+        desc.append("// Pattern 2: Batch UUID assignment for child objects\n");
+        desc.append("public boolean assignUuidsToChildren(java.util.List<? extends MdObject> children, String parentName) {\n");
+        desc.append("    boolean allSuccess = true;\n");
+        desc.append("    for (MdObject child : children) {\n");
+        desc.append("        try {\n");
+        desc.append("            child.setUuid(UUID.randomUUID());\n");
+        desc.append("            System.out.println(\"UUID assigned to: \" + parentName + \".\" + child.getName());\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for \" + parentName + \".\" + child.getName() + \": \" + e.getMessage());\n");
+        desc.append("            allSuccess = false; // Continue with remaining objects\n");
+        desc.append("        }\n");
+        desc.append("    }\n");
+        desc.append("    return allSuccess;\n");
+        desc.append("}\n");
+        desc.append("```\n\n");
+        desc.append("### Complete Example: Catalog with All UUIDs Safely Assigned\n\n");
+        desc.append("```java\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("\n");
+        desc.append("// Assign UUID to top-level object\n");
+        desc.append("if (!assignUuidSafely(catalog, \"Catalog.Products\")) {\n");
+        desc.append("    System.err.println(\"FATAL: Cannot create catalog without UUID\");\n");
+        desc.append("    return null;\n");
+        desc.append("}\n");
+        desc.append("\n");
+        desc.append("// Create and assign UUIDs to attributes\n");
+        desc.append("CatalogAttribute code = mdFactory.createCatalogAttribute();\n");
+        desc.append("code.setName(\"Code\");\n");
+        desc.append("if (!assignUuidSafely(code, \"Catalog.Products.Code\")) {\n");
+        desc.append("    System.err.println(\"FATAL: Cannot create attribute without UUID\");\n");
+        desc.append("    return null;\n");
+        desc.append("}\n");
+        desc.append("\n");
+        desc.append("CatalogAttribute description = mdFactory.createCatalogAttribute();\n");
+        desc.append("description.setName(\"Description\");\n");
+        desc.append("if (!assignUuidSafely(description, \"Catalog.Products.Description\")) {\n");
+        desc.append("    System.err.println(\"FATAL: Cannot create attribute without UUID\");\n");
+        desc.append("    return null;\n");
+        desc.append("}\n");
+        desc.append("\n");
+        desc.append("// Assign UUIDs to all child objects at once\n");
+        desc.append("java.util.List<MdObject> attributes = new java.util.ArrayList<>();\n");
+        desc.append("attributes.add(code);\n");
+        desc.append("attributes.add(description);\n");
+        desc.append("\n");
+        desc.append("if (!assignUuidsToChildren(attributes, \"Catalog.Products\")) {\n");
+        desc.append("    System.err.println(\"WARNING: Some attributes failed UUID assignment\");\n");
+        desc.append("    // Decide whether to continue or abort\n");
+        desc.append("}\n");
+        desc.append("\n");
+        desc.append("// Set types and add to catalog\n");
+        desc.append("// ... (TypeDescription creation and assignment)\n");
+        desc.append("catalog.getAttributes().add(code);\n");
+        desc.append("catalog.getAttributes().add(description);\n");
+        desc.append("```\n\n");
+        desc.append("### UUID Assignment for Different Metadata Types:\n\n");
+        desc.append("**Catalog with attributes:**\n");
+        desc.append("```java\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("catalog.getAttributes().forEach(attr -> attr.setUuid(UUID.randomUUID()));\n");
+        desc.append("catalog.getTabularSections().forEach(ts -> {\n");
+        desc.append("    ts.setUuid(UUID.randomUUID());\n");
+        desc.append("    ts.getAttributes().forEach(tsa -> tsa.setUuid(UUID.randomUUID()));\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("**Document with attributes and tabular sections:**\n");
+        desc.append("```java\n");
+        desc.append("document.setUuid(UUID.randomUUID());\n");
+        desc.append("document.getAttributes().forEach(attr -> attr.setUuid(UUID.randomUUID()));\n");
+        desc.append("document.getTabularSections().forEach(ts -> {\n");
+        desc.append("    ts.setUuid(UUID.randomUUID());\n");
+        desc.append("    ts.getAttributes().forEach(tsa -> tsa.setUuid(UUID.randomUUID()));\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("**InformationRegister with dimensions and resources:**\n");
+        desc.append("```java\n");
+        desc.append("register.setUuid(UUID.randomUUID());\n");
+        desc.append("register.getDimensions().forEach(dim -> dim.setUuid(UUID.randomUUID()));\n");
+        desc.append("register.getResources().forEach(res -> res.setUuid(UUID.randomUUID()));\n");
+        desc.append("register.getAttributes().forEach(attr -> attr.setUuid(UUID.randomUUID()));\n");
+        desc.append("```\n\n");
+        desc.append("**Enum with enum values:**\n");
+        desc.append("```java\n");
+        desc.append("enumObject.setUuid(UUID.randomUUID());\n");
+        desc.append("enumObject.getEnumValues().forEach(value -> value.setUuid(UUID.randomUUID()));\n");
+        desc.append("```\n\n");
+        desc.append("**Common Pitfalls to Avoid:**\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG: Forgetting child object UUIDs\n");
+        desc.append("catalog.setUuid(UUID.randomUUID()); // OK\n");
+        desc.append("catalog.getAttributes().add(attr); // ❌ attr has no UUID! SU45 error!\n");
+        desc.append("\n");
+        desc.append("// ❌ WRONG: Using fillDefaultReferences in JShell (may timeout)\n");
+        desc.append("// modelFactory.fillDefaultReferences(catalog); // DO NOT USE in JShell!\n");
+        desc.append("\n");
+        desc.append("// ❌ WRONG: Not checking UUID assignment success\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("// If this fails, object will have null UUID and cause SU45 error\n");
+        desc.append("\n");
+        desc.append("// ✅ CORRECT: Manual UUID assignment with error handling\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("attr.setUuid(UUID.randomUUID());\n");
+        desc.append("// Both objects have valid UUIDs\n");
+        desc.append("```\n\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildTypeDescriptionBuilderBestPractices()
+    {
+        var desc = new StringBuilder();
+        desc.append("## TypeDescriptionBuilder Best Practices - Transaction Context\n\n");
+        desc.append("### ⚠️ CRITICAL: TypeDescription Must Be Created Inside Transaction\n\n");
+        desc.append("TypeDescription and TypeItem proxies MUST be created and used within the SAME BM transaction.\n");
+        desc.append("Creating TypeDescription outside the transaction context can lead to:\n");
+        desc.append("- NullPointerException when setting types\n");
+        desc.append("- Inconsistent type resolution\n");
+        desc.append("- Transaction isolation violations\n\n");
+        desc.append("### ✅ CORRECT: Complete TypeDescription Creation Pattern\n\n");
+        desc.append("```java\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Create metadata\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        \n");
+        desc.append("        // STEP 1: Get typeProvider INSIDE transaction\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("        \n");
+        desc.append("        // STEP 2: Get TypeItem proxies INSIDE transaction\n");
+        desc.append("        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("        TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("        \n");
+        desc.append("        // STEP 3: Validate proxies before building\n");
+        desc.append("        if (stringType == null) {\n");
+        desc.append("            System.err.println(\"ERROR: Cannot resolve STRING type\");\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        if (catalogRef == null) {\n");
+        desc.append("            System.err.println(\"ERROR: Cannot resolve CATALOG_REF type\");\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // STEP 4: Build TypeDescription INSIDE transaction\n");
+        desc.append("        TypeDescription stringTypeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(stringType)\n");
+        desc.append("            .build();\n");
+        desc.append("        \n");
+        desc.append("        TypeDescription catalogRefTypeDesc = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(catalogRef)\n");
+        desc.append("            .build();\n");
+        desc.append("        \n");
+        desc.append("        // STEP 5: Set TypeDescription to attribute INSIDE transaction\n");
+        desc.append("        attribute.setType(stringTypeDesc);\n");
+        desc.append("        referenceAttribute.setType(catalogRefTypeDesc);\n");
+        desc.append("        \n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### ❌ WRONG Patterns:\n\n");
+        desc.append("**Pattern 1: Getting typeProvider outside transaction**\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG: TypeProvider created OUTSIDE transaction\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Create metadata\") {\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        attribute.setType(new TypeDescriptionBuilder().addType(stringType).build());\n");
+        desc.append("        // ❌ May cause NullPointerException\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("**Pattern 2: Using TypeItem from different transaction**\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG: TypeItem from transaction #1 used in transaction #2\n");
+        desc.append("TypeItem typeFromTrans1 = null;\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Transaction 1\") {\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("        typeFromTrans1 = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Transaction 2\") {\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        attribute.setType(new TypeDescriptionBuilder().addType(typeFromTrans1).build());\n");
+        desc.append("        // ❌ TypeItem is invalid for this transaction\n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### Frequently Used Patterns:\n\n");
+        desc.append("**Pattern 1: Simple String Type**\n");
+        desc.append("```java\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder().addType(stringType).build();\n");
+        desc.append("attribute.setType(typeDesc);\n");
+        desc.append("```\n\n");
+        desc.append("**Pattern 2: Number with Qualifiers**\n");
+        desc.append("```java\n");
+        desc.append("IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder().addType(numberType).build();\n");
+        desc.append("\n");
+        desc.append("// Set number qualifiers (inside transaction)\n");
+        desc.append("if (typeDesc.getNumberQualifiers() == null) {\n");
+        desc.append("    typeDesc.setNumberQualifiers(modelFactory.createNumberQualifiers());\n");
+        desc.append("}\n");
+        desc.append("typeDesc.getNumberQualifiers().setPrecision(10); // Total digits\n");
+        desc.append("typeDesc.getNumberQualifiers().setScale(2);     // Decimal places\n");
+        desc.append("// NOTE: Scale must be <= Precision to avoid SU8 error\n");
+        desc.append("```\n\n");
+        desc.append("**Pattern 3: Composite Type (String or Number)**\n");
+        desc.append("```java\n");
+        desc.append("TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n");
+        desc.append("TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("TypeDescription compositeType = new TypeDescriptionBuilder()\n");
+        desc.append("    .addType(stringType)\n");
+        desc.append("    .addType(numberType)\n");
+        desc.append("    .build();\n");
+        desc.append("attribute.setType(compositeType);\n");
+        desc.append("```\n\n");
+        desc.append("**Pattern 4: Catalog Reference (Generic)**\n");
+        desc.append("```java\n");
+        desc.append("TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder().addType(catalogRef).build();\n");
+        desc.append("attribute.setType(typeDesc);\n");
+        desc.append("```\n\n");
+        desc.append("**Pattern 5: Specific Catalog Reference (Requires existing catalog)**\n");
+        desc.append("```java\n");
+        desc.append("TypeItem productsRef = (TypeItem)typeProvider.getProxy(\"Catalog.Products\");\n");
+        desc.append("if (productsRef == null) {\n");
+        desc.append("    System.err.println(\"ERROR: Catalog.Products does not exist\");\n");
+        desc.append("    return null; // Stop creation\n");
+        desc.append("}\n");
+        desc.append("TypeDescription typeDesc = new TypeDescriptionBuilder().addType(productsRef).build();\n");
+        desc.append("attribute.setType(typeDesc);\n");
+        desc.append("```\n\n");
+        desc.append("**Pattern 6: Fallback Pattern (Specific → Generic)**\n");
+        desc.append("```java\n");
+        desc.append("TypeItem unitsRef = (TypeItem)typeProvider.getProxy(\"Catalog.Units\");\n");
+        desc.append("TypeDescription typeDesc;\n");
+        desc.append("if (unitsRef == null) {\n");
+        desc.append("    System.out.println(\"WARNING: Catalog.Units not found, using generic CATALOG_REF\");\n");
+        desc.append("    TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("    typeDesc = new TypeDescriptionBuilder().addType(catalogRef).build();\n");
+        desc.append("} else {\n");
+        desc.append("    typeDesc = new TypeDescriptionBuilder().addType(unitsRef).build();\n");
+        desc.append("}\n");
+        desc.append("attribute.setType(typeDesc);\n");
+        desc.append("```\n\n");
+        desc.append("### Performance Considerations:\n");
+        desc.append("- **Reuse TypeDescription**: Create once, use multiple times for same type\n");
+        desc.append("- **Validate early**: Check `typeProvider.getProxy(...)` before building\n");
+        desc.append("- **Minimize proxy calls**: Get all needed TypeItems at once\n");
+        desc.append("- **Stay in transaction**: All TypeDescription operations in same transaction\n\n");
+        desc.append("### Common Errors and Solutions:\n");
+        desc.append("**Error**: `NullPointerException` when setting type\n");
+        desc.append("**Solution**: Ensure typeProvider and TypeItem are created INSIDE transaction\n\n");
+        desc.append("**Error**: `IllegalArgumentException` when adding type\n");
+        desc.append("**Solution**: Validate `typeProvider.getProxy(...)` returns non-null before `addType(...)`\n\n");
+        desc.append("**Error**: SU8 - Scale > Precision\n");
+        desc.append("**Solution**: Ensure `scale <= precision` for Number types\n\n");
+        desc.append("**Error**: Type not found for specific FQN\n");
+        desc.append("**Solution**: Use fallback pattern or ensure referenced metadata exists first\n\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildEnhancedDocumentCreationWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Enhanced Workflow: Create Document with Full Validation\n\n");
+        desc.append("This workflow provides comprehensive document creation with:\n");
+        desc.append("- Existence check before creation\n");
+        desc.append("- UUID assignment for all objects (document, attributes, tabular sections, line attributes)\n");
+        desc.append("- Type validation and error handling\n");
+        desc.append("- Complete validation before attachment\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("Document result = globalContext.execute(new AbstractBmTask<Document>(\"Create document safely\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Document execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("        \n");
+        desc.append("        // CHECK 1: Document existence\n");
+        desc.append("        String documentFqn = \"Document.GoodsReceipt\";\n");
+        desc.append("        if (transaction.getTopObjectByFqn(documentFqn) != null) {\n");
+        desc.append("            System.err.println(\"ERROR: Document already exists: \" + documentFqn);\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // CREATE document\n");
+        desc.append("        Document document = mdFactory.createDocument();\n");
+        desc.append("        document.setName(\"GoodsReceipt\");\n");
+        desc.append("        document.getSynonym().put(\"ru\", \"Приход товаров\");\n");
+        desc.append("        \n");
+        desc.append("        // SET document properties\n");
+        desc.append("        document.setNumberType(DocumentNumberType.NUMBER);\n");
+        desc.append("        document.setNumberLength(9);\n");
+        desc.append("        document.setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL);\n");
+        desc.append("        document.setRealTimePosting(RealTimePosting.DENY);\n");
+        desc.append("        \n");
+        desc.append("        // ASSIGN UUID to document\n");
+        desc.append("        try {\n");
+        desc.append("            document.setUuid(UUID.randomUUID());\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for document: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // CREATE type provider\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("        \n");
+        desc.append("        // CREATE attributes with UUID assignment\n");
+        desc.append("        DocumentAttribute warehouse = mdFactory.createDocumentAttribute();\n");
+        desc.append("        warehouse.setName(\"Warehouse\");\n");
+        desc.append("        warehouse.getSynonym().put(\"ru\", \"Склад\");\n");
+        desc.append("        try {\n");
+        desc.append("            warehouse.setUuid(UUID.randomUUID()); // CRITICAL: UUID for all child objects\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for Warehouse attribute: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("        TypeDescription warehouseType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(catalogRefType)\n");
+        desc.append("            .build();\n");
+        desc.append("        warehouse.setType(warehouseType);\n");
+        desc.append("        document.getAttributes().add(warehouse);\n");
+        desc.append("        \n");
+        desc.append("        // CREATE tabular section\n");
+        desc.append("        DocumentTabularSection products = mdFactory.createDocumentTabularSection();\n");
+        desc.append("        products.setName(\"Products\");\n");
+        desc.append("        products.getSynonym().put(\"ru\", \"Товары\");\n");
+        desc.append("        try {\n");
+        desc.append("            products.setUuid(UUID.randomUUID()); // CRITICAL: UUID for tabular section\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for Products tabular section: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // CREATE tabular section attributes with UUID assignment\n");
+        desc.append("        TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();\n");
+        desc.append("        product.setName(\"Product\");\n");
+        desc.append("        product.getSynonym().put(\"ru\", \"Номенклатура\");\n");
+        desc.append("        try {\n");
+        desc.append("            product.setUuid(UUID.randomUUID()); // CRITICAL: UUID for line attributes\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for Product attribute: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        TypeDescription productType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(catalogRefType)\n");
+        desc.append("            .build();\n");
+        desc.append("        product.setType(productType);\n");
+        desc.append("        products.getAttributes().add(product);\n");
+        desc.append("        \n");
+        desc.append("        TabularSectionAttribute quantity = mdFactory.createTabularSectionAttribute();\n");
+        desc.append("        quantity.setName(\"Quantity\");\n");
+        desc.append("        quantity.getSynonym().put(\"ru\", \"Количество\");\n");
+        desc.append("        try {\n");
+        desc.append("            quantity.setUuid(UUID.randomUUID()); // CRITICAL: UUID for line attributes\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for Quantity attribute: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("        TypeDescription quantityType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(numberType)\n");
+        desc.append("            .build();\n");
+        desc.append("        quantity.setType(quantityType);\n");
+        desc.append("        products.getAttributes().add(quantity);\n");
+        desc.append("        document.getTabularSections().add(products);\n");
+        desc.append("        \n");
+        desc.append("        // VALIDATE before attachment\n");
+        desc.append("        if (document.getAttributes().isEmpty()) {\n");
+        desc.append("            System.err.println(\"ERROR: Document has no attributes\");\n");
+        desc.append("        }\n");
+        desc.append("        if (document.getTabularSections().isEmpty()) {\n");
+        desc.append("            System.out.println(\"WARNING: Document has no tabular sections\");\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // ATTACH and add to configuration\n");
+        desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(document.eClass(), document.getName()).toString();\n");
+        desc.append("        try {\n");
+        desc.append("            transaction.attachTopObject((IBmObject)document, fqn);\n");
+        desc.append("            configuration.getDocuments().add(document);\n");
+        desc.append("            System.out.println(\"SUCCESS: Document created: \" + fqn);\n");
+        desc.append("            return document;\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to attach document: \" + e.getMessage());\n");
+        desc.append("            e.printStackTrace();\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### UUID Assignment Checklist for Documents:\n");
+        desc.append("- [ ] Document top-level object: `document.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] All DocumentAttribute objects: `attr.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] All DocumentTabularSection objects: `ts.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] All TabularSectionAttribute objects: `tsa.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] Wrap ALL UUID assignments in try-catch blocks\n");
+        desc.append("- [ ] Abort creation if any UUID assignment fails\n\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildEnhancedRegisterCreationWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Enhanced Workflow: Create Register with Full Validation\n\n");
+        desc.append("This workflow provides comprehensive register creation (Information, Accumulation, Accounting, Calculation) with:\n");
+        desc.append("- Existence check before creation\n");
+        desc.append("- UUID assignment for all objects (register, dimensions, resources, attributes)\n");
+        desc.append("- Type validation and error handling\n");
+        desc.append("- Complete validation before attachment\n\n");
+        desc.append("### Pattern for All Register Types:\n\n");
+        desc.append("```java\n");
+        desc.append("// This pattern applies to:\n");
+        desc.append("// - InformationRegister\n");
+        desc.append("// - AccumulationRegister\n");
+        desc.append("// - AccountingRegister\n");
+        desc.append("// - CalculationRegister\n");
+        desc.append("\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("InformationRegister result = globalContext.execute(new AbstractBmTask<InformationRegister>(\"Create register safely\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public InformationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("        \n");
+        desc.append("        // CHECK 1: Register existence\n");
+        desc.append("        String registerFqn = \"InformationRegister.Prices\";\n");
+        desc.append("        if (transaction.getTopObjectByFqn(registerFqn) != null) {\n");
+        desc.append("            System.err.println(\"ERROR: Register already exists: \" + registerFqn);\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // CREATE register\n");
+        desc.append("        InformationRegister register = mdFactory.createInformationRegister();\n");
+        desc.append("        register.setName(\"Prices\");\n");
+        desc.append("        register.getSynonym().put(\"ru\", \"Цены\");\n");
+        desc.append("        register.setInformationRegisterPeriodicity(InformationRegisterPeriodicity.DAY);\n");
+        desc.append("        register.setUseStandardCommands(true);\n");
+        desc.append("        \n");
+        desc.append("        // ASSIGN UUID to register\n");
+        desc.append("        try {\n");
+        desc.append("            register.setUuid(UUID.randomUUID());\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for register: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // CREATE type provider\n");
+        desc.append("        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n");
+        desc.append("            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n");
+        desc.append("        \n");
+        desc.append("        // CREATE dimension with UUID\n");
+        desc.append("        InformationRegisterDimension product = mdFactory.createInformationRegisterDimension();\n");
+        desc.append("        product.setName(\"Product\");\n");
+        desc.append("        product.getSynonym().put(\"ru\", \"Товар\");\n");
+        desc.append("        try {\n");
+        desc.append("            product.setUuid(UUID.randomUUID()); // CRITICAL: UUID for dimensions\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for dimension Product: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n");
+        desc.append("        TypeDescription productType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(catalogRefType)\n");
+        desc.append("            .build();\n");
+        desc.append("        product.setType(productType);\n");
+        desc.append("        register.getDimensions().add(product);\n");
+        desc.append("        \n");
+        desc.append("        // CREATE resource with UUID\n");
+        desc.append("        InformationRegisterResource price = mdFactory.createInformationRegisterResource();\n");
+        desc.append("        price.setName(\"Price\");\n");
+        desc.append("        price.getSynonym().put(\"ru\", \"Цена\");\n");
+        desc.append("        try {\n");
+        desc.append("            price.setUuid(UUID.randomUUID()); // CRITICAL: UUID for resources\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to set UUID for resource Price: \" + e.getMessage());\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);\n");
+        desc.append("        TypeDescription priceType = new TypeDescriptionBuilder()\n");
+        desc.append("            .addType(numberType)\n");
+        desc.append("            .build();\n");
+        desc.append("        price.setType(priceType);\n");
+        desc.append("        register.getResources().add(price);\n");
+        desc.append("        \n");
+        desc.append("        // VALIDATE before attachment\n");
+        desc.append("        if (register.getDimensions().isEmpty()) {\n");
+        desc.append("            System.err.println(\"ERROR: Register has no dimensions (at least one required)\");\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        // ATTACH and add to configuration\n");
+        desc.append("        String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();\n");
+        desc.append("        try {\n");
+        desc.append("            transaction.attachTopObject((IBmObject)register, fqn);\n");
+        desc.append("            configuration.getInformationRegisters().add(register);\n");
+        desc.append("            System.out.println(\"SUCCESS: Register created: \" + fqn);\n");
+        desc.append("            return register;\n");
+        desc.append("        } catch (Exception e) {\n");
+        desc.append("            System.err.println(\"ERROR: Failed to attach register: \" + e.getMessage());\n");
+        desc.append("            e.printStackTrace();\n");
+        desc.append("            return null;\n");
+        desc.append("        }\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### UUID Assignment Checklist for Registers:\n");
+        desc.append("- [ ] Register top-level object: `register.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] All InformationRegisterDimension objects: `dim.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] All InformationRegisterResource objects: `res.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] All RegisterAttribute objects: `attr.setUuid(UUID.randomUUID())`\n");
+        desc.append("- [ ] For CalculationRegister: Recalculation objects need UUID\n");
+        desc.append("- [ ] Wrap ALL UUID assignments in try-catch blocks\n");
+        desc.append("- [ ] Abort creation if any UUID assignment fails\n\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildChildElementsUuidImportance()
+    {
+        var desc = new StringBuilder();
+        desc.append("## CRITICAL: UUID Importance for Child Elements\n\n");
+        desc.append("### Why UUIDs are Required for ALL Child Elements\n\n");
+        desc.append("**Metadata Model Requirements:**\n");
+        desc.append("- ALL metadata objects derived from `MdObject` MUST have UUIDs\n");
+        desc.append("- This includes ALL child elements (attributes, tabular sections, dimensions, resources)\n");
+        desc.append("- Missing UUIDs cause SU45 validation errors\n");
+        desc.append("- UUIDs are used for object identification and references\n\n");
+        desc.append("**Common Child Elements That Need UUIDs:**\n");
+        desc.append("\n");
+        desc.append("**Catalogs:**\n");
+        desc.append("- CatalogAttribute\n");
+        desc.append("- CatalogTabularSection\n");
+        desc.append("- TabularSectionAttribute (inside tabular sections)\n");
+        desc.append("- PredefinedItem (predefined catalog items)\n\n");
+        desc.append("**Documents:**\n");
+        desc.append("- DocumentAttribute\n");
+        desc.append("- DocumentTabularSection\n");
+        desc.append("- TabularSectionAttribute (inside tabular sections)\n\n");
+        desc.append("**Registers (Information, Accumulation, Accounting, Calculation):**\n");
+        desc.append("- RegisterAttribute\n");
+        desc.append("- InformationRegisterDimension\n");
+        desc.append("- InformationRegisterResource\n");
+        desc.append("- AccumulationRegisterDimension\n");
+        desc.append("- AccumulationRegisterResource\n");
+        desc.append("- AccountingRegisterDimension\n");
+        desc.append("- AccountingRegisterResource\n");
+        desc.append("- CalculationRegisterDimension\n");
+        desc.append("- CalculationRegisterResource\n");
+        desc.append("- Recalculation (CalculationRegister specific)\n");
+        desc.append("- RecalculationDimension (inside Recalculation)\n\n");
+        desc.append("**BusinessProcess / Task:**\n");
+        desc.append("- BusinessProcessAttribute\n");
+        desc.append("- TaskAttribute\n");
+        desc.append("- BusinessProcessTabularSection\n");
+        desc.append("- TaskTabularSection\n");
+        desc.append("- TabularSectionAttribute (inside tabular sections)\n\n");
+        desc.append("**Enum:**\n");
+        desc.append("- EnumValue\n\n");
+        desc.append("**Common Forms, Commands, Templates:**\n");
+        desc.append("- BasicForm (attached to any metadata object)\n");
+        desc.append("- BasicCommand (attached to any metadata object)\n");
+        desc.append("- Template (attached to any metadata object)\n\n");
+        desc.append("**CommonModule:**\n");
+        desc.append("- Method (inside module)\n");
+        desc.append("- Parameter (inside Method)\n\n");
+        desc.append("**ExternalDataSource:**\n");
+        desc.append("- Table\n");
+        desc.append("- Column (inside Table)\n");
+        desc.append("- Cube\n");
+        desc.append("- DimensionTable (inside Cube)\n");
+        desc.append("- Table (inside Cube)\n");
+        desc.append("- Column (inside Cube tables)\n\n");
+        desc.append("### UUID Assignment Pattern:\n\n");
+        desc.append("```java\n");
+        desc.append("// Pattern 1: Top-level object\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setName(\"Products\");\n");
+        desc.append("catalog.setUuid(UUID.randomUUID()); // ✅ REQUIRED\n");
+        desc.append("\n");
+        desc.append("// Pattern 2: Child object (attribute)\n");
+        desc.append("CatalogAttribute attr = mdFactory.createCatalogAttribute();\n");
+        desc.append("attr.setName(\"Code\");\n");
+        desc.append("attr.setUuid(UUID.randomUUID()); // ✅ REQUIRED\n");
+        desc.append("\n");
+        desc.append("// Pattern 3: Nested child object (tabular section attribute)\n");
+        desc.append("CatalogTabularSection ts = mdFactory.createCatalogTabularSection();\n");
+        desc.append("ts.setName(\"Items\");\n");
+        desc.append("ts.setUuid(UUID.randomUUID()); // ✅ REQUIRED\n");
+        desc.append("\n");
+        desc.append("TabularSectionAttribute tsa = mdFactory.createTabularSectionAttribute();\n");
+        desc.append("tsa.setName(\"Quantity\");\n");
+        desc.append("tsa.setUuid(UUID.randomUUID()); // ✅ REQUIRED\n");
+        desc.append("ts.getAttributes().add(tsa);\n");
+        desc.append("catalog.getTabularSections().add(ts);\n");
+        desc.append("\n");
+        desc.append("// Pattern 4: Multiple child objects\n");
+        desc.append("catalog.getAttributes().forEach(attr -> attr.setUuid(UUID.randomUUID()));\n");
+        desc.append("catalog.getTabularSections().forEach(ts -> {\n");
+        desc.append("    ts.setUuid(UUID.randomUUID());\n");
+        desc.append("    ts.getAttributes().forEach(tsa -> tsa.setUuid(UUID.randomUUID()));\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### Common Mistakes:\n");
+        desc.append("```java\n");
+        desc.append("// ❌ WRONG: Forgetting child object UUIDs\n");
+        desc.append("Catalog catalog = mdFactory.createCatalog();\n");
+        desc.append("catalog.setUuid(UUID.randomUUID()); // ✅ OK\n");
+        desc.append("catalog.getAttributes().add(attr); // ❌ attr has no UUID! SU45 error!\n");
+        desc.append("\n");
+        desc.append("// ❌ WRONG: Using fillDefaultReferences in JShell\n");
+        desc.append("// modelFactory.fillDefaultReferences(catalog); // May timeout\n");
+        desc.append("\n");
+        desc.append("// ❌ WRONG: Not handling UUID assignment errors\n");
+        desc.append("attr.setUuid(UUID.randomUUID());\n");
+        desc.append("// If this fails silently, attr.getUuid() remains null → SU45 error\n");
+        desc.append("\n");
+        desc.append("// ✅ CORRECT: Manual UUID assignment with error handling\n");
+        desc.append("catalog.setUuid(UUID.randomUUID());\n");
+        desc.append("attr.setUuid(UUID.randomUUID());\n");
+        desc.append("// All objects have valid UUIDs\n");
+        desc.append("\n");
+        desc.append("// ✅ CORRECT: Error handling for UUID assignment\n");
+        desc.append("try {\n");
+        desc.append("    attr.setUuid(UUID.randomUUID());\n");
+        desc.append("} catch (Exception e) {\n");
+        desc.append("    System.err.println(\"ERROR: Cannot create attribute without UUID\");\n");
+        desc.append("    return null; // Stop creation\n");
+        desc.append("}\n");
+        desc.append("```\n\n");
+        desc.append("### Validation SU45 - UUID Required:\n");
+        desc.append("When SU45 error occurs:\n");
+        desc.append("1. Check ALL top-level objects have UUIDs\n");
+        desc.append("2. Check ALL child objects have UUIDs (attributes, tabular sections, etc.)\n");
+        desc.append("3. Check ALL nested child objects (tabular section attributes)\n");
+        desc.append("4. Ensure UUID is set BEFORE adding to parent collection\n");
+        desc.append("5. Verify no UUID assignment exceptions were silently ignored\n\n");
+        desc.append("### Summary:\n");
+        desc.append("- **ALL** metadata objects need UUIDs, not just top-level\n");
+        desc.append("- Child elements are often forgotten, causing SU45 errors\n");
+        desc.append("- Use manual UUID assignment with error handling\n");
+        desc.append("- Validate UUID assignment success before attachment\n\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDocumentRegistersWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Add Document Registers (Set Up Registrars on Document Side)\n\n");
+        desc.append("Registrars are configured on the **document** side through `Document.getRegisterRecords()`. \n");
+        desc.append("This creates a bidirectional relationship: document → register.\n\n");
+        desc.append("**⚠️ IMPORTANT:** Registers do NOT have `getRegisteredDocuments()` method. \n");
+        desc.append("Registrars are managed from the document side only.\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Add document registers\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("        \n");
+        desc.append("        // Get the document to configure\n");
+        desc.append("        Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("        \n");
+        desc.append("        // Get the registers to add as registrars\n");
+        desc.append("        AccumulationRegister stockRegister = (AccumulationRegister)transaction.getTopObjectByFqn(\"AccumulationRegister.GoodsInStock\");\n");
+        desc.append("        InformationRegister priceRegister = (InformationRegister)transaction.getTopObjectByFqn(\"InformationRegister.Prices\");\n");
+        desc.append("        \n");
+        desc.append("        if (document != null) {\n");
+        desc.append("            // Add accumulation register as registrar\n");
+        desc.append("            if (stockRegister != null) {\n");
+        desc.append("                document.getRegisterRecords().add(stockRegister);\n");
+        desc.append("                System.out.println(\"Added: AccumulationRegister.GoodsInStock as registrar\");\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            // Add information register as registrar\n");
+        desc.append("            if (priceRegister != null) {\n");
+        desc.append("                document.getRegisterRecords().add(priceRegister);\n");
+        desc.append("                System.out.println(\"Added: InformationRegister.Prices as registrar\");\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            System.out.println(\"Document registers configured successfully\");\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### Key Points:\n");
+        desc.append("- **Document side**: Registrators are configured on `Document.getRegisterRecords()`\n");
+        desc.append("- **No register.getRegisteredDocuments()**: Registers don't have this method\n");
+        desc.append("- **Bidirectional**: Setting document→register establishes both directions\n");
+        desc.append("- **Multiple registers**: One document can have multiple registers\n");
+        desc.append("- **Accumulation registers**: Use for stock/quantity tracking\n");
+        desc.append("- **Accounting registers**: Use for accounting operations\n");
+        desc.append("- **Calculation registers**: Use for payroll and calculation operations\n");
+        desc.append("\n");
+        desc.append("### \u26A0 CRITICAL: InformationRegister CANNOT be a registrar\n");
+        desc.append("**IMPORTANT**: InformationRegister cannot be added to `Document.getRegisterRecords()`.\n");
+        desc.append("InformationRegister stores periodic data but is NOT a register for documents.\n");
+        desc.append("\n");
+        desc.append("### Valid Register Types for Documents:\n");
+        desc.append("- **AccumulationRegister**: Stock registers (BALANCE or TURNOVERS) - CAN be a registrar\n");
+        desc.append("- **AccountingRegister**: Chart of accounts-based accounting - CAN be a registrar\n");
+        desc.append("- **CalculationRegister**: Payroll and calculation registers - CAN be a registrar\n");
+        desc.append("- **InformationRegister**: Periodic data - CANNOT be a registrar (error: SU45)\n");
+        desc.append("- **Note**: Only AccumulationRegister, AccountingRegister, and CalculationRegister can be document registrars\n");
+        desc.append("\n");
+        desc.append("### Verification:\n");
+        desc.append("After adding registers, verify:\n");
+        desc.append("```java\n");
+        desc.append("System.out.println(\"Document registers: \" + document.getRegisterRecords().size());\n");
+        desc.append("document.getRegisterRecords().forEach(reg -> \n");
+        desc.append("    System.out.println(\"  \" + reg.getName() + \" (\" + reg.eClass().getName() + \")\"));\n");
+        desc.append("```\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDocumentJournalDocumentsWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Add Registered Documents To Document Journal\n\n");
+        desc.append("Registered documents are configured on the **journal** side through `DocumentJournal.getRegisteredDocuments()`. \n");
+        desc.append("This determines which documents appear in the journal.\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Add journal documents\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("        \n");
+        desc.append("        // Get the journal to configure\n");
+        desc.append("        DocumentJournal journal = (DocumentJournal)transaction.getTopObjectByFqn(\"DocumentJournal.GoodsMovement\");\n");
+        desc.append("        \n");
+        desc.append("        // Get the documents to add to the journal\n");
+        desc.append("        Document receiptDoc = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("        Document saleDoc = (Document)transaction.getTopObjectByFqn(\"Document.GoodsSale\");\n");
+        desc.append("        Document returnDoc = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReturn\");\n");
+        desc.append("        \n");
+        desc.append("        if (journal != null) {\n");
+        desc.append("            // Add documents to the journal\n");
+        desc.append("            if (receiptDoc != null) {\n");
+        desc.append("                journal.getRegisteredDocuments().add(receiptDoc);\n");
+        desc.append("                System.out.println(\"Added: Document.GoodsReceipt\");\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            if (saleDoc != null) {\n");
+        desc.append("                journal.getRegisteredDocuments().add(saleDoc);\n");
+        desc.append("                System.out.println(\"Added: Document.GoodsSale\");\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            if (returnDoc != null) {\n");
+        desc.append("                journal.getRegisteredDocuments().add(returnDoc);\n");
+        desc.append("                System.out.println(\"Added: Document.GoodsReturn\");\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            System.out.println(\"Journal documents configured successfully\");\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### Key Points:\n");
+        desc.append("- **Journal side**: Registered documents are configured on `DocumentJournal.getRegisteredDocuments()`\n");
+        desc.append("- **Multiple documents**: One journal can contain multiple documents\n");
+        desc.append("- **Document order**: Order in collection determines display order in journal\n");
+        desc.append("- **Clear existing**: Use `clear()` to remove all documents before adding new ones\n");
+        desc.append("- **Journal purpose**: Groups related documents for easier navigation and filtering\n");
+        desc.append("- **No registration required**: Adding to journal doesn't affect registrar relationships\n");
+        desc.append("\n");
+        desc.append("### Verification:\n");
+        desc.append("After adding documents, verify:\n");
+        desc.append("```java\n");
+        desc.append("System.out.println(\"Journal documents: \" + journal.getRegisteredDocuments().size());\n");
+        desc.append("journal.getRegisteredDocuments().forEach(doc -> \n");
+        desc.append("    System.out.println(\"  \" + doc.getName() + \" (\" + doc.getSynonym().get(\"ru\") + \")\"));\n");
+        desc.append("```\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildExchangePlanThisNodeWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Set Exchange Plan ThisNode\n\n");
+        desc.append("The `thisNode` property identifies which node of the exchange plan represents the current system. \n");
+        desc.append("This is a UUID reference that must be set for the exchange plan to work correctly.\n\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("globalContext.execute(new AbstractBmTask<Void>(\"Set exchange plan thisNode\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        Configuration configuration = (Configuration)transaction.getTopObjectByFqn(\"Configuration\");\n");
+        desc.append("        \n");
+        desc.append("        // Get the exchange plan\n");
+        desc.append("        ExchangePlan exchangePlan = (ExchangePlan)transaction.getTopObjectByFqn(\"ExchangePlan.Synchronization\");\n");
+        desc.append("        \n");
+        desc.append("        if (exchangePlan != null) {\n");
+        desc.append("            // Generate a random UUID for the thisNode\n");
+        desc.append("            UUID thisNodeUUID = UUID.randomUUID();\n");
+        desc.append("            \n");
+        desc.append("            // Set the thisNode property\n");
+        desc.append("            exchangePlan.setThisNode(thisNodeUUID);\n");
+        desc.append("            \n");
+        desc.append("            System.out.println(\"ExchangePlan thisNode set to: \" + thisNodeUUID);\n");
+        desc.append("            System.out.println(\"This node now participates in exchange\");\n");
+        desc.append("        } else {\n");
+        desc.append("            System.err.println(\"ExchangePlan not found\");\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        return null;\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n\n");
+        desc.append("### Key Points:\n");
+        desc.append("- **UUID property**: `setThisNode(UUID)` takes a UUID, not a node object\n");
+        desc.append("- **Random UUID**: Use `UUID.randomUUID()` for new nodes\n");
+        desc.append("- **Existing nodes**: If participating in existing exchange, use UUID from other node\n");
+        desc.append("- **Content items**: ExchangePlan content items are separate from thisNode\n");
+        desc.append("- **Bidirectional**: Set thisNode on each participating node in the exchange\n");
+        desc.append("\n");
+        desc.append("### Common Scenarios:\n");
+        desc.append("\n**1. New exchange plan (single node):**\n");
+        desc.append("```java\n");
+        desc.append("UUID thisNodeUUID = UUID.randomUUID();\n");
+        desc.append("exchangePlan.setThisNode(thisNodeUUID);\n");
+        desc.append("// This node is now the only participant\n");
+        desc.append("```\n");
+        desc.append("\n**2. Existing exchange (join as new node):**\n");
+        desc.append("```java\n");
+        desc.append("// Get UUID from existing exchange plan content\n");
+        desc.append("UUID existingNodeUUID = UUID.fromString(\"550e8400-e29b-41d4-a716-446655440000\");\n");
+        desc.append("exchangePlan.setThisNode(existingNodeUUID);\n");
+        desc.append("// This node now joins existing exchange\n");
+        desc.append("```\n");
+        desc.append("\n**3. Exchange with multiple nodes:**\n");
+        desc.append("```java\n");
+        desc.append("// Node 1 (Main office)\n");
+        desc.append("exchangePlan.setThisNode(UUID.fromString(\"550e8400-e29b-41d4-a716-446655440000\"));\n");
+        desc.append("\n");
+        desc.append("// Node 2 (Warehouse)\n");
+        desc.append("exchangePlan.setThisNode(UUID.fromString(\"660e8400-e29b-41d4-a716-446655440001\"));\n");
+        desc.append("// Each node has its own thisNode UUID\n");
+        desc.append("```\n");
+        desc.append("\n");
+        desc.append("### Verification:\n");
+        desc.append("```java\n");
+        desc.append("UUID currentThisNode = exchangePlan.getThisNode();\n");
+        desc.append("if (currentThisNode != null) {\n");
+        desc.append("    System.out.println(\"ThisNode UUID: \" + currentThisNode);\n");
+        desc.append("    System.out.println(\"This node is configured for exchange\");\n");
+        desc.append("} else {\n");
+        desc.append("    System.out.println(\"ThisNode is not set - exchange plan won't work\");\n");
+        desc.append("}\n");
+        desc.append("```\n");
+        return desc.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildEditExistingMetadataWorkflow()
+    {
+        var desc = new StringBuilder();
+        desc.append("## Edit Existing Metadata Object\n\n");
+        desc.append("Generic workflow for editing any existing metadata object safely.\n\n");
+        desc.append("### Core Rules:\n");
+        desc.append("- ✅ **Load** existing object from BM transaction\n");
+        desc.append("- ✅ **Modify** properties directly on the loaded object\n");
+        desc.append("- ✅ **Return** the modified object\n");
+        desc.append("- ❌ **NEVER use** `attachTopObject()` for existing objects\n");
+        desc.append("- ❌ **NEVER use** `transaction.detachTopObject()` for existing objects\n");
+        desc.append("\n");
+        desc.append("### Generic Pattern:\n");
+        desc.append("```java\n");
+        desc.append("IProject project = workspaceRoot.getProject(\"MyProject\");\n");
+        desc.append("IV8Project v8project = projectManager.getProject(project);\n");
+        desc.append("IBmModel bmModel = modelManager.getModel(project);\n");
+        desc.append("IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();\n");
+        desc.append("\n");
+        desc.append("Document result = globalContext.execute(new AbstractBmTask<Document>(\"Edit document\") {\n");
+        desc.append("    @Override\n");
+        desc.append("    public Document execute(IBmTransaction transaction, IProgressMonitor monitor) {\n");
+        desc.append("        // STEP 1: Load existing object\n");
+        desc.append("        Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("        \n");
+        desc.append("        if (document != null) {\n");
+        desc.append("            // STEP 2: Modify properties directly\n");
+        desc.append("            document.setDescriptionLength(200);\n");
+        desc.append("            document.setUseStandardCommands(true);\n");
+        desc.append("            document.setRealTimePosting(RealTimePosting.DENY);\n");
+        desc.append("            document.setNumberType(DocumentNumberType.NUMBER);\n");
+        desc.append("            \n");
+        desc.append("            // STEP 3: Add/Remove child objects through collections\n");
+        desc.append("            // Add attribute\n");
+        desc.append("            DocumentAttribute attr = mdFactory.createDocumentAttribute();\n");
+        desc.append("            attr.setName(\"NewAttribute\");\n");
+        desc.append("            attr.setUuid(UUID.randomUUID());\n");
+        desc.append("            // ... set type ...\n");
+        desc.append("            document.getAttributes().add(attr);\n");
+        desc.append("            \n");
+        desc.append("            // Remove attribute by finding and deleting\n");
+        desc.append("            DocumentAttribute oldAttr = document.getAttributes().stream()\n");
+        desc.append("                .filter(a -> \"OldAttribute\".equals(a.getName()))\n");
+        desc.append("                .findFirst()\n");
+        desc.append("                .orElse(null);\n");
+        desc.append("            if (oldAttr != null) {\n");
+        desc.append("                EcoreUtil.delete(oldAttr);\n");
+        desc.append("            }\n");
+        desc.append("            \n");
+        desc.append("            // STEP 4: Return modified object\n");
+        desc.append("            return document;\n");
+        desc.append("        }\n");
+        desc.append("        \n");
+        desc.append("        return null; // Object not found\n");
+        desc.append("    }\n");
+        desc.append("});\n");
+        desc.append("```\n");
+        desc.append("\n");
+        desc.append("### Edit Different Object Types:\n");
+        desc.append("\n**Catalog:**\n");
+        desc.append("```java\n");
+        desc.append("Catalog catalog = (Catalog)transaction.getTopObjectByFqn(\"Catalog.Products\");\n");
+        desc.append("catalog.setCodeLength(10);\n");
+        desc.append("catalog.setDescriptionLength(200);\n");
+        desc.append("return catalog;\n");
+        desc.append("```\n");
+        desc.append("\n**Information Register:**\n");
+        desc.append("```java\n");
+        desc.append("InformationRegister register = (InformationRegister)transaction.getTopObjectByFqn(\"InformationRegister.Prices\");\n");
+        desc.append("register.setInformationRegisterPeriodicity(InformationRegisterPeriodicity.DAY);\n");
+        desc.append("register.setWriteMode(RegisterWriteMode.INDEPENDENT);\n");
+        desc.append("return register;\n");
+        desc.append("```\n");
+        desc.append("\n**Accumulation Register:**\n");
+        desc.append("```java\n");
+        desc.append("AccumulationRegister register = (AccumulationRegister)transaction.getTopObjectByFqn(\"AccumulationRegister.GoodsInStock\");\n");
+        desc.append("register.setRegisterType(AccumulationRegisterType.BALANCE);\n");
+        desc.append("return register;\n");
+        desc.append("```\n");
+        desc.append("\n**Enum:**\n");
+        desc.append("```java\n");
+        desc.append("Enum enumObj = (Enum)transaction.getTopObjectByFqn(\"Enum.Statuses\");\n");
+        desc.append("enumObj.getEnumValues().get(0).setName(\"Active\");\n");
+        desc.append("return enumObj;\n");
+        desc.append("```\n");
+        desc.append("\n");
+        desc.append("### Common Pitfalls to Avoid:\n");
+        desc.append("\n**❌ WRONG: Using attachTopObject for existing object**\n");
+        desc.append("```java\n");
+        desc.append("Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("document.setDescriptionLength(200);\n");
+        desc.append("String fqn = fqnGenerator.generateStandaloneObjectFqn(document.eClass(), document.getName()).toString();\n");
+        desc.append("transaction.attachTopObject((IBmObject)document, fqn); // ❌ BmFqnAlreadyInUseException!\n");
+        desc.append("```\n");
+        desc.append("\n**❌ WRONG: Detaching existing object**\n");
+        desc.append("```java\n");
+        desc.append("Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("transaction.detachTopObject((IBmObject)document); // ❌ Detach should not be used for editing\n");
+        desc.append("```\n");
+        desc.append("\n**✅ CORRECT: Direct modification only**\n");
+        desc.append("```java\n");
+        desc.append("Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("if (document != null) {\n");
+        desc.append("    document.setDescriptionLength(200); // ✅ Direct modification\n");
+        desc.append("    // No attachTopObject() call\n");
+        desc.append("    // No detachTopObject() call\n");
+        desc.append("    // Just modify and return\n");
+        desc.append("}\n");
+        desc.append("```\n");
+        desc.append("\n");
+        desc.append("### Edit Document Registers:\n");
+        desc.append("```java\n");
+        desc.append("Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("AccumulationRegister register = (AccumulationRegister)transaction.getTopObjectByFqn(\"AccumulationRegister.GoodsInStock\");\n");
+        desc.append("if (document != null && register != null) {\n");
+        desc.append("    document.getRegisterRecords().add(register);\n");
+        desc.append("    System.out.println(\"Added register to document\");\n");
+        desc.append("}\n");
+        desc.append("```\n");
+        desc.append("\n");
+        desc.append("### Edit Document Journal Documents:\n");
+        desc.append("```java\n");
+        desc.append("DocumentJournal journal = (DocumentJournal)transaction.getTopObjectByFqn(\"DocumentJournal.GoodsMovement\");\n");
+        desc.append("Document document = (Document)transaction.getTopObjectByFqn(\"Document.GoodsReceipt\");\n");
+        desc.append("if (journal != null && document != null) {\n");
+        desc.append("    journal.getRegisteredDocuments().add(document);\n");
+        desc.append("    System.out.println(\"Added document to journal\");\n");
+        desc.append("}\n");
+        desc.append("```\n");
+        desc.append("\n");
+        desc.append("### Delete Child Objects:\n");
+        desc.append("```java\n");
+        desc.append("// Remove child object properly\n");
+        desc.append("CatalogAttribute attrToRemove = catalog.getAttributes().stream()\n");
+        desc.append("    .filter(a -> \"OldName\".equals(a.getName()))\n");
+        desc.append("    .findFirst()\n");
+        desc.append("    .orElse(null);\n");
+        desc.append("if (attrToRemove != null) {\n");
+        desc.append("    EcoreUtil.delete(attrToRemove); // ✅ Correct deletion method\n");
+        desc.append("    System.out.println(\"Removed attribute: \" + attrToRemove.getName());\n");
+        desc.append("}\n");
+        desc.append("```\n");
         return desc.toString();
     }
 }
