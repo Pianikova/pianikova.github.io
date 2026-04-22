@@ -23,6 +23,7 @@ import jdk.jshell.SnippetEvent;
 class JShellSession
     implements IJShellSession
 {
+    private static final int MAX_EXECUTION_HISTORY_SIZE = 4096;
 	private final int sessionId;
 	private final JShell shell;
 	private final ByteArrayOutputStream outBuffer;
@@ -32,7 +33,6 @@ class JShellSession
     private final List<String> executionHistory = new ArrayList<>();
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
     private ArrayList<String> cachedAvailableBindings;
-    private static final int MAX_EXECUTION_HISTORY_SIZE = 100;
 
     JShellSession(int sessionId, JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
         IRestrictedTypesValidator restrictedTypesValidator, Set<IJShellBindingProvider> bindingProviders)
@@ -63,6 +63,7 @@ class JShellSession
             var descriptions = provider.getBindings();
             bindings.addAll(descriptions.keySet());
         }
+
         return bindings;
     }
 
@@ -130,81 +131,81 @@ class JShellSession
         try
         {
             // Split code into individual completions using analyzeCompletion
-        var analysis = shell.sourceCodeAnalysis();
-        var remaining = code;
-        while (result.compilationErrors.isEmpty() && remaining != null && !remaining.isBlank())
-        {
-            var completion = analysis.analyzeCompletion(remaining);
-            String source;
-            if (completion.completeness().isComplete())
+            var analysis = shell.sourceCodeAnalysis();
+            var remaining = code;
+            while (result.compilationErrors.isEmpty() && remaining != null && !remaining.isBlank())
             {
-                source = completion.source();
-                remaining = completion.remaining();
-            }
-            else
-            {
-                source = completion.remaining();
-            }
-
-            var events = shell.eval(source);
-            if (!events.isEmpty())
-            {
-                for (SnippetEvent event : events)
+                var completion = analysis.analyzeCompletion(remaining);
+                String source;
+                if (completion.completeness().isComplete())
                 {
-                    switch (event.status())
+                    source = completion.source();
+                    remaining = completion.remaining();
+                }
+                else
+                {
+                    source = completion.remaining();
+                }
+
+                var events = shell.eval(source);
+                if (!events.isEmpty())
+                {
+                    for (SnippetEvent event : events)
                     {
-                    case REJECTED:
-                        // Get structured diagnostics for compilation errors
-                        var diagnostics = shell.diagnostics(event.snippet()).collect(Collectors.toList());
-                        if (!diagnostics.isEmpty())
+                        switch (event.status())
                         {
-                            for (var diag : diagnostics)
+                        case REJECTED:
+                            // Get structured diagnostics for compilation errors
+                            var diagnostics = shell.diagnostics(event.snippet()).collect(Collectors.toList());
+                            if (!diagnostics.isEmpty())
                             {
-                                var error = new CompilationError();
-                                error.isError = diag.isError();
-                                error.code = diag.getCode();
-                                error.message = diag.getMessage(null);
-                                error.position = diag.getPosition();
-                                error.startPosition = diag.getStartPosition();
-                                error.endPosition = diag.getEndPosition();
-
-                                // Determine the error type based on error code
-                                var errorCode = diag.getCode();
-                                if (errorCode != null)
+                                for (var diag : diagnostics)
                                 {
-                                    error.isResolutionError = errorCode.startsWith("compiler.err.cant.resolve")
-                                        || "compiler.err.cant.apply.symbol".equals(errorCode);
-                                    error.isUnreachableError = "compiler.err.unreachable.stmt".equals(errorCode);
-                                    error.isNotAStatementError = "compiler.err.not.stmt".equals(errorCode);
+                                    var error = new CompilationError();
+                                    error.isError = diag.isError();
+                                    error.code = diag.getCode();
+                                    error.message = diag.getMessage(null);
+                                    error.position = diag.getPosition();
+                                    error.startPosition = diag.getStartPosition();
+                                    error.endPosition = diag.getEndPosition();
+
+                                    // Determine the error type based on error code
+                                    var errorCode = diag.getCode();
+                                    if (errorCode != null)
+                                    {
+                                        error.isResolutionError = errorCode.startsWith("compiler.err.cant.resolve")
+                                            || "compiler.err.cant.apply.symbol".equals(errorCode);
+                                        error.isUnreachableError = "compiler.err.unreachable.stmt".equals(errorCode);
+                                        error.isNotAStatementError = "compiler.err.not.stmt".equals(errorCode);
+                                    }
+
+                                    result.compilationErrors.add(error);
                                 }
-
-                                result.compilationErrors.add(error);
                             }
+                            break;
+
+                        case VALID:
+                            addToExecutionHistory(source);
+                            // Check for runtime exceptions
+                            if (event.exception() != null)
+                            {
+                                var exception = event.exception();
+                                var error = new RuntimeError();
+                                error.exceptionType = exception.getClass().getName();
+                                error.message = exception.getMessage();
+
+                                var stackTrace = new java.io.StringWriter();
+                                exception.printStackTrace(new java.io.PrintWriter(stackTrace));
+                                error.stackTrace = stackTrace.toString();
+
+                                result.runtimeErrors.add(error);
+                            }
+                            break;
                         }
-                        break;
-
-                    case VALID:
-                        addToExecutionHistory(source);
-                        // Check for runtime exceptions
-                        if (event.exception() != null)
-                        {
-                            var exception = event.exception();
-                            var error = new RuntimeError();
-                            error.exceptionType = exception.getClass().getName();
-                            error.message = exception.getMessage();
-
-                            var stackTrace = new java.io.StringWriter();
-                            exception.printStackTrace(new java.io.PrintWriter(stackTrace));
-                            error.stackTrace = stackTrace.toString();
-
-                            result.runtimeErrors.add(error);
-                        }
-                        break;
                     }
                 }
             }
         }
-    }
         catch (OutOfMemoryError e)
         {
             var error = new RuntimeError();

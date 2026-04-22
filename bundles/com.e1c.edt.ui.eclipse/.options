@@ -7,3 +7,4 @@ com.e1c.edt.ai/chat=false
 com.e1c.edt.ai/code_completion=false
 com.e1c.edt.ai/sync=false
 com.e1c.edt.ai/jobs=false
+com.e1c.edt.ai/tools=false

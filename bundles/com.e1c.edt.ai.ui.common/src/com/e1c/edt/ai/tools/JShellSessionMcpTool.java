@@ -92,9 +92,8 @@ public class JShellSessionMcpTool
 
 		try
 		{
-            IJShellSession session = sessions.getOrCreateSession(0);
-
-            SessionResult result = session.getSessionResult();
+            var session = sessions.getOrCreateSession(0);
+            var result = session.getSessionResult();
 			var content = json.serialize(result);
             details.responseMarkdown = Messages.JShellSessionCreated;
 			return messageFactory.createMessage(this, call, content, details);
@@ -121,9 +120,16 @@ public class JShellSessionMcpTool
 		description.append("\n- Session preserves state between JShell calls");
 
 		description.append("\n\n**When to use:**");
-		description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" tool (required)");
-		description.append("\n- To check available bindings and execution history");
+        description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" for execution");
+        description.append("\n- After calling ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" to get a scenario-specific template");
+        description.append("\n- To check available bindings and execution history");
 		description.append("\n- To get session info for existing session");
+
+        description.append("\n\n**Required flow for EDT/Eclipse scenarios:**");
+        description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME).append(" first");
+        description.append("\n2. Call ").append(TOOL_NAME).append(" to get a session");
+        description.append("\n3. Call ").append(JShellMcpTool.TOOL_NAME).append(" to execute the prepared code");
 
 		description.append("\n\n**Usage:**");
 		description.append("\n- If `repl_session_id` is not provided → creates NEW session");
@@ -142,11 +148,11 @@ public class JShellSessionMcpTool
 					description.append("\n");
 					for (var entry : descriptions.entrySet())
 					{
-						String bindingName = entry.getKey();
-						JShellBindingDescription bindingInfo = entry.getValue();
-						String bindingDesc = bindingInfo.getDescription();
-						String bindingExample = bindingInfo.getExample();
-                        String bindingRestriction = bindingInfo.getRestriction();
+                        var bindingName = entry.getKey();
+                        var bindingInfo = entry.getValue();
+                        var bindingDesc = bindingInfo.getDescription();
+                        var bindingExample = bindingInfo.getExample();
+                        var bindingRestriction = bindingInfo.getRestriction();
 
 						description.append("\n**`").append(bindingName).append("`**");
 						description.append("\n").append(bindingDesc);

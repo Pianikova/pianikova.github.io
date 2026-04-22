@@ -90,7 +90,6 @@ public class JShellMcpTool
 	{
 		var details = new ToolCallMessageDetails();
 		details.autoCall = false;
-
 		var optionalRequest = json.deserialize(call.function.arguments, Request.class);
 		if (optionalRequest.isEmpty())
 		{
@@ -98,7 +97,6 @@ public class JShellMcpTool
 		}
 
 		var request = optionalRequest.get();
-
 		if (call.callKind == ToolCallKind.RENDER)
 		{
 			var requestMarkdown = new StringBuilder();
@@ -181,7 +179,7 @@ public class JShellMcpTool
 	private String getBindingVariableNamesExample()
 	{
 		var bindingNames = new ArrayList<String>();
-		for (IJShellBindingProvider provider : bindingProviders)
+        for (var provider : bindingProviders)
 		{
             var bindings = provider.getBindings();
 			if (bindings != null)
@@ -206,11 +204,6 @@ public class JShellMcpTool
 		return String.join(", ", exampleNames);
 	}
 
-    private String getProviderUseCases(IJShellBindingProvider provider)
-    {
-        return provider.getUseCases();
-    }
-
     @SuppressWarnings("nls")
 	private McpToolCallSpecification createSpecification()
 	{
@@ -222,6 +215,9 @@ public class JShellMcpTool
 		var description = new StringBuilder();
         description.append("Executes Java code using JShell REPL. Preserves state across executions.");
 		description.append("\n\n**IMPORTANT:**");
+        description.append("\n- For EDT metadata or Eclipse API code generation, you MUST call ")
+            .append(JShellManualMcpTool.TOOL_NAME)
+            .append(" first to get a scenario-specific template");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
 
@@ -232,71 +228,37 @@ public class JShellMcpTool
 		description.append("\n- Use ONLY complete statements with `;` (e.g., `int x = 10;`)");
 		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");
         description.append("\n- Output MUST be in main thread for result capture");
+        description.append("\n- DO NOT use without a value `return;` - always return any value (e.g., `return null;`)");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
 		{
             description.append("\n- Pre-configured objects are available in JShell");
-			description.append("\n- See ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool for detailed binding documentation with examples");
+			description.append("\n- See ").append(JShellSessionMcpTool.TOOL_NAME)
+                .append(" for the full binding list, descriptions, restrictions, and examples");
 			String bindingExamples = getBindingVariableNamesExample();
-			description.append("\\n- **IMPORTANT:** Bindings are already available as variables (e.g., ").append(bindingExamples).append("). DO NOT use `JShellObjectBridge.retrieve()` - it's for internal use only.");
-
-            description.append("\n\n**Binding providers:**");
-            for (var provider : bindingProviders)
+            if (!bindingExamples.isEmpty())
             {
-                var descriptions = provider.getBindings();
-                if (!descriptions.isEmpty())
-                {
-                    description.append("\n\n**");
-                    description.append(provider.getDescription());
-                    description.append("**");
-                    String useCases = getProviderUseCases(provider);
-                    if (!useCases.isEmpty())
-                    {
-                        description.append("\n\n");
-                        description.append(useCases);
-                    }
-                    description.append("\n\nAvailable bindings:");
-                    int count = 0;
-                    for (var entry : descriptions.entrySet())
-                    {
-                        if (count < 3)
-                        {
-                            String bindingName = entry.getKey();
-                            JShellBindingDescription bindingInfo = entry.getValue();
-                            String bindingRestriction = bindingInfo.getRestriction();
-                            description.append("\n- `")
-                                .append(bindingName)
-                                .append("`: ")
-                                .append(bindingInfo.getDescription());
-                            if (bindingRestriction != null && !bindingRestriction.isEmpty())
-                            {
-                                description.append(" (has restriction)");
-                            }
-                            count++;
-                        }
-                        else
-                        {
-                            description.append("\n- ... and more (see JShellSession tool)");
-                            break;
-                        }
-                    }
-                }
+                description.append("\n- Bindings are already available as variables, for example ")
+                    .append(bindingExamples).append(".");
             }
+            description.append("\n- DO NOT use `JShellObjectBridge.retrieve()` - it is for internal use only.");
 		}
 
 		description.append("\n\n**Workflow:**");
-		description.append("\n1. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
-        description.append("\n2. Use ").append(TOOL_NAME).append(" with that ID to execute code");
-		description.append("\n3. Reuse same ID to maintain state");
+        description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" to get guidance for the scenario");
+		description.append("\n2. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
+        description.append("\n3. Use ").append(TOOL_NAME).append(" with that ID to execute code");
+		description.append("\n4. Reuse same ID to maintain state");
 
 		// Add restricted types information
-		Set<String> restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
+        var restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
 		if (!restrictedTypes.isEmpty())
 		{
 			description.append("\n\n**⚠️ RESTRICTED TYPES (security restrictions):**");
 			description.append("\nThe following types are NOT ALLOWED:");
-			for (String type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
+            for (var type : restrictedTypes.stream().sorted().collect(Collectors.toList()))
 			{
 				description.append("\n- `").append(type).append("`");
 			}

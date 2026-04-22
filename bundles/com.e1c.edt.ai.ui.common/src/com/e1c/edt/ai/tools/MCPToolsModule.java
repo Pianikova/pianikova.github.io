@@ -48,6 +48,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(SetMarkersMcpTool.class);
         toolBinder.addBinding().to(DeleteMarkersMcpTool.class);
         toolBinder.addBinding().to(JShellSessionMcpTool.class);
+        toolBinder.addBinding().to(JShellManualMcpTool.class);
         toolBinder.addBinding().to(JShellMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
@@ -85,6 +86,8 @@ public class MCPToolsModule
         // JShell binding providers
         var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
         jshellBindingProviderBinder.addBinding().to(EclipsePlatformBindingProvider.class);
+        var jshellManualProviderBinder = Multibinder.newSetBinder(binder(), IJShellManualProvider.class);
+        jshellManualProviderBinder.addBinding().to(EclipsePlatformBindingProvider.class);
 
         // JGit command implementations
         var jgitCommandBinder = Multibinder.newSetBinder(binder(), IJGitCommand.class);

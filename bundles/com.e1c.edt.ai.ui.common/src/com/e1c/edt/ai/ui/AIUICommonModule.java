@@ -15,6 +15,7 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.tools.JShellSessionManager;
 import com.e1c.edt.ai.tools.MCPToolsModule;
 import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
@@ -51,6 +52,7 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(UpdateService.class);
         initializableBinder.addBinding().to(Notificator.class);
         initializableBinder.addBinding().to(ActiveProjectTracker.class);
+        initializableBinder.addBinding().to(JShellSessionManager.class);
 
         bind(UI.class).in(Singleton.class);
         bind(IUI.class).to(UI.class);

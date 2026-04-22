@@ -157,6 +157,7 @@ public class McpTools
         boolean isAvailable;
     }
 
+    @SuppressWarnings("nls")
     @Override
     public CompletableFuture<McpCallToolsResult> callTools(McpToolCalls calls, ICancellationToken cancellationToken)
     {
@@ -174,10 +175,18 @@ public class McpTools
 
             try
             {
-                @SuppressWarnings("nls")
+                log.trace(TracingSources.TOOLS, "McpTools",
+                    () -> "Tool request: " + toolName + ", args: " + json.serialize(call.function.arguments));
                 var callFuture =
                     tool.call(call, cancellationToken)
+                        .thenApply(response -> {
+                            log.trace(TracingSources.TOOLS, "McpTools",
+                                () -> "Tool response: " + toolName + ", result: " + json.serialize(response));
+                            return response;
+                        })
                         .exceptionally(error -> {
+                            log.trace(TracingSources.TOOLS, "McpTools",
+                                () -> "Tool exception: " + toolName + ", error: " + error.toString());
                             log.warning("AI Tool failed", () -> {
                                 var message = new StringBuilder();
                                 message.append(error.toString());
@@ -191,6 +200,8 @@ public class McpTools
             }
             catch (Exception ex)
             {
+                log.trace(TracingSources.TOOLS, "McpTools",
+                    () -> "Tool exception (sync): " + toolName + ", error: " + ex.toString());
                 var message = createErrorMessage(tool, call, toolName, ex);
                 futures.add(CompletableFuture.completedFuture(message));
             }
@@ -204,7 +215,6 @@ public class McpTools
             return CompletableFuture.completedFuture(result);
         }
 
-        @SuppressWarnings("nls")
         var futureResult = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
             .thenApply(v -> {
                 var result = new McpCallToolsResult();
