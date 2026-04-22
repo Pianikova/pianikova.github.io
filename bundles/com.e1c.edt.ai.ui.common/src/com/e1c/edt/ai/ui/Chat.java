@@ -10,9 +10,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -75,6 +77,23 @@ public class Chat
     implements IChat, IChatDialog, IStateListener
 {
     private static final String AI_CHAT_DIR = "ai.chat"; //$NON-NLS-1$
+    private static final String INSTANCE_ID = UUID.randomUUID().toString();
+
+    static
+    {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            var dir = getUserDataDirectory();
+            try (var stream = Files.walk(dir))
+            {
+                stream.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+            }
+            catch (IOException ignored)
+            {
+                // best-effort cleanup
+            }
+        }, "ai-chat-userdata-cleanup")); //$NON-NLS-1$
+    }
+
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
     private static final String CHAT_API_WINK_TEMPLATE =
         "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"}, \"%s\", \"%s\")"; //$NON-NLS-1$
@@ -569,7 +588,16 @@ public class Chat
         view.setLayoutY(-1);
 
         var webEngine = getEngine();
-        webEngine.setUserDataDirectory(getUserDataDirectory().toFile());
+        var userDataDirectory = getUserDataDirectory();
+        try
+        {
+            Files.createDirectories(userDataDirectory);
+        }
+        catch (IOException error)
+        {
+            log.logError(error);
+        }
+        webEngine.setUserDataDirectory(userDataDirectory.toFile());
         webEngine.setOnError(event -> {
             log.logError(event.getMessage());
             log.logError(event.getException());
@@ -693,7 +721,7 @@ public class Chat
             .addTrailingSeparator()
             .append(AI_CHAT_DIR)
             .toFile()
-            .getAbsolutePath());
+            .getAbsolutePath(), INSTANCE_ID);
     }
 
     private void chatInJob(Optional<AIContext> ctx, IChatAction chatAction)
