@@ -78,21 +78,8 @@ public class Chat
 {
     private static final String AI_CHAT_DIR = "ai.chat"; //$NON-NLS-1$
     private static final String INSTANCE_ID = UUID.randomUUID().toString();
-
-    static
-    {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            var dir = getUserDataDirectory();
-            try (var stream = Files.walk(dir))
-            {
-                stream.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-            }
-            catch (IOException ignored)
-            {
-                // best-effort cleanup
-            }
-        }, "ai-chat-userdata-cleanup")); //$NON-NLS-1$
-    }
+    private static final java.util.concurrent.atomic.AtomicBoolean CLEANUP_REGISTERED =
+        new java.util.concurrent.atomic.AtomicBoolean();
 
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
     private static final String CHAT_API_WINK_TEMPLATE =
@@ -598,6 +585,7 @@ public class Chat
             log.logError(error);
         }
         webEngine.setUserDataDirectory(userDataDirectory.toFile());
+        registerCleanupHook(userDataDirectory);
         webEngine.setOnError(event -> {
             log.logError(event.getMessage());
             log.logError(event.getException());
@@ -722,6 +710,25 @@ public class Chat
             .append(AI_CHAT_DIR)
             .toFile()
             .getAbsolutePath(), INSTANCE_ID);
+    }
+
+    @SuppressWarnings("nls")
+    private static void registerCleanupHook(Path userDataDirectory)
+    {
+        if (!CLEANUP_REGISTERED.compareAndSet(false, true))
+        {
+            return;
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try (var stream = Files.walk(userDataDirectory))
+            {
+                stream.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+            }
+            catch (IOException | RuntimeException ignored)
+            {
+                // best-effort cleanup
+            }
+        }, "ai-chat-userdata-cleanup"));
     }
 
     private void chatInJob(Optional<AIContext> ctx, IChatAction chatAction)
