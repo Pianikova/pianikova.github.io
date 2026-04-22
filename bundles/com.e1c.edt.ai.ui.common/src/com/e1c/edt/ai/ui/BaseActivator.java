@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui;
 import java.util.Hashtable;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import org.eclipse.core.runtime.IStatus;
@@ -49,8 +50,8 @@ public abstract class BaseActivator
     private static final String ICONS_PATH = "icons"; //$NON-NLS-1$
     private static BaseActivator plugin;
     private BundleContext bundleContext;
-    private Injector injector;
-    private ISettings settings;
+    private final AtomicReference<Injector> injectorRef = new AtomicReference<>();
+    private volatile ISettings settings;
     private DebugTrace debugTrace;
 
     /**
@@ -329,31 +330,43 @@ public abstract class BaseActivator
     private Injector getInjector()
     {
         var defaultActivator = getDefault();
-        var localInjector = defaultActivator.injector;
-        if (localInjector == null)
+        var existing = defaultActivator.injectorRef.get();
+        if (existing != null)
         {
-            synchronized (this)
-            {
-                localInjector = defaultActivator.injector;
-                if (localInjector == null)
-                {
-                    try
-                    {
-                        localInjector = createInjector();
-                        defaultActivator.injector = localInjector;
-                    }
-                    catch (Exception e)
-                    {
-                        log(createErrorStatus("Failed to create injector for " //$NON-NLS-1$
-                            + getBundle().getSymbolicName(), e));
-                        throw new RuntimeException("Failed to create injector for " //$NON-NLS-1$
-                            + getBundle().getSymbolicName(), e);
-                    }
-                }
-            }
+            return existing;
         }
 
-        return localInjector;
+        Injector created;
+        try
+        {
+            created = createInjector();
+        }
+        catch (Exception e)
+        {
+            log(createErrorStatus("Failed to create injector for " //$NON-NLS-1$
+                + getBundle().getSymbolicName(), e));
+            throw new RuntimeException("Failed to create injector for " //$NON-NLS-1$
+                + getBundle().getSymbolicName(), e);
+        }
+
+        // Lock-free publication: if another thread won the race, discard our instance
+        // and use the winner's. Avoids holding a monitor on the activator during the
+        // expensive createInjector() call, which was a UI-thread contention source.
+        if (defaultActivator.injectorRef.compareAndSet(null, created))
+        {
+            return created;
+        }
+        return defaultActivator.injectorRef.get();
+    }
+
+    /**
+     * Non-blocking accessor for the cached {@link ISettings}. Returns {@code null}
+     * if the plugin has not finished starting yet. Does NOT force injector creation —
+     * safe to call from UI-thread paths such as property testers.
+     */
+    public ISettings trySettings()
+    {
+        return settings;
     }
 
     protected abstract Injector createInjector();

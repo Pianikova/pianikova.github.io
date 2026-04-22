@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -112,6 +113,7 @@ public class Chat
     private final IFileSystem fileSystem;
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).weakKeys().build();
     private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
+    private final Object chatStateLock = new Object();
 
     private WebView webView;
     private ChatKey lastChatKey;
@@ -741,22 +743,54 @@ public class Chat
     }
 
     @SuppressWarnings("nls")
-    private synchronized IStatus chat(Optional<AIContext> ctx, IChatAction chatAction)
+    private IStatus chat(Optional<AIContext> ctx, IChatAction chatAction)
     {
         try
         {
             var chatUrl = settings.getChatUrl();
             var newChatKey = new ChatKey(chatUrl, settings.getClientToken());
-            if (!Objects.equals(lastChatKey, newChatKey))
+            boolean needsInit;
+            // Narrow lock: only guard mutation of lastChatKey/handler state.
+            // Do NOT hold the monitor during blocking future waits or syncExec
+            // dispatches below — that is a UI-thread deadlock risk.
+            synchronized (chatStateLock)
             {
-                handler.reset();
-                lastChatKey = newChatKey;
-                dispatcher.dispatch(() -> {
+                needsInit = !Objects.equals(lastChatKey, newChatKey);
+                if (needsInit)
+                {
+                    handler.reset();
+                    lastChatKey = newChatKey;
+                }
+            }
+
+            if (needsInit)
+            {
+                var futureOpt = dispatcher.dispatch(() -> {
                     var webEngine = getEngine();
                     return initialize(webEngine, () -> {
                         webEngine.load(chatUrl.toString());
                     });
-                }).get().join();
+                });
+                if (futureOpt.isPresent())
+                {
+                    try
+                    {
+                        futureOpt.get().get(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS);
+                    }
+                    catch (TimeoutException error)
+                    {
+                        log.warning(AI_CHAT, () -> "Chat initialization timed out");
+                    }
+                    catch (InterruptedException error)
+                    {
+                        Thread.currentThread().interrupt();
+                        log.warning(AI_CHAT, () -> "Chat initialization interrupted");
+                    }
+                    catch (ExecutionException error)
+                    {
+                        log.warning(AI_CHAT, () -> "Chat initialization failed: " + error);
+                    }
+                }
 
                 wink(32);
             }
@@ -823,7 +857,29 @@ public class Chat
             return;
         }
 
-        var tools = mcpTools.getSpecifications().join().stream().map(i -> i.function).collect(Collectors.toList());
+        List<?> tools;
+        try
+        {
+            tools = mcpTools.getSpecifications()
+                .get(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+                .stream().map(i -> i.function).collect(Collectors.toList());
+        }
+        catch (TimeoutException error)
+        {
+            log.warning(AI_CHAT, () -> "MCP specifications timed out, skipping wink tools sync"); //$NON-NLS-1$
+            return;
+        }
+        catch (InterruptedException error)
+        {
+            Thread.currentThread().interrupt();
+            log.warning(AI_CHAT, () -> "MCP specifications wait interrupted"); //$NON-NLS-1$
+            return;
+        }
+        catch (ExecutionException error)
+        {
+            log.warning(AI_CHAT, () -> "MCP specifications failed: " + error); //$NON-NLS-1$
+            return;
+        }
         var toolsJson = json.serialize(tools);
 
         var webEngine = getEngine();
