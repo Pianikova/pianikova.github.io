@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -250,7 +251,11 @@ public class GetMarkersMcpTool implements IMcpTool
         if (path != null && !path.isBlank())
         {
             file = projectTools.getProjectFile(project, path).orElse(null);
-            if (file == null || !file.exists())
+            if (file == null)
+            {
+                throw new ToolException("The file \"" + path + "\" does not exist in the project.");
+            }
+            if (!file.exists())
             {
                 throw new ToolException("The file \"" + path + "\" does not exist.");
             }
@@ -261,10 +266,8 @@ public class GetMarkersMcpTool implements IMcpTool
             Stream<MarkerInfo> allMarkers = Stream.empty();
             for (var markersProvider : markersProviders)
             {
-                var markers = markersProvider.getMarkers(project, file)
-                    .filter(
-                        marker -> markerTypeFilter == null || MarkerType.fromTypeId(marker.type) == markerTypeFilter)
-                    .filter(marker -> path == null || path.isBlank() || path.equals(marker.path));
+                var markers =
+                    markersProvider.getMarkers(project, file).filter(applyMarkerFilters(markerTypeFilter, path));
 
                 allMarkers = Stream.concat(allMarkers, markers);
             }
@@ -300,13 +303,23 @@ public class GetMarkersMcpTool implements IMcpTool
         }
         catch (OperationCanceledException error)
         {
-            if (error instanceof OperationCanceledException)
-            {
-                throw new ToolException("Operation cancelled", error, ToolErrorType.RETRYABLE);
-            }
-
-            throw new ToolException("Unexpected error", error, ToolErrorType.RETRYABLE);
+            throw new ToolException("Operation cancelled", error, ToolErrorType.RETRYABLE);
         }
+    }
+
+    private static Predicate<MarkerInfo> applyMarkerFilters(MarkerType markerTypeFilter,
+        String path)
+    {
+        return new Predicate<>()
+        {
+            @Override
+            public boolean test(MarkerInfo marker)
+            {
+                return (markerTypeFilter == null
+                    || (marker.type != null && MarkerType.fromTypeId(marker.type) == markerTypeFilter))
+                    && (path == null || path.isBlank() || java.util.Objects.equals(path, marker.path));
+            }
+        };
     }
 
 
@@ -428,7 +441,7 @@ public class GetMarkersMcpTool implements IMcpTool
 
         var pathProp = new McpToolCallProperty();
         pathProp.type = "string";
-        pathProp.description = "Optional absolute path to file";
+        pathProp.description = "Optional project-relative path to file";
         properties.put("path", pathProp);
 
         parameters.properties = properties;
