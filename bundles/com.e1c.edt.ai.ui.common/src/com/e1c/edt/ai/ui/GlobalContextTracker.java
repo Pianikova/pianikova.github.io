@@ -4,8 +4,8 @@
 package com.e1c.edt.ai.ui;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.jobs.Job;
@@ -27,7 +27,7 @@ class GlobalContextTracker
     private final IDispatcher dispatcher;
     private final IStateService stateService;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
-    private final HashMap<String, IProjectTrackingWorkflow> projectWorkflows = new HashMap<>();
+    private final ConcurrentHashMap<String, IProjectTrackingWorkflow> projectWorkflows = new ConcurrentHashMap<>();
 
     @Inject
     public GlobalContextTracker(ISettings settings, IDispatcher dispatcher, IStateService stateService,
@@ -58,18 +58,36 @@ class GlobalContextTracker
             return Optional.empty();
         }
 
-        synchronized (projectWorkflows)
+        var workflowKey = project.getName();
+        var existing = projectWorkflows.get(workflowKey);
+        if (existing != null)
         {
-            var workflowKey = project.getName();
-            var workflow = projectWorkflows.computeIfAbsent(workflowKey,
-                k -> {
-                    var newWorkflow = projectTrackingWorkflowProvider.get();
-                    newWorkflow.initialize(project);
-                    scheduleTracking(workflowKey, newWorkflow, 0);
-                    return newWorkflow;
-                });
-            return Optional.of(workflow);
+            return Optional.of(existing);
         }
+
+        // Cheap allocation via Guice provider; heavy work (initialize + job
+        // scheduling) happens OUTSIDE the map section below to avoid holding
+        // any lock while doing I/O-bound setup — that was a UI-thread stall
+        // source when track(...) was called from the UI thread.
+        var candidate = projectTrackingWorkflowProvider.get();
+        var previous = projectWorkflows.putIfAbsent(workflowKey, candidate);
+        if (previous != null)
+        {
+            return Optional.of(previous);
+        }
+
+        try
+        {
+            candidate.initialize(project);
+            scheduleTracking(workflowKey, candidate, 0);
+        }
+        catch (RuntimeException error)
+        {
+            // Roll back so a later caller can retry.
+            projectWorkflows.remove(workflowKey, candidate);
+            throw error;
+        }
+        return Optional.of(candidate);
     }
 
     @Override
@@ -91,20 +109,17 @@ class GlobalContextTracker
 
     private void track(JobContext jobCtx, String workflowKey, IProjectTrackingWorkflow workflow)
     {
-        synchronized (projectWorkflows)
+        // IDE is closing or AI is disabled
+        if (jobCtx.CancellationTokenSource.isCanceled() || !settings.isEnabled())
         {
-            // IDE is closing or AI is disabled
-            if (jobCtx.CancellationTokenSource.isCanceled() || !settings.isEnabled())
-            {
-                projectWorkflows.clear();
-                return;
-            }
+            projectWorkflows.clear();
+            return;
+        }
 
-            if (!workflow.getProject().exists())
-            {
-                projectWorkflows.remove(workflowKey);
-                return;
-            }
+        if (!workflow.getProject().exists())
+        {
+            projectWorkflows.remove(workflowKey);
+            return;
         }
 
         var delay = Duration.ofSeconds(5);
@@ -121,10 +136,7 @@ class GlobalContextTracker
     @Override
     public void onServiceStateChange(ServiceState serviceState)
     {
-        synchronized (projectWorkflows)
-        {
-            projectWorkflows.clear();
-        }
+        projectWorkflows.clear();
     }
 
     @Override

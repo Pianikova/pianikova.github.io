@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -78,21 +79,8 @@ public class Chat
 {
     private static final String AI_CHAT_DIR = "ai.chat"; //$NON-NLS-1$
     private static final String INSTANCE_ID = UUID.randomUUID().toString();
-
-    static
-    {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            var dir = getUserDataDirectory();
-            try (var stream = Files.walk(dir))
-            {
-                stream.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
-            }
-            catch (IOException ignored)
-            {
-                // best-effort cleanup
-            }
-        }, "ai-chat-userdata-cleanup")); //$NON-NLS-1$
-    }
+    private static final java.util.concurrent.atomic.AtomicBoolean CLEANUP_REGISTERED =
+        new java.util.concurrent.atomic.AtomicBoolean();
 
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
     private static final String CHAT_API_WINK_TEMPLATE =
@@ -125,6 +113,7 @@ public class Chat
     private final IFileSystem fileSystem;
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).weakKeys().build();
     private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
+    private final Object chatStateLock = new Object();
 
     private WebView webView;
     private ChatKey lastChatKey;
@@ -598,6 +587,7 @@ public class Chat
             log.logError(error);
         }
         webEngine.setUserDataDirectory(userDataDirectory.toFile());
+        registerCleanupHook(userDataDirectory);
         webEngine.setOnError(event -> {
             log.logError(event.getMessage());
             log.logError(event.getException());
@@ -724,6 +714,25 @@ public class Chat
             .getAbsolutePath(), INSTANCE_ID);
     }
 
+    @SuppressWarnings("nls")
+    private static void registerCleanupHook(Path userDataDirectory)
+    {
+        if (!CLEANUP_REGISTERED.compareAndSet(false, true))
+        {
+            return;
+        }
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try (var stream = Files.walk(userDataDirectory))
+            {
+                stream.sorted(Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+            }
+            catch (IOException | RuntimeException ignored)
+            {
+                // best-effort cleanup
+            }
+        }, "ai-chat-userdata-cleanup"));
+    }
+
     private void chatInJob(Optional<AIContext> ctx, IChatAction chatAction)
     {
         ensureWebViewExists();
@@ -734,22 +743,54 @@ public class Chat
     }
 
     @SuppressWarnings("nls")
-    private synchronized IStatus chat(Optional<AIContext> ctx, IChatAction chatAction)
+    private IStatus chat(Optional<AIContext> ctx, IChatAction chatAction)
     {
         try
         {
             var chatUrl = settings.getChatUrl();
             var newChatKey = new ChatKey(chatUrl, settings.getClientToken());
-            if (!Objects.equals(lastChatKey, newChatKey))
+            boolean needsInit;
+            // Narrow lock: only guard mutation of lastChatKey/handler state.
+            // Do NOT hold the monitor during blocking future waits or syncExec
+            // dispatches below — that is a UI-thread deadlock risk.
+            synchronized (chatStateLock)
             {
-                handler.reset();
-                lastChatKey = newChatKey;
-                dispatcher.dispatch(() -> {
+                needsInit = !Objects.equals(lastChatKey, newChatKey);
+                if (needsInit)
+                {
+                    handler.reset();
+                    lastChatKey = newChatKey;
+                }
+            }
+
+            if (needsInit)
+            {
+                var futureOpt = dispatcher.dispatch(() -> {
                     var webEngine = getEngine();
                     return initialize(webEngine, () -> {
                         webEngine.load(chatUrl.toString());
                     });
-                }).get().join();
+                });
+                if (futureOpt.isPresent())
+                {
+                    try
+                    {
+                        futureOpt.get().get(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS);
+                    }
+                    catch (TimeoutException error)
+                    {
+                        log.warning(AI_CHAT, () -> "Chat initialization timed out");
+                    }
+                    catch (InterruptedException error)
+                    {
+                        Thread.currentThread().interrupt();
+                        log.warning(AI_CHAT, () -> "Chat initialization interrupted");
+                    }
+                    catch (ExecutionException error)
+                    {
+                        log.warning(AI_CHAT, () -> "Chat initialization failed: " + error);
+                    }
+                }
 
                 wink(32);
             }
@@ -816,7 +857,29 @@ public class Chat
             return;
         }
 
-        var tools = mcpTools.getSpecifications().join().stream().map(i -> i.function).collect(Collectors.toList());
+        List<?> tools;
+        try
+        {
+            tools = mcpTools.getSpecifications()
+                .get(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
+                .stream().map(i -> i.function).collect(Collectors.toList());
+        }
+        catch (TimeoutException error)
+        {
+            log.warning(AI_CHAT, () -> "MCP specifications timed out, skipping wink tools sync"); //$NON-NLS-1$
+            return;
+        }
+        catch (InterruptedException error)
+        {
+            Thread.currentThread().interrupt();
+            log.warning(AI_CHAT, () -> "MCP specifications wait interrupted"); //$NON-NLS-1$
+            return;
+        }
+        catch (ExecutionException error)
+        {
+            log.warning(AI_CHAT, () -> "MCP specifications failed: " + error); //$NON-NLS-1$
+            return;
+        }
         var toolsJson = json.serialize(tools);
 
         var webEngine = getEngine();

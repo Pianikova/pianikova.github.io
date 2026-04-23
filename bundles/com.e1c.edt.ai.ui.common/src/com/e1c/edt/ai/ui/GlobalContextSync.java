@@ -9,6 +9,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.Fields;
@@ -16,6 +18,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IGlobalContext;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.IGlobalContextService;
@@ -29,21 +32,24 @@ import com.google.inject.Provider;
 class GlobalContextSync implements IGlobalContextSync
 {
     private final ILog log;
+    private final ISettings settings;
     private final Provider<IStatistics> statisticsProvider;
     private final IJson json;
     private final IGlobalContext globalContext;
     private final IGlobalContextService globalContextService;
 
     @Inject
-    public GlobalContextSync(ILog log, Provider<IStatistics> statisticsProvider, IJson json,
+    public GlobalContextSync(ILog log, ISettings settings, Provider<IStatistics> statisticsProvider, IJson json,
         IGlobalContext globalContext, IGlobalContextService globalContextService)
     {
         Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(globalContext);
         Preconditions.checkNotNull(globalContextService);
         this.log = log;
+        this.settings = settings;
         this.statisticsProvider = statisticsProvider;
         this.json = json;
         this.globalContext = globalContext;
@@ -212,10 +218,20 @@ class GlobalContextSync implements IGlobalContextSync
                             cancellationToken);
                     });
 
-                    optionalResult =
-                        globalContextService
+                    try
+                    {
+                        var timeout = settings.getTimeout();
+                        optionalResult = globalContextService
                             .update(aiContext.getProjectId(), updates, 10, statistics, cancellationToken)
-                            .get();
+                            .get(timeout.toNanos(), TimeUnit.NANOSECONDS);
+                    }
+                    catch (TimeoutException error)
+                    {
+                        log.warning(TracingSources.SYNC,
+                            () -> "Global context update timed out after " //$NON-NLS-1$
+                                + settings.getTimeout());
+                        return CompletableFuture.completedFuture(false);
+                    }
                 }
 
                 if (cancellationToken.isCanceled())
