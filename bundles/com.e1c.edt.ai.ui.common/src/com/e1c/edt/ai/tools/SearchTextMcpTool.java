@@ -5,10 +5,11 @@ package com.e1c.edt.ai.tools;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.eclipse.core.resources.IResource;
 import org.eclipse.text.quicksearch.internal.core.LineItem;
@@ -44,7 +45,8 @@ public class SearchTextMcpTool
 {
     public static final String TOOL_NAME = "SearchText";
     private static final int DEFAULT_MAX_ELEMENTS = McpToolConstants.DEFAULT_MAX_SEARCH_ELEMENTS;
-    private static final int MAX_LINE_LEN = 10000;
+    private static final int MAX_LINE_LEN = 3000;
+    private static final int MAX_RESULTS = 3000;
 
     // @formatter:off
     private static String QuestionExample =
@@ -144,7 +146,9 @@ public class SearchTextMcpTool
                 throw new ToolException("Operation was cancelled before execution.");
             }
 
-            final List<Element> allElements = Collections.synchronizedList(new ArrayList<>());
+            final List<Element> allElements = new ArrayList<>();
+            final ReadWriteLock lock = new ReentrantReadWriteLock();
+            final int maxTotalElements = Math.min(firstIndex + maxCount, MAX_RESULTS);
             var query = new QuickTextQuery(searchQuery, false);
 
             var searcher = new QuickTextSearcher(query,
@@ -162,9 +166,10 @@ public class SearchTextMcpTool
                     @Override
                     public void add(LineItem match)
                     {
-                        synchronized (allElements)
+                        lock.writeLock().lock();
+                        try
                         {
-                            if (!cancellationToken.isCanceled() && allElements.size() < 10000)
+                            if (!cancellationToken.isCanceled() && allElements.size() < maxTotalElements)
                             {
                                 var element = createElement(match);
                                 if (element != null)
@@ -173,45 +178,87 @@ public class SearchTextMcpTool
                                 }
                             }
                         }
+                        finally
+                        {
+                            lock.writeLock().unlock();
+                        }
                     }
 
                     @Override
                     public void clear()
                     {
-                        synchronized (allElements)
+                        lock.writeLock().lock();
+                        try
                         {
                             allElements.clear();
+                        }
+                        finally
+                        {
+                            lock.writeLock().unlock();
                         }
                     }
 
                     @Override
                     public void revoke(LineItem match)
                     {
-                        synchronized (allElements)
+                        String path = match.getFile().getFullPath().toString();
+                        int lineNumber = match.getLineNumber();
+                        int offset = match.getOffset();
+
+                        lock.writeLock().lock();
+                        try
                         {
-                            allElements.removeIf(e -> match.getFile().getFullPath().toString().equals(e.path)
-                                && e.lineNumber == match.getLineNumber() && e.offset == match.getOffset());
+                            var iterator = allElements.iterator();
+                            while (iterator.hasNext())
+                            {
+                                var element = iterator.next();
+                                if (isSameElement(element, path, lineNumber, offset))
+                                {
+                                    iterator.remove();
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            lock.writeLock().unlock();
                         }
                     }
 
                     @Override
                     public void update(LineItem match)
                     {
+                        String path = match.getFile().getFullPath().toString();
+                        int lineNumber = match.getLineNumber();
+                        int offset = match.getOffset();
+
+                        lock.writeLock().lock();
+                        try
+                        {
+                            for (int i = 0; i < allElements.size(); i++)
+                            {
+                                var element = allElements.get(i);
+                                if (isSameElement(element, path, lineNumber, offset))
+                                {
+                                    var updatedElement = createElement(match);
+                                    if (updatedElement != null)
+                                    {
+                                        allElements.set(i, updatedElement);
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            lock.writeLock().unlock();
+                        }
                     }
                 });
 
             if (filePathPatterns != null && !filePathPatterns.isEmpty())
             {
-                StringBuilder patternBuilder = new StringBuilder();
-                for (int i = 0; i < filePathPatterns.size(); i++)
-                {
-                    if (i > 0)
-                    {
-                        patternBuilder.append(",");
-                    }
-                    patternBuilder.append(filePathPatterns.get(i));
-                }
-                searcher.setPathMatcher(ResourceMatchers.commaSeparatedPaths(patternBuilder.toString()));
+                String patterns = String.join(",", filePathPatterns);
+                searcher.setPathMatcher(ResourceMatchers.commaSeparatedPaths(patterns));
             }
 
             try
@@ -235,22 +282,39 @@ public class SearchTextMcpTool
                 throw new ToolException("Search was cancelled");
             }
 
+            // Check pagination limit
+            if (firstIndex >= MAX_RESULTS)
+            {
+                throw new ToolException("Parameter 'first_index' cannot be greater than or equal to " + MAX_RESULTS
+                    + ". Maximum pagination depth is " + MAX_RESULTS + " results.");
+            }
+
             // Apply pagination: get sublist based on firstIndex and maxCount
             List<Element> elements;
-            if (firstIndex >= allElements.size())
+            int totalResults;
+            lock.readLock().lock();
+            try
             {
-                elements = new ArrayList<>();
+                if (firstIndex >= allElements.size())
+                {
+                    elements = new ArrayList<>();
+                }
+                else
+                {
+                    int endIndex = Math.min(firstIndex + maxCount, allElements.size());
+                    elements = new ArrayList<>(allElements.subList(firstIndex, endIndex));
+                }
+                totalResults = allElements.size();
             }
-            else
+            finally
             {
-                int endIndex = Math.min(firstIndex + maxCount, allElements.size());
-                elements = allElements.subList(firstIndex, endIndex);
+                lock.readLock().unlock();
             }
 
             // Create SearchTextResponse with paginated results and total count
             SearchTextResponse response = new SearchTextResponse();
             response.results = elements;
-            response.totalResults = allElements.size();
+            response.totalResults = totalResults;
 
             var content = json.serialize(response);
 
@@ -330,7 +394,7 @@ public class SearchTextMcpTool
     private Element createElement(LineItem match)
     {
         var file = match.getFile();
-        if (file == null || !file.exists())
+        if (file == null)
         {
             return null;
         }
@@ -346,6 +410,11 @@ public class SearchTextMcpTool
         element.lineContent = match.getText();
 
         return element;
+    }
+
+    private boolean isSameElement(Element element, String path, int lineNumber, int offset)
+    {
+        return path.equals(element.path) && lineNumber == element.lineNumber && offset == element.offset;
     }
 
     private McpToolCallSpecification createSpecification()
