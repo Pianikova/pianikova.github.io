@@ -123,13 +123,15 @@ public class GlobMcpTool
 		}
 
 		var request = optionalRequest.get();
-		var path = request.path;
+        var path = request.path;
 		if (path == null || path.isBlank())
 		{
 			throw new ToolException("The \"path\" parameter is required and must be a valid directory path.");
 		}
 		var pattern = request.pattern != null ? request.pattern : "*";
-        var depth = request.depth != null ? request.depth : 3;
+        var userDepth = request.depth != null ? request.depth : 3;
+        // Increase depth for patterns with ** to support deeper searches
+        var depth = (pattern.contains("**") && userDepth < 10) ? 10 : userDepth;
 
 		if (call.callKind == ToolCallKind.RENDER)
 		{
@@ -208,7 +210,9 @@ public class GlobMcpTool
 				{
 					var attrs = Files.readAttributes(path, BasicFileAttributes.class);
 					var relativePath = baseDir.relativize(path).toString();
-					var matchesPattern = patternMatcher.matches(relativePath, pattern);
+					// Normalize path separators to forward slashes for pattern matching
+					var normalizedPath = relativePath.replace("\\", "/");
+					var matchesPattern = patternMatcher.matches(normalizedPath, pattern);
 
 					if (Files.isDirectory(path))
 					{
@@ -281,26 +285,28 @@ public class GlobMcpTool
 				try
 				{
 					var relativePath = baseDir.relativize(path).toString();
+					// Normalize path separators to forward slashes for tree display
+					var normalizedPath = relativePath.replace("\\", "/");
 					var absolutePath = path.toAbsolutePath().toString();
 					var isRelevant = relevantPaths.contains(absolutePath);
 
-					if (Files.isDirectory(path))
-					{
+				if (Files.isDirectory(path))
+				{
                         if (isRelevant)
                         {
-                            treeBuilder.addDirectory(relativePath, currentDepth);
+                            treeBuilder.addDirectory(normalizedPath, currentDepth);
                             scanDirectoryForTree(baseDir, path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
                                 treeBuilder, cancellationToken);
                             treeBuilder.endDirectory();
                         }
-					}
-					else if (Files.isRegularFile(path))
-					{
+				}
+				else if (Files.isRegularFile(path))
+				{
                         if (isRelevant)
-						{
-							treeBuilder.addFile(relativePath, currentDepth);
-						}
-					}
+				{
+					treeBuilder.addFile(normalizedPath, currentDepth);
+				}
+				}
 				}
 				catch (IOException e)
 				{

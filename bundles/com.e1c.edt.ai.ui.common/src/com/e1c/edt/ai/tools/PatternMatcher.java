@@ -3,6 +3,8 @@
 */
 package com.e1c.edt.ai.tools;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 import com.google.inject.Singleton;
 
@@ -14,7 +16,8 @@ import com.google.inject.Singleton;
  * - ** - matches any number of directory segments (including zero)
  * - [abc] - matches any character in the set
  * - [a-z] - matches any character in the range
- * - {a,b,c} - matches any of the comma-separated alternatives
+ * - [!abc] / [^abc] - negated character class
+ * - {a,b,c} - matches any of the comma-separated alternatives (supports nesting and wildcards)
  * - Path separators can be / or \
  */
 @Singleton
@@ -91,133 +94,191 @@ public class PatternMatcher
 	}
 
 
-	@SuppressWarnings("nls")
 	private boolean matchSegment(String segment, String pattern)
 	{
+		return segment.matches(translateSegmentToRegex(pattern));
+	}
+
+	@SuppressWarnings("nls")
+	private String translateSegmentToRegex(String pattern)
+	{
 		StringBuilder regex = new StringBuilder();
-		for (int i = 0; i < pattern.length(); i++)
+		int i = 0;
+		while (i < pattern.length())
 		{
 			char c = pattern.charAt(i);
 			switch (c)
 			{
 				case '*':
 					regex.append(".*");
+					i++;
 					break;
 				case '?':
 					regex.append(".");
+					i++;
 					break;
 				case '.':
 					regex.append("\\.");
+					i++;
 					break;
 				case '[':
-					regex.append(processCharacterClass(pattern, i));
-					int closingBracket = pattern.indexOf(']', i);
-					if (closingBracket != -1)
+				{
+					int end = pattern.indexOf(']', i);
+					if (end == -1)
 					{
-						i = closingBracket;
+						regex.append(Pattern.quote("["));
+						i++;
+					}
+					else
+					{
+						regex.append(processCharacterClass(pattern.substring(i + 1, end)));
+						i = end + 1;
 					}
 					break;
+				}
 				case '{':
-					regex.append(processBraceExpansion(pattern, i));
-					int closingBrace = pattern.indexOf('}', i);
-					if (closingBrace != -1)
+				{
+					int end = findMatchingBrace(pattern, i);
+					if (end == -1)
 					{
-						i = closingBrace;
+						regex.append(Pattern.quote("{"));
+						i++;
+					}
+					else
+					{
+						String content = pattern.substring(i + 1, end);
+						List<String> alternatives = splitTopLevelCommas(content);
+						if (alternatives.size() < 2)
+						{
+							// No top-level commas -> treat literally, including the braces
+							regex.append(Pattern.quote(pattern.substring(i, end + 1)));
+						}
+						else
+						{
+							regex.append("(");
+							for (int k = 0; k < alternatives.size(); k++)
+							{
+								if (k > 0)
+								{
+									regex.append("|");
+								}
+								regex.append(translateSegmentToRegex(alternatives.get(k)));
+							}
+							regex.append(")");
+						}
+						i = end + 1;
 					}
 					break;
+				}
 				default:
 					regex.append(Pattern.quote(String.valueOf(c)));
+					i++;
 			}
 		}
-		return segment.matches(regex.toString());
+		return regex.toString();
+	}
+
+	private int findMatchingBrace(String s, int start)
+	{
+		int depth = 0;
+		for (int i = start; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			if (c == '{')
+			{
+				depth++;
+			}
+			else if (c == '}')
+			{
+				depth--;
+				if (depth == 0)
+				{
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
+	private List<String> splitTopLevelCommas(String s)
+	{
+		List<String> parts = new ArrayList<>();
+		int depth = 0;
+		int start = 0;
+		for (int i = 0; i < s.length(); i++)
+		{
+			char c = s.charAt(i);
+			if (c == '{' || c == '[')
+			{
+				depth++;
+			}
+			else if (c == '}' || c == ']')
+			{
+				depth--;
+			}
+			else if (c == ',' && depth == 0)
+			{
+				parts.add(s.substring(start, i));
+				start = i + 1;
+			}
+		}
+		parts.add(s.substring(start));
+		return parts;
 	}
 
 	@SuppressWarnings("nls")
-	private String processCharacterClass(String pattern, int startIndex)
+	private String processCharacterClass(String content)
 	{
-		int endIndex = pattern.indexOf(']', startIndex);
-		if (endIndex == -1)
+		if (content.isEmpty())
 		{
-			return Pattern.quote("[");
+			return Pattern.quote("[]");
 		}
 
-		String content = pattern.substring(startIndex + 1, endIndex);
-		StringBuilder regex = new StringBuilder("[");
-		
-		for (int i = 0; i < content.length(); i++)
+		boolean negate = content.charAt(0) == '!' || content.charAt(0) == '^';
+		int start = negate ? 1 : 0;
+
+		StringBuilder regex = new StringBuilder();
+		regex.append(negate ? "[^" : "[");
+
+		int i = start;
+		while (i < content.length())
 		{
 			char c = content.charAt(i);
-			if (c == '-' && i > 0 && i < content.length() - 1)
+			if (c == '-' && i > start && i + 1 < content.length())
 			{
 				char prev = content.charAt(i - 1);
 				char next = content.charAt(i + 1);
-				if (Character.isLetterOrDigit(prev) && Character.isLetterOrDigit(next) && prev < next)
+				if (prev < next)
 				{
-					regex.append(prev).append("-").append(next);
-					i++;
+					regex.append("-").append(escapeForCharClass(next));
+					i += 2;
+					continue;
 				}
-				else
-				{
-					regex.append("\\-");
-				}
+				regex.append("\\-");
+				i++;
+				continue;
 			}
-			else
-			{
-				regex.append(Pattern.quote(String.valueOf(c)));
-			}
+			regex.append(escapeForCharClass(c));
+			i++;
 		}
-		
+
 		regex.append("]");
 		return regex.toString();
 	}
 
 	@SuppressWarnings("nls")
-	private String processBraceExpansion(String pattern, int startIndex)
+	private String escapeForCharClass(char c)
 	{
-		int endIndex = pattern.indexOf('}', startIndex);
-		if (endIndex == -1)
+		switch (c)
 		{
-			return Pattern.quote("{");
+			case ']':
+			case '\\':
+			case '^':
+			case '-':
+			case '[':
+				return "\\" + c;
+			default:
+				return String.valueOf(c);
 		}
-
-		String content = pattern.substring(startIndex + 1, endIndex);
-		
-		// Only treat as brace expansion if there's a comma (separator)
-		if (!content.contains(","))
-		{
-			return Pattern.quote(pattern.substring(startIndex, endIndex + 1));
-		}
-		
-		String[] alternatives = content.split(",");
-		StringBuilder regex = new StringBuilder("(");
-		
-		for (int i = 0; i < alternatives.length; i++)
-		{
-			if (i > 0)
-			{
-				regex.append("|");
-			}
-			for (int j = 0; j < alternatives[i].length(); j++)
-			{
-				char c = alternatives[i].charAt(j);
-				switch (c)
-				{
-					case '*':
-						regex.append(".*");
-						break;
-					case '?':
-						regex.append(".");
-						break;
-					case '.':
-						regex.append("\\.");
-						break;
-					default:
-						regex.append(Pattern.quote(String.valueOf(c)));
-				}
-			}
-		}
-		
-		regex.append(")");
-		return regex.toString();
 	}
 }
