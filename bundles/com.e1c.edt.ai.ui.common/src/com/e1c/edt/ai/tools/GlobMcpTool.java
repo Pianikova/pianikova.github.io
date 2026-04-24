@@ -155,21 +155,21 @@ public class GlobMcpTool
 			result.items = new ArrayList<>();
 			result.stats = new Stats();
 
-				try
-			{
+		try
+		{
                 var relevantPaths = new HashSet<String>();
                 ITreeBuilder treeBuilder = treeBuilderProvider.get();
-                scanDirectory(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, cancellationToken, LIMIT);
+                scanDirectory(baseDir.toPath(), baseDir.toPath(), pattern, depth, 0, result, relevantPaths, cancellationToken, LIMIT);
                 if (!relevantPaths.isEmpty())
                 {
                     relevantPaths.add(baseDir.getAbsolutePath());
                 }
-			scanDirectoryForTree(baseDir.toPath(), pattern, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
-			result.tree = treeBuilder.build();
+		scanDirectoryForTree(baseDir.toPath(), baseDir.toPath(), pattern, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
+		result.tree = treeBuilder.build();
 
                 result.items.sort((a, b) -> Long.compare(b.modified, a.modified));
                 result.stats.truncated = result.items.size() >= LIMIT;
-			}
+		}
 			catch (IOException e)
 			{
 				throw new ToolException("Directory listing failed", e, ToolErrorType.RETRYABLE);
@@ -188,7 +188,7 @@ public class GlobMcpTool
 	}
 
     @SuppressWarnings("nls")
-    private void scanDirectory(Path dir, String pattern, int maxDepth, int currentDepth, Result result,
+    private void scanDirectory(Path baseDir, Path dir, String pattern, int maxDepth, int currentDepth, Result result,
         Set<String> relevantPaths, ICancellationToken cancellationToken, int limit) throws IOException
 	{
         if (cancellationToken.isCanceled() || currentDepth > maxDepth || result.items.size() >= limit)
@@ -207,23 +207,23 @@ public class GlobMcpTool
 				try
 				{
 					var attrs = Files.readAttributes(path, BasicFileAttributes.class);
-					var relativePath = dir.relativize(path).toString();
+					var relativePath = baseDir.relativize(path).toString();
 					var matchesPattern = patternMatcher.matches(relativePath, pattern);
 
 					if (Files.isDirectory(path))
 					{
                         if (matchesPattern)
                         {
-    						var dirInfo = new ItemInfo();
-    						dirInfo.path = path.toAbsolutePath().toString();
-    						dirInfo.type = "directory";
-    						dirInfo.modified = attrs.lastModifiedTime().toMillis();
-    						result.items.add(dirInfo);
-    						result.stats.totalItems++;
+   						var dirInfo = new ItemInfo();
+   						dirInfo.path = path.toAbsolutePath().toString();
+   						dirInfo.type = "directory";
+   						dirInfo.modified = attrs.lastModifiedTime().toMillis();
+   						result.items.add(dirInfo);
+   						result.stats.totalItems++;
                             relevantPaths.add(path.toAbsolutePath().toString());
                         }
                         var beforeCount = relevantPaths.size();
-                        scanDirectory(path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
+                        scanDirectory(baseDir, path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
                             cancellationToken, limit);
                         var afterCount = relevantPaths.size();
 
@@ -262,7 +262,7 @@ public class GlobMcpTool
 	}
 
     @SuppressWarnings("nls")
-    private void scanDirectoryForTree(Path dir, String pattern, int maxDepth, int currentDepth, Result result,
+    private void scanDirectoryForTree(Path baseDir, Path dir, String pattern, int maxDepth, int currentDepth, Result result,
         Set<String> relevantPaths, ITreeBuilder treeBuilder, ICancellationToken cancellationToken) throws IOException
 	{
 		if (cancellationToken.isCanceled() || currentDepth > maxDepth)
@@ -280,7 +280,7 @@ public class GlobMcpTool
 
 				try
 				{
-					var relativePath = dir.relativize(path).toString();
+					var relativePath = baseDir.relativize(path).toString();
 					var absolutePath = path.toAbsolutePath().toString();
 					var isRelevant = relevantPaths.contains(absolutePath);
 
@@ -289,7 +289,7 @@ public class GlobMcpTool
                         if (isRelevant)
                         {
                             treeBuilder.addDirectory(relativePath, currentDepth);
-                            scanDirectoryForTree(path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
+                            scanDirectoryForTree(baseDir, path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
                                 treeBuilder, cancellationToken);
                             treeBuilder.endDirectory();
                         }
@@ -306,8 +306,8 @@ public class GlobMcpTool
 				{
                     //
 				}
-		});
-	}
+			});
+		}
 }
 
 @SuppressWarnings("nls")

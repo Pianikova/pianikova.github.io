@@ -244,4 +244,145 @@ public class PatternMatcherTest
 		assertTrue(matcher.matches("src/subdir/Module.bsl", "src/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
 		assertFalse(matcher.matches("other/Module.bsl", "src/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
 	}
+
+	@Test
+	public void testCharacterClasses()
+	{
+		assertTrue(matcher.matches("file1.txt", "file[123].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("file2.txt", "file[123].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("file3.txt", "file[123].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("file4.txt", "file[123].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("filea.txt", "file[a-z].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("filez.txt", "file[a-z].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("fileA.txt", "file[a-z].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("fileA.txt", "file[A-Z].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("file0.txt", "file[0-9].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("file9.txt", "file[0-9].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("filea.txt", "file[0-9].txt")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testBraceExpansion()
+	{
+		assertTrue(matcher.matches("file.txt", "file.{txt,md}")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("file.md", "file.{txt,md}")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("file.java", "file.{txt,md}")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("test1.txt", "test{1,2,3}.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("test2.txt", "test{1,2,3}.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("test3.txt", "test{1,2,3}.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("test4.txt", "test{1,2,3}.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("data.csv", "{file,data}.{csv,txt}")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("file.txt", "{file,data}.{csv,txt}")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("other.txt", "{file,data}.{csv,txt}")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testCyrillicPatterns()
+	{
+		assertTrue(matcher.matches("файл.txt", "*.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Модуль.bsl", "*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Справочник/Элемент.xml", "Справочник/*.xml")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("Модуль.java", "*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("файл1.txt", "файл?.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("файл12.txt", "файл?.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testDirectoryPrefixWithDoubleStar()
+	{
+		assertTrue(matcher.matches("CommonModules/Module/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("CommonModules/Subdir/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("CommonModules/Deep/Nested/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("src/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/module/test.bsl", "src/**/test.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/test.bsl", "src/**/test.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("src/module/other.bsl", "src/**/test.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testNestedRecursion()
+	{
+		assertTrue(matcher.matches("a/b/c/d/file.bsl", "a/**/c/**/file.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("a/c/file.bsl", "a/**/c/**/file.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("a/b/c/d/e/file.bsl", "a/**/c/**/file.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("a/b/c/file.bsl", "a/**/d/**/file.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/module/submodule/test.bsl", "src/**/test.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testComplexCombination()
+	{
+		assertTrue(matcher.matches("Module1.bsl", "Module[0-9].bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("CommonModules/Module1/Module.bsl", "CommonModules/**/Module[0-9]/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("file{test}.txt", "file{test}.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Module/test.bsl", "Module/{test,data}.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Модуль1.bsl", "Модуль[0-9].bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testDoubleStarWithDirectoryInMiddle()
+	{
+		// Test patterns like **/Temp/* should match files in Temp directory at any depth
+		assertTrue(matcher.matches("Temp/test.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/Temp/test.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/deep/nested/Temp/Test1.bsl", "**/Temp/Test[1-2].bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		
+		// Negative tests - should not match files not in Temp directory
+		assertFalse(matcher.matches("src/other/test.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("Temp/test.bsl", "**/Other/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testRealWorldIssuePatterns()
+	{
+		// Pattern: **/Temp/* should match files in Temp at any depth
+		assertTrue(matcher.matches("src/Catalogs/Temp/Test1.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/Catalogs/Temp/test.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Catalogs/Temp/data.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Temp/file.txt", "**/Temp/*.txt")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Other/Temp/file.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		
+		// Pattern: **/Temp/* should NOT match files outside Temp
+		assertFalse(matcher.matches("src/Catalogs/Other/Test1.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("src/Catalogs/test.bsl", "**/Temp/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("src/Temp/test.bsl", "**/Other/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		
+		// Pattern: src/**/*.mdo should match .mdo files anywhere under src
+		assertTrue(matcher.matches("src/Configuration/Configuration.mdo", "src/**/*.mdo")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/Catalogs/Temp/Test.mdo", "src/**/*.mdo")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/deep/nested/Test.mdo", "src/**/*.mdo")); //$NON-NLS-1$ //$NON-NLS-2$
+		
+		// Pattern: src/**/*.mdo should NOT match files outside src
+		assertFalse(matcher.matches("Configuration/Configuration.mdo", "src/**/*.mdo")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("test.mdo", "src/**/*.mdo")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testDirectoryPrefixPatterns()
+	{
+		// Test patterns like directory/**/* match files under directory at any depth
+		assertTrue(matcher.matches("CommonModules/Module/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("CommonModules/Subdir/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("CommonModules/Deep/Nested/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		
+		// Should NOT match files outside CommonModules
+		assertFalse(matcher.matches("src/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("other/CommonModules/Module.bsl", "CommonModules/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Test
+	public void testDoubleStarWithDirectoryPattern()
+	{
+		// More complex patterns: **/directory/**/*
+		assertTrue(matcher.matches("src/Temp/module/file.bsl", "**/Temp/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Temp/module/file.bsl", "**/Temp/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("Temp/file.bsl", "**/Temp/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertTrue(matcher.matches("src/deep/Temp/nested/file.bsl", "**/Temp/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		
+		// Negative tests
+		assertFalse(matcher.matches("src/other/file.bsl", "**/Temp/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		assertFalse(matcher.matches("Temp/file.java", "**/Temp/**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+	}
 }
