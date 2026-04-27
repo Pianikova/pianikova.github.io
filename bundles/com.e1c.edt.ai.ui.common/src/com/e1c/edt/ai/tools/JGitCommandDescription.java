@@ -67,6 +67,24 @@ public class JGitCommandDescription
     }
 
     /**
+     * Set additional notes (rendered after parameters in the tool spec).
+     */
+    public JGitCommandDescription setNotes(String notes)
+    {
+        this.notes = notes;
+        return this;
+    }
+
+    /**
+     * Set usage examples (rendered after parameters in the tool spec).
+     */
+    public JGitCommandDescription setExamples(List<String> examples)
+    {
+        this.examples = examples;
+        return this;
+    }
+
+    /**
      * Command parameter description
      */
     public static class CommandParameter

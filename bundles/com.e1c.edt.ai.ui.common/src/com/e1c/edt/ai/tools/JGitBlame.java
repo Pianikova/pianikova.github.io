@@ -45,6 +45,10 @@ public class JGitBlame implements IJGitCommand
         blameCmd.setFilePath(filePath);
 
         var result = blameCmd.call();
+        if (result == null)
+        {
+            return new GitCommandResult(1, "", "fatal: " + filePath + " does not exist");
+        }
         var sb = new StringBuilder();
 
         for (int i = 0; i < result.getResultContents().size(); i++)

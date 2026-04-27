@@ -6,7 +6,10 @@ package com.e1c.edt.ai.tools;
 import java.util.List;
 
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.MergeCommand;
+import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.BranchConfig.BranchRebaseMode;
 
 /**
  * Git pull command implementation
@@ -25,7 +28,10 @@ public class JGitPull implements IJGitCommand
     {
         return new JGitCommandDescription("Fetch from and integrate with another repository or a local branch")
             .addParameter("<repository>", "Remote repository to pull from (default: origin)")
-            .addParameter("<refspec>", "Branch to pull");
+            .addParameter("<refspec>", "Branch to pull")
+            .addParameter("--rebase", "Rebase current branch on top of fetched branch")
+            .addParameter("--no-rebase", "Merge instead of rebasing (default)")
+            .addParameter("--ff-only", "Refuse to merge unless fast-forward is possible");
     }
 
     @SuppressWarnings("nls")
@@ -34,26 +40,57 @@ public class JGitPull implements IJGitCommand
     {
         var remote = "origin";
         var branch = "";
+        Boolean rebase = null;
+        var ffOnly = false;
 
-        if (!args.isEmpty() && !args.get(0).startsWith("-"))
+        var positional = 0;
+        for (var arg : args)
         {
-            remote = args.get(0);
-            if (args.size() > 1 && !args.get(1).startsWith("-"))
+            if (arg.equals("--rebase"))
             {
-                branch = args.get(1);
+                rebase = Boolean.TRUE;
+            }
+            else if (arg.equals("--no-rebase"))
+            {
+                rebase = Boolean.FALSE;
+            }
+            else if (arg.equals("--ff-only"))
+            {
+                ffOnly = true;
+            }
+            else if (!arg.startsWith("-"))
+            {
+                if (positional == 0)
+                {
+                    remote = arg;
+                }
+                else if (positional == 1)
+                {
+                    branch = arg;
+                }
+                positional++;
             }
         }
 
-        var pullCmd = git.pull();
+        PullCommand pullCmd = git.pull();
         pullCmd.setRemote(remote);
         if (!branch.isEmpty())
         {
             pullCmd.setRemoteBranchName(branch);
         }
+        if (rebase != null)
+        {
+            pullCmd.setRebase(rebase ? BranchRebaseMode.REBASE : BranchRebaseMode.NONE);
+        }
+        if (ffOnly)
+        {
+            pullCmd.setFastForward(MergeCommand.FastForwardMode.FF_ONLY);
+        }
 
         var result = pullCmd.call();
         var fetchResult = result.getFetchResult();
         var mergeResult = result.getMergeResult();
+        var rebaseResult = result.getRebaseResult();
 
         var message = new StringBuilder();
         if (fetchResult != null)
@@ -81,7 +118,19 @@ public class JGitPull implements IJGitCommand
             }
             else
             {
-                message.append("Merge status: ").append(mergeStatus).append("\n");
+                return new GitCommandResult(1, message.toString(), "Merge status: " + mergeStatus);
+            }
+        }
+        else if (rebaseResult != null)
+        {
+            var st = rebaseResult.getStatus();
+            if (st.isSuccessful())
+            {
+                message.append("Rebase successful. Status: ").append(st).append("\n");
+            }
+            else
+            {
+                return new GitCommandResult(1, message.toString(), "Rebase status: " + st);
             }
         }
         else

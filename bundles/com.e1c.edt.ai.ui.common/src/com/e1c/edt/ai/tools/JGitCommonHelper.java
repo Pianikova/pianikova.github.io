@@ -30,10 +30,14 @@ public class JGitCommonHelper implements IJGitCommonHelper
             return null;
         }
 
+        // Set gitDir and workTree explicitly.
+        // Do NOT call readEnvironment() — it can override gitDir/workTree via GIT_DIR /
+        // GIT_INDEX_FILE env-vars, causing index writes to go to an unrelated location.
+        // Do NOT call findGitDir() — it is a no-op when gitDir is already set, but
+        // calling it resets the work-tree to the JVM working directory on some JGit versions.
         var builder = new FileRepositoryBuilder();
         builder.setGitDir(gitDir);
-        builder.readEnvironment();
-        builder.findGitDir();
+        builder.setWorkTree(gitDir.getParentFile());
         return builder.build();
     }
 

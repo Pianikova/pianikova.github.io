@@ -104,21 +104,29 @@ public class MCPToolsModule
         jgitCommandBinder.addBinding().to(JGitDescribe.class); //
         jgitCommandBinder.addBinding().to(JGitDiff.class);
         jgitCommandBinder.addBinding().to(JGitFetch.class);
+        jgitCommandBinder.addBinding().to(JGitGrep.class);
+        jgitCommandBinder.addBinding().to(JGitInit.class);
         jgitCommandBinder.addBinding().to(JGitLog.class);
         jgitCommandBinder.addBinding().to(JGitLsFiles.class); //
+        jgitCommandBinder.addBinding().to(JGitLsRemote.class);
         jgitCommandBinder.addBinding().to(JGitMerge.class); //
         jgitCommandBinder.addBinding().to(JGitMv.class);
         jgitCommandBinder.addBinding().to(JGitPull.class);
         jgitCommandBinder.addBinding().to(JGitPush.class);
         jgitCommandBinder.addBinding().to(JGitRebase.class); //
+        jgitCommandBinder.addBinding().to(JGitReflog.class);
         jgitCommandBinder.addBinding().to(JGitRemote.class); //
         jgitCommandBinder.addBinding().to(JGitReset.class);
+        jgitCommandBinder.addBinding().to(JGitRestore.class);
+        jgitCommandBinder.addBinding().to(JGitRevParse.class);
         jgitCommandBinder.addBinding().to(JGitRevert.class);
         jgitCommandBinder.addBinding().to(JGitRm.class);
+        jgitCommandBinder.addBinding().to(JGitShortlog.class);
         jgitCommandBinder.addBinding().to(JGitShow.class);
         jgitCommandBinder.addBinding().to(JGitShowBranch.class);
         jgitCommandBinder.addBinding().to(JGitStash.class);
         jgitCommandBinder.addBinding().to(JGitStatus.class);
+        jgitCommandBinder.addBinding().to(JGitSwitch.class);
         jgitCommandBinder.addBinding().to(JGitTag.class);
     }
 }

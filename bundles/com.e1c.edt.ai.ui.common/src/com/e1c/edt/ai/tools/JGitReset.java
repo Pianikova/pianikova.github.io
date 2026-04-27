@@ -29,7 +29,7 @@ public class JGitReset implements IJGitCommand
             .addParameter("--mixed", "Reset index but keep working directory changes (default)")
             .addParameter("--hard", "Reset index and working directory (discard all changes)")
             .addParameter("<commit>", "Commit to reset to (default: HEAD)")
-            .addParameter("<paths>...", "Reset only specified paths");
+            .addParameter("<paths>...", "Reset only specified paths (unstage files); mode flags are ignored when paths are given");
     }
 
     @SuppressWarnings("nls")
@@ -70,9 +70,15 @@ public class JGitReset implements IJGitCommand
                 mode = ResetCommand.ResetType.MIXED;
                 modeSpecified = true;
             }
+            else if (arg.equals("--"))
+            {
+                // explicit end-of-options separator; remaining args are paths
+                // handled by falling through to next args, but since we process in one pass,
+                // subsequent non-flag args will be treated as paths (commit already consumed)
+            }
             else if (!arg.startsWith("-"))
             {
-                if (commit == null)
+                if (commit == null && paths.isEmpty())
                 {
                     commit = arg;
                 }
@@ -83,12 +89,19 @@ public class JGitReset implements IJGitCommand
             }
         }
 
-        // Validate: --soft cannot be used with paths
-        if (mode == ResetCommand.ResetType.SOFT && !paths.isEmpty())
+        // When paths are specified, perform a per-path index reset (unstage).
+        // Mode flags are not applicable for path-based reset — they are silently ignored,
+        // matching real git behavior: "git reset HEAD -- file.txt" unstages file.txt.
+        if (!paths.isEmpty())
         {
-            return new GitCommandResult(1, "", "error: cannot do a soft reset with paths\n");
+            if (mode == ResetCommand.ResetType.SOFT)
+            {
+                return new GitCommandResult(1, "", "error: cannot do a soft reset with paths\n");
+            }
+            return resetPaths(git, commit != null ? commit : "HEAD", paths);
         }
 
+        // Full HEAD reset
         try
         {
             var resetCmd = git.reset();
@@ -97,13 +110,12 @@ public class JGitReset implements IJGitCommand
             {
                 resetCmd.setRef(commit);
             }
-            for (var path : paths)
-            {
-                resetCmd.addPath(path);
-            }
             resetCmd.call();
 
-            return new GitCommandResult(0, "", "");
+            var modeLabel = mode == ResetCommand.ResetType.SOFT ? "soft"
+                : mode == ResetCommand.ResetType.HARD ? "hard" : "mixed";
+            var ref = commit != null ? commit : "HEAD";
+            return new GitCommandResult(0, "HEAD is now at " + ref + " (--" + modeLabel + ")\n", "");
         }
         catch (Exception e)
         {
@@ -112,8 +124,42 @@ public class JGitReset implements IJGitCommand
             {
                 errorMsg = "Failed to reset";
             }
-            var stackTrace = e.getClass().getSimpleName();
-            return new GitCommandResult(1, "", "error: " + errorMsg + " (" + stackTrace + ")\n");
+            return new GitCommandResult(1, "", "error: " + errorMsg + " (" + e.getClass().getSimpleName() + ")\n");
+        }
+    }
+
+    /**
+     * Resets specific paths in the index to match the given ref (unstage).
+     * Equivalent to: git reset <ref> -- path1 path2 ...
+     */
+    @SuppressWarnings("nls")
+    private static GitCommandResult resetPaths(Git git, String ref, List<String> paths)
+    {
+        try
+        {
+            var resetCmd = git.reset();
+            resetCmd.setRef(ref);
+            for (var p : paths)
+            {
+                resetCmd.addPath(p.replace('\\', '/'));
+            }
+            resetCmd.call();
+
+            var sb = new StringBuilder();
+            for (var p : paths)
+            {
+                sb.append("Unstaged changes after reset:\nM\t").append(p).append("\n");
+            }
+            return new GitCommandResult(0, sb.toString(), "");
+        }
+        catch (Exception e)
+        {
+            var errorMsg = e.getMessage();
+            if (errorMsg == null || errorMsg.isEmpty())
+            {
+                errorMsg = "Failed to reset paths";
+            }
+            return new GitCommandResult(1, "", "error: " + errorMsg + " (" + e.getClass().getSimpleName() + ")\n");
         }
     }
 }
