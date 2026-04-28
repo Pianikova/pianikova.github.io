@@ -36,8 +36,8 @@ public class MCPToolsModule
         toolBinder.addBinding().to(ListMcpTool.class);
         // toolBinder.addBinding().to(GitMcpTool.class);
         toolBinder.addBinding().to(JGitMcpTool.class);
-        // toolBinder.addBinding().to(GitCommitsMcpTool.class);
-        // toolBinder.addBinding().to(GitDiffMcpTool.class);
+        toolBinder.addBinding().to(GitCommitsMcpTool.class);
+        toolBinder.addBinding().to(GitDiffMcpTool.class);
         toolBinder.addBinding().to(LocalHistoryMcpTool.class);
         toolBinder.addBinding().to(LocalChangesMcpTool.class);
         toolBinder.addBinding().to(NavigationHistoryMcpTool.class);
