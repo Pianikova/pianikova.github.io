@@ -144,6 +144,8 @@ public class JGitDescribe implements IJGitCommand
                             continue;
                         }
 
+                        org.eclipse.jgit.lib.ObjectId commitId;
+
                         // Filter out lightweight tags unless --tags is specified
                         if (!tags)
                         {
@@ -157,17 +159,21 @@ public class JGitDescribe implements IJGitCommand
                                     // Not an annotated tag (lightweight tag)
                                     continue;
                                 }
+                                commitId = peeled.getId();
                             }
                             catch (Exception e)
                             {
                                 continue;
                             }
                         }
+                        else
+                        {
+                            commitId = ref.getObjectId();
+                        }
 
                         try
                         {
-                            var tagObjectId = ref.getObjectId();
-                            var tagCommit = revWalk.parseCommit(tagObjectId);
+                            var tagCommit = revWalk.parseCommit(commitId);
 
                             if (tagCommit.equals(headCommit))
                             {
@@ -229,7 +235,7 @@ public class JGitDescribe implements IJGitCommand
                 }
                 else
                 {
-                    sb.append(headCommit.abbreviate(abbrev).name());
+                    return new GitCommandResult(1, "", "fatal: cannot describe - no tags found");
                 }
 
                 if (dirty && !git.status().call().isClean())
