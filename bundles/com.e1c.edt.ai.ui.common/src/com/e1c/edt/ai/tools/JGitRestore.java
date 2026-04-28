@@ -3,11 +3,25 @@
 */
 package com.e1c.edt.ai.tools;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.jgit.api.CheckoutCommand.Stage;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.dircache.DirCache;
+import org.eclipse.jgit.dircache.DirCacheEntry;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectLoader;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.filter.PathFilter;
 
 /**
  * Modern equivalent of `git checkout -- <paths>`: restores files from the index or a source.
@@ -104,6 +118,19 @@ public class JGitRestore implements IJGitCommand
                 resetCmd.addPath(p);
             }
             resetCmd.call();
+            return new GitCommandResult(0, "", "");
+        }
+
+        // If source is not specified, restore from HEAD (matching standard git restore behavior)
+        if (source == null && !staged)
+        {
+            var checkoutCmd = git.checkout();
+            for (var p : paths)
+            {
+                checkoutCmd.addPath(p);
+            }
+            checkoutCmd.setStartPoint("HEAD");
+            checkoutCmd.call();
             return new GitCommandResult(0, "", "");
         }
 

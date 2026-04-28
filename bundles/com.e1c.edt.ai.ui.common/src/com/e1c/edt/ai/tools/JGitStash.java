@@ -89,6 +89,21 @@ public class JGitStash implements IJGitCommand
             {
                 return new GitCommandResult(0, "No local changes to save\n", "");
             }
+            
+            // For untracked files, JGit only saves them but does not remove from working directory
+            // We need to clean untracked files manually
+            if (includeUntracked)
+            {
+                try
+                {
+                    git.clean().setCleanDirectories(true).setIgnore(false).call();
+                }
+                catch (Exception cleanEx)
+                {
+                    // Ignore clean errors - stash was already created
+                }
+            }
+            
             return new GitCommandResult(0,
                 "Saved working directory and index state " + stashCommit.getName() + "\n", "");
         }
@@ -182,6 +197,7 @@ public class JGitStash implements IJGitCommand
     {
         try
         {
+            // StashDropCommand.setStashRef() only accepts int index
             git.stashDrop().setStashRef(idx).call();
             return new GitCommandResult(0, "", "");
         }
