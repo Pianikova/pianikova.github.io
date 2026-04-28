@@ -42,6 +42,7 @@ public class JGitClean implements IJGitCommand
         var dryRun = args.contains("-n") || args.contains("--dry-run");
         var force = args.contains("-f") || args.contains("--force");
         var directories = args.contains("-d");
+        var ignored = args.contains("-x");
 
         var status = git.status().call();
         var untrackedFiles = new ArrayList<String>(status.getUntracked());
@@ -49,6 +50,7 @@ public class JGitClean implements IJGitCommand
         {
             untrackedFiles.addAll(status.getUntrackedFolders());
         }
+        
         var sb = new StringBuilder();
 
         if (dryRun)
@@ -61,6 +63,17 @@ public class JGitClean implements IJGitCommand
                     sb.append("  ").append(file).append("\n");
                 }
             }
+            if (ignored)
+            {
+                var ignoredFiles = new ArrayList<String>(status.getIgnoredNotInIndex());
+                for (var file : ignoredFiles)
+                {
+                    if (directories || !file.endsWith("/"))
+                    {
+                        sb.append("  ").append(file).append("\n");
+                    }
+                }
+            }
         }
         else if (force)
         {
@@ -68,7 +81,13 @@ public class JGitClean implements IJGitCommand
             var removed = 0;
             var directoriesToDelete = new ArrayList<File>();
             
-            for (var file : untrackedFiles)
+            var filesToDelete = new ArrayList<String>(untrackedFiles);
+            if (ignored)
+            {
+                filesToDelete.addAll(status.getIgnoredNotInIndex());
+            }
+            
+            for (var file : filesToDelete)
             {
                 if (directories || !file.endsWith("/"))
                 {
@@ -76,7 +95,7 @@ public class JGitClean implements IJGitCommand
                     if (filePath.isDirectory() ? deleteDirectory(filePath) : filePath.delete())
                     {
                         removed++;
-                        if (directories)
+                        if (directories && filePath.isDirectory())
                         {
                             directoriesToDelete.add(filePath.getParentFile());
                         }
@@ -92,7 +111,7 @@ public class JGitClean implements IJGitCommand
                 }
             }
             
-            sb.append("Removed ").append(removed).append(" files.\n");
+            sb.append("Removed ").append(removed).append(" items.\n");
         }
         else
         {
