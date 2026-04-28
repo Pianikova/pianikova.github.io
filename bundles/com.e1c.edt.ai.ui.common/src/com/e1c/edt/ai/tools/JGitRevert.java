@@ -11,6 +11,8 @@ import java.util.List;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.RepositoryState;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
 
 /**
  * Git revert command implementation
@@ -96,12 +98,19 @@ public class JGitRevert implements IJGitCommand
                 return new GitCommandResult(1, "", "fatal: bad revision '" + commitHash + "'");
             }
 
+            try (RevWalk revWalk = new RevWalk(git.getRepository()))
+            {
+                RevCommit commit = revWalk.parseCommit(commitRef);
+                if (commit.getParentCount() > 1)
+                {
+                    // Merge commit - revert not supported by JGit
+                    return new GitCommandResult(1, "", "fatal: revert of merge commits is not supported by JGit API. "
+                        + "Use native git or manually revert changes.\n");
+                }
+            }
+
             var revertCmd = git.revert();
             revertCmd.include(commitRef);
-            if (mainline != null)
-            {
-                revertCmd.setOurCommitName("HEAD");
-            }
 
             try
             {
@@ -153,7 +162,29 @@ public class JGitRevert implements IJGitCommand
         {
             return new GitCommandResult(1, "", "fatal: no revert in progress\n");
         }
-        git.commit().setAllowEmpty(false).call();
+
+        // Read commit message from MERGE_MSG file created by JGit
+        var mergeMsgFile = new File(git.getRepository().getDirectory(), "MERGE_MSG");
+        var commitCmd = git.commit().setAllowEmpty(false);
+        if (mergeMsgFile.exists())
+        {
+            try (var reader = new java.io.BufferedReader(new java.io.FileReader(mergeMsgFile)))
+            {
+                var msg = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null)
+                {
+                    msg.append(line).append("\n");
+                }
+                commitCmd.setMessage(msg.toString());
+            }
+        }
+        else
+        {
+            commitCmd.setMessage("Revert completed after conflict resolution\n");
+        }
+
+        commitCmd.call();
         return new GitCommandResult(0, "Revert continued successfully.\n", "");
     }
 
@@ -165,7 +196,18 @@ public class JGitRevert implements IJGitCommand
         {
             return new GitCommandResult(1, "", "fatal: no revert in progress\n");
         }
-        git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD).setRef("ORIG_HEAD").call();
+        // JGit doesn't create ORIG_HEAD for revert, so we reset to HEAD to clear conflicts
+        git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD).setRef("HEAD").call();
+        var revertHead = new File(git.getRepository().getDirectory(), "REVERT_HEAD");
+        if (revertHead.exists())
+        {
+            revertHead.delete();
+        }
+        var mergeMsg = new File(git.getRepository().getDirectory(), "MERGE_MSG");
+        if (mergeMsg.exists())
+        {
+            mergeMsg.delete();
+        }
         return new GitCommandResult(0, "Revert aborted.\n", "");
     }
 
