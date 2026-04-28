@@ -87,6 +87,7 @@ public class JGitPull implements IJGitCommand
         }
         if (ffOnly)
         {
+            pullCmd.setRebase(BranchRebaseMode.NONE);
             pullCmd.setFastForward(MergeCommand.FastForwardMode.FF_ONLY);
         }
 
