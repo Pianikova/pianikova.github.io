@@ -120,7 +120,14 @@ public class JGitClone implements IJGitCommand
         }
 
         var cloneCmd = Git.cloneRepository();
-        cloneCmd.setURI(url);
+        String uri = url;
+        // Convert local file path to file:// URI for JGit
+        File sourceFile = new File(url);
+        if (sourceFile.exists() && sourceFile.isDirectory())
+        {
+            uri = sourceFile.toURI().toString();
+        }
+        cloneCmd.setURI(uri);
         cloneCmd.setDirectory(targetDir);
 
         if (branch != null)
