@@ -136,6 +136,10 @@ public class JGitGrep implements IJGitCommand
             grepRevision(repository, revId, compiled, paths, filesOnly, countOnly, showLineNumbers, sb);
         }
 
+        if (sb.length() == 0)
+        {
+            return new GitCommandResult(1, "", "");
+        }
         return new GitCommandResult(0, sb.toString(), "");
     }
 

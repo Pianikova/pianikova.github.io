@@ -5,8 +5,9 @@ package com.e1c.edt.ai.tools;
 
 import java.util.List;
 
-import org.eclipse.jgit.api.CreateBranchCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.lib.Constants;
+import org.eclipse.jgit.lib.RefUpdate;
 
 /**
  * Modern equivalent of `git checkout <branch>`: switches branches.
@@ -81,36 +82,102 @@ public class JGitSwitch implements IJGitCommand
             return new GitCommandResult(1, "", "fatal: missing branch name");
         }
 
-        var checkout = git.checkout();
-        if (createName != null)
+        try
         {
-            checkout.setCreateBranch(true).setName(createName);
-            if (forceCreate)
+            var repository = git.getRepository();
+            repository.getRefDatabase().refresh();
+
+            if (detach)
             {
-                checkout.setUpstreamMode(CreateBranchCommand.SetupUpstreamMode.NOTRACK);
-                checkout.setForceRefUpdate(true);
+                var detachTarget = target != null ? target : "HEAD";
+                var targetId = repository.resolve(detachTarget);
+                if (targetId == null)
+                {
+                    return new GitCommandResult(1, "", "fatal: invalid reference: " + detachTarget + "\n");
+                }
+                git.checkout()
+                    .setName(targetId.getName())
+                    .setForced(force)
+                    .call();
+                return new GitCommandResult(0, "HEAD is now at " + targetId.abbreviate(7).name() + "\n", "");
             }
-            if (target != null)
+
+            if (createName != null)
             {
-                checkout.setStartPoint(target);
+                var startPoint = target != null ? target : "HEAD";
+                
+                // Check if branch already exists when not using force create
+                if (!forceCreate)
+                {
+                    try
+                    {
+                        var existingRef = repository.findRef(Constants.R_HEADS + createName);
+                        if (existingRef != null)
+                        {
+                            return new GitCommandResult(1, "", "fatal: A branch named '" + createName + "' already exists\n");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        // Ignore exceptions, branch might not exist
+                    }
+                }
+                
+                if (forceCreate)
+                {
+                    var startId = repository.resolve(startPoint);
+                    if (startId == null)
+                    {
+                        return new GitCommandResult(1, "", "fatal: invalid reference: " + startPoint + "\n");
+                    }
+                    var refUpdate = repository.updateRef(Constants.R_HEADS + createName);
+                    refUpdate.setNewObjectId(startId);
+                    refUpdate.setForceUpdate(true);
+                    var updateResult = refUpdate.update();
+                    if (updateResult == RefUpdate.Result.LOCK_FAILURE || updateResult == RefUpdate.Result.REJECTED
+                        || updateResult == RefUpdate.Result.IO_FAILURE)
+                    {
+                        return new GitCommandResult(1, "",
+                            "fatal: cannot reset branch '" + createName + "': " + updateResult + "\n");
+                    }
+                    repository.getRefDatabase().refresh();
+                    git.checkout()
+                        .setName(createName)
+                        .setForced(force)
+                        .call();
+                    return new GitCommandResult(0, "Switched to and reset branch '" + createName + "'\n", "");
+                }
+
+                git.checkout()
+                    .setName(createName)
+                    .setCreateBranch(true)
+                    .setStartPoint(startPoint)
+                    .setForced(force)
+                    .call();
+                return new GitCommandResult(0, "Switched to a new branch '" + createName + "'\n", "");
             }
+
+            git.checkout()
+                .setName(target)
+                .setForced(force)
+                .call();
+            repository.getRefDatabase().refresh();
+            var currentBranch = repository.getBranch();
+            if (!target.equals(currentBranch))
+            {
+                return new GitCommandResult(1, "",
+                    "fatal: checkout did not switch to '" + target + "' (current branch is '" + currentBranch + "')\n");
+            }
+            return new GitCommandResult(0, "Switched to branch '" + target + "'\n", "");
         }
-        else
+        catch (Exception e)
         {
-            checkout.setName(target);
+            var message = e.getMessage();
+            if (message == null || message.isBlank())
+            {
+                message = e.getClass().getSimpleName();
+            }
+            return new GitCommandResult(1, "", "fatal: " + message + "\n");
         }
-        if (force)
-        {
-            checkout.setForced(true);
-        }
-        // detach: when target is a commit (not a branch), checkout already detaches.
-        if (detach && target != null)
-        {
-            checkout.setName(target);
-        }
-        checkout.call();
-        var name = createName != null ? createName : target;
-        return new GitCommandResult(0, "Switched to " + (createName != null ? "a new branch '" : "branch '")
-            + name + "'\n", "");
     }
 }

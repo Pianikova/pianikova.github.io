@@ -130,6 +130,16 @@ public class JGitMerge implements IJGitCommand
 
         var result = mergeCmd.call();
         var status = result.getMergeStatus();
+        
+        // Check for conflicts by examining repository state
+        var repoState = git.getRepository().getRepositoryState();
+        if (repoState == RepositoryState.MERGING)
+        {
+            return new GitCommandResult(1, "", 
+                "Automatic merge failed; fix conflicts and then commit the result.\n" +
+                "You can use the " + EditMcpTool.TOOL_NAME + " tool to resolve conflicts in conflicting files.");
+        }
+        
         if (status.isSuccessful())
         {
             return new GitCommandResult(0, "Merge result: " + status + "\n", "");

@@ -54,14 +54,15 @@ public class JGitRm implements IJGitCommand
             rmCmd.setCached(true);
         }
 
+        if (paths.isEmpty())
+        {
+            return new GitCommandResult(1, "", "fatal: no pathspec was given. Which files should I remove?\n");
+        }
+
         try
         {
             var result = rmCmd.call();
-            if (paths.isEmpty())
-            {
-                return new GitCommandResult(0, "", "");
-            }
-            
+
             var anyRemoved = false;
             for (var path : paths)
             {

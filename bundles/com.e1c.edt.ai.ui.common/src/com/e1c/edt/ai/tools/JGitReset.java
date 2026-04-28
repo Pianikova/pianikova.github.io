@@ -40,10 +40,15 @@ public class JGitReset implements IJGitCommand
         String commit = null;
         var paths = new ArrayList<String>();
         boolean modeSpecified = false;
+        boolean pathsOnly = false;
 
         for (var arg : args)
         {
-            if (arg.equals("--soft"))
+            if (pathsOnly)
+            {
+                paths.add(arg);
+            }
+            else if (arg.equals("--soft"))
             {
                 if (modeSpecified)
                 {
@@ -72,9 +77,7 @@ public class JGitReset implements IJGitCommand
             }
             else if (arg.equals("--"))
             {
-                // explicit end-of-options separator; remaining args are paths
-                // handled by falling through to next args, but since we process in one pass,
-                // subsequent non-flag args will be treated as paths (commit already consumed)
+                pathsOnly = true;
             }
             else if (!arg.startsWith("-"))
             {

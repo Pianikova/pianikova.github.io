@@ -39,8 +39,9 @@ public class JGitCommit implements IJGitCommand
     public GitCommandResult run(Git git, List<String> args) throws GitAPIException, IOException
     {
         var commitCmd = git.commit();
-        var message = "";
+        String message = null;
         var allowEmpty = false;
+        var missingMessageValue = false;
 
         for (int i = 0; i < args.size(); i++)
         {
@@ -51,6 +52,10 @@ public class JGitCommit implements IJGitCommand
                 {
                     message = args.get(i + 1);
                     i++;
+                }
+                else
+                {
+                    missingMessageValue = true;
                 }
             }
             else if (arg.equals("-a"))
@@ -93,14 +98,16 @@ public class JGitCommit implements IJGitCommand
 
         commitCmd.setAllowEmpty(allowEmpty);
 
-        if (message.isEmpty())
+        if (missingMessageValue)
         {
-            commitCmd.setMessage("<no message>");
+            return new GitCommandResult(1, "", "error: switch `m' requires a value\n");
         }
-        else
+        if (message == null)
         {
-            commitCmd.setMessage(message);
+            return new GitCommandResult(1, "", "fatal: no commit message specified\n");
         }
+
+        commitCmd.setMessage(message);
 
         var commit = commitCmd.call();
         return new GitCommandResult(0, "[" + git.getRepository().getBranch() + " "

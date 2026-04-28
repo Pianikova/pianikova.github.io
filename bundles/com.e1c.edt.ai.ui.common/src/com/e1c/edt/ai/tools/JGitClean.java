@@ -44,7 +44,11 @@ public class JGitClean implements IJGitCommand
         var directories = args.contains("-d");
 
         var status = git.status().call();
-        var untrackedFiles = status.getUntracked();
+        var untrackedFiles = new ArrayList<String>(status.getUntracked());
+        if (directories)
+        {
+            untrackedFiles.addAll(status.getUntrackedFolders());
+        }
         var sb = new StringBuilder();
 
         if (dryRun)
@@ -69,7 +73,7 @@ public class JGitClean implements IJGitCommand
                 if (directories || !file.endsWith("/"))
                 {
                     var filePath = new File(workDir, file);
-                    if (filePath.delete())
+                    if (filePath.isDirectory() ? deleteDirectory(filePath) : filePath.delete())
                     {
                         removed++;
                         if (directories)
@@ -92,7 +96,7 @@ public class JGitClean implements IJGitCommand
         }
         else
         {
-            sb.append("Use -f/--force to actually remove files.\n");
+            return new GitCommandResult(1, "", "fatal: clean.requireForce defaults to true and neither -i, -n, nor -f given; refusing to clean\n");
         }
 
         return new GitCommandResult(0, sb.toString(), "");
@@ -109,5 +113,22 @@ public class JGitClean implements IJGitCommand
         {
             dir.delete();
         }
+    }
+
+    private boolean deleteDirectory(File dir)
+    {
+        var files = dir.listFiles();
+        if (files != null)
+        {
+            for (var file : files)
+            {
+                var deleted = file.isDirectory() ? deleteDirectory(file) : file.delete();
+                if (!deleted)
+                {
+                    return false;
+                }
+            }
+        }
+        return dir.delete();
     }
 }
