@@ -10,6 +10,9 @@ import org.eclipse.jgit.api.MergeCommand;
 import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.BranchConfig.BranchRebaseMode;
+import org.eclipse.jgit.lib.RepositoryState;
+
+import com.e1c.edt.ai.tools.EditMcpTool;
 
 /**
  * Git pull command implementation
@@ -118,6 +121,13 @@ public class JGitPull implements IJGitCommand
             }
             else
             {
+                var repoState = git.getRepository().getRepositoryState();
+                if (repoState == RepositoryState.MERGING)
+                {
+                    return new GitCommandResult(1, message.toString(),
+                        "Merge conflicts occurred. Resolve conflicts using the `" + EditMcpTool.TOOL_NAME + "` tool, "
+                            + "then `git add` and `git commit` to complete the merge.");
+                }
                 return new GitCommandResult(1, message.toString(), "Merge status: " + mergeStatus);
             }
         }
@@ -130,6 +140,15 @@ public class JGitPull implements IJGitCommand
             }
             else
             {
+                var repoState = git.getRepository().getRepositoryState();
+                if (repoState == RepositoryState.REBASING
+                    || repoState == RepositoryState.REBASING_INTERACTIVE
+                    || repoState == RepositoryState.REBASING_MERGE)
+                {
+                    return new GitCommandResult(1, message.toString(),
+                        "Rebase conflicts occurred. Resolve conflicts using the `" + EditMcpTool.TOOL_NAME + "` tool, "
+                            + "then `git add` and `git rebase --continue` (or `--skip` / `--abort`).");
+                }
                 return new GitCommandResult(1, message.toString(), "Rebase status: " + st);
             }
         }

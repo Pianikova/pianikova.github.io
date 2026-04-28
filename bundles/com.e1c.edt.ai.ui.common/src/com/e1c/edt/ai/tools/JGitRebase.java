@@ -22,6 +22,8 @@ import org.eclipse.jgit.lib.RebaseTodoLine;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryState;
 
+import com.e1c.edt.ai.tools.EditMcpTool;
+
 /**
  * Git rebase command implementation.
  *
@@ -209,7 +211,7 @@ public class JGitRebase implements IJGitCommand
         if (status == Status.STOPPED)
         {
             return new GitCommandResult(1, "",
-                "error: could not apply some commits. Resolve conflicts (use `Edit`), `add`, "
+                "error: could not apply some commits. Resolve conflicts (use `" + EditMcpTool.TOOL_NAME + "`), `add`, "
                     + "then `rebase --continue` (or `--skip` / `--abort`).\n");
         }
         if (status == Status.UNCOMMITTED_CHANGES)

@@ -12,6 +12,8 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.RepositoryState;
 
+import com.e1c.edt.ai.tools.EditMcpTool;
+
 /**
  * Git cherry-pick command implementation
  */
@@ -141,7 +143,7 @@ public class JGitCherryPick implements IJGitCommand
                 return new GitCommandResult(0, "Cherry-pick successful.\n", "");
             case CONFLICTING:
                 return new GitCommandResult(1, "",
-                    "Cherry-pick stopped due to conflicts. Resolve conflicts using the `Edit` tool, "
+                    "Cherry-pick stopped due to conflicts. Resolve conflicts using the `" + EditMcpTool.TOOL_NAME + "` tool, "
                         + "then `add` and `cherry-pick --continue` (or `--skip` / `--abort`).\n");
             case FAILED:
                 var failures = result.getFailingPaths();
