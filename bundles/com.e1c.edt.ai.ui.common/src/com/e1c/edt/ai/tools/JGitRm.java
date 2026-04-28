@@ -63,25 +63,16 @@ public class JGitRm implements IJGitCommand
         {
             var result = rmCmd.call();
 
-            var anyRemoved = false;
-            for (var path : paths)
-            {
-                if (result.findEntry(path) < 0)
-                {
-                    anyRemoved = true;
-                    break;
-                }
-            }
-            
-            if (!anyRemoved)
-            {
-                return new GitCommandResult(1, "", "error: pathspec did not match any files\n");
-            }
             return new GitCommandResult(0, "", "");
         }
         catch (Exception e)
         {
             var errorMsg = e.getMessage();
+            var cause = e.getCause();
+            if (cause != null && cause.getMessage() != null)
+            {
+                errorMsg = cause.getMessage();
+            }
             if (errorMsg == null || errorMsg.isEmpty())
             {
                 errorMsg = "Failed to remove files";
