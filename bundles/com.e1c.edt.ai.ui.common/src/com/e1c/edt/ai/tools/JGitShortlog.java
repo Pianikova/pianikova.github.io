@@ -112,9 +112,13 @@ public class JGitShortlog implements IJGitCommand
         var sb = new StringBuilder();
         for (var e : entries)
         {
-            sb.append(e.getKey()).append(" (").append(e.getValue().size()).append("):\n");
-            if (!summary)
+            if (summary)
             {
+                sb.append(e.getValue().size()).append("\t").append(e.getKey()).append("\n");
+            }
+            else
+            {
+                sb.append(e.getKey()).append(" (").append(e.getValue().size()).append("):\n");
                 for (var subject : e.getValue())
                 {
                     sb.append("      ").append(subject).append("\n");
