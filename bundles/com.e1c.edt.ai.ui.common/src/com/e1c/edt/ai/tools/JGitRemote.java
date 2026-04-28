@@ -83,6 +83,7 @@ public class JGitRemote implements IJGitCommand
             try
             {
                 git.remoteRemove().setRemoteName(name).call();
+                removeRemoteFromConfig(git, name);
             }
             catch (Exception e)
             {
@@ -111,5 +112,12 @@ public class JGitRemote implements IJGitCommand
         }
 
         return new GitCommandResult(0, sb.toString(), "");
+    }
+
+    private static void removeRemoteFromConfig(Git git, String name) throws IOException
+    {
+        StoredConfig config = git.getRepository().getConfig();
+        config.unsetSection("remote", name);
+        config.save();
     }
 }

@@ -4,6 +4,8 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,8 +13,6 @@ import org.eclipse.jgit.api.CherryPickResult;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.RepositoryState;
-
-import com.e1c.edt.ai.tools.EditMcpTool;
 
 /**
  * Git cherry-pick command implementation
@@ -98,9 +98,28 @@ public class JGitCherryPick implements IJGitCommand
         {
             return new GitCommandResult(1, "", "fatal: no cherry-pick in progress\n");
         }
-        // Resume by committing: create a commit using the current index state.
-        git.commit().setAllowEmpty(false).call();
+        // Resume by committing: create a commit using the current index state and preserved message.
+        git.commit().setAllowEmpty(false).setMessage(readContinuationMessage(git)).call();
         return new GitCommandResult(0, "Cherry-pick continued successfully.\n", "");
+    }
+
+    @SuppressWarnings("nls")
+    private static String readContinuationMessage(Git git) throws IOException
+    {
+        var gitDir = git.getRepository().getDirectory().toPath();
+        for (var fileName : List.of("MERGE_MSG", "COMMIT_EDITMSG"))
+        {
+            var messagePath = gitDir.resolve(fileName);
+            if (Files.isRegularFile(messagePath))
+            {
+                var message = Files.readString(messagePath, StandardCharsets.UTF_8).trim();
+                if (!message.isEmpty())
+                {
+                    return message;
+                }
+            }
+        }
+        return "cherry-pick: continue";
     }
 
     @SuppressWarnings("nls")
@@ -143,7 +162,7 @@ public class JGitCherryPick implements IJGitCommand
                 return new GitCommandResult(0, "Cherry-pick successful.\n", "");
             case CONFLICTING:
                 return new GitCommandResult(1, "",
-                    "Cherry-pick stopped due to conflicts. Resolve conflicts using the `" + EditMcpTool.TOOL_NAME + "` tool, "
+                    "Cherry-pick stopped due to conflicts. Resolve conflicts using the `Edit` tool, "
                         + "then `add` and `cherry-pick --continue` (or `--skip` / `--abort`).\n");
             case FAILED:
                 var failures = result.getFailingPaths();

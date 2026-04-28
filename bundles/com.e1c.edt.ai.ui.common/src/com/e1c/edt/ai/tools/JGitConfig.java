@@ -3,11 +3,13 @@
 */
 package com.e1c.edt.ai.tools;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.StoredConfig;
+import org.eclipse.jgit.storage.file.FileBasedConfig;
 import org.eclipse.jgit.util.FS;
 import org.eclipse.jgit.util.SystemReader;
 
@@ -129,10 +131,10 @@ public class JGitConfig implements IJGitCommand
 
         if (positional.size() == 1 || get)
         {
-            var value = config.getString(parsed.section, parsed.subsection, parsed.name);
-            if (value != null)
+            var values = config.getStringList(parsed.section, parsed.subsection, parsed.name);
+            if (values != null && values.length > 0)
             {
-                return new GitCommandResult(0, value + "\n", "");
+                return new GitCommandResult(0, values[0] + "\n", "");
             }
             return new GitCommandResult(1, "", "");
         }
@@ -158,7 +160,9 @@ public class JGitConfig implements IJGitCommand
                 return sys;
             case LOCAL:
             default:
-                return git.getRepository().getConfig();
+                var local = new FileBasedConfig(new File(git.getRepository().getDirectory(), "config"), FS.DETECTED);
+                local.load();
+                return local;
         }
     }
 

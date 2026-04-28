@@ -6,6 +6,7 @@ package com.e1c.edt.ai.tools;
 import java.util.List;
 
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.lib.RefUpdate;
 
 /**
  * Git stash command implementation
@@ -197,8 +198,26 @@ public class JGitStash implements IJGitCommand
     {
         try
         {
-            // StashDropCommand.setStashRef() only accepts int index
+            var before = stashCount(git);
+            if (idx < 0 || idx >= before)
+            {
+                return new GitCommandResult(1, "", "error: stash@{" + idx + "} is not a valid reference\n");
+            }
+
             git.stashDrop().setStashRef(idx).call();
+            git.getRepository().getRefDatabase().refresh();
+            if (stashCount(git) >= before)
+            {
+                if (idx == 0 && before == 1)
+                {
+                    deleteStashRef(git);
+                }
+                git.getRepository().getRefDatabase().refresh();
+            }
+            if (stashCount(git) >= before)
+            {
+                return new GitCommandResult(1, "", "error: failed to drop stash@{" + idx + "}\n");
+            }
             return new GitCommandResult(0, "", "");
         }
         catch (Exception e)
@@ -213,8 +232,7 @@ public class JGitStash implements IJGitCommand
         try
         {
             git.stashApply().setStashRef("stash@{" + idx + "}").call();
-            git.stashDrop().setStashRef(idx).call();
-            return new GitCommandResult(0, "", "");
+            return doDrop(git, idx);
         }
         catch (Exception e)
         {
@@ -228,6 +246,16 @@ public class JGitStash implements IJGitCommand
         try
         {
             git.stashDrop().setAll(true).call();
+            git.getRepository().getRefDatabase().refresh();
+            if (stashCount(git) > 0)
+            {
+                deleteStashRef(git);
+                git.getRepository().getRefDatabase().refresh();
+            }
+            if (stashCount(git) > 0)
+            {
+                return new GitCommandResult(1, "", "error: failed to clear stash\n");
+            }
             return new GitCommandResult(0, "", "");
         }
         catch (Exception e)
@@ -271,6 +299,23 @@ public class JGitStash implements IJGitCommand
             msg = fallback;
         }
         return new GitCommandResult(1, "", "error: " + msg + "\n");
+    }
+
+    private static int stashCount(Git git) throws Exception
+    {
+        return git.stashList().call().size();
+    }
+
+    private static void deleteStashRef(Git git) throws Exception
+    {
+        var update = git.getRepository().updateRef("refs/stash");
+        update.setForceUpdate(true);
+        var result = update.delete();
+        if (result != RefUpdate.Result.FORCED && result != RefUpdate.Result.NO_CHANGE
+            && result != RefUpdate.Result.NEW && result != RefUpdate.Result.FAST_FORWARD)
+        {
+            throw new IllegalStateException("cannot delete refs/stash: " + result);
+        }
     }
 
     @SuppressWarnings("nls")
