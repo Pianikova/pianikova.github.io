@@ -8,18 +8,29 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.RebaseCommand;
+import org.eclipse.jgit.api.RebaseCommand.InteractiveHandler;
 import org.eclipse.jgit.api.RebaseResult;
 import org.eclipse.jgit.api.RebaseResult.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.RebaseTodoLine;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryState;
 
+import com.e1c.edt.ai.tools.EditMcpTool;
+
 /**
- * Git rebase command implementation with enhanced features
+ * Git rebase command implementation.
+ *
+ * NOTE: Interactive rebase (-i) is not supported in an LLM context — there is no
+ * editor to drive the todo list. Use --autosquash to automate fixup!/squash!
+ * commits, or rewrite history non-interactively via reset --soft + commit --amend
+ * + cherry-pick (use the Edit tool to modify files between steps).
  */
 public class JGitRebase implements IJGitCommand
 {
@@ -38,231 +49,313 @@ public class JGitRebase implements IJGitCommand
             .addParameter("--continue", "Continue rebase after resolving conflicts")
             .addParameter("--abort", "Abort rebase and restore original branch")
             .addParameter("--skip", "Skip current patch and continue")
-            .addParameter("--strategy=<strategy>", "Use the given merge strategy (recursive, resolve, simple, ours, theirs)")
-            .addParameter("-i, --interactive", "Make a list and commit a shell script to edit it");
+            .addParameter("--autostash", "Automatically stash uncommitted changes and reapply after rebase")
+            .addParameter("--autosquash",
+                "Automatically reorder/apply commits prefixed with `fixup!`/`squash!` to amend their target")
+            .addParameter("--strategy=<strategy>",
+                "Use the given merge strategy (recursive, resolve, simple, ours, theirs)")
+            .setNotes("Interactive rebase (-i, --exec, --root, edit/reword/squash) is NOT supported — "
+                + "there is no editor available. To rewrite history non-interactively, use one of:\n"
+                + "  * --autosquash with `fixup!<subject>` / `squash!<subject>` commit messages\n"
+                + "  * `reset --soft <base>` + `commit -m \"...\"` (collapse a range into one commit)\n"
+                + "  * `commit --amend -m \"...\"` (reword/fix the latest commit)\n"
+                + "  * `cherry-pick` to reapply individual commits onto a new base\n"
+                + "Edit files between steps with the `Edit` tool. After conflicts, resolve with `Edit`, "
+                + "`add`, then `rebase --continue` (or `--skip` / `--abort`).");
     }
 
     @SuppressWarnings("nls")
     @Override
     public GitCommandResult run(Git git, List<String> args) throws GitAPIException, IOException
     {
+        if (args.contains("-i") || args.contains("--interactive"))
+        {
+            return new GitCommandResult(1, "",
+                "error: interactive rebase (-i) is not supported in this environment.\n"
+                    + "Use --autosquash, or rewrite history with reset --soft / commit --amend / cherry-pick.\n");
+        }
+
         var rebaseCmd = git.rebase();
 
         if (args.contains("--continue"))
         {
             return handleContinue(rebaseCmd);
         }
-        else if (args.contains("--abort"))
+        if (args.contains("--abort"))
         {
             return handleAbort(rebaseCmd, git.getRepository());
         }
-        else if (args.contains("--skip"))
+        if (args.contains("--skip"))
         {
             return handleSkip(rebaseCmd, git.getRepository());
         }
-        else
-        {
-            return handleNewRebase(rebaseCmd, git, args);
-        }
+        return handleNewRebase(rebaseCmd, git, args);
     }
 
     @SuppressWarnings("nls")
     private GitCommandResult handleContinue(RebaseCommand rebaseCmd) throws GitAPIException
     {
-        rebaseCmd.setOperation(org.eclipse.jgit.api.RebaseCommand.Operation.CONTINUE);
-        RebaseResult result = rebaseCmd.call();
-
-        if (result.getStatus().isSuccessful())
-        {
-            return new GitCommandResult(0, "Rebase continue successful.\\n", "");
-        }
-        else if (result.getStatus() == Status.NOTHING_TO_COMMIT)
-        {
-            return new GitCommandResult(1, "",
-                "error: you have unstaged changes. Resolve conflicts and run \"git rebase --continue\".\\n");
-        }
-        else if (result.getStatus() == Status.STOPPED)
-        {
-            return new GitCommandResult(1, "",
-                "error: could not continue rebase. Resolve conflicts and run \"git rebase --continue\".\\n");
-        }
-        else if (result.getStatus() == Status.EDIT)
-        {
-            return new GitCommandResult(1, "",
-                "error: cannot continue in edit state. Use \"git rebase --continue\" after making changes.\\n");
-        }
-        else if (result.getStatus() == Status.FAILED || result.getStatus() == Status.CONFLICTS)
-        {
-            return new GitCommandResult(1, "",
-                "error: rebase failed due to conflicts. Resolve conflicts and run \"git rebase --continue\".\\n");
-        }
-        else
-        {
-            return new GitCommandResult(1, "", "Rebase continue failed: " + result.getStatus());
-        }
+        rebaseCmd.setOperation(RebaseCommand.Operation.CONTINUE);
+        return handleRebaseResult(rebaseCmd.call(), null);
     }
 
     @SuppressWarnings("nls")
-    private GitCommandResult handleAbort(RebaseCommand rebaseCmd, Repository repository) throws GitAPIException, IOException
+    private GitCommandResult handleAbort(RebaseCommand rebaseCmd, Repository repository)
+        throws GitAPIException, IOException
     {
         if (!isRebaseInProgress(repository))
         {
-            return new GitCommandResult(1, "", "fatal: No rebase in progress?\\n");
+            return new GitCommandResult(1, "", "fatal: No rebase in progress?\n");
         }
-
-        rebaseCmd.setOperation(org.eclipse.jgit.api.RebaseCommand.Operation.ABORT);
-        RebaseResult result = rebaseCmd.call();
-
+        rebaseCmd.setOperation(RebaseCommand.Operation.ABORT);
+        var result = rebaseCmd.call();
         if (result.getStatus().isSuccessful() || result.getStatus() == Status.ABORTED)
         {
-            return new GitCommandResult(0, "Rebase aborted.\\n", "");
+            return new GitCommandResult(0, "Rebase aborted.\n", "");
         }
-        else if (result.getStatus() == Status.FAILED)
-        {
-            return new GitCommandResult(1, "", "fatal: Failed to abort rebase.\\n");
-        }
-        else
-        {
-            return new GitCommandResult(1, "", "Rebase abort failed: " + result.getStatus());
-        }
+        return new GitCommandResult(1, "", "Rebase abort failed: " + result.getStatus());
     }
 
     @SuppressWarnings("nls")
-    private GitCommandResult handleSkip(RebaseCommand rebaseCmd, Repository repository) throws GitAPIException, IOException
+    private GitCommandResult handleSkip(RebaseCommand rebaseCmd, Repository repository)
+        throws GitAPIException, IOException
     {
         if (!isRebaseInProgress(repository))
         {
-            return new GitCommandResult(1, "", "fatal: No rebase in progress?\\n");
+            return new GitCommandResult(1, "", "fatal: No rebase in progress?\n");
         }
-
-        rebaseCmd.setOperation(org.eclipse.jgit.api.RebaseCommand.Operation.SKIP);
-        RebaseResult result = rebaseCmd.call();
-
-        if (result.getStatus().isSuccessful())
-        {
-            return new GitCommandResult(0, "Rebase skipped.\\n", "");
-        }
-        else if (result.getStatus() == Status.NOTHING_TO_COMMIT)
-        {
-            return new GitCommandResult(1, "", "fatal: Cannot skip - nothing to commit.\\n");
-        }
-        else if (result.getStatus() == Status.FAILED)
-        {
-            return new GitCommandResult(1, "", "fatal: Failed to skip commit.\\n");
-        }
-        else
-        {
-            return new GitCommandResult(1, "", "Rebase skip failed: " + result.getStatus());
-        }
+        rebaseCmd.setOperation(RebaseCommand.Operation.SKIP);
+        return handleRebaseResult(rebaseCmd.call(), null);
     }
 
     @SuppressWarnings("nls")
-    private GitCommandResult handleNewRebase(RebaseCommand rebaseCmd, Git git, List<String> args) throws GitAPIException, IOException
+    private GitCommandResult handleNewRebase(RebaseCommand rebaseCmd, Git git, List<String> args)
+        throws GitAPIException, IOException
     {
-        if (args.isEmpty())
+        String upstream = null;
+        var autostash = false;
+        var autosquash = false;
+        for (var arg : args)
+        {
+            if (arg.equals("--autostash"))
+            {
+                autostash = true;
+            }
+            else if (arg.equals("--no-autostash"))
+            {
+                autostash = false;
+            }
+            else if (arg.equals("--autosquash"))
+            {
+                autosquash = true;
+            }
+            else if (!arg.startsWith("-") && upstream == null)
+            {
+                upstream = arg;
+            }
+        }
+
+        if (upstream == null)
         {
             return new GitCommandResult(1, "", "fatal: you must specify an upstream branch or commit");
         }
 
-        var upstream = args.get(0);
         var currentBranch = git.getRepository().getBranch();
         var upstreamRef = git.getRepository().resolve(upstream);
-
         if (upstreamRef == null)
         {
             return new GitCommandResult(1, "", "fatal: invalid upstream '" + upstream + "'");
         }
 
-        boolean interactive = args.contains("-i") || args.contains("--interactive");
+        // --autostash: stash before rebase, pop after.
+        org.eclipse.jgit.revwalk.RevCommit stash = null;
+        if (autostash)
+        {
+            stash = git.stashCreate().setIncludeUntracked(false).call();
+        }
 
         rebaseCmd.setUpstream(upstreamRef);
 
-        if (interactive)
+        if (autosquash)
         {
-            rebaseCmd.setOperation(org.eclipse.jgit.api.RebaseCommand.Operation.BEGIN);
+            rebaseCmd.runInteractively(new AutosquashHandler());
         }
 
-        var result = rebaseCmd.call();
-
-        return handleRebaseResult(result, currentBranch);
+        try
+        {
+            var result = rebaseCmd.call();
+            if (stash != null && (result.getStatus().isSuccessful()))
+            {
+                git.stashApply().setStashRef(stash.getName()).call();
+                git.stashDrop().setStashRef(0).call();
+            }
+            return handleRebaseResult(result, currentBranch);
+        }
+        catch (GitAPIException e)
+        {
+            if (stash != null)
+            {
+                // Best-effort: leave stash in place for user recovery.
+                return new GitCommandResult(1, "",
+                    "Rebase failed: " + e.getMessage() + "\n"
+                        + "Autostash entry preserved (use `git stash pop` to recover).\n");
+            }
+            throw e;
+        }
     }
 
     @SuppressWarnings("nls")
     private GitCommandResult handleRebaseResult(RebaseResult result, String currentBranch)
     {
-        if (result.getStatus() == Status.STOPPED)
+        var status = result.getStatus();
+        if (status == Status.STOPPED)
         {
             return new GitCommandResult(1, "",
-                "error: could not apply some commits. Resolve conflicts and run \"git rebase --continue\".\\n" +
-                "To abort and get back to the state before \"git rebase\", run \"git rebase --abort\".\\n");
+                "error: could not apply some commits. Resolve conflicts (use `" + EditMcpTool.TOOL_NAME + "`), `add`, "
+                    + "then `rebase --continue` (or `--skip` / `--abort`).\n");
         }
-        else if (result.getStatus() == Status.EDIT)
-        {
-            return new GitCommandResult(0,
-                "Rebase stopped for editing. Make changes and run \"git rebase --continue\".\\n", "");
-        }
-        else if (result.getStatus() == Status.INTERACTIVE_PREPARED)
-        {
-            return new GitCommandResult(0,
-                "Interactive rebase prepared. Edit the todo list and run \"git rebase --continue\".\\n", "");
-        }
-        else if (result.getStatus() == Status.UNCOMMITTED_CHANGES)
+        if (status == Status.UNCOMMITTED_CHANGES)
         {
             return new GitCommandResult(1, "",
-                "error: cannot rebase: you have unstaged changes.\\n");
+                "error: cannot rebase: you have unstaged changes. Commit them or use --autostash.\n");
         }
-        else if (result.getStatus() == Status.CONFLICTS)
+        if (status == Status.CONFLICTS)
+        {
+            return new GitCommandResult(1, "", "error: checkout failed due to conflicts.\n");
+        }
+        if (status == Status.NOTHING_TO_COMMIT)
         {
             return new GitCommandResult(1, "",
-                "error: checkout failed due to conflicts.\\n");
+                "error: no changes - resolve conflicts and run `rebase --continue` (or `--skip`).\n");
         }
-        else if (result.getStatus().isSuccessful())
+        if (status.isSuccessful())
         {
-            if (result.getStatus() == Status.UP_TO_DATE)
+            if (status == Status.UP_TO_DATE)
             {
-                return new GitCommandResult(0, "Current branch is up to date.\\n", "");
+                return new GitCommandResult(0, "Current branch is up to date.\n", "");
             }
-            if (result.getStatus() == Status.FAST_FORWARD)
+            if (status == Status.FAST_FORWARD)
             {
-                return new GitCommandResult(0, "Fast-forwarded.\\n", "");
+                return new GitCommandResult(0, "Fast-forwarded.\n", "");
             }
-            if (result.getStatus() == Status.STASH_APPLY_CONFLICTS)
-            {
-                return new GitCommandResult(0, "Successfully rebased, but stash apply had conflicts.\\n", "");
-            }
-            return new GitCommandResult(0,
-                "Successfully rebased and updated refs/heads/" + currentBranch + ".\\n", "");
+            var ref = currentBranch != null ? "refs/heads/" + currentBranch : "current branch";
+            return new GitCommandResult(0, "Successfully rebased and updated " + ref + ".\n", "");
         }
-        else
-        {
-            return new GitCommandResult(1, "", "Rebase failed: " + result.getStatus());
-        }
+        return new GitCommandResult(1, "", "Rebase failed: " + status);
     }
 
     @SuppressWarnings("nls")
     private boolean isRebaseInProgress(Repository repository) throws IOException
     {
-        RepositoryState state = repository.getRepositoryState();
-
-        if (state == RepositoryState.REBASING ||
-            state == RepositoryState.REBASING_INTERACTIVE ||
-            state == RepositoryState.REBASING_MERGE)
+        var state = repository.getRepositoryState();
+        if (state == RepositoryState.REBASING
+            || state == RepositoryState.REBASING_INTERACTIVE
+            || state == RepositoryState.REBASING_MERGE)
         {
             return true;
         }
-
         File gitDir = repository.getDirectory();
         if (gitDir != null)
         {
-            Path rebaseMergeDir = Paths.get(gitDir.getAbsolutePath(), "rebase-merge");
-            Path rebaseApplyDir = Paths.get(gitDir.getAbsolutePath(), "rebase-apply");
-
-            if (Files.exists(rebaseMergeDir) || Files.exists(rebaseApplyDir))
+            Path rm = Paths.get(gitDir.getAbsolutePath(), "rebase-merge");
+            Path ra = Paths.get(gitDir.getAbsolutePath(), "rebase-apply");
+            if (Files.exists(rm) || Files.exists(ra))
             {
                 return true;
             }
         }
-
         return false;
+    }
+
+    /**
+     * Implements --autosquash by reordering todo lines so that any commit whose
+     * subject starts with `fixup!<target>` or `squash!<target>` is moved right
+     * after the matching <target> commit and converted to FIXUP/SQUASH actions.
+     */
+    @SuppressWarnings("nls")
+    private static final class AutosquashHandler implements InteractiveHandler
+    {
+        @Override
+        public void prepareSteps(List<RebaseTodoLine> steps)
+        {
+            var bySubject = new HashMap<String, RebaseTodoLine>();
+            for (var s : steps)
+            {
+                if (s.getAction() == RebaseTodoLine.Action.PICK)
+                {
+                    var msg = s.getShortMessage();
+                    if (msg != null && !msg.startsWith("fixup!") && !msg.startsWith("squash!"))
+                    {
+                        bySubject.putIfAbsent(msg, s);
+                    }
+                }
+            }
+
+            var reordered = new ArrayList<RebaseTodoLine>(steps.size());
+            var consumed = new java.util.HashSet<RebaseTodoLine>();
+            for (var s : steps)
+            {
+                if (consumed.contains(s))
+                {
+                    continue;
+                }
+                reordered.add(s);
+                if (s.getAction() != RebaseTodoLine.Action.PICK)
+                {
+                    continue;
+                }
+                var subject = s.getShortMessage();
+                if (subject == null)
+                {
+                    continue;
+                }
+                // Append any fixup!/squash! that target this commit's subject.
+                for (var f : steps)
+                {
+                    if (f == s || consumed.contains(f))
+                    {
+                        continue;
+                    }
+                    var fmsg = f.getShortMessage();
+                    if (fmsg == null)
+                    {
+                        continue;
+                    }
+                    String target = null;
+                    RebaseTodoLine.Action newAction = null;
+                    if (fmsg.startsWith("fixup! "))
+                    {
+                        target = fmsg.substring("fixup! ".length()).trim();
+                        newAction = RebaseTodoLine.Action.FIXUP;
+                    }
+                    else if (fmsg.startsWith("squash! "))
+                    {
+                        target = fmsg.substring("squash! ".length()).trim();
+                        newAction = RebaseTodoLine.Action.SQUASH;
+                    }
+                    if (target != null && subject.startsWith(target))
+                    {
+                        try
+                        {
+                            f.setAction(newAction);
+                        }
+                        catch (Exception ignore)
+                        {
+                            // some JGit versions may forbid certain transitions
+                        }
+                        reordered.add(f);
+                        consumed.add(f);
+                    }
+                }
+            }
+            steps.clear();
+            steps.addAll(reordered);
+        }
+
+        @Override
+        public String modifyCommitMessage(String commit)
+        {
+            return commit;
+        }
     }
 }

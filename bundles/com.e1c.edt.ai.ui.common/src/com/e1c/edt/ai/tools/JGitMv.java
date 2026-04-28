@@ -93,6 +93,9 @@ public class JGitMv implements IJGitCommand
             git.add().addFilepattern(destPath).call();
         }
 
-        return new GitCommandResult(0, "Renamed '" + source + "' to '" + destination + "'\n", "");
+        var msg = dryRun
+            ? "Dry run: Would rename '" + source + "' to '" + destination + "'\n"
+            : "Renamed '" + source + "' to '" + destination + "'\n";
+        return new GitCommandResult(0, msg, "");
     }
 }

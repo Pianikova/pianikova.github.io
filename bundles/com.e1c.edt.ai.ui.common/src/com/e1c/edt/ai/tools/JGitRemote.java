@@ -3,11 +3,13 @@
 */
 package com.e1c.edt.ai.tools;
 
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.lib.StoredConfig;
 import org.eclipse.jgit.transport.URIish;
 
 /**
@@ -35,7 +37,7 @@ public class JGitRemote implements IJGitCommand
 
     @SuppressWarnings("nls")
     @Override
-    public GitCommandResult run(Git git, List<String> args) throws GitAPIException, URISyntaxException
+    public GitCommandResult run(Git git, List<String> args) throws GitAPIException, URISyntaxException, IOException
     {
         var add = false;
         var remove = false;
@@ -78,9 +80,15 @@ public class JGitRemote implements IJGitCommand
 
         if (remove && !name.isEmpty())
         {
-            var remoteRemoveCmd = git.remoteRemove();
-            remoteRemoveCmd.setRemoteName(name);
-            remoteRemoveCmd.call();
+            try
+            {
+                git.remoteRemove().setRemoteName(name).call();
+                removeRemoteFromConfig(git, name);
+            }
+            catch (Exception e)
+            {
+                return new GitCommandResult(1, "", "Error removing remote: " + e.getMessage());
+            }
             return new GitCommandResult(0, "", "");
         }
 
@@ -104,5 +112,12 @@ public class JGitRemote implements IJGitCommand
         }
 
         return new GitCommandResult(0, sb.toString(), "");
+    }
+
+    private static void removeRemoteFromConfig(Git git, String name) throws IOException
+    {
+        StoredConfig config = git.getRepository().getConfig();
+        config.unsetSection("remote", name);
+        config.save();
     }
 }

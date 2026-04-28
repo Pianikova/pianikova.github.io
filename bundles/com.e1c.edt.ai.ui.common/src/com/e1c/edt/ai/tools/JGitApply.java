@@ -41,18 +41,31 @@ public class JGitApply implements IJGitCommand
 
         // Parse arguments (JGit ApplyCommand has limited options compared to git)
         var patchBuilder = new StringBuilder();
+        boolean isFirstNonFlag = true;
         for (var arg : args)
         {
             if (!arg.startsWith("-"))
             {
+                // If first non-flag arg looks like a complete patch (contains diff header), use it as-is
+                if (isFirstNonFlag && arg.contains("diff --git"))
+                {
+                    patchContent = arg;
+                    break;
+                }
                 if (patchBuilder.length() > 0)
                 {
                     patchBuilder.append("\n");
                 }
                 patchBuilder.append(arg);
+                isFirstNonFlag = false;
             }
         }
-        patchContent = patchBuilder.toString();
+        if (patchContent.isEmpty())
+        {
+            patchContent = patchBuilder.toString();
+        }
+        // Decode escaped newlines (\n -> actual newline)
+        patchContent = patchContent.replace("\\n", "\n");
 
         // If patch content is provided as argument, use it
         if (!patchContent.isEmpty())

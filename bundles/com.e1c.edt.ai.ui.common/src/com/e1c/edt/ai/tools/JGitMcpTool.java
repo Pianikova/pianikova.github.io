@@ -244,7 +244,7 @@ public class JGitMcpTool
             return new GitCommandResult(1, "", "jgit: '" + command + "' is not a jgit command. See 'jgit --help'.");
         }
 
-        // Handle clone command specially
+        // Handle commands that don't require an existing repository
         if (command.equals("clone"))
         {
             try
@@ -252,6 +252,21 @@ public class JGitMcpTool
                 if (commandHandler instanceof JGitClone)
                 {
                     ((JGitClone)commandHandler).setWorkingDirectory(workingDirectory);
+                }
+                return commandHandler.run(null, commandArgs);
+            }
+            catch (Exception e)
+            {
+                return new GitCommandResult(1, "", e.getMessage());
+            }
+        }
+        if (command.equals("init"))
+        {
+            try
+            {
+                if (commandHandler instanceof JGitInit)
+                {
+                    ((JGitInit)commandHandler).setWorkingDirectory(workingDirectory);
                 }
                 return commandHandler.run(null, commandArgs);
             }
@@ -311,6 +326,22 @@ public class JGitMcpTool
                 for (var param : params)
                 {
                     description.append("    - `").append(param.getName()).append("`: ").append(param.getDescription()).append("\n");
+                }
+            }
+
+            var notes = cmdDesc.getNotes();
+            if (notes != null && !notes.isBlank())
+            {
+                description.append("  NOTE: ").append(notes).append("\n");
+            }
+
+            var examples = cmdDesc.getExamples();
+            if (examples != null && !examples.isEmpty())
+            {
+                description.append("  Examples:\n");
+                for (var ex : examples)
+                {
+                    description.append("    ").append(ex).append("\n");
                 }
             }
         }

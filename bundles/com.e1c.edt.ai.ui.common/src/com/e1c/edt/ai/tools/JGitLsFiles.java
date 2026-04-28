@@ -82,18 +82,11 @@ public class JGitLsFiles implements IJGitCommand
                 }
             }
 
-            if (showDeleted || showModified)
+            if (showDeleted)
             {
                 for (var file : status.getMissing())
                 {
-                    if (showDeleted && !showModified)
-                    {
-                        sb.append(file).append("\n");
-                    }
-                    else if (showModified)
-                    {
-                        sb.append(file).append("\n");
-                    }
+                    sb.append(file).append("\n");
                 }
             }
 

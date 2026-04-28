@@ -20,8 +20,8 @@ import org.eclipse.jgit.lib.AnyObjectId;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.treewalk.EmptyTreeIterator;
 
 /**
  * Git show command implementation
@@ -85,13 +85,20 @@ public class JGitShow implements IJGitCommand
             return formatCommitDetails(git, headCommit, showStat);
         }
 
-        var objectId = repository.resolve(args.get(objectIndex));
-        if (objectId == null)
+        var objectArg = args.get(objectIndex);
+        var path = pathIndex >= 0 ? args.get(pathIndex) : null;
+        var colonIndex = objectArg.indexOf(':');
+        if (path == null && colonIndex > 0)
         {
-            return new GitCommandResult(1, "", "fatal: bad revision '" + args.get(objectIndex) + "'");
+            path = objectArg.substring(colonIndex + 1);
+            objectArg = objectArg.substring(0, colonIndex);
         }
 
-        var path = pathIndex >= 0 ? args.get(pathIndex) : null;
+        var objectId = repository.resolve(objectArg);
+        if (objectId == null)
+        {
+            return new GitCommandResult(1, "", "fatal: bad revision '" + objectArg + "'");
+        }
 
         if (path != null && !path.isEmpty())
         {
@@ -142,72 +149,67 @@ public class JGitShow implements IJGitCommand
             var fullMessage = commit.getFullMessage();
             sb.append("\n    ").append((fullMessage != null ? fullMessage.trim() : "")).append("\n\n");
 
-            var parentCommit = commit.getParentCount() > 0 ? commit.getParent(0) : null;
-            if (parentCommit != null)
+            try
             {
-                try
+                var repository = git.getRepository();
+                var outputStream = new ByteArrayOutputStream();
+                try (var formatter = new DiffFormatter(outputStream))
                 {
-                    var repository = git.getRepository();
-                    var outputStream = new ByteArrayOutputStream();
-                    try (var formatter = new DiffFormatter(outputStream))
+                    formatter.setRepository(repository);
+                    formatter.setContext(3);
+
+                    try (var objectReader = repository.newObjectReader())
                     {
-                        formatter.setRepository(repository);
-                        formatter.setContext(3);
-
-                        try (var revWalk = new RevWalk(repository))
+                        var newTree = commit.getTree();
+                        if (newTree == null)
                         {
-                            revWalk.markStart(commit);
-                            revWalk.markStart(parentCommit);
-                            
-                            var oldTree = parentCommit.getTree();
-                            var newTree = commit.getTree();
-                            
-                            if (oldTree == null || newTree == null)
-                            {
-                                throw new Exception("Tree is null (old: " + (oldTree == null) + ", new: " + (newTree == null) + ")");
-                            }
+                            throw new Exception("Tree is null");
+                        }
 
-                            try (var objectReader = repository.newObjectReader())
-                            {
-                                var oldTreeIter = new CanonicalTreeParser();
-                                oldTreeIter.reset(objectReader, oldTree.getId());
-                                
-                                var newTreeIter = new CanonicalTreeParser();
-                                newTreeIter.reset(objectReader, newTree.getId());
+                        org.eclipse.jgit.treewalk.AbstractTreeIterator oldTreeIter;
+                        if (commit.getParentCount() > 0)
+                        {
+                            var oldTree = commit.getParent(0).getTree();
+                            var parser = new CanonicalTreeParser();
+                            parser.reset(objectReader, oldTree.getId());
+                            oldTreeIter = parser;
+                        }
+                        else
+                        {
+                            oldTreeIter = new EmptyTreeIterator();
+                        }
 
-                                List<org.eclipse.jgit.diff.DiffEntry> diffs = formatter.scan(oldTreeIter, newTreeIter);
-                                
-                                if (diffs != null && !diffs.isEmpty())
-                                {
-                                    if (showStat)
-                                    {
-                                        appendCommitStats(git, commit, diffs, sb);
-                                    }
-                                    else
-                                    {
-                                        for (var diff : diffs)
-                                        {
-                                            formatter.format(diff);
-                                        }
-                                        sb.append(outputStream.toString(StandardCharsets.UTF_8.name()));
-                                    }
-                                }
-                                else
-                                {
-                                    sb.append("(no changes)\n");
-                                }
+                        var newTreeIter = new CanonicalTreeParser();
+                        newTreeIter.reset(objectReader, newTree.getId());
+
+                        List<org.eclipse.jgit.diff.DiffEntry> diffs = formatter.scan(oldTreeIter, newTreeIter);
+
+                        if (diffs != null && !diffs.isEmpty())
+                        {
+                            if (showStat)
+                            {
+                                appendCommitStats(git, commit, diffs, sb);
                             }
+                            else
+                            {
+                                for (var diff : diffs)
+                                {
+                                    formatter.format(diff);
+                                }
+                                sb.append(outputStream.toString(StandardCharsets.UTF_8.name()));
+                            }
+                        }
+                        else
+                        {
+                            sb.append("(no changes)\n");
                         }
                     }
                 }
-                catch (Exception diffException)
-                {
-                    sb.append("(diff not available - error: ").append(diffException.getClass().getSimpleName()).append(": ").append(diffException.getMessage()).append(")\n");
-                }
             }
-            else
+            catch (Exception diffException)
             {
-                sb.append("(empty commit)\n");
+                sb.append("(diff not available - error: ").append(diffException.getClass().getSimpleName()).append(": ")
+                    .append(diffException.getMessage()).append(")\n");
             }
 
             return new GitCommandResult(0, sb.toString(), "");
