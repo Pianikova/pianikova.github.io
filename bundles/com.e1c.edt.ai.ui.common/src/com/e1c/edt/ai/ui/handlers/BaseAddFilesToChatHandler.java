@@ -21,6 +21,7 @@ import org.eclipse.ui.handlers.HandlerUtil;
 import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.IFileDocument;
 import com.e1c.edt.ai.IFiles;
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ui.BaseActivator;
@@ -43,6 +44,8 @@ public class BaseAddFilesToChatHandler
     IContentSourceProvider contentSourceProvider;
     @Inject
     IFiles files;
+    @Inject
+    ILog log;
 
     public BaseAddFilesToChatHandler()
     {
@@ -53,41 +56,62 @@ public class BaseAddFilesToChatHandler
     @Override
     public void setEnabled(Object evaluationContext)
     {
-        if (!settings.isEnabled())
+        try
         {
-            setBaseEnabled(false);
-            return;
-        }
-
-        if (evaluationContext instanceof ExpressionContext)
-        {
-            var expressionContext = (ExpressionContext)evaluationContext;
-            var elements = expressionContext.getDefaultVariable();
-            if (elements instanceof List)
+            if (!settings.isEnabled())
             {
-                setBaseEnabled(!getContents((List)elements).isEmpty());
+                setBaseEnabled(false);
                 return;
             }
-        }
 
-        setBaseEnabled(false);
+            if (evaluationContext instanceof ExpressionContext)
+            {
+                var expressionContext = (ExpressionContext)evaluationContext;
+                var elements = expressionContext.getDefaultVariable();
+                if (elements instanceof List)
+                {
+                    setBaseEnabled(!getContents((List)elements).isEmpty());
+                    return;
+                }
+            }
+
+            setBaseEnabled(false);
+        }
+        catch (Exception e)
+        {
+            if (log != null)
+            {
+                log.logError(e);
+            }
+            setBaseEnabled(false);
+        }
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public Object execute(ExecutionEvent event)
     {
-        var selection = HandlerUtil.getCurrentSelection(event);
-        if (selection == null || !(selection instanceof IStructuredSelection))
+        try
         {
-            return null;
-        }
+            var selection = HandlerUtil.getCurrentSelection(event);
+            if (selection == null || !(selection instanceof IStructuredSelection))
+            {
+                return null;
+            }
 
-        var structuredSelection = (IStructuredSelection)HandlerUtil.getCurrentSelection(event);
-        var contents = getContents(structuredSelection.toList());
-        if (!contents.isEmpty())
+            var structuredSelection = (IStructuredSelection)HandlerUtil.getCurrentSelection(event);
+            var contents = getContents(structuredSelection.toList());
+            if (!contents.isEmpty())
+            {
+                chat.addFiles(contents);
+            }
+        }
+        catch (Exception e)
         {
-            chat.addFiles(contents);
+            if (log != null)
+            {
+                log.logError(e);
+            }
         }
 
         return null;
