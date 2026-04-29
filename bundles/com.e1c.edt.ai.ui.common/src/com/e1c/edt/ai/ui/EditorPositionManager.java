@@ -32,14 +32,18 @@ public class EditorPositionManager
 	private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
 	private final ILog log;
 	private final IDispatcher dispatcher;
+	private final ISpecializedEditorOpener specializedEditorOpener;
 
 	@Inject
-    public EditorPositionManager(ILog log, IDispatcher dispatcher)
+    public EditorPositionManager(ILog log, IDispatcher dispatcher,
+        ISpecializedEditorOpener specializedEditorOpener)
 	{
 		Preconditions.checkNotNull(log);
 		Preconditions.checkNotNull(dispatcher);
+		Preconditions.checkNotNull(specializedEditorOpener);
 		this.log = log;
 		this.dispatcher = dispatcher;
+		this.specializedEditorOpener = specializedEditorOpener;
 	}
 
 	@Override
@@ -59,12 +63,54 @@ public class EditorPositionManager
                 var file = root.getFile(new Path(filePath));
                 if (file != null && file.exists())
                 {
-                    editor = IDE.openEditor(page, file);
+                    editor = specializedEditorOpener.openInSpecializedEditor(page, file);
+                    if (editor == null)
+                    {
+                        editor = IDE.openEditor(page, file, true);
+                    }
                 }
 			}
             catch (Exception e)
             {
-                //
+                log.logError("workspace-relative branch threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            }
+
+            if (editor == null)
+            {
+                // Try to map an absolute filesystem path back to a workspace IFile so that
+                // EDT's content-type-bound editors (BSL Xtext, form, MD) are used.
+                try
+                {
+                    var osPath = Path.fromOSString(filePath);
+                    var fileForLocation = root.getFileForLocation(osPath);
+
+                    if (fileForLocation == null)
+                    {
+                        // Fallback: try findFilesForLocationURI for linked / nested resources
+                        var found = root.findFilesForLocationURI(new File(filePath).toURI());
+                        for (var f : found)
+                        {
+                            if (fileForLocation == null && f.exists())
+                            {
+                                fileForLocation = f;
+                            }
+                        }
+                    }
+
+                    if (fileForLocation != null && fileForLocation.exists())
+                    {
+                        editor = specializedEditorOpener.openInSpecializedEditor(page, fileForLocation);
+                        if (editor == null)
+                        {
+                            editor = IDE.openEditor(page, fileForLocation, true);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    log.logError(
+                        "workspace-absolute branch threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                }
             }
 
             if (editor == null)

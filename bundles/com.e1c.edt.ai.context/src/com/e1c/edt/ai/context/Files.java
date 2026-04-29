@@ -14,7 +14,7 @@ import org.eclipse.emf.ecore.EObject;
 import com._1c.g5.v8.dt.bsl.model.Module;
 import com._1c.g5.v8.dt.core.filesystem.IQualifiedNameFilePathConverter;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
-import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
+import com._1c.g5.v8.dt.metadata.mdclass.CommonModule;
 import com._1c.g5.v8.dt.ui.util.LabelUtil;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IFiles;
@@ -51,10 +51,14 @@ public class Files
     @Override
     public Optional<IFile> getCodeFile(EObject eObject)
     {
-        var module = eObject.eGet(MdClassPackage.Literals.COMMON_MODULE__MODULE, true);
-        if (module instanceof Module)
+        if (!(eObject instanceof CommonModule))
         {
-            var file = resourceLookup.getPlatformResource((Module)module);
+            return Optional.empty();
+        }
+        Module module = ((CommonModule)eObject).getModule();
+        if (module != null)
+        {
+            var file = resourceLookup.getPlatformResource(module);
             if (file != null && !file.isHidden() && !file.isVirtual() && file.exists())
             {
                 return Optional.of(file);
