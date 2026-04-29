@@ -53,6 +53,7 @@ public class AIUIModule
         bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(IProjectBuilder.class).to(ProjectBuilder.class).in(Singleton.class);
+        bind(ISpecializedEditorOpener.class).to(EdtSpecializedEditorOpener.class).in(Singleton.class);
         // @formatter:on
     }
 }
