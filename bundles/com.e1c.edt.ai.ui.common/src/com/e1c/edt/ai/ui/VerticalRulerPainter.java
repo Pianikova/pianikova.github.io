@@ -67,7 +67,7 @@ class VerticalRulerPainter
             return;
         }
 
-        range = new Range(y, (int)(h * (DPIUtil.autoScaleUp(1) == 2 ? .9 : 1.0)));
+        range = new Range(y, (int)(h * (DPIUtil.getDeviceZoom() >= 200 ? .9 : 1.0)));
     }
 
     @SuppressWarnings("nls")
