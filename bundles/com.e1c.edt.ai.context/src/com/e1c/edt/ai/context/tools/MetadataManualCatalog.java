@@ -16,10 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.tools.IJShellManualProvider;
 import com.e1c.edt.ai.tools.JShellManualEntry;
 import com.e1c.edt.ai.tools.ManualResourceLoader;
-import com.google.gson.Gson;
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 /**
@@ -39,7 +41,16 @@ public class MetadataManualCatalog
     private static final String INDEX_RESOURCE = "/manual/index.json"; //$NON-NLS-1$
 
     private final ManualResourceLoader loader = new ManualResourceLoader(MetadataManualCatalog.class, "/manual"); //$NON-NLS-1$
-    private final List<JShellManualEntry> entries = loadEntries();
+    private final IJson json;
+    private final List<JShellManualEntry> entries;
+
+    @Inject
+    public MetadataManualCatalog(IJson json)
+    {
+        Preconditions.checkNotNull(json);
+        this.json = json;
+        this.entries = loadEntries();
+    }
 
     @Override
     public Collection<JShellManualEntry> getManualEntries()
@@ -50,11 +61,8 @@ public class MetadataManualCatalog
     private List<JShellManualEntry> loadEntries()
     {
         var raw = readIndex();
-        var manifests = new Gson().fromJson(raw, Manifest[].class);
-        if (manifests == null)
-        {
-            return List.of();
-        }
+        var manifests = json.deserialize(raw, Manifest[].class)
+            .orElseThrow(() -> new IllegalStateException("Cannot parse " + INDEX_RESOURCE)); //$NON-NLS-1$
         var result = new ArrayList<JShellManualEntry>(manifests.length);
         for (var manifest : manifests)
         {
@@ -69,7 +77,8 @@ public class MetadataManualCatalog
         var keywords = manifest.keywords != null ? manifest.keywords : List.<String>of();
         var vars = manifest.vars != null ? manifest.vars : Map.<String, String>of();
         var guidePath = manifest.guide;
-        return new JShellManualEntry(manifest.id, manifest.scope, manifest.title, manifest.summary,
+        var category = manifest.category != null ? manifest.category : JShellManualEntry.deriveCategory(manifest.id);
+        return new JShellManualEntry(manifest.id, manifest.scope, category, manifest.title, manifest.summary,
             () -> loader.load(guidePath, vars), bindings, keywords);
     }
 
@@ -96,6 +105,7 @@ public class MetadataManualCatalog
     {
         String id;
         String scope;
+        String category;
         String title;
         String summary;
         String guide;

@@ -2,6 +2,7 @@
   {
     "id": "add_document_registers",
     "scope": "edt",
+    "category": "composite",
     "title": "Add Document Registers",
     "summary": "Configure which registers a document can write to (set up registrars on document side).",
     "guide": "workflows/composite/add_document_registers.md",
@@ -19,6 +20,7 @@
   {
     "id": "add_registered_documents_to_journal",
     "scope": "edt",
+    "category": "composite",
     "title": "Add Registered Documents To Journal",
     "summary": "Configure which documents appear in a document journal (set up on journal side).",
     "guide": "workflows/composite/add_registered_documents_to_journal.md",
@@ -36,6 +38,7 @@
   {
     "id": "add_tabular_section",
     "scope": "edt",
+    "category": "composite",
     "title": "Add Tabular Section",
     "summary": "Add a tabular section and its attributes to an existing metadata object.",
     "guide": "workflows/composite/add_tabular_section.md",
@@ -54,6 +57,7 @@
   {
     "id": "child_elements_uuid_importance",
     "scope": "edt",
+    "category": "reference",
     "title": "Child Elements UUID Importance",
     "summary": "CRITICAL: Importance of UUIDs for all child elements (attributes, tabular sections, etc.).",
     "guide": "workflows/reference/child_elements_uuid_importance.md",
@@ -71,6 +75,7 @@
   {
     "id": "create_accounting_register",
     "scope": "edt",
+    "category": "create",
     "title": "Create Accounting Register",
     "summary": "Create accounting register with chart of accounts dependencies.",
     "guide": "workflows/create/create_accounting_register.md",
@@ -90,6 +95,7 @@
   {
     "id": "create_accumulation_register",
     "scope": "edt",
+    "category": "create",
     "title": "Create Accumulation Register",
     "summary": "Create accumulation register with dimensions, resources, and type setup.",
     "guide": "workflows/create/create_accumulation_register.md",
@@ -109,6 +115,7 @@
   {
     "id": "create_attribute_for_entity",
     "scope": "edt",
+    "category": "create",
     "title": "Create Attribute For Entity",
     "summary": "Create entity-specific attributes with the correct child type and TypeDescription.",
     "guide": "workflows/create/create_attribute_for_entity.md",
@@ -128,6 +135,7 @@
   {
     "id": "create_bot",
     "scope": "edt",
+    "category": "create",
     "title": "Create Bot",
     "summary": "Create Bot metadata and configure its conversation logic afterwards.",
     "guide": "workflows/create/create_bot.md",
@@ -146,6 +154,7 @@
   {
     "id": "create_business_process",
     "scope": "edt",
+    "category": "create",
     "title": "Create Business Process",
     "summary": "Create BusinessProcess metadata with standard top-level workflow.",
     "guide": "workflows/create/create_business_process.md",
@@ -164,6 +173,7 @@
   {
     "id": "create_calculation_register",
     "scope": "edt",
+    "category": "create",
     "title": "Create Calculation Register",
     "summary": "Create calculation register with schedule and calculation-specific references.",
     "guide": "workflows/create/create_calculation_register.md",
@@ -183,6 +193,7 @@
   {
     "id": "create_catalog",
     "scope": "edt",
+    "category": "create",
     "title": "Create Catalog",
     "summary": "Create a top-level Catalog safely inside a BM transaction.",
     "guide": "workflows/create/create_catalog.md",
@@ -202,6 +213,7 @@
   {
     "id": "create_chart_of_accounts",
     "scope": "edt",
+    "category": "create",
     "title": "Create Chart Of Accounts",
     "summary": "Create ChartOfAccounts as a top-level accounting metadata object.",
     "guide": "workflows/create/create_chart_of_accounts.md",
@@ -220,6 +232,7 @@
   {
     "id": "create_chart_of_calculation_types",
     "scope": "edt",
+    "category": "create",
     "title": "Create Chart Of Calculation Types",
     "summary": "Create ChartOfCalculationTypes for calculation registers.",
     "guide": "workflows/create/create_chart_of_calculation_types.md",
@@ -238,6 +251,7 @@
   {
     "id": "create_chart_of_characteristic_types",
     "scope": "edt",
+    "category": "create",
     "title": "Create Chart Of Characteristic Types",
     "summary": "Create ChartOfCharacteristicTypes metadata with code, description, and value type settings.",
     "guide": "workflows/create/create_chart_of_characteristic_types.md",
@@ -257,6 +271,7 @@
   {
     "id": "create_command_group",
     "scope": "edt",
+    "category": "create",
     "title": "Create Command Group",
     "summary": "Create CommandGroup metadata and then place commands in it.",
     "guide": "workflows/create/create_command_group.md",
@@ -275,6 +290,7 @@
   {
     "id": "create_common_attribute",
     "scope": "edt",
+    "category": "create",
     "title": "Create Common Attribute",
     "summary": "Create CommonAttribute metadata with mandatory TypeDescription.",
     "guide": "workflows/create/create_common_attribute.md",
@@ -294,6 +310,7 @@
   {
     "id": "create_common_command",
     "scope": "edt",
+    "category": "create",
     "title": "Create Common Command",
     "summary": "Create CommonCommand metadata and add it to configuration command collections.",
     "guide": "workflows/create/create_common_command.md",
@@ -311,6 +328,7 @@
   {
     "id": "create_common_form",
     "scope": "edt",
+    "category": "create",
     "title": "Create Common Form",
     "summary": "Create CommonForm metadata and attach it as a top-level object.",
     "guide": "workflows/create/create_common_form.md",
@@ -328,6 +346,7 @@
   {
     "id": "create_common_module",
     "scope": "edt",
+    "category": "create",
     "title": "Create Common Module",
     "summary": "Create CommonModule metadata and align it with Module.bsl.",
     "guide": "workflows/create/create_common_module.md",
@@ -346,6 +365,7 @@
   {
     "id": "create_common_picture",
     "scope": "edt",
+    "category": "create",
     "title": "Create Common Picture",
     "summary": "Create CommonPicture metadata and assign picture content later.",
     "guide": "workflows/create/create_common_picture.md",
@@ -364,6 +384,7 @@
   {
     "id": "create_common_template",
     "scope": "edt",
+    "category": "create",
     "title": "Create Common Template",
     "summary": "Create CommonTemplate metadata and fill template content afterwards.",
     "guide": "workflows/create/create_common_template.md",
@@ -382,6 +403,7 @@
   {
     "id": "create_configuration_project",
     "scope": "edt",
+    "category": "configuration",
     "title": "Create Configuration Project",
     "summary": "Create a new 1C configuration project in the Eclipse workspace with the required project structure.",
     "guide": "configuration/create_configuration_project.md",
@@ -400,6 +422,7 @@
   {
     "id": "create_constant",
     "scope": "edt",
+    "category": "create",
     "title": "Create Constant",
     "summary": "Create Constant metadata with mandatory TypeDescription.",
     "guide": "workflows/create/create_constant.md",
@@ -419,6 +442,7 @@
   {
     "id": "create_cube",
     "scope": "edt",
+    "category": "create",
     "title": "Create Cube",
     "summary": "Create Cube inside ExternalDataSource and then add dimensions, resources, and functions.",
     "guide": "workflows/create/create_cube.md",
@@ -436,6 +460,7 @@
   {
     "id": "create_data_processor",
     "scope": "edt",
+    "category": "create",
     "title": "Create Data Processor",
     "summary": "Create DataProcessor metadata; forms and module content are separate follow-up steps.",
     "guide": "workflows/create/create_data_processor.md",
@@ -454,6 +479,7 @@
   {
     "id": "create_defined_type",
     "scope": "edt",
+    "category": "create",
     "title": "Create Defined Type",
     "summary": "Create DefinedType with a precise TypeDescription.",
     "guide": "workflows/create/create_defined_type.md",
@@ -474,6 +500,7 @@
   {
     "id": "create_document",
     "scope": "edt",
+    "category": "create",
     "title": "Create Document",
     "summary": "Create a Document with safe defaults and BM transaction rules.",
     "guide": "workflows/create/create_document.md",
@@ -492,6 +519,7 @@
   {
     "id": "create_document_journal",
     "scope": "edt",
+    "category": "create",
     "title": "Create Document Journal",
     "summary": "Create DocumentJournal metadata with safe top-level attach flow.",
     "guide": "workflows/create/create_document_journal.md",
@@ -509,6 +537,7 @@
   {
     "id": "create_document_numerator",
     "scope": "edt",
+    "category": "create",
     "title": "Create Document Numerator",
     "summary": "Create DocumentNumerator metadata and connect documents to it later.",
     "guide": "workflows/create/create_document_numerator.md",
@@ -527,6 +556,7 @@
   {
     "id": "create_event_subscription",
     "scope": "edt",
+    "category": "create",
     "title": "Create Event Subscription",
     "summary": "Create EventSubscription metadata and fill event handler references explicitly.",
     "guide": "workflows/create/create_event_subscription.md",
@@ -545,6 +575,7 @@
   {
     "id": "create_exchange_plan",
     "scope": "edt",
+    "category": "create",
     "title": "Create Exchange Plan",
     "summary": "Create ExchangePlan metadata with safe top-level attach flow.",
     "guide": "workflows/create/create_exchange_plan.md",
@@ -563,6 +594,7 @@
   {
     "id": "create_external_data_source",
     "scope": "edt",
+    "category": "create",
     "title": "Create External Data Source",
     "summary": "Create ExternalDataSource metadata and then add tables, cubes, and fields.",
     "guide": "workflows/create/create_external_data_source.md",
@@ -581,6 +613,7 @@
   {
     "id": "create_filter_criterion",
     "scope": "edt",
+    "category": "create",
     "title": "Create Filter Criterion",
     "summary": "Create FilterCriterion metadata and set its TypeDescription carefully.",
     "guide": "workflows/create/create_filter_criterion.md",
@@ -600,6 +633,7 @@
   {
     "id": "create_functional_option",
     "scope": "edt",
+    "category": "create",
     "title": "Create Functional Option",
     "summary": "Create FunctionalOption metadata and bind controlled objects later.",
     "guide": "workflows/create/create_functional_option.md",
@@ -618,6 +652,7 @@
   {
     "id": "create_functional_options_parameter",
     "scope": "edt",
+    "category": "create",
     "title": "Create Functional Options Parameter",
     "summary": "Create FunctionalOptionsParameter metadata and connect it to functional options afterwards.",
     "guide": "workflows/create/create_functional_options_parameter.md",
@@ -636,6 +671,7 @@
   {
     "id": "create_http_service",
     "scope": "edt",
+    "category": "create",
     "title": "Create HTTP Service",
     "summary": "Create HTTPService metadata and then add URL templates and methods.",
     "guide": "workflows/create/create_http_service.md",
@@ -654,6 +690,7 @@
   {
     "id": "create_information_register",
     "scope": "edt",
+    "category": "create",
     "title": "Create Information Register",
     "summary": "Create information register with dimensions, resources, and periodicity.",
     "guide": "workflows/create/create_information_register.md",
@@ -673,6 +710,7 @@
   {
     "id": "create_integration_service",
     "scope": "edt",
+    "category": "create",
     "title": "Create Integration Service",
     "summary": "Create IntegrationService metadata and then add channels.",
     "guide": "workflows/create/create_integration_service.md",
@@ -691,6 +729,7 @@
   {
     "id": "create_interface",
     "scope": "edt",
+    "category": "create",
     "title": "Create Interface",
     "summary": "Create Interface metadata and configure command interface content afterwards.",
     "guide": "workflows/create/create_interface.md",
@@ -708,6 +747,7 @@
   {
     "id": "create_language",
     "scope": "edt",
+    "category": "create",
     "title": "Create Language",
     "summary": "Create Language metadata and then configure default language references in configuration.",
     "guide": "workflows/create/create_language.md",
@@ -725,6 +765,7 @@
   {
     "id": "create_report",
     "scope": "edt",
+    "category": "create",
     "title": "Create Report",
     "summary": "Create Report metadata; forms, module, and layouts can be added later.",
     "guide": "workflows/create/create_report.md",
@@ -742,6 +783,7 @@
   {
     "id": "create_role",
     "scope": "edt",
+    "category": "create",
     "title": "Create Role",
     "summary": "Create Role metadata and then configure rights separately.",
     "guide": "workflows/create/create_role.md",
@@ -760,6 +802,7 @@
   {
     "id": "create_scheduled_job",
     "scope": "edt",
+    "category": "create",
     "title": "Create Scheduled Job",
     "summary": "Create ScheduledJob metadata and define job parameters afterwards.",
     "guide": "workflows/create/create_scheduled_job.md",
@@ -778,6 +821,7 @@
   {
     "id": "create_sequence",
     "scope": "edt",
+    "category": "create",
     "title": "Create Sequence",
     "summary": "Create Sequence metadata and then add dimension rules for ordering logic.",
     "guide": "workflows/create/create_sequence.md",
@@ -796,6 +840,7 @@
   {
     "id": "create_session_parameter",
     "scope": "edt",
+    "category": "create",
     "title": "Create Session Parameter",
     "summary": "Create SessionParameter metadata with mandatory TypeDescription.",
     "guide": "workflows/create/create_session_parameter.md",
@@ -815,6 +860,7 @@
   {
     "id": "create_settings_storage",
     "scope": "edt",
+    "category": "create",
     "title": "Create Settings Storage",
     "summary": "Create SettingsStorage metadata and bind configuration references to it later.",
     "guide": "workflows/create/create_settings_storage.md",
@@ -832,6 +878,7 @@
   {
     "id": "create_style",
     "scope": "edt",
+    "category": "create",
     "title": "Create Style",
     "summary": "Create Style metadata and then add style items or assign it as default style.",
     "guide": "workflows/create/create_style.md",
@@ -850,6 +897,7 @@
   {
     "id": "create_style_item",
     "scope": "edt",
+    "category": "create",
     "title": "Create Style Item",
     "summary": "Create StyleItem metadata and configure its visual type afterwards.",
     "guide": "workflows/create/create_style_item.md",
@@ -867,6 +915,7 @@
   {
     "id": "create_subsystem",
     "scope": "edt",
+    "category": "create",
     "title": "Create Subsystem",
     "summary": "Create Subsystem metadata and then link objects through references or command interfaces.",
     "guide": "workflows/create/create_subsystem.md",
@@ -884,6 +933,7 @@
   {
     "id": "create_table",
     "scope": "edt",
+    "category": "create",
     "title": "Create Table",
     "summary": "Create Table inside ExternalDataSource with fields and command sources added afterwards.",
     "guide": "workflows/create/create_table.md",
@@ -900,6 +950,7 @@
   {
     "id": "create_task",
     "scope": "edt",
+    "category": "create",
     "title": "Create Task",
     "summary": "Create Task metadata with attributes and standard top-level workflow.",
     "guide": "workflows/create/create_task.md",
@@ -917,6 +968,7 @@
   {
     "id": "create_type_description",
     "scope": "edt",
+    "category": "create",
     "title": "Create TypeDescription",
     "summary": "Build primitive, reference, union, and qualified TypeDescription values.",
     "guide": "workflows/create/create_type_description.md",
@@ -935,6 +987,7 @@
   {
     "id": "create_web_service",
     "scope": "edt",
+    "category": "create",
     "title": "Create Web Service",
     "summary": "Create WebService metadata and then add operations and parameters.",
     "guide": "workflows/create/create_web_service.md",
@@ -953,6 +1006,7 @@
   {
     "id": "create_ws_reference",
     "scope": "edt",
+    "category": "create",
     "title": "Create WS Reference",
     "summary": "Create WSReference metadata and configure service connection details later.",
     "guide": "workflows/create/create_ws_reference.md",
@@ -971,6 +1025,7 @@
   {
     "id": "create_xdto_package",
     "scope": "edt",
+    "category": "create",
     "title": "Create XDTO Package",
     "summary": "Create XDTOPackage metadata and then add package content or schema definitions.",
     "guide": "workflows/create/create_xdto_package.md",
@@ -989,6 +1044,7 @@
   {
     "id": "delete_attribute",
     "scope": "edt",
+    "category": "delete",
     "title": "Delete Attribute",
     "summary": "Delete attribute-like children safely by removing them from parent collections.",
     "guide": "workflows/delete/delete_attribute.md",
@@ -1005,6 +1061,7 @@
   {
     "id": "delete_configuration_project",
     "scope": "edt",
+    "category": "configuration",
     "title": "Delete Configuration Project",
     "summary": "Delete an existing 1C configuration project from the workspace and clean up associated resources.",
     "guide": "configuration/delete_configuration_project.md",
@@ -1023,6 +1080,7 @@
   {
     "id": "delete_metadata_object",
     "scope": "edt",
+    "category": "delete",
     "title": "Delete Metadata Object",
     "summary": "Delete top-level metadata objects through the parent collection and transaction detach.",
     "guide": "workflows/delete/delete_metadata_object.md",
@@ -1039,6 +1097,7 @@
   {
     "id": "edit_business_process",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Business Process",
     "summary": "Edit BusinessProcess in BM transaction and keep child objects in the right collections.",
     "guide": "workflows/edit/edit_business_process.md",
@@ -1054,6 +1113,7 @@
   {
     "id": "edit_chart_of_accounts",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Chart Of Accounts",
     "summary": "Edit ChartOfAccounts by loading existing object and mutating supported features.",
     "guide": "workflows/edit/edit_chart_of_accounts.md",
@@ -1069,6 +1129,7 @@
   {
     "id": "edit_common_module",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Common Module",
     "summary": "Edit CommonModule flags and metadata separately from Module.bsl content.",
     "guide": "workflows/edit/edit_common_module.md",
@@ -1084,6 +1145,7 @@
   {
     "id": "create_enum",
     "scope": "edt",
+    "category": "create",
     "title": "Create Enum",
     "summary": "Create enumeration and initial enum values.",
     "guide": "workflows/create/create_enum.md",
@@ -1102,6 +1164,7 @@
   {
     "id": "edit_enum",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Enum",
     "summary": "Edit Enum and its enum values by loading the existing top-level object.",
     "guide": "workflows/edit/edit_enum.md",
@@ -1117,6 +1180,7 @@
   {
     "id": "edit_existing_metadata",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Existing Metadata",
     "summary": "Generic workflow for editing any existing metadata object correctly.",
     "guide": "workflows/edit/edit_existing_metadata.md",
@@ -1137,6 +1201,7 @@
   {
     "id": "edit_existing_object",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Existing Object",
     "summary": "Modify an existing metadata object without reattaching it as a new top object.",
     "guide": "workflows/edit/edit_existing_object.md",
@@ -1155,6 +1220,7 @@
   {
     "id": "edit_information_register",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Information Register",
     "summary": "Edit InformationRegister by loading it from BM transaction and changing only existing features.",
     "guide": "workflows/edit/edit_information_register.md",
@@ -1170,6 +1236,7 @@
   {
     "id": "edit_task",
     "scope": "edt",
+    "category": "edit",
     "title": "Edit Task",
     "summary": "Edit Task metadata in BM transaction without recreating the object.",
     "guide": "workflows/edit/edit_task.md",
@@ -1185,6 +1252,7 @@
   {
     "id": "edt_overview",
     "scope": "edt",
+    "category": "reference",
     "title": "EDT Metadata Overview",
     "summary": "Core EDT transaction, type, validation, and pitfall guidance before writing metadata code.",
     "guide": "workflows/reference/edt_overview.md",
@@ -1207,6 +1275,7 @@
   {
     "id": "enhanced_catalog_creation",
     "scope": "edt",
+    "category": "enhanced",
     "title": "Enhanced Catalog Creation",
     "summary": "Create catalog with existence check and UUID error handling.",
     "guide": "workflows/enhanced/enhanced_catalog_creation.md",
@@ -1227,6 +1296,7 @@
   {
     "id": "enhanced_document_creation",
     "scope": "edt",
+    "category": "enhanced",
     "title": "Enhanced Document Creation",
     "summary": "Create document with full validation and UUID error handling.",
     "guide": "workflows/enhanced/enhanced_document_creation.md",
@@ -1247,6 +1317,7 @@
   {
     "id": "enhanced_register_creation",
     "scope": "edt",
+    "category": "enhanced",
     "title": "Enhanced Register Creation",
     "summary": "Create registers (Information, Accumulation, Accounting, Calculation) with full validation.",
     "guide": "workflows/enhanced/enhanced_register_creation.md",
@@ -1267,6 +1338,7 @@
   {
     "id": "rename_object",
     "scope": "edt",
+    "category": "composite",
     "title": "Rename Metadata Object",
     "summary": "Rename a metadata object inside BM transaction with correct lookup flow.",
     "guide": "workflows/composite/rename_object.md",
@@ -1283,6 +1355,7 @@
   {
     "id": "resolve_top_object_and_parent_collection",
     "scope": "edt",
+    "category": "composite",
     "title": "Resolve Top Object And Parent Collection",
     "summary": "Resolve top objects by FQN and choose the correct parent collection before mutation.",
     "guide": "workflows/composite/resolve_top_object_and_parent_collection.md",
@@ -1300,6 +1373,7 @@
   {
     "id": "safe_uuid_assignment",
     "scope": "edt",
+    "category": "reference",
     "title": "Safe UUID Assignment",
     "summary": "Safe UUID assignment patterns for all metadata objects and child elements.",
     "guide": "workflows/reference/safe_uuid_assignment.md",
@@ -1317,6 +1391,7 @@
   {
     "id": "set_exchange_plan_thisnode",
     "scope": "edt",
+    "category": "composite",
     "title": "Set Exchange Plan ThisNode",
     "summary": "Set the current node UUID for an exchange plan to participate in replication.",
     "guide": "workflows/composite/set_exchange_plan_thisnode.md",
@@ -1335,6 +1410,7 @@
   {
     "id": "typedescription_best_practices",
     "scope": "edt",
+    "category": "reference",
     "title": "TypeDescriptionBuilder Best Practices",
     "summary": "Best practices for using TypeDescriptionBuilder inside transactions.",
     "guide": "workflows/reference/typedescription_best_practices.md",
@@ -1354,6 +1430,7 @@
   {
     "id": "validation_errors",
     "scope": "edt",
+    "category": "reference",
     "title": "Metadata Validation Errors",
     "summary": "Interpret common metadata validation failures and missing required fields.",
     "guide": "workflows/reference/validation_errors.md",
