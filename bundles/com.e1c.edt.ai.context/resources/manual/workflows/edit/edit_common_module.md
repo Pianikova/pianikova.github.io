@@ -1,0 +1,23 @@
+## Safe Workflow: Edit CommonModule
+
+```java
+IProject project = workspaceRoot.getProject("MyProject");
+IBmModel bmModel = modelManager.getModel(project);
+IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
+globalContext.execute(new AbstractBmTask<Void>("Edit CommonModule") {
+    @Override
+    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {
+        CommonModule commonModule = (CommonModule)transaction.getTopObjectByFqn("CommonModule.WorkingWithData");
+        if (commonModule != null) {
+        commonModule.setServer(true);
+                commonModule.setServerCall(true);
+        }
+        return null;
+    }
+});
+```
+
+### Notes
+- Load the existing object by FQN from the transaction
+- Do not recreate or reattach the object
+- Metadata flags and BSL source are separate concerns. Update Module.bsl through file tools, not through mdFactory.

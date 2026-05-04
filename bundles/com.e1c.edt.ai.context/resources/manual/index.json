@@ -1,0 +1,1371 @@
+[
+  {
+    "id": "add_document_registers",
+    "scope": "edt",
+    "title": "Add Document Registers",
+    "summary": "Configure which registers a document can write to (set up registrars on document side).",
+    "guide": "workflows/composite/add_document_registers.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "document register",
+      "registrar",
+      "register records"
+    ]
+  },
+  {
+    "id": "add_registered_documents_to_journal",
+    "scope": "edt",
+    "title": "Add Registered Documents To Journal",
+    "summary": "Configure which documents appear in a document journal (set up on journal side).",
+    "guide": "workflows/composite/add_registered_documents_to_journal.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "document journal",
+      "registered documents",
+      "journal"
+    ]
+  },
+  {
+    "id": "add_tabular_section",
+    "scope": "edt",
+    "title": "Add Tabular Section",
+    "summary": "Add a tabular section and its attributes to an existing metadata object.",
+    "guide": "workflows/composite/add_tabular_section.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "tabular section",
+      "document tabular section",
+      "catalog tabular section"
+    ]
+  },
+  {
+    "id": "child_elements_uuid_importance",
+    "scope": "edt",
+    "title": "Child Elements UUID Importance",
+    "summary": "CRITICAL: Importance of UUIDs for all child elements (attributes, tabular sections, etc.).",
+    "guide": "workflows/reference/child_elements_uuid_importance.md",
+    "bindings": [
+      "mdFactory",
+      "modelFactory"
+    ],
+    "keywords": [
+      "UUID importance",
+      "child objects",
+      "SU45 error",
+      "UUID assignment"
+    ]
+  },
+  {
+    "id": "create_accounting_register",
+    "scope": "edt",
+    "title": "Create Accounting Register",
+    "summary": "Create accounting register with chart of accounts dependencies.",
+    "guide": "workflows/create/create_accounting_register.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "accounting register",
+      "chart of accounts",
+      "register"
+    ]
+  },
+  {
+    "id": "create_accumulation_register",
+    "scope": "edt",
+    "title": "Create Accumulation Register",
+    "summary": "Create accumulation register with dimensions, resources, and type setup.",
+    "guide": "workflows/create/create_accumulation_register.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "accumulation register",
+      "register",
+      "create register"
+    ]
+  },
+  {
+    "id": "create_attribute_for_entity",
+    "scope": "edt",
+    "title": "Create Attribute For Entity",
+    "summary": "Create entity-specific attributes with the correct child type and TypeDescription.",
+    "guide": "workflows/create/create_attribute_for_entity.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "attribute",
+      "catalog attribute",
+      "document attribute",
+      "register attribute"
+    ]
+  },
+  {
+    "id": "create_bot",
+    "scope": "edt",
+    "title": "Create Bot",
+    "summary": "Create Bot metadata and configure its conversation logic afterwards.",
+    "guide": "workflows/create/create_bot.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "bot",
+      "assistant",
+      "chat bot"
+    ]
+  },
+  {
+    "id": "create_business_process",
+    "scope": "edt",
+    "title": "Create Business Process",
+    "summary": "Create BusinessProcess metadata with standard top-level workflow.",
+    "guide": "workflows/create/create_business_process.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "business process",
+      "bp",
+      "process"
+    ]
+  },
+  {
+    "id": "create_calculation_register",
+    "scope": "edt",
+    "title": "Create Calculation Register",
+    "summary": "Create calculation register with schedule and calculation-specific references.",
+    "guide": "workflows/create/create_calculation_register.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "calculation register",
+      "register",
+      "schedule"
+    ]
+  },
+  {
+    "id": "create_catalog",
+    "scope": "edt",
+    "title": "Create Catalog",
+    "summary": "Create a top-level Catalog safely inside a BM transaction.",
+    "guide": "workflows/create/create_catalog.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "catalog",
+      "create catalog",
+      "metadata object"
+    ]
+  },
+  {
+    "id": "create_chart_of_accounts",
+    "scope": "edt",
+    "title": "Create Chart Of Accounts",
+    "summary": "Create ChartOfAccounts as a top-level accounting metadata object.",
+    "guide": "workflows/create/create_chart_of_accounts.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "chart of accounts",
+      "accounts",
+      "accounting"
+    ]
+  },
+  {
+    "id": "create_chart_of_calculation_types",
+    "scope": "edt",
+    "title": "Create Chart Of Calculation Types",
+    "summary": "Create ChartOfCalculationTypes for calculation registers.",
+    "guide": "workflows/create/create_chart_of_calculation_types.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "chart of calculation types",
+      "calculation types",
+      "payroll"
+    ]
+  },
+  {
+    "id": "create_chart_of_characteristic_types",
+    "scope": "edt",
+    "title": "Create Chart Of Characteristic Types",
+    "summary": "Create ChartOfCharacteristicTypes metadata with code, description, and value type settings.",
+    "guide": "workflows/create/create_chart_of_characteristic_types.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "chart of characteristic types",
+      "characteristics",
+      "plan видов характеристик"
+    ]
+  },
+  {
+    "id": "create_command_group",
+    "scope": "edt",
+    "title": "Create Command Group",
+    "summary": "Create CommandGroup metadata and then place commands in it.",
+    "guide": "workflows/create/create_command_group.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "command group",
+      "group",
+      "commands"
+    ]
+  },
+  {
+    "id": "create_common_attribute",
+    "scope": "edt",
+    "title": "Create Common Attribute",
+    "summary": "Create CommonAttribute metadata with mandatory TypeDescription.",
+    "guide": "workflows/create/create_common_attribute.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "common attribute",
+      "attribute",
+      "type description"
+    ]
+  },
+  {
+    "id": "create_common_command",
+    "scope": "edt",
+    "title": "Create Common Command",
+    "summary": "Create CommonCommand metadata and add it to configuration command collections.",
+    "guide": "workflows/create/create_common_command.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "common command",
+      "command"
+    ]
+  },
+  {
+    "id": "create_common_form",
+    "scope": "edt",
+    "title": "Create Common Form",
+    "summary": "Create CommonForm metadata and attach it as a top-level object.",
+    "guide": "workflows/create/create_common_form.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "common form",
+      "form"
+    ]
+  },
+  {
+    "id": "create_common_module",
+    "scope": "edt",
+    "title": "Create Common Module",
+    "summary": "Create CommonModule metadata and align it with Module.bsl.",
+    "guide": "workflows/create/create_common_module.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "common module",
+      "module",
+      "create common module"
+    ]
+  },
+  {
+    "id": "create_common_picture",
+    "scope": "edt",
+    "title": "Create Common Picture",
+    "summary": "Create CommonPicture metadata and assign picture content later.",
+    "guide": "workflows/create/create_common_picture.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "common picture",
+      "picture",
+      "image"
+    ]
+  },
+  {
+    "id": "create_common_template",
+    "scope": "edt",
+    "title": "Create Common Template",
+    "summary": "Create CommonTemplate metadata and fill template content afterwards.",
+    "guide": "workflows/create/create_common_template.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "common template",
+      "template",
+      "макет"
+    ]
+  },
+  {
+    "id": "create_configuration_project",
+    "scope": "edt",
+    "title": "Create Configuration Project",
+    "summary": "Create a new 1C configuration project in the Eclipse workspace with the required project structure.",
+    "guide": "configuration/create_configuration_project.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "configuration",
+      "configuration project",
+      "create configuration",
+      "create project"
+    ]
+  },
+  {
+    "id": "create_constant",
+    "scope": "edt",
+    "title": "Create Constant",
+    "summary": "Create Constant metadata with mandatory TypeDescription.",
+    "guide": "workflows/create/create_constant.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "constant",
+      "settings",
+      "type description"
+    ]
+  },
+  {
+    "id": "create_cube",
+    "scope": "edt",
+    "title": "Create Cube",
+    "summary": "Create Cube inside ExternalDataSource and then add dimensions, resources, and functions.",
+    "guide": "workflows/create/create_cube.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "cube",
+      "olap",
+      "analytics"
+    ]
+  },
+  {
+    "id": "create_data_processor",
+    "scope": "edt",
+    "title": "Create Data Processor",
+    "summary": "Create DataProcessor metadata; forms and module content are separate follow-up steps.",
+    "guide": "workflows/create/create_data_processor.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "data processor",
+      "processor",
+      "обработка"
+    ]
+  },
+  {
+    "id": "create_defined_type",
+    "scope": "edt",
+    "title": "Create Defined Type",
+    "summary": "Create DefinedType with a precise TypeDescription.",
+    "guide": "workflows/create/create_defined_type.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator",
+      "modelFactory"
+    ],
+    "keywords": [
+      "defined type",
+      "type alias",
+      "type description"
+    ]
+  },
+  {
+    "id": "create_document",
+    "scope": "edt",
+    "title": "Create Document",
+    "summary": "Create a Document with safe defaults and BM transaction rules.",
+    "guide": "workflows/create/create_document.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "document",
+      "create document"
+    ]
+  },
+  {
+    "id": "create_document_journal",
+    "scope": "edt",
+    "title": "Create Document Journal",
+    "summary": "Create DocumentJournal metadata with safe top-level attach flow.",
+    "guide": "workflows/create/create_document_journal.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "document journal",
+      "journal"
+    ]
+  },
+  {
+    "id": "create_document_numerator",
+    "scope": "edt",
+    "title": "Create Document Numerator",
+    "summary": "Create DocumentNumerator metadata and connect documents to it later.",
+    "guide": "workflows/create/create_document_numerator.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "document numerator",
+      "numerator",
+      "numbering"
+    ]
+  },
+  {
+    "id": "create_event_subscription",
+    "scope": "edt",
+    "title": "Create Event Subscription",
+    "summary": "Create EventSubscription metadata and fill event handler references explicitly.",
+    "guide": "workflows/create/create_event_subscription.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "event subscription",
+      "handler",
+      "subscription"
+    ]
+  },
+  {
+    "id": "create_exchange_plan",
+    "scope": "edt",
+    "title": "Create Exchange Plan",
+    "summary": "Create ExchangePlan metadata with safe top-level attach flow.",
+    "guide": "workflows/create/create_exchange_plan.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "exchange plan",
+      "replication",
+      "exchange"
+    ]
+  },
+  {
+    "id": "create_external_data_source",
+    "scope": "edt",
+    "title": "Create External Data Source",
+    "summary": "Create ExternalDataSource metadata and then add tables, cubes, and fields.",
+    "guide": "workflows/create/create_external_data_source.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "external data source",
+      "data source",
+      "integration"
+    ]
+  },
+  {
+    "id": "create_filter_criterion",
+    "scope": "edt",
+    "title": "Create Filter Criterion",
+    "summary": "Create FilterCriterion metadata and set its TypeDescription carefully.",
+    "guide": "workflows/create/create_filter_criterion.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "filter criterion",
+      "criterion",
+      "type description"
+    ]
+  },
+  {
+    "id": "create_functional_option",
+    "scope": "edt",
+    "title": "Create Functional Option",
+    "summary": "Create FunctionalOption metadata and bind controlled objects later.",
+    "guide": "workflows/create/create_functional_option.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "functional option",
+      "feature flag",
+      "option"
+    ]
+  },
+  {
+    "id": "create_functional_options_parameter",
+    "scope": "edt",
+    "title": "Create Functional Options Parameter",
+    "summary": "Create FunctionalOptionsParameter metadata and connect it to functional options afterwards.",
+    "guide": "workflows/create/create_functional_options_parameter.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "functional options parameter",
+      "feature parameter",
+      "parameter"
+    ]
+  },
+  {
+    "id": "create_http_service",
+    "scope": "edt",
+    "title": "Create HTTP Service",
+    "summary": "Create HTTPService metadata and then add URL templates and methods.",
+    "guide": "workflows/create/create_http_service.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "http service",
+      "rest",
+      "url template"
+    ]
+  },
+  {
+    "id": "create_information_register",
+    "scope": "edt",
+    "title": "Create Information Register",
+    "summary": "Create information register with dimensions, resources, and periodicity.",
+    "guide": "workflows/create/create_information_register.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "information register",
+      "register",
+      "create information register"
+    ]
+  },
+  {
+    "id": "create_integration_service",
+    "scope": "edt",
+    "title": "Create Integration Service",
+    "summary": "Create IntegrationService metadata and then add channels.",
+    "guide": "workflows/create/create_integration_service.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "integration service",
+      "service channel",
+      "integration"
+    ]
+  },
+  {
+    "id": "create_interface",
+    "scope": "edt",
+    "title": "Create Interface",
+    "summary": "Create Interface metadata and configure command interface content afterwards.",
+    "guide": "workflows/create/create_interface.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "interface",
+      "ui interface"
+    ]
+  },
+  {
+    "id": "create_language",
+    "scope": "edt",
+    "title": "Create Language",
+    "summary": "Create Language metadata and then configure default language references in configuration.",
+    "guide": "workflows/create/create_language.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "language",
+      "localization"
+    ]
+  },
+  {
+    "id": "create_report",
+    "scope": "edt",
+    "title": "Create Report",
+    "summary": "Create Report metadata; forms, module, and layouts can be added later.",
+    "guide": "workflows/create/create_report.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "report",
+      "analytics"
+    ]
+  },
+  {
+    "id": "create_role",
+    "scope": "edt",
+    "title": "Create Role",
+    "summary": "Create Role metadata and then configure rights separately.",
+    "guide": "workflows/create/create_role.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "role",
+      "rights",
+      "security"
+    ]
+  },
+  {
+    "id": "create_scheduled_job",
+    "scope": "edt",
+    "title": "Create Scheduled Job",
+    "summary": "Create ScheduledJob metadata and define job parameters afterwards.",
+    "guide": "workflows/create/create_scheduled_job.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "scheduled job",
+      "regламентное задание",
+      "job"
+    ]
+  },
+  {
+    "id": "create_sequence",
+    "scope": "edt",
+    "title": "Create Sequence",
+    "summary": "Create Sequence metadata and then add dimension rules for ordering logic.",
+    "guide": "workflows/create/create_sequence.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "sequence",
+      "ordering",
+      "последовательность"
+    ]
+  },
+  {
+    "id": "create_session_parameter",
+    "scope": "edt",
+    "title": "Create Session Parameter",
+    "summary": "Create SessionParameter metadata with mandatory TypeDescription.",
+    "guide": "workflows/create/create_session_parameter.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "session parameter",
+      "parameter",
+      "type description"
+    ]
+  },
+  {
+    "id": "create_settings_storage",
+    "scope": "edt",
+    "title": "Create Settings Storage",
+    "summary": "Create SettingsStorage metadata and bind configuration references to it later.",
+    "guide": "workflows/create/create_settings_storage.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "settings storage",
+      "storage"
+    ]
+  },
+  {
+    "id": "create_style",
+    "scope": "edt",
+    "title": "Create Style",
+    "summary": "Create Style metadata and then add style items or assign it as default style.",
+    "guide": "workflows/create/create_style.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "style",
+      "theme",
+      "ui style"
+    ]
+  },
+  {
+    "id": "create_style_item",
+    "scope": "edt",
+    "title": "Create Style Item",
+    "summary": "Create StyleItem metadata and configure its visual type afterwards.",
+    "guide": "workflows/create/create_style_item.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "style item",
+      "style element"
+    ]
+  },
+  {
+    "id": "create_subsystem",
+    "scope": "edt",
+    "title": "Create Subsystem",
+    "summary": "Create Subsystem metadata and then link objects through references or command interfaces.",
+    "guide": "workflows/create/create_subsystem.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "subsystem",
+      "section"
+    ]
+  },
+  {
+    "id": "create_table",
+    "scope": "edt",
+    "title": "Create Table",
+    "summary": "Create Table inside ExternalDataSource with fields and command sources added afterwards.",
+    "guide": "workflows/create/create_table.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "table",
+      "external data source table"
+    ]
+  },
+  {
+    "id": "create_task",
+    "scope": "edt",
+    "title": "Create Task",
+    "summary": "Create Task metadata with attributes and standard top-level workflow.",
+    "guide": "workflows/create/create_task.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "task",
+      "create task"
+    ]
+  },
+  {
+    "id": "create_type_description",
+    "scope": "edt",
+    "title": "Create TypeDescription",
+    "summary": "Build primitive, reference, union, and qualified TypeDescription values.",
+    "guide": "workflows/create/create_type_description.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelFactory"
+    ],
+    "keywords": [
+      "type description",
+      "typedescription",
+      "qualifiers",
+      "reference type"
+    ]
+  },
+  {
+    "id": "create_web_service",
+    "scope": "edt",
+    "title": "Create Web Service",
+    "summary": "Create WebService metadata and then add operations and parameters.",
+    "guide": "workflows/create/create_web_service.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "web service",
+      "soap",
+      "operation"
+    ]
+  },
+  {
+    "id": "create_ws_reference",
+    "scope": "edt",
+    "title": "Create WS Reference",
+    "summary": "Create WSReference metadata and configure service connection details later.",
+    "guide": "workflows/create/create_ws_reference.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "ws reference",
+      "soap client",
+      "reference"
+    ]
+  },
+  {
+    "id": "create_xdto_package",
+    "scope": "edt",
+    "title": "Create XDTO Package",
+    "summary": "Create XDTOPackage metadata and then add package content or schema definitions.",
+    "guide": "workflows/create/create_xdto_package.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "xdto package",
+      "xdto",
+      "schema"
+    ]
+  },
+  {
+    "id": "delete_attribute",
+    "scope": "edt",
+    "title": "Delete Attribute",
+    "summary": "Delete attribute-like children safely by removing them from parent collections.",
+    "guide": "workflows/delete/delete_attribute.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "delete attribute",
+      "remove attribute",
+      "delete field"
+    ]
+  },
+  {
+    "id": "delete_configuration_project",
+    "scope": "edt",
+    "title": "Delete Configuration Project",
+    "summary": "Delete an existing 1C configuration project from the workspace and clean up associated resources.",
+    "guide": "configuration/delete_configuration_project.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "workbench"
+    ],
+    "keywords": [
+      "configuration",
+      "configuration project",
+      "delete configuration",
+      "delete project"
+    ]
+  },
+  {
+    "id": "delete_metadata_object",
+    "scope": "edt",
+    "title": "Delete Metadata Object",
+    "summary": "Delete top-level metadata objects through the parent collection and transaction detach.",
+    "guide": "workflows/delete/delete_metadata_object.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "delete metadata",
+      "detach top object",
+      "remove object"
+    ]
+  },
+  {
+    "id": "edit_business_process",
+    "scope": "edt",
+    "title": "Edit Business Process",
+    "summary": "Edit BusinessProcess in BM transaction and keep child objects in the right collections.",
+    "guide": "workflows/edit/edit_business_process.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "edit business process",
+      "business process"
+    ]
+  },
+  {
+    "id": "edit_chart_of_accounts",
+    "scope": "edt",
+    "title": "Edit Chart Of Accounts",
+    "summary": "Edit ChartOfAccounts by loading existing object and mutating supported features.",
+    "guide": "workflows/edit/edit_chart_of_accounts.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "edit chart of accounts",
+      "accounts chart"
+    ]
+  },
+  {
+    "id": "edit_common_module",
+    "scope": "edt",
+    "title": "Edit Common Module",
+    "summary": "Edit CommonModule flags and metadata separately from Module.bsl content.",
+    "guide": "workflows/edit/edit_common_module.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "edit common module",
+      "module flags"
+    ]
+  },
+  {
+    "id": "create_enum",
+    "scope": "edt",
+    "title": "Create Enum",
+    "summary": "Create enumeration and initial enum values.",
+    "guide": "workflows/create/create_enum.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "enum",
+      "enumeration",
+      "enum value"
+    ]
+  },
+  {
+    "id": "edit_enum",
+    "scope": "edt",
+    "title": "Edit Enum",
+    "summary": "Edit Enum and its enum values by loading the existing top-level object.",
+    "guide": "workflows/edit/edit_enum.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "edit enum",
+      "enum value"
+    ]
+  },
+  {
+    "id": "edit_existing_metadata",
+    "scope": "edt",
+    "title": "Edit Existing Metadata",
+    "summary": "Generic workflow for editing any existing metadata object correctly.",
+    "guide": "workflows/edit/edit_existing_metadata.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "edit",
+      "existing object",
+      "update metadata",
+      "modification"
+    ]
+  },
+  {
+    "id": "edit_existing_object",
+    "scope": "edt",
+    "title": "Edit Existing Object",
+    "summary": "Modify an existing metadata object without reattaching it as a new top object.",
+    "guide": "workflows/edit/edit_existing_object.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "edit",
+      "existing object",
+      "update metadata"
+    ]
+  },
+  {
+    "id": "edit_information_register",
+    "scope": "edt",
+    "title": "Edit Information Register",
+    "summary": "Edit InformationRegister by loading it from BM transaction and changing only existing features.",
+    "guide": "workflows/edit/edit_information_register.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "edit information register",
+      "information register"
+    ]
+  },
+  {
+    "id": "edit_task",
+    "scope": "edt",
+    "title": "Edit Task",
+    "summary": "Edit Task metadata in BM transaction without recreating the object.",
+    "guide": "workflows/edit/edit_task.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "edit task",
+      "task metadata"
+    ]
+  },
+  {
+    "id": "edt_overview",
+    "scope": "edt",
+    "title": "EDT Metadata Overview",
+    "summary": "Core EDT transaction, type, validation, and pitfall guidance before writing metadata code.",
+    "guide": "workflows/reference/edt_overview.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator",
+      "modelFactory"
+    ],
+    "keywords": [
+      "edt",
+      "metadata",
+      "transaction",
+      "types",
+      "pitfalls"
+    ]
+  },
+  {
+    "id": "enhanced_catalog_creation",
+    "scope": "edt",
+    "title": "Enhanced Catalog Creation",
+    "summary": "Create catalog with existence check and UUID error handling.",
+    "guide": "workflows/enhanced/enhanced_catalog_creation.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "enhanced catalog",
+      "safe creation",
+      "existence check",
+      "UUID handling"
+    ]
+  },
+  {
+    "id": "enhanced_document_creation",
+    "scope": "edt",
+    "title": "Enhanced Document Creation",
+    "summary": "Create document with full validation and UUID error handling.",
+    "guide": "workflows/enhanced/enhanced_document_creation.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "enhanced document",
+      "safe creation",
+      "UUID handling",
+      "tabular sections"
+    ]
+  },
+  {
+    "id": "enhanced_register_creation",
+    "scope": "edt",
+    "title": "Enhanced Register Creation",
+    "summary": "Create registers (Information, Accumulation, Accounting, Calculation) with full validation.",
+    "guide": "workflows/enhanced/enhanced_register_creation.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "enhanced register",
+      "safe creation",
+      "UUID handling",
+      "dimensions resources"
+    ]
+  },
+  {
+    "id": "rename_object",
+    "scope": "edt",
+    "title": "Rename Metadata Object",
+    "summary": "Rename a metadata object inside BM transaction with correct lookup flow.",
+    "guide": "workflows/composite/rename_object.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "rename",
+      "metadata rename",
+      "object name"
+    ]
+  },
+  {
+    "id": "resolve_top_object_and_parent_collection",
+    "scope": "edt",
+    "title": "Resolve Top Object And Parent Collection",
+    "summary": "Resolve top objects by FQN and choose the correct parent collection before mutation.",
+    "guide": "workflows/composite/resolve_top_object_and_parent_collection.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "top object",
+      "fqn",
+      "parent collection",
+      "containment"
+    ]
+  },
+  {
+    "id": "safe_uuid_assignment",
+    "scope": "edt",
+    "title": "Safe UUID Assignment",
+    "summary": "Safe UUID assignment patterns for all metadata objects and child elements.",
+    "guide": "workflows/reference/safe_uuid_assignment.md",
+    "bindings": [
+      "mdFactory",
+      "modelFactory"
+    ],
+    "keywords": [
+      "UUID",
+      "SU45 error",
+      "child objects UUID",
+      "UUID assignment"
+    ]
+  },
+  {
+    "id": "set_exchange_plan_thisnode",
+    "scope": "edt",
+    "title": "Set Exchange Plan ThisNode",
+    "summary": "Set the current node UUID for an exchange plan to participate in replication.",
+    "guide": "workflows/composite/set_exchange_plan_thisnode.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "exchange plan",
+      "this node",
+      "replication",
+      "exchange"
+    ]
+  },
+  {
+    "id": "typedescription_best_practices",
+    "scope": "edt",
+    "title": "TypeDescriptionBuilder Best Practices",
+    "summary": "Best practices for using TypeDescriptionBuilder inside transactions.",
+    "guide": "workflows/reference/typedescription_best_practices.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "modelFactory"
+    ],
+    "keywords": [
+      "TypeDescriptionBuilder",
+      "transaction context",
+      "IEObjectProvider",
+      "best practices"
+    ]
+  },
+  {
+    "id": "validation_errors",
+    "scope": "edt",
+    "title": "Metadata Validation Errors",
+    "summary": "Interpret common metadata validation failures and missing required fields.",
+    "guide": "workflows/reference/validation_errors.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "validation",
+      "error",
+      "metadata validation"
+    ]
+  }
+]

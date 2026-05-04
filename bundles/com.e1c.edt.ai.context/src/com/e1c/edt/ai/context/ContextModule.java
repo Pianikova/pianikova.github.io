@@ -40,6 +40,7 @@ import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
 import com.e1c.edt.ai.context.tools.IMethodListProvider;
 import com.e1c.edt.ai.context.tools.MarkersProvider;
 import com.e1c.edt.ai.context.tools.MetadataBindingProvider;
+import com.e1c.edt.ai.context.tools.MetadataManualCatalog;
 import com.e1c.edt.ai.context.tools.MethodListProvider;
 import com.e1c.edt.ai.tools.IJShellBindingProvider;
 import com.e1c.edt.ai.tools.IJShellManualProvider;
@@ -107,7 +108,7 @@ class ContextModule
         var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
         jshellBindingProviderBinder.addBinding().to(MetadataBindingProvider.class);
         var jshellManualProviderBinder = Multibinder.newSetBinder(binder(), IJShellManualProvider.class);
-        jshellManualProviderBinder.addBinding().to(MetadataBindingProvider.class);
+        jshellManualProviderBinder.addBinding().to(MetadataManualCatalog.class);
 
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();

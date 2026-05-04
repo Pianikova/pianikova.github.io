@@ -1,0 +1,19 @@
+## Safe Workflow: Create Cube inside ExternalDataSource
+
+### Parent resolution
+- Load the parent `ExternalDataSource` from transaction by FQN
+- Create `Cube` inside the same BM transaction
+- Add it to `externalDataSource.getCubes()`
+
+### Example
+```java
+ExternalDataSource source = (ExternalDataSource)transaction.getTopObjectByFqn("ExternalDataSource.WarehouseDwh");
+Cube cube = mdFactory.createCube();
+cube.setName("SalesCube");
+cube.setUuid(UUID.randomUUID());
+source.getCubes().add(cube);
+```
+
+### Notes
+- Add dimensions, resources, functions, and dimension tables after cube creation
+- Keep TypeDescription on child objects explicit to avoid validation noise
