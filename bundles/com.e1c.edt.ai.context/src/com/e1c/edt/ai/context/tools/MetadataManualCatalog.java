@@ -76,10 +76,12 @@ public class MetadataManualCatalog
         var bindings = manifest.bindings != null ? manifest.bindings : List.<String>of();
         var keywords = manifest.keywords != null ? manifest.keywords : List.<String>of();
         var vars = manifest.vars != null ? manifest.vars : Map.<String, String>of();
-        var guidePath = manifest.guide;
         var category = manifest.category != null ? manifest.category : JShellManualEntry.deriveCategory(manifest.id);
+        var resourcePath = manifest.template != null
+            ? "_templates/" + manifest.template + ".md" //$NON-NLS-1$ //$NON-NLS-2$
+            : manifest.guide;
         return new JShellManualEntry(manifest.id, manifest.scope, category, manifest.title, manifest.summary,
-            () -> loader.load(guidePath, vars), bindings, keywords);
+            () -> loader.load(resourcePath, vars), bindings, keywords);
     }
 
     private String readIndex()
@@ -108,7 +110,8 @@ public class MetadataManualCatalog
         String category;
         String title;
         String summary;
-        String guide;
+        String guide;     // path to a standalone .md file (mutually exclusive with `template`)
+        String template;  // template id under _templates/<name>.md
         List<String> bindings;
         List<String> keywords;
         HashMap<String, String> vars;

@@ -161,10 +161,6 @@ public final class ManualResourceLoader
 
     private String resolveVars(String content, Map<String, String> vars)
     {
-        if (vars == null || vars.isEmpty())
-        {
-            return content;
-        }
         var matcher = VAR_PATTERN.matcher(content);
         var out = new StringBuilder();
         var last = 0;
@@ -172,8 +168,10 @@ public final class ManualResourceLoader
         {
             out.append(content, last, matcher.start());
             var key = matcher.group(1);
-            var value = vars.get(key);
-            out.append(value != null ? value : matcher.group());
+            var value = vars != null ? vars.get(key) : null;
+            // Missing var defaults to empty: templates can declare optional placeholders
+            // that callers may omit. Loud-mode would catch typos but breaks optionality.
+            out.append(value != null ? value : ""); //$NON-NLS-1$
             last = matcher.end();
         }
         out.append(content, last, content.length());

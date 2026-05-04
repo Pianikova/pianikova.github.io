@@ -138,7 +138,6 @@
     "category": "create",
     "title": "Create Bot",
     "summary": "Create Bot metadata and configure its conversation logic afterwards.",
-    "guide": "workflows/create/create_bot.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -149,7 +148,17 @@
       "bot",
       "assistant",
       "chat bot"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Bot",
+      "typeName": "Bot",
+      "variableName": "bot",
+      "createMethod": "createBot()",
+      "collection": "getBots()",
+      "setupBlock": "        bot.setName(\"SupportBot\");\n",
+      "notes": "Conversation scenarios, commands, and integration endpoints are configured after the bot metadata object is attached."
+    }
   },
   {
     "id": "create_business_process",
@@ -157,7 +166,6 @@
     "category": "create",
     "title": "Create Business Process",
     "summary": "Create BusinessProcess metadata with standard top-level workflow.",
-    "guide": "workflows/create/create_business_process.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -168,7 +176,17 @@
       "business process",
       "bp",
       "process"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "BusinessProcess",
+      "typeName": "BusinessProcess",
+      "variableName": "businessProcess",
+      "createMethod": "createBusinessProcess()",
+      "collection": "getBusinessProcesses()",
+      "setupBlock": "        businessProcess.setAutonumbering(true);\n",
+      "notes": "Add attributes and tabular sections using the generic attribute and tabular section scenarios."
+    }
   },
   {
     "id": "create_calculation_register",
@@ -216,7 +234,6 @@
     "category": "create",
     "title": "Create Chart Of Accounts",
     "summary": "Create ChartOfAccounts as a top-level accounting metadata object.",
-    "guide": "workflows/create/create_chart_of_accounts.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -227,7 +244,17 @@
       "chart of accounts",
       "accounts",
       "accounting"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "ChartOfAccounts",
+      "typeName": "ChartOfAccounts",
+      "variableName": "chart",
+      "createMethod": "createChartOfAccounts()",
+      "collection": "getChartsOfAccounts()",
+      "setupBlock": "        chart.setCodeLength(10);\n                chart.setDescriptionLength(100);\n",
+      "notes": "ChartOfAccounts is commonly referenced by AccountingRegister. Create the chart first if registers depend on it."
+    }
   },
   {
     "id": "create_chart_of_calculation_types",
@@ -235,7 +262,6 @@
     "category": "create",
     "title": "Create Chart Of Calculation Types",
     "summary": "Create ChartOfCalculationTypes for calculation registers.",
-    "guide": "workflows/create/create_chart_of_calculation_types.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -246,7 +272,17 @@
       "chart of calculation types",
       "calculation types",
       "payroll"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "ChartOfCalculationTypes",
+      "typeName": "ChartOfCalculationTypes",
+      "variableName": "chart",
+      "createMethod": "createChartOfCalculationTypes()",
+      "collection": "getChartsOfCalculationTypes()",
+      "setupBlock": "        chart.setCodeLength(10);\n                chart.setDescriptionLength(100);\n",
+      "notes": "CalculationRegister frequently depends on ChartOfCalculationTypes. Create the chart before assigning register references."
+    }
   },
   {
     "id": "create_chart_of_characteristic_types",
@@ -254,7 +290,6 @@
     "category": "create",
     "title": "Create Chart Of Characteristic Types",
     "summary": "Create ChartOfCharacteristicTypes metadata with code, description, and value type settings.",
-    "guide": "workflows/create/create_chart_of_characteristic_types.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -266,7 +301,18 @@
       "chart of characteristic types",
       "characteristics",
       "plan видов характеристик"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "ChartOfCharacteristicTypes",
+      "typeName": "ChartOfCharacteristicTypes",
+      "variableName": "chart",
+      "createMethod": "createChartOfCharacteristicTypes()",
+      "collection": "getChartsOfCharacteristicTypes()",
+      "setupBlock": "        chart.setCodeLength(10);\n                chart.setDescriptionLength(100);\n                IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                chart.setType(typeDesc);\n",
+      "notes": "ChartOfCharacteristicTypes requires a value `TypeDescription`; replace the sample string type with the actual allowed characteristic value types.",
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+    }
   },
   {
     "id": "create_command_group",
@@ -274,7 +320,6 @@
     "category": "create",
     "title": "Create Command Group",
     "summary": "Create CommandGroup metadata and then place commands in it.",
-    "guide": "workflows/create/create_command_group.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -285,7 +330,17 @@
       "command group",
       "group",
       "commands"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "CommandGroup",
+      "typeName": "CommandGroup",
+      "variableName": "group",
+      "createMethod": "createCommandGroup()",
+      "collection": "getCommandGroups()",
+      "setupBlock": "        group.setName(\"SalesCommands\");\n",
+      "notes": "Use command groups to organize common commands and UI navigation after the group object exists."
+    }
   },
   {
     "id": "create_common_attribute",
@@ -293,7 +348,6 @@
     "category": "create",
     "title": "Create Common Attribute",
     "summary": "Create CommonAttribute metadata with mandatory TypeDescription.",
-    "guide": "workflows/create/create_common_attribute.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -305,7 +359,18 @@
       "common attribute",
       "attribute",
       "type description"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "CommonAttribute",
+      "typeName": "CommonAttribute",
+      "variableName": "attribute",
+      "createMethod": "createCommonAttribute()",
+      "collection": "getCommonAttributes()",
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                attribute.setType(typeDesc);\n",
+      "notes": "CommonAttribute extends BasicFeature, so assign `TypeDescription` before adding it to configuration.",
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+    }
   },
   {
     "id": "create_common_command",
@@ -313,7 +378,6 @@
     "category": "create",
     "title": "Create Common Command",
     "summary": "Create CommonCommand metadata and add it to configuration command collections.",
-    "guide": "workflows/create/create_common_command.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -323,7 +387,17 @@
     "keywords": [
       "common command",
       "command"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "CommonCommand",
+      "typeName": "CommonCommand",
+      "variableName": "command",
+      "createMethod": "createCommonCommand()",
+      "collection": "getCommonCommands()",
+      "setupBlock": "        command.setName(\"OpenDashboard\");\n",
+      "notes": "Command groups and UI placement are configured separately after command creation."
+    }
   },
   {
     "id": "create_common_form",
@@ -331,7 +405,6 @@
     "category": "create",
     "title": "Create Common Form",
     "summary": "Create CommonForm metadata and attach it as a top-level object.",
-    "guide": "workflows/create/create_common_form.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -341,7 +414,17 @@
     "keywords": [
       "common form",
       "form"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "CommonForm",
+      "typeName": "CommonForm",
+      "variableName": "form",
+      "createMethod": "createCommonForm()",
+      "collection": "getCommonForms()",
+      "setupBlock": "        form.setName(\"UniversalSearchForm\");\n",
+      "notes": "Form structure and controls are separate layers. Start by creating the top-level metadata object."
+    }
   },
   {
     "id": "create_common_module",
@@ -349,7 +432,6 @@
     "category": "create",
     "title": "Create Common Module",
     "summary": "Create CommonModule metadata and align it with Module.bsl.",
-    "guide": "workflows/create/create_common_module.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -360,7 +442,17 @@
       "common module",
       "module",
       "create common module"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "CommonModule",
+      "typeName": "CommonModule",
+      "variableName": "commonModule",
+      "createMethod": "createCommonModule()",
+      "collection": "getCommonModules()",
+      "setupBlock": "        commonModule.setServer(true);\n                commonModule.setServerCall(true);\n",
+      "notes": "After metadata creation, create or update the corresponding Module.bsl file through file tools. Metadata flags and BSL text are separate layers."
+    }
   },
   {
     "id": "create_common_picture",
@@ -368,7 +460,6 @@
     "category": "create",
     "title": "Create Common Picture",
     "summary": "Create CommonPicture metadata and assign picture content later.",
-    "guide": "workflows/create/create_common_picture.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -379,7 +470,17 @@
       "common picture",
       "picture",
       "image"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "CommonPicture",
+      "typeName": "CommonPicture",
+      "variableName": "picture",
+      "createMethod": "createCommonPicture()",
+      "collection": "getCommonPictures()",
+      "setupBlock": "        picture.setName(\"Logo\");\n",
+      "notes": "After creation, assign the actual picture resource or content through the corresponding picture APIs."
+    }
   },
   {
     "id": "create_common_template",
@@ -387,7 +488,6 @@
     "category": "create",
     "title": "Create Common Template",
     "summary": "Create CommonTemplate metadata and fill template content afterwards.",
-    "guide": "workflows/create/create_common_template.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -398,7 +498,17 @@
       "common template",
       "template",
       "макет"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "CommonTemplate",
+      "typeName": "CommonTemplate",
+      "variableName": "template",
+      "createMethod": "createCommonTemplate()",
+      "collection": "getCommonTemplates()",
+      "setupBlock": "        template.setName(\"PrintLayout\");\n",
+      "notes": "Template binary or text content is maintained separately after the metadata object exists."
+    }
   },
   {
     "id": "create_configuration_project",
@@ -425,7 +535,6 @@
     "category": "create",
     "title": "Create Constant",
     "summary": "Create Constant metadata with mandatory TypeDescription.",
-    "guide": "workflows/create/create_constant.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -437,7 +546,18 @@
       "constant",
       "settings",
       "type description"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Constant",
+      "typeName": "Constant",
+      "variableName": "constant",
+      "createMethod": "createConstant()",
+      "collection": "getConstants()",
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                constant.setType(typeDesc);\n",
+      "notes": "Constants implement TypeDescriptionProvider, so `setType(...)` is mandatory.",
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+    }
   },
   {
     "id": "create_cube",
@@ -463,7 +583,6 @@
     "category": "create",
     "title": "Create Data Processor",
     "summary": "Create DataProcessor metadata; forms and module content are separate follow-up steps.",
-    "guide": "workflows/create/create_data_processor.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -474,7 +593,17 @@
       "data processor",
       "processor",
       "обработка"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "DataProcessor",
+      "typeName": "DataProcessor",
+      "variableName": "processor",
+      "createMethod": "createDataProcessor()",
+      "collection": "getDataProcessors()",
+      "setupBlock": "        processor.setName(\"DataMaintenance\");\n",
+      "notes": "For executable behavior, add forms or module content separately after metadata creation."
+    }
   },
   {
     "id": "create_defined_type",
@@ -482,7 +611,6 @@
     "category": "create",
     "title": "Create Defined Type",
     "summary": "Create DefinedType with a precise TypeDescription.",
-    "guide": "workflows/create/create_defined_type.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -495,7 +623,18 @@
       "defined type",
       "type alias",
       "type description"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "DefinedType",
+      "typeName": "DefinedType",
+      "variableName": "definedType",
+      "createMethod": "createDefinedType()",
+      "collection": "getDefinedTypes()",
+      "setupBlock": "        // Create String type with length qualifier\n                IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                // Set string qualifiers (length)\n                // Note: StringQualifiers must be set on the TypeDescription, not passed to builder\n                // StringQualifiers stringQualifiers = modelFactory.createStringQualifiers();\n                // stringQualifiers.setLength(50);\n                // typeDesc.setStringQualifiers(stringQualifiers);\n\n                // Simplified: just set length on TypeDescription's qualifiers\n                if (typeDesc.getStringQualifiers() == null) {\n                    typeDesc.setStringQualifiers(modelFactory.createStringQualifiers());\n                }\n                typeDesc.getStringQualifiers().setLength(50);\n\n                definedType.setType(typeDesc);\n",
+      "notes": "DefinedType is usually used as a reusable alias; choose qualifiers deliberately to avoid broad runtime types.",
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+    }
   },
   {
     "id": "create_document",
@@ -522,7 +661,6 @@
     "category": "create",
     "title": "Create Document Journal",
     "summary": "Create DocumentJournal metadata with safe top-level attach flow.",
-    "guide": "workflows/create/create_document_journal.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -532,7 +670,17 @@
     "keywords": [
       "document journal",
       "journal"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "DocumentJournal",
+      "typeName": "DocumentJournal",
+      "variableName": "journal",
+      "createMethod": "createDocumentJournal()",
+      "collection": "getDocumentJournals()",
+      "setupBlock": "        journal.setName(\"DocumentsJournal\");\n",
+      "notes": "DocumentJournal collects document views; related columns and commands can be configured later."
+    }
   },
   {
     "id": "create_document_numerator",
@@ -540,7 +688,6 @@
     "category": "create",
     "title": "Create Document Numerator",
     "summary": "Create DocumentNumerator metadata and connect documents to it later.",
-    "guide": "workflows/create/create_document_numerator.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -551,7 +698,17 @@
       "document numerator",
       "numerator",
       "numbering"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "DocumentNumerator",
+      "typeName": "DocumentNumerator",
+      "variableName": "numerator",
+      "createMethod": "createDocumentNumerator()",
+      "collection": "getDocumentNumerators()",
+      "setupBlock": "        numerator.setName(\"MainNumerator\");\n",
+      "notes": "Attach documents to the numerator later through document properties inside a BM transaction."
+    }
   },
   {
     "id": "create_event_subscription",
@@ -559,7 +716,6 @@
     "category": "create",
     "title": "Create Event Subscription",
     "summary": "Create EventSubscription metadata and fill event handler references explicitly.",
-    "guide": "workflows/create/create_event_subscription.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -570,7 +726,17 @@
       "event subscription",
       "handler",
       "subscription"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "EventSubscription",
+      "typeName": "EventSubscription",
+      "variableName": "subscription",
+      "createMethod": "createEventSubscription()",
+      "collection": "getEventSubscriptions()",
+      "setupBlock": "        subscription.setName(\"OnDocumentPost\");\n",
+      "notes": "After creation, configure source object, event, and handler module explicitly."
+    }
   },
   {
     "id": "create_exchange_plan",
@@ -578,7 +744,6 @@
     "category": "create",
     "title": "Create Exchange Plan",
     "summary": "Create ExchangePlan metadata with safe top-level attach flow.",
-    "guide": "workflows/create/create_exchange_plan.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -589,7 +754,17 @@
       "exchange plan",
       "replication",
       "exchange"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "ExchangePlan",
+      "typeName": "ExchangePlan",
+      "variableName": "exchangePlan",
+      "createMethod": "createExchangePlan()",
+      "collection": "getExchangePlans()",
+      "setupBlock": "        exchangePlan.setCodeLength(9);\n",
+      "notes": "Exchange plans are top-level objects; node definitions and related metadata can be added afterwards."
+    }
   },
   {
     "id": "create_external_data_source",
@@ -597,7 +772,6 @@
     "category": "create",
     "title": "Create External Data Source",
     "summary": "Create ExternalDataSource metadata and then add tables, cubes, and fields.",
-    "guide": "workflows/create/create_external_data_source.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -608,7 +782,17 @@
       "external data source",
       "data source",
       "integration"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "ExternalDataSource",
+      "typeName": "ExternalDataSource",
+      "variableName": "source",
+      "createMethod": "createExternalDataSource()",
+      "collection": "getExternalDataSources()",
+      "setupBlock": "        source.setName(\"WarehouseDwh\");\n",
+      "notes": "Tables, cubes, fields, dimensions, and resources are child objects created after the source."
+    }
   },
   {
     "id": "create_filter_criterion",
@@ -616,7 +800,6 @@
     "category": "create",
     "title": "Create Filter Criterion",
     "summary": "Create FilterCriterion metadata and set its TypeDescription carefully.",
-    "guide": "workflows/create/create_filter_criterion.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -628,7 +811,18 @@
       "filter criterion",
       "criterion",
       "type description"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "FilterCriterion",
+      "typeName": "FilterCriterion",
+      "variableName": "criterion",
+      "createMethod": "createFilterCriterion()",
+      "collection": "getFilterCriteria()",
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n        TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n        TypeDescription typeDesc = new TypeDescriptionBuilder()\n            .addType(catalogRefType)\n            .build();\n\n        criterion.setType(typeDesc);\n",
+      "notes": "FilterCriterion implements TypeDescriptionProvider. Make the type narrow and intentional.",
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+    }
   },
   {
     "id": "create_functional_option",
@@ -636,7 +830,6 @@
     "category": "create",
     "title": "Create Functional Option",
     "summary": "Create FunctionalOption metadata and bind controlled objects later.",
-    "guide": "workflows/create/create_functional_option.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -647,7 +840,17 @@
       "functional option",
       "feature flag",
       "option"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "FunctionalOption",
+      "typeName": "FunctionalOption",
+      "variableName": "option",
+      "createMethod": "createFunctionalOption()",
+      "collection": "getFunctionalOptions()",
+      "setupBlock": "        option.setName(\"UseAdvancedPricing\");\n",
+      "notes": "Bind commands, forms, or object availability to the option after it is created."
+    }
   },
   {
     "id": "create_functional_options_parameter",
@@ -655,7 +858,6 @@
     "category": "create",
     "title": "Create Functional Options Parameter",
     "summary": "Create FunctionalOptionsParameter metadata and connect it to functional options afterwards.",
-    "guide": "workflows/create/create_functional_options_parameter.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -666,7 +868,17 @@
       "functional options parameter",
       "feature parameter",
       "parameter"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "FunctionalOptionsParameter",
+      "typeName": "FunctionalOptionsParameter",
+      "variableName": "parameter",
+      "createMethod": "createFunctionalOptionsParameter()",
+      "collection": "getFunctionalOptionsParameters()",
+      "setupBlock": "        parameter.setName(\"CurrentCompany\");\n",
+      "notes": "After creation, link the parameter to functional options and configure dependent expressions."
+    }
   },
   {
     "id": "create_http_service",
@@ -674,7 +886,6 @@
     "category": "create",
     "title": "Create HTTP Service",
     "summary": "Create HTTPService metadata and then add URL templates and methods.",
-    "guide": "workflows/create/create_http_service.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -685,7 +896,17 @@
       "http service",
       "rest",
       "url template"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "HTTPService",
+      "typeName": "HTTPService",
+      "variableName": "service",
+      "createMethod": "createHTTPService()",
+      "collection": "getHttpServices()",
+      "setupBlock": "        service.setName(\"OrdersApi\");\n",
+      "notes": "URL templates and HTTP methods are child objects. Keep routing details in follow-up steps."
+    }
   },
   {
     "id": "create_information_register",
@@ -713,7 +934,6 @@
     "category": "create",
     "title": "Create Integration Service",
     "summary": "Create IntegrationService metadata and then add channels.",
-    "guide": "workflows/create/create_integration_service.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -724,7 +944,17 @@
       "integration service",
       "service channel",
       "integration"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "IntegrationService",
+      "typeName": "IntegrationService",
+      "variableName": "service",
+      "createMethod": "createIntegrationService()",
+      "collection": "getIntegrationServices()",
+      "setupBlock": "        service.setName(\"ERPIntegration\");\n",
+      "notes": "Add `IntegrationServiceChannel` objects after the parent service is attached to configuration."
+    }
   },
   {
     "id": "create_interface",
@@ -732,7 +962,6 @@
     "category": "create",
     "title": "Create Interface",
     "summary": "Create Interface metadata and configure command interface content afterwards.",
-    "guide": "workflows/create/create_interface.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -742,7 +971,17 @@
     "keywords": [
       "interface",
       "ui interface"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Interface",
+      "typeName": "Interface",
+      "variableName": "interfaceObject",
+      "createMethod": "createInterface()",
+      "collection": "getInterfaces()",
+      "setupBlock": "        interfaceObject.setName(\"MainInterface\");\n",
+      "notes": "Configure sections, command interface, and navigation structure after the top-level interface is attached."
+    }
   },
   {
     "id": "create_language",
@@ -750,7 +989,6 @@
     "category": "create",
     "title": "Create Language",
     "summary": "Create Language metadata and then configure default language references in configuration.",
-    "guide": "workflows/create/create_language.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -760,7 +998,17 @@
     "keywords": [
       "language",
       "localization"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Language",
+      "typeName": "Language",
+      "variableName": "language",
+      "createMethod": "createLanguage()",
+      "collection": "getLanguages()",
+      "setupBlock": "        language.setName(\"English\");\n",
+      "notes": "After creation, set configuration default language and local string entries appropriately."
+    }
   },
   {
     "id": "create_report",
@@ -768,7 +1016,6 @@
     "category": "create",
     "title": "Create Report",
     "summary": "Create Report metadata; forms, module, and layouts can be added later.",
-    "guide": "workflows/create/create_report.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -778,7 +1025,17 @@
     "keywords": [
       "report",
       "analytics"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Report",
+      "typeName": "Report",
+      "variableName": "report",
+      "createMethod": "createReport()",
+      "collection": "getReports()",
+      "setupBlock": "        report.setName(\"SalesAnalysis\");\n",
+      "notes": "Metadata object creation does not create layouts, forms, or module code automatically."
+    }
   },
   {
     "id": "create_role",
@@ -786,7 +1043,6 @@
     "category": "create",
     "title": "Create Role",
     "summary": "Create Role metadata and then configure rights separately.",
-    "guide": "workflows/create/create_role.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -797,7 +1053,17 @@
       "role",
       "rights",
       "security"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Role",
+      "typeName": "Role",
+      "variableName": "role",
+      "createMethod": "createRole()",
+      "collection": "getRoles()",
+      "setupBlock": "        role.setName(\"PowerUser\");\n",
+      "notes": "Rights matrices and permissions are configured after the role object exists."
+    }
   },
   {
     "id": "create_scheduled_job",
@@ -805,7 +1071,6 @@
     "category": "create",
     "title": "Create Scheduled Job",
     "summary": "Create ScheduledJob metadata and define job parameters afterwards.",
-    "guide": "workflows/create/create_scheduled_job.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -816,7 +1081,17 @@
       "scheduled job",
       "regламентное задание",
       "job"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "ScheduledJob",
+      "typeName": "ScheduledJob",
+      "variableName": "job",
+      "createMethod": "createScheduledJob()",
+      "collection": "getScheduledJobs()",
+      "setupBlock": "        job.setName(\"NightlyCleanup\");\n",
+      "notes": "Add schedule details and called method configuration after the top-level job object exists."
+    }
   },
   {
     "id": "create_sequence",
@@ -824,7 +1099,6 @@
     "category": "create",
     "title": "Create Sequence",
     "summary": "Create Sequence metadata and then add dimension rules for ordering logic.",
-    "guide": "workflows/create/create_sequence.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -835,7 +1109,17 @@
       "sequence",
       "ordering",
       "последовательность"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Sequence",
+      "typeName": "Sequence",
+      "variableName": "sequence",
+      "createMethod": "createSequence()",
+      "collection": "getSequences()",
+      "setupBlock": "        sequence.setName(\"DocumentsSequence\");\n",
+      "notes": "After sequence creation, add dimensions and connect participating objects through sequence settings."
+    }
   },
   {
     "id": "create_session_parameter",
@@ -843,7 +1127,6 @@
     "category": "create",
     "title": "Create Session Parameter",
     "summary": "Create SessionParameter metadata with mandatory TypeDescription.",
-    "guide": "workflows/create/create_session_parameter.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -855,7 +1138,18 @@
       "session parameter",
       "parameter",
       "type description"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "SessionParameter",
+      "typeName": "SessionParameter",
+      "variableName": "parameter",
+      "createMethod": "createSessionParameter()",
+      "collection": "getSessionParameters()",
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                parameter.setType(typeDesc);\n",
+      "notes": "SessionParameter implements TypeDescriptionProvider, so set `type` before the object is used in session logic.",
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+    }
   },
   {
     "id": "create_settings_storage",
@@ -863,7 +1157,6 @@
     "category": "create",
     "title": "Create Settings Storage",
     "summary": "Create SettingsStorage metadata and bind configuration references to it later.",
-    "guide": "workflows/create/create_settings_storage.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -873,7 +1166,17 @@
     "keywords": [
       "settings storage",
       "storage"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "SettingsStorage",
+      "typeName": "SettingsStorage",
+      "variableName": "storage",
+      "createMethod": "createSettingsStorage()",
+      "collection": "getSettingsStorages()",
+      "setupBlock": "        storage.setName(\"CommonSettingsStorage\");\n",
+      "notes": "Configuration references such as commonSettingsStorage or reportsVariantsStorage should point to this object afterwards."
+    }
   },
   {
     "id": "create_style",
@@ -881,7 +1184,6 @@
     "category": "create",
     "title": "Create Style",
     "summary": "Create Style metadata and then add style items or assign it as default style.",
-    "guide": "workflows/create/create_style.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -892,7 +1194,17 @@
       "style",
       "theme",
       "ui style"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Style",
+      "typeName": "Style",
+      "variableName": "style",
+      "createMethod": "createStyle()",
+      "collection": "getStyles()",
+      "setupBlock": "        style.setName(\"CorporateStyle\");\n",
+      "notes": "After creation, assign the style in configuration defaults or reference it from forms and UI elements."
+    }
   },
   {
     "id": "create_style_item",
@@ -900,7 +1212,6 @@
     "category": "create",
     "title": "Create Style Item",
     "summary": "Create StyleItem metadata and configure its visual type afterwards.",
-    "guide": "workflows/create/create_style_item.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -910,7 +1221,17 @@
     "keywords": [
       "style item",
       "style element"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "StyleItem",
+      "typeName": "StyleItem",
+      "variableName": "styleItem",
+      "createMethod": "createStyleItem()",
+      "collection": "getStyleItems()",
+      "setupBlock": "        styleItem.setName(\"PrimaryButton\");\n",
+      "notes": "StyleItem visual type and concrete appearance settings should be configured explicitly after creation."
+    }
   },
   {
     "id": "create_subsystem",
@@ -918,7 +1239,6 @@
     "category": "create",
     "title": "Create Subsystem",
     "summary": "Create Subsystem metadata and then link objects through references or command interfaces.",
-    "guide": "workflows/create/create_subsystem.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -928,7 +1248,17 @@
     "keywords": [
       "subsystem",
       "section"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Subsystem",
+      "typeName": "Subsystem",
+      "variableName": "subsystem",
+      "createMethod": "createSubsystem()",
+      "collection": "getSubsystems()",
+      "setupBlock": "        subsystem.setName(\"Sales\");\n",
+      "notes": "Configuration keeps subsystem references; command interfaces and object composition are follow-up steps."
+    }
   },
   {
     "id": "create_table",
@@ -953,7 +1283,6 @@
     "category": "create",
     "title": "Create Task",
     "summary": "Create Task metadata with attributes and standard top-level workflow.",
-    "guide": "workflows/create/create_task.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -963,7 +1292,17 @@
     "keywords": [
       "task",
       "create task"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "Task",
+      "typeName": "Task",
+      "variableName": "task",
+      "createMethod": "createTask()",
+      "collection": "getTasks()",
+      "setupBlock": "        task.setAutonumbering(true);\n",
+      "notes": "Tasks often mirror BusinessProcess patterns. Use TaskAttribute/TaskTabularSection for child objects."
+    }
   },
   {
     "id": "create_type_description",
@@ -990,7 +1329,6 @@
     "category": "create",
     "title": "Create Web Service",
     "summary": "Create WebService metadata and then add operations and parameters.",
-    "guide": "workflows/create/create_web_service.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -1001,7 +1339,17 @@
       "web service",
       "soap",
       "operation"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "WebService",
+      "typeName": "WebService",
+      "variableName": "service",
+      "createMethod": "createWebService()",
+      "collection": "getWebServices()",
+      "setupBlock": "        service.setName(\"OrderService\");\n",
+      "notes": "Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children."
+    }
   },
   {
     "id": "create_ws_reference",
@@ -1009,7 +1357,6 @@
     "category": "create",
     "title": "Create WS Reference",
     "summary": "Create WSReference metadata and configure service connection details later.",
-    "guide": "workflows/create/create_ws_reference.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -1020,7 +1367,17 @@
       "ws reference",
       "soap client",
       "reference"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "WSReference",
+      "typeName": "WSReference",
+      "variableName": "reference",
+      "createMethod": "createWSReference()",
+      "collection": "getWsReferences()",
+      "setupBlock": "        reference.setName(\"ExternalSoapService\");\n",
+      "notes": "After creation, fill endpoint and service metadata according to the referenced WSDL contract."
+    }
   },
   {
     "id": "create_xdto_package",
@@ -1028,7 +1385,6 @@
     "category": "create",
     "title": "Create XDTO Package",
     "summary": "Create XDTOPackage metadata and then add package content or schema definitions.",
-    "guide": "workflows/create/create_xdto_package.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -1039,7 +1395,17 @@
       "xdto package",
       "xdto",
       "schema"
-    ]
+    ],
+    "template": "top-level-create",
+    "vars": {
+      "title": "XDTOPackage",
+      "typeName": "XDTOPackage",
+      "variableName": "packageObject",
+      "createMethod": "createXDTOPackage()",
+      "collection": "getXDTOPackages()",
+      "setupBlock": "        packageObject.setName(\"CommonSchema\");\n",
+      "notes": "Add XDTO package content and imported types after the package metadata object exists."
+    }
   },
   {
     "id": "delete_attribute",
