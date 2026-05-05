@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 
 /**
  * Loads markdown resources from a bundle classpath and resolves
- * {@code {{>fragment-id}}} includes and {@code {{var}}} placeholders.
+ * {@code ${>fragment-id}} includes and {@code ${var}} placeholders.
  * <p>
  * Resource paths are resolved relative to the supplied anchor class via
  * {@link Class#getResourceAsStream(String)}. Fragment includes look up files
@@ -25,9 +25,13 @@ import java.util.stream.Collectors;
  */
 public final class ManualResourceLoader
 {
-    private static final Pattern INCLUDE_PATTERN = Pattern.compile("\\{\\{>\\s*([\\w\\-/]+)\\s*\\}\\}"); //$NON-NLS-1$
-    private static final Pattern VAR_PATTERN = Pattern.compile("\\{\\{\\s*([\\w\\.]+)\\s*\\}\\}"); //$NON-NLS-1$
-    private static final Pattern DYN_PATTERN = Pattern.compile("\\{\\{\\$([\\w\\-]+):([\\w\\.]+)\\s*\\}\\}"); //$NON-NLS-1$
+    // Unified `${...}` family. Inner sigils discriminate the kind:
+    //   ${var}            — variable substitution (resolveVars)
+    //   ${>fragment-id}   — fragment include from /fragments/<id>.md (resolveIncludes)
+    //   ${@kind:arg}      — dynamic resolver registered via registerDynamicResolver (resolveDynamic)
+    private static final Pattern INCLUDE_PATTERN = Pattern.compile("\\$\\{>\\s*([\\w\\-/]+)\\s*\\}"); //$NON-NLS-1$
+    private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{\\s*([\\w\\.]+)\\s*\\}"); //$NON-NLS-1$
+    private static final Pattern DYN_PATTERN = Pattern.compile("\\$\\{@([\\w\\-]+):([\\w\\.]+)\\s*\\}"); //$NON-NLS-1$
 
     private final Class<?> anchor;
     private final String root;
@@ -53,11 +57,11 @@ public final class ManualResourceLoader
     }
 
     /**
-     * Register a resolver for {@code {{$kind:argument}}} placeholders. Useful for
+     * Register a resolver for {@code ${@kind:argument}} placeholders. Useful for
      * runtime-computed snippets such as method signature listings that cannot live
      * as static markdown.
      *
-     * @param kind the placeholder kind (the part after {@code $} and before {@code :})
+     * @param kind the placeholder kind (the part after {@code @} and before {@code :})
      * @param resolver function that maps the argument to its replacement text
      */
     public void registerDynamicResolver(String kind, Function<String, String> resolver)
@@ -99,10 +103,10 @@ public final class ManualResourceLoader
     }
 
     /**
-     * Load a guide markdown with {@code {{>fragment}}} includes and {@code {{var}}} placeholders resolved.
+     * Load a guide markdown with {@code ${>fragment}} includes and {@code ${var}} placeholders resolved.
      *
      * @param relativePath path relative to root (no leading slash)
-     * @param vars optional variable map for {@code {{name}}} substitution; may be {@code null}
+     * @param vars optional variable map for {@code ${name}} substitution; may be {@code null}
      * @return resolved markdown content
      */
     public String load(String relativePath, Map<String, String> vars)

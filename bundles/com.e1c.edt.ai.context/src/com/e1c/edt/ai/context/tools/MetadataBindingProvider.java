@@ -70,7 +70,7 @@ import com.google.inject.Singleton;
  * <p>
  * Binding descriptions live as static markdown under
  * {@code resources/manual/bindings/<bindingName>.md}. The {@code mdFactory}
- * description has a {@code {{$method-list:MdClassFactory}}} placeholder that is
+ * description has a {@code ${@method-list:MdClassFactory}} placeholder that is
  * resolved at runtime against {@link IMethodListProvider}.
  */
 @Singleton

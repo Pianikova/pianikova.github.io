@@ -152,7 +152,7 @@ if (catalog != null) {
 
 ### Available Public Methods:
 
-{{$method-list:MdClassFactory}}
+${@method-list:MdClassFactory}
 
 **Note:** In JShell, prefer `mdFactory` plus manual UUID assignment for new metadata objects.
 Use `modelFactory` only when you specifically need its higher-level behavior and can tolerate possible OSGi timeout issues.
