@@ -22,35 +22,29 @@ public class ContentReplacer implements IContentReplacer
             .collect(Collectors.toList());
     }
 
-	@Override
-	public ReplaceResult replace(String currentContent, String originContent, String newContent,
-		String lineDelimiter, boolean replaceAll)
-	{
-		// Validate input parameters
-		Preconditions.checkNotNull(currentContent);
-		Preconditions.checkNotNull(originContent);
-		Preconditions.checkNotNull(newContent);
-		Preconditions.checkNotNull(lineDelimiter);
+    @Override
+    public ReplaceResult replace(String currentContent, String originContent, String newContent,
+        String lineDelimiter, boolean replaceAll)
+    {
+        Preconditions.checkNotNull(currentContent);
+        Preconditions.checkNotNull(originContent);
+        Preconditions.checkNotNull(newContent);
+        Preconditions.checkNotNull(lineDelimiter);
 
-		// Determine line delimiter from currentContent, fallback to provided argument
-		String detectedLineDelimiter = detectLineDelimiter(currentContent);
-		if (detectedLineDelimiter == null)
-		{
-			detectedLineDelimiter = lineDelimiter;
-		}
+        String detectedLineDelimiter = detectLineDelimiter(currentContent);
+        if (detectedLineDelimiter == null)
+        {
+            detectedLineDelimiter = lineDelimiter;
+        }
 
-		// Check if currentContent has BOM and remember it
-		boolean currentHasBOM = currentContent.startsWith(BOM);
+        boolean currentHasBOM = currentContent.startsWith(BOM);
 
-		// Remove BOM from all content for searching/comparison (ignore BOM)
-		String searchCurrentContent = stripBOM(currentContent);
-		String searchOriginContent = stripBOM(originContent);
-		String searchNewContent = stripBOM(newContent);
+        // Original content with original line delimiters but BOM stripped — used for line/column mapping.
+        String strippedOriginal = stripBOM(currentContent);
 
-		// Normalize all content to use \n as line delimiter
-		String normalizedCurrentContent = normalizeLineDelimiters(searchCurrentContent);
-		String normalizedOriginContent = normalizeLineDelimiters(searchOriginContent);
-		String normalizedNewContent = normalizeLineDelimiters(searchNewContent);
+        String normalizedCurrentContent = prepare(currentContent);
+        String normalizedOriginContent = prepare(originContent);
+        String normalizedNewContent = prepare(newContent);
 
         if (normalizedOriginContent.isEmpty())
         {
@@ -92,14 +86,62 @@ public class ContentReplacer implements IContentReplacer
                 + normalizedCurrentContent.substring(searchResult.firstIndex + searchResult.searchCandidate.length());
         }
 
-		// Convert back to original line delimiter
-		String updatedContent = denormalizeLineDelimiters(normalizedUpdatedContent, detectedLineDelimiter);
+        // Compute match position on the original (BOM-stripped, non-normalized) content,
+        // so line/column reflect what the user sees in the editor.
+        int startOffset = normalizedOffsetToStrippedOffset(strippedOriginal, searchResult.firstIndex);
+        int endOffset = normalizedOffsetToStrippedOffset(strippedOriginal,
+            searchResult.firstIndex + searchResult.searchCandidate.length());
+        int[] start = offsetToLineColumn(strippedOriginal, startOffset);
+        int[] end = offsetToLineColumn(strippedOriginal, endOffset);
 
-		// Restore BOM if it was present in current content
-		updatedContent = restoreBOM(updatedContent, currentHasBOM);
+        return buildResult(normalizedUpdatedContent, detectedLineDelimiter, currentHasBOM, addedLines, removedLines,
+            searchResult.occurrenceCount > 1, start[0], start[1], end[0], end[1]);
+    }
 
-		return new ReplaceResult(updatedContent, addedLines, removedLines, true, searchResult.occurrenceCount > 1);
-	}
+    private ReplaceResult replaceWithEmptyOrigin(String normalizedCurrentContent, String normalizedNewContent,
+        String detectedLineDelimiter, boolean currentHasBOM, boolean replaceAll)
+    {
+        int removedLines = countLinesIgnoringContext("", normalizedNewContent, NORMALIZED_LINE_DELIMITER, true); //$NON-NLS-1$
+        int addedLines = countLinesIgnoringContext(normalizedNewContent, "", NORMALIZED_LINE_DELIMITER, false); //$NON-NLS-1$
+
+        String normalizedUpdatedContent;
+        if (replaceAll)
+        {
+            normalizedUpdatedContent = normalizedCurrentContent.replace("", normalizedNewContent); //$NON-NLS-1$
+            removedLines = 0;
+            addedLines = 0;
+        }
+        else
+        {
+            normalizedUpdatedContent = normalizedCurrentContent.replaceFirst(java.util.regex.Pattern.quote(""), //$NON-NLS-1$
+                java.util.regex.Matcher.quoteReplacement(normalizedNewContent));
+        }
+
+        // Empty-origin insertion happens at the very start of the content.
+        return buildResult(normalizedUpdatedContent, detectedLineDelimiter, currentHasBOM, addedLines, removedLines, false,
+            1, 1, 1, 1);
+    }
+
+    /**
+     * Strips BOM and normalizes line delimiters to "\n" — the canonical form used for searching.
+     */
+    private String prepare(String content)
+    {
+        return normalizeLineDelimiters(stripBOM(content));
+    }
+
+    /**
+     * Common tail: denormalize line delimiters, restore BOM, package the result.
+     */
+    private ReplaceResult buildResult(String normalizedUpdatedContent, String detectedLineDelimiter, boolean hadBOM,
+        int addedLines, int removedLines, boolean multipleOccurrences, int matchStartLine, int matchStartColumn,
+        int matchEndLine, int matchEndColumn)
+    {
+        String updatedContent = denormalizeLineDelimiters(normalizedUpdatedContent, detectedLineDelimiter);
+        updatedContent = restoreBOM(updatedContent, hadBOM);
+        return new ReplaceResult(updatedContent, addedLines, removedLines, true, multipleOccurrences, matchStartLine,
+            matchStartColumn, matchEndLine, matchEndColumn);
+    }
 
     private ReplacementSearchResult findReplacement(String content, String find, boolean replaceAll)
     {
@@ -141,224 +183,230 @@ public class ContentReplacer implements IContentReplacer
     }
 
     private String stripBOM(String content)
-	{
-		if (content == null || content.isEmpty())
-		{
-			return content;
-		}
-		if (content.startsWith(BOM))
-		{
-			return content.substring(BOM.length());
-		}
-
-		return content;
-	}
-
-	private String restoreBOM(String content, boolean hadBOM)
-	{
-		if (hadBOM && (content == null || !content.startsWith(BOM)))
-		{
-			return BOM + content;
-		}
-
-		return content;
-	}
-
-	/**
-	 * Detects the line delimiter used in content
-	 *
-	 * @param content the content to detect line delimiter from
-	 * @return the detected line delimiter (\r\n, \r, or \n), or null if not determinable
-	 */
-	@SuppressWarnings("nls")
-    private String detectLineDelimiter(String content)
-	{
-		if (content.isEmpty())
-		{
-			return null;
-		}
-
-		int crCount = 0;
-		int lfCount = 0;
-		int crlfCount = 0;
-
-		for (int i = 0; i < content.length(); i++)
-		{
-			char c = content.charAt(i);
-			if (c == '\r')
-			{
-				if (i + 1 < content.length() && content.charAt(i + 1) == '\n')
-				{
-					crlfCount++;
-					i++; // Skip the next character (\n)
-				}
-				else
-				{
-					crCount++;
-				}
-			}
-			else if (c == '\n')
-			{
-				lfCount++;
-			}
-		}
-
-		// Prioritize CRLF over CR/LF individually
-		if (crlfCount > 0)
-		{
-			return "\r\n";
-		}
-
-		if (crCount > 0)
-		{
-			return "\r";
-		}
-
-		if (lfCount > 0)
-		{
-			return "\n";
-		}
-
-		// No line delimiters found
-		return null;
-	}
-
-	/**
-	 * Normalizes line delimiters in content to \n
-	 *
-	 * @param content the content to normalize
-	 * @param lineDelimiter the current line delimiter
-	 * @return normalized content with \n line delimiters
-	 */
-	private String normalizeLineDelimiters(String content)
-	{
-		if (content.isEmpty())
-		{
-			return content;
-		}
-		return content.replace("\r\n", "\n").replace('\r', '\n'); //$NON-NLS-1$ //$NON-NLS-2$
-	}
-
-	/**
-	 * Denormalizes line delimiters from \n back to the original line delimiter
-	 *
-	 * @param content the content with \n line delimiters
-	 * @param lineDelimiter the target line delimiter
-	 * @return content with original line delimiters
-	 */
-	private String denormalizeLineDelimiters(String content, String lineDelimiter)
-	{
-		if (content.isEmpty() || lineDelimiter.equals(NORMALIZED_LINE_DELIMITER))
-		{
-			return content;
-		}
-		return content.replace(NORMALIZED_LINE_DELIMITER, lineDelimiter);
-	}
-
-	/**
-	 * Counts the number of occurrences of a substring in a string
-	 *
-	 * @param str the string to search in
-	 * @param sub the substring to search for
-	 * @return the number of occurrences
-	 */
-	private int countOccurrences(String str, String sub)
-	{
-		if (str.isEmpty() || sub.isEmpty())
-		{
-			return 0;
-		}
-
-		int count = 0;
-		int idx = 0;
-
-		while ((idx = str.indexOf(sub, idx)) != -1)
-		{
-			count++;
-			idx += sub.length();
-		}
-
-		return count;
-	}
-
-	/**
-	 * Counts the number of lines in content, ignoring common prefix and suffix with other content
-	 *
-	 * @param content the content to count lines in
-	 * @param otherContent the other content to compare against
-	 * @param lineDelimiter the line delimiter
-	 * @param isRemoved true if this is removed content, false if added
-	 * @return the number of lines
-	 */
-	private int countLinesIgnoringContext(String content, String otherContent, String lineDelimiter, boolean isRemoved)
-	{
-		if (content.isEmpty())
-		{
-			return 0;
-		}
-
-		// Split content into lines
-		String[] contentLines = content.split(java.util.regex.Pattern.quote(lineDelimiter), -1);
-		String[] otherLines = otherContent.split(java.util.regex.Pattern.quote(lineDelimiter), -1);
-
-		// Find common prefix
-		int prefixLength = 0;
-		int minPrefixLength = Math.min(contentLines.length, otherLines.length);
-		while (prefixLength < minPrefixLength && contentLines[prefixLength].equals(otherLines[prefixLength]))
-		{
-			prefixLength++;
-		}
-
-		// Find common suffix
-		int suffixLength = 0;
-		int minSuffixLength = Math.min(contentLines.length - prefixLength, otherLines.length - prefixLength);
-		while (suffixLength < minSuffixLength
-			&& contentLines[contentLines.length - 1 - suffixLength].equals(otherLines[otherLines.length - 1 - suffixLength]))
-		{
-			suffixLength++;
-		}
-
-		// Count lines excluding common prefix and suffix
-		int countedLines = contentLines.length - prefixLength - suffixLength;
-
-		// Special case: if removing, and there's only one line being replaced (middle line)
-		// We should count it as 1 removed line
-		if (isRemoved && countedLines == 0 && contentLines.length > 0 && otherLines.length > 0)
-		{
-			// Check if this is a case where a single line is being replaced within context
-			// e.g., "Abc\nLine2\nXyz\n" -> "Abc\nNewLine\nXyz\n"
-			// Here, Line2 is replaced by NewLine, but Abc and Xyz are context
-			if (contentLines.length == otherLines.length && prefixLength + suffixLength == contentLines.length - 1)
-			{
-				return 1;
-			}
-		}
-
-		return Math.max(0, countedLines);
-	}
-
-    private ReplaceResult replaceWithEmptyOrigin(String normalizedCurrentContent, String normalizedNewContent,
-        String detectedLineDelimiter, boolean currentHasBOM, boolean replaceAll)
     {
-        int removedLines = countLinesIgnoringContext("", normalizedNewContent, NORMALIZED_LINE_DELIMITER, true); //$NON-NLS-1$
-        int addedLines = countLinesIgnoringContext(normalizedNewContent, "", NORMALIZED_LINE_DELIMITER, false); //$NON-NLS-1$
-
-        String normalizedUpdatedContent;
-        if (replaceAll)
+        if (content == null || content.isEmpty())
         {
-            normalizedUpdatedContent = normalizedCurrentContent.replace("", normalizedNewContent); //$NON-NLS-1$
-            removedLines = 0;
-            addedLines = 0;
+            return content;
         }
-        else
+        if (content.startsWith(BOM))
         {
-            normalizedUpdatedContent = normalizedCurrentContent.replaceFirst(java.util.regex.Pattern.quote(""), //$NON-NLS-1$
-                java.util.regex.Matcher.quoteReplacement(normalizedNewContent));
+            return content.substring(BOM.length());
         }
 
-        String updatedContent = denormalizeLineDelimiters(normalizedUpdatedContent, detectedLineDelimiter);
-        updatedContent = restoreBOM(updatedContent, currentHasBOM);
-        return new ReplaceResult(updatedContent, addedLines, removedLines, true, false);
+        return content;
+    }
+
+    private String restoreBOM(String content, boolean hadBOM)
+    {
+        if (hadBOM && (content == null || !content.startsWith(BOM)))
+        {
+            return BOM + content;
+        }
+
+        return content;
+    }
+
+    /**
+     * Detects the line delimiter used in content
+     *
+     * @param content the content to detect line delimiter from
+     * @return the detected line delimiter (\r\n, \r, or \n), or null if not determinable
+     */
+    @SuppressWarnings("nls")
+    private String detectLineDelimiter(String content)
+    {
+        if (content.isEmpty())
+        {
+            return null;
+        }
+
+        int crCount = 0;
+        int lfCount = 0;
+        int crlfCount = 0;
+
+        for (int i = 0; i < content.length(); i++)
+        {
+            char c = content.charAt(i);
+            if (c == '\r')
+            {
+                if (i + 1 < content.length() && content.charAt(i + 1) == '\n')
+                {
+                    crlfCount++;
+                    i++; // Skip the next character (\n)
+                }
+                else
+                {
+                    crCount++;
+                }
+            }
+            else if (c == '\n')
+            {
+                lfCount++;
+            }
+        }
+
+        if (crlfCount > 0)
+        {
+            return "\r\n";
+        }
+
+        if (crCount > 0)
+        {
+            return "\r";
+        }
+
+        if (lfCount > 0)
+        {
+            return "\n";
+        }
+
+        return null;
+    }
+
+    private String normalizeLineDelimiters(String content)
+    {
+        if (content.isEmpty())
+        {
+            return content;
+        }
+        return content.replace("\r\n", "\n").replace('\r', '\n'); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private String denormalizeLineDelimiters(String content, String lineDelimiter)
+    {
+        if (content.isEmpty() || lineDelimiter.equals(NORMALIZED_LINE_DELIMITER))
+        {
+            return content;
+        }
+        return content.replace(NORMALIZED_LINE_DELIMITER, lineDelimiter);
+    }
+
+    private int countOccurrences(String str, String sub)
+    {
+        if (str.isEmpty() || sub.isEmpty())
+        {
+            return 0;
+        }
+
+        int count = 0;
+        int idx = 0;
+
+        while ((idx = str.indexOf(sub, idx)) != -1)
+        {
+            count++;
+            idx += sub.length();
+        }
+
+        return count;
+    }
+
+    /**
+     * Counts the number of lines in content, ignoring common prefix and suffix with other content
+     */
+    private int countLinesIgnoringContext(String content, String otherContent, String lineDelimiter, boolean isRemoved)
+    {
+        if (content.isEmpty())
+        {
+            return 0;
+        }
+
+        String[] contentLines = content.split(java.util.regex.Pattern.quote(lineDelimiter), -1);
+        String[] otherLines = otherContent.split(java.util.regex.Pattern.quote(lineDelimiter), -1);
+
+        int prefixLength = 0;
+        int minPrefixLength = Math.min(contentLines.length, otherLines.length);
+        while (prefixLength < minPrefixLength && contentLines[prefixLength].equals(otherLines[prefixLength]))
+        {
+            prefixLength++;
+        }
+
+        int suffixLength = 0;
+        int minSuffixLength = Math.min(contentLines.length - prefixLength, otherLines.length - prefixLength);
+        while (suffixLength < minSuffixLength && contentLines[contentLines.length - 1 - suffixLength]
+            .equals(otherLines[otherLines.length - 1 - suffixLength]))
+        {
+            suffixLength++;
+        }
+
+        int countedLines = contentLines.length - prefixLength - suffixLength;
+
+        if (isRemoved && countedLines == 0 && contentLines.length > 0 && otherLines.length > 0)
+        {
+            if (contentLines.length == otherLines.length && prefixLength + suffixLength == contentLines.length - 1)
+            {
+                return 1;
+            }
+        }
+
+        return Math.max(0, countedLines);
+    }
+
+    /**
+     * Maps an offset in the normalized (LF-only, BOM-stripped) content back to an offset in the
+     * BOM-stripped original content (which still uses the source line delimiter).
+     */
+    private int normalizedOffsetToStrippedOffset(String strippedOriginal, int normalizedOffset)
+    {
+        int strippedIdx = 0;
+        int normIdx = 0;
+        while (normIdx < normalizedOffset && strippedIdx < strippedOriginal.length())
+        {
+            char c = strippedOriginal.charAt(strippedIdx);
+            if (c == '\r')
+            {
+                if (strippedIdx + 1 < strippedOriginal.length() && strippedOriginal.charAt(strippedIdx + 1) == '\n')
+                {
+                    strippedIdx += 2;
+                }
+                else
+                {
+                    strippedIdx += 1;
+                }
+                normIdx += 1;
+            }
+            else
+            {
+                strippedIdx += 1;
+                normIdx += 1;
+            }
+        }
+        return strippedIdx;
+    }
+
+    /**
+     * Converts a character offset in {@code content} to a 1-based (line, column) pair.
+     * Recognizes \r\n, \r and \n as line breaks.
+     *
+     * @return a two-element array {line, column}
+     */
+    private int[] offsetToLineColumn(String content, int offset)
+    {
+        int line = 1;
+        int column = 1;
+        int limit = Math.min(offset, content.length());
+        for (int i = 0; i < limit; i++)
+        {
+            char c = content.charAt(i);
+            if (c == '\r')
+            {
+                line++;
+                column = 1;
+                if (i + 1 < limit && content.charAt(i + 1) == '\n')
+                {
+                    i++;
+                }
+            }
+            else if (c == '\n')
+            {
+                line++;
+                column = 1;
+            }
+            else
+            {
+                column++;
+            }
+        }
+        return new int[] { line, column };
     }
 
     private static class ReplacementSearchResult
@@ -369,8 +417,8 @@ public class ContentReplacer implements IContentReplacer
         private final int firstIndex;
         private final int occurrenceCount;
 
-        private ReplacementSearchResult(boolean notFound, boolean multipleMatches, String searchCandidate, int firstIndex,
-            int occurrenceCount)
+        private ReplacementSearchResult(boolean notFound, boolean multipleMatches, String searchCandidate,
+            int firstIndex, int occurrenceCount)
         {
             this.notFound = notFound;
             this.multipleMatches = multipleMatches;

@@ -145,29 +145,33 @@ public class EditMcpTool
             throw new ToolException("`new_content` is required.");
         }
 
+        var replaceAll = request.replaceAll != null ? request.replaceAll : false;
+
         if (call.callKind == ToolCallKind.RENDER)
         {
-            var requestMarkdown = new StringBuilder();
-
-            requestMarkdown.append(MessageFormat.format(Messages.EditTitleTemplate, markdownUtils.formatFilePath(path)));
-
-            // Add diff details
-            if (request.oldContent != null && request.newContent != null)
+            // Best-effort: try to read the file and run a dry replacement so the link can point
+            // at the edited fragment. Any failure here is non-fatal — we just fall back to a
+            // plain file link. RENDER must never write to disk or to the document.
+            ReplaceResult previewResult = null;
+            String previewContent = tryReadCurrentContent(path);
+            if (previewContent != null)
             {
-                requestMarkdown.append("\n\n");
-                requestMarkdown.append("<details><summary>")
-                    .append(Messages.EditDetailsSummary)
-                    .append("</summary>\n\n");
-                requestMarkdown.append(
-                    markdownUtils.buildGitDiff(path, request.oldContent, request.newContent));
-                requestMarkdown.append("\n</details>");
+                ReplaceResult attempt = contentReplacer.replace(previewContent, oldContent, newContent,
+                    System.lineSeparator(), replaceAll);
+                if (attempt.isSuccess())
+                {
+                    previewResult = attempt;
+                }
             }
+
+            var requestMarkdown = new StringBuilder();
+            requestMarkdown.append(
+                MessageFormat.format(Messages.EditTitleTemplate, buildFileLink(path, previewResult)));
+            requestMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
 
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
-
-        var replaceAll = request.replaceAll != null ? request.replaceAll : false;
 
         // Use supplyAsync to execute the blocking operation on a separate thread.
         return CompletableFuture.supplyAsync(() -> {
@@ -206,30 +210,18 @@ public class EditMcpTool
                         throw new ToolException(errorMessage);
                     }
 
-                    var replacementResult = new ReplacementResult();
-                    replacementResult.updatedContent = replaceResult.getUpdatedContent();
-                    replacementResult.addedLines = replaceResult.getAddedLines();
-                    replacementResult.removedLines = replaceResult.getRemovedLines();
-
                     // Write back
-                    var updatedData = replacementResult.updatedContent.getBytes(StandardCharsets.UTF_8);
+                    var updatedData = replaceResult.getUpdatedContent().getBytes(StandardCharsets.UTF_8);
                     fileSystem.writeAllBytes(path, updatedData);
 
                     var response = new StringBuilder();
                     response.append("File updated: \"").append(path).append("\".\n");
                     response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
-                    // Add diff details to response markdown
                     var responseMarkdown = new StringBuilder();
-                    responseMarkdown
-                        .append(MessageFormat.format(Messages.EditedTemplate, markdownUtils.formatFilePath(path),
-                        createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
-                    responseMarkdown.append("\n\n");
-                    responseMarkdown.append("<details><summary>")
-                        .append(Messages.EditDetailsSummary)
-                        .append("</summary>\n\n");
-                    responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
-                    responseMarkdown.append("\n</details>");
+                    responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
+                        createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
+                    responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
                     details.responseMarkdown = responseMarkdown.toString();
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
@@ -307,17 +299,12 @@ public class EditMcpTool
                 throw new ToolException(errorMessage);
             }
 
-            var replacementResult = new ReplacementResult();
-            replacementResult.updatedContent = replaceResult.getUpdatedContent();
-            replacementResult.addedLines = replaceResult.getAddedLines();
-            replacementResult.removedLines = replaceResult.getRemovedLines();
-
             // Write updated content
             var optionalError = dispatcher.dispatch(() ->
             {
                 try
                 {
-                    fileDocument.setContent(replacementResult.updatedContent);
+                    fileDocument.setContent(replaceResult.getUpdatedContent());
                     fileDocument.save();
                     return null;
                 }
@@ -336,14 +323,10 @@ public class EditMcpTool
             var displayPath = actualFile.getProjectRelativePath().toPortableString();
             response.append("File updated: \"").append(displayPath).append("\".");
 
-            // Add response markdown with diff details
             var responseMarkdown = new StringBuilder();
-            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, markdownUtils.formatFilePath(path),
-                createChangesString(replacementResult.addedLines, replacementResult.removedLines)));
-            responseMarkdown.append("\n\n");
-            responseMarkdown.append("<details><summary>").append(Messages.EditDetailsSummary).append("</summary>\n\n");
-            responseMarkdown.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
-            responseMarkdown.append("\n</details>");
+            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
+                createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
+            responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
             details.responseMarkdown = responseMarkdown.toString();
 
             return messageFactory.createMessage(this, call, response.toString(), details);
@@ -351,13 +334,78 @@ public class EditMcpTool
     }
 
     /**
-     * Wrapper class for replacement result.
+     * Best-effort read of the file's current content for RENDER preview. Returns null on any failure —
+     * RENDER must remain side-effect-free and resilient to missing/inaccessible files.
      */
-    private static class ReplacementResult
+    private String tryReadCurrentContent(String path)
     {
-        String updatedContent;
-        int addedLines;
-        int removedLines;
+        try
+        {
+            if (!fileSystem.fileExists(path))
+            {
+                return null;
+            }
+
+            String detectedProjectName = projectTools.determineProjectName(path);
+            boolean isProjectFile = detectedProjectName != null && !detectedProjectName.isBlank();
+            if (isProjectFile)
+            {
+                var root = ResourcesPlugin.getWorkspace().getRoot();
+                var project = root.getProject(detectedProjectName);
+                if (project != null && project.exists() && project.isOpen())
+                {
+                    var projectFile = projectTools.getProjectFile(project, path);
+                    if (projectFile.isPresent())
+                    {
+                        var optionalDocument = contentSourceProvider.getFileDocument(projectFile.get());
+                        if (optionalDocument.isPresent())
+                        {
+                            var doc = optionalDocument.get().getDocument();
+                            var optContent = dispatcher.dispatch(() -> doc.get());
+                            if (optContent.isPresent())
+                            {
+                                return optContent.get();
+                            }
+                        }
+                    }
+                }
+            }
+
+            byte[] data = fileSystem.readAllBytes(path);
+            return new String(data, StandardCharsets.UTF_8);
+        }
+        catch (Exception ignored)
+        {
+            return null;
+        }
+    }
+
+    /**
+     * Builds a markdown link to the file. When position info is available in {@code result},
+     * the link points at the matched fragment; otherwise it points at the file as a whole.
+     */
+    private String buildFileLink(String path, ReplaceResult result)
+    {
+        if (result != null && result.isSuccess() && result.getMatchStartLine() > 0)
+        {
+            return markdownUtils.formatFilePath(path, result.getMatchStartLine(), result.getMatchStartColumn(),
+                result.getMatchEndLine(), result.getMatchEndColumn());
+        }
+        return markdownUtils.formatFilePath(path);
+    }
+
+    /**
+     * Builds the {@code <details>}-wrapped diff block appended after the header line.
+     */
+    private String buildEditDetailsBlock(String path, String oldContent, String newContent)
+    {
+        var sb = new StringBuilder();
+        sb.append("\n\n<details><summary>")
+            .append(Messages.EditDetailsSummary)
+            .append("</summary>\n\n");
+        sb.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
+        sb.append("\n</details>");
+        return sb.toString();
     }
 
     /**
