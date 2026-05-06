@@ -9,6 +9,7 @@ import org.eclipse.xtext.builder.IXtextBuilderParticipant;
 import com.e1c.edt.ai.AIModule;
 import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.IDefaultSettings;
+import com.e1c.edt.ai.IEditRollback;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectBuilder;
 import com.e1c.edt.ai.IProjectIdProvider;
@@ -16,6 +17,7 @@ import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.context.IModuleProvider;
 import com.e1c.edt.ai.context.ModuleProvider;
+import com.e1c.edt.ai.tools.EditRollback;
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -54,6 +56,7 @@ public class AIUIModule
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(IProjectBuilder.class).to(ProjectBuilder.class).in(Singleton.class);
         bind(ISpecializedEditorOpener.class).to(EdtSpecializedEditorOpener.class).in(Singleton.class);
+        bind(IEditRollback.class).to(EditRollback.class).in(Singleton.class);
         // @formatter:on
     }
 }

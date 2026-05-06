@@ -397,6 +397,7 @@ public class EditMcpTool
     /**
      * Builds the {@code <details>}-wrapped diff block appended after the header line.
      */
+    @SuppressWarnings("nls")
     private String buildEditDetailsBlock(String path, String oldContent, String newContent)
     {
         var sb = new StringBuilder();

@@ -10,6 +10,7 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
 
 import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.IEditRollback;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMarkdownUtils;
@@ -36,13 +37,14 @@ public class IdeApiHandler
     private final IEditorPositionManager editorPositionManager;
     private final IMarkdownUtils markdownUtils;
     private final IWeb web;
+    private final IEditRollback editRollback;
     private boolean isReady;
 
     @Inject
     public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
         Provider<IChat> chatProvider, IJson json,
         IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager,
-        IMarkdownUtils markdownUtils, IWeb web)
+        IMarkdownUtils markdownUtils, IWeb web, IEditRollback editRollback)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
@@ -55,6 +57,7 @@ public class IdeApiHandler
         Preconditions.checkNotNull(editorPositionManager);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(web);
+        Preconditions.checkNotNull(editRollback);
         this.log = log;
         this.ui = ui;
         this.dispatcher = dispatcher;
@@ -66,6 +69,7 @@ public class IdeApiHandler
         this.editorPositionManager = editorPositionManager;
         this.markdownUtils = markdownUtils;
         this.web = web;
+        this.editRollback = editRollback;
     }
 
     public void wink(String parameter)
@@ -272,5 +276,22 @@ public class IdeApiHandler
     public void reset()
     {
         this.isReady = false;
+    }
+
+    /**
+     * Reverts a single Edit operation by applying the inverse text replacement to the file's
+     * current content. Arguments mirror those of the original {@code Edit} tool call recorded in
+     * the chat history, so the operation is fully stateless and works after IDE restart.
+     * <p>
+     * If the file has been further modified since the original edit and the post-edit fragment
+     * can no longer be located unambiguously, the rollback refuses and returns {@code false} —
+     * intermediate work is never silently destroyed.
+     *
+     * @return {@code true} on successful revert; {@code false} on validation/IO failure or when
+     *         the file has diverged.
+     */
+    public boolean rollbackEdit(String path, String oldContent, String newContent, boolean replaceAll)
+    {
+        return editRollback.rollback(path, oldContent, newContent, replaceAll);
     }
 }
