@@ -10,7 +10,7 @@ import com.google.gson.annotations.SerializedName;
 public class SessionResult
 {
 	@SerializedName("repl_session_id")
-	public int sessionId;
+	public String sessionId;
 
 	@SerializedName("available_bindings")
 	public ArrayList<String> availableBindings;

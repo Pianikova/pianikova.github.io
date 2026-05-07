@@ -13,9 +13,9 @@ public class JShellObjectBridge
 {
     private static final Map<Integer, Object> objectStore = new HashMap<>();
     private static final AtomicInteger counter = new AtomicInteger(0);
-    private static final Map<Integer, Set<Integer>> sessionObjectIds = new ConcurrentHashMap<>();
+    private static final Map<String, Set<Integer>> sessionObjectIds = new ConcurrentHashMap<>();
 
-    public static int store(int sessionId, Object obj)
+    public static int store(String sessionId, Object obj)
     {
         int id = counter.incrementAndGet();
         objectStore.put(id, obj);
@@ -24,7 +24,7 @@ public class JShellObjectBridge
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> T retrieve(int sessionId, int id)
+    public static <T> T retrieve(String sessionId, int id)
     {
         Set<Integer> sessionIds = sessionObjectIds.get(sessionId);
         if (sessionIds != null && sessionIds.contains(id))
@@ -34,7 +34,7 @@ public class JShellObjectBridge
         return null;
     }
 
-    public static void releaseSession(int sessionId)
+    public static void releaseSession(String sessionId)
     {
         Set<Integer> ids = sessionObjectIds.remove(sessionId);
         if (ids != null)

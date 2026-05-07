@@ -31,7 +31,7 @@ public class JShellSessionMcpTool
 	public static final String TOOL_NAME = "JShellSession"; //$NON-NLS-1$
 
 	private static final String AnswerExample =
-        "{\"repl_session_id\":123,\"available_bindings\":[\"workbench\"]}"; //$NON-NLS-1$
+        "{\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"available_bindings\":[\"workbench\"]}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
@@ -92,7 +92,7 @@ public class JShellSessionMcpTool
 
 		try
 		{
-            var session = sessions.getOrCreateSession(0);
+            var session = sessions.getOrCreateSession(null);
             var result = session.getSessionResult();
 			var content = json.serialize(result);
             details.responseMarkdown = Messages.JShellSessionCreated;
@@ -133,7 +133,7 @@ public class JShellSessionMcpTool
 
 		description.append("\n\n**Usage:**");
 		description.append("\n- If `repl_session_id` is not provided → creates NEW session");
-		description.append("\n- If `repl_session_id` is provided → returns info about EXISTING session");
+		description.append("\n- If `repl_session_id` is provided (UUID string) → returns info about EXISTING session");
 		description.append("\n- Returns: session ID, available bindings, execution history");
 
 		description.append("\n\n### Available bindings:");
@@ -177,7 +177,7 @@ public class JShellSessionMcpTool
 		description.append("\n\n**Examples:**");
 		description.append("\n  Create new session: Q: {}");
 		description.append("\n  A: ").append(AnswerExample);
-		description.append("\n  Get existing session: Q: {\"repl_session_id\": 123}");
+		description.append("\n  Get existing session: Q: {\"repl_session_id\": \"550e8400-e29b-41d4-a716-446655440000\"}");
 
 		spec.function.description = description.toString();
 
@@ -186,9 +186,9 @@ public class JShellSessionMcpTool
 		var properties = new HashMap<String, McpToolCallProperty>();
 
 		var sessionIdProp = new McpToolCallProperty();
-		sessionIdProp.type = "integer";
+		sessionIdProp.type = "string";
 		sessionIdProp.description =
-			"Optional session ID. If 0 or not provided, a new session will be created. If provided, returns info about the existing session.";
+			"Optional session ID (UUID string). If not provided, a new session will be created. If provided, returns info about the existing session.";
 		properties.put("repl_session_id", sessionIdProp);
 
 		parameters.properties = properties;

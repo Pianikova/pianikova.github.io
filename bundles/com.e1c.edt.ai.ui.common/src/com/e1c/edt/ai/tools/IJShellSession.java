@@ -15,7 +15,7 @@ public interface IJShellSession
 	 *
 	 * @return the session ID
 	 */
-	int getSessionId();
+	String getSessionId();
 
 	/**
 	 * Executes code in this JShell session.

@@ -35,10 +35,10 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-        "{\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":123}"; //$NON-NLS-1$
+        "{\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\"}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
-        "{\"return_value\":null,\"repl_session_id\":123,\"std_out\":\"Active window: Eclipse\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
+        "{\"return_value\":null,\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"std_out\":\"Active window: Eclipse\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
@@ -283,8 +283,8 @@ public class JShellMcpTool
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();
-        sessionIdProp.type = "integer";
-		sessionIdProp.description = "Session ID from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
+        sessionIdProp.type = "string";
+		sessionIdProp.description = "Session ID (UUID string) from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
 		properties.put("repl_session_id", sessionIdProp);
 
 		parameters.properties = properties;
@@ -303,7 +303,7 @@ public class JShellMcpTool
 		public String code;
 
 		@SerializedName("repl_session_id")
-        public int sessionId;
+        public String sessionId;
 	}
 }
 

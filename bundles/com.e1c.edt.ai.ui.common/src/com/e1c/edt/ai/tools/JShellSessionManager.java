@@ -11,8 +11,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.e1c.edt.ai.CancellationTokens;
@@ -40,13 +40,12 @@ public class JShellSessionManager
     private static final int SESSION_EXPIRY_HOURS = 12;
     private static final int PREWARM_WAIT_TIMEOUT_MS = 30000;
 
-    private final Cache<Integer, JShellSession> cache;
+    private final Cache<String, JShellSession> cache;
 	private final ILog log;
 	private final Set<IJShellBindingProvider> bindingProviders;
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final IJShellClassPathProvider classPathProvider;
     private final IDispatcher dispatcher;
-    private final AtomicInteger sessionCounter = new AtomicInteger(0);
     private final AtomicReference<JShellSession> preWarmedSession = new AtomicReference<>();
     private final Object sessionLock = new Object();
 
@@ -88,9 +87,9 @@ public class JShellSessionManager
 
     @SuppressWarnings("nls")
     @Override
-    public IJShellSession getOrCreateSession(int sessionId)
+    public IJShellSession getOrCreateSession(String sessionId)
 	{
-        if (sessionId == 0)
+        if (sessionId == null || sessionId.isEmpty())
 		{
             var preWarmed = preWarmedSession.getAndSet(null);
             if (preWarmed != null)
@@ -139,9 +138,9 @@ public class JShellSessionManager
 	}
 
     @Override
-    public IJShellSession getSession(int sessionId)
+    public IJShellSession getSession(String sessionId)
     {
-        if (sessionId == 0)
+        if (sessionId == null || sessionId.isEmpty())
         {
             return null;
         }
@@ -177,7 +176,7 @@ public class JShellSessionManager
         }
         classPathProvider.addAllBundleClassPaths(shell);
 
-        int sessionId = sessionCounter.incrementAndGet();
+        String sessionId = UUID.randomUUID().toString();
         var session = new JShellSession(sessionId, shell, outBuffer, errBuffer, restrictedTypesValidator, bindingProviders);
 
         // Pre-import commonly used packages from providers
@@ -221,7 +220,7 @@ public class JShellSessionManager
                 var className = bindingType.getName();
                 classPathProvider.addClassPathFor(shell, bindingType);
                 var bindCode =
-                    String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(%d, %d);",
+                    String.format("%s %s = (%s)com.e1c.edt.ai.tools.JShellObjectBridge.retrieve(\"%s\", %d);",
                         className, varName, className, session.getSessionId(), objectId);
                 var result = session.execute(bindCode);
 
@@ -300,7 +299,7 @@ public class JShellSessionManager
 	}
 
     @Override
-    public void invalidateSession(int sessionId)
+    public void invalidateSession(String sessionId)
     {
         cache.invalidate(sessionId);
     }

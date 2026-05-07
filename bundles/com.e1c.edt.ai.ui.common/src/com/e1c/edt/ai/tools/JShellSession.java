@@ -24,7 +24,7 @@ class JShellSession
     implements IJShellSession
 {
     private static final int MAX_EXECUTION_HISTORY_SIZE = 4096;
-	private final int sessionId;
+	private final String sessionId;
 	private final JShell shell;
 	private final ByteArrayOutputStream outBuffer;
 	private final ByteArrayOutputStream errBuffer;
@@ -34,7 +34,7 @@ class JShellSession
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
     private ArrayList<String> cachedAvailableBindings;
 
-    JShellSession(int sessionId, JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
+    JShellSession(String sessionId, JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
         IRestrictedTypesValidator restrictedTypesValidator, Set<IJShellBindingProvider> bindingProviders)
 	{
         Preconditions.checkNotNull(shell);
@@ -89,7 +89,7 @@ class JShellSession
     }
 
 	@Override
-    public int getSessionId()
+    public String getSessionId()
 	{
 		return sessionId;
 	}
