@@ -177,7 +177,11 @@ public class JShellSessionManager
         classPathProvider.addAllBundleClassPaths(shell);
 
         String sessionId = UUID.randomUUID().toString();
-        var session = new JShellSession(sessionId, shell, outBuffer, errBuffer, restrictedTypesValidator, bindingProviders);
+        var sessionImports = snapshot.importsByProvider.values().stream()
+            .flatMap(Collection::stream)
+            .collect(java.util.stream.Collectors.toList());
+        var session = new JShellSession(sessionId, shell, sessionClassLoader, outBuffer, errBuffer,
+            restrictedTypesValidator, bindingProviders, sessionImports);
 
         // Pre-import commonly used packages from providers
         for (var imports : snapshot.importsByProvider.values())

@@ -26,29 +26,36 @@ class JShellSession
     private static final int MAX_EXECUTION_HISTORY_SIZE = 4096;
 	private final String sessionId;
 	private final JShell shell;
+    private final ClassLoader classLoader;
 	private final ByteArrayOutputStream outBuffer;
 	private final ByteArrayOutputStream errBuffer;
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final Set<IJShellBindingProvider> bindingProviders;
     private final List<String> executionHistory = new ArrayList<>();
+    private final List<String> imports;
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
     private ArrayList<String> cachedAvailableBindings;
 
-    JShellSession(String sessionId, JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
-        IRestrictedTypesValidator restrictedTypesValidator, Set<IJShellBindingProvider> bindingProviders)
+    JShellSession(String sessionId, JShell shell, ClassLoader classLoader, ByteArrayOutputStream outBuffer,
+        ByteArrayOutputStream errBuffer, IRestrictedTypesValidator restrictedTypesValidator,
+        Set<IJShellBindingProvider> bindingProviders, List<String> imports)
 	{
         Preconditions.checkNotNull(shell);
+        Preconditions.checkNotNull(classLoader);
         Preconditions.checkNotNull(outBuffer);
         Preconditions.checkNotNull(errBuffer);
         Preconditions.checkNotNull(restrictedTypesValidator);
         Preconditions.checkNotNull(bindingProviders);
+        Preconditions.checkNotNull(imports);
 
         this.sessionId = sessionId;
 		this.shell = shell;
+        this.classLoader = classLoader;
 		this.outBuffer = outBuffer;
 		this.errBuffer = errBuffer;
         this.restrictedTypesValidator = restrictedTypesValidator;
         this.bindingProviders = bindingProviders;
+        this.imports = new ArrayList<>(imports);
         this.cachedAvailableBindings = buildAvailableBindings();
 	}
 
@@ -250,6 +257,18 @@ class JShellSession
     public List<String> getExecutionHistory()
     {
         return new ArrayList<>(executionHistory);
+    }
+
+    @Override
+    public ClassLoader getClassLoader()
+    {
+        return classLoader;
+    }
+
+    @Override
+    public List<String> getImports()
+    {
+        return new ArrayList<>(imports);
     }
 
     @Override

@@ -367,6 +367,10 @@ public class JShellManualMcpTool
             .append(".\n\n");
         sb.append("You MUST use this tool before ").append(JShellMcpTool.TOOL_NAME)
             .append(" when working with EDT metadata API or Eclipse platform API.\n");
+        sb.append("This manual gives workflow guidance, not proof of exact Java signatures. ")
+            .append("Do not invent methods, overloads, enum constants, packages, or type names from the manual text. ")
+            .append("Use ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" to confirm exact API before executing JShell code.\n");
         sb.append("Use it for create/edit/delete/look-up scenarios, for workbench/editor/workspace code, and ")
             .append("for any code that uses bindings like `mdFactory`, `modelManager`, `projectManager`, ")
             .append("`workspaceRoot`, `workbench`, `resourceLookup`, or `fqnGenerator`.\n\n");
@@ -388,8 +392,11 @@ public class JShellManualMcpTool
         sb.append("1. Call ").append(TOOL_NAME).append(" with a convention-matching scenario id.\n");
         sb.append("2. If status is `not_matched` or `fuzzy`, refine using `suggestions` or `available_scenarios`.\n");
         sb.append("3. Create or reuse a session with ").append(JShellSessionMcpTool.TOOL_NAME).append(".\n");
-        sb.append("4. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
-        sb.append("5. If ").append(JShellMcpTool.TOOL_NAME)
+        sb.append("4. Use ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" to verify exact packages, types, enum constants, methods, fields, constructors, and signatures ")
+            .append("for every API call that is not already proven by tool output.\n");
+        sb.append("5. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
+        sb.append("6. If ").append(JShellMcpTool.TOOL_NAME)
             .append(" returns an EDT/Eclipse preflight error, return to ").append(TOOL_NAME)
             .append(" with a better matching scenario id.\n");
         return sb.toString();

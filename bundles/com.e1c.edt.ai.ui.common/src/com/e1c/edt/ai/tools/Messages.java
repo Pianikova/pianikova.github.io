@@ -105,6 +105,8 @@ public class Messages
     public static String JShellSessionPreWarming;
     public static String JShellManualRequest;
     public static String JShellManualResponse;
+    public static String JShellReflectionRequest;
+    public static String JShellReflectionResponse;
 
     // Marker operations
     public static String MarkersTitle;

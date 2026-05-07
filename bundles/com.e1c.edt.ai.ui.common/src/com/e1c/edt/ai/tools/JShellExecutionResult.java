@@ -24,4 +24,7 @@ public class JShellExecutionResult
 
     @SerializedName("runtime_errors")
     public List<RuntimeError> runtimeErrors;
+
+    @SerializedName("suggested_reflection_queries")
+    public List<String> suggestedReflectionQueries;
 }

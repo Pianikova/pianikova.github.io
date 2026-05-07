@@ -40,6 +40,20 @@ public interface IJShellSession
     SessionResult getSessionResult();
 
     /**
+     * Returns class loader used by this session for resolving Java API types.
+     *
+     * @return session class loader
+     */
+    ClassLoader getClassLoader();
+
+    /**
+     * Returns imports available in this session.
+     *
+     * @return list of import statements
+     */
+    List<String> getImports();
+
+    /**
      * Closes the JShell session and releases resources.
      */
 	void close();

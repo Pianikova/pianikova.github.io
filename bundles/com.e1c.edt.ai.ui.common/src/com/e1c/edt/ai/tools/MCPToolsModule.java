@@ -49,6 +49,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(DeleteMarkersMcpTool.class);
         toolBinder.addBinding().to(JShellSessionMcpTool.class);
         toolBinder.addBinding().to(JShellManualMcpTool.class);
+        toolBinder.addBinding().to(JShellReflectionMcpTool.class);
         toolBinder.addBinding().to(JShellMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
@@ -61,6 +62,12 @@ public class MCPToolsModule
         bind(ITreeBuilder.class).to(TreeBuilder.class);
         bind(IJShellClassPathProvider.class).to(JShellClassPathProvider.class).in(Singleton.class);
         bind(IJShellClassPathProvider.class).to(JShellClassPathProvider.class).in(Singleton.class);
+        bind(IJShellReflectionService.class).to(JShellReflectionService.class).in(Singleton.class);
+        bind(IJShellTypeIndex.class).to(JShellTypeIndex.class).in(Singleton.class);
+        bind(IJShellMemberResolver.class).to(JShellMemberResolver.class).in(Singleton.class);
+        bind(IWildcardMatcher.class).to(WildcardMatcher.class).in(Singleton.class);
+        bind(IReflectionSignatureFormatter.class).to(ReflectionSignatureFormatter.class).in(Singleton.class);
+        bind(IJShellReflectionQuerySuggester.class).to(JShellReflectionQuerySuggester.class).in(Singleton.class);
         bind(IRestrictedTypesProvider.class).to(RestrictedTypesProvider.class).in(Singleton.class);
         bind(IRestrictedTypesValidator.class).to(RestrictedTypesValidator.class).in(Singleton.class);
         bind(IReplacements.class).to(Replacements.class).in(Singleton.class);
