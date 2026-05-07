@@ -8,7 +8,6 @@ import com.e1c.edt.ai.assistent.model.Parameters;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Names;
 
 public class AIModule
@@ -22,10 +21,6 @@ public class AIModule
     {
         // @formatter:off
         install(new AssistentModule());
-
-        // skills
-        var skillBinder = MapBinder.newMapBinder(binder(), String.class, ISkill.class);
-//        skillBinder.addBinding("git-commit-message" or Skills.GIT_COMMIT_MESSAGE).to(GitCommitMessageSkill.class);
 
         bind(ParametersParser.class).in(Singleton.class);
         bind(new TypeLiteral<IValidator<String>>() { /**/ }).annotatedWith(Names.named(PARAMETERS)).to(ParametersParser.class);
@@ -61,8 +56,6 @@ public class AIModule
         bind(IProjectTools.class).to(ProjectTools.class).in(Singleton.class);
         bind(ITraceScenario.class).to(TraceScenario.class).in(Singleton.class);
         bind(IConversationFacade.class).to(ConversationFacade.class).in(Singleton.class);
-        bind(ISkillFacade.class).to(SkillFacade.class).in(Singleton.class);
-        bind(ISkillRegistry.class).to(SkillRegistry.class).in(Singleton.class);
         bind(RegexTemplateProcessor.class).in(Singleton.class);
         // @formatter:on
     }

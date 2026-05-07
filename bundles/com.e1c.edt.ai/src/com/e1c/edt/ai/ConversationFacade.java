@@ -44,52 +44,18 @@ public class ConversationFacade
     private final IJson json;
     private final IMcpTools mcpTools;
     private final ISettings settings;
-    private final ISkillFacade skillFacade;
 
     @Inject
-    public ConversationFacade(IConversations conversations, IJson json, IMcpTools mcpTools, ISettings settings,
-        ISkillFacade skillFacade)
+    public ConversationFacade(IConversations conversations, IJson json, IMcpTools mcpTools, ISettings settings)
     {
         Preconditions.checkNotNull(conversations);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(settings);
-        Preconditions.checkNotNull(skillFacade);
-        this.skillFacade = skillFacade;
         this.settings = settings;
         this.conversations = conversations;
         this.json = json;
         this.mcpTools = mcpTools;
-    }
-
-    /**
-     * Асинхронно отправляет сообщение ассистенту.
-     * <p>
-     * Если запрос помечен как запрос скилла, сначала выполняет скилл через {@link ISkillFacade},
-     * используя результат как подготовленное сообщение. Затем отправляет сообщение в диалог,
-     * создавая новый диалог при необходимости или продолжая существующий.
-     * </p>
-     *
-     * @param request запрос пользователя с сообщением, проектом и сессией диалога
-     * @param cancellationToken токен для отмены асинхронной операции
-     * @return {@link CompletableFuture} с результатом отправки, содержащим текст ответа и сессию
-     */
-    @Override
-    public CompletableFuture<SendMessageResult> sendAsync(SendUserMessageRequest request,
-        ICancellationToken cancellationToken)
-    {
-        CompletableFuture<SendUserMessageRequest> result;
-        if (request.isSkillRequest())
-        {
-            result = skillFacade.execute(request, cancellationToken).thenApply(prepared ->
-                 new SendUserMessageRequest(request.getProjectId(), prepared, request.getConversationSession(),
-                     request.isForceNewConversation()));
-        }
-        else
-        {
-            result = CompletableFuture.completedFuture(request);
-        }
-        return result.thenCompose(preparedRequest -> send(preparedRequest, cancellationToken));
     }
 
     /**
@@ -104,7 +70,8 @@ public class ConversationFacade
      * @param cancellationToken токен для отмены операции
      * @return {@link CompletableFuture} с результатом отправки
      */
-    private CompletableFuture<SendMessageResult> send(SendUserMessageRequest request,
+    @Override
+    public CompletableFuture<SendMessageResult> sendAsync(SendUserMessageRequest request,
         ICancellationToken cancellationToken)
     {
         boolean isNewConversation = request.isForceNewConversation() || request.getConversationSession() == null
