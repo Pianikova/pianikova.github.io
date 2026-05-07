@@ -3,8 +3,6 @@
  */
 package com.e1c.edt.ai.tools;
 
-import java.util.ArrayList;
-
 import com.google.gson.annotations.SerializedName;
 
 public class SessionResult
@@ -13,8 +11,5 @@ public class SessionResult
 	public String sessionId;
 
 	@SerializedName("available_bindings")
-	public ArrayList<String> availableBindings;
-
-	@SerializedName("execution_history")
-	public ArrayList<String> executionHistory;
+	public java.util.List<String> availableBindings;
 }

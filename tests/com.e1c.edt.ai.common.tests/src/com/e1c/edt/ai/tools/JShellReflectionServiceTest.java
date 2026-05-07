@@ -60,12 +60,38 @@ public class JShellReflectionServiceTest
     }
 
     @Test
+    public void testEnumWildcardReturnsConstantsOnly()
+    {
+        var results = service.search(new TestSession(), List.of("java.time.DayOfWeek.*")); //$NON-NLS-1$
+
+        assertEquals("member-search", results.get(0).kind); //$NON-NLS-1$
+        assertEquals("enum", results.get(0).results.get(0).kind); //$NON-NLS-1$
+        assertTrue(results.get(0).results.get(0).items.contains("MONDAY")); //$NON-NLS-1$
+        assertFalse(results.get(0).results.get(0).items.stream().anyMatch(item -> item.startsWith("wait("))); //$NON-NLS-1$
+    }
+
+    @Test
     public void testTypeLookupReturnsPublicMembers()
     {
         var results = service.search(new TestSession(), List.of("java.lang.String")); //$NON-NLS-1$
 
         assertEquals("type-search", results.get(0).kind); //$NON-NLS-1$
         assertTrue(results.get(0).results.get(0).items.stream().anyMatch(item -> item.startsWith("substring("))); //$NON-NLS-1$
+    }
+
+    @Test
+    public void testExactFqnTypeLookupDoesNotRequireOsgiIndex()
+    {
+        var typeIndex = new FailingIndexWildcardMatcher();
+        var formatter = new ReflectionSignatureFormatter();
+        var memberResolver = new JShellMemberResolver(typeIndex, new WildcardMatcher(), formatter);
+        var reflectionService = new JShellReflectionService(typeIndex, memberResolver, formatter,
+            new JShellReflectionQuerySuggester());
+
+        var results = reflectionService.search(new TestSession(), List.of("java.lang.String")); //$NON-NLS-1$
+
+        assertEquals("type-search", results.get(0).kind); //$NON-NLS-1$
+        assertEquals("java.lang.String", results.get(0).results.get(0).fqn); //$NON-NLS-1$
     }
 
     @Test
@@ -93,12 +119,6 @@ public class JShellReflectionServiceTest
         }
 
         @Override
-        public List<String> getExecutionHistory()
-        {
-            return List.of();
-        }
-
-        @Override
         public SessionResult getSessionResult()
         {
             return new SessionResult();
@@ -120,6 +140,21 @@ public class JShellReflectionServiceTest
         public void close()
         {
             // Nothing to close.
+        }
+    }
+
+    private static class FailingIndexWildcardMatcher
+        extends JShellTypeIndex
+    {
+        FailingIndexWildcardMatcher()
+        {
+            super(new WildcardMatcher());
+        }
+
+        @Override
+        public boolean hasPackage(String packageName)
+        {
+            throw new AssertionError("Exact FQN lookup should not scan packages"); //$NON-NLS-1$
         }
     }
 }

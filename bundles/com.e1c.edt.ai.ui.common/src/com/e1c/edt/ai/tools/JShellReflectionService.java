@@ -7,9 +7,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -26,6 +29,8 @@ public class JShellReflectionService
     private final IJShellMemberResolver memberResolver;
     private final IReflectionSignatureFormatter signatureFormatter;
     private final IJShellReflectionQuerySuggester querySuggester;
+    private final Cache<Class<?>, List<String>> publicMembersCache =
+        CacheBuilder.newBuilder().maximumSize(2048).weakKeys().build();
 
     @Inject
     public JShellReflectionService(IJShellTypeIndex typeIndex, IJShellMemberResolver memberResolver,
@@ -121,6 +126,18 @@ public class JShellReflectionService
     }
 
     private List<String> publicMembers(Class<?> type)
+    {
+        try
+        {
+            return publicMembersCache.get(type, () -> buildPublicMembers(type));
+        }
+        catch (ExecutionException e)
+        {
+            return buildPublicMembers(type);
+        }
+    }
+
+    private List<String> buildPublicMembers(Class<?> type)
     {
         var items = new ArrayList<String>();
         Arrays.stream(type.getMethods())

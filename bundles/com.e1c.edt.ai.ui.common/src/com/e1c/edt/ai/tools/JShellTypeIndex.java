@@ -6,8 +6,10 @@ package com.e1c.edt.ai.tools;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -26,6 +28,8 @@ public class JShellTypeIndex
 {
     private final IWildcardMatcher wildcardMatcher;
     private final AtomicReference<List<String>> cachedTypeNames = new AtomicReference<>();
+    private final AtomicReference<Map<String, List<String>>> cachedSimpleNameIndex = new AtomicReference<>();
+    private final Object indexLock = new Object();
 
     @Inject
     public JShellTypeIndex(IWildcardMatcher wildcardMatcher)
@@ -38,6 +42,19 @@ public class JShellTypeIndex
     public List<JShellResolvedType> findTypes(IJShellSession session, String query, int limit)
     {
         var normalizedQuery = normalizeTypeQuery(query);
+        if (normalizedQuery.isEmpty())
+        {
+            return List.of();
+        }
+        if (!wildcardMatcher.hasWildcard(normalizedQuery))
+        {
+            var directTypes = findDirectTypes(session, normalizedQuery, limit);
+            if (!directTypes.isEmpty())
+            {
+                return directTypes;
+            }
+        }
+
         var names = candidateNames(session, normalizedQuery);
         return names.stream()
             .filter(name -> matchesTypeQuery(normalizedQuery, name))
@@ -75,7 +92,10 @@ public class JShellTypeIndex
         names.add(query);
         if (query.indexOf('.') >= 0 || wildcardMatcher.hasWildcard(query))
         {
-            names.addAll(getTypeNames());
+            if (wildcardMatcher.hasWildcard(query))
+            {
+                names.addAll(getTypeNames());
+            }
             return names;
         }
 
@@ -83,7 +103,32 @@ public class JShellTypeIndex
         {
             addImportCandidate(names, importStatement, query);
         }
-        names.addAll(getTypeNames());
+        names.addAll(getSimpleNameIndex().getOrDefault(query, List.of()));
+        return names;
+    }
+
+    private List<JShellResolvedType> findDirectTypes(IJShellSession session, String query, int limit)
+    {
+        var names = directTypeNames(session, query);
+        return names.stream()
+            .map(name -> load(session, name))
+            .filter(type -> type != null)
+            .limit(limit)
+            .collect(Collectors.toList());
+    }
+
+    private Collection<String> directTypeNames(IJShellSession session, String query)
+    {
+        var names = new LinkedHashSet<String>();
+        names.add(query);
+        if (query.indexOf('.') < 0)
+        {
+            names.add("java.lang." + query); //$NON-NLS-1$
+            for (var importStatement : session.getImports())
+            {
+                addImportCandidate(names, importStatement, query);
+            }
+        }
         return names;
     }
 
@@ -141,22 +186,63 @@ public class JShellTypeIndex
             return cached;
         }
 
-        var names = new ArrayList<String>();
-        var anchor = FrameworkUtil.getBundle(JShellTypeIndex.class);
-        if (anchor != null && anchor.getBundleContext() != null)
+        synchronized (indexLock)
         {
-            for (var bundle : anchor.getBundleContext().getBundles())
+            cached = cachedTypeNames.get();
+            if (cached != null)
             {
-                addBundleTypes(names, bundle);
+                return cached;
             }
+
+            var names = new ArrayList<String>();
+            var anchor = FrameworkUtil.getBundle(JShellTypeIndex.class);
+            if (anchor != null && anchor.getBundleContext() != null)
+            {
+                for (var bundle : anchor.getBundleContext().getBundles())
+                {
+                    addBundleTypes(names, bundle);
+                }
+            }
+            var sorted = names.stream()
+                .filter(name -> !name.contains("$")) //$NON-NLS-1$
+                .distinct()
+                .sorted(Comparator.naturalOrder())
+                .collect(Collectors.toList());
+            cachedTypeNames.set(List.copyOf(sorted));
+            return cachedTypeNames.get();
         }
-        var sorted = names.stream()
-            .filter(name -> !name.contains("$")) //$NON-NLS-1$
-            .distinct()
-            .sorted(Comparator.naturalOrder())
-            .collect(Collectors.toList());
-        cachedTypeNames.compareAndSet(null, sorted);
-        return cachedTypeNames.get();
+    }
+
+    private Map<String, List<String>> getSimpleNameIndex()
+    {
+        var cached = cachedSimpleNameIndex.get();
+        if (cached != null)
+        {
+            return cached;
+        }
+
+        synchronized (indexLock)
+        {
+            cached = cachedSimpleNameIndex.get();
+            if (cached != null)
+            {
+                return cached;
+            }
+
+            var index = new HashMap<String, List<String>>();
+            for (var name : getTypeNames())
+            {
+                index.computeIfAbsent(simpleName(name), key -> new ArrayList<>()).add(name);
+            }
+
+            var immutableIndex = new HashMap<String, List<String>>();
+            for (var entry : index.entrySet())
+            {
+                immutableIndex.put(entry.getKey(), List.copyOf(entry.getValue()));
+            }
+            cachedSimpleNameIndex.set(Map.copyOf(immutableIndex));
+            return cachedSimpleNameIndex.get();
+        }
     }
 
     private void addBundleTypes(List<String> names, Bundle bundle)

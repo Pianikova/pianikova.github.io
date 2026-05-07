@@ -22,7 +22,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.ui.IDispatcher;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -39,24 +38,21 @@ public class JShellReflectionMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IJShellSessionManager sessions;
     private final IJShellReflectionService reflectionService;
-    private final IDispatcher dispatcher;
     private final McpToolCallSpecification specification;
 
     @Inject
     public JShellReflectionMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IJShellSessionManager sessions, IJShellReflectionService reflectionService, IDispatcher dispatcher)
+        IJShellSessionManager sessions, IJShellReflectionService reflectionService)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(sessions);
         Preconditions.checkNotNull(reflectionService);
-        Preconditions.checkNotNull(dispatcher);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.sessions = sessions;
         this.reflectionService = reflectionService;
-        this.dispatcher = dispatcher;
         this.specification = createSpecification();
     }
 
@@ -111,14 +107,14 @@ public class JShellReflectionMcpTool
                 ToolErrorType.RETRYABLE);
         }
 
-        var result = dispatcher.dispatch(() -> reflectionService.search(session, request.queries));
-        if (result.isEmpty())
+        var result = reflectionService.search(session, request.queries);
+        if (result == null || result.isEmpty())
         {
             throw new ToolException("Can't analyze API.", null, ToolErrorType.RETRYABLE); //$NON-NLS-1$
         }
 
         details.responseMarkdown = Messages.JShellReflectionResponse;
-        return messageFactory.createMessage(this, call, json.serialize(result.get()), details);
+        return messageFactory.createMessage(this, call, json.serialize(result), details);
     }
 
     @SuppressWarnings("nls")

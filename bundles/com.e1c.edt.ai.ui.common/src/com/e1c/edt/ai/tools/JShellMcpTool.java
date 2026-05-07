@@ -237,6 +237,11 @@ public class JShellMcpTool
             .append("verify the exact type/member signatures with ").append(JShellReflectionMcpTool.TOOL_NAME);
         description.append("\n- If a previous execution failed with `cannot find symbol`, `method not found`, or `package does not exist`, use ")
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" with `suggested_reflection_queries` instead of guessing APIs");
+        description.append("\n- After executing code that changes EDT/Eclipse project resources or metadata, MUST call ")
+            .append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" for the affected project to inspect resulting markers. Use `marker_type: \"problem\"` ")
+            .append("for build/validation errors, `marker_type: \"1c\"` for 1C/BSL markers, and ")
+            .append("`marker_type: \"ai_marker\"` for AIError/AIWarning/AIInfo markers");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
 
@@ -271,7 +276,9 @@ public class JShellMcpTool
         description.append("\n3. Call ").append(JShellReflectionMcpTool.TOOL_NAME)
             .append(" for every uncertain or unverified Java API name/signature before writing calls that depend on it");
         description.append("\n4. Use ").append(TOOL_NAME).append(" with that ID to execute code");
-		description.append("\n5. Reuse same ID to maintain state");
+        description.append("\n5. If project resources or metadata were changed, call ").append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" for `problem`, `1c`, and relevant `ai_marker` errors/warnings before reporting success");
+		description.append("\n6. Reuse same ID to maintain state");
 
 		// Add restricted types information
         var restrictedTypes = restrictedTypesProvider.getRestrictedTypes();

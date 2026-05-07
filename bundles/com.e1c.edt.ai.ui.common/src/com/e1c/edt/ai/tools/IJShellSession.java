@@ -26,14 +26,7 @@ public interface IJShellSession
 	JShellExecutionResult execute(String code);
 
 	/**
-	 * Returns the history of code executed in this session.
-	 *
-	 * @return list of executed code snippets
-	 */
-	List<String> getExecutionHistory();
-
-	/**
-     * Returns session result with available bindings and execution history.
+     * Returns session result with available bindings.
      *
      * @return session result
      */

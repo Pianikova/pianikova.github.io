@@ -23,7 +23,6 @@ import jdk.jshell.SnippetEvent;
 class JShellSession
     implements IJShellSession
 {
-    private static final int MAX_EXECUTION_HISTORY_SIZE = 4096;
 	private final String sessionId;
 	private final JShell shell;
     private final ClassLoader classLoader;
@@ -31,7 +30,6 @@ class JShellSession
 	private final ByteArrayOutputStream errBuffer;
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final Set<IJShellBindingProvider> bindingProviders;
-    private final List<String> executionHistory = new ArrayList<>();
     private final List<String> imports;
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
     private ArrayList<String> cachedAvailableBindings;
@@ -75,24 +73,11 @@ class JShellSession
     }
 
     /**
-     * Adds source to execution history, maintaining maximum size.
-     */
-    private void addToExecutionHistory(String source)
-    {
-        executionHistory.add(source);
-        if (executionHistory.size() > MAX_EXECUTION_HISTORY_SIZE)
-        {
-            executionHistory.remove(0);
-        }
-    }
-
-    /**
-     * Populates session result fields (available bindings and execution history).
+     * Populates session result fields.
      */
     private void populateSessionResult(SessionResult result)
     {
         result.availableBindings = new ArrayList<>(cachedAvailableBindings);
-        result.executionHistory = new ArrayList<>(executionHistory);
     }
 
 	@Override
@@ -192,7 +177,6 @@ class JShellSession
                             break;
 
                         case VALID:
-                            addToExecutionHistory(source);
                             // Check for runtime exceptions
                             if (event.exception() != null)
                             {
@@ -253,12 +237,6 @@ class JShellSession
         return result;
 	}
 
-	@Override
-    public List<String> getExecutionHistory()
-    {
-        return new ArrayList<>(executionHistory);
-    }
-
     @Override
     public ClassLoader getClassLoader()
     {
@@ -292,7 +270,7 @@ class JShellSession
             }
             finally
             {
-                executionHistory.clear();
+                // Nothing to clear.
             }
         }
 	}

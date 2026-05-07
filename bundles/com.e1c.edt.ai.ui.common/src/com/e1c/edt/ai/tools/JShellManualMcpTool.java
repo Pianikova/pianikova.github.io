@@ -396,7 +396,11 @@ public class JShellManualMcpTool
             .append(" to verify exact packages, types, enum constants, methods, fields, constructors, and signatures ")
             .append("for every API call that is not already proven by tool output.\n");
         sb.append("5. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
-        sb.append("6. If ").append(JShellMcpTool.TOOL_NAME)
+        sb.append("6. After code changes project resources or metadata, call ").append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" for the affected project. Use `marker_type: \"problem\"` for build/validation issues, ")
+            .append("`marker_type: \"1c\"` for 1C/BSL markers, and `marker_type: \"ai_marker\"` ")
+            .append("for AIError/AIWarning/AIInfo markers.\n");
+        sb.append("7. If ").append(JShellMcpTool.TOOL_NAME)
             .append(" returns an EDT/Eclipse preflight error, return to ").append(TOOL_NAME)
             .append(" with a better matching scenario id.\n");
         return sb.toString();
