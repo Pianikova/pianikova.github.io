@@ -161,6 +161,18 @@ public class JShellReflectionMcpTool
             .append(" when unsure about packages, types, enum constants, methods, fields, constructors, or signatures.");
         description.append("\n\nUse this tool to determine the exact Java API. Do not rely on memory or guesswork for ")
             .append("method names, overloads, enum constants, package names, or type names.");
+        description.append("\n\nEDT batch-first workflow: before writing JShell code that touches more than one EDT type, ")
+            .append("factory method, enum, field, or method, collect all unknown API names and call ")
+            .append(TOOL_NAME)
+            .append(" once with the full `queries` array. Prefer one broad batch call over many small calls.");
+        description.append("\n\nDo NOT use this tool only to re-check baseline top-level CRUD already returned by an exact ")
+            .append(JShellManualMcpTool.TOOL_NAME)
+            .append(" scenario or EDT metadata API card. For those cases, use the manual directly. Use reflection only for ")
+            .append("unknown child objects, form internals, module internals, enum constants, overloads, or APIs not covered by the manual.");
+        description.append("\n\nKnown EDT enum constants already covered by the manual do not need reflection: ")
+            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
+            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`. ")
+            .append("Do not look up `AccumulationRegisterType.REMAINDERS`; use `BALANCE` for remainder/balance registers.");
         description.append("\n\nAccepts multiple search strings in one call and returns results in the same order.");
         description.append("\nSupports `*` wildcards for type and member lookup.");
         description.append("\nOne query can return multiple search results; each result contains a flat `items` list.");

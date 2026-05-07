@@ -43,7 +43,7 @@ public class JShellReflectionQuerySuggesterTest
     public void testSuggestsFromCompilationErrorsAndCode()
     {
         var error = new CompilationError();
-        error.message = "cannot find symbol\n  symbol:   method numberQualifiers(int)"; //$NON-NLS-1$
+        error.message = "cannot find symbol\\n  symbol:   method numberQualifiers(int)"; //$NON-NLS-1$
 
         var suggestions = suggester.suggestForCompilationErrors(
             "new TypeDescriptionBuilder().numberQualifiers(4);", //$NON-NLS-1$
@@ -52,5 +52,21 @@ public class JShellReflectionQuerySuggesterTest
 
         assertTrue(suggestions.contains("TypeDescriptionBuilder.*numberQualifiers*")); //$NON-NLS-1$
         assertTrue(suggestions.contains("*numberQualifiers*")); //$NON-NLS-1$
+    }
+
+    @Test
+    public void testSuggestsEnumOwnerFromCompilationLocation()
+    {
+        var error = new CompilationError();
+        error.message =
+            "cannot find symbol\n  symbol:   variable Turnovers\n  location: class com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType"; //$NON-NLS-1$
+
+        var suggestions = suggester.suggestForCompilationErrors(
+            "register.setRegisterType(AccumulationRegisterType.Turnovers);", //$NON-NLS-1$
+            List.of(error),
+            12);
+
+        assertTrue(suggestions.contains("com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType.*")); //$NON-NLS-1$
+        assertTrue(suggestions.contains("AccumulationRegisterType.*")); //$NON-NLS-1$
     }
 }

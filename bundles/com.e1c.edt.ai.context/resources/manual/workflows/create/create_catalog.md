@@ -34,9 +34,9 @@ Catalog created = globalContext.execute(new AbstractBmTask<Catalog>("Create cata
         TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
         TypeDescription typeDesc = new TypeDescriptionBuilder()
             .addType(stringType)
+            .setStringQualifiers(100, false)
             .build();
 
-        // Note: String/Number qualifiers can be set via TypeDescriptionBuilder if needed
         article.setType(typeDesc);
         catalog.getAttributes().add(article);
 
@@ -166,6 +166,7 @@ attr.setUuid(UUID.randomUUID());
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
 TypeDescription attrType = new TypeDescriptionBuilder()
     .addType(stringType)
+    .setStringQualifiers(100, false)
     .build();
 attr.setType(attrType);
 catalog.getAttributes().add(attr);

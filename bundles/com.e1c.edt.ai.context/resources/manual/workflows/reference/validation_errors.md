@@ -36,8 +36,13 @@ if (catalog != null) {
 **Important Notes:**
 - Always get typeProvider INSIDE the transaction
 - TypeItem proxies must be obtained and used within the SAME IBmTransaction
-- For String types, use buildStringTypeDescription() or buildStringTypeWithQualifiersDescription()
-- For Number types, use buildNumberTypeDescription() or buildNumberTypeWithQualifiersDescription()
+- For qualified types, use `TypeDescriptionBuilder` fluent methods:
+  `setStringQualifiers(length, fixed)`,
+  `setNumberQualifiers(scale, precision, nonNegative)`,
+  `setBinaryQualifiers(length, fixed)`, or
+  `setDateQualifiers(DateFractions)`
+- Do not use `modelFactory` to create type qualifiers in JShell snippets; it is
+  slower, easier to misuse, and may hit OSGi timeout issues
 
 ### SU8: Scale Cannot Exceed Precision
 
@@ -144,7 +149,7 @@ int scale = nq.getScale();
 - Always use `globalContext.execute(new AbstractBmTask<Void>(...) {...})`
 - Get object by FQN: `transaction.getTopObjectByFqn("Catalog.Имя")`
 - Modify directly (no attachTopObject needed for existing objects)
-- Set type or qualifiers using modelFactory
+- Set type or qualifiers with `TypeDescriptionBuilder` inside the same BM transaction
 
 **Step 4: Verify fix**
 - Call `GetMarkers` again with `marker_type: "1c"`
@@ -156,7 +161,7 @@ int scale = nq.getScale();
 
 **Important Reminders:**
 - TypeDescription and TypeItem must be created INSIDE the transaction
-- Use `modelFactory` for creating qualifiers in JShell context
+- Use `TypeDescriptionBuilder` for qualifiers in JShell context
 - Set UUIDs manually when creating new metadata objects
 - For existing objects: modify directly, don't use attachTopObject()
 - Check that Scale <= Precision for all Number types

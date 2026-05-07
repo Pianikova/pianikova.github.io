@@ -68,6 +68,30 @@ AccountingRegister register = globalContext.execute(new AbstractBmTask<Accountin
 **Note:** AccountingRegister requires ChartOfAccounts reference and at least one Dimension with account reference type.
 **Note:** `AccountingRegisterDimension` and `AccountingRegisterResource` support `setBalance(boolean)` in EDT API.
 
+### Registrar modes
+
+Use one of these modes deliberately:
+- **Mode A: register only for later linking.** Creating only the register is acceptable as an intermediate step, but `GetMarkers` may return SU45 until a document registrar is linked.
+- **Mode B: register with registrar document.** Preferred when the user asks for a complete valid register workflow.
+
+Accounting registers MUST have at least one document that records to them. Registrars are configured on documents, not on registers.
+
+```java
+Document accountingOperation = (Document)transaction.getTopObjectByFqn("Document.AccountingOperation");
+AccountingRegister accounting = (AccountingRegister)transaction.getTopObjectByFqn("AccountingRegister.Accounting");
+if (accountingOperation != null && accounting != null && !accountingOperation.getRegisterRecords().contains(accounting)) {
+    accountingOperation.getRegisterRecords().add(accounting);
+}
+```
+
+If the registrar document does not exist, create it in the same BM transaction or call `create_document` first, then call `add_document_registers`.
+
+### Expected validation marker for Mode A
+
+If you create the register without linking a registrar document, `GetMarkers` can return SU45: "Некорректный состав регистраторов регистра. Ни один из документов не является регистратором для регистра".
+
+Do not report success while this marker remains unless the user explicitly asked to create an invalid intermediate register for later linking.
+
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project. For Mode B, fix all new validation markers before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.

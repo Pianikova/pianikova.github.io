@@ -1,5 +1,21 @@
 ## TypeDescriptionBuilder Best Practices - Transaction Context
 
+### Canonical Packages
+
+Use these exact packages in JShell:
+- `com._1c.g5.v8.dt.platform.IEObjectProvider`
+- `com._1c.g5.v8.dt.platform.IEObjectTypeNames`
+- `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`
+- `com._1c.g5.v8.dt.mcore.TypeDescription`
+- `com._1c.g5.v8.dt.mcore.TypeItem`
+- `com._1c.g5.v8.dt.mcore.McorePackage`
+
+Do not import `IEObjectProvider` from `mcore` or `metadata.md`. Do not import `TypeDescriptionBuilder` from `dt.md`; that package is wrong for EDT TypeDescription creation.
+
+For `IEObjectTypeNames.STRING`, always set a finite length with `setStringQualifiers(length, false)` unless a scenario explicitly requires a fixed string with `true`. An unlimited string can produce SU8 marker: "Строка не может быть неограниченной длины".
+
+Never pass a nullable proxy directly to `TypeDescriptionBuilder.addType(...)`. `typeProvider.getProxy(...)` may return `null` for specific metadata names that do not exist in the current project. Check the proxy first and either stop with a clear message or fall back to a generic type such as `IEObjectTypeNames.CATALOG_REF`, `DOCUMENT_REF`, `STRING`, or `NUMBER`.
+
 ### ⚠️ CRITICAL: TypeDescription Must Be Created Inside Transaction
 
 TypeDescription and TypeItem proxies MUST be created and used within the SAME BM transaction.
@@ -200,6 +216,9 @@ attribute.setType(typeDesc);
 
 **Error**: `IllegalArgumentException` when adding type
 **Solution**: Validate `typeProvider.getProxy(...)` returns non-null before `addType(...)`
+
+**Error**: `The 'no null' constraint is violated` in `TypeDescriptionBuilder.addType`
+**Solution**: A `TypeItem` proxy is null. Do not call `addType(proxy)` until `proxy != null`; use a generic fallback or create the referenced metadata first.
 
 **Error**: SU8 - Scale > Precision
 **Solution**: Ensure `scale <= precision` for Number types

@@ -79,6 +79,7 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Create catal
         TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
         TypeDescription nameType = new TypeDescriptionBuilder()
             .addType(stringType)
+            .setStringQualifiers(100, false)
             .build();
         name.setType(nameType);
         catalog.getAttributes().add(name);

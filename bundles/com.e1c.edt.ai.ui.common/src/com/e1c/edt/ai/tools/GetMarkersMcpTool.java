@@ -340,6 +340,7 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- `ai_marker` includes `AIError`, `AIWarning`, `AIInfo` marker types.");
         description.append("\n- Markers are sorted by importance: severity (error > warning > info) then priority (high > normal > low).");
         description.append("\n- If not all markers are returned, the response will show total count and suggest pagination.");
+        description.append("\n- After a JShell metadata/resource change, wait for the JShell result before calling this tool for the same project.");
         description.append("\n\nRelated tools:");
         description.append("\n- Create/update markers: `" + SetMarkersMcpTool.TOOL_NAME + "`.");
         description.append("\n- Remove markers: `" + DeleteMarkersMcpTool.TOOL_NAME + "`.");

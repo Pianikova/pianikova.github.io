@@ -29,6 +29,8 @@ public class JShellTypeIndex
     private final IWildcardMatcher wildcardMatcher;
     private final AtomicReference<List<String>> cachedTypeNames = new AtomicReference<>();
     private final AtomicReference<Map<String, List<String>>> cachedSimpleNameIndex = new AtomicReference<>();
+    private final AtomicReference<Map<String, List<String>>> cachedSignificantSimpleNameIndex =
+        new AtomicReference<>(Map.of());
     private final Object indexLock = new Object();
 
     @Inject
@@ -36,6 +38,24 @@ public class JShellTypeIndex
     {
         Preconditions.checkNotNull(wildcardMatcher);
         this.wildcardMatcher = wildcardMatcher;
+    }
+
+    @Override
+    public void warmUp(Collection<Class<?>> significantClasses)
+    {
+        if (significantClasses != null)
+        {
+            var significantTypeNames = significantClasses.stream()
+                .filter(clazz -> clazz != null && !clazz.isPrimitive() && !clazz.isArray())
+                .map(Class::getName)
+                .filter(name -> !name.contains("$")) //$NON-NLS-1$
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+            cachedSignificantSimpleNameIndex.set(buildSimpleNameIndex(significantTypeNames));
+        }
+
+        getSimpleNameIndex();
     }
 
     @Override
@@ -103,6 +123,7 @@ public class JShellTypeIndex
         {
             addImportCandidate(names, importStatement, query);
         }
+        names.addAll(cachedSignificantSimpleNameIndex.get().getOrDefault(query, List.of()));
         names.addAll(getSimpleNameIndex().getOrDefault(query, List.of()));
         return names;
     }
@@ -128,6 +149,7 @@ public class JShellTypeIndex
             {
                 addImportCandidate(names, importStatement, query);
             }
+            names.addAll(cachedSignificantSimpleNameIndex.get().getOrDefault(query, List.of()));
         }
         return names;
     }
@@ -234,15 +256,29 @@ public class JShellTypeIndex
             {
                 index.computeIfAbsent(simpleName(name), key -> new ArrayList<>()).add(name);
             }
-
-            var immutableIndex = new HashMap<String, List<String>>();
-            for (var entry : index.entrySet())
-            {
-                immutableIndex.put(entry.getKey(), List.copyOf(entry.getValue()));
-            }
-            cachedSimpleNameIndex.set(Map.copyOf(immutableIndex));
+            cachedSimpleNameIndex.set(buildImmutableSimpleNameIndex(index));
             return cachedSimpleNameIndex.get();
         }
+    }
+
+    private Map<String, List<String>> buildSimpleNameIndex(List<String> typeNames)
+    {
+        var index = new HashMap<String, List<String>>();
+        for (var name : typeNames)
+        {
+            index.computeIfAbsent(simpleName(name), key -> new ArrayList<>()).add(name);
+        }
+        return buildImmutableSimpleNameIndex(index);
+    }
+
+    private Map<String, List<String>> buildImmutableSimpleNameIndex(Map<String, List<String>> index)
+    {
+        var immutableIndex = new HashMap<String, List<String>>();
+        for (var entry : index.entrySet())
+        {
+            immutableIndex.put(entry.getKey(), List.copyOf(entry.getValue()));
+        }
+        return Map.copyOf(immutableIndex);
     }
 
     private void addBundleTypes(List<String> names, Bundle bundle)

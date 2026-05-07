@@ -20,9 +20,11 @@ globalContext.execute(new AbstractBmTask<Void>("Add document registers") {
         // Get the document to configure
         Document document = (Document)transaction.getTopObjectByFqn("Document.GoodsReceipt");
 
-        // Get the registers to add as registrars
+        // Get the registers to add as registrars.
+        // Only AccumulationRegister, AccountingRegister, and CalculationRegister are valid here.
         AccumulationRegister stockRegister = (AccumulationRegister)transaction.getTopObjectByFqn("AccumulationRegister.GoodsInStock");
-        InformationRegister priceRegister = (InformationRegister)transaction.getTopObjectByFqn("InformationRegister.Prices");
+        AccountingRegister accountingRegister = (AccountingRegister)transaction.getTopObjectByFqn("AccountingRegister.MainLedger");
+        CalculationRegister payrollRegister = (CalculationRegister)transaction.getTopObjectByFqn("CalculationRegister.Payroll");
 
         if (document != null) {
             // Add accumulation register as registrar
@@ -31,10 +33,16 @@ globalContext.execute(new AbstractBmTask<Void>("Add document registers") {
                 System.out.println("Added: AccumulationRegister.GoodsInStock as registrar");
             }
 
-            // Add information register as registrar
-            if (priceRegister != null) {
-                document.getRegisterRecords().add(priceRegister);
-                System.out.println("Added: InformationRegister.Prices as registrar");
+            // Add accounting register as registrar
+            if (accountingRegister != null) {
+                document.getRegisterRecords().add(accountingRegister);
+                System.out.println("Added: AccountingRegister.MainLedger as registrar");
+            }
+
+            // Add calculation register as registrar
+            if (payrollRegister != null) {
+                document.getRegisterRecords().add(payrollRegister);
+                System.out.println("Added: CalculationRegister.Payroll as registrar");
             }
 
             System.out.println("Document registers configured successfully");
@@ -64,6 +72,20 @@ InformationRegister stores periodic data but is NOT a register for documents.
 - **CalculationRegister**: Payroll and calculation registers - CAN be a registrar
 - **InformationRegister**: Periodic data - CANNOT be a registrar (error: SU45)
 - **Note**: Only AccumulationRegister, AccountingRegister, and CalculationRegister can be document registrars
+
+### Forbidden API / Patterns
+
+Do not use these when configuring document registrars:
+- `DocumentRegisterRecord`
+- `mdFactory.createDocumentRegisterRecord()`
+- `register.getRegisteredDocuments()`
+- `Document.getRegisterRecords().add(informationRegister)`
+- Any `InformationRegister` as a document registrar
+
+If `JShellReflection` returns `not-found` for a register-record class or factory
+method, do not invent a replacement class. Use `Document.getRegisterRecords()`
+with an existing `AccumulationRegister`, `AccountingRegister`, or
+`CalculationRegister`.
 
 ### Verification:
 After adding registers, verify:

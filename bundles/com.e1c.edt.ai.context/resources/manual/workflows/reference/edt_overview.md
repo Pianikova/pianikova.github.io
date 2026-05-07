@@ -11,6 +11,9 @@
 - Use `mdFactory.createXxx()` + `attachTopObject()` to CREATE new objects
 - Modify existing objects directly (no `attachTopObject()` needed)
 - After every metadata CRUD operation, run the `GetMarkers` tool with `marker_type: "1c"` and inspect remaining 1C markers before reporting success
+- If a workflow needs more than one unknown EDT type, method, factory, field, or enum, call `JShellReflection` once with the full `queries` array before writing JShell code
+- Use canonical imports from `jshell_edt_canonical_imports`: `AbstractBmTask` and `IBmTransaction` are in `com._1c.g5.v8.bm.integration`, not in `com._1c.g5.v8.dt.bm.integration`
+- In persistent JShell sessions, wrap non-trivial snippets in `{ ... }` blocks to avoid stale top-level variables and `NoSuchFieldError`
 
 **❌ PROHIBITED:**
 - Do NOT use `executeReadonlyTask(...)` for metadata creation/modification
@@ -59,6 +62,7 @@ document.setNumberPeriodicity(DocumentNumberPeriodicity.YEAR);
 - Use `RegisterWriteMode.INDEPENDENT` or `RegisterWriteMode.RECORDER_SUBORDINATE`
 - Use specific child factories (`createInformationRegisterDimension/Resource`); generic `createRegisterDimension/Resource` is not valid in mdFactory
 - Contains: resources, attributes, dimensions (all require types)
+- String dimensions/resources/attributes must use finite string qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can return SU8 "Строка не может быть неограниченной длины"
 
 **AccumulationRegister (РегистрНакопления):**
 - Use `AccumulationRegisterType.BALANCE` or `AccumulationRegisterType.TURNOVERS`
@@ -1122,6 +1126,7 @@ catalog.setHierarchyType(HierarchyType.HIERARCHY_OF_ITEMS);
 ```
 
 **TypeDescriptionBuilder:** always validate `typeProvider.getProxy(...)` before `addType(...)`.
+If the proxy is null, do not call `addType(null)`: stop, create the referenced metadata first, or use a generic fallback type.
 Unresolved specific proxies may happen for typos, non-existent metadata, or references to objects that are not yet visible.
 
 ```java
@@ -1305,7 +1310,7 @@ int scale = nq.getScale();
 - Always use `globalContext.execute(new AbstractBmTask<Void>(...) {...})`
 - Get object by FQN: `transaction.getTopObjectByFqn("Catalog.Имя")`
 - Modify directly (no attachTopObject needed for existing objects)
-- Set type or qualifiers using modelFactory
+- Set type or qualifiers with `TypeDescriptionBuilder` inside the same BM transaction
 
 **Step 4: Verify fix**
 - Refresh/Rebuild project in EDT
@@ -1317,7 +1322,7 @@ int scale = nq.getScale();
 
 **Important Reminders:**
 - TypeDescription and TypeItem must be created INSIDE the transaction
-- Use `modelFactory` for creating qualifiers in JShell context
+- Use `TypeDescriptionBuilder` for qualifiers in JShell context
 - Set UUIDs manually when creating new metadata objects
 - For existing objects: modify directly, don't use attachTopObject()
 - Check that Scale <= Precision for all Number types

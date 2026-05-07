@@ -39,3 +39,16 @@ Use a file-scoped marker request when the changed metadata file is known and the
 - Duplicate names or FQN conflicts.
 - Registers missing document registrars.
 - References to metadata objects that were renamed, deleted, or not yet created.
+
+### Post-check contract by scenario type
+
+| Scenario type | Marker contract |
+|---|---|
+| Top-level create/edit/delete | Run `GetMarkers` with `marker_type: "1c"` before reporting success. Any new marker for the changed object means the operation is incomplete. |
+| Child creation (`BasicFeature`, attributes, dimensions, resources) | Treat missing `type` and missing UUID markers as blocking. Fix them in the same workflow. |
+| Accumulation/Accounting/Calculation register create | If creating a complete workflow, SU45 registrar markers are blocking. Link a document through `Document.getRegisterRecords().add(register)`. |
+| Register-only intermediate create | SU45 registrar markers are allowed only if the user explicitly asked to create the register for later linking. Report that registrar linking remains required. |
+| Information register create | A registrar marker is not expected. Do not add `InformationRegister` to `Document.getRegisterRecords()`. |
+| Delete or rename | Run project-wide markers because references can break outside the changed object's file. |
+
+Do not summarize a CRUD operation as successful while new blocking 1C markers remain.

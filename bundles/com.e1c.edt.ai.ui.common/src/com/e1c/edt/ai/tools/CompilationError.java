@@ -8,7 +8,7 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Structured information about a JShell compilation error.
  */
-class CompilationError
+public class CompilationError
 {
 	@SerializedName("is_error")
 	public boolean isError;

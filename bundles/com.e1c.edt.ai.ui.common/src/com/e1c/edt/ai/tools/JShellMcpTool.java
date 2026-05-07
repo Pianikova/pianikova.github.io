@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ICancellationToken;
@@ -49,6 +50,7 @@ public class JShellMcpTool
 	private final IRestrictedTypesProvider restrictedTypesProvider;
     private final IJShellReflectionQuerySuggester reflectionQuerySuggester;
     private final IDispatcher dispatcher;
+    private final ConcurrentHashMap<String, Object> sessionLocks = new ConcurrentHashMap<>();
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
@@ -134,22 +136,26 @@ public class JShellMcpTool
 					ToolErrorType.RETRYABLE);
 			}
 
-            var optionalResult = dispatcher.dispatch(() -> session.execute(request.code));
-            if (optionalResult.isEmpty())
+            var sessionLock = sessionLocks.computeIfAbsent(session.getSessionId(), id -> new Object());
+            synchronized (sessionLock)
             {
-                throw new ToolException("Can't execute code.", null, ToolErrorType.RETRYABLE);
-            }
+                var optionalResult = dispatcher.dispatch(() -> session.execute(request.code));
+                if (optionalResult.isEmpty())
+                {
+                    throw new ToolException("Can't execute code.", null, ToolErrorType.RETRYABLE);
+                }
 
-            var result = optionalResult.get();
-            if (!result.compilationErrors.isEmpty())
-            {
-                result.suggestedReflectionQueries =
-                    reflectionQuerySuggester.suggestForCompilationErrors(request.code, result.compilationErrors, 12);
+                var result = optionalResult.get();
+                if (!result.compilationErrors.isEmpty())
+                {
+                    result.suggestedReflectionQueries =
+                        reflectionQuerySuggester.suggestForCompilationErrors(request.code, result.compilationErrors, 12);
+                }
+                var content = json.serialize(result);
+                var responseMarkdown = buildResponseMarkdown(request.code, result);
+                details.responseMarkdown = responseMarkdown;
+                return messageFactory.createMessage(this, call, content, details);
             }
-			var content = json.serialize(result);
-			var responseMarkdown = buildResponseMarkdown(request.code, result);
-			details.responseMarkdown = responseMarkdown;
-			return messageFactory.createMessage(this, call, content, details);
 		}
 		catch (ToolException e)
 		{
@@ -228,13 +234,18 @@ public class JShellMcpTool
             .append(JShellManualMcpTool.TOOL_NAME)
             .append(" first to get a scenario-specific template");
         description.append("\n- Use ").append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" before execution when unsure about packages, types, enum constants, methods, fields, constructors, or signatures");
+            .append(" before execution only when unsure about packages, types, enum constants, methods, fields, constructors, or signatures not already covered by an exact ")
+            .append(JShellManualMcpTool.TOOL_NAME).append(" guide");
         description.append("\n- NEVER invent Java API calls, method overloads, enum constants, package names, or type names. ")
             .append("If the exact API is not already proven by tool output, call ")
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" first");
-        description.append("\n- Before using EDT metadata API calls such as `mdFactory.create*`, `TypeDescriptionBuilder.*`, ")
-            .append("`IEObjectProvider.getProxy`, `IEObjectTypeNames.*`, `HierarchyType.*`, or unknown `set*/get*` members, ")
-            .append("verify the exact type/member signatures with ").append(JShellReflectionMcpTool.TOOL_NAME);
+        description.append("\n- For baseline top-level EDT metadata CRUD, trust exact ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" scenarios and API cards; do not call ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" merely to re-check listed factories, collections, FQN prefixes, or safe setters");
+        description.append("\n- Known EDT enum constants from the manual do NOT need reflection: ")
+            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
+            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`");
+        description.append("\n- For TypeDescriptionBuilder, validate every `typeProvider.getProxy(...)` result before `addType(...)`; null proxies cause runtime `IllegalArgumentException`");
         description.append("\n- If a previous execution failed with `cannot find symbol`, `method not found`, or `package does not exist`, use ")
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" with `suggested_reflection_queries` instead of guessing APIs");
         description.append("\n- After executing code that changes EDT/Eclipse project resources or metadata, MUST call ")
@@ -253,6 +264,10 @@ public class JShellMcpTool
 		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");
         description.append("\n- Output MUST be in main thread for result capture");
         description.append("\n- DO NOT use without a value `return;` - always return any value (e.g., `return null;`)");
+        description.append("\n- Non-trivial EDT snippets SHOULD be wrapped in `{ ... }` to keep local variables local in persistent JShell sessions");
+        description.append("\n- Calls with the same `repl_session_id` are executed sequentially; wait for the previous result before relying on changed session state");
+        description.append("\n- Do not run ").append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" in parallel with a JShell metadata change for the same project/session; wait for the JShell result first");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
@@ -273,8 +288,8 @@ public class JShellMcpTool
         description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME)
             .append(" to get guidance for the scenario");
 		description.append("\n2. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
-        description.append("\n3. Call ").append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" for every uncertain or unverified Java API name/signature before writing calls that depend on it");
+        description.append("\n3. If the manual exact guide does not cover needed APIs, call ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" once with all uncertain Java API names/signatures before writing calls that depend on them");
         description.append("\n4. Use ").append(TOOL_NAME).append(" with that ID to execute code");
         description.append("\n5. If project resources or metadata were changed, call ").append(GetMarkersMcpTool.TOOL_NAME)
             .append(" for `problem`, `1c`, and relevant `ai_marker` errors/warnings before reporting success");

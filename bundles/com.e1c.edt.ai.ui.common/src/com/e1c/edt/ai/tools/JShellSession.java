@@ -88,7 +88,7 @@ class JShellSession
 
     @SuppressWarnings({ "nls", "incomplete-switch" })
     @Override
-    public JShellExecutionResult execute(String code)
+    public synchronized JShellExecutionResult execute(String code)
 	{
         if (isClosed.get())
         {

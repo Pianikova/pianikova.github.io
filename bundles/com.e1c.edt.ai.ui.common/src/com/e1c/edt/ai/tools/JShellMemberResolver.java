@@ -28,7 +28,7 @@ public class JShellMemberResolver
     private final IWildcardMatcher wildcardMatcher;
     private final IReflectionSignatureFormatter signatureFormatter;
     private final Cache<Class<?>, TypeMembers> membersCache =
-        CacheBuilder.newBuilder().maximumSize(2048).weakKeys().build();
+        CacheBuilder.newBuilder().maximumSize(8192).weakKeys().build();
 
     @Inject
     public JShellMemberResolver(IJShellTypeIndex typeIndex, IWildcardMatcher wildcardMatcher,

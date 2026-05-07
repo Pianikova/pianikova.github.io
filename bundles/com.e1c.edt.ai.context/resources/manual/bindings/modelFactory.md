@@ -16,6 +16,7 @@ attribute.setName("Article");
         TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
         TypeDescription typeDesc = new TypeDescriptionBuilder()
             .addType(stringType)
+            .setStringQualifiers(100, false)
             .build();
 
 attribute.setType(typeDesc);

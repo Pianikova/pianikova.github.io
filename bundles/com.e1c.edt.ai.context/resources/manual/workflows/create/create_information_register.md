@@ -56,6 +56,7 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
 - InformationRegister usually needs at least one dimension and often one resource
 - Every new feature derived from BasicFeature must have `setType(...)`
 - Use a specific reference type like `Catalog.Products` when you need a strict typed dimension
+- If a dimension, resource, or attribute uses `IEObjectTypeNames.STRING`, build it with finite qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can report SU8: "Строка не может быть неограниченной длины"
 
 ### Required post-check
 

@@ -13,6 +13,7 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 
 import com._1c.g5.v8.bm.core.IBmNamespace;
+import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.bm.core.IBmTransaction;
 import com._1c.g5.v8.bm.integration.IBmEditingContext;
 import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
@@ -212,6 +213,7 @@ public class MetadataBindingProvider
             ChartOfAccounts.class, ChartOfCalculationTypes.class, Recalculation.class, AccumulationRegisterType.class,
             CalculationRegisterPeriodicity.class,
             IBmNamespace.class,
+            IBmObject.class,
             IBmTransaction.class,
             IBmModel.class,
             IBmEditingContext.class,

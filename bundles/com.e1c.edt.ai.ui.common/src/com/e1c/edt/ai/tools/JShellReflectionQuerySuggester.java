@@ -4,8 +4,10 @@
 package com.e1c.edt.ai.tools;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -25,6 +27,11 @@ public class JShellReflectionQuerySuggester
 
     private static final Pattern COMPILER_SYMBOL_PATTERN =
         Pattern.compile("(?i)(?:symbol|символ)\\s*:\\s*(?:method|variable|class|метод|переменная|класс)?\\s*([\\w$]+)"); //$NON-NLS-1$
+
+    private static final Pattern COMPILER_LOCATION_CLASS_PATTERN =
+        Pattern.compile("(?i)location\\s*:\\s*class\\s+([\\w.$]+)"); //$NON-NLS-1$
+
+    private static final Map<String, List<String>> EDT_ALIASES = edtAliases();
 
     @Override
     public List<String> suggestForQuery(String query, int limit)
@@ -58,6 +65,8 @@ public class JShellReflectionQuerySuggester
         {
             return;
         }
+
+        addAliasSuggestions(suggestions, query);
 
         var splitAt = query.lastIndexOf('.');
         if (splitAt > 0 && splitAt < query.length() - 1)
@@ -109,6 +118,20 @@ public class JShellReflectionQuerySuggester
         {
             return;
         }
+
+        var locationMatcher = COMPILER_LOCATION_CLASS_PATTERN.matcher(message);
+        while (locationMatcher.find())
+        {
+            var location = locationMatcher.group(1);
+            if (location != null && !location.isBlank())
+            {
+                var simpleLocation = location.substring(location.lastIndexOf('.') + 1);
+                suggestions.add(location + ".*"); //$NON-NLS-1$
+                suggestions.add(simpleLocation + ".*"); //$NON-NLS-1$
+                addAliasSuggestions(suggestions, simpleLocation);
+            }
+        }
+
         var matcher = COMPILER_SYMBOL_PATTERN.matcher(message);
         while (matcher.find())
         {
@@ -116,8 +139,57 @@ public class JShellReflectionQuerySuggester
             if (symbol != null && !symbol.isBlank())
             {
                 suggestions.add("*" + symbol + "*"); //$NON-NLS-1$ //$NON-NLS-2$
+                addAliasSuggestions(suggestions, symbol);
             }
         }
+    }
+
+    private void addAliasSuggestions(Set<String> suggestions, String query)
+    {
+        var normalized = stripWildcards(query);
+        var aliases = EDT_ALIASES.get(normalized);
+        if (aliases == null)
+        {
+            var simpleName = normalized.substring(normalized.lastIndexOf('.') + 1);
+            aliases = EDT_ALIASES.get(simpleName);
+        }
+        if (aliases == null)
+        {
+            return;
+        }
+        for (var alias : aliases)
+        {
+            suggestions.add(alias);
+            suggestions.add(alias + ".*"); //$NON-NLS-1$
+        }
+    }
+
+    private static Map<String, List<String>> edtAliases()
+    {
+        var aliases = new LinkedHashMap<String, List<String>>();
+        aliases.put("IEObjectProvider", List.of("com._1c.g5.v8.dt.platform.IEObjectProvider")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("IEObjectTypeNames", List.of("com._1c.g5.v8.dt.platform.IEObjectTypeNames")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("TypeDescriptionBuilder", //$NON-NLS-1$
+            List.of("com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder")); //$NON-NLS-1$
+        aliases.put("TypeDescription", List.of("com._1c.g5.v8.dt.mcore.TypeDescription")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("TypeItem", List.of("com._1c.g5.v8.dt.mcore.TypeItem")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("IBmObject", List.of("com._1c.g5.v8.bm.core.IBmObject")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("RegisterWriteMode", //$NON-NLS-1$
+            List.of("com._1c.g5.v8.dt.metadata.mdclass.RegisterWriteMode")); //$NON-NLS-1$
+        aliases.put("AccumulationRegisterType", //$NON-NLS-1$
+            List.of("com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType")); //$NON-NLS-1$
+        aliases.put("Turnovers", //$NON-NLS-1$
+            List.of("AccumulationRegisterType.*", //$NON-NLS-1$
+                "com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType.*")); //$NON-NLS-1$
+        aliases.put("Remainders", //$NON-NLS-1$
+            List.of("AccumulationRegisterType.*", //$NON-NLS-1$
+                "com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType.*")); //$NON-NLS-1$
+        aliases.put("Independent", //$NON-NLS-1$
+            List.of("RegisterWriteMode.*", //$NON-NLS-1$
+                "com._1c.g5.v8.dt.metadata.mdclass.RegisterWriteMode.*")); //$NON-NLS-1$
+        aliases.put("McorePackage.Literals.TYPE_ITEM", //$NON-NLS-1$
+            List.of("com._1c.g5.v8.dt.mcore.McorePackage.Literals.TYPE_ITEM", "McorePackage.Literals.TYPE_ITEM")); //$NON-NLS-1$ //$NON-NLS-2$
+        return Map.copyOf(aliases);
     }
 
     private List<String> limit(LinkedHashSet<String> suggestions, int limit)

@@ -45,6 +45,20 @@
 | WebService (Web-сервис) | `createWebService()` | `WebService.` |
 | IntegrationService (СервисИнтеграции) | `createIntegrationService()` | `IntegrationService.` |
 
+| CommonForm | `createCommonForm()` | `CommonForm.` |
+| CommonCommand | `createCommonCommand()` | `CommonCommand.` |
+| CommonPicture | `createCommonPicture()` | `CommonPicture.` |
+| CommonTemplate | `createCommonTemplate()` | `CommonTemplate.` |
+| Role | `createRole()` | `Role.` |
+| SessionParameter | `createSessionParameter()` | `SessionParameter.` |
+| CommandGroup | `createCommandGroup()` | `CommandGroup.` |
+| FunctionalOptionsParameter | `createFunctionalOptionsParameter()` | `FunctionalOptionsParameter.` |
+| Style | `createStyle()` | `Style.` |
+| StyleItem | `createStyleItem()` | `StyleItem.` |
+| ExternalDataSource | `createExternalDataSource()` | `ExternalDataSource.` |
+| XDTOPackage | `createXDTOPackage()` | `XDTOPackage.` |
+| Bot | `createBot()` | `Bot.` |
+
 ### Supported Attribute/Section Types:
 
 | Type | Factory Method | Parent Object |
@@ -102,6 +116,7 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
 TypeDescription attrType = new TypeDescriptionBuilder()
     .addType(stringType)
+    .setStringQualifiers(100, false)
     .build();
 attribute.setType(attrType);
 catalog.getAttributes().add(attribute);

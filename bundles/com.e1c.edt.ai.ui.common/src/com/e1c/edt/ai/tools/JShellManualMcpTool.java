@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -185,7 +184,9 @@ public class JShellManualMcpTool
         }
 
         var topScore = ranked.get(0).score;
-        var matched = ranked.stream().limit(maxResults).map(RankedEntry::entry).collect(Collectors.toList());
+        var matched = topScore >= EXACT_MATCH_THRESHOLD
+            ? List.of(ranked.get(0).entry())
+            : ranked.stream().limit(maxResults).map(RankedEntry::entry).collect(Collectors.toList());
         response.matchedScenarios = matched.stream().map(this::toDetails).collect(Collectors.toList());
 
         if (topScore >= EXACT_MATCH_THRESHOLD)
@@ -367,10 +368,20 @@ public class JShellManualMcpTool
             .append(".\n\n");
         sb.append("You MUST use this tool before ").append(JShellMcpTool.TOOL_NAME)
             .append(" when working with EDT metadata API or Eclipse platform API.\n");
-        sb.append("This manual gives workflow guidance, not proof of exact Java signatures. ")
-            .append("Do not invent methods, overloads, enum constants, packages, or type names from the manual text. ")
+        sb.append("For exact manual hits, the listed baseline top-level CRUD factory, collection, FQN prefix, and safe setters ")
+            .append("are already proven guidance. Do not call ")
+            .append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" only to re-check those baseline calls. ")
             .append("Use ").append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" to confirm exact API before executing JShell code.\n");
+            .append(" for unknown child objects, form internals, module internals, enum constants, overloads, or APIs not covered by the matched guide.\n");
+        sb.append("If you need more than one unknown EDT type or method, call ")
+            .append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" once with the full `queries` list. Known register constants in the manual do not need reflection: ")
+            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
+            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`.\n");
+        sb.append("For 1C metadata CRUD, after every JShell create, update/edit, or delete, the mandatory next tool is ")
+            .append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" with `marker_type: \"1c\"` for the affected project. Do not report success and do not start the next CRUD operation before checking markers.\n");
         sb.append("Use it for create/edit/delete/look-up scenarios, for workbench/editor/workspace code, and ")
             .append("for any code that uses bindings like `mdFactory`, `modelManager`, `projectManager`, ")
             .append("`workspaceRoot`, `workbench`, `resourceLookup`, or `fqnGenerator`.\n\n");
@@ -392,9 +403,9 @@ public class JShellManualMcpTool
         sb.append("1. Call ").append(TOOL_NAME).append(" with a convention-matching scenario id.\n");
         sb.append("2. If status is `not_matched` or `fuzzy`, refine using `suggestions` or `available_scenarios`.\n");
         sb.append("3. Create or reuse a session with ").append(JShellSessionMcpTool.TOOL_NAME).append(".\n");
-        sb.append("4. Use ").append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" to verify exact packages, types, enum constants, methods, fields, constructors, and signatures ")
-            .append("for every API call that is not already proven by tool output.\n");
+        sb.append("4. Skip ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" for exact manual baseline CRUD. Use it only for API calls not already proven by the matched guide, ")
+            .append("and batch all unknown queries in one call.\n");
         sb.append("5. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
         sb.append("6. After code changes project resources or metadata, call ").append(GetMarkersMcpTool.TOOL_NAME)
             .append(" for the affected project. Use `marker_type: \"problem\"` for build/validation issues, ")

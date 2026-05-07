@@ -1,65 +1,63 @@
 ## Safe Workflow: Create New 1C Configuration Project
 
-This workflow creates a complete 1C:Enterprise configuration project in the workspace.
-This includes all necessary files and structures for a functional V8 project.
+This workflow creates a minimal EDT 1C:Enterprise configuration project in the Eclipse workspace.
+
+Critical rule: create required project files first, then enable V8 nature and Xtext builder. If V8 nature is enabled before `DT-INF/PROJECT.PMF`, `src/Configuration/Configuration.mdo`, and `.settings` exist, EDT lifecycle can start on a half-created project. The result may be visible in workspace but not resolvable through `projectManager`.
 
 ```java
-// Step 1: Define project name
 String projectName = "MyNewConfiguration";
 IProject projectHandle = workspaceRoot.getProject(projectName);
+NullProgressMonitor monitor = new NullProgressMonitor();
 
-// Step 2: Check if project already exists
 if (projectHandle.exists()) {
     System.err.println("ERROR: Project already exists: " + projectName);
     // Stop here in JShell and choose another project name.
 }
 
 try {
-    // Step 3: Create project description with natures AND build command SET BEFORE creation
+    // Step 1: Create and open a plain Eclipse project.
+    // Do not set V8 nature yet.
     IProjectDescription description = ResourcesPlugin.getWorkspace().newProjectDescription(projectName);
+    projectHandle.create(description, monitor);
+    projectHandle.open(monitor);
+    projectHandle.setDefaultCharset("UTF-8", monitor);
 
-    // Set natures
-    String[] natures = new String[2];
-    natures[0] = "org.eclipse.xtext.ui.shared.xtextNature";
-    natures[1] = "com._1c.g5.v8.dt.core.V8ConfigurationNature";
-    description.setNatureIds(natures);
+    // Step 2: Create folders EDT may read during early project lifecycle.
+    IFolder settingsFolder = projectHandle.getFolder(".settings");
+    if (!settingsFolder.exists()) {
+        settingsFolder.create(false, true, monitor);
+    }
 
-    // Set build command (CRITICAL for Xtext builder)
-    ICommand[] commands = new ICommand[1];
-    ICommand command = description.newCommand();
-    command.setBuilderName("org.eclipse.xtext.ui.shared.xtextBuilder");
-    commands[0] = command;
-    description.setBuildSpec(commands);
-
-    // Step 4: Create the project with pre-configured description
-    projectHandle.create(description, new NullProgressMonitor());
-    projectHandle.open(new NullProgressMonitor());
-
-    // Step 5: Create basic project structure
     IFolder srcFolder = projectHandle.getFolder("src");
-    srcFolder.create(false, true, new NullProgressMonitor());
+    if (!srcFolder.exists()) {
+        srcFolder.create(false, true, monitor);
+    }
 
     IFolder configFolder = srcFolder.getFolder("Configuration");
-    configFolder.create(false, true, new NullProgressMonitor());
+    if (!configFolder.exists()) {
+        configFolder.create(false, true, monitor);
+    }
 
-    // Step 6: Create DT-INF folder and PROJECT.PMF file (CRITICAL for V8 project)
     IFolder dtinfFolder = projectHandle.getFolder("DT-INF");
-    dtinfFolder.create(false, true, new NullProgressMonitor());
+    if (!dtinfFolder.exists()) {
+        dtinfFolder.create(false, true, monitor);
+    }
 
+    // Step 3: Create PROJECT.PMF. It is an OSGi-like manifest, not XML.
     IFile pmfFile = dtinfFolder.getFile("PROJECT.PMF");
-    // CRITICAL: PROJECT.PMF must be OSGi manifest format, NOT XML!
     String pmfContent = "Manifest-Version: 1.0\nRuntime-Version: 8.3.24\n";
-    pmfFile.create(new ByteArrayInputStream(pmfContent.getBytes()), true, new NullProgressMonitor());
+    if (!pmfFile.exists()) {
+        pmfFile.create(new ByteArrayInputStream(pmfContent.getBytes("UTF-8")), true, monitor);
+    }
 
-    // Step 7: Create Configuration.mdo file (CRITICAL for metadata initialization)
-    // IMPORTANT: Use CORRECT format with mdclass namespace (NOT mdobject!)
+    // Step 4: Create minimal Configuration.mdo with mdclass namespace.
     IFile configFile = configFolder.getFile("Configuration.mdo");
     String configContent = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
         "<mdclass:Configuration xmlns:mdclass=\"http://g5.1c.ru/v8/dt/metadata/mdclass\" uuid=\"" + UUID.randomUUID().toString() + "\">\n" +
         "  <name>Configuration</name>\n" +
         "  <synonym>\n" +
         "    <key>ru</key>\n" +
-        "    <value>Конфигурация</value>\n" +
+        "    <value>\u041a\u043e\u043d\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044f</value>\n" +
         "  </synonym>\n" +
         "  <defaultRunMode>ManagedApplication</defaultRunMode>\n" +
         "  <usePurposes>PersonalComputer</usePurposes>\n" +
@@ -69,49 +67,66 @@ try {
         "    </functionality>\n" +
         "  </usedMobileApplicationFunctionalities>\n" +
         "</mdclass:Configuration>";
-    configFile.create(new ByteArrayInputStream(configContent.getBytes("UTF-8")), true, new NullProgressMonitor());
+    if (!configFile.exists()) {
+        configFile.create(new ByteArrayInputStream(configContent.getBytes("UTF-8")), true, monitor);
+    }
 
-    // Step 8: Refresh project to ensure file system synchronization
-    projectHandle.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+    projectHandle.refreshLocal(IResource.DEPTH_INFINITE, monitor);
 
-    // Step 9: Wait for asynchronous project initialization using POLLING mechanism
-    boolean initialized = false; // FIX: Declare initialized variable before use
-    java.lang.System.out.println("Waiting for project initialization (polling mechanism)...");
-    int maxAttempts = 30; // 30 attempts × 500ms = 15 seconds max
-    int attempt = 0;
+    // Step 5: Enable V8 nature and Xtext builder only after required files exist.
+    description = projectHandle.getDescription();
+    description.setNatureIds(new String[] {
+        "org.eclipse.xtext.ui.shared.xtextNature",
+        "com._1c.g5.v8.dt.core.V8ConfigurationNature"
+    });
 
-    while (attempt < maxAttempts && !initialized) {
-        attempt++;
+    ICommand command = description.newCommand();
+    command.setBuilderName("org.eclipse.xtext.ui.shared.xtextBuilder");
+    description.setBuildSpec(new ICommand[] { command });
+    projectHandle.setDescription(description, IResource.FORCE, monitor);
+    projectHandle.refreshLocal(IResource.DEPTH_INFINITE, monitor);
+
+    // Step 6: Wait for asynchronous EDT initialization.
+    boolean initialized = false;
+    System.out.println("Waiting for project initialization...");
+
+    int maxAttempts = 40; // 40 attempts * 500ms = 20 seconds max
+    for (int attempt = 1; attempt <= maxAttempts && !initialized; attempt++) {
         try {
-            Thread.sleep(500); // Short pause between attempts
+            Thread.sleep(500);
 
+            // In JShell use the IProject handle. projectManager.getProject(String) can return null
+            // while project lifecycle caches are still settling.
             IV8Project v8project = projectManager.getProject(projectHandle);
-            if (v8project != null) {
-                // Verify BM model is also available
-                IBmModel bmModel = modelManager.getModel(projectHandle);
-                if (bmModel != null) {
-                    // Check Configuration object is accessible
-                    IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
-                    Configuration config = globalContext.execute(new AbstractBmTask<Configuration>("Check Config") {
-                        @Override
-                        public Configuration execute(IBmTransaction transaction, IProgressMonitor monitor) {
-                            return (Configuration)transaction.getTopObjectByFqn("Configuration");
-                        }
-                    });
+            if (v8project == null) {
+                continue;
+            }
 
-                    if (config != null) {
-                        initialized = true;
-                        java.lang.System.out.println("Project initialized in " + (attempt * 500) + "ms (attempt " + attempt + ")");
-                        java.lang.System.out.println("SUCCESS: V8 project created");
-                        java.lang.System.out.println("Version: " + v8project.getVersion());
-                        java.lang.System.out.println("SUCCESS: BM model initialized");
-                        java.lang.System.out.println("SUCCESS: Configuration object is accessible");
-                        java.lang.System.out.println("Configuration name: " + config.getName());
-                        java.lang.System.out.println("Configuration project created successfully: " + projectName);
-                    }
+            IBmModel bmModel = modelManager.getModel(projectHandle);
+            if (bmModel == null) {
+                continue;
+            }
+
+            IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
+            Configuration config = globalContext.execute(new AbstractBmTask<Configuration>("Check Configuration") {
+                @Override
+                public Configuration execute(IBmTransaction transaction, IProgressMonitor taskMonitor) {
+                    return (Configuration)transaction.getTopObjectByFqn("Configuration");
                 }
+            });
+
+            if (config != null) {
+                initialized = true;
+                System.out.println("Project initialized in " + (attempt * 500) + "ms");
+                System.out.println("SUCCESS: V8 project created");
+                System.out.println("Project name: " + projectHandle.getName());
+                System.out.println("Version: " + v8project.getVersion());
+                System.out.println("SUCCESS: BM model initialized");
+                System.out.println("SUCCESS: Configuration object is accessible");
+                System.out.println("Configuration name: " + config.getName());
             }
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             System.err.println("Polling interrupted: " + e.getMessage());
             break;
         }
@@ -119,60 +134,31 @@ try {
 
     if (!initialized) {
         System.err.println("ERROR: Project initialization failed after " + maxAttempts + " attempts");
-        System.err.println("Please check project logs for details");
+        System.err.println("Check trace.log and verify .settings, DT-INF/PROJECT.PMF, and src/Configuration/Configuration.mdo");
         // Stop here in JShell and inspect project logs before continuing.
     }
-
 } catch (CoreException | UnsupportedEncodingException e) {
     System.err.println("ERROR creating project: " + e.getMessage());
     e.printStackTrace();
 }
 ```
 
-**Critical Issues Fixed:**
+### Rules
 
-**Issue 1: Incorrect PROJECT.PMF format**
-- ✅ FIX: Create DT-INF folder with OSGi manifest format (NOT XML)
-- PROJECT.PMF must be OSGi manifest format: "Manifest-Version: 1.0\nRuntime-Version: 8.3.24\n"
-- Without correct format, causes ProjectManifestException
-- XML format (<?xml version=...?>) is INCORRECT for PROJECT.PMF
+- Create a plain Eclipse project first.
+- Create `.settings`, `DT-INF/PROJECT.PMF`, `src`, and `src/Configuration/Configuration.mdo` before enabling V8 nature.
+- `PROJECT.PMF` must be manifest format, not XML.
+- `Configuration.mdo` must use `http://g5.1c.ru/v8/dt/metadata/mdclass`.
+- Enable both natures after required files exist: `org.eclipse.xtext.ui.shared.xtextNature`, `com._1c.g5.v8.dt.core.V8ConfigurationNature`.
+- Add Xtext builder after required files exist: `org.eclipse.xtext.ui.shared.xtextBuilder`.
+- During verification, use `projectManager.getProject(projectHandle)`, not `projectManager.getProject(projectName)`.
+- Verify `IV8Project`, `IBmModel`, and top object `Configuration`.
+- After creation, run `GetMarkers` with `marker_type: "1c"` for the project.
 
-**Issue 2: INCORRECT Configuration.mdo format**
-- ✅ FIX: Use mdclass namespace instead of mdobject
-- Correct namespace: http://g5.1c.ru/v8/dt/metadata/mdclass (NOT mdobject)
-- Without correct namespace, causes BM model initialization failure
-- Remove optional elements that cause issues: scriptVariant, defaultLanguage, configurationCompatibility
-- Add REQUIRED elements: defaultRunMode, usedMobileApplicationFunctionalities
+### Known failure signs
 
-**Issue 3: Asynchronous project initialization**
-- ✅ FIX: Use polling mechanism with adaptive waiting instead of fixed sleep
-- Polling checks project readiness every 500ms (30 attempts × 500ms = 15 seconds max)
-- Automatically stops when project is fully initialized (IV8Project + BM model + Configuration object)
-- Proven efficiency: typically initializes in 2-3 seconds (50% faster than fixed 5-second delay)
-- For production: use project build listener instead of polling
+- Project appears in `GetProjects`, but `projectManager.getProject("Name")` returns `null`: use the `IProject` handle and wait for lifecycle initialization.
+- `NoSuchFileException` for `.settings`: create `.settings` before enabling V8 nature.
+- `ProjectManifestException`: check `DT-INF/PROJECT.PMF` format and `Runtime-Version`.
+- BM model exists but `Configuration` is not accessible: check `src/Configuration/Configuration.mdo` namespace and root element.
 
-**Issue 4: No Configuration object verification**
-- ✅ FIX: Add verification that Configuration object is accessible via BM transaction
-- Without verification, project may appear to work but fail on metadata operations
-- Configuration object accessibility confirms BM model is properly initialized
-
-**Issue 5: Missing build command**
-- ✅ FIX: Add Xtext builder command to project description
-- Build command is required for proper V8 project initialization
-- Without it, project may not be recognized as V8 configuration
-
-**Important Notes:**
-- PROJECT.PMF is REQUIRED for V8 project initialization
-- PROJECT.PMF must be OSGi manifest format (Manifest-Version: 1.0, Runtime-Version: X.X.X)
-- DO NOT use XML format for PROJECT.PMF - it will cause ProjectManifestException
-- Configuration.mdo MUST use mdclass namespace (http://g5.1c.ru/v8/dt/metadata/mdclass)
-- Configuration.mdo MUST include: defaultRunMode, usedMobileApplicationFunctionalities
-- DO NOT use mdobject namespace - it causes BM model initialization failure
-- Both natures AND build command MUST be set BEFORE project creation
-- BM model is initialized on first access via modelManager.getModel()
-- After creation, you can use mdFactory workflows to add metadata objects
-- For production use, use proper IProgressMonitor implementation
-- Verify all initialization steps succeed before proceeding with metadata operations
-- Polling mechanism is RECOMMENDED for JShell context - adaptive and efficient
-- Polling checks: IV8Project + BM model + Configuration object accessibility
-- Polling stops automatically when project is ready (typically 2-3 seconds)

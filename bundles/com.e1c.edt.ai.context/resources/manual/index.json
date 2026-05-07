@@ -173,8 +173,10 @@
       "variableName": "bot",
       "createMethod": "createBot()",
       "collection": "getBots()",
-      "setupBlock": "        bot.setName(\"SupportBot\");\n",
-      "notes": "Conversation scenarios, commands, and integration endpoints are configured after the bot metadata object is attached."
+      "setupBlock": "",
+      "notes": "Conversation scenarios, commands, and integration endpoints are configured after the bot metadata object is attached.",
+      "sampleName": "SupportBot",
+      "extraSetup": ""
     }
   },
   {
@@ -182,7 +184,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create Business Process",
-    "summary": "Create BusinessProcess metadata with standard top-level workflow.",
+    "summary": "Create BusinessProcess metadata together with required Task reference.",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -192,7 +194,10 @@
     "keywords": [
       "business process",
       "bp",
-      "process"
+      "process",
+      "task",
+      "setTask",
+      "SU45"
     ],
     "template": "top-level-create",
     "vars": {
@@ -201,8 +206,10 @@
       "variableName": "businessProcess",
       "createMethod": "createBusinessProcess()",
       "collection": "getBusinessProcesses()",
-      "setupBlock": "        businessProcess.setAutonumbering(true);\n",
-      "notes": "Add attributes and tabular sections using the generic attribute and tabular section scenarios."
+      "setupBlock": "        businessProcess.setAutonumbering(true);\n\n        Task task = mdFactory.createTask();\n        task.setName(businessProcess.getName() + \"Task\");\n        task.setAutonumbering(true);\n        task.setUuid(UUID.randomUUID());\n        String taskFqn = fqnGenerator.generateStandaloneObjectFqn(task.eClass(), task.getName()).toString();\n        transaction.attachTopObject((IBmObject)task, taskFqn);\n        configuration.getTasks().add(task);\n        businessProcess.setTask(task);\n",
+      "notes": "BusinessProcess requires a non-null task. Create and attach a Task in the same transaction or resolve an existing Task and call businessProcess.setTask(task); otherwise GetMarkers reports SU45 for property \"task\". Add route points, attributes, and tabular sections in follow-up workflows.",
+      "sampleName": "BusinessProcessSample",
+      "extraSetup": ""
     }
   },
   {
@@ -270,7 +277,9 @@
       "createMethod": "createChartOfAccounts()",
       "collection": "getChartsOfAccounts()",
       "setupBlock": "        chart.setCodeLength(10);\n                chart.setDescriptionLength(100);\n",
-      "notes": "ChartOfAccounts is commonly referenced by AccountingRegister. Create the chart first if registers depend on it."
+      "notes": "ChartOfAccounts is commonly referenced by AccountingRegister. Create the chart first if registers depend on it.",
+      "sampleName": "ChartOfAccountsSample",
+      "extraSetup": ""
     }
   },
   {
@@ -298,7 +307,9 @@
       "createMethod": "createChartOfCalculationTypes()",
       "collection": "getChartsOfCalculationTypes()",
       "setupBlock": "        chart.setCodeLength(10);\n                chart.setDescriptionLength(100);\n",
-      "notes": "CalculationRegister frequently depends on ChartOfCalculationTypes. Create the chart before assigning register references."
+      "notes": "CalculationRegister frequently depends on ChartOfCalculationTypes. Create the chart before assigning register references.",
+      "sampleName": "ChartOfCalculationTypesSample",
+      "extraSetup": ""
     }
   },
   {
@@ -326,9 +337,10 @@
       "variableName": "chart",
       "createMethod": "createChartOfCharacteristicTypes()",
       "collection": "getChartsOfCharacteristicTypes()",
-      "setupBlock": "        chart.setCodeLength(10);\n                chart.setDescriptionLength(100);\n                IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                chart.setType(typeDesc);\n",
+      "setupBlock": "        chart.setCodeLength(10);\n                chart.setDescriptionLength(100);\n                IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .setStringQualifiers(100, false)\n                    .build();\n\n                chart.setType(typeDesc);\n",
       "notes": "ChartOfCharacteristicTypes requires a value `TypeDescription`; replace the sample string type with the actual allowed characteristic value types.",
-      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n",
+      "sampleName": "ChartOfCharacteristicTypesSample"
     }
   },
   {
@@ -355,8 +367,10 @@
       "variableName": "group",
       "createMethod": "createCommandGroup()",
       "collection": "getCommandGroups()",
-      "setupBlock": "        group.setName(\"SalesCommands\");\n",
-      "notes": "Use command groups to organize common commands and UI navigation after the group object exists."
+      "setupBlock": "",
+      "notes": "Use command groups to organize common commands and UI navigation after the group object exists.",
+      "sampleName": "SalesCommands",
+      "extraSetup": ""
     }
   },
   {
@@ -384,9 +398,10 @@
       "variableName": "attribute",
       "createMethod": "createCommonAttribute()",
       "collection": "getCommonAttributes()",
-      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                attribute.setType(typeDesc);\n",
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .setStringQualifiers(100, false)\n                    .build();\n\n                attribute.setType(typeDesc);\n",
       "notes": "CommonAttribute extends BasicFeature, so assign `TypeDescription` before adding it to configuration.",
-      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n",
+      "sampleName": "CommonAttributeSample"
     }
   },
   {
@@ -412,8 +427,10 @@
       "variableName": "command",
       "createMethod": "createCommonCommand()",
       "collection": "getCommonCommands()",
-      "setupBlock": "        command.setName(\"OpenDashboard\");\n",
-      "notes": "Command groups and UI placement are configured separately after command creation."
+      "setupBlock": "",
+      "notes": "Command groups and UI placement are configured separately after command creation.",
+      "sampleName": "OpenDashboard",
+      "extraSetup": ""
     }
   },
   {
@@ -439,8 +456,10 @@
       "variableName": "form",
       "createMethod": "createCommonForm()",
       "collection": "getCommonForms()",
-      "setupBlock": "        form.setName(\"UniversalSearchForm\");\n",
-      "notes": "Form structure and controls are separate layers. Start by creating the top-level metadata object."
+      "setupBlock": "",
+      "notes": "Form structure and controls are separate layers. Start by creating the top-level metadata object.",
+      "sampleName": "UniversalSearchForm",
+      "extraSetup": ""
     }
   },
   {
@@ -468,7 +487,9 @@
       "createMethod": "createCommonModule()",
       "collection": "getCommonModules()",
       "setupBlock": "        commonModule.setServer(true);\n                commonModule.setServerCall(true);\n",
-      "notes": "After metadata creation, create or update the corresponding Module.bsl file through file tools. Metadata flags and BSL text are separate layers."
+      "notes": "After metadata creation, create or update the corresponding Module.bsl file through file tools. Metadata flags and BSL text are separate layers.",
+      "sampleName": "CommonModuleSample",
+      "extraSetup": ""
     }
   },
   {
@@ -495,8 +516,10 @@
       "variableName": "picture",
       "createMethod": "createCommonPicture()",
       "collection": "getCommonPictures()",
-      "setupBlock": "        picture.setName(\"Logo\");\n",
-      "notes": "After creation, assign the actual picture resource or content through the corresponding picture APIs."
+      "setupBlock": "",
+      "notes": "After creation, assign the actual picture resource or content through the corresponding picture APIs.",
+      "sampleName": "Logo",
+      "extraSetup": ""
     }
   },
   {
@@ -523,8 +546,10 @@
       "variableName": "template",
       "createMethod": "createCommonTemplate()",
       "collection": "getCommonTemplates()",
-      "setupBlock": "        template.setName(\"PrintLayout\");\n",
-      "notes": "Template binary or text content is maintained separately after the metadata object exists."
+      "setupBlock": "",
+      "notes": "Template binary or text content is maintained separately after the metadata object exists.",
+      "sampleName": "PrintLayout",
+      "extraSetup": ""
     }
   },
   {
@@ -571,9 +596,10 @@
       "variableName": "constant",
       "createMethod": "createConstant()",
       "collection": "getConstants()",
-      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                constant.setType(typeDesc);\n",
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .setStringQualifiers(100, false)\n                    .build();\n\n                constant.setType(typeDesc);\n",
       "notes": "Constants implement TypeDescriptionProvider, so `setType(...)` is mandatory.",
-      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n",
+      "sampleName": "ConstantSample"
     }
   },
   {
@@ -618,8 +644,10 @@
       "variableName": "processor",
       "createMethod": "createDataProcessor()",
       "collection": "getDataProcessors()",
-      "setupBlock": "        processor.setName(\"DataMaintenance\");\n",
-      "notes": "For executable behavior, add forms or module content separately after metadata creation."
+      "setupBlock": "",
+      "notes": "For executable behavior, add forms or module content separately after metadata creation.",
+      "sampleName": "DataMaintenance",
+      "extraSetup": ""
     }
   },
   {
@@ -648,9 +676,10 @@
       "variableName": "definedType",
       "createMethod": "createDefinedType()",
       "collection": "getDefinedTypes()",
-      "setupBlock": "        // Create String type with length qualifier\n                IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                // Set string qualifiers (length)\n                // Note: StringQualifiers must be set on the TypeDescription, not passed to builder\n                // StringQualifiers stringQualifiers = modelFactory.createStringQualifiers();\n                // stringQualifiers.setLength(50);\n                // typeDesc.setStringQualifiers(stringQualifiers);\n\n                // Simplified: just set length on TypeDescription's qualifiers\n                if (typeDesc.getStringQualifiers() == null) {\n                    typeDesc.setStringQualifiers(modelFactory.createStringQualifiers());\n                }\n                typeDesc.getStringQualifiers().setLength(50);\n\n                definedType.setType(typeDesc);\n",
-      "notes": "DefinedType is usually used as a reusable alias; choose qualifiers deliberately to avoid broad runtime types.",
-      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .setStringQualifiers(50, false)\n                    .build();\n\n                definedType.setType(typeDesc);\n",
+      "notes": "DefinedType is usually used as a reusable alias; choose TypeDescriptionBuilder qualifiers deliberately to avoid broad runtime types.",
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n",
+      "sampleName": "DefinedTypeSample"
     }
   },
   {
@@ -695,8 +724,10 @@
       "variableName": "journal",
       "createMethod": "createDocumentJournal()",
       "collection": "getDocumentJournals()",
-      "setupBlock": "        journal.setName(\"DocumentsJournal\");\n",
-      "notes": "DocumentJournal collects document views; related columns and commands can be configured later."
+      "setupBlock": "",
+      "notes": "DocumentJournal collects document views; related columns and commands can be configured later.",
+      "sampleName": "DocumentsJournal",
+      "extraSetup": ""
     }
   },
   {
@@ -723,8 +754,10 @@
       "variableName": "numerator",
       "createMethod": "createDocumentNumerator()",
       "collection": "getDocumentNumerators()",
-      "setupBlock": "        numerator.setName(\"MainNumerator\");\n",
-      "notes": "Attach documents to the numerator later through document properties inside a BM transaction."
+      "setupBlock": "",
+      "notes": "Attach documents to the numerator later through document properties inside a BM transaction.",
+      "sampleName": "MainNumerator",
+      "extraSetup": ""
     }
   },
   {
@@ -751,8 +784,10 @@
       "variableName": "subscription",
       "createMethod": "createEventSubscription()",
       "collection": "getEventSubscriptions()",
-      "setupBlock": "        subscription.setName(\"OnDocumentPost\");\n",
-      "notes": "After creation, configure source object, event, and handler module explicitly."
+      "setupBlock": "",
+      "notes": "After creation, configure source object, event, and handler module explicitly.",
+      "sampleName": "OnDocumentPost",
+      "extraSetup": ""
     }
   },
   {
@@ -780,7 +815,9 @@
       "createMethod": "createExchangePlan()",
       "collection": "getExchangePlans()",
       "setupBlock": "        exchangePlan.setCodeLength(9);\n",
-      "notes": "Exchange plans are top-level objects; node definitions and related metadata can be added afterwards."
+      "notes": "Exchange plans are top-level objects; node definitions and related metadata can be added afterwards.",
+      "sampleName": "ExchangePlanSample",
+      "extraSetup": ""
     }
   },
   {
@@ -807,8 +844,10 @@
       "variableName": "source",
       "createMethod": "createExternalDataSource()",
       "collection": "getExternalDataSources()",
-      "setupBlock": "        source.setName(\"WarehouseDwh\");\n",
-      "notes": "Tables, cubes, fields, dimensions, and resources are child objects created after the source."
+      "setupBlock": "",
+      "notes": "Tables, cubes, fields, dimensions, and resources are child objects created after the source.",
+      "sampleName": "WarehouseDwh",
+      "extraSetup": ""
     }
   },
   {
@@ -838,7 +877,8 @@
       "collection": "getFilterCriteria()",
       "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n        TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);\n        TypeDescription typeDesc = new TypeDescriptionBuilder()\n            .addType(catalogRefType)\n            .build();\n\n        criterion.setType(typeDesc);\n",
       "notes": "FilterCriterion implements TypeDescriptionProvider. Make the type narrow and intentional.",
-      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n",
+      "sampleName": "FilterCriterionSample"
     }
   },
   {
@@ -865,8 +905,10 @@
       "variableName": "option",
       "createMethod": "createFunctionalOption()",
       "collection": "getFunctionalOptions()",
-      "setupBlock": "        option.setName(\"UseAdvancedPricing\");\n",
-      "notes": "Bind commands, forms, or object availability to the option after it is created."
+      "setupBlock": "",
+      "notes": "Bind commands, forms, or object availability to the option after it is created.",
+      "sampleName": "UseAdvancedPricing",
+      "extraSetup": ""
     }
   },
   {
@@ -893,8 +935,10 @@
       "variableName": "parameter",
       "createMethod": "createFunctionalOptionsParameter()",
       "collection": "getFunctionalOptionsParameters()",
-      "setupBlock": "        parameter.setName(\"CurrentCompany\");\n",
-      "notes": "After creation, link the parameter to functional options and configure dependent expressions."
+      "setupBlock": "",
+      "notes": "After creation, link the parameter to functional options and configure dependent expressions.",
+      "sampleName": "CurrentCompany",
+      "extraSetup": ""
     }
   },
   {
@@ -921,8 +965,10 @@
       "variableName": "service",
       "createMethod": "createHTTPService()",
       "collection": "getHttpServices()",
-      "setupBlock": "        service.setName(\"OrdersApi\");\n",
-      "notes": "URL templates and HTTP methods are child objects. Keep routing details in follow-up steps."
+      "setupBlock": "",
+      "notes": "URL templates and HTTP methods are child objects. Keep routing details in follow-up steps.",
+      "sampleName": "OrdersApi",
+      "extraSetup": ""
     }
   },
   {
@@ -969,8 +1015,10 @@
       "variableName": "service",
       "createMethod": "createIntegrationService()",
       "collection": "getIntegrationServices()",
-      "setupBlock": "        service.setName(\"ERPIntegration\");\n",
-      "notes": "Add `IntegrationServiceChannel` objects after the parent service is attached to configuration."
+      "setupBlock": "",
+      "notes": "Add `IntegrationServiceChannel` objects after the parent service is attached to configuration.",
+      "sampleName": "ERPIntegration",
+      "extraSetup": ""
     }
   },
   {
@@ -996,8 +1044,10 @@
       "variableName": "interfaceObject",
       "createMethod": "createInterface()",
       "collection": "getInterfaces()",
-      "setupBlock": "        interfaceObject.setName(\"MainInterface\");\n",
-      "notes": "Configure sections, command interface, and navigation structure after the top-level interface is attached."
+      "setupBlock": "",
+      "notes": "Configure sections, command interface, and navigation structure after the top-level interface is attached.",
+      "sampleName": "MainInterface",
+      "extraSetup": ""
     }
   },
   {
@@ -1023,8 +1073,10 @@
       "variableName": "language",
       "createMethod": "createLanguage()",
       "collection": "getLanguages()",
-      "setupBlock": "        language.setName(\"English\");\n",
-      "notes": "After creation, set configuration default language and local string entries appropriately."
+      "setupBlock": "",
+      "notes": "After creation, set configuration default language and local string entries appropriately.",
+      "sampleName": "English",
+      "extraSetup": ""
     }
   },
   {
@@ -1050,8 +1102,10 @@
       "variableName": "report",
       "createMethod": "createReport()",
       "collection": "getReports()",
-      "setupBlock": "        report.setName(\"SalesAnalysis\");\n",
-      "notes": "Metadata object creation does not create layouts, forms, or module code automatically."
+      "setupBlock": "",
+      "notes": "Metadata object creation does not create layouts, forms, or module code automatically.",
+      "sampleName": "SalesAnalysis",
+      "extraSetup": ""
     }
   },
   {
@@ -1078,8 +1132,10 @@
       "variableName": "role",
       "createMethod": "createRole()",
       "collection": "getRoles()",
-      "setupBlock": "        role.setName(\"PowerUser\");\n",
-      "notes": "Rights matrices and permissions are configured after the role object exists."
+      "setupBlock": "",
+      "notes": "Rights matrices and permissions are configured after the role object exists.",
+      "sampleName": "PowerUser",
+      "extraSetup": ""
     }
   },
   {
@@ -1106,8 +1162,10 @@
       "variableName": "job",
       "createMethod": "createScheduledJob()",
       "collection": "getScheduledJobs()",
-      "setupBlock": "        job.setName(\"NightlyCleanup\");\n",
-      "notes": "Add schedule details and called method configuration after the top-level job object exists."
+      "setupBlock": "",
+      "notes": "Add schedule details and called method configuration after the top-level job object exists.",
+      "sampleName": "NightlyCleanup",
+      "extraSetup": ""
     }
   },
   {
@@ -1134,8 +1192,10 @@
       "variableName": "sequence",
       "createMethod": "createSequence()",
       "collection": "getSequences()",
-      "setupBlock": "        sequence.setName(\"DocumentsSequence\");\n",
-      "notes": "After sequence creation, add dimensions and connect participating objects through sequence settings."
+      "setupBlock": "",
+      "notes": "After sequence creation, add dimensions and connect participating objects through sequence settings.",
+      "sampleName": "DocumentsSequence",
+      "extraSetup": ""
     }
   },
   {
@@ -1163,9 +1223,10 @@
       "variableName": "parameter",
       "createMethod": "createSessionParameter()",
       "collection": "getSessionParameters()",
-      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .build();\n\n                parameter.setType(typeDesc);\n",
+      "setupBlock": "        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE\n                    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());\n                TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);\n                TypeDescription typeDesc = new TypeDescriptionBuilder()\n                    .addType(stringType)\n                    .setStringQualifiers(100, false)\n                    .build();\n\n                parameter.setType(typeDesc);\n",
       "notes": "SessionParameter implements TypeDescriptionProvider, so set `type` before the object is used in session logic.",
-      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n"
+      "extraSetup": "IV8Project v8project = projectManager.getProject(project);\n",
+      "sampleName": "SessionParameterSample"
     }
   },
   {
@@ -1191,8 +1252,10 @@
       "variableName": "storage",
       "createMethod": "createSettingsStorage()",
       "collection": "getSettingsStorages()",
-      "setupBlock": "        storage.setName(\"CommonSettingsStorage\");\n",
-      "notes": "Configuration references such as commonSettingsStorage or reportsVariantsStorage should point to this object afterwards."
+      "setupBlock": "",
+      "notes": "Configuration references such as commonSettingsStorage or reportsVariantsStorage should point to this object afterwards.",
+      "sampleName": "CommonSettingsStorage",
+      "extraSetup": ""
     }
   },
   {
@@ -1219,8 +1282,10 @@
       "variableName": "style",
       "createMethod": "createStyle()",
       "collection": "getStyles()",
-      "setupBlock": "        style.setName(\"CorporateStyle\");\n",
-      "notes": "After creation, assign the style in configuration defaults or reference it from forms and UI elements."
+      "setupBlock": "",
+      "notes": "After creation, assign the style in configuration defaults or reference it from forms and UI elements.",
+      "sampleName": "CorporateStyle",
+      "extraSetup": ""
     }
   },
   {
@@ -1246,8 +1311,10 @@
       "variableName": "styleItem",
       "createMethod": "createStyleItem()",
       "collection": "getStyleItems()",
-      "setupBlock": "        styleItem.setName(\"PrimaryButton\");\n",
-      "notes": "StyleItem visual type and concrete appearance settings should be configured explicitly after creation."
+      "setupBlock": "",
+      "notes": "StyleItem visual type and concrete appearance settings should be configured explicitly after creation.",
+      "sampleName": "PrimaryButton",
+      "extraSetup": ""
     }
   },
   {
@@ -1274,8 +1341,10 @@
       "variableName": "subsystem",
       "createMethod": "createSubsystem()",
       "collection": "getSubsystems()",
-      "setupBlock": "        subsystem.setName(\"Sales\");\n",
-      "notes": "Configuration keeps subsystem references; command interfaces and object composition are follow-up steps."
+      "setupBlock": "",
+      "notes": "Configuration keeps subsystem references; command interfaces and object composition are follow-up steps.",
+      "sampleName": "Sales",
+      "extraSetup": ""
     }
   },
   {
@@ -1319,7 +1388,9 @@
       "createMethod": "createTask()",
       "collection": "getTasks()",
       "setupBlock": "        task.setAutonumbering(true);\n",
-      "notes": "Tasks often mirror BusinessProcess patterns. Use TaskAttribute/TaskTabularSection for child objects."
+      "notes": "Tasks often mirror BusinessProcess patterns. Use TaskAttribute/TaskTabularSection for child objects.",
+      "sampleName": "TaskSample",
+      "extraSetup": ""
     }
   },
   {
@@ -1365,8 +1436,10 @@
       "variableName": "service",
       "createMethod": "createWebService()",
       "collection": "getWebServices()",
-      "setupBlock": "        service.setName(\"OrderService\");\n",
-      "notes": "Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children."
+      "setupBlock": "",
+      "notes": "Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children.",
+      "sampleName": "OrderService",
+      "extraSetup": ""
     }
   },
   {
@@ -1393,8 +1466,10 @@
       "variableName": "reference",
       "createMethod": "createWSReference()",
       "collection": "getWsReferences()",
-      "setupBlock": "        reference.setName(\"ExternalSoapService\");\n",
-      "notes": "After creation, fill endpoint and service metadata according to the referenced WSDL contract."
+      "setupBlock": "",
+      "notes": "After creation, fill endpoint and service metadata according to the referenced WSDL contract.",
+      "sampleName": "ExternalSoapService",
+      "extraSetup": ""
     }
   },
   {
@@ -1402,7 +1477,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create XDTO Package",
-    "summary": "Create XDTOPackage metadata and then add package content or schema definitions.",
+    "summary": "Create XDTOPackage metadata with required namespace and then add package content or schema definitions.",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -1412,7 +1487,9 @@
     "keywords": [
       "xdto package",
       "xdto",
-      "schema"
+      "schema",
+      "namespace",
+      "setNamespace"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1421,8 +1498,10 @@
       "variableName": "packageObject",
       "createMethod": "createXDTOPackage()",
       "collection": "getXDTOPackages()",
-      "setupBlock": "        packageObject.setName(\"CommonSchema\");\n",
-      "notes": "Add XDTO package content and imported types after the package metadata object exists."
+      "setupBlock": "        packageObject.setNamespace(\"http://example.com/xdto/CommonSchema\");\n",
+      "notes": "Namespace is required; missing namespace produces a 1C validation marker. Add XDTO package content and imported types after the package metadata object exists.",
+      "sampleName": "CommonSchema",
+      "extraSetup": ""
     }
   },
   {
@@ -1460,6 +1539,33 @@
       "delete configuration",
       "delete project"
     ]
+  },
+  {
+    "id": "delete_top_level_metadata_object",
+    "scope": "edt",
+    "category": "delete",
+    "title": "Delete Top-Level Metadata Object",
+    "summary": "Reusable template for deleting a top-level metadata object through its Configuration collection and BM detach.",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "delete top-level object",
+      "delete metadata object",
+      "remove metadata",
+      "top-level delete template"
+    ],
+    "template": "top-level-delete",
+    "vars": {
+      "title": "Catalog",
+      "typeName": "Catalog",
+      "variableName": "catalog",
+      "fqnPrefix": "Catalog",
+      "sampleName": "Products",
+      "collection": "getCatalogs()",
+      "notes": "Replace the type, FQN prefix, sample name, and Configuration collection with the exact metadata object you are deleting."
+    }
   },
   {
     "id": "delete_metadata_object",
@@ -1560,6 +1666,33 @@
       "edit enum",
       "enum value"
     ]
+  },
+  {
+    "id": "edit_top_level_metadata_object",
+    "scope": "edt",
+    "category": "edit",
+    "title": "Edit Top-Level Metadata Object",
+    "summary": "Reusable template for editing an existing top-level metadata object without reattaching it.",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "edit top-level object",
+      "edit metadata object",
+      "update metadata",
+      "top-level edit template"
+    ],
+    "template": "top-level-edit",
+    "vars": {
+      "title": "Catalog",
+      "typeName": "Catalog",
+      "variableName": "catalog",
+      "fqnPrefix": "Catalog",
+      "sampleName": "Products",
+      "editBlock": "        catalog.setDescriptionLength(200);\n        catalog.getSynonym().put(\"ru\", \"Products\");\n",
+      "notes": "Replace the type, FQN prefix, sample name, and edit block with the exact metadata object you are editing."
+    }
   },
   {
     "id": "edit_existing_metadata",
@@ -1792,6 +1925,37 @@
     ]
   },
   {
+    "id": "jshell_edt_canonical_imports",
+    "scope": "edt",
+    "category": "reference",
+    "title": "JShell EDT Canonical Imports",
+    "summary": "Exact EDT imports, JShell block-scope rule, and method names that prevent common JShell API errors.",
+    "guide": "workflows/reference/jshell_edt_canonical_imports.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "imports",
+      "canonical imports",
+      "AbstractBmTask",
+      "IBmTransaction",
+      "IBmObject",
+      "IEObjectProvider",
+      "IEObjectTypeNames",
+      "TypeDescriptionBuilder",
+      "TypeDescription",
+      "NoSuchFieldError",
+      "JShell block scope",
+      "getRootURL",
+      "getNamespace",
+      "импорты",
+      "пакеты",
+      "reflection"
+    ]
+  },
+  {
     "id": "typedescription_best_practices",
     "scope": "edt",
     "category": "reference",
@@ -1809,6 +1973,472 @@
       "transaction context",
       "IEObjectProvider",
       "best practices"
+    ]
+  },
+  {
+    "id": "metadata_object_coverage",
+    "scope": "edt",
+    "category": "reference",
+    "title": "Metadata Object Coverage",
+    "summary": "Maintenance map from 1C metadata object kinds to JShellManual scenario ids and reusable templates.",
+    "guide": "workflows/reference/metadata_object_coverage.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "metadata object coverage",
+      "1c objects",
+      "top-level template",
+      "scenario map",
+      "manual maintenance",
+      "configuration",
+      "subsystems",
+      "catalogs",
+      "documents",
+      "document journals",
+      "document numerators",
+      "document sequences",
+      "information registers",
+      "accumulation registers",
+      "accounting registers",
+      "calculation registers",
+      "enumerations",
+      "constants",
+      "charts of characteristic types",
+      "charts of accounts",
+      "charts of calculation types",
+      "exchange plans",
+      "business processes",
+      "tasks",
+      "common modules",
+      "common forms",
+      "common commands",
+      "common pictures",
+      "common templates",
+      "common attributes",
+      "roles",
+      "session parameters",
+      "command groups",
+      "functional options",
+      "functional option parameters",
+      "styles",
+      "defined types",
+      "external data sources",
+      "http services",
+      "web services",
+      "ws references",
+      "integration services",
+      "xdto packages",
+      "reports",
+      "data processors",
+      "scheduled jobs",
+      "settings storages",
+      "filter criteria",
+      "event subscriptions",
+      "bots",
+      "data areas",
+      "monitoring centers",
+      "route maps",
+      "presentation packages",
+      "Конфигурация",
+      "Подсистемы",
+      "Справочники",
+      "Документы",
+      "Журналы документов",
+      "Нумераторы документов",
+      "Последовательности документов",
+      "Регистры сведений",
+      "Регистры накопления",
+      "Регистры бухгалтерии",
+      "Регистры расчета",
+      "Перечисления",
+      "Константы",
+      "Планы видов характеристик",
+      "Планы счетов",
+      "Планы видов расчета",
+      "Планы обмена",
+      "Бизнес-процессы",
+      "Задачи",
+      "Общие модули",
+      "Общие формы",
+      "Общие команды",
+      "Общие картинки",
+      "Общие шаблоны",
+      "Общие реквизиты",
+      "Роли",
+      "Параметры сеанса",
+      "Группы команд",
+      "Функциональные опции",
+      "Параметры функциональных опций",
+      "Стили",
+      "Определяемые типы",
+      "Внешние источники данных",
+      "HTTP-сервисы",
+      "Веб-сервисы",
+      "WS-ссылки",
+      "Сервисы интеграции",
+      "XDTO-пакеты",
+      "Отчеты",
+      "Обработки",
+      "Регламентные задания",
+      "Хранилища настроек",
+      "Критерии отбора",
+      "Подписки на события",
+      "Боты",
+      "Области данных",
+      "Центры мониторинга",
+      "Карты маршрутов",
+      "Пакеты отображения"
+    ]
+  },
+  {
+    "id": "metadata_api_core",
+    "scope": "edt",
+    "category": "reference",
+    "title": "EDT Metadata API Cards Core",
+    "summary": "Verified factories, Configuration collections, FQN prefixes, and safe setters for core metadata objects.",
+    "guide": "workflows/reference/metadata_api_core.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "api cards",
+      "verified api",
+      "factory collection",
+      "Configuration",
+      "Subsystem",
+      "CommonModule",
+      "CommonForm",
+      "CommonCommand",
+      "CommonPicture",
+      "CommonTemplate",
+      "CommonAttribute",
+      "Role",
+      "SessionParameter",
+      "CommandGroup",
+      "FunctionalOption",
+      "FunctionalOptionsParameter",
+      "Style",
+      "DefinedType",
+      "Interface",
+      "Language",
+      "getCommonModules",
+      "createCommonModule",
+      "setServerCall",
+      "setClientManagedApplication",
+      "setModifiesData",
+      "подсистема",
+      "общий модуль",
+      "общая форма",
+      "общая команда",
+      "роль",
+      "параметр сеанса",
+      "функциональная опция",
+      "определяемый тип"
+    ]
+  },
+  {
+    "id": "metadata_api_data",
+    "scope": "edt",
+    "category": "reference",
+    "title": "EDT Metadata API Cards Data",
+    "summary": "Verified factories, collections, and safe setters for catalogs, documents, enums, constants, reports, and processors.",
+    "guide": "workflows/reference/metadata_api_data.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "api cards",
+      "Catalog",
+      "Document",
+      "DocumentJournal",
+      "DocumentNumerator",
+      "Sequence",
+      "Enum",
+      "Constant",
+      "ChartOfCharacteristicTypes",
+      "ChartOfAccounts",
+      "ChartOfCalculationTypes",
+      "Report",
+      "ExternalReport",
+      "DataProcessor",
+      "ExternalDataProcessor",
+      "ScheduledJob",
+      "SettingsStorage",
+      "FilterCriterion",
+      "EventSubscription",
+      "createCatalog",
+      "getCatalogs",
+      "createDocument",
+      "getDocuments",
+      "TypeDescription",
+      "справочник",
+      "документ",
+      "журнал документов",
+      "нумератор документов",
+      "последовательность документов",
+      "перечисление",
+      "константа",
+      "план видов характеристик",
+      "план счетов",
+      "план видов расчета",
+      "отчет",
+      "внешний отчет",
+      "обработка",
+      "внешняя обработка",
+      "регламентное задание",
+      "хранилище настроек",
+      "критерий отбора",
+      "подписка на событие"
+    ]
+  },
+  {
+    "id": "metadata_api_registers",
+    "scope": "edt",
+    "category": "reference",
+    "title": "EDT Metadata API Cards Registers",
+    "summary": "Verified register factories, collections, and validation boundaries for EDT register metadata.",
+    "guide": "workflows/reference/metadata_api_registers.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "api cards",
+      "register",
+      "InformationRegister",
+      "AccumulationRegister",
+      "AccountingRegister",
+      "MdExtDimension",
+      "CalculationRegister",
+      "Recalculation",
+      "createInformationRegister",
+      "createAccumulationRegister",
+      "createAccountingRegister",
+      "createCalculationRegister",
+      "registrar",
+      "dimension",
+      "extra dimension",
+      "resource",
+      "регистр сведений",
+      "регистр накопления",
+      "регистр бухгалтерии",
+      "регистр расчета",
+      "перерасчет",
+      "измерение",
+      "ресурс"
+    ]
+  },
+  {
+    "id": "metadata_api_exchange_services",
+    "scope": "edt",
+    "category": "reference",
+    "title": "EDT Metadata API Cards Exchange And Services",
+    "summary": "Verified factories, collections, and safe setters for exchange plans, services, XDTO, and external data sources.",
+    "guide": "workflows/reference/metadata_api_exchange_services.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "api cards",
+      "ExchangePlan",
+      "ExternalDataSource",
+      "Table",
+      "Cube",
+      "HTTPService",
+      "WebService",
+      "WSReference",
+      "IntegrationService",
+      "XDTOPackage",
+      "createHTTPService",
+      "getHttpServices",
+      "setRootURL",
+      "createWebService",
+      "getWebServices",
+      "setNamespace",
+      "createIntegrationService",
+      "getIntegrationServices",
+      "план обмена",
+      "внешний источник данных",
+      "HTTP-сервис",
+      "веб-сервис",
+      "WS-ссылка",
+      "сервис интеграции",
+      "XDTO-пакет"
+    ]
+  },
+  {
+    "id": "metadata_api_processes_misc",
+    "scope": "edt",
+    "category": "reference",
+    "title": "EDT Metadata API Cards Processes And Misc",
+    "summary": "Verified process metadata cards and reflection boundaries for rare or version-dependent 1C objects.",
+    "guide": "workflows/reference/metadata_api_processes_misc.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "api cards",
+      "BusinessProcess",
+      "Task",
+      "Bot",
+      "DataArea",
+      "MonitoringCenter",
+      "RouteMap",
+      "DisplayPackage",
+      "PresentationPackage",
+      "createBusinessProcess",
+      "createTask",
+      "createBot",
+      "бизнес-процесс",
+      "задача",
+      "бот",
+      "область данных",
+      "центр мониторинга",
+      "карта маршрута",
+      "пакет отображения"
+    ]
+  },
+  {
+    "id": "edt_validation_traps",
+    "scope": "edt",
+    "category": "reference",
+    "title": "EDT Validation Traps",
+    "summary": "Common EDT metadata validation traps from logs and model workflows: UUIDs, TypeDescription, project settings, registers, services.",
+    "guide": "workflows/reference/edt_validation_traps.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "validation traps",
+      "GetMarkers",
+      "NoSuchFileException",
+      ".settings",
+      "UUID",
+      "SU45",
+      "TypeDescription",
+      "ExchangePlan thisNode",
+      "register validation",
+      "service validation",
+      "ошибки валидации",
+      "маркеры",
+      "uuid",
+      "тип значения",
+      "thisNode"
+    ]
+  },
+  {
+    "id": "crud_common_objects",
+    "scope": "edt",
+    "category": "composite",
+    "title": "CRUD Common Objects",
+    "summary": "Batch create/read/edit/delete recipe for CommonModule, CommonForm, and CommonCommand without unnecessary reflection.",
+    "guide": "workflows/composite/crud_common_objects.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "CRUD common objects",
+      "CommonModule",
+      "CommonForm",
+      "CommonCommand",
+      "createCommonModule",
+      "createCommonForm",
+      "createCommonCommand",
+      "общий модуль",
+      "общая форма",
+      "общая команда"
+    ]
+  },
+  {
+    "id": "crud_services",
+    "scope": "edt",
+    "category": "composite",
+    "title": "CRUD Service Objects",
+    "summary": "Batch create/read/edit/delete recipe for HTTPService, WebService, IntegrationService, WSReference, and XDTOPackage.",
+    "guide": "workflows/composite/crud_services.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "CRUD services",
+      "HTTPService",
+      "WebService",
+      "IntegrationService",
+      "WSReference",
+      "XDTOPackage",
+      "setRootURL",
+      "setNamespace",
+      "HTTP-сервис",
+      "веб-сервис",
+      "сервис интеграции",
+      "WS-ссылка",
+      "XDTO-пакет"
+    ]
+  },
+  {
+    "id": "crud_basic_metadata",
+    "scope": "edt",
+    "category": "composite",
+    "title": "CRUD Basic Metadata",
+    "summary": "Batch create/read/edit/delete recipe for Catalog, Document, Enum, Constant, Subsystem, Report, and DataProcessor.",
+    "guide": "workflows/composite/crud_basic_metadata.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "CRUD metadata",
+      "Catalog",
+      "Document",
+      "Enum",
+      "Constant",
+      "Subsystem",
+      "Report",
+      "DataProcessor",
+      "createCatalog",
+      "createDocument",
+      "справочник",
+      "документ",
+      "перечисление",
+      "константа",
+      "подсистема",
+      "отчет",
+      "обработка"
     ]
   },
   {

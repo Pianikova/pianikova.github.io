@@ -20,6 +20,7 @@ article.setUuid(UUID.randomUUID());
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
 TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(stringType)
+    .setStringQualifiers(100, false)
     .build();
 
 article.setType(typeDesc);
@@ -86,12 +87,18 @@ if (authors != null) {
         country.setName("Страна");
         country.setUuid(UUID.randomUUID());
         TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
-        TypeDescription countryType = new TypeDescriptionBuilder().addType(stringType).build();
+        TypeDescription countryType = new TypeDescriptionBuilder()
+            .addType(stringType)
+            .setStringQualifiers(100, false)
+            .build();
         country.setType(countryType);
         authors.getAttributes().add(country);
     } else if (country.getType() == null || country.getType().getTypes().isEmpty()) {
         TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
-        TypeDescription countryType = new TypeDescriptionBuilder().addType(stringType).build();
+        TypeDescription countryType = new TypeDescriptionBuilder()
+            .addType(stringType)
+            .setStringQualifiers(100, false)
+            .build();
         country.setType(countryType);
     }
 }
@@ -102,6 +109,7 @@ if (authors != null) {
 - Every attribute derived from `BasicFeature` must have `setType(...)` before it is added to the parent collection
 - `CatalogAttribute`, `DocumentAttribute`, and `TabularSectionAttribute` are the most common sources of `md-legacy-emf-check` when `type` is omitted
 - For child objects, UUID is still recommended in JShell
+- For `IEObjectTypeNames.STRING`, always set finite qualifiers with `.setStringQualifiers(length, false)` to avoid SU8 unlimited-string markers.
 
 ### Required post-check
 

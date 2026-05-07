@@ -174,6 +174,7 @@ TypeDescription unitsType = new TypeDescriptionBuilder()
 - Use generic IEObjectTypeNames only when polymorphism is desired
 - Build the type before assigning it to attributes, dimensions, resources, constants, or defined types
 - Always validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
+- If a specific metadata proxy like `"Catalog.Units"` is null, do not call `addType(null)`. Use a generic fallback such as `IEObjectTypeNames.CATALOG_REF` or create the missing metadata first.
 - Specific references only work for metadata objects that already exist and are visible to the current transaction
 - When a specific proxy is unavailable, fall back to a generic type like `IEObjectTypeNames.CATALOG_REF`
 - Set qualifiers via the builder's fluent methods — they internally use `McoreFactory.eINSTANCE` and are JShell-safe
