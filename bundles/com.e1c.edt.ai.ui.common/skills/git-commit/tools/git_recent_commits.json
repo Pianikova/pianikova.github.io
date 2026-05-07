@@ -1,0 +1,12 @@
+{
+  "name": "git",
+  "arguments": {
+    "working_directory": "${working_directory}",
+    "args": [
+      "log",
+      "-n",
+      "${max_commit_count}",
+      "--pretty=format:%s"
+    ]
+  }
+}

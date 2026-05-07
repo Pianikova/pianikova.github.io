@@ -61,6 +61,9 @@ public class AIModule
         bind(IProjectTools.class).to(ProjectTools.class).in(Singleton.class);
         bind(ITraceScenario.class).to(TraceScenario.class).in(Singleton.class);
         bind(IConversationFacade.class).to(ConversationFacade.class).in(Singleton.class);
+        bind(ISkillFacade.class).to(SkillFacade.class).in(Singleton.class);
+        bind(ISkillRegistry.class).to(SkillRegistry.class).in(Singleton.class);
+        bind(RegexTemplateProcessor.class).in(Singleton.class);
         // @formatter:on
     }
 }

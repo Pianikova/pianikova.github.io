@@ -1,0 +1,7 @@
+{
+  "name": "git",
+  "arguments": {
+    "working_directory": "${working_directory}",	
+    "args": ["diff", "--cached"]
+  }
+}
