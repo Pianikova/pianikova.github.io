@@ -29,6 +29,9 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Create catal
         catalog.setName("Products");
         catalog.getSynonym().put("ru", "Products");
         catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);
+        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS);       // does NOT exist
+        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_HIERARCHICAL); // does NOT exist
+        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_NONE);         // does NOT exist — omit the call instead
         catalog.setCodeLength(9);
         catalog.setDescriptionLength(150);
 

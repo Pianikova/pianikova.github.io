@@ -109,21 +109,41 @@ attribute.setType(typeDesc);
 ```
 
 **Pattern 2: Number with Qualifiers**
+
+Use the builder's fluent `setNumberQualifiers(scale, precision, nonNegative)` —
+it constructs the qualifier internally via `McoreFactory.eINSTANCE` and is
+JShell-safe (NO `modelFactory` / OSGi service involved).
+⚠️ scale MUST be ≤ precision (otherwise SU8 error).
+
 ```java
 IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
-TypeDescription typeDesc = new TypeDescriptionBuilder().addType(numberType).build();
 
-// Set number qualifiers (inside transaction)
-if (typeDesc.getNumberQualifiers() == null) {
-    typeDesc.setNumberQualifiers(modelFactory.createNumberQualifiers());
-}
-typeDesc.getNumberQualifiers().setPrecision(10); // Total digits
-typeDesc.getNumberQualifiers().setScale(2);     // Decimal places
-// NOTE: Scale must be <= Precision to avoid SU8 error
+// Number(10, 2), non-negative — typical price/amount column
+TypeDescription typeDesc = new TypeDescriptionBuilder()
+    .addType(numberType)
+    .setNumberQualifiers(2, 10, true)
+    .build();
 ```
+
+**Pattern 2b: String with Qualifiers**
+
+```java
+TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+
+// Variable-length string up to 1000 chars
+TypeDescription bioType = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(1000, false)
+    .build();
+```
+
+The full qualifier API on `TypeDescriptionBuilder`: `setStringQualifiers(int, boolean)`,
+`setBinaryQualifiers(int, boolean)`, `setNumberQualifiers(int, int, boolean)`,
+`setDateQualifiers(DateFractions)`. Nothing else exists for qualifiers — see
+the anti-patterns table in the `create_type_description` scenario.
 
 **Pattern 3: Composite Type (String or Number)**
 ```java

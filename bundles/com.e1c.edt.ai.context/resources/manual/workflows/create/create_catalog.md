@@ -1,5 +1,9 @@
 ## Safe Workflow: Create Catalog
 
+> ⚠️ **HierarchyType — only two valid constants in EDT API.**
+> Use ONLY `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` (default) or `HierarchyType.HIERARCHY_OF_ITEMS`.
+> Other names from 1C:Enterprise classic API (`HIERARCHY_GROUPS`, `HIERARCHY_HIERARCHICAL`, `HIERARCHY_NONE`) **do not exist** and cause `cannot find symbol`.
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
@@ -15,6 +19,9 @@ Catalog created = globalContext.execute(new AbstractBmTask<Catalog>("Create cata
         catalog.setName("Products");
         catalog.getSynonym().put("ru", "Products");
         catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);
+        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS);       // does NOT exist
+        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_HIERARCHICAL); // does NOT exist
+        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_NONE);         // does NOT exist — omit the call instead
         catalog.setCodeLength(9);
         catalog.setDescriptionLength(150);
 
@@ -47,10 +54,14 @@ Catalog created = globalContext.execute(new AbstractBmTask<Catalog>("Create cata
 
 ### HierarchyType constants
 
-- `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` is available and safe as a default
-- `HierarchyType.HIERARCHY_OF_ITEMS` is available when folders are not needed
-- `HierarchyType.HIERARCHY_GROUPS` does not exist in EDT API
-- `HierarchyType.HIERARCHY_HIERARCHICAL` does not exist in EDT API
+| Use this                                       | Instead of (does NOT exist)                       |
+|------------------------------------------------|---------------------------------------------------|
+| `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS`    | `HierarchyType.HIERARCHY_GROUPS`                  |
+| `HierarchyType.HIERARCHY_OF_ITEMS`             | `HierarchyType.HIERARCHY_HIERARCHICAL`            |
+| _(omit `setHierarchyType` for non-hierarchical)_ | `HierarchyType.HIERARCHY_NONE`                  |
+
+For a non-hierarchical catalog simply do not call `setHierarchyType(...)` —
+the platform default is correct.
 
 ### Safe reference type pattern
 

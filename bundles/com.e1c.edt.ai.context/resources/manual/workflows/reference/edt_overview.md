@@ -37,11 +37,20 @@
 
 **Document (Документ):**
 - Use `DocumentNumberType.NUMBER` or `DocumentNumberType.STRING`
-- Use `DocumentNumberPeriodicity.NONPERIODICAL` (correct enum constant)
+- Use `DocumentNumberPeriodicity.NONPERIODICAL` (also `YEAR`, `QUARTER`, `MONTH`, `DAY`)
 - Supports: realTimePosting, registerRecordsDeletion, sequenceFilling
 - Do not use `setPosted(...)` - this setter is not present in EDT API
-
 - May reference: numerator, registerRecords (array of BasicRegister)
+
+```java
+// Document number periodicity — pick the right enum CLASS name carefully
+document.setNumberPeriodicity(DocumentNumberPeriodicity.YEAR);
+// ❌ DateNumberPeriodicityity.YEAR     — class does NOT exist (typo / hallucination)
+// ❌ DateNumberPeriodicity.YEAR        — class does NOT exist
+// ❌ DocumentPeriodicity.YEAR          — class does NOT exist
+// The ONLY correct enum class is DocumentNumberPeriodicity from
+// com._1c.g5.v8.dt.metadata.mdclass; valid values: NONPERIODICAL, YEAR, QUARTER, MONTH, DAY.
+```
 
 **InformationRegister (РегистрСведений):**
 - Use `InformationRegisterPeriodicity.NONPERIODICAL`, `SECOND`, `DAY`, `MONTH`, `QUARTER`, `YEAR`, `RECORDER_POSITION`
@@ -268,49 +277,31 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+
+// String, no qualifier
 typeDesc = new TypeDescriptionBuilder()
     .addType(stringType)
     .build();
 
-// Set string qualifiers (length)
-// Note: StringQualifiers must be set on the TypeDescription, not passed to builder
-// StringQualifiers stringQualifiers = modelFactory.createStringQualifiers();
-// stringQualifiers.setLength(50);
-// typeDesc.setStringQualifiers(stringQualifiers);
+// String of length 50, variable-length — use the builder's setStringQualifiers(length, fixed).
+// This path is JShell-safe (no `modelFactory` / OSGi service involved).
+typeDesc = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(50, false)
+    // ❌ .stringQualifiersLength(50) — method does NOT exist
+    // ❌ .setLength(50)               — TypeDescriptionBuilder has no such method
+    .build();
 
-// Simplified: just set length on TypeDescription's qualifiers
-if (typeDesc.getStringQualifiers() == null) {
-    typeDesc.setStringQualifiers(modelFactory.createStringQualifiers());
-}
-typeDesc.getStringQualifiers().setLength(50);
-
-// Number type
-typeProvider = IEObjectProvider.Registry.INSTANCE
-    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+// Number type — Number(10, 2), non-negative.
+// ⚠️ CRITICAL: scale must be <= precision (otherwise SU8 error).
+// Signature: setNumberQualifiers(int scale, int precision, boolean nonNegative).
 TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
 typeDesc = new TypeDescriptionBuilder()
     .addType(numberType)
+    .setNumberQualifiers(2, 10, true)
+    // ❌ .numberQualifiersPrecision(10).numberQualifiersScale(2) — methods do NOT exist
+    // ❌ .setPrecision(10).setScale(2)                           — TypeDescriptionBuilder has no such methods
     .build();
-
-// Number type with precision and scale (recommended for amounts, prices, etc.)
-// Create Number type with precision and scale qualifiers
-typeProvider = IEObjectProvider.Registry.INSTANCE
-    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
-typeDesc = new TypeDescriptionBuilder()
-    .addType(numberType)
-    .build();
-
-// Set number qualifiers (precision, scale)
-// ⚠️ CRITICAL: Scale must be <= Precision, otherwise SU8 error occurs
-// Precision = total number of digits (including decimal places)
-// Scale = number of digits after decimal point
-if (typeDesc.getNumberQualifiers() == null) {
-    typeDesc.setNumberQualifiers(modelFactory.createNumberQualifiers());
-}
-typeDesc.getNumberQualifiers().setPrecision(10);
-typeDesc.getNumberQualifiers().setScale(2);
-// This creates a Number(10, 2) type: up to 10 total digits, 2 after decimal point
 
 // Date type
 typeProvider = IEObjectProvider.Registry.INSTANCE
@@ -602,17 +593,21 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(stringType)
     .build();
 ```
-If qualifiers are required, use modelFactory to create them:
+If qualifiers are required, use the builder's fluent setters — they construct
+the qualifier internally via `McoreFactory.eINSTANCE` and are JShell-safe
+(NO `modelFactory` / OSGi service):
 ```java
-// NOTE: This requires modelFactory context and may timeout in JShell
-// For JShell, prefer simple types without qualifiers
+// String of length 150, variable-length
+TypeDescription strType = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(150, false)
+    .build();
 
-// If needed, create qualifiers via modelFactory:
-// StringQualifiers stringQuals = modelFactory.createStringQualifiers();
-// stringQuals.setLength(150);
-// NumberQualifiers numberQuals = modelFactory.createNumberQualifiers();
-// numberQuals.setPrecision(10);
-// numberQuals.setScale(2);
+// Number(10, 2), non-negative
+TypeDescription numType = new TypeDescriptionBuilder()
+    .addType(numberType)
+    .setNumberQualifiers(2, 10, true)
+    .build();
 ```
 ### Best Practices
 
@@ -1201,8 +1196,7 @@ if (catalog != null) {
 **Important Notes:**
 - Always get typeProvider INSIDE the transaction
 - TypeItem proxies must be obtained and used within the SAME IBmTransaction
-- For String types, use buildStringTypeDescription() or buildStringTypeWithQualifiersDescription()
-- For Number types, use buildNumberTypeDescription() or buildNumberTypeWithQualifiersDescription()
+- For qualified types, use the fluent builder: `setStringQualifiers(length, fixed)`, `setNumberQualifiers(scale, precision, nonNegative)`, `setBinaryQualifiers(length, fixed)`, `setDateQualifiers(DateFractions)` — see scenario `create_type_description`
 
 ### SU8: Scale Cannot Exceed Precision
 
