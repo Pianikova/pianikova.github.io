@@ -21,3 +21,4 @@ globalContext.execute(new AbstractBmTask<Void>("Edit ChartOfAccounts") {
 - Load the existing object by FQN from the transaction
 - Do not recreate or reattach the object
 - Be careful with references from AccountingRegister and dependent objects when renaming or restructuring the chart.
+- After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers.

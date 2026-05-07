@@ -9,6 +9,20 @@ Generic workflow for editing any existing metadata object safely.
 - ❌ **NEVER use** `attachTopObject()` for existing objects
 - ❌ **NEVER use** `transaction.detachTopObject()` for existing objects
 
+### Required post-check
+
+After editing metadata, call `GetMarkers` for the changed file or the whole project:
+
+```json
+{
+  "project_name": "MyProject",
+  "marker_type": "1c",
+  "max_count": 50
+}
+```
+
+Fix new 1C markers before reporting the edit as complete.
+
 ### Generic Pattern:
 ```java
 IProject project = workspaceRoot.getProject("MyProject");

@@ -24,6 +24,7 @@ ${setupBlock}        String fqn = fqnGenerator.generateStandaloneObjectFqn(${var
 - Set UUID before attach
 - Generate FQN with `fqnGenerator`
 - Add the object to `Configuration.${collection}`
+- After the transaction completes, run `GetMarkers` with `marker_type: "1c"` for the project or changed file
 
 ### Notes
 - ${notes}

@@ -44,16 +44,9 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         warehouse.setType(warehouseType);
         document.getAttributes().add(warehouse);
 
-        // Add date attribute
-        DocumentAttribute dateAttr = mdFactory.createDocumentAttribute();
-        dateAttr.setName("Date");
-        dateAttr.getSynonym().put("ru", "Дата");
-        TypeItem dateType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DATE);
-        TypeDescription dateTypeDesc = new TypeDescriptionBuilder()
-            .addType(dateType)
-            .build();
-        dateAttr.setType(dateTypeDesc);
-        document.getAttributes().add(dateAttr);
+        // ⚠️ WARNING: Do NOT create "Date" attribute - it conflicts with standard document property
+        // Documents have standard attributes: Date, Number, Posted, Ref - these are built-in
+        // Add custom attributes only (do not use names: Date, Number, Posted, DeletionMark, Ref)
 
         // Add tabular section with typed line attributes
         DocumentTabularSection products = mdFactory.createDocumentTabularSection();
@@ -86,7 +79,6 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)
         document.setUuid(UUID.randomUUID());
         warehouse.setUuid(UUID.randomUUID());
-        dateAttr.setUuid(UUID.randomUUID());
 
         // Generate FQN and attach to transaction
         String fqn = fqnGenerator.generateStandaloneObjectFqn(document.eClass(), document.getName()).toString();
@@ -108,3 +100,25 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 - **UUIDs** MUST be set for document and all attributes to avoid SU45 errors
 - **Every `DocumentAttribute` and `TabularSectionAttribute` must call `setType(...)`** before `add(...)`; otherwise EDT reports `md-legacy-emf-check` / `type is required`
 - **Check before creating** to avoid `BmFqnAlreadyInUseException`
+
+**⚠️ CRITICAL: Standard Document Attributes**
+- **NEVER create custom attributes with names matching standard document properties**
+- Standard document attributes (built-in, cannot be overridden): `Date`, `Number`, `Posted`, `Ref`, `DeletionMark`
+- Trying to create an attribute named "Date" will cause validation error: "Некорректное значение свойства \"name\" реквизита \"Date\". Совпадает с именем стандартного реквизита"
+- Only create custom attributes with unique names (e.g., Warehouse, Customer, Amount, etc.)
+
+**Register Registers for Accumulation/Accounting Registers:**
+- After creating a document, you can add registers it records to via `document.getRegisterRecords().add(register)`
+- Example:
+```java
+AccumulationRegister stockRegister = (AccumulationRegister)transaction.getTopObjectByFqn("AccumulationRegister.GoodsInStock");
+if (stockRegister != null) {
+    document.getRegisterRecords().add(stockRegister);
+}
+```
+- Registers are configured on documents, not on registers themselves
+- Each document can record to multiple registers (accumulation, accounting, information, calculation)
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

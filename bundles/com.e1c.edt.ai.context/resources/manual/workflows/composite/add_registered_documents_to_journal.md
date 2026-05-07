@@ -62,3 +62,7 @@ System.out.println("Journal documents: " + journal.getRegisteredDocuments().size
 journal.getRegisteredDocuments().forEach(doc ->
     System.out.println("  " + doc.getName() + " (" + doc.getSynonym().get("ru") + ")"));
 ```
+
+### Required post-check
+
+After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for the project and fix new validation markers before reporting success.

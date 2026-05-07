@@ -61,3 +61,22 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
 ```
 **Note:** Registers require at least one Dimension. Resources are optional but recommended.
 **Note:** `AccumulationRegisterDimension` does not have `setBalance(...)`; do not call it in JShell examples.
+
+**⚠️ CRITICAL: Registers Must Have Registrars**
+- Accumulation/Accounting/Calculation registers MUST have at least one document that records to them
+- Without registrars, validation error occurs: "Некорректный состав регистраторов регистра. Ни один из документов не является регистратором для регистра"
+- Registrars are configured on DOCUMENTS, not on registers
+- After creating a document, add the register to its `registerRecords` collection:
+```java
+Document goodsReceipt = (Document)transaction.getTopObjectByFqn("Document.GoodsReceipt");
+AccumulationRegister stockRegister = (AccumulationRegister)transaction.getTopObjectByFqn("AccumulationRegister.GoodsInStock");
+if (goodsReceipt != null && stockRegister != null) {
+    goodsReceipt.getRegisterRecords().add(stockRegister);
+}
+```
+- One register can have multiple registrar documents
+- Register type affects which document types can record to it (all documents can record to accumulation registers)
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

@@ -56,3 +56,7 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
 - InformationRegister usually needs at least one dimension and often one resource
 - Every new feature derived from BasicFeature must have `setType(...)`
 - Use a specific reference type like `Catalog.Products` when you need a strict typed dimension
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

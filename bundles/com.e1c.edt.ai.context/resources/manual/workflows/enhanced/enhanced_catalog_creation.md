@@ -134,3 +134,7 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Create catal
 - When UUID assignment failures are possible
 - For scripts that need reliable error handling
 
+### Required post-check
+
+After enhanced metadata creation, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.
+

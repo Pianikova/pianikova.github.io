@@ -27,3 +27,7 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Delete attri
 });
 ```
 **NOTE:** Always use `EcoreUtil.delete()` instead of `getAttributes().remove()` for proper entity deletion.
+
+### Required post-check
+
+After deleting an attribute or other child metadata object, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

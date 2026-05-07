@@ -73,6 +73,23 @@
     ]
   },
   {
+    "id": "check_1c_markers_after_crud",
+    "scope": "edt",
+    "category": "reference",
+    "title": "Check 1C Markers After CRUD",
+    "summary": "Run GetMarkers after create, edit, or delete metadata operations to detect 1C validation errors.",
+    "guide": "workflows/reference/check_1c_markers_after_crud.md",
+    "bindings": [],
+    "keywords": [
+      "GetMarkers",
+      "1c markers",
+      "validation",
+      "CRUD",
+      "diagnostics",
+      "metadata errors"
+    ]
+  },
+  {
     "id": "create_accounting_register",
     "scope": "edt",
     "category": "create",
@@ -1239,6 +1256,7 @@
     "category": "create",
     "title": "Create Subsystem",
     "summary": "Create Subsystem metadata and then link objects through references or command interfaces.",
+    "guide": "workflows/create/create_subsystem.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",

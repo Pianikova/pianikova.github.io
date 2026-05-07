@@ -42,3 +42,7 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Add tabula
     }
 });
 ```
+
+### Required post-check
+
+After changing metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

@@ -22,3 +22,4 @@ globalContext.execute(new AbstractBmTask<Void>("Edit Task") {
 - Load the existing object by FQN from the transaction
 - Do not recreate or reattach the object
 - Use the generic attribute/tabular-section scenarios when you need to modify child collections.
+- After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers.

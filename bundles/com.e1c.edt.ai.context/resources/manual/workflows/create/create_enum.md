@@ -27,3 +27,7 @@ globalContext.execute(new AbstractBmTask<Void>("Create enum") {
 - Add at least one `EnumValue` immediately to reduce validation issues
 - Set UUID on the enum and on each enum value
 - For edits, mutate `enumObject.getEnumValues()` directly instead of recreating the enum
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

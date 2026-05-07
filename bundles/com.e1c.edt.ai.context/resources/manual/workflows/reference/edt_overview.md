@@ -10,6 +10,7 @@
 - Use `getTopObjectByFqn()` to READ existing objects
 - Use `mdFactory.createXxx()` + `attachTopObject()` to CREATE new objects
 - Modify existing objects directly (no `attachTopObject()` needed)
+- After every metadata CRUD operation, run the `GetMarkers` tool with `marker_type: "1c"` and inspect remaining 1C markers before reporting success
 
 **❌ PROHIBITED:**
 - Do NOT use `executeReadonlyTask(...)` for metadata creation/modification
@@ -108,6 +109,7 @@ document.setNumberPeriodicity(DocumentNumberPeriodicity.YEAR);
 5. Generate FQN: `fqnGenerator.generateStandaloneObjectFqn(eClass(), name)`
 6. Attach: `transaction.attachTopObject((IBmObject)object, fqn)`
 7. Add to parent collection: `configuration.getXxxs().add(object)`
+8. After the transaction completes, call `GetMarkers` with `marker_type: "1c"` for the project or changed file and fix any new metadata errors
 
 #### Common Property Setting Patterns
 

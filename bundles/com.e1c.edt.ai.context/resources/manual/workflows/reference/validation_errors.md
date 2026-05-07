@@ -132,7 +132,7 @@ int scale = nq.getScale();
 ### General Workflow for Fixing Metadata Validation Errors
 
 **Step 1: Identify the error**
-- Check EDT markers/problems view
+- Call `GetMarkers` with `marker_type: "1c"` or check EDT markers/problems view
 - Note the error code (SU45, SU8, etc.)
 - Note the object path (Catalog.Контрагенты, Document.ПриходТовара, etc.)
 
@@ -147,8 +147,8 @@ int scale = nq.getScale();
 - Set type or qualifiers using modelFactory
 
 **Step 4: Verify fix**
-- Refresh/Rebuild project in EDT
-- Check markers view for remaining errors
+- Call `GetMarkers` again with `marker_type: "1c"`
+- Check returned markers for remaining errors
 
 **Step 5: Consider project-wide fixes**
 - If multiple objects have same error, iterate through collections
@@ -161,3 +161,97 @@ int scale = nq.getScale();
 - For existing objects: modify directly, don't use attachTopObject()
 - Check that Scale <= Precision for all Number types
 - Verify that all attributes have valid TypeDescription set
+
+### Standard Document Attribute Names Cannot Be Overridden
+
+**Error Message:** "Некорректное значение свойства \"name\" реквизита \"<имя>\". Совпадает с именем стандартного реквизита"
+
+**Problem:** Trying to create a document attribute with a name that matches a built-in standard document property.
+
+**Common Causes:**
+- Creating a custom attribute named "Date"
+- Creating a custom attribute named "Number", "Posted", "DeletionMark", or "Ref"
+
+**Standard Document Attributes (Built-in, Cannot Override):**
+- `Date` - Document date (standard property, always exists)
+- `Number` - Document number (standard property, always exists)
+- `Posted` - Posted status (standard property)
+- `Ref` - Document reference (standard property)
+- `DeletionMark` - Deletion mark (standard property)
+
+**Fix Pattern:**
+```java
+// ❌ WRONG - This causes validation error
+DocumentAttribute dateAttr = mdFactory.createDocumentAttribute();
+dateAttr.setName("Date"); // ❌ Conflicts with standard attribute!
+dateAttr.setType(dateTypeDesc);
+document.getAttributes().add(dateAttr);
+// Error: "Некорректное значение свойства \"name\" реквизита \"Date\". Совпадает с именем стандартного реквизита"
+
+// ✅ CORRECT - Use a different name
+DocumentAttribute documentDate = mdFactory.createDocumentAttribute();
+documentDate.setName("DocumentDate"); // ✅ Unique name
+documentDate.setType(dateTypeDesc);
+document.getAttributes().add(documentDate);
+```
+
+**Important Notes:**
+- Never create custom attributes with names matching standard document properties
+- Standard attributes are automatically provided by the platform
+- Only create custom attributes with unique, descriptive names
+- Common custom attribute names: Warehouse, Customer, Amount, Counterparty, etc.
+
+### Accumulation/Accounting/Calculation Registers Must Have Registrars
+
+**Error Message:** "Некорректный состав регистраторов регистра. Ни один из документов не является регистратором для регистра"
+
+**Problem:** Creating an AccumulationRegister, AccountingRegister, or CalculationRegister without any document registrars.
+
+**Common Causes:**
+- Creating a register and not configuring any document to record to it
+- Misunderstanding where registrars are configured (on documents, not on registers)
+
+**Understanding Registrars:**
+- Registers MUST have at least one document that records to them
+- Registrars are configured on the **DOCUMENT** side, not on the **REGISTER** side
+- Documents record to registers via `Document.getRegisterRecords().add(register)`
+- Registers do NOT have a method to list their registrars (no `getRegisteredDocuments()`)
+
+**Fix Pattern:**
+```java
+// Step 1: Create the register
+AccumulationRegister register = mdFactory.createAccumulationRegister();
+register.setName("GoodsInStock");
+register.setRegisterType(AccumulationRegisterType.BALANCE);
+// ... add dimensions and resources ...
+register.setUuid(UUID.randomUUID());
+String registerFqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();
+transaction.attachTopObject((IBmObject)register, registerFqn);
+configuration.getAccumulationRegisters().add(register);
+
+// Step 2: Create a document
+Document document = mdFactory.createDocument();
+document.setName("GoodsReceipt");
+// ... configure document ...
+document.setUuid(UUID.randomUUID());
+String documentFqn = fqnGenerator.generateStandaloneObjectFqn(document.eClass(), document.getName()).toString();
+transaction.attachTopObject((IBmObject)document, documentFqn);
+configuration.getDocuments().add(document);
+
+// Step 3: Add the register as a registrar for the document
+// ⚠️ CRITICAL: This step is REQUIRED to avoid validation error
+document.getRegisterRecords().add(register);
+```
+
+**Important Notes:**
+- AccumulationRegister, AccountingRegister, and CalculationRegister MUST have registrars
+- InformationRegister does NOT need registrars (periodic data, not document movements)
+- Multiple documents can record to the same register
+- One document can record to multiple registers
+- Always configure registrars on the document side via `document.getRegisterRecords().add(register)`
+
+**Valid Register Types for Document Registrars:**
+- ✅ `AccumulationRegister` - CAN be a registrar (stock/quantity tracking)
+- ✅ `AccountingRegister` - CAN be a registrar (chart of accounts based)
+- ✅ `CalculationRegister` - CAN be a registrar (payroll and calculations)
+- ❌ `InformationRegister` - CANNOT be a registrar (periodic data only)

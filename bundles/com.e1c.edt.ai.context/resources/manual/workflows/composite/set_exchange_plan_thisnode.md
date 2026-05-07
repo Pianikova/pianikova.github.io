@@ -79,3 +79,7 @@ if (currentThisNode != null) {
     System.out.println("ThisNode is not set - exchange plan won't work");
 }
 ```
+
+### Required post-check
+
+After changing metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

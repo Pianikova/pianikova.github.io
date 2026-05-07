@@ -35,3 +35,7 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Edit catalog
     }
 });
 ```
+
+### Required post-check
+
+After editing metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project. Inspect returned markers and fix new validation errors before reporting success.

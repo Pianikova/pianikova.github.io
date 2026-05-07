@@ -72,3 +72,7 @@ System.out.println("Document registers: " + document.getRegisterRecords().size()
 document.getRegisterRecords().forEach(reg ->
     System.out.println("  " + reg.getName() + " (" + reg.eClass().getName() + ")"));
 ```
+
+### Required post-check
+
+After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for the project and fix new validation markers before reporting success.

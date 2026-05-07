@@ -23,3 +23,7 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Rename catal
     }
 });
 ```
+
+### Required post-check
+
+After renaming metadata, call `GetMarkers` with `marker_type: "1c"` for the project and fix new validation markers before reporting success.

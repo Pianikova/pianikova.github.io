@@ -102,3 +102,7 @@ if (authors != null) {
 - Every attribute derived from `BasicFeature` must have `setType(...)` before it is added to the parent collection
 - `CatalogAttribute`, `DocumentAttribute`, and `TabularSectionAttribute` are the most common sources of `md-legacy-emf-check` when `type` is omitted
 - For child objects, UUID is still recommended in JShell
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

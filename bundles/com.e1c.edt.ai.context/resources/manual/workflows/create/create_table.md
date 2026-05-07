@@ -17,3 +17,7 @@ source.getTables().add(table);
 ### Notes
 - Child objects inside ExternalDataSource are usually not attached as standalone top-level objects
 - Add fields and commands after the table exists
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

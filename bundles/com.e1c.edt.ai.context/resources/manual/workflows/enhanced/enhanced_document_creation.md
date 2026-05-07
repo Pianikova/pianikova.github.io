@@ -142,4 +142,5 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Create doc
 - [ ] All TabularSectionAttribute objects: `tsa.setUuid(UUID.randomUUID())`
 - [ ] Wrap ALL UUID assignments in try-catch blocks
 - [ ] Abort creation if any UUID assignment fails
+- [ ] After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers
 

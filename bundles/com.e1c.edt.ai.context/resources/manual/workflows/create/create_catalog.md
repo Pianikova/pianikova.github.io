@@ -186,3 +186,7 @@ transaction.attachTopObject((IBmObject)catalog, fqn);
 ### Important notes
 - Validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
 - References to metadata objects created in the same unfinished scenario may be unavailable; use a generic reference type or split work into steps
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

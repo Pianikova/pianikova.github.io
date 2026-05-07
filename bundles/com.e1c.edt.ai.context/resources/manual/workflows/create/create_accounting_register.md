@@ -67,3 +67,7 @@ AccountingRegister register = globalContext.execute(new AbstractBmTask<Accountin
 ```
 **Note:** AccountingRegister requires ChartOfAccounts reference and at least one Dimension with account reference type.
 **Note:** `AccountingRegisterDimension` and `AccountingRegisterResource` support `setBalance(boolean)` in EDT API.
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

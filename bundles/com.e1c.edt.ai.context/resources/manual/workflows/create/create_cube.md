@@ -17,3 +17,7 @@ source.getCubes().add(cube);
 ### Notes
 - Add dimensions, resources, functions, and dimension tables after cube creation
 - Keep TypeDescription on child objects explicit to avoid validation noise
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

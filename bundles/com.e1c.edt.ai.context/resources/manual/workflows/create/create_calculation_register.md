@@ -73,3 +73,7 @@ CalculationRegister register = globalContext.execute(new AbstractBmTask<Calculat
 ```
 **Note:** CalculationRegister requires ChartOfCalculationTypes reference and at least one base Dimension.
 **Note:** Use a numeric type for calculation resources such as amount; do not reuse a reference type from a dimension.
+
+### Required post-check
+
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.

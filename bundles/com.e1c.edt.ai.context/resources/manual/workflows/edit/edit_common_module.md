@@ -21,3 +21,4 @@ globalContext.execute(new AbstractBmTask<Void>("Edit CommonModule") {
 - Load the existing object by FQN from the transaction
 - Do not recreate or reattach the object
 - Metadata flags and BSL source are separate concerns. Update Module.bsl through file tools, not through mdFactory.
+- After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers.

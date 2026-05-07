@@ -21,3 +21,4 @@ globalContext.execute(new AbstractBmTask<Void>("Edit InformationRegister") {
 - Load the existing object by FQN from the transaction
 - Do not recreate or reattach the object
 - Do not call attachTopObject() for an existing register. Add or remove child objects through the existing collections.
+- After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers.

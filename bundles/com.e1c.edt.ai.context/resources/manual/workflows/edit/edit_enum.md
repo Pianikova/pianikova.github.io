@@ -20,3 +20,4 @@ globalContext.execute(new AbstractBmTask<Void>("Edit Enum") {
 - Load the existing object by FQN from the transaction
 - Do not recreate or reattach the object
 - Prefer changing value names/descriptions in-place. For deleted values, remove them from enumObject.getEnumValues().
+- After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers.

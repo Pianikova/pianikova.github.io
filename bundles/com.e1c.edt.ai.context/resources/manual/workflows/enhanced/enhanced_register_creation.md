@@ -117,4 +117,5 @@ InformationRegister result = globalContext.execute(new AbstractBmTask<Informatio
 - [ ] For CalculationRegister: Recalculation objects need UUID
 - [ ] Wrap ALL UUID assignments in try-catch blocks
 - [ ] Abort creation if any UUID assignment fails
+- [ ] After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers
 
