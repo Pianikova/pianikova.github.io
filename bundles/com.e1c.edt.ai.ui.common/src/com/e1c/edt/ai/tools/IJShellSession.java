@@ -15,7 +15,7 @@ public interface IJShellSession
 	 *
 	 * @return the session ID
 	 */
-	int getSessionId();
+	String getSessionId();
 
 	/**
 	 * Executes code in this JShell session.
@@ -26,18 +26,25 @@ public interface IJShellSession
 	JShellExecutionResult execute(String code);
 
 	/**
-	 * Returns the history of code executed in this session.
-	 *
-	 * @return list of executed code snippets
-	 */
-	List<String> getExecutionHistory();
-
-	/**
-     * Returns session result with available bindings and execution history.
+     * Returns session result with available bindings.
      *
      * @return session result
      */
     SessionResult getSessionResult();
+
+    /**
+     * Returns class loader used by this session for resolving Java API types.
+     *
+     * @return session class loader
+     */
+    ClassLoader getClassLoader();
+
+    /**
+     * Returns imports available in this session.
+     *
+     * @return list of import statements
+     */
+    List<String> getImports();
 
     /**
      * Closes the JShell session and releases resources.

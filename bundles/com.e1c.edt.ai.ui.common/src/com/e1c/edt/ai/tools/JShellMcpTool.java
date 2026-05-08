@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ICancellationToken;
@@ -35,24 +36,27 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-        "{\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":123}"; //$NON-NLS-1$
+        "{\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\"}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
-        "{\"return_value\":null,\"repl_session_id\":123,\"std_out\":\"Active window: Eclipse\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
+        "{\"return_value\":null,\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"std_out\":\"Active window: Eclipse\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
 	private final IMcpToolsCallMessageFactory messageFactory;
 	private final IJShellSessionManager sessions;
 	private final Set<IJShellBindingProvider> bindingProviders;
-	private final IMarkdownUtils markdownUtils;
+    private final IMarkdownUtils markdownUtils;
 	private final IRestrictedTypesProvider restrictedTypesProvider;
+    private final IJShellReflectionQuerySuggester reflectionQuerySuggester;
     private final IDispatcher dispatcher;
+    private final ConcurrentHashMap<String, Object> sessionLocks = new ConcurrentHashMap<>();
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
 		IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
-        IRestrictedTypesProvider restrictedTypesProvider, IDispatcher dispatcher)
+        IRestrictedTypesProvider restrictedTypesProvider, IJShellReflectionQuerySuggester reflectionQuerySuggester,
+        IDispatcher dispatcher)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
@@ -60,6 +64,7 @@ public class JShellMcpTool
 		Preconditions.checkNotNull(bindingProviders);
 		Preconditions.checkNotNull(markdownUtils);
 		Preconditions.checkNotNull(restrictedTypesProvider);
+        Preconditions.checkNotNull(reflectionQuerySuggester);
         Preconditions.checkNotNull(dispatcher);
 
 		this.json = json;
@@ -68,6 +73,7 @@ public class JShellMcpTool
 		this.bindingProviders = bindingProviders;
 		this.markdownUtils = markdownUtils;
 		this.restrictedTypesProvider = restrictedTypesProvider;
+        this.reflectionQuerySuggester = reflectionQuerySuggester;
         this.dispatcher = dispatcher;
 		this.spec = createSpecification();
 	}
@@ -130,17 +136,26 @@ public class JShellMcpTool
 					ToolErrorType.RETRYABLE);
 			}
 
-            var optionalResult = dispatcher.dispatch(() -> session.execute(request.code));
-            if (optionalResult.isEmpty())
+            var sessionLock = sessionLocks.computeIfAbsent(session.getSessionId(), id -> new Object());
+            synchronized (sessionLock)
             {
-                throw new ToolException("Can't execute code.", null, ToolErrorType.RETRYABLE);
-            }
+                var optionalResult = dispatcher.dispatch(() -> session.execute(request.code));
+                if (optionalResult.isEmpty())
+                {
+                    throw new ToolException("Can't execute code.", null, ToolErrorType.RETRYABLE);
+                }
 
-            var result = optionalResult.get();
-			var content = json.serialize(result);
-			var responseMarkdown = buildResponseMarkdown(request.code, result);
-			details.responseMarkdown = responseMarkdown;
-			return messageFactory.createMessage(this, call, content, details);
+                var result = optionalResult.get();
+                if (!result.compilationErrors.isEmpty())
+                {
+                    result.suggestedReflectionQueries =
+                        reflectionQuerySuggester.suggestForCompilationErrors(request.code, result.compilationErrors, 12);
+                }
+                var content = json.serialize(result);
+                var responseMarkdown = buildResponseMarkdown(request.code, result);
+                details.responseMarkdown = responseMarkdown;
+                return messageFactory.createMessage(this, call, content, details);
+            }
 		}
 		catch (ToolException e)
 		{
@@ -218,6 +233,26 @@ public class JShellMcpTool
         description.append("\n- For EDT metadata or Eclipse API code generation, you MUST call ")
             .append(JShellManualMcpTool.TOOL_NAME)
             .append(" first to get a scenario-specific template");
+        description.append("\n- Use ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" before execution only when unsure about packages, types, enum constants, methods, fields, constructors, or signatures not already covered by an exact ")
+            .append(JShellManualMcpTool.TOOL_NAME).append(" guide");
+        description.append("\n- NEVER invent Java API calls, method overloads, enum constants, package names, or type names. ")
+            .append("If the exact API is not already proven by tool output, call ")
+            .append(JShellReflectionMcpTool.TOOL_NAME).append(" first");
+        description.append("\n- For baseline top-level EDT metadata CRUD, trust exact ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" scenarios and API cards; do not call ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" merely to re-check listed factories, collections, FQN prefixes, or safe setters");
+        description.append("\n- Known EDT enum constants from the manual do NOT need reflection: ")
+            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
+            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`");
+        description.append("\n- For TypeDescriptionBuilder, validate every `typeProvider.getProxy(...)` result before `addType(...)`; null proxies cause runtime `IllegalArgumentException`");
+        description.append("\n- If a previous execution failed with `cannot find symbol`, `method not found`, or `package does not exist`, use ")
+            .append(JShellReflectionMcpTool.TOOL_NAME).append(" with `suggested_reflection_queries` instead of guessing APIs");
+        description.append("\n- After executing code that changes EDT/Eclipse project resources or metadata, MUST call ")
+            .append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" for the affected project to inspect resulting markers. Use `marker_type: \"problem\"` ")
+            .append("for build/validation errors, `marker_type: \"1c\"` for 1C/BSL markers, and ")
+            .append("`marker_type: \"ai_marker\"` for AIError/AIWarning/AIInfo markers");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
 
@@ -229,6 +264,10 @@ public class JShellMcpTool
 		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");
         description.append("\n- Output MUST be in main thread for result capture");
         description.append("\n- DO NOT use without a value `return;` - always return any value (e.g., `return null;`)");
+        description.append("\n- Non-trivial EDT snippets SHOULD be wrapped in `{ ... }` to keep local variables local in persistent JShell sessions");
+        description.append("\n- Calls with the same `repl_session_id` are executed sequentially; wait for the previous result before relying on changed session state");
+        description.append("\n- Do not run ").append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" in parallel with a JShell metadata change for the same project/session; wait for the JShell result first");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
@@ -249,8 +288,12 @@ public class JShellMcpTool
         description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME)
             .append(" to get guidance for the scenario");
 		description.append("\n2. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
-        description.append("\n3. Use ").append(TOOL_NAME).append(" with that ID to execute code");
-		description.append("\n4. Reuse same ID to maintain state");
+        description.append("\n3. If the manual exact guide does not cover needed APIs, call ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" once with all uncertain Java API names/signatures before writing calls that depend on them");
+        description.append("\n4. Use ").append(TOOL_NAME).append(" with that ID to execute code");
+        description.append("\n5. If project resources or metadata were changed, call ").append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" for `problem`, `1c`, and relevant `ai_marker` errors/warnings before reporting success");
+		description.append("\n6. Reuse same ID to maintain state");
 
 		// Add restricted types information
         var restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
@@ -283,8 +326,8 @@ public class JShellMcpTool
 		properties.put("code", codeProp);
 
 		var sessionIdProp = new McpToolCallProperty();
-        sessionIdProp.type = "integer";
-		sessionIdProp.description = "Session ID from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
+        sessionIdProp.type = "string";
+		sessionIdProp.description = "Session ID (UUID string) from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
 		properties.put("repl_session_id", sessionIdProp);
 
 		parameters.properties = properties;
@@ -303,7 +346,7 @@ public class JShellMcpTool
 		public String code;
 
 		@SerializedName("repl_session_id")
-        public int sessionId;
+        public String sessionId;
 	}
 }
 

@@ -23,32 +23,37 @@ import jdk.jshell.SnippetEvent;
 class JShellSession
     implements IJShellSession
 {
-    private static final int MAX_EXECUTION_HISTORY_SIZE = 4096;
-	private final int sessionId;
+	private final String sessionId;
 	private final JShell shell;
+    private final ClassLoader classLoader;
 	private final ByteArrayOutputStream outBuffer;
 	private final ByteArrayOutputStream errBuffer;
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final Set<IJShellBindingProvider> bindingProviders;
-    private final List<String> executionHistory = new ArrayList<>();
+    private final List<String> imports;
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
     private ArrayList<String> cachedAvailableBindings;
 
-    JShellSession(int sessionId, JShell shell, ByteArrayOutputStream outBuffer, ByteArrayOutputStream errBuffer,
-        IRestrictedTypesValidator restrictedTypesValidator, Set<IJShellBindingProvider> bindingProviders)
+    JShellSession(String sessionId, JShell shell, ClassLoader classLoader, ByteArrayOutputStream outBuffer,
+        ByteArrayOutputStream errBuffer, IRestrictedTypesValidator restrictedTypesValidator,
+        Set<IJShellBindingProvider> bindingProviders, List<String> imports)
 	{
         Preconditions.checkNotNull(shell);
+        Preconditions.checkNotNull(classLoader);
         Preconditions.checkNotNull(outBuffer);
         Preconditions.checkNotNull(errBuffer);
         Preconditions.checkNotNull(restrictedTypesValidator);
         Preconditions.checkNotNull(bindingProviders);
+        Preconditions.checkNotNull(imports);
 
         this.sessionId = sessionId;
 		this.shell = shell;
+        this.classLoader = classLoader;
 		this.outBuffer = outBuffer;
 		this.errBuffer = errBuffer;
         this.restrictedTypesValidator = restrictedTypesValidator;
         this.bindingProviders = bindingProviders;
+        this.imports = new ArrayList<>(imports);
         this.cachedAvailableBindings = buildAvailableBindings();
 	}
 
@@ -68,35 +73,22 @@ class JShellSession
     }
 
     /**
-     * Adds source to execution history, maintaining maximum size.
-     */
-    private void addToExecutionHistory(String source)
-    {
-        executionHistory.add(source);
-        if (executionHistory.size() > MAX_EXECUTION_HISTORY_SIZE)
-        {
-            executionHistory.remove(0);
-        }
-    }
-
-    /**
-     * Populates session result fields (available bindings and execution history).
+     * Populates session result fields.
      */
     private void populateSessionResult(SessionResult result)
     {
         result.availableBindings = new ArrayList<>(cachedAvailableBindings);
-        result.executionHistory = new ArrayList<>(executionHistory);
     }
 
 	@Override
-    public int getSessionId()
+    public String getSessionId()
 	{
 		return sessionId;
 	}
 
     @SuppressWarnings({ "nls", "incomplete-switch" })
     @Override
-    public JShellExecutionResult execute(String code)
+    public synchronized JShellExecutionResult execute(String code)
 	{
         if (isClosed.get())
         {
@@ -185,7 +177,6 @@ class JShellSession
                             break;
 
                         case VALID:
-                            addToExecutionHistory(source);
                             // Check for runtime exceptions
                             if (event.exception() != null)
                             {
@@ -246,10 +237,16 @@ class JShellSession
         return result;
 	}
 
-	@Override
-    public List<String> getExecutionHistory()
+    @Override
+    public ClassLoader getClassLoader()
     {
-        return new ArrayList<>(executionHistory);
+        return classLoader;
+    }
+
+    @Override
+    public List<String> getImports()
+    {
+        return new ArrayList<>(imports);
     }
 
     @Override
@@ -273,7 +270,7 @@ class JShellSession
             }
             finally
             {
-                executionHistory.clear();
+                // Nothing to clear.
             }
         }
 	}

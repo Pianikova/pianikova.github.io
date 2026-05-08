@@ -19,7 +19,6 @@ import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
-import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
@@ -31,7 +30,7 @@ public class JShellSessionMcpTool
 	public static final String TOOL_NAME = "JShellSession"; //$NON-NLS-1$
 
 	private static final String AnswerExample =
-        "{\"repl_session_id\":123,\"available_bindings\":[\"workbench\"]}"; //$NON-NLS-1$
+        "{\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"available_bindings\":[\"workbench\"]}"; //$NON-NLS-1$
 
 	private final IJson json;
 	private final McpToolCallSpecification spec;
@@ -92,7 +91,7 @@ public class JShellSessionMcpTool
 
 		try
 		{
-            var session = sessions.getOrCreateSession(0);
+            var session = sessions.getOrCreateSession(null);
             var result = session.getSessionResult();
 			var content = json.serialize(result);
             details.responseMarkdown = Messages.JShellSessionCreated;
@@ -123,18 +122,23 @@ public class JShellSessionMcpTool
         description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" for execution");
         description.append("\n- After calling ").append(JShellManualMcpTool.TOOL_NAME)
             .append(" to get a scenario-specific template");
-        description.append("\n- To check available bindings and execution history");
-		description.append("\n- To get session info for existing session");
+        description.append("\n- To check available bindings");
+        description.append("\n- To get a fresh `repl_session_id` for JShell and JShellReflection calls");
 
         description.append("\n\n**Required flow for EDT/Eclipse scenarios:**");
         description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME).append(" first");
         description.append("\n2. Call ").append(TOOL_NAME).append(" to get a session");
         description.append("\n3. Call ").append(JShellMcpTool.TOOL_NAME).append(" to execute the prepared code");
 
-		description.append("\n\n**Usage:**");
-		description.append("\n- If `repl_session_id` is not provided → creates NEW session");
-		description.append("\n- If `repl_session_id` is provided → returns info about EXISTING session");
-		description.append("\n- Returns: session ID, available bindings, execution history");
+        description.append("\n\n**Usage:**");
+        description.append("\n- Takes no parameters");
+        description.append("\n- Always creates a new session or returns a pre-warmed fresh session");
+        description.append("\n- Returns: `repl_session_id` and available bindings");
+        description.append("\n- Use the returned `repl_session_id` in subsequent ")
+            .append(JShellMcpTool.TOOL_NAME)
+            .append(" and ")
+            .append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" calls");
 
 		description.append("\n\n### Available bindings:");
 		description.append("\nPre-configured Eclipse objects available in JShell sessions:");
@@ -171,29 +175,16 @@ public class JShellSessionMcpTool
 			}
 		}
 
-		description.append("\n\n**Parameter:**");
-		description.append("\n- `repl_session_id` (optional): Session ID. If not provided, creates new session.");
-
 		description.append("\n\n**Examples:**");
-		description.append("\n  Create new session: Q: {}");
+        description.append("\n  Create session: Q: {}");
 		description.append("\n  A: ").append(AnswerExample);
-		description.append("\n  Get existing session: Q: {\"repl_session_id\": 123}");
 
 		spec.function.description = description.toString();
 
 		var parameters = new McpToolCallParameters();
 		parameters.type = "object";
-		var properties = new HashMap<String, McpToolCallProperty>();
-
-		var sessionIdProp = new McpToolCallProperty();
-		sessionIdProp.type = "integer";
-		sessionIdProp.description =
-			"Optional session ID. If 0 or not provided, a new session will be created. If provided, returns info about the existing session.";
-		properties.put("repl_session_id", sessionIdProp);
-
-		parameters.properties = properties;
-		var required = new ArrayList<String>();
-		parameters.required = required;
+        parameters.properties = new HashMap<>();
+        parameters.required = new ArrayList<>();
 
 		spec.function.parameters = parameters;
 		return spec;

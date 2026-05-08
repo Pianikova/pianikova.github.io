@@ -240,6 +240,8 @@ public final class JShellSharedExecutionControlProvider
         {
             PrintStream originalOut = System.out;
             PrintStream originalErr = System.err;
+            ByteArrayOutputStream invocationOutBuffer = new ByteArrayOutputStream();
+            ByteArrayOutputStream invocationErrBuffer = new ByteArrayOutputStream();
             Thread currentThread = Thread.currentThread();
             ClassLoader originalContextClassLoader = currentThread.getContextClassLoader();
             try
@@ -248,8 +250,8 @@ public final class JShellSharedExecutionControlProvider
                 {
                     currentThread.setContextClassLoader(contextClassLoader);
                 }
-                System.setOut(new PrintStream(outBuffer, true, StandardCharsets.UTF_8));
-                System.setErr(new PrintStream(errBuffer, true, StandardCharsets.UTF_8));
+                System.setOut(new PrintStream(invocationOutBuffer, true, StandardCharsets.UTF_8));
+                System.setErr(new PrintStream(invocationErrBuffer, true, StandardCharsets.UTF_8));
                 Class<?> klass = loaderDelegate.findClass(className);
                 Method method = klass.getDeclaredMethod(methodName);
                 method.setAccessible(true);
@@ -272,6 +274,8 @@ public final class JShellSharedExecutionControlProvider
             }
             finally
             {
+                appendCapturedOutput(invocationOutBuffer, outBuffer);
+                appendCapturedOutput(invocationErrBuffer, errBuffer);
                 currentThread.setContextClassLoader(originalContextClassLoader);
                 System.setOut(originalOut);
                 System.setErr(originalErr);
@@ -291,6 +295,8 @@ public final class JShellSharedExecutionControlProvider
         {
             PrintStream originalOut = System.out;
             PrintStream originalErr = System.err;
+            ByteArrayOutputStream invocationOutBuffer = new ByteArrayOutputStream();
+            ByteArrayOutputStream invocationErrBuffer = new ByteArrayOutputStream();
             Thread currentThread = Thread.currentThread();
             ClassLoader originalContextClassLoader = currentThread.getContextClassLoader();
             try
@@ -299,12 +305,14 @@ public final class JShellSharedExecutionControlProvider
                 {
                     currentThread.setContextClassLoader(contextClassLoader);
                 }
-                System.setOut(new PrintStream(outBuffer, true, StandardCharsets.UTF_8));
-                System.setErr(new PrintStream(errBuffer, true, StandardCharsets.UTF_8));
+                System.setOut(new PrintStream(invocationOutBuffer, true, StandardCharsets.UTF_8));
+                System.setErr(new PrintStream(invocationErrBuffer, true, StandardCharsets.UTF_8));
                 loaderDelegate.load(cbcs);
             }
             finally
             {
+                appendCapturedOutput(invocationOutBuffer, outBuffer);
+                appendCapturedOutput(invocationErrBuffer, errBuffer);
                 currentThread.setContextClassLoader(originalContextClassLoader);
                 System.setOut(originalOut);
                 System.setErr(originalErr);
@@ -355,6 +363,19 @@ public final class JShellSharedExecutionControlProvider
             // Avoid invoking toString() on dynamic OSGi/Peaberry proxies:
             // for some services it triggers blocking lookup with timeout.
             return resultClass.getName() + "@" + Integer.toHexString(System.identityHashCode(result)); //$NON-NLS-1$
+        }
+
+        private void appendCapturedOutput(ByteArrayOutputStream invocationBuffer, ByteArrayOutputStream sessionBuffer)
+        {
+            if (invocationBuffer.size() == 0)
+            {
+                return;
+            }
+
+            synchronized (sessionBuffer)
+            {
+                sessionBuffer.write(invocationBuffer.toByteArray(), 0, invocationBuffer.size());
+            }
         }
     }
 }

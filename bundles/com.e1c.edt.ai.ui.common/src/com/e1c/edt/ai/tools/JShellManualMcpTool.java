@@ -6,6 +6,7 @@ package com.e1c.edt.ai.tools;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -33,11 +34,28 @@ import com.google.inject.Inject;
 
 /**
  * Scenario-oriented manual for writing JShell code.
+ * <p>
+ * The tool description is generated dynamically from the registered scenarios
+ * so the LLM sees a categorized list of available scenario IDs in the system
+ * prompt — no discovery call required for the common case.
+ * <p>
+ * Response shape adapts to query precision:
+ * <ul>
+ *   <li>Exact match (score &ge; 180): returns only {@code matched_scenarios}.</li>
+ *   <li>Fuzzy match (score 1–179): returns matches plus a compact
+ *       {@code available_scenarios} ({id, category} pairs only).</li>
+ *   <li>No match: returns top-3 near-misses as suggestions instead of throwing.</li>
+ *   <li>Browse by {@code category}: returns category contents as matches,
+ *       no available_scenarios.</li>
+ * </ul>
  */
 public class JShellManualMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "JShellManual"; //$NON-NLS-1$
+    private static final int EXACT_MATCH_THRESHOLD = 180;
+    private static final int DEFAULT_MAX_RESULTS = 5;
+    private static final int NEAR_MISS_LIMIT = 3;
 
     private final IJson json;
     private final IMcpToolsCallMessageFactory messageFactory;
@@ -96,59 +114,122 @@ public class JShellManualMcpTool
         return CompletableFuture.supplyAsync(() -> execute(request, call, details, cancellationToken));
     }
 
+    @SuppressWarnings("nls")
     private ToolCallMessage execute(Request request, McpToolCall call, ToolCallMessageDetails details,
         ICancellationToken cancellationToken)
     {
         if (cancellationToken.isCanceled())
         {
-            throw new ToolException("Operation was cancelled before execution.", null, ToolErrorType.RETRYABLE); //$NON-NLS-1$
+            throw new ToolException("Operation was cancelled before execution.", null, ToolErrorType.RETRYABLE);
         }
 
-        var allEntries = manualProviders.stream()
-            .flatMap(provider -> provider.getManualEntries().stream())
-            .sorted(Comparator.comparing(JShellManualEntry::getScope).thenComparing(JShellManualEntry::getId))
+        var allEntries = collectAllEntries();
+        var scope = normalizeScope(request.apiScope);
+        var category = normalize(request.category);
+        var query = normalize(request.scenario);
+        var maxResults = request.maxResults != null && request.maxResults.intValue() > 0
+            ? request.maxResults.intValue()
+            : DEFAULT_MAX_RESULTS;
+
+        var scoped = allEntries.stream()
+            .filter(e -> "both".equals(scope) || scope.equals(e.getScope()))
+            .filter(e -> category.isEmpty() || category.equals(e.getCategory()))
             .collect(Collectors.toList());
-
-        var matchedEntries = findMatches(allEntries, request);
-        if (request.scenario != null && !request.scenario.isBlank() && matchedEntries.isEmpty())
-        {
-            throw new ToolException("No JShell manual scenario matched: " + request.scenario); //$NON-NLS-1$
-        }
 
         var response = new Response();
         response.query = request.scenario;
-        response.apiScope = normalizeScope(request.apiScope);
-        response.availableScenarios = allEntries.stream().map(this::toSummary).collect(Collectors.toList());
-        response.matchedScenarios = matchedEntries.stream().map(this::toDetails).collect(Collectors.toList());
+        response.apiScope = scope;
+        response.category = request.category;
 
-        details.responseMarkdown = buildResponseMarkdown(request, matchedEntries, allEntries);
+        // Mode A: browse by category, no scenario query.
+        if (query.isEmpty() && !category.isEmpty())
+        {
+            response.status = "browse";
+            response.matchedScenarios = scoped.stream().map(this::toDetails).collect(Collectors.toList());
+            details.responseMarkdown = buildResponseMarkdown(request, scoped, allEntries);
+            return messageFactory.createMessage(this, call, json.serialize(response), details);
+        }
+
+        // Mode B: empty query — short directory of all entries (compact).
+        if (query.isEmpty())
+        {
+            response.status = "directory";
+            response.matchedScenarios = List.of();
+            response.availableScenarios = scoped.stream().map(this::toCompactSummary).collect(Collectors.toList());
+            details.responseMarkdown = buildResponseMarkdown(request, List.of(), allEntries);
+            return messageFactory.createMessage(this, call, json.serialize(response), details);
+        }
+
+        // Mode C: scenario query with scoring.
+        var ranked = scoped.stream()
+            .map(e -> new RankedEntry(e, score(e, query)))
+            .filter(r -> r.score > 0)
+            .sorted(Comparator.comparingInt(RankedEntry::score).reversed()
+                .thenComparing(r -> r.entry().getTitle()))
+            .collect(Collectors.toList());
+
+        if (ranked.isEmpty())
+        {
+            // Mode C.1: no matches — emit suggestions instead of throwing.
+            response.status = "not_matched";
+            response.matchedScenarios = List.of();
+            response.suggestions = scoped.stream()
+                .filter(e -> isCloseLexically(e, query))
+                .limit(NEAR_MISS_LIMIT)
+                .map(this::toCompactSummary)
+                .collect(Collectors.toList());
+            response.availableScenarios = scoped.stream().map(this::toCompactSummary).collect(Collectors.toList());
+            details.responseMarkdown = buildResponseMarkdown(request, List.of(), allEntries);
+            return messageFactory.createMessage(this, call, json.serialize(response), details);
+        }
+
+        var topScore = ranked.get(0).score;
+        var matched = topScore >= EXACT_MATCH_THRESHOLD
+            ? List.of(ranked.get(0).entry())
+            : ranked.stream().limit(maxResults).map(RankedEntry::entry).collect(Collectors.toList());
+        response.matchedScenarios = matched.stream().map(this::toDetails).collect(Collectors.toList());
+
+        if (topScore >= EXACT_MATCH_THRESHOLD)
+        {
+            // Mode C.2: confident hit — drop directory entirely.
+            response.status = "exact";
+        }
+        else
+        {
+            // Mode C.3: fuzzy — give compact directory so the LLM can refine.
+            response.status = "fuzzy";
+            response.availableScenarios = scoped.stream().map(this::toCompactSummary).collect(Collectors.toList());
+        }
+
+        details.responseMarkdown = buildResponseMarkdown(request, matched, allEntries);
         return messageFactory.createMessage(this, call, json.serialize(response), details);
     }
 
-    private List<JShellManualEntry> findMatches(List<JShellManualEntry> allEntries, Request request)
+    private List<JShellManualEntry> collectAllEntries()
     {
-        var scope = normalizeScope(request.apiScope);
-        var maxResults = request.maxResults != null && request.maxResults.intValue() > 0
-            ? request.maxResults.intValue()
-            : 5;
-        var query = normalize(request.scenario);
-
-        var filtered = allEntries.stream()
-            .filter(entry -> "both".equals(scope) || scope.equals(entry.getScope())) //$NON-NLS-1$
+        return manualProviders.stream()
+            .flatMap(provider -> provider.getManualEntries().stream())
+            .sorted(Comparator.comparing(JShellManualEntry::getScope).thenComparing(JShellManualEntry::getId))
             .collect(Collectors.toList());
-        if (query.isEmpty())
+    }
+
+    private boolean isCloseLexically(JShellManualEntry entry, String query)
+    {
+        var id = normalize(entry.getId());
+        var title = normalize(entry.getTitle());
+        // word-overlap heuristic: any whitespace-separated token of query appears in id/title
+        for (var token : query.split("\\s+|_")) //$NON-NLS-1$
         {
-            return filtered.stream().limit(maxResults).collect(Collectors.toList());
+            if (token.length() < 3)
+            {
+                continue;
+            }
+            if (id.contains(token) || title.contains(token))
+            {
+                return true;
+            }
         }
-
-        return filtered.stream()
-            .map(entry -> new RankedEntry(entry, score(entry, query)))
-            .filter(rank -> rank.score > 0)
-            .sorted(Comparator.comparingInt(RankedEntry::score).reversed()
-                .thenComparing(rank -> rank.entry().getTitle()))
-            .limit(maxResults)
-            .map(RankedEntry::entry)
-            .collect(Collectors.toList());
+        return false;
     }
 
     private int score(JShellManualEntry entry, String query)
@@ -200,26 +281,25 @@ public class JShellManualMcpTool
         return Messages.JShellManualResponse;
     }
 
-    private Summary toSummary(JShellManualEntry entry)
-    {
-        var summary = new Summary();
-        summary.id = entry.getId();
-        summary.scope = entry.getScope();
-        summary.title = entry.getTitle();
-        summary.summary = entry.getSummary();
-        return summary;
-    }
-
     private Details toDetails(JShellManualEntry entry)
     {
         var details = new Details();
         details.id = entry.getId();
         details.scope = entry.getScope();
+        details.category = entry.getCategory();
         details.title = entry.getTitle();
         details.summary = entry.getSummary();
         details.recommendedBindings = new ArrayList<>(entry.getRecommendedBindings());
         details.guideMarkdown = entry.getGuide();
         return details;
+    }
+
+    private CompactSummary toCompactSummary(JShellManualEntry entry)
+    {
+        var summary = new CompactSummary();
+        summary.id = entry.getId();
+        summary.category = entry.getCategory();
+        return summary;
     }
 
     @SuppressWarnings("nls")
@@ -230,7 +310,7 @@ public class JShellManualMcpTool
         {
             return normalized;
         }
-        return "both"; //$NON-NLS-1$
+        return "both";
     }
 
     private String normalize(String value)
@@ -246,26 +326,7 @@ public class JShellManualMcpTool
         spec.function = new McpToolCallFunction();
         spec.function.name = TOOL_NAME;
 
-        var description = new StringBuilder();
-        description.append("Provides scenario-oriented guidance for writing Java code for ")
-            .append(JShellMcpTool.TOOL_NAME).append(".\n\n");
-        description.append("You MUST use this tool before ").append(JShellMcpTool.TOOL_NAME)
-            .append(" when working with EDT metadata API or Eclipse platform API.\n");
-        description.append("Use it for create/edit/delete/look-up scenarios, for workbench/editor/workspace code, and for any code that uses bindings like `mdFactory`, `modelManager`, `projectManager`, `workspaceRoot`, `workbench`, `resourceLookup`, or `fqnGenerator`.\n\n");
-        description.append("What it returns:\n");
-        description.append("- recommended bindings\n");
-        description.append("- workflow and safety rules\n");
-        description.append("- scenario-specific code templates\n");
-        description.append("- common mistakes and fixes\n\n");
-        description.append("Suggested workflow:\n");
-        description.append("1. Call ").append(TOOL_NAME).append(" with a scenario like `create_catalog`.\n");
-        description.append("2. Create or reuse a session with ").append(JShellSessionMcpTool.TOOL_NAME).append(".\n");
-        description.append("3. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
-        description.append("4. If ").append(JShellMcpTool.TOOL_NAME)
-            .append(" returns an EDT/Eclipse preflight error, come back to ").append(TOOL_NAME)
-            .append(" with a better matching scenario.\n");
-
-        spec.function.description = description.toString();
+        spec.function.description = buildDescription();
 
         var parameters = new McpToolCallParameters();
         parameters.type = "object";
@@ -273,24 +334,122 @@ public class JShellManualMcpTool
 
         var scenarioProperty = new McpToolCallProperty();
         scenarioProperty.type = "string";
-        scenarioProperty.description =
-            "Optional scenario identifier or topic, for example create_catalog, document attribute, active editor."; //$NON-NLS-1$
-        properties.put("scenario", scenarioProperty); //$NON-NLS-1$
+        scenarioProperty.description = "Scenario id (e.g. `create_catalog`) or free-text topic. "
+            + "Naming convention: <verb>_<entity>. See tool description for the categorized list of ids.";
+        properties.put("scenario", scenarioProperty);
+
+        var categoryProperty = new McpToolCallProperty();
+        categoryProperty.type = "string";
+        categoryProperty.description = "Optional category filter: create | edit | delete | composite | enhanced "
+            + "| reference | configuration. Combine with empty `scenario` to browse a category.";
+        properties.put("category", categoryProperty);
 
         var scopeProperty = new McpToolCallProperty();
         scopeProperty.type = "string";
-        scopeProperty.description = "Optional scope filter: edt, eclipse, or both."; //$NON-NLS-1$
-        properties.put("api_scope", scopeProperty); //$NON-NLS-1$
+        scopeProperty.description = "Optional scope filter: edt, eclipse, or both.";
+        properties.put("api_scope", scopeProperty);
 
         var maxResultsProperty = new McpToolCallProperty();
         maxResultsProperty.type = "integer";
-        maxResultsProperty.description = "Optional maximum number of matched scenarios to return."; //$NON-NLS-1$
-        properties.put("max_results", maxResultsProperty); //$NON-NLS-1$
+        maxResultsProperty.description = "Optional max number of matched scenarios. Default 5.";
+        properties.put("max_results", maxResultsProperty);
 
         parameters.properties = properties;
         parameters.required = new ArrayList<>();
         spec.function.parameters = parameters;
         return spec;
+    }
+
+    @SuppressWarnings("nls")
+    private String buildDescription()
+    {
+        var sb = new StringBuilder();
+        sb.append("Provides scenario-oriented guidance for writing Java code for ").append(JShellMcpTool.TOOL_NAME)
+            .append(".\n\n");
+        sb.append("You MUST use this tool before ").append(JShellMcpTool.TOOL_NAME)
+            .append(" when working with EDT metadata API or Eclipse platform API.\n");
+        sb.append("For exact manual hits, the listed baseline top-level CRUD factory, collection, FQN prefix, and safe setters ")
+            .append("are already proven guidance. Do not call ")
+            .append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" only to re-check those baseline calls. ")
+            .append("Use ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" for unknown child objects, form internals, module internals, enum constants, overloads, or APIs not covered by the matched guide.\n");
+        sb.append("If you need more than one unknown EDT type or method, call ")
+            .append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" once with the full `queries` list. Known register constants in the manual do not need reflection: ")
+            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
+            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`.\n");
+        sb.append("For 1C metadata CRUD, after every JShell create, update/edit, or delete, the mandatory next tool is ")
+            .append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" with `marker_type: \"1c\"` for the affected project. Do not report success and do not start the next CRUD operation before checking markers.\n");
+        sb.append("Use it for create/edit/delete/look-up scenarios, for workbench/editor/workspace code, and ")
+            .append("for any code that uses bindings like `mdFactory`, `modelManager`, `projectManager`, ")
+            .append("`workspaceRoot`, `workbench`, `resourceLookup`, or `fqnGenerator`.\n\n");
+
+        sb.append("Naming convention: scenario ids are `<verb>_<entity>`, e.g. `create_catalog`, ")
+            .append("`edit_information_register`, `delete_attribute`, `add_tabular_section`. ")
+            .append("Pass the convention-matching id directly; you can also pass free text and the tool will fuzzy-match.\n\n");
+
+        sb.append("Available scenarios by category:\n\n");
+        sb.append(buildCategoryListing());
+
+        sb.append("\n\nResponse shape:\n");
+        sb.append("- `matched_scenarios`: hits with full guide_markdown.\n");
+        sb.append("- `available_scenarios`: compact `{id, category}` directory; present only when match is fuzzy or absent.\n");
+        sb.append("- `suggestions`: did-you-mean list when no match (instead of error).\n");
+        sb.append("- `status`: exact | fuzzy | not_matched | browse | directory.\n\n");
+
+        sb.append("Suggested workflow:\n");
+        sb.append("1. Call ").append(TOOL_NAME).append(" with a convention-matching scenario id.\n");
+        sb.append("2. If status is `not_matched` or `fuzzy`, refine using `suggestions` or `available_scenarios`.\n");
+        sb.append("3. Create or reuse a session with ").append(JShellSessionMcpTool.TOOL_NAME).append(".\n");
+        sb.append("4. Skip ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" for exact manual baseline CRUD. Use it only for API calls not already proven by the matched guide, ")
+            .append("and batch all unknown queries in one call.\n");
+        sb.append("5. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
+        sb.append("6. After code changes project resources or metadata, call ").append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" for the affected project. Use `marker_type: \"problem\"` for build/validation issues, ")
+            .append("`marker_type: \"1c\"` for 1C/BSL markers, and `marker_type: \"ai_marker\"` ")
+            .append("for AIError/AIWarning/AIInfo markers.\n");
+        sb.append("7. If ").append(JShellMcpTool.TOOL_NAME)
+            .append(" returns an EDT/Eclipse preflight error, return to ").append(TOOL_NAME)
+            .append(" with a better matching scenario id.\n");
+        return sb.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildCategoryListing()
+    {
+        var entries = collectAllEntries();
+        var byCategory = new LinkedHashMap<String, List<String>>();
+        // canonical category order
+        for (var c : List.of("create", "edit", "delete", "composite", "enhanced", "reference", "configuration", "misc"))
+        {
+            byCategory.put(c, new ArrayList<>());
+        }
+        for (var e : entries)
+        {
+            var c = e.getCategory();
+            byCategory.computeIfAbsent(c, k -> new ArrayList<>()).add(e.getId());
+        }
+        var sb = new StringBuilder();
+        for (var bucket : byCategory.entrySet())
+        {
+            var ids = bucket.getValue();
+            if (ids.isEmpty())
+            {
+                continue;
+            }
+            sb.append("- **").append(bucket.getKey()).append("** (")
+                .append(ids.size()).append("): ");
+            sb.append(String.join(", ", ids.stream().sorted().limit(12).collect(Collectors.toList())));
+            if (ids.size() > 12)
+            {
+                sb.append(", … (").append(ids.size() - 12).append(" more)");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 
     private static class RankedEntry
@@ -323,26 +482,47 @@ public class JShellManualMcpTool
         @SerializedName("api_scope")
         public String apiScope;
 
+        @SerializedName("category")
+        public String category;
+
         @SerializedName("max_results")
         public Integer maxResults;
     }
 
     private static class Response
     {
+        @SerializedName("status")
+        public String status;
+
         @SerializedName("query")
         public String query;
 
         @SerializedName("api_scope")
         public String apiScope;
 
+        @SerializedName("category")
+        public String category;
+
         @SerializedName("matched_scenarios")
         public List<Details> matchedScenarios;
 
+        @SerializedName("suggestions")
+        public List<CompactSummary> suggestions;
+
         @SerializedName("available_scenarios")
-        public List<Summary> availableScenarios;
+        public List<CompactSummary> availableScenarios;
     }
 
-    private static class Summary
+    private static class CompactSummary
+    {
+        @SerializedName("id")
+        public String id;
+
+        @SerializedName("category")
+        public String category;
+    }
+
+    private static class Details
     {
         @SerializedName("id")
         public String id;
@@ -350,15 +530,15 @@ public class JShellManualMcpTool
         @SerializedName("scope")
         public String scope;
 
+        @SerializedName("category")
+        public String category;
+
         @SerializedName("title")
         public String title;
 
         @SerializedName("summary")
         public String summary;
-    }
 
-    private static class Details extends Summary
-    {
         @SerializedName("recommended_bindings")
         public List<String> recommendedBindings;
 

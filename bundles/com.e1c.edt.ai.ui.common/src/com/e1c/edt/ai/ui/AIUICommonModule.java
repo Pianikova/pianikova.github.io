@@ -10,12 +10,15 @@ import com.e1c.edt.ai.ICodeCompletionActionHandler;
 import com.e1c.edt.ai.ICodeCompletionSession;
 import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.ICursorInfoProvider;
+import com.e1c.edt.ai.IEditRollback;
 import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.tools.EditRollback;
 import com.e1c.edt.ai.tools.JShellSessionManager;
+import com.e1c.edt.ai.tools.JShellReflectionWarmUp;
 import com.e1c.edt.ai.tools.MCPToolsModule;
 import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
@@ -53,6 +56,7 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(Notificator.class);
         initializableBinder.addBinding().to(ActiveProjectTracker.class);
         initializableBinder.addBinding().to(JShellSessionManager.class);
+        initializableBinder.addBinding().to(JShellReflectionWarmUp.class);
 
         bind(UI.class).in(Singleton.class);
         bind(IUI.class).to(UI.class);
@@ -119,6 +123,7 @@ public class AIUICommonModule
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
         bind(IStateService.class).to(StateService.class).in(Singleton.class);
         bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
+        bind(IEditRollback.class).to(EditRollback.class).in(Singleton.class);
         bind(IEdtLinkHandler.class).to(EdtLinkHandler.class).in(Singleton.class);
         bind(IEditorPositionManager.class).to(EditorPositionManager.class).in(Singleton.class);
         bind(IDiagnosticReportDialogProvider.class).to(DiagnosticReportDialogProvider.class).in(Singleton.class);

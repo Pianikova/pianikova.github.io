@@ -11,10 +11,10 @@ public interface IJShellSessionManager
 	/**
 	 * Gets an existing session by ID or creates a new one.
 	 *
-	 * @param sessionId the session ID, or 0 to create a new session
+	 * @param sessionId the session ID, or {@code null}/empty to create a new session
 	 * @return the JShell session
 	 */
-	IJShellSession getOrCreateSession(int sessionId);
+	IJShellSession getOrCreateSession(String sessionId);
 
 	/**
 	 * Gets an existing session by ID without creating a new one.
@@ -22,14 +22,14 @@ public interface IJShellSessionManager
 	 * @param sessionId the session ID
 	 * @return the JShell session, or null if not found
 	 */
-	IJShellSession getSession(int sessionId);
+	IJShellSession getSession(String sessionId);
 
 	/**
 	 * Invalidates a specific session.
 	 *
 	 * @param sessionId the session ID to invalidate
 	 */
-	void invalidateSession(int sessionId);
+	void invalidateSession(String sessionId);
 
 	/**
 	 * Invalidates all sessions.
