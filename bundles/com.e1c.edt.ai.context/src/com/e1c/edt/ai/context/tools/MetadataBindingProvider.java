@@ -278,9 +278,14 @@ public class MetadataBindingProvider
             return "";
         }
 
-        return "Call GetMarkers with marker_type \"1c\" for the affected project or changed .mdo file. "
-            + "Inspect all relevant 1C markers for the changed entity/top object, including errors, warnings, "
-            + "and infos; do not check only errors. If SU45/type markers appear, ensure every BasicFeature child "
+        return "Call GetMarkers with marker_type \"1c\" scoped to each changed top-level entity .mdo path when "
+            + "that path is known or can be derived. Fix only markers relevant to the entities changed by this "
+            + "CRUD operation. Do not fix unrelated project-wide markers. Use project-wide GetMarkers only for "
+            + "changes that can affect other objects, such as delete, rename, registrar links, references, "
+            + "command interfaces, or configuration-level changes; even then, filter fixes to the changed "
+            + "entities and directly affected references. Inspect all relevant 1C markers for the changed "
+            + "entity/top object, including errors, warnings, and infos; do not check only errors. If SU45/type "
+            + "markers appear, ensure every BasicFeature child "
             + "has its own fresh TypeDescription instance; do not reuse one TypeDescription across multiple "
             + "attributes, dimensions, or resources. For document CRUD, do not create custom attributes named "
             + "Date/Дата, Number/Номер, Posted/Проведен, Ref/Ссылка, or DeletionMark/ПометкаУдаления. For numeric "

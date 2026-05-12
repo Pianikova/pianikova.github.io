@@ -29,9 +29,10 @@ ${setupBlock}        String fqn = fqnGenerator.generateStandaloneObjectFqn(${var
 - Add the object to `Configuration.${collection}`
 - If this workflow requires more than one unknown EDT type, method, factory, field, or enum, call `JShellReflection` once with the full `queries` array before writing JShell code
 - Call `JShell` with `scope: "edt"`, `request_description`, and `response_description`
-- Mandatory next tool after this JShell create: run `GetMarkers` with `marker_type: "1c"` for the project or changed file
+- Mandatory next tool after this JShell create: run `GetMarkers` with `marker_type: "1c"` and `path` to the created top-level `.mdo` when the path is known or can be derived
 - Do not report success and do not start the next 1C metadata CRUD operation until the `GetMarkers` response is checked
 - Inspect all relevant 1C markers for the changed entity/top object, including errors, warnings, and infos; do not check only errors
+- Do not fix unrelated project-wide markers. Use project-wide `GetMarkers` only for references, registrars, command interfaces, configuration-level changes, or when the `.mdo` path cannot be derived.
 - If `GetMarkers` returns relevant validation markers, treat the operation as incomplete until they are fixed or explicitly explained
 
 ### Notes

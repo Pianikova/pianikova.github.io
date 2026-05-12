@@ -137,5 +137,5 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Create catal
 
 ### Required post-check
 
-After enhanced metadata creation, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.
+After enhanced metadata creation, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.
 

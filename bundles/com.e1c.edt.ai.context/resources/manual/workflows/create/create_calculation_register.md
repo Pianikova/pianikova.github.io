@@ -103,4 +103,4 @@ Do not report success while this marker remains unless the user explicitly asked
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project. For Mode B, fix all new validation markers before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed register `.mdo` when known or derivable. For Mode B, fix markers relevant to the changed register and its registrar links before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.

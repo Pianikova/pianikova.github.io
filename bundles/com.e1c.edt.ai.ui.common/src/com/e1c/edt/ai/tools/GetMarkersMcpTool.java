@@ -290,8 +290,8 @@ public class GetMarkersMcpTool implements IMcpTool
             var response = new GetMarkersResponse();
             response.markers = markersPage;
             response.totalMarkers = allMarkersList.size();
-            response.requiredNextStep =
-                buildRequiredNextStep(markerTypeFilter, markersPage.size(), allMarkersList.size(), firstIndex, maxCount);
+            response.requiredNextStep = buildRequiredNextStep(markerTypeFilter, path, markersPage, allMarkersList.size(),
+                firstIndex, maxCount);
 
             var content = json.serialize(response);
 
@@ -310,8 +310,8 @@ public class GetMarkersMcpTool implements IMcpTool
     }
 
     @SuppressWarnings("nls")
-    private String buildRequiredNextStep(MarkerType markerTypeFilter, int returnedCount, int totalCount, int firstIndex,
-        int maxCount)
+    private String buildRequiredNextStep(MarkerType markerTypeFilter, String path, List<MarkerInfo> returnedMarkers,
+        int totalCount, int firstIndex, int maxCount)
     {
         if (totalCount == 0)
         {
@@ -325,13 +325,20 @@ public class GetMarkersMcpTool implements IMcpTool
                 .append("entity/top object, including errors, warnings, and infos. For SU45/type markers, set a fresh ")
                 .append("TypeDescription instance on every BasicFeature child before adding it to the parent; do not ")
                 .append("reuse the same TypeDescription object across multiple attributes, dimensions, or resources.");
+            if (path == null || path.isBlank())
+            {
+                next.append(" If this GetMarkers call follows JShell CRUD and the changed top-level .mdo paths are ")
+                    .append("known or derivable, call GetMarkers again with path for each changed entity and fix only ")
+                    .append("markers relevant to those entities. Do not repair unrelated project-wide markers.");
+            }
+            append1CMarkerSpecificHints(next, returnedMarkers);
         }
         else
         {
             next.append("Markers remain. Inspect and fix all relevant returned markers before reporting success.");
         }
 
-        var nextIndex = firstIndex + returnedCount;
+        var nextIndex = firstIndex + returnedMarkers.size();
         if (nextIndex < totalCount)
         {
             next.append(" Pagination is incomplete: call GetMarkers again with first_index ")
@@ -341,6 +348,43 @@ public class GetMarkersMcpTool implements IMcpTool
                 .append(" to inspect the remaining markers.");
         }
         return next.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private void append1CMarkerSpecificHints(StringBuilder next, List<MarkerInfo> markers)
+    {
+        if (markers == null || markers.isEmpty())
+        {
+            return;
+        }
+
+        var messages = markers.stream()
+            .map(marker -> marker.message == null ? "" : marker.message)
+            .collect(Collectors.joining("\n"));
+
+        if (messages.contains("Совпадает с именем стандартного реквизита")
+            || messages.contains("standard"))
+        {
+            next.append(" If a document attribute name duplicates a standard document property, remove the custom ")
+                .append("attribute: documents already have built-in Date/Дата, Number/Номер, Posted/Проведен, ")
+                .append("Ref/Ссылка, and DeletionMark/ПометкаУдаления.");
+        }
+        if (messages.contains("Точность числа не может быть больше его длины"))
+        {
+            next.append(" For number qualifiers, TypeDescriptionBuilder uses setNumberQualifiers(scale, precision, ")
+                .append("nonNegative): for Number(10,2) call setNumberQualifiers(2, 10, ...), not (10, 2, ...).");
+        }
+        if (messages.contains("Переменная длина строки должна быть внутри диапазона"))
+        {
+            next.append(" For string qualifiers, use a valid finite length for this EDT version, usually ")
+                .append("setStringQualifiers(100, false); avoid large values such as 1000.");
+        }
+        if (messages.contains("Некорректный состав регистраторов регистра")
+            || messages.contains("регистратором для регистра"))
+        {
+            next.append(" For register registrar markers, link at least one document to the register via ")
+                .append("document.getRegisterRecords().add(register); registrars are configured on documents, not on the register.");
+        }
     }
 
     private static Predicate<MarkerInfo> applyMarkerFilters(MarkerType markerTypeFilter,
@@ -374,10 +418,11 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- Use `path` (absolute or project-relative) to scope to a specific file.");
         description.append("\n- Use pagination parameters to page through results.");
         description.append("\n- `ai_marker` includes `AIError`, `AIWarning`, `AIInfo` marker types.");
-        description.append("\n- `marker_type: \"1c\"` returns 1C validation markers of all severities. After 1C metadata CRUD, inspect all relevant markers for the changed entity/top object, including errors, warnings, and infos; do not check only errors.");
+        description.append("\n- `marker_type: \"1c\"` returns 1C validation markers of all severities. After 1C metadata CRUD, pass `path` to each changed top-level `.mdo` file when known or derivable, inspect only markers relevant to the changed entities/top objects, including errors, warnings, and infos, and do not check only errors.");
+        description.append("\n- After JShell CRUD, do not use project-wide results to fix unrelated existing markers. Use project-wide `GetMarkers` only for delete, rename, registrar links, references, command interfaces, configuration-level changes, or when the changed `.mdo` path cannot be derived; even then, filter fixes to the changed entities and directly affected references.");
         description.append("\n- If returned 1C markers contain SU45/type-required messages for attributes, dimensions, or resources, the next action is to fix the metadata with JShell. Each BasicFeature child needs its own fresh TypeDescription instance; do not reuse one TypeDescription across several children.");
         description.append("\n- Non-empty marker responses include JSON field `required_next_step`; follow it before reporting success.");
-        description.append("\n- After changing one 1C entity, prefer `path` to the changed `.mdo` file when known; otherwise use project scope. For references, delete, rename, registrars, and command interfaces, use project scope.");
+        description.append("\n- After changing one 1C entity, prefer `path` to the changed `.mdo` file when known; otherwise use project scope only as a fallback. For references, delete, rename, registrars, and command interfaces, use project scope but fix only affected markers.");
         description.append("\n- For 1C CRUD validation, use `max_count` large enough (for example 200) and paginate until all relevant markers are inspected.");
         description.append("\n- Markers are sorted by importance: severity (error > warning > info) then priority (high > normal > low).");
         description.append("\n- If not all markers are returned, the response will show total count and suggest pagination.");

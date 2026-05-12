@@ -352,6 +352,7 @@ public class JShellMcpTool
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" with `suggested_reflection_queries` instead of guessing APIs");
         description.append("\n- Choose `scope` from the allowed values listed in the `scope` parameter. ")
             .append("Scope-specific required next steps are returned in JSON field `required_next_step` by the matching `IJShellBindingProvider`");
+        description.append("\n- For `scope: \"edt\"` metadata CRUD, include the changed top-level entities and their `.mdo` paths in `response_description` when possible; after execution, follow `required_next_step` by calling GetMarkers with `path` for each changed entity, not a broad project-wide cleanup");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
 
@@ -369,6 +370,7 @@ public class JShellMcpTool
             .append(" in parallel with a JShell metadata change for the same project/session; wait for the JShell result first");
         description.append("\n- `request_description` describes what will be done and is shown as request markdown");
         description.append("\n- `response_description` describes what was done and is shown as response markdown");
+        description.append("\n- For EDT CRUD, `response_description` should name the changed top-level objects and known `.mdo` paths so the next GetMarkers call can be scoped");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
@@ -393,7 +395,8 @@ public class JShellMcpTool
             .append(" once with all uncertain Java API names/signatures before writing calls that depend on them");
         description.append("\n4. Use ").append(TOOL_NAME).append(" with that ID to execute code");
         description.append("\n5. Follow JSON field `required_next_step` when it is returned by the active binding provider");
-		description.append("\n6. Reuse same ID to maintain state");
+        description.append("\n6. For EDT CRUD, validate changed `.mdo` paths first and fix only markers relevant to the changed entities");
+		description.append("\n7. Reuse same ID to maintain state");
 
 		// Add restricted types information
         var restrictedTypes = restrictedTypesProvider.getRestrictedTypes();
@@ -443,7 +446,7 @@ public class JShellMcpTool
 
         var responseDescriptionProp = new McpToolCallProperty();
         responseDescriptionProp.type = "string";
-        responseDescriptionProp.description = "Required user-visible response markdown: what was done.";
+        responseDescriptionProp.description = "Required user-visible response markdown: what was done. For EDT CRUD, include changed top-level entities and known .mdo paths.";
         properties.put("response_description", responseDescriptionProp);
 
 		var sessionIdProp = new McpToolCallProperty();
