@@ -24,11 +24,11 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
         TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
-        TypeDescription typeDesc = new TypeDescriptionBuilder()
+        TypeDescription warehouseType = new TypeDescriptionBuilder()
             .addType(catalogRefType)
             .build();
 
-        warehouse.setType(typeDesc);
+        warehouse.setType(warehouseType);
         register.getDimensions().add(warehouse);
 
         // Add resource
@@ -40,11 +40,12 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
         typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
         TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
-        typeDesc = new TypeDescriptionBuilder()
+        TypeDescription quantityType = new TypeDescriptionBuilder()
             .addType(numberType)
+            .setNumberQualifiers(0, 10, false)
             .build();
 
-        quantity.setType(typeDesc);
+        quantity.setType(quantityType);
         register.getResources().add(quantity);
 
         // Set UUIDs manually (RECOMMENDED for JShell)
@@ -61,6 +62,8 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
 ```
 **Note:** Registers require at least one Dimension. Resources are optional but recommended.
 **Note:** `AccumulationRegisterDimension` does not have `setBalance(...)`; do not call it in JShell examples.
+**Note:** Each dimension/resource/attribute needs its own fresh `TypeDescription`; do not reuse one instance.
+**Note:** For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
 
 ### Registrar modes
 

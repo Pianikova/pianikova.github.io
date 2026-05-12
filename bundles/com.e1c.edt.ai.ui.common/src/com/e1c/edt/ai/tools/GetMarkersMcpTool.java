@@ -290,6 +290,8 @@ public class GetMarkersMcpTool implements IMcpTool
             var response = new GetMarkersResponse();
             response.markers = markersPage;
             response.totalMarkers = allMarkersList.size();
+            response.requiredNextStep =
+                buildRequiredNextStep(markerTypeFilter, markersPage.size(), allMarkersList.size(), firstIndex, maxCount);
 
             var content = json.serialize(response);
 
@@ -305,6 +307,40 @@ public class GetMarkersMcpTool implements IMcpTool
         {
             throw new ToolException("Operation cancelled", error, ToolErrorType.RETRYABLE);
         }
+    }
+
+    @SuppressWarnings("nls")
+    private String buildRequiredNextStep(MarkerType markerTypeFilter, int returnedCount, int totalCount, int firstIndex,
+        int maxCount)
+    {
+        if (totalCount == 0)
+        {
+            return null;
+        }
+
+        var next = new StringBuilder();
+        if (markerTypeFilter == MarkerType.M1C)
+        {
+            next.append("1C markers remain. Do not report success. Fix all relevant markers for the changed ")
+                .append("entity/top object, including errors, warnings, and infos. For SU45/type markers, set a fresh ")
+                .append("TypeDescription instance on every BasicFeature child before adding it to the parent; do not ")
+                .append("reuse the same TypeDescription object across multiple attributes, dimensions, or resources.");
+        }
+        else
+        {
+            next.append("Markers remain. Inspect and fix all relevant returned markers before reporting success.");
+        }
+
+        var nextIndex = firstIndex + returnedCount;
+        if (nextIndex < totalCount)
+        {
+            next.append(" Pagination is incomplete: call GetMarkers again with first_index ")
+                .append(nextIndex)
+                .append(" and max_count ")
+                .append(maxCount)
+                .append(" to inspect the remaining markers.");
+        }
+        return next.toString();
     }
 
     private static Predicate<MarkerInfo> applyMarkerFilters(MarkerType markerTypeFilter,
@@ -339,6 +375,8 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- Use pagination parameters to page through results.");
         description.append("\n- `ai_marker` includes `AIError`, `AIWarning`, `AIInfo` marker types.");
         description.append("\n- `marker_type: \"1c\"` returns 1C validation markers of all severities. After 1C metadata CRUD, inspect all relevant markers for the changed entity/top object, including errors, warnings, and infos; do not check only errors.");
+        description.append("\n- If returned 1C markers contain SU45/type-required messages for attributes, dimensions, or resources, the next action is to fix the metadata with JShell. Each BasicFeature child needs its own fresh TypeDescription instance; do not reuse one TypeDescription across several children.");
+        description.append("\n- Non-empty marker responses include JSON field `required_next_step`; follow it before reporting success.");
         description.append("\n- After changing one 1C entity, prefer `path` to the changed `.mdo` file when known; otherwise use project scope. For references, delete, rename, registrars, and command interfaces, use project scope.");
         description.append("\n- For 1C CRUD validation, use `max_count` large enough (for example 200) and paginate until all relevant markers are inspected.");
         description.append("\n- Markers are sorted by importance: severity (error > warning > info) then priority (high > normal > low).");
@@ -482,5 +520,8 @@ public class GetMarkersMcpTool implements IMcpTool
 
         @SerializedName("total_markers")
         public int totalMarkers;
+
+        @SerializedName("required_next_step")
+        public String requiredNextStep;
     }
 }

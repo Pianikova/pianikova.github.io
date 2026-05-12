@@ -28,6 +28,8 @@ import org.eclipse.core.runtime.IProgressMonitor;
 - `com._1c.g5.v8.dt.mcore.IEObjectProvider` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectProvider`.
 - `com._1c.g5.v8.dt.metadata.md.IEObjectTypeNames` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectTypeNames`.
 - `com._1c.g5.v8.dt.md.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
+- `com._1c.g5.v8.dt.core.IV8Project` is wrong. Use `com._1c.g5.v8.dt.core.platform.IV8Project`.
+- `com._1c.g5.v8.dt.core.IV8ProjectManager` is wrong. Use `com._1c.g5.v8.dt.core.platform.IV8ProjectManager`.
 
 ## Persistent JShell Scope
 

@@ -24,11 +24,11 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
         TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
-        TypeDescription typeDesc = new TypeDescriptionBuilder()
+        TypeDescription productType = new TypeDescriptionBuilder()
             .addType(catalogRefType)
             .build();
 
-        product.setType(typeDesc);
+        product.setType(productType);
         register.getDimensions().add(product);
 
         InformationRegisterResource price = mdFactory.createInformationRegisterResource();
@@ -37,11 +37,12 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
         typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
         TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
-        typeDesc = new TypeDescriptionBuilder()
+        TypeDescription priceType = new TypeDescriptionBuilder()
             .addType(numberType)
+            .setNumberQualifiers(2, 10, false)
             .build();
 
-        price.setType(typeDesc);
+        price.setType(priceType);
         register.getResources().add(price);
 
         String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();
@@ -55,6 +56,8 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
 ### Notes
 - InformationRegister usually needs at least one dimension and often one resource
 - Every new feature derived from BasicFeature must have `setType(...)`
+- Never reuse one `TypeDescription` instance across dimensions, resources, or attributes. Reuse `TypeItem` proxies only.
+- For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
 - Use a specific reference type like `Catalog.Products` when you need a strict typed dimension
 - If a dimension, resource, or attribute uses `IEObjectTypeNames.STRING`, build it with finite qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can report SU8: "Строка не может быть неограниченной длины"
 

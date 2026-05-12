@@ -31,7 +31,7 @@ catalog.getAttributes().add(article);
 1. Choose the exact child class for the parent (`CatalogAttribute`, `DocumentAttribute`, `TabularSectionAttribute`, ...)
 2. Set `name` and `uuid` on the new child object
 3. Resolve `IEObjectProvider` INSIDE the current transaction
-4. Build `TypeDescription` BEFORE adding the object to the parent collection
+4. Build a fresh `TypeDescription` BEFORE adding the object to the parent collection
 5. Call `setType(typeDesc)` on every object derived from `BasicFeature`
 6. Only after `setType(...)` add the object to `getAttributes()` / `getDimensions()` / `getResources()`
 
@@ -107,6 +107,8 @@ if (authors != null) {
 ### Rules
 - Always choose the child class that matches the parent entity
 - Every attribute derived from `BasicFeature` must have `setType(...)` before it is added to the parent collection
+- Never reuse one `TypeDescription` instance for multiple children. It is an EMF containment object and moves to the latest owner. Reuse `TypeItem` proxies, then build a new `TypeDescription` per child.
+- Before attaching or finishing a bulk CRUD transaction, loop through all new `BasicFeature` children and fail if `getType() == null || getType().getTypes().isEmpty()`
 - `CatalogAttribute`, `DocumentAttribute`, and `TabularSectionAttribute` are the most common sources of `md-legacy-emf-check` when `type` is omitted
 - For child objects, UUID is still recommended in JShell
 - For `IEObjectTypeNames.STRING`, always set finite qualifiers with `.setStringQualifiers(length, false)` to avoid SU8 unlimited-string markers.

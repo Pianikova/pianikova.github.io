@@ -176,6 +176,11 @@ public class JShellReflectionQuerySuggester
         aliases.put("NumberQualifiers", List.of("com._1c.g5.v8.dt.mcore.NumberQualifiers")); //$NON-NLS-1$ //$NON-NLS-2$
         aliases.put("McoreFactory", List.of("com._1c.g5.v8.dt.mcore.McoreFactory")); //$NON-NLS-1$ //$NON-NLS-2$
         aliases.put("IBmObject", List.of("com._1c.g5.v8.bm.core.IBmObject")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("IV8Project", List.of("com._1c.g5.v8.dt.core.platform.IV8Project")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("IV8ProjectManager", //$NON-NLS-1$
+            List.of("com._1c.g5.v8.dt.core.platform.IV8ProjectManager")); //$NON-NLS-1$
+        aliases.put("IBmModelManager", //$NON-NLS-1$
+            List.of("com._1c.g5.v8.dt.core.platform.IBmModelManager")); //$NON-NLS-1$
         aliases.put("RegisterWriteMode", //$NON-NLS-1$
             List.of("com._1c.g5.v8.dt.metadata.mdclass.RegisterWriteMode")); //$NON-NLS-1$
         aliases.put("AccumulationRegisterType", //$NON-NLS-1$

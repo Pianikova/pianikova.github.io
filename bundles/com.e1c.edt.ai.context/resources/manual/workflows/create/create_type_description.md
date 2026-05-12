@@ -29,6 +29,7 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 Use `TypeDescriptionBuilder.setStringQualifiers(int length, boolean fixed)`.
 The builder constructs the qualifier internally via `McoreFactory.eINSTANCE`,
 so this path is JShell-safe (no OSGi service involved, no `modelFactory`).
+Prefer `length <= 100` unless reflection or the target EDT model proves that a larger value is valid.
 
 ```java
 IV8Project v8project = projectManager.getProject(project);
@@ -36,13 +37,13 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
 
-// Variable-length string up to 1000 chars (e.g. Биография, Description)
+// Variable-length string up to 100 chars (safe default for EDT metadata)
 TypeDescription bioType = new TypeDescriptionBuilder()
     .addType(stringType)
-    .setStringQualifiers(1000, false)
-    // ❌ .stringQualifiersLength(1000)              — method does NOT exist
-    // ❌ .stringQualifiersLength(1000).fixed(false) — method does NOT exist
-    // ❌ .setLength(1000)                           — TypeDescriptionBuilder has no such method
+    .setStringQualifiers(100, false)
+    // ❌ .stringQualifiersLength(100)              — method does NOT exist
+    // ❌ .stringQualifiersLength(100).fixed(false) — method does NOT exist
+    // ❌ .setLength(100)                           — TypeDescriptionBuilder has no such method
     .build();
 
 // Fixed-length string of 9 chars (e.g. Article code)

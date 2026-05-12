@@ -280,7 +280,13 @@ public class MetadataBindingProvider
 
         return "Call GetMarkers with marker_type \"1c\" for the affected project or changed .mdo file. "
             + "Inspect all relevant 1C markers for the changed entity/top object, including errors, warnings, "
-            + "and infos; do not check only errors. Fix relevant markers before reporting success or starting "
+            + "and infos; do not check only errors. If SU45/type markers appear, ensure every BasicFeature child "
+            + "has its own fresh TypeDescription instance; do not reuse one TypeDescription across multiple "
+            + "attributes, dimensions, or resources. For document CRUD, do not create custom attributes named "
+            + "Date/Дата, Number/Номер, Posted/Проведен, Ref/Ссылка, or DeletionMark/ПометкаУдаления. For numeric "
+            + "types, TypeDescriptionBuilder.setNumberQualifiers uses (scale, precision, nonNegative), for example "
+            + "Number(10,2) is setNumberQualifiers(2, 10, false). For registers, link registrar documents via "
+            + "document.getRegisterRecords().add(register). Fix relevant markers before reporting success or starting "
             + "another 1C metadata CRUD operation.";
     }
 

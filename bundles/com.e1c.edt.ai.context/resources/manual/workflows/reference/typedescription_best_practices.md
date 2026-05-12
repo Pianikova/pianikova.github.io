@@ -12,7 +12,7 @@ Use these exact packages in JShell:
 
 Do not import `IEObjectProvider` from `mcore` or `metadata.md`. Do not import `TypeDescriptionBuilder` from `dt.md`; that package is wrong for EDT TypeDescription creation.
 
-For `IEObjectTypeNames.STRING`, always set a finite length with `setStringQualifiers(length, false)` unless a scenario explicitly requires a fixed string with `true`. An unlimited string can produce SU8 marker: "Строка не может быть неограниченной длины".
+For `IEObjectTypeNames.STRING`, always set a finite length with `setStringQualifiers(length, false)` unless a scenario explicitly requires a fixed string with `true`. Prefer `length <= 100` unless the EDT version/model explicitly allows a larger value. An unlimited or oversized string can produce SU8 markers such as "Строка не может быть неограниченной длины" or "Переменная длина строки должна быть внутри диапазона от 0 до 100".
 
 Never pass a nullable proxy directly to `TypeDescriptionBuilder.addType(...)`. `typeProvider.getProxy(...)` may return `null` for specific metadata names that do not exist in the current project. Check the proxy first and either stop with a clear message or fall back to a generic type such as `IEObjectTypeNames.CATALOG_REF`, `DOCUMENT_REF`, `STRING`, or `NUMBER`.
 
@@ -54,6 +54,7 @@ globalContext.execute(new AbstractBmTask<Void>("Create metadata") {
         // STEP 4: Build TypeDescription INSIDE transaction
         TypeDescription stringTypeDesc = new TypeDescriptionBuilder()
             .addType(stringType)
+            .setStringQualifiers(100, false)
             .build();
 
         TypeDescription catalogRefTypeDesc = new TypeDescriptionBuilder()
@@ -120,7 +121,10 @@ IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
-TypeDescription typeDesc = new TypeDescriptionBuilder().addType(stringType).build();
+TypeDescription typeDesc = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(100, false)
+    .build();
 attribute.setType(typeDesc);
 ```
 
@@ -149,10 +153,10 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 ```java
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
 
-// Variable-length string up to 1000 chars
+// Variable-length string up to 100 chars
 TypeDescription bioType = new TypeDescriptionBuilder()
     .addType(stringType)
-    .setStringQualifiers(1000, false)
+    .setStringQualifiers(100, false)
     .build();
 ```
 
@@ -205,7 +209,8 @@ attribute.setType(typeDesc);
 ```
 
 ### Performance Considerations:
-- **Reuse TypeDescription**: Create once, use multiple times for same type
+- **Do not reuse TypeDescription instances**: `TypeDescription` is an EMF containment object. Reusing one instance for multiple attributes/dimensions/resources moves it to the latest owner and leaves earlier children without `type`.
+- **Reuse TypeItem proxies only**: Resolve `TypeItem` once when useful, then call `new TypeDescriptionBuilder()...build()` separately for every target child.
 - **Validate early**: Check `typeProvider.getProxy(...)` before building
 - **Minimize proxy calls**: Get all needed TypeItems at once
 - **Stay in transaction**: All TypeDescription operations in same transaction
