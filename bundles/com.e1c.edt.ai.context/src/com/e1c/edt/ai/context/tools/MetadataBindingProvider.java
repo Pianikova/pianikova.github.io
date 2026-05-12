@@ -58,6 +58,8 @@ import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
 import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
 import com.e1c.edt.ai.tools.IJShellBindingProvider;
 import com.e1c.edt.ai.tools.JShellBindingDescription;
+import com.e1c.edt.ai.tools.JShellExecutionContext;
+import com.e1c.edt.ai.tools.JShellExecutionResult;
 import com.e1c.edt.ai.tools.ManualResourceLoader;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -106,6 +108,12 @@ public class MetadataBindingProvider
         this.methodListProvider = methodListProvider;
         this.loader = new ManualResourceLoader(MetadataBindingProvider.class, "/manual"); //$NON-NLS-1$
         this.loader.registerDynamicResolver("method-list", this::renderMethodList); //$NON-NLS-1$
+    }
+
+    @Override
+    public String getScope()
+    {
+        return "edt"; //$NON-NLS-1$
     }
 
     private String renderMethodList(String className)
@@ -258,5 +266,66 @@ public class MetadataBindingProvider
             "import org.eclipse.emf.ecore.util.EcoreUtil;"
         );
         // @formatter:on
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public String getRequiredNextStep(JShellExecutionContext context)
+    {
+        if (context == null || context.result == null || hasExecutionErrors(context.result)
+            || !isLikelyMetadataMutation(context.code))
+        {
+            return "";
+        }
+
+        return "Call GetMarkers with marker_type \"1c\" scoped to each changed top-level entity .mdo path when "
+            + "that path is known or can be derived. Fix only markers relevant to the entities changed by this "
+            + "CRUD operation. Do not fix unrelated project-wide markers. Use project-wide GetMarkers only for "
+            + "changes that can affect other objects, such as delete, rename, registrar links, references, "
+            + "command interfaces, or configuration-level changes; even then, filter fixes to the changed "
+            + "entities and directly affected references. Inspect all relevant 1C markers for the changed "
+            + "entity/top object, including errors, warnings, and infos; do not check only errors. If SU45/type "
+            + "markers appear, ensure every BasicFeature child "
+            + "has its own fresh TypeDescription instance; do not reuse one TypeDescription across multiple "
+            + "attributes, dimensions, or resources. For document CRUD, do not create custom attributes named "
+            + "Date/Дата, Number/Номер, Posted/Проведен, Ref/Ссылка, or DeletionMark/ПометкаУдаления. For numeric "
+            + "types, TypeDescriptionBuilder.setNumberQualifiers uses (scale, precision, nonNegative), for example "
+            + "Number(10,2) is setNumberQualifiers(2, 10, false). For registers, link registrar documents via "
+            + "document.getRegisterRecords().add(register). Fix relevant markers before reporting success or starting "
+            + "another 1C metadata CRUD operation.";
+    }
+
+    private boolean hasExecutionErrors(JShellExecutionResult result)
+    {
+        return result.compilationErrors != null && !result.compilationErrors.isEmpty()
+            || result.runtimeErrors != null && !result.runtimeErrors.isEmpty();
+    }
+
+    private boolean isLikelyMetadataMutation(String code)
+    {
+        if (code == null || code.isBlank())
+        {
+            return false;
+        }
+
+        var hasMetadataContext = containsAny(code,
+            "mdFactory", "modelFactory", "modelManager", "fqnGenerator", "IBmTransaction", "IBmModel", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+            "IBmGlobalEditingContext", "Configuration", "com._1c.g5.v8.dt.metadata", "com._1c.g5.v8.bm"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        var hasMutation = containsAny(code,
+            "globalContext.execute", "new AbstractBmTask", "attachTopObject", "detachTopObject", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            ".set", ".add(", ".remove(", ".clear()"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        return hasMetadataContext && hasMutation;
+    }
+
+    private boolean containsAny(String text, String... fragments)
+    {
+        for (var fragment : fragments)
+        {
+            if (text.contains(fragment))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

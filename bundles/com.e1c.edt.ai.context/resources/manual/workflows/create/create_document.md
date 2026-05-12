@@ -1,5 +1,12 @@
 ## Safe Workflow: Create Document
 
+Before writing code, decide which attributes are custom. Do not create document attributes named `Date`, `Дата`,
+`Number`, `Номер`, `Posted`, `Проведен`, `Ref`, `Ссылка`, `DeletionMark`, or `ПометкаУдаления`: these are standard
+document properties and EDT reports SU45 name/type markers if they are added as custom attributes.
+
+When a document has many attributes, prefer small helper methods that return a NEW `TypeDescription` on every call.
+Never store one `TypeDescription` and assign it to two attributes.
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
@@ -70,11 +77,30 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
         TypeDescription quantityType = new TypeDescriptionBuilder()
             .addType(numberType)
+            .setNumberQualifiers(0, 10, false)
             .build();
         quantity.setType(quantityType);
         quantity.setUuid(UUID.randomUUID());
         products.getAttributes().add(quantity);
         document.getTabularSections().add(products);
+
+        // Validate all child TypeDescription values before attach.
+        // TypeDescription is containment: never reuse the same instance across children.
+        for (DocumentAttribute attribute : document.getAttributes()) {
+            if (attribute.getType() == null || attribute.getType().getTypes().isEmpty()) {
+                System.err.println("ERROR: Missing TypeDescription for document attribute: " + attribute.getName());
+                return null;
+            }
+        }
+        for (DocumentTabularSection section : document.getTabularSections()) {
+            for (TabularSectionAttribute attribute : section.getAttributes()) {
+                if (attribute.getType() == null || attribute.getType().getTypes().isEmpty()) {
+                    System.err.println("ERROR: Missing TypeDescription for tabular section attribute: "
+                        + section.getName() + "." + attribute.getName());
+                    return null;
+                }
+            }
+        }
 
         // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)
         document.setUuid(UUID.randomUUID());
@@ -99,11 +125,15 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 - **IEObjectProvider** must use `v8project.getVersion()` for version compatibility
 - **UUIDs** MUST be set for document and all attributes to avoid SU45 errors
 - **Every `DocumentAttribute` and `TabularSectionAttribute` must call `setType(...)`** before `add(...)`; otherwise EDT reports `md-legacy-emf-check` / `type is required`
+- **Never reuse the same `TypeDescription` instance for multiple children.** `TypeDescription` is containment; assigning it to another attribute moves it away from the previous owner and causes `type is required` markers. Reuse `TypeItem`, not `TypeDescription`.
+- **For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first.** For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`, not `.setNumberQualifiers(10, 2, false)`.
+- **Before `attachTopObject`, verify all document attributes and tabular section attributes have non-null/non-empty `getType()`**
 - **Check before creating** to avoid `BmFqnAlreadyInUseException`
 
 **⚠️ CRITICAL: Standard Document Attributes**
 - **NEVER create custom attributes with names matching standard document properties**
 - Standard document attributes (built-in, cannot be overridden): `Date`, `Number`, `Posted`, `Ref`, `DeletionMark`
+- Russian standard names are also reserved: `Дата`, `Номер`, `Проведен`, `Ссылка`, `ПометкаУдаления`
 - Trying to create an attribute named "Date" will cause validation error: "Некорректное значение свойства \"name\" реквизита \"Date\". Совпадает с именем стандартного реквизита"
 - Only create custom attributes with unique names (e.g., Warehouse, Customer, Amount, etc.)
 
@@ -121,4 +151,4 @@ if (stockRegister != null) {
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project and fix new validation markers before reporting success.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.

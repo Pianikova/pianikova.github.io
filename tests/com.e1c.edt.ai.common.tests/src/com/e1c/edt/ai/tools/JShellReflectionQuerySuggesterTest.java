@@ -69,4 +69,16 @@ public class JShellReflectionQuerySuggesterTest
         assertTrue(suggestions.contains("com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType.*")); //$NON-NLS-1$
         assertTrue(suggestions.contains("AccumulationRegisterType.*")); //$NON-NLS-1$
     }
+
+    @Test
+    public void testSuggestsNumberQualifiersFqn()
+    {
+        var error = new CompilationError();
+        error.message = "cannot find symbol\n  symbol: class NumberQualifiers"; //$NON-NLS-1$
+
+        var suggestions = suggester.suggestForCompilationErrors("", List.of(error), 12); //$NON-NLS-1$
+
+        assertTrue(suggestions.contains("com._1c.g5.v8.dt.mcore.NumberQualifiers")); //$NON-NLS-1$
+        assertTrue(suggestions.contains("com._1c.g5.v8.dt.mcore.NumberQualifiers.*")); //$NON-NLS-1$
+    }
 }

@@ -61,7 +61,7 @@ public class JShellReflectionService
 
     private JShellReflectionQueryResult search(IJShellSession session, String query)
     {
-        var normalized = query == null ? "" : query.trim(); //$NON-NLS-1$
+        var normalized = normalizeQuery(query);
         var cacheKey = System.identityHashCode(session.getClassLoader()) + ":" + normalized; //$NON-NLS-1$
         var cached = queryResultCache.getIfPresent(cacheKey);
         if (cached != null)
@@ -71,6 +71,28 @@ public class JShellReflectionService
         var result = searchUncached(session, query, normalized);
         queryResultCache.put(cacheKey, result);
         return result;
+    }
+
+    private String normalizeQuery(String query)
+    {
+        var normalized = query == null ? "" : query.trim(); //$NON-NLS-1$
+        if (normalized.startsWith("import ")) //$NON-NLS-1$
+        {
+            normalized = normalized.substring("import ".length()).trim(); //$NON-NLS-1$
+            if (normalized.startsWith("static ")) //$NON-NLS-1$
+            {
+                normalized = normalized.substring("static ".length()).trim(); //$NON-NLS-1$
+            }
+            if (normalized.endsWith(";")) //$NON-NLS-1$
+            {
+                normalized = normalized.substring(0, normalized.length() - 1).trim();
+            }
+            if (normalized.endsWith(".*")) //$NON-NLS-1$
+            {
+                normalized = normalized.substring(0, normalized.length() - 2);
+            }
+        }
+        return normalized;
     }
 
     private JShellReflectionQueryResult searchUncached(IJShellSession session, String query, String normalized)

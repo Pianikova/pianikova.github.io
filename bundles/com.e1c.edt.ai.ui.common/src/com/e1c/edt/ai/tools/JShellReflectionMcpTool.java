@@ -174,6 +174,9 @@ public class JShellReflectionMcpTool
             .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`. ")
             .append("Do not look up `AccumulationRegisterType.REMAINDERS`; use `BALANCE` for remainder/balance registers.");
         description.append("\n\nAccepts multiple search strings in one call and returns results in the same order.");
+        description.append("\nQueries are API symbols, package names, or wildcard member searches, not Java statements. ")
+            .append("Do not send `import ...` statements; use `com.example.package`, `SomeType`, or `SomeType.set*`. ")
+            .append("If an import statement is accidentally provided, it is treated as the imported package/type.");
         description.append("\nSupports `*` wildcards for type and member lookup.");
         description.append("\nOne query can return multiple search results; each result contains a flat `items` list.");
         description.append("\nIf a query is not found, use returned `suggestions` for the next ")

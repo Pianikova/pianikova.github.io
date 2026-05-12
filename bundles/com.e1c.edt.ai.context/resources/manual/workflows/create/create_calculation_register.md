@@ -31,11 +31,11 @@ CalculationRegister register = globalContext.execute(new AbstractBmTask<Calculat
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
         TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
-        TypeDescription typeDesc = new TypeDescriptionBuilder()
+        TypeDescription employeeType = new TypeDescriptionBuilder()
             .addType(catalogRefType)
             .build();
 
-        employee.setType(typeDesc);
+        employee.setType(employeeType);
         register.getDimensions().add(employee);
 
         // Add resource
@@ -46,11 +46,12 @@ CalculationRegister register = globalContext.execute(new AbstractBmTask<Calculat
         typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
         TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
-        typeDesc = new TypeDescriptionBuilder()
+        TypeDescription amountType = new TypeDescriptionBuilder()
             .addType(numberType)
+            .setNumberQualifiers(2, 10, false)
             .build();
 
-        amount.setType(typeDesc);
+        amount.setType(amountType);
         register.getResources().add(amount);
 
         // Add recalculation rule
@@ -73,6 +74,8 @@ CalculationRegister register = globalContext.execute(new AbstractBmTask<Calculat
 ```
 **Note:** CalculationRegister requires ChartOfCalculationTypes reference and at least one base Dimension.
 **Note:** Use a numeric type for calculation resources such as amount; do not reuse a reference type from a dimension.
+**Note:** Each dimension/resource/attribute needs its own fresh `TypeDescription`; do not reuse one instance.
+**Note:** For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
 
 ### Registrar modes
 
@@ -100,4 +103,4 @@ Do not report success while this marker remains unless the user explicitly asked
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` for the changed file or project. For Mode B, fix all new validation markers before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed register `.mdo` when known or derivable. For Mode B, fix markers relevant to the changed register and its registrar links before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.

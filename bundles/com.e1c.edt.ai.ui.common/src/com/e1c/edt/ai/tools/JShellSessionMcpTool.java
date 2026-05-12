@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
@@ -128,10 +129,16 @@ public class JShellSessionMcpTool
         description.append("\n\n**Required flow for EDT/Eclipse scenarios:**");
         description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME).append(" first");
         description.append("\n2. Call ").append(TOOL_NAME).append(" to get a session");
-        description.append("\n3. Call ").append(JShellMcpTool.TOOL_NAME).append(" to execute the prepared code");
+        description.append("\n3. Call ").append(JShellMcpTool.TOOL_NAME)
+            .append(" to execute the prepared code; for EDT CRUD, its `response_description` should name changed ")
+            .append("top-level objects and known `.mdo` paths");
+        description.append("\n4. For EDT CRUD, call ").append(GetMarkersMcpTool.TOOL_NAME)
+            .append(" with `marker_type: \"1c\"` and `path` for each changed `.mdo` when possible; fix only markers ")
+            .append("related to changed entities or directly affected references");
 
         description.append("\n\n**Usage:**");
         description.append("\n- Takes no parameters");
+        description.append("\n- Does not accept `code`, `scope`, `request_description`, or `response_description`");
         description.append("\n- Always creates a new session or returns a pre-warmed fresh session");
         description.append("\n- Returns: `repl_session_id` and available bindings");
         description.append("\n- Use the returned `repl_session_id` in subsequent ")
@@ -139,6 +146,16 @@ public class JShellSessionMcpTool
             .append(" and ")
             .append(JShellReflectionMcpTool.TOOL_NAME)
             .append(" calls");
+        description.append("\n- Pass `scope`, descriptions, and code only to ")
+            .append(JShellMcpTool.TOOL_NAME);
+        description.append("\n- Available JShell scopes from binding providers: ")
+            .append(bindingProviders.stream()
+                .map(IJShellBindingProvider::getScope)
+                .filter(scope -> scope != null && !scope.isBlank())
+                .map(String::trim)
+                .distinct()
+                .sorted()
+                .collect(Collectors.joining(", ")));
 
 		description.append("\n\n### Available bindings:");
 		description.append("\nPre-configured Eclipse objects available in JShell sessions:");

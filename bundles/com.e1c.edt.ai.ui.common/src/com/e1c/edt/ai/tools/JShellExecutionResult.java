@@ -27,4 +27,7 @@ public class JShellExecutionResult
 
     @SerializedName("suggested_reflection_queries")
     public List<String> suggestedReflectionQueries;
+
+    @SerializedName("required_next_step")
+    public String requiredNextStep;
 }

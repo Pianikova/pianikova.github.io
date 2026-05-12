@@ -164,7 +164,7 @@ int scale = nq.getScale();
 - Use `TypeDescriptionBuilder` for qualifiers in JShell context
 - Set UUIDs manually when creating new metadata objects
 - For existing objects: modify directly, don't use attachTopObject()
-- Check that Scale <= Precision for all Number types
+- Check that Scale <= Precision for all Number types; `setNumberQualifiers(scale, precision, nonNegative)` uses scale first
 - Verify that all attributes have valid TypeDescription set
 
 ### Standard Document Attribute Names Cannot Be Overridden
@@ -176,6 +176,7 @@ int scale = nq.getScale();
 **Common Causes:**
 - Creating a custom attribute named "Date"
 - Creating a custom attribute named "Number", "Posted", "DeletionMark", or "Ref"
+- Creating localized standard-name attributes such as "Дата", "Номер", "Проведен", "ПометкаУдаления", or "Ссылка"
 
 **Standard Document Attributes (Built-in, Cannot Override):**
 - `Date` - Document date (standard property, always exists)
@@ -183,19 +184,20 @@ int scale = nq.getScale();
 - `Posted` - Posted status (standard property)
 - `Ref` - Document reference (standard property)
 - `DeletionMark` - Deletion mark (standard property)
+- `Дата`, `Номер`, `Проведен`, `Ссылка`, `ПометкаУдаления` - localized standard names are also reserved
 
 **Fix Pattern:**
 ```java
 // ❌ WRONG - This causes validation error
 DocumentAttribute dateAttr = mdFactory.createDocumentAttribute();
-dateAttr.setName("Date"); // ❌ Conflicts with standard attribute!
+dateAttr.setName("Дата"); // ❌ Conflicts with standard attribute!
 dateAttr.setType(dateTypeDesc);
 document.getAttributes().add(dateAttr);
-// Error: "Некорректное значение свойства \"name\" реквизита \"Date\". Совпадает с именем стандартного реквизита"
+// Error: "Некорректное значение свойства \"name\" реквизита \"Дата\". Совпадает с именем стандартного реквизита"
 
 // ✅ CORRECT - Use a different name
 DocumentAttribute documentDate = mdFactory.createDocumentAttribute();
-documentDate.setName("DocumentDate"); // ✅ Unique name
+documentDate.setName("ДатаДокумента"); // ✅ Unique name
 documentDate.setType(dateTypeDesc);
 document.getAttributes().add(documentDate);
 ```

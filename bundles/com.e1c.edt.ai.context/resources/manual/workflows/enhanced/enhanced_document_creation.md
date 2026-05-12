@@ -6,6 +6,11 @@ This workflow provides comprehensive document creation with:
 - Type validation and error handling
 - Complete validation before attachment
 
+Critical TypeDescription rule: `TypeDescription` is an EMF containment object. Do not reuse one `TypeDescription` instance for multiple `DocumentAttribute` or `TabularSectionAttribute` objects. You may reuse `TypeItem` proxies, but build a fresh `new TypeDescriptionBuilder()...build()` for every child before `setType(...)`.
+
+Do not create document attributes named `Date`, `Дата`, `Number`, `Номер`, `Posted`, `Проведен`, `Ref`, `Ссылка`,
+`DeletionMark`, or `ПометкаУдаления`. They are standard document properties.
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
@@ -106,17 +111,27 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Create doc
         TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
         TypeDescription quantityType = new TypeDescriptionBuilder()
             .addType(numberType)
+            .setNumberQualifiers(0, 10, false)
             .build();
         quantity.setType(quantityType);
         products.getAttributes().add(quantity);
         document.getTabularSections().add(products);
 
         // VALIDATE before attachment
-        if (document.getAttributes().isEmpty()) {
-            System.err.println("ERROR: Document has no attributes");
+        for (DocumentAttribute attribute : document.getAttributes()) {
+            if (attribute.getType() == null || attribute.getType().getTypes().isEmpty()) {
+                System.err.println("ERROR: Missing TypeDescription for document attribute: " + attribute.getName());
+                return null;
+            }
         }
-        if (document.getTabularSections().isEmpty()) {
-            System.out.println("WARNING: Document has no tabular sections");
+        for (DocumentTabularSection section : document.getTabularSections()) {
+            for (TabularSectionAttribute attribute : section.getAttributes()) {
+                if (attribute.getType() == null || attribute.getType().getTypes().isEmpty()) {
+                    System.err.println("ERROR: Missing TypeDescription for tabular section attribute: "
+                        + section.getName() + "." + attribute.getName());
+                    return null;
+                }
+            }
         }
 
         // ATTACH and add to configuration
@@ -142,5 +157,9 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Create doc
 - [ ] All TabularSectionAttribute objects: `tsa.setUuid(UUID.randomUUID())`
 - [ ] Wrap ALL UUID assignments in try-catch blocks
 - [ ] Abort creation if any UUID assignment fails
+- [ ] Build a fresh `TypeDescription` for each `DocumentAttribute` and `TabularSectionAttribute`; never reuse one instance across multiple children
+- [ ] Use `setNumberQualifiers(scale, precision, nonNegative)` with scale first, for example `setNumberQualifiers(2, 10, false)` for `Number(10,2)`
+- [ ] Do not add custom attributes whose names duplicate standard document properties such as `Date`/`Дата` or `Number`/`Номер`
+- [ ] Before `attachTopObject`, verify every child `getType()` is non-null and non-empty
 - [ ] After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers
 

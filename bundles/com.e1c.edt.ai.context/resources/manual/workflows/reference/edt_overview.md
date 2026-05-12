@@ -603,10 +603,10 @@ If qualifiers are required, use the builder's fluent setters — they construct
 the qualifier internally via `McoreFactory.eINSTANCE` and are JShell-safe
 (NO `modelFactory` / OSGi service):
 ```java
-// String of length 150, variable-length
+// String of length 100, variable-length
 TypeDescription strType = new TypeDescriptionBuilder()
     .addType(stringType)
-    .setStringQualifiers(150, false)
+    .setStringQualifiers(100, false)
     .build();
 
 // Number(10, 2), non-negative
@@ -629,15 +629,13 @@ TypeItem type = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
 // TypeItem type = TypeItem.eINSTANCE; // Do NOT do this
 ```
 
-**2. Create TypeDescription once, reuse when possible**
+**2. Reuse TypeItem, not TypeDescription**
 ```java
-// Create type description outside loop
-TypeDescription stringTypeDesc = new TypeDescriptionBuilder()
-    .addType(stringType)
-    .build();
-
-// Reuse for multiple attributes
+// TypeDescription is containment. Build a fresh instance for every child.
 for (CatalogAttribute attr : attributes) {
+    TypeDescription stringTypeDesc = new TypeDescriptionBuilder()
+        .addType(stringType)
+        .build();
     attr.setType(stringTypeDesc);
 }
 ```

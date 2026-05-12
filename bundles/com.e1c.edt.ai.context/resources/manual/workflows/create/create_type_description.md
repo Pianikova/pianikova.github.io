@@ -29,6 +29,7 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 Use `TypeDescriptionBuilder.setStringQualifiers(int length, boolean fixed)`.
 The builder constructs the qualifier internally via `McoreFactory.eINSTANCE`,
 so this path is JShell-safe (no OSGi service involved, no `modelFactory`).
+Prefer `length <= 100` unless reflection or the target EDT model proves that a larger value is valid.
 
 ```java
 IV8Project v8project = projectManager.getProject(project);
@@ -36,13 +37,13 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
 
-// Variable-length string up to 1000 chars (e.g. Биография, Description)
+// Variable-length string up to 100 chars (safe default for EDT metadata)
 TypeDescription bioType = new TypeDescriptionBuilder()
     .addType(stringType)
-    .setStringQualifiers(1000, false)
-    // ❌ .stringQualifiersLength(1000)              — method does NOT exist
-    // ❌ .stringQualifiersLength(1000).fixed(false) — method does NOT exist
-    // ❌ .setLength(1000)                           — TypeDescriptionBuilder has no such method
+    .setStringQualifiers(100, false)
+    // ❌ .stringQualifiersLength(100)              — method does NOT exist
+    // ❌ .stringQualifiersLength(100).fixed(false) — method does NOT exist
+    // ❌ .setLength(100)                           — TypeDescriptionBuilder has no such method
     .build();
 
 // Fixed-length string of 9 chars (e.g. Article code)
@@ -57,6 +58,9 @@ TypeDescription articleType = new TypeDescriptionBuilder()
 Use `TypeDescriptionBuilder.setNumberQualifiers(int scale, int precision, boolean nonNegative)`.
 ⚠️ `scale` (digits after the decimal point) MUST be `<= precision` (total digits),
 otherwise the platform raises an SU8 error.
+
+Do not create `NumberQualifiers` manually in JShell. Prefer the builder fluent method below:
+it uses the correct EDT factory internally and avoids missing imports plus scale/precision drift.
 
 ```java
 IV8Project v8project = projectManager.getProject(project);
@@ -190,6 +194,7 @@ LLMs often invent these. None of them exist in the EDT API. Use the right name f
 | `.numberQualifiersPrecision(P)`                  | `.setNumberQualifiers(scale, P, false)`                           |
 | `.numberQualifiersScale(S)`                      | `.setNumberQualifiers(S, precision, false)`                       |
 | `.setLength(N)` (on builder)                     | `.setStringQualifiers(N, false)` (length is a qualifier, not a top-level setter) |
+| `new NumberQualifiers(...)` or manual `McoreFactory.eINSTANCE.createNumberQualifiers()` | `.setNumberQualifiers(scale, precision, nonNegative)` |
 | `.dateFractions(DateFractions.DATE)`             | `.setDateQualifiers(DateFractions.DATE)`                          |
 | `NumberCategory.INTEGER`                         | `.setNumberQualifiers(0, precision, false)` — scale=0 means integer |
 | `IEObjectTypeNames.INTEGER`                      | `IEObjectTypeNames.NUMBER` + `setNumberQualifiers(0, ...)`        |

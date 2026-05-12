@@ -381,10 +381,22 @@ public class JShellManualMcpTool
             .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`.\n");
         sb.append("For 1C metadata CRUD, after every JShell create, update/edit, or delete, the mandatory next tool is ")
             .append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" with `marker_type: \"1c\"` for the affected project. Do not report success and do not start the next CRUD operation before checking markers.\n");
+            .append(" with `marker_type: \"1c\"` and `path` for each changed top-level `.mdo` file when the path is known ")
+            .append("or can be derived. Check all relevant markers for the changed entity, including errors, warnings, ")
+            .append("and infos; do not check only errors. Do not fix unrelated project-wide markers. Use project-wide ")
+            .append("GetMarkers only for delete, rename, registrar/reference changes, command interfaces, configuration-level ")
+            .append("changes, or when the changed `.mdo` path cannot be derived. Do not report success and do not start ")
+            .append("the next CRUD operation before checking scoped markers.\n");
         sb.append("Use it for create/edit/delete/look-up scenarios, for workbench/editor/workspace code, and ")
             .append("for any code that uses bindings like `mdFactory`, `modelManager`, `projectManager`, ")
             .append("`workspaceRoot`, `workbench`, `resourceLookup`, or `fqnGenerator`.\n\n");
+        sb.append("When calling ").append(JShellMcpTool.TOOL_NAME)
+            .append(", always pass `scope`, `request_description`, and `response_description`. ")
+            .append("Use `scope: \"edt\"` for 1C metadata API and `scope: \"eclipse\"` for Eclipse workspace/UI API. ")
+            .append("The request description says what will be done; the response description says what was done. ")
+            .append("For EDT CRUD, put changed top-level object names and known `.mdo` paths in `response_description`. ")
+            .append("After ").append(JShellMcpTool.TOOL_NAME)
+            .append(", inspect JSON field `required_next_step`; for EDT CRUD it can require marker validation.\n\n");
 
         sb.append("Naming convention: scenario ids are `<verb>_<entity>`, e.g. `create_catalog`, ")
             .append("`edit_information_register`, `delete_attribute`, `add_tabular_section`. ")
@@ -408,9 +420,10 @@ public class JShellManualMcpTool
             .append("and batch all unknown queries in one call.\n");
         sb.append("5. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
         sb.append("6. After code changes project resources or metadata, call ").append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" for the affected project. Use `marker_type: \"problem\"` for build/validation issues, ")
+            .append(" for the changed file first when known. Use `marker_type: \"problem\"` for build/validation issues, ")
             .append("`marker_type: \"1c\"` for 1C/BSL markers, and `marker_type: \"ai_marker\"` ")
-            .append("for AIError/AIWarning/AIInfo markers.\n");
+            .append("for AIError/AIWarning/AIInfo markers. For `marker_type: \"1c\"`, inspect all relevant severities, ")
+            .append("not only errors, and fix only markers related to the entities changed by the JShell operation.\n");
         sb.append("7. If ").append(JShellMcpTool.TOOL_NAME)
             .append(" returns an EDT/Eclipse preflight error, return to ").append(TOOL_NAME)
             .append(" with a better matching scenario id.\n");

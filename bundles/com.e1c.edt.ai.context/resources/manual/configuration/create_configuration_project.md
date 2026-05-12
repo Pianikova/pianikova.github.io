@@ -4,6 +4,8 @@ This workflow creates a minimal EDT 1C:Enterprise configuration project in the E
 
 Critical rule: create required project files first, then enable V8 nature and Xtext builder. If V8 nature is enabled before `DT-INF/PROJECT.PMF`, `src/Configuration/Configuration.mdo`, and `.settings` exist, EDT lifecycle can start on a half-created project. The result may be visible in workspace but not resolvable through `projectManager`.
 
+Import rule: if explicit imports are needed, use `com._1c.g5.v8.dt.core.platform.IV8Project`. Do not import `com._1c.g5.v8.dt.core.IV8Project`; that package does not contain `IV8Project`.
+
 ```java
 String projectName = "MyNewConfiguration";
 IProject projectHandle = workspaceRoot.getProject(projectName);
@@ -161,4 +163,3 @@ try {
 - `NoSuchFileException` for `.settings`: create `.settings` before enabling V8 nature.
 - `ProjectManifestException`: check `DT-INF/PROJECT.PMF` format and `Runtime-Version`.
 - BM model exists but `Configuration` is not accessible: check `src/Configuration/Configuration.mdo` namespace and root element.
-

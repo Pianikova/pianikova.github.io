@@ -97,4 +97,4 @@ document.getRegisterRecords().forEach(reg ->
 
 ### Required post-check
 
-After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for the project and fix new validation markers before reporting success.
+After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for the project, but fix only markers on changed entities and directly affected references before reporting success.

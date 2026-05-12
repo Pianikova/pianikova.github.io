@@ -20,6 +20,12 @@ import com.google.inject.Singleton;
 public class EclipsePlatformBindingProvider
 	implements IJShellBindingProvider, IJShellManualProvider
 {
+    @Override
+    public String getScope()
+    {
+        return "eclipse"; //$NON-NLS-1$
+    }
+
     @SuppressWarnings("nls")
     @Override
     public Map<String, JShellBindingDescription> getBindings()
