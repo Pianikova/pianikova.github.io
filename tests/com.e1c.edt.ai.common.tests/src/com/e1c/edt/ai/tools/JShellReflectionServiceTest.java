@@ -95,6 +95,16 @@ public class JShellReflectionServiceTest
     }
 
     @Test
+    public void testImportStatementQueryIsNormalizedToPackage()
+    {
+        var results = service.search(new TestSession(), List.of("import java.lang.*;")); //$NON-NLS-1$
+
+        assertEquals("package-search", results.get(0).kind); //$NON-NLS-1$
+        assertEquals("import java.lang.*;", results.get(0).query); //$NON-NLS-1$
+        assertEquals("java.lang", results.get(0).results.get(0).fqn); //$NON-NLS-1$
+    }
+
+    @Test
     public void testNotFoundReturnsSuggestions()
     {
         var results = service.search(new TestSession(), List.of("java.lang.String.lengthy*")); //$NON-NLS-1$

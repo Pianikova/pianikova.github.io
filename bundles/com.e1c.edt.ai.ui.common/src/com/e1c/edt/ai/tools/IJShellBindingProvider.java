@@ -13,6 +13,15 @@ import java.util.Map;
 public interface IJShellBindingProvider
 {
     /**
+     * Returns the execution scope this provider supports.
+     * <p>
+     * The scope is used by JShell tool calls to select provider-specific workflow hints.
+     *
+     * @return Scope name, for example {@code edt} or {@code eclipse}
+     */
+    String getScope();
+
+    /**
      * Returns description and usage examples for each binding.
      * This will be used to enrich the tool description.
      *
@@ -51,4 +60,15 @@ public interface IJShellBindingProvider
      * @return Use cases description string, or empty string if none
      */
     String getUseCases();
+
+    /**
+     * Returns provider-specific required next step after JShell code execution.
+     *
+     * @param context Execution context
+     * @return Required next step text, or empty string if no next step is required
+     */
+    default String getRequiredNextStep(JShellExecutionContext context)
+    {
+        return ""; //$NON-NLS-1$
+    }
 }

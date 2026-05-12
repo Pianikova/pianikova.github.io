@@ -338,6 +338,9 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- Use `path` (absolute or project-relative) to scope to a specific file.");
         description.append("\n- Use pagination parameters to page through results.");
         description.append("\n- `ai_marker` includes `AIError`, `AIWarning`, `AIInfo` marker types.");
+        description.append("\n- `marker_type: \"1c\"` returns 1C validation markers of all severities. After 1C metadata CRUD, inspect all relevant markers for the changed entity/top object, including errors, warnings, and infos; do not check only errors.");
+        description.append("\n- After changing one 1C entity, prefer `path` to the changed `.mdo` file when known; otherwise use project scope. For references, delete, rename, registrars, and command interfaces, use project scope.");
+        description.append("\n- For 1C CRUD validation, use `max_count` large enough (for example 200) and paginate until all relevant markers are inspected.");
         description.append("\n- Markers are sorted by importance: severity (error > warning > info) then priority (high > normal > low).");
         description.append("\n- If not all markers are returned, the response will show total count and suggest pagination.");
         description.append("\n- After a JShell metadata/resource change, wait for the JShell result before calling this tool for the same project.");

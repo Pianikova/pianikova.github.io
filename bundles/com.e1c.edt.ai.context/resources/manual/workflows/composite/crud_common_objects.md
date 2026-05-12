@@ -2,7 +2,7 @@
 
 Use this bundle when asked to create, read, update, and delete common metadata objects. Baseline CRUD for these objects should use `JShellManual` only; do not call `JShellReflection` unless the request includes form internals, module text APIs, command parameter types, or command placement.
 
-Mandatory validation rule: after every JShell create, update/edit, or delete of a 1C metadata object, the next tool call must be `GetMarkers` with `marker_type: "1c"` for the affected project. Do not report success and do not start the next CRUD operation until marker response is checked and non-empty markers are fixed.
+Mandatory validation rule: call `JShell` with `scope: "edt"`, `request_description`, and `response_description`. After every JShell create, update/edit, or delete of a 1C metadata object, the next tool call must be `GetMarkers` with `marker_type: "1c"` for the affected project. Do not report success and do not start the next CRUD operation until all relevant markers for the changed entity/top object are checked and fixed or explicitly explained, including errors, warnings, and infos. Do not check only errors.
 
 Objects:
 - `CommonModule`

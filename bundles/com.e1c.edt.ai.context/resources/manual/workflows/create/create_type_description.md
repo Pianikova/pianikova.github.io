@@ -58,6 +58,9 @@ Use `TypeDescriptionBuilder.setNumberQualifiers(int scale, int precision, boolea
 ⚠️ `scale` (digits after the decimal point) MUST be `<= precision` (total digits),
 otherwise the platform raises an SU8 error.
 
+Do not create `NumberQualifiers` manually in JShell. Prefer the builder fluent method below:
+it uses the correct EDT factory internally and avoids missing imports plus scale/precision drift.
+
 ```java
 IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
@@ -190,6 +193,7 @@ LLMs often invent these. None of them exist in the EDT API. Use the right name f
 | `.numberQualifiersPrecision(P)`                  | `.setNumberQualifiers(scale, P, false)`                           |
 | `.numberQualifiersScale(S)`                      | `.setNumberQualifiers(S, precision, false)`                       |
 | `.setLength(N)` (on builder)                     | `.setStringQualifiers(N, false)` (length is a qualifier, not a top-level setter) |
+| `new NumberQualifiers(...)` or manual `McoreFactory.eINSTANCE.createNumberQualifiers()` | `.setNumberQualifiers(scale, precision, nonNegative)` |
 | `.dateFractions(DateFractions.DATE)`             | `.setDateQualifiers(DateFractions.DATE)`                          |
 | `NumberCategory.INTEGER`                         | `.setNumberQualifiers(0, precision, false)` — scale=0 means integer |
 | `IEObjectTypeNames.INTEGER`                      | `IEObjectTypeNames.NUMBER` + `setNumberQualifiers(0, ...)`        |

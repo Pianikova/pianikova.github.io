@@ -77,7 +77,7 @@
     "scope": "edt",
     "category": "reference",
     "title": "Check 1C Markers After CRUD",
-    "summary": "Run GetMarkers after create, edit, or delete metadata operations to detect 1C validation errors.",
+    "summary": "Run GetMarkers after create, edit, or delete metadata operations to inspect all relevant 1C validation markers.",
     "guide": "workflows/reference/check_1c_markers_after_crud.md",
     "bindings": [],
     "keywords": [

@@ -36,7 +36,7 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-        "{\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\"}"; //$NON-NLS-1$
+        "{\"scope\":\"eclipse\",\"request_description\":\"Read active Eclipse window title.\",\"response_description\":\"Active Eclipse window title was printed.\",\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\"}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
         "{\"return_value\":null,\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"std_out\":\"Active window: Eclipse\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
@@ -103,13 +103,10 @@ public class JShellMcpTool
 		}
 
 		var request = optionalRequest.get();
+        validateRequest(request);
 		if (call.callKind == ToolCallKind.RENDER)
 		{
-			var requestMarkdown = new StringBuilder();
-			requestMarkdown.append(Messages.JShellExecutingTemplate);
-			requestMarkdown.append("\n\n");
-			requestMarkdown.append("```java\n").append(request.code).append("\n```");
-			details.requestMarkdown = requestMarkdown.toString();
+            details.requestMarkdown = request.requestDescription + buildCodeDetailsBlock(request.code);
 			return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
 		}
 
@@ -151,8 +148,9 @@ public class JShellMcpTool
                     result.suggestedReflectionQueries =
                         reflectionQuerySuggester.suggestForCompilationErrors(request.code, result.compilationErrors, 12);
                 }
+                result.requiredNextStep = buildRequiredNextStep(request, result);
                 var content = json.serialize(result);
-                var responseMarkdown = buildResponseMarkdown(request.code, result);
+                var responseMarkdown = buildResponseMarkdown(request, result);
                 details.responseMarkdown = responseMarkdown;
                 return messageFactory.createMessage(this, call, content, details);
             }
@@ -168,27 +166,131 @@ public class JShellMcpTool
 	}
 
 	@SuppressWarnings("nls")
-	private String buildResponseMarkdown(String code, JShellExecutionResult result)
-	{
-		var md = new StringBuilder();
-		if (!result.compilationErrors.isEmpty())
-		{
-			md.append(Messages.JShellErrorTemplate);
-		}
-		else
-		{
-			md.append(Messages.JShellExecutedTemplate);
-		}
+    private void validateRequest(Request request)
+    {
+        if (isBlank(request.sessionId))
+        {
+            throw new ToolException("Missing required parameter `repl_session_id`. Use "
+                + JShellSessionMcpTool.TOOL_NAME + " tool to create a session first.", null, ToolErrorType.RETRYABLE);
+        }
+        if (isBlank(request.code))
+        {
+            throw new ToolException("Missing required parameter `code`.", null, ToolErrorType.RETRYABLE);
+        }
+        if (isBlank(request.scope))
+        {
+            throw new ToolException("Missing required parameter `scope`. Allowed values: "
+                + String.join(", ", getAllowedScopes()) + ".", null, ToolErrorType.RETRYABLE);
+        }
+        if (isBlank(request.requestDescription))
+        {
+            throw new ToolException("Missing required parameter `request_description`.", null, ToolErrorType.RETRYABLE);
+        }
+        if (isBlank(request.responseDescription))
+        {
+            throw new ToolException("Missing required parameter `response_description`.", null, ToolErrorType.RETRYABLE);
+        }
+        if (!getAllowedScopes().contains(normalizeScope(request.scope)))
+        {
+            throw new ToolException("Unsupported `scope`: " + request.scope + ". Allowed values: "
+                + String.join(", ", getAllowedScopes()) + ".", null, ToolErrorType.RETRYABLE);
+        }
+    }
 
-		md.append("\n\n");
-		md.append("```java\n").append(code).append("\n```\n");
-		if (result.stdOut != null && !result.stdOut.isEmpty())
-		{
-            md.append("```\n").append(result.stdOut).append("\n```\n");
-		}
+    private boolean isBlank(String value)
+    {
+        return value == null || value.isBlank();
+    }
+
+    private String normalizeScope(String scope)
+    {
+        return scope == null ? "" : scope.trim().toLowerCase(java.util.Locale.ROOT); //$NON-NLS-1$
+    }
+
+    private ArrayList<String> getAllowedScopes()
+    {
+        return bindingProviders.stream()
+            .map(IJShellBindingProvider::getScope)
+            .filter(scope -> scope != null && !scope.isBlank())
+            .map(this::normalizeScope)
+            .distinct()
+            .sorted()
+            .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+	private String buildResponseMarkdown(Request request, JShellExecutionResult result)
+	{
+        if (hasExecutionErrors(result))
+        {
+            var md = new StringBuilder();
+            md.append(Messages.JShellErrorTemplate);
+            md.append(buildExecutionDetailsBlock(request.code, result));
+            return md.toString();
+        }
+
+		var md = new StringBuilder();
+        md.append(request.responseDescription);
+        md.append(buildExecutionDetailsBlock(request.code, result));
 
 		return md.toString();
 	}
+
+    @SuppressWarnings("nls")
+    private String buildExecutionDetailsBlock(String code, JShellExecutionResult result)
+    {
+        var sb = new StringBuilder();
+        sb.append("\n\n<details><summary>Details</summary>\n\n");
+        sb.append("```java\n").append(code).append("\n```");
+        if (result != null && result.stdOut != null && !result.stdOut.isEmpty())
+        {
+            sb.append("\n\n```text\n").append(result.stdOut).append("\n```");
+        }
+        if (result != null && result.stdErr != null && !result.stdErr.isEmpty())
+        {
+            sb.append("\n\n```text\n").append(result.stdErr).append("\n```");
+        }
+        sb.append("\n</details>");
+        return sb.toString();
+    }
+
+    @SuppressWarnings("nls")
+    private String buildCodeDetailsBlock(String code)
+    {
+        var sb = new StringBuilder();
+        sb.append("\n\n<details><summary>Details</summary>\n\n");
+        sb.append("```java\n").append(code).append("\n```");
+        sb.append("\n</details>");
+        return sb.toString();
+    }
+
+    private boolean hasExecutionErrors(JShellExecutionResult result)
+    {
+        return result != null
+            && (result.compilationErrors != null && !result.compilationErrors.isEmpty()
+                || result.runtimeErrors != null && !result.runtimeErrors.isEmpty());
+    }
+
+    private String buildRequiredNextStep(Request request, JShellExecutionResult result)
+    {
+        if (hasExecutionErrors(result))
+        {
+            return null;
+        }
+
+        var context = new JShellExecutionContext();
+        context.scope = normalizeScope(request.scope);
+        context.requestDescription = request.requestDescription;
+        context.responseDescription = request.responseDescription;
+        context.code = request.code;
+        context.result = result;
+
+        var requiredNextStep = bindingProviders.stream()
+            .filter(provider -> context.scope.equals(normalizeScope(provider.getScope())))
+            .map(provider -> provider.getRequiredNextStep(context))
+            .filter(nextStep -> nextStep != null && !nextStep.isBlank())
+            .collect(Collectors.joining("\n\n"));
+        return requiredNextStep.isBlank() ? null : requiredNextStep;
+    }
 
 	@SuppressWarnings("nls")
 	private String getBindingVariableNamesExample()
@@ -248,11 +350,8 @@ public class JShellMcpTool
         description.append("\n- For TypeDescriptionBuilder, validate every `typeProvider.getProxy(...)` result before `addType(...)`; null proxies cause runtime `IllegalArgumentException`");
         description.append("\n- If a previous execution failed with `cannot find symbol`, `method not found`, or `package does not exist`, use ")
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" with `suggested_reflection_queries` instead of guessing APIs");
-        description.append("\n- After executing code that changes EDT/Eclipse project resources or metadata, MUST call ")
-            .append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" for the affected project to inspect resulting markers. Use `marker_type: \"problem\"` ")
-            .append("for build/validation errors, `marker_type: \"1c\"` for 1C/BSL markers, and ")
-            .append("`marker_type: \"ai_marker\"` for AIError/AIWarning/AIInfo markers");
+        description.append("\n- Choose `scope` from the allowed values listed in the `scope` parameter. ")
+            .append("Scope-specific required next steps are returned in JSON field `required_next_step` by the matching `IJShellBindingProvider`");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
 
@@ -268,6 +367,8 @@ public class JShellMcpTool
         description.append("\n- Calls with the same `repl_session_id` are executed sequentially; wait for the previous result before relying on changed session state");
         description.append("\n- Do not run ").append(GetMarkersMcpTool.TOOL_NAME)
             .append(" in parallel with a JShell metadata change for the same project/session; wait for the JShell result first");
+        description.append("\n- `request_description` describes what will be done and is shown as request markdown");
+        description.append("\n- `response_description` describes what was done and is shown as response markdown");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
@@ -291,8 +392,7 @@ public class JShellMcpTool
         description.append("\n3. If the manual exact guide does not cover needed APIs, call ").append(JShellReflectionMcpTool.TOOL_NAME)
             .append(" once with all uncertain Java API names/signatures before writing calls that depend on them");
         description.append("\n4. Use ").append(TOOL_NAME).append(" with that ID to execute code");
-        description.append("\n5. If project resources or metadata were changed, call ").append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" for `problem`, `1c`, and relevant `ai_marker` errors/warnings before reporting success");
+        description.append("\n5. Follow JSON field `required_next_step` when it is returned by the active binding provider");
 		description.append("\n6. Reuse same ID to maintain state");
 
 		// Add restricted types information
@@ -308,6 +408,10 @@ public class JShellMcpTool
 		}
 
 		description.append("\n\n**Parameters:**");
+        description.append("\n- `scope` (required): Execution scope. Allowed values: ")
+            .append(String.join(", ", getAllowedScopes()));
+        description.append("\n- `request_description` (required): Short user-visible description of what will be done");
+        description.append("\n- `response_description` (required): Short user-visible description of what was done");
 		description.append("\n- `code` (required): Complete Java statements ending with `;`");
 		description.append("\n- `repl_session_id` (required): Session ID from JShellSession tool");
 
@@ -325,6 +429,23 @@ public class JShellMcpTool
 		codeProp.description = "Java code to execute (required)";
 		properties.put("code", codeProp);
 
+        var scopeProp = new McpToolCallProperty();
+        scopeProp.type = "string";
+        scopeProp.description = "Required execution scope. Allowed values: "
+            + String.join(", ", getAllowedScopes())
+            + ". Choose the scope that owns the bindings and workflow hints needed for this code.";
+        properties.put("scope", scopeProp);
+
+        var requestDescriptionProp = new McpToolCallProperty();
+        requestDescriptionProp.type = "string";
+        requestDescriptionProp.description = "Required user-visible request markdown: what will be done.";
+        properties.put("request_description", requestDescriptionProp);
+
+        var responseDescriptionProp = new McpToolCallProperty();
+        responseDescriptionProp.type = "string";
+        responseDescriptionProp.description = "Required user-visible response markdown: what was done.";
+        properties.put("response_description", responseDescriptionProp);
+
 		var sessionIdProp = new McpToolCallProperty();
         sessionIdProp.type = "string";
 		sessionIdProp.description = "Session ID (UUID string) from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
@@ -334,6 +455,9 @@ public class JShellMcpTool
 		var required = new ArrayList<String>();
 		required.add("code");
 		required.add("repl_session_id");
+        required.add("scope");
+        required.add("request_description");
+        required.add("response_description");
 		parameters.required = required;
 
 		spec.function.parameters = parameters;
@@ -342,6 +466,15 @@ public class JShellMcpTool
 
 	private static class Request
 	{
+        @SerializedName("scope")
+        public String scope;
+
+        @SerializedName("request_description")
+        public String requestDescription;
+
+        @SerializedName("response_description")
+        public String responseDescription;
+
 		@SerializedName("code")
 		public String code;
 

@@ -173,6 +173,8 @@ public class JShellReflectionQuerySuggester
             List.of("com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder")); //$NON-NLS-1$
         aliases.put("TypeDescription", List.of("com._1c.g5.v8.dt.mcore.TypeDescription")); //$NON-NLS-1$ //$NON-NLS-2$
         aliases.put("TypeItem", List.of("com._1c.g5.v8.dt.mcore.TypeItem")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("NumberQualifiers", List.of("com._1c.g5.v8.dt.mcore.NumberQualifiers")); //$NON-NLS-1$ //$NON-NLS-2$
+        aliases.put("McoreFactory", List.of("com._1c.g5.v8.dt.mcore.McoreFactory")); //$NON-NLS-1$ //$NON-NLS-2$
         aliases.put("IBmObject", List.of("com._1c.g5.v8.bm.core.IBmObject")); //$NON-NLS-1$ //$NON-NLS-2$
         aliases.put("RegisterWriteMode", //$NON-NLS-1$
             List.of("com._1c.g5.v8.dt.metadata.mdclass.RegisterWriteMode")); //$NON-NLS-1$
