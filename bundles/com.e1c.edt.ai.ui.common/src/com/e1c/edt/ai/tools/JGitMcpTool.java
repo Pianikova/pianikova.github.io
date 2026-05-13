@@ -244,54 +244,115 @@ public class JGitMcpTool
             return new GitCommandResult(1, "", "jgit: '" + command + "' is not a jgit command. See 'jgit --help'.");
         }
 
-        // Handle commands that don't require an existing repository
-        if (command.equals("clone"))
+        // On Windows, JGit operations against .git/index can transiently fail with
+        // "Cannot lock .git/index" if a prior command's LockFile handle is still in
+        // the OS close-pending state when the next command tries createNewFile.
+        // Retry the whole command up to a few times with short backoff — each retry
+        // also re-runs WindowCache eviction and stale-lock cleanup via the finally
+        // block, which gives the OS time to finalize handle release.
+        var maxAttempts = com.e1c.edt.ai.tools.JGitCommonHelper.isWindowsOs() ? 5 : 1;
+        GitCommandResult lastLockResult = null;
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
+            var result = executeGitCommandOnce(command, commandArgs, commandHandler, workingDirectory);
+            if (!isLockFailure(result))
+            {
+                return result;
+            }
+            lastLockResult = result;
             try
             {
-                if (commandHandler instanceof JGitClone)
-                {
-                    ((JGitClone)commandHandler).setWorkingDirectory(workingDirectory);
-                }
-                return commandHandler.run(null, commandArgs);
+                Thread.sleep(50L * (attempt + 1));
             }
-            catch (Exception e)
+            catch (InterruptedException ie)
             {
-                return new GitCommandResult(1, "", e.getMessage());
+                Thread.currentThread().interrupt();
+                return result;
             }
         }
-        if (command.equals("init"))
-        {
-            try
-            {
-                if (commandHandler instanceof JGitInit)
-                {
-                    ((JGitInit)commandHandler).setWorkingDirectory(workingDirectory);
-                }
-                return commandHandler.run(null, commandArgs);
-            }
-            catch (Exception e)
-            {
-                return new GitCommandResult(1, "", e.getMessage());
-            }
-        }
+        return lastLockResult;
+    }
 
-        var repository = commonHelper.openRepository(workingDirectory);
-        if (repository == null)
+    private static boolean isLockFailure(GitCommandResult r)
+    {
+        if (r == null || r.exitCode == 0)
         {
-            return new GitCommandResult(128, "", "fatal: not a git repository (or any of the parent directories): .git");
+            return false;
         }
+        return r.stdErr != null && r.stdErr.contains("Cannot lock"); //$NON-NLS-1$
+    }
 
-        try (Git git = new Git(repository))
+    @SuppressWarnings("nls")
+    private GitCommandResult executeGitCommandOnce(String command, List<String> commandArgs,
+        IJGitCommand commandHandler, String workingDirectory)
+        throws IOException, GitAPIException, URISyntaxException, ToolException
+    {
+        try
         {
-            try
+            // Handle commands that don't require an existing repository
+            if (command.equals("clone"))
             {
-                return commandHandler.run(git, commandArgs);
+                try
+                {
+                    if (commandHandler instanceof JGitClone)
+                    {
+                        ((JGitClone)commandHandler).setWorkingDirectory(workingDirectory);
+                    }
+                    return commandHandler.run(null, commandArgs);
+                }
+                catch (Exception e)
+                {
+                    return new GitCommandResult(1, "", e.getMessage());
+                }
             }
-            catch (Exception e)
+            if (command.equals("init"))
             {
-                return new GitCommandResult(1, "", e.getMessage());
+                try
+                {
+                    if (commandHandler instanceof JGitInit)
+                    {
+                        ((JGitInit)commandHandler).setWorkingDirectory(workingDirectory);
+                    }
+                    return commandHandler.run(null, commandArgs);
+                }
+                catch (Exception e)
+                {
+                    return new GitCommandResult(1, "", e.getMessage());
+                }
             }
+
+            var repository = commonHelper.openRepository(workingDirectory);
+            if (repository == null)
+            {
+                return new GitCommandResult(128, "",
+                    "fatal: not a git repository (or any of the parent directories): .git");
+            }
+
+            try (Git git = new Git(repository))
+            {
+                try
+                {
+                    return commandHandler.run(git, commandArgs);
+                }
+                catch (Exception e)
+                {
+                    return new GitCommandResult(1, "", e.getMessage());
+                }
+            }
+        }
+        finally
+        {
+            // On Windows, JGit's global WindowCache holds PackFile handles (via
+            // RandomAccessFile) beyond Repository.close(). Re-installing the cache
+            // forces eviction of all cached PackFile windows and releases OS handles,
+            // so that subsequent operations (rename/delete pack-*.pack, switch which
+            // needs .git/index.lock) are not blocked by lingering handles.
+            // Also clean up any stale .git/index.lock left over by CloneCommand
+            // (a known JGit/Windows issue where DirCacheCheckout may not rename the
+            // lock file before its handle is closed by the OS).
+            // No-op on Linux/macOS — POSIX semantics make this unnecessary there.
+            com.e1c.edt.ai.tools.JGitCommonHelper.releaseFileHandlesIfWindows();
+            com.e1c.edt.ai.tools.JGitCommonHelper.cleanupStaleIndexLock(workingDirectory);
         }
     }
 

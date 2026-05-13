@@ -177,7 +177,9 @@ public class JGitGrep implements IJGitCommand
     private static void grepRevision(Repository repository, ObjectId revId, Pattern pattern, List<String> paths,
         boolean filesOnly, boolean countOnly, boolean lineNumbers, StringBuilder out) throws IOException
     {
-        try (var revWalk = new RevWalk(repository); var treeWalk = new TreeWalk(repository))
+        try (var revWalk = new RevWalk(repository);
+            var treeWalk = new TreeWalk(repository);
+            var reader = repository.newObjectReader())
         {
             var commit = revWalk.parseCommit(revId);
             treeWalk.addTree(commit.getTree());
@@ -189,7 +191,7 @@ public class JGitGrep implements IJGitCommand
                 {
                     continue;
                 }
-                var loader = repository.open(treeWalk.getObjectId(0));
+                var loader = reader.open(treeWalk.getObjectId(0));
                 var bytes = loader.getBytes();
                 grepBytes(path, bytes, pattern, filesOnly, countOnly, lineNumbers, revId.getName(), out);
             }

@@ -142,7 +142,9 @@ public class JGitClone implements IJGitCommand
             cloneCmd.setTagOption(TagOpt.NO_TAGS);
         }
 
-        cloneCmd.call();
-        return new GitCommandResult(0, "Cloning into '" + dirName + "'...\ndone.\n", "");
+        try (Git cloned = cloneCmd.call())
+        {
+            return new GitCommandResult(0, "Cloning into '" + dirName + "'...\ndone.\n", "");
+        }
     }
 }

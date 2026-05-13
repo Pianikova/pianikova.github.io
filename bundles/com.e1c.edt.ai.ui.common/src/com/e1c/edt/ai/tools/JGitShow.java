@@ -335,7 +335,8 @@ public class JGitShow implements IJGitCommand
         var commit = repository.parseCommit(objectId);
         var tree = commit.getTree();
 
-        try (var treeWalk = new org.eclipse.jgit.treewalk.TreeWalk(repository))
+        try (var treeWalk = new org.eclipse.jgit.treewalk.TreeWalk(repository);
+            var reader = repository.newObjectReader())
         {
             treeWalk.addTree(tree);
             treeWalk.setRecursive(true);
@@ -347,7 +348,7 @@ public class JGitShow implements IJGitCommand
             }
 
             var objectIdFile = treeWalk.getObjectId(0);
-            var loader = repository.open(objectIdFile);
+            var loader = reader.open(objectIdFile);
 
             if (loader.isLarge())
             {
@@ -362,13 +363,16 @@ public class JGitShow implements IJGitCommand
     @SuppressWarnings("nls")
     private GitCommandResult showBlobContent(Repository repository, AnyObjectId objectId) throws IOException
     {
-        var loader = repository.open(objectId);
-        if (loader.isLarge())
+        try (var reader = repository.newObjectReader())
         {
-            return new GitCommandResult(1, "", "fatal: object is too large to show");
-        }
+            var loader = reader.open(objectId);
+            if (loader.isLarge())
+            {
+                return new GitCommandResult(1, "", "fatal: object is too large to show");
+            }
 
-        var content = new String(loader.getBytes(), StandardCharsets.UTF_8);
-        return new GitCommandResult(0, content, "");
+            var content = new String(loader.getBytes(), StandardCharsets.UTF_8);
+            return new GitCommandResult(0, content, "");
+        }
     }
 }
