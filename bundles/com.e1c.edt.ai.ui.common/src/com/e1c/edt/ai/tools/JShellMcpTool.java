@@ -348,6 +348,7 @@ public class JShellMcpTool
             .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
             .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`");
         description.append("\n- For TypeDescriptionBuilder, validate every `typeProvider.getProxy(...)` result before `addType(...)`; null proxies cause runtime `IllegalArgumentException`");
+        description.append("\n- For EDT string TypeDescription values, default to `setStringQualifiers(100, false)` or smaller. Do not use length greater than 100, such as 150 or 1000, unless the user explicitly requires it and the current EDT model accepts it");
         description.append("\n- If a previous execution failed with `cannot find symbol`, `method not found`, or `package does not exist`, use ")
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" with `suggested_reflection_queries` instead of guessing APIs");
         description.append("\n- Choose `scope` from the allowed values listed in the `scope` parameter. ")

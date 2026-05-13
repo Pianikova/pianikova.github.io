@@ -62,7 +62,7 @@ document.setNumberPeriodicity(DocumentNumberPeriodicity.YEAR);
 - Use `RegisterWriteMode.INDEPENDENT` or `RegisterWriteMode.RECORDER_SUBORDINATE`
 - Use specific child factories (`createInformationRegisterDimension/Resource`); generic `createRegisterDimension/Resource` is not valid in mdFactory
 - Contains: resources, attributes, dimensions (all require types)
-- String dimensions/resources/attributes must use finite string qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can return SU8 "Строка не может быть неограниченной длины"
+- String dimensions/resources/attributes must use finite string qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can return SU8 "Строка не может быть неограниченной длины". Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires it and the current EDT model accepts it.
 
 **AccumulationRegister (РегистрНакопления):**
 - Use `AccumulationRegisterType.BALANCE` or `AccumulationRegisterType.TURNOVERS`

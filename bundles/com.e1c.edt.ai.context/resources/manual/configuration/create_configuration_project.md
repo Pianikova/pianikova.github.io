@@ -155,7 +155,7 @@ try {
 - Add Xtext builder after required files exist: `org.eclipse.xtext.ui.shared.xtextBuilder`.
 - During verification, use `projectManager.getProject(projectHandle)`, not `projectManager.getProject(projectName)`.
 - Verify `IV8Project`, `IBmModel`, and top object `Configuration`.
-- After creation, run `GetMarkers` with `marker_type: "1c"` for the project.
+- After creating a new configuration project, run `GetMarkers` with `marker_type: "1c"` for the project because project initialization touches project-level files and the root `Configuration.mdo`. This project-wide check is specific to project creation; for ordinary 1C metadata CRUD, use `GetMarkers` with `path` to each changed top-level `.mdo` and do not fix unrelated project-wide markers.
 
 ### Known failure signs
 

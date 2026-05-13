@@ -12,9 +12,40 @@ Use these exact packages in JShell:
 
 Do not import `IEObjectProvider` from `mcore` or `metadata.md`. Do not import `TypeDescriptionBuilder` from `dt.md`; that package is wrong for EDT TypeDescription creation.
 
-For `IEObjectTypeNames.STRING`, always set a finite length with `setStringQualifiers(length, false)` unless a scenario explicitly requires a fixed string with `true`. Prefer `length <= 100` unless the EDT version/model explicitly allows a larger value. An unlimited or oversized string can produce SU8 markers such as "Строка не может быть неограниченной длины" or "Переменная длина строки должна быть внутри диапазона от 0 до 100".
+For `IEObjectTypeNames.STRING`, always set a finite length with `setStringQualifiers(length, false)` unless a scenario explicitly requires a fixed string with `true`. Default to `length <= 100`. Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires the larger length and the current EDT model accepts it. An unlimited or oversized string can produce SU8 markers such as "Строка не может быть неограниченной длины" or "Переменная длина строки должна быть внутри диапазона от 0 до 100".
 
 Never pass a nullable proxy directly to `TypeDescriptionBuilder.addType(...)`. `typeProvider.getProxy(...)` may return `null` for specific metadata names that do not exist in the current project. Check the proxy first and either stop with a clear message or fall back to a generic type such as `IEObjectTypeNames.CATALOG_REF`, `DOCUMENT_REF`, `STRING`, or `NUMBER`.
+
+### Preflight-blocked patterns
+
+Do not send JShell code with these EDT patterns. They are known to create compile errors or 1C validation markers:
+
+```java
+// WRONG: string length is too large for the current EDT metadata validation.
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(150, false).build();
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false).build();
+
+// WRONG: EcorePackage data types are not EDT TypeItem values.
+TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
+TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, v8project);
+
+// WRONG: do not pass Ecore literals to TypeDescriptionBuilder.
+new TypeDescriptionBuilder().addType(EcorePackage.Literals.ESTRING).build();
+```
+
+Use this canonical EDT pattern instead:
+
+```java
+IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
+
+TypeDescription stringTypeDesc = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(100, false)
+    .build();
+```
 
 ### ⚠️ CRITICAL: TypeDescription Must Be Created Inside Transaction
 

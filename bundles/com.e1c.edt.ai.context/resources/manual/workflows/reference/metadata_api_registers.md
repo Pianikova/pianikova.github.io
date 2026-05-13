@@ -15,7 +15,7 @@ Known constants above do not require `JShellReflection`. If periodicity or recor
 
 Dimensions, resources, and attributes are child objects and need UUIDs.
 
-Validation trap: string dimensions/resources/attributes must use finite string qualifiers. For `IEObjectTypeNames.STRING`, build `TypeDescription` with `.setStringQualifiers(100, false)` or another explicit length to avoid SU8 "Строка не может быть неограниченной длины".
+Validation trap: string dimensions/resources/attributes must use finite string qualifiers. For `IEObjectTypeNames.STRING`, build `TypeDescription` with `.setStringQualifiers(100, false)` or a smaller explicit length to avoid SU8 "Строка не может быть неограниченной длины". Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires it and the current EDT model accepts it.
 
 ## AccumulationRegister
 

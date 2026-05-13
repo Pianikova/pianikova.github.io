@@ -3,6 +3,34 @@
 ### Recommended bindings
 - `workspaceRoot`, `projectManager`, `modelManager`, `mdFactory`, `fqnGenerator`
 
+### Preflight-blocked patterns
+
+Do not send JShell code with these EDT patterns:
+
+```java
+// WRONG: current EDT validation can reject variable string lengths above 100.
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(150, false).build();
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false).build();
+
+// WRONG: Ecore data types are not EDT TypeItem values.
+TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
+TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, v8project);
+```
+
+Use `IEObjectProvider` and safe string qualifiers:
+
+```java
+IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
+
+TypeDescription dimensionType = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(100, false)
+    .build();
+```
+
 ### Example
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
@@ -59,7 +87,7 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
 - Never reuse one `TypeDescription` instance across dimensions, resources, or attributes. Reuse `TypeItem` proxies only.
 - For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
 - Use a specific reference type like `Catalog.Products` when you need a strict typed dimension
-- If a dimension, resource, or attribute uses `IEObjectTypeNames.STRING`, build it with finite qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can report SU8: "Строка не может быть неограниченной длины"
+- If a dimension, resource, or attribute uses `IEObjectTypeNames.STRING`, build it with finite qualifiers, for example `.setStringQualifiers(100, false)`. Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires it and the current EDT model accepts it. Otherwise `GetMarkers` can report SU8: "Строка не может быть неограниченной длины" or "Переменная длина строки должна быть внутри диапазона от 0 до 100".
 
 ### Required post-check
 

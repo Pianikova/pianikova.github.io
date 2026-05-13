@@ -111,7 +111,7 @@ if (authors != null) {
 - Before attaching or finishing a bulk CRUD transaction, loop through all new `BasicFeature` children and fail if `getType() == null || getType().getTypes().isEmpty()`
 - `CatalogAttribute`, `DocumentAttribute`, and `TabularSectionAttribute` are the most common sources of `md-legacy-emf-check` when `type` is omitted
 - For child objects, UUID is still recommended in JShell
-- For `IEObjectTypeNames.STRING`, always set finite qualifiers with `.setStringQualifiers(length, false)` to avoid SU8 unlimited-string markers.
+- For `IEObjectTypeNames.STRING`, always set finite qualifiers with `.setStringQualifiers(length, false)` to avoid SU8 unlimited-string markers. Default to `.setStringQualifiers(100, false)` or smaller; do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires it and the current EDT model accepts it.
 
 ### Required post-check
 

@@ -29,7 +29,33 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 Use `TypeDescriptionBuilder.setStringQualifiers(int length, boolean fixed)`.
 The builder constructs the qualifier internally via `McoreFactory.eINSTANCE`,
 so this path is JShell-safe (no OSGi service involved, no `modelFactory`).
-Prefer `length <= 100` unless reflection or the target EDT model proves that a larger value is valid.
+Default to `length <= 100`. Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires the larger length and the current EDT model accepts it. Recent EDT validation can reject variable string lengths outside `0..100`.
+
+### Preflight-blocked patterns
+
+Do not send JShell code with these EDT patterns:
+
+```java
+// WRONG: current EDT validation can reject variable string lengths above 100.
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(150, false).build();
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false).build();
+
+// WRONG: Ecore data types are not EDT TypeItem values.
+TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
+TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, v8project);
+
+// WRONG: TypeDescriptionBuilder.addType expects EDT TypeItem, not Ecore literals.
+new TypeDescriptionBuilder().addType(EcorePackage.Literals.ESTRING).build();
+```
+
+Use `IEObjectProvider` and `IEObjectTypeNames`:
+
+```java
+IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
+```
 
 ```java
 IV8Project v8project = projectManager.getProject(project);

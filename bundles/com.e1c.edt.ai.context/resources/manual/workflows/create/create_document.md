@@ -7,6 +7,34 @@ document properties and EDT reports SU45 name/type markers if they are added as 
 When a document has many attributes, prefer small helper methods that return a NEW `TypeDescription` on every call.
 Never store one `TypeDescription` and assign it to two attributes.
 
+### Preflight-blocked patterns
+
+Do not send JShell code with these EDT patterns:
+
+```java
+// WRONG: EDT string qualifiers above 100 are rejected by current validation.
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(150, false).build();
+new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false).build();
+
+// WRONG: Ecore data types are not EDT TypeItem values.
+TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
+TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, v8project);
+```
+
+Use this pattern instead:
+
+```java
+IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
+
+TypeDescription nameType = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(100, false)
+    .build();
+```
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);

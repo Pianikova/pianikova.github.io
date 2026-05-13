@@ -290,7 +290,9 @@ public class MetadataBindingProvider
             + "attributes, dimensions, or resources. For document CRUD, do not create custom attributes named "
             + "Date/Дата, Number/Номер, Posted/Проведен, Ref/Ссылка, or DeletionMark/ПометкаУдаления. For numeric "
             + "types, TypeDescriptionBuilder.setNumberQualifiers uses (scale, precision, nonNegative), for example "
-            + "Number(10,2) is setNumberQualifiers(2, 10, false). For registers, link registrar documents via "
+            + "Number(10,2) is setNumberQualifiers(2, 10, false). For string types, do not use "
+            + "setStringQualifiers with length greater than 100 unless the user explicitly requires it and the "
+            + "EDT model accepts it; default to setStringQualifiers(100, false), not 150 or 1000. For registers, link registrar documents via "
             + "document.getRegisterRecords().add(register). Fix relevant markers before reporting success or starting "
             + "another 1C metadata CRUD operation.";
     }
