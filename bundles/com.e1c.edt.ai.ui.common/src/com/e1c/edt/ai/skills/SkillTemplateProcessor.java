@@ -45,9 +45,14 @@ public class SkillTemplateProcessor
         return templateProcessor.replace(text, PLACEHOLDER_PATTERN, match -> {
             var key = match.group(1);
             if (!parameters.containsKey(key)) {
-                throw new SkillExecutionException(SkillErrorCode.MESSING_PARAMETER, "Missing skill parameter: " + key); //$NON-NLS-1$
+                throw new SkillExecutionException(SkillErrorCode.MISSING_PARAMETER, "Missing skill parameter: " + key); //$NON-NLS-1$
             }
-            return parameters.get(key);
+            var value = parameters.get(key);
+            if (value == null)
+            {
+                throw new SkillExecutionException(SkillErrorCode.MISSING_PARAMETER, "Null skill parameter for key: " + key); //$NON-NLS-1$
+            }
+            return value;
         });
     }
 
@@ -57,9 +62,14 @@ public class SkillTemplateProcessor
             var key = match.group(1);
             if (!parameters.containsKey(key))
             {
-                throw new SkillExecutionException(SkillErrorCode.MESSING_PARAMETER, "Missing skill parameter: " + key); //$NON-NLS-1$
+                throw new SkillExecutionException(SkillErrorCode.MISSING_PARAMETER, "Missing skill parameter: " + key); //$NON-NLS-1$
             }
             var value = parameters.get(key);
+            if (value == null)
+            {
+                throw new SkillExecutionException(SkillErrorCode.MISSING_PARAMETER,
+                    "Null skill parameter for key: " + key); //$NON-NLS-1$
+            }
             var jsonString = json.serialize(value);
             return jsonString.substring(1, jsonString.length() - 1);
         });

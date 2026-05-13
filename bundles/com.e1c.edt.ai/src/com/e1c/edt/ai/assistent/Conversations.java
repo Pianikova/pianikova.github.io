@@ -405,7 +405,7 @@ public class Conversations implements IConversations
                 }
                 catch (Exception ex)
                 {
-                    //
+                    log.error(ex, "Failed to cancel request: " + asyncRequest + " with token: " + attachToken); //$NON-NLS-1$ //$NON-NLS-2$
                 }
 
                 if (error != null && !future.isDone())

@@ -65,11 +65,22 @@ public class RegexTemplateProcessor
      * @param text текст для замены
      * @param pattern регулярное выражение для поиска
      * @param replacementProvider функция для получения значения замены на основе найденного совпадения
-     * @return текст с замененными значениями
+     * @return текст с замененными значениями или {@code null}, если {@code text} равен {@code null}
+     * @throws NullPointerException если {@code pattern} или {@code replacementProvider} равен {@code null}
      */
     public String replace(String text, Pattern pattern,
         Function<MatchResult, String> replacementProvider)
     {
+        if (text == null)
+        {
+            return null;
+        }
+
+        if (pattern == null || replacementProvider == null)
+        {
+            throw new NullPointerException();
+        }
+
         var matcher = pattern.matcher(text);
         var result = new StringBuilder();
         while (matcher.find())
@@ -80,5 +91,7 @@ public class RegexTemplateProcessor
         matcher.appendTail(result);
         return result.toString();
     }
+
+
 }
 
