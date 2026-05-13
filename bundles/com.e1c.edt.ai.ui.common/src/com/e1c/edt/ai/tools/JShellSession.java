@@ -203,9 +203,8 @@ class JShellSession
             error.exceptionType = e.getClass().getName();
             error.message = "Out of memory during code execution. The code may have allocated too much memory.";
             error.stackTrace = e.getMessage();
-            result.runtimeErrors.add(error);
-            result.stdOut = outBuffer.toString();
-            result.stdErr = errBuffer.toString();
+            result.stdOut = outBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
+            result.stdErr = errBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
             populateSessionResult(result);
             return result;
         }
@@ -222,14 +221,14 @@ class JShellSession
             e.printStackTrace(new java.io.PrintWriter(stackTrace));
             error.stackTrace = stackTrace.toString();
             result.runtimeErrors.add(error);
-            result.stdOut = outBuffer.toString();
-            result.stdErr = errBuffer.toString();
+            result.stdOut = outBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
+            result.stdErr = errBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
             populateSessionResult(result);
             return result;
         }
 
-        result.stdOut = outBuffer.toString();
-        result.stdErr = errBuffer.toString();
+        result.stdOut = outBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
+        result.stdErr = errBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
 
         // Fill session result fields
         populateSessionResult(result);
