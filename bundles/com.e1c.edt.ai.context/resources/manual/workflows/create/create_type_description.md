@@ -152,6 +152,29 @@ TypeDescription dateOnly = new TypeDescriptionBuilder()
 
 ### Catalog reference
 
+Use generic `IEObjectTypeNames.CATALOG_REF` only for an intentionally polymorphic
+"any catalog reference" value. If the requested type is concrete, for example
+`CatalogRef.Контрагенты`, use `typeProvider.getProxy("CatalogRef.Контрагенты")`
+and stop if it is not found.
+
+#### Specific catalog reference
+
+```java
+IV8Project v8project = projectManager.getProject(project);
+IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.Контрагенты");
+if (suppliersRef == null) {
+    System.err.println("ERROR: Cannot resolve CatalogRef.Контрагенты");
+    return null;
+}
+TypeDescription typeDesc = new TypeDescriptionBuilder()
+    .addType(suppliersRef)
+    .build();
+```
+
+#### Generic catalog reference
+
 ```java
 IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
@@ -176,6 +199,28 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 
 ### Enum reference
 
+Use generic `IEObjectTypeNames.ENUM_REF` only for an intentionally polymorphic
+"any enum reference" value. If the requested type is concrete, for example
+`EnumRef.ВидыТоваров`, use `typeProvider.getProxy("EnumRef.ВидыТоваров")`.
+
+#### Specific enum reference
+
+```java
+IV8Project v8project = projectManager.getProject(project);
+IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+TypeItem productKindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
+if (productKindRef == null) {
+    System.err.println("ERROR: Cannot resolve EnumRef.ВидыТоваров");
+    return null;
+}
+TypeDescription typeDesc = new TypeDescriptionBuilder()
+    .addType(productKindRef)
+    .build();
+```
+
+#### Generic enum reference
+
 ```java
 IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
@@ -189,9 +234,9 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 ### Validate proxy before addType
 
 ```java
-TypeItem unitsRef = (TypeItem)typeProvider.getProxy("Catalog.Units");
+TypeItem unitsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Units");
 if (unitsRef == null) {
-    System.err.println("ERROR: Cannot resolve type proxy Catalog.Units");
+    System.err.println("ERROR: Cannot resolve type proxy CatalogRef.Units");
     return null;
 }
 TypeDescription unitsType = new TypeDescriptionBuilder()
@@ -200,13 +245,13 @@ TypeDescription unitsType = new TypeDescriptionBuilder()
 ```
 
 ### Rules
-- Prefer a specific proxy like `Catalog.Products` when the business rule is narrow
+- Prefer a specific proxy like `CatalogRef.Products` when the business rule is narrow
 - Use generic IEObjectTypeNames only when polymorphism is desired
 - Build the type before assigning it to attributes, dimensions, resources, constants, or defined types
 - Always validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
-- If a specific metadata proxy like `"Catalog.Units"` is null, do not call `addType(null)`. Use a generic fallback such as `IEObjectTypeNames.CATALOG_REF` or create the missing metadata first.
+- If a specific metadata proxy like `"CatalogRef.Units"` is null, do not call `addType(null)`. Stop and create the missing metadata first. Use a generic fallback such as `IEObjectTypeNames.CATALOG_REF` only when the user explicitly asked for polymorphic reference type.
 - Specific references only work for metadata objects that already exist and are visible to the current transaction
-- When a specific proxy is unavailable, fall back to a generic type like `IEObjectTypeNames.CATALOG_REF`
+- Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, or `IDtConstants.getEnumRefQName(...)`; use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Use `"Catalog.Name"` / `"Enum.Name"` only for top-object metadata FQNs.
 - Set qualifiers via the builder's fluent methods — they internally use `McoreFactory.eINSTANCE` and are JShell-safe
 
 ### ❌ Anti-patterns — methods that DO NOT exist on TypeDescriptionBuilder

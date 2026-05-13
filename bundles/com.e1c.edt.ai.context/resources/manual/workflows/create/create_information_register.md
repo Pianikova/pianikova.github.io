@@ -86,7 +86,7 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
 - Every new feature derived from BasicFeature must have `setType(...)`
 - Never reuse one `TypeDescription` instance across dimensions, resources, or attributes. Reuse `TypeItem` proxies only.
 - For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
-- Use a specific reference type like `Catalog.Products` when you need a strict typed dimension
+- Use a specific reference type like `CatalogRef.Products` when you need a strict typed dimension
 - If a dimension, resource, or attribute uses `IEObjectTypeNames.STRING`, build it with finite qualifiers, for example `.setStringQualifiers(100, false)`. Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires it and the current EDT model accepts it. Otherwise `GetMarkers` can report SU8: "Строка не может быть неограниченной длины" or "Переменная длина строки должна быть внутри диапазона от 0 до 100".
 
 ### Required post-check

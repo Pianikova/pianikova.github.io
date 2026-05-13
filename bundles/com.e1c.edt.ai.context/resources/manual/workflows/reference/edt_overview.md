@@ -227,7 +227,9 @@ TypeItem undefinedType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UNDEF
 TypeItem valueType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.VALUESTORAGE);
 TypeItem uuidType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UUID);
 
-// Primary metadata reference types
+// Primary metadata reference types. These are generic polymorphic roots.
+// For a concrete user request like CatalogRef.Контрагенты or EnumRef.ВидыТоваров,
+// use typeProvider.getProxy("CatalogRef.Контрагенты") / typeProvider.getProxy("EnumRef.ВидыТоваров") instead.
 TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
 TypeItem documentRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DOCUMENT_REF);
 TypeItem enumRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ENUM_REF);
@@ -338,7 +340,7 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
     .build();
 
 // Specific catalog reference (requires existing catalog)
-TypeItem catalogType = (TypeItem)typeProvider.getProxy("Catalog.Products");
+TypeItem catalogType = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
 typeDesc = new TypeDescriptionBuilder()
     .addType(catalogType)
     .build();
@@ -366,7 +368,7 @@ typeDesc = new TypeDescriptionBuilder()
     .build();
 
 // Specific enum reference
-TypeItem enumType = (TypeItem)typeProvider.getProxy("Enum.OrderStatus");
+TypeItem enumType = (TypeItem)typeProvider.getProxy("EnumRef.OrderStatus");
 typeDesc = new TypeDescriptionBuilder()
     .addType(enumType)
     .build();
@@ -561,16 +563,16 @@ typeDesc = new TypeDescriptionBuilder()
 To reference specific metadata objects, use fully qualified names (FQN):
 ```java
 // Specific catalog
-TypeItem productsRef = (TypeItem)typeProvider.getProxy("Catalog.Products");
-TypeItem nomenclatureRef = (TypeItem)typeProvider.getProxy("Catalog.Номенклатура");
+TypeItem productsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
+TypeItem nomenclatureRef = (TypeItem)typeProvider.getProxy("CatalogRef.Номенклатура");
 
 // Specific document
 TypeItem goodsReceiptRef = (TypeItem)typeProvider.getProxy("Document.GoodsReceipt");
 TypeItem salesOrderRef = (TypeItem)typeProvider.getProxy("Document.ЗаказКлиента");
 
 // Specific enum
-TypeItem orderStatusRef = (TypeItem)typeProvider.getProxy("Enum.OrderStatus");
-TypeItem sexRef = (TypeItem)typeProvider.getProxy("Enum.Пол");
+TypeItem orderStatusRef = (TypeItem)typeProvider.getProxy("EnumRef.OrderStatus");
+TypeItem sexRef = (TypeItem)typeProvider.getProxy("EnumRef.Пол");
 
 // Specific registers
 TypeItem goodsStockRef = (TypeItem)typeProvider.getProxy("AccumulationRegister.GoodsInStock");
@@ -666,7 +668,7 @@ attribute.setType(compositeType);
 - **Business Process/Task references**: Use `BUSINESS_PROCESS_REF` and `TASK_REF` for workflow metadata
 - **ANY_REF**: Universal reference type - use when any reference type is acceptable
 - **CHARACTERISTIC**: Universal characteristic type for flexible attribute handling
-- **Specific metadata references**: Use FQN like `"Catalog.Products"` - requires metadata to exist in configuration
+- **Specific metadata reference TypeItems**: Use type names like `"CatalogRef.Products"` / `"EnumRef.OrderStatus"` - requires metadata to exist in configuration. Use `"Catalog.Products"` / `"Enum.OrderStatus"` only for top-object FQNs in `transaction.getTopObjectByFqn(...)`.
 
 ### Complete Example
 
@@ -1124,13 +1126,14 @@ catalog.setHierarchyType(HierarchyType.HIERARCHY_OF_ITEMS);
 ```
 
 **TypeDescriptionBuilder:** always validate `typeProvider.getProxy(...)` before `addType(...)`.
-If the proxy is null, do not call `addType(null)`: stop, create the referenced metadata first, or use a generic fallback type.
+If the proxy is null, do not call `addType(null)`: stop and create the referenced metadata first.
+Use a generic fallback type only when the user explicitly asked for a polymorphic "any catalog" / "any enum" reference.
 Unresolved specific proxies may happen for typos, non-existent metadata, or references to objects that are not yet visible.
 
 ```java
-TypeItem proxy = (TypeItem)typeProvider.getProxy("Catalog.Units");
+TypeItem proxy = (TypeItem)typeProvider.getProxy("CatalogRef.Units");
 if (proxy == null) {
-    System.err.println("ERROR: Cannot resolve Catalog.Units");
+    System.err.println("ERROR: Cannot resolve CatalogRef.Units");
     return null;
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder()

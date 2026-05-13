@@ -65,21 +65,41 @@ the platform default is correct.
 
 ### Safe reference type pattern
 
+When the user names a concrete reference type such as `CatalogRef.Контрагенты`,
+`CatalogRef.ХранимыеФайлы`, or `EnumRef.ВидыТоваров`, resolve that exact metadata
+reference type with `typeProvider.getProxy("CatalogRef.Контрагенты")`,
+`typeProvider.getProxy("CatalogRef.ХранимыеФайлы")`, or
+`typeProvider.getProxy("EnumRef.ВидыТоваров")`. Do not silently replace it with
+generic `IEObjectTypeNames.CATALOG_REF` or `IEObjectTypeNames.ENUM_REF`; generic
+reference types are valid only when the user explicitly asks for "any catalog" /
+"any enum" polymorphism.
+
 ```java
-TypeItem unitsRef = (TypeItem)typeProvider.getProxy("Catalog.Units");
+TypeItem unitsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Units");
 if (unitsRef == null) {
-    System.err.println("ERROR: Cannot resolve Catalog.Units");
-    TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
-    TypeDescription fallbackType = new TypeDescriptionBuilder()
-        .addType(catalogRef)
-        .build();
-    article.setType(fallbackType);
-} else {
-    TypeDescription strictType = new TypeDescriptionBuilder()
-        .addType(unitsRef)
-        .build();
-    article.setType(strictType);
+    System.err.println("ERROR: Cannot resolve CatalogRef.Units");
+    return null; // Stop instead of creating an incorrect generic CatalogRef
 }
+TypeDescription strictType = new TypeDescriptionBuilder()
+    .addType(unitsRef)
+    .build();
+article.setType(strictType);
+```
+
+Concrete Russian-name example:
+
+```java
+TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.Контрагенты");
+TypeItem pictureRef = (TypeItem)typeProvider.getProxy("CatalogRef.ХранимыеФайлы");
+TypeItem kindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
+if (suppliersRef == null || pictureRef == null || kindRef == null) {
+    System.err.println("ERROR: Cannot resolve concrete reference type: "
+        + "CatalogRef.Контрагенты / CatalogRef.ХранимыеФайлы / EnumRef.ВидыТоваров");
+    return null;
+}
+supplierAttribute.setType(new TypeDescriptionBuilder().addType(suppliersRef).build());
+pictureAttribute.setType(new TypeDescriptionBuilder().addType(pictureRef).build());
+kindAttribute.setType(new TypeDescriptionBuilder().addType(kindRef).build());
 ```
 
 ### Register Type Example
@@ -97,21 +117,25 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
 // Dimension 1: Product (specific catalog reference)
 InformationRegisterDimension productDim = mdFactory.createInformationRegisterDimension();
 productDim.setName("Product");
-TypeItem productsRef = (TypeItem)typeProvider.getProxy("Catalog.Products");
+TypeItem productsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
 TypeDescription productType = new TypeDescriptionBuilder()
     .addType(productsRef)
     .build();
 productDim.setType(productType);
 prices.getDimensions().add(productDim);
 
-// Dimension 2: PriceType (generic catalog reference)
+// Dimension 2: PriceType (specific catalog reference when the exact catalog is required)
 InformationRegisterDimension priceTypeDim = mdFactory.createInformationRegisterDimension();
 priceTypeDim.setName("PriceType");
-TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
-TypeDescription catalogRefType = new TypeDescriptionBuilder()
-    .addType(catalogRef)
+TypeItem priceTypesRef = (TypeItem)typeProvider.getProxy("CatalogRef.PriceTypes");
+if (priceTypesRef == null) {
+    System.err.println("ERROR: Cannot resolve CatalogRef.PriceTypes");
+    return null;
+}
+TypeDescription priceTypesType = new TypeDescriptionBuilder()
+    .addType(priceTypesRef)
     .build();
-priceTypeDim.setType(catalogRefType);
+priceTypeDim.setType(priceTypesType);
 prices.getDimensions().add(priceTypeDim);
 
 // Resource: Price (Number type)
@@ -186,7 +210,8 @@ transaction.attachTopObject((IBmObject)catalog, fqn);
 
 ### Important notes
 - Validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
-- References to metadata objects created in the same unfinished scenario may be unavailable; use a generic reference type or split work into steps
+- References to metadata objects created in the same unfinished scenario may be unavailable. If the final business type must be concrete, split work into steps and stop on unresolved proxies; do not report success with a generic placeholder.
+- Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, or `IDtConstants.getEnumRefQName(...)` for EDT TypeDescription creation in JShell. Use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Top-object FQNs are still `"Catalog.Name"` / `"Enum.Name"` for `transaction.getTopObjectByFqn(...)`; TypeItem names are `"CatalogRef.Name"` / `"EnumRef.Name"`.
 
 ### Required post-check
 

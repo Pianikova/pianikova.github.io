@@ -19,6 +19,9 @@ new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false
 // WRONG: Ecore data types are not EDT TypeItem values.
 TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
 TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, v8project);
+
+// WRONG: the requested type is CatalogRef.Номенклатура, but this is generic CatalogRef.
+TypeItem productType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
 ```
 
 Use this pattern instead:
@@ -72,7 +75,11 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         DocumentAttribute warehouse = mdFactory.createDocumentAttribute();
         warehouse.setName("Warehouse");
         warehouse.getSynonym().put("ru", "Склад");
-        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
+        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Warehouses");
+        if (catalogRefType == null) {
+            System.err.println("ERROR: Cannot resolve CatalogRef.Warehouses");
+            return null;
+        }
         TypeDescription warehouseType = new TypeDescriptionBuilder()
             .addType(catalogRefType)
             .build();
@@ -92,8 +99,13 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();
         product.setName("Product");
         product.getSynonym().put("ru", "Номенклатура");
+        TypeItem productsRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
+        if (productsRefType == null) {
+            System.err.println("ERROR: Cannot resolve CatalogRef.Products");
+            return null;
+        }
         TypeDescription productType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(productsRefType)
             .build();
         product.setType(productType);
         product.setUuid(UUID.randomUUID());
@@ -155,6 +167,7 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 - **Every `DocumentAttribute` and `TabularSectionAttribute` must call `setType(...)`** before `add(...)`; otherwise EDT reports `md-legacy-emf-check` / `type is required`
 - **Never reuse the same `TypeDescription` instance for multiple children.** `TypeDescription` is containment; assigning it to another attribute moves it away from the previous owner and causes `type is required` markers. Reuse `TypeItem`, not `TypeDescription`.
 - **For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first.** For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`, not `.setNumberQualifiers(10, 2, false)`.
+- **For concrete references, use exact TypeItem proxies.** `CatalogRef.Номенклатура` means `typeProvider.getProxy("CatalogRef.Номенклатура")`, not generic `IEObjectTypeNames.CATALOG_REF`; `EnumRef.ВидыТоваров` means `typeProvider.getProxy("EnumRef.ВидыТоваров")`, not generic `ENUM_REF`. Keep `"Catalog.Номенклатура"` for `transaction.getTopObjectByFqn(...)` only.
 - **Before `attachTopObject`, verify all document attributes and tabular section attributes have non-null/non-empty `getType()`**
 - **Check before creating** to avoid `BmFqnAlreadyInUseException`
 

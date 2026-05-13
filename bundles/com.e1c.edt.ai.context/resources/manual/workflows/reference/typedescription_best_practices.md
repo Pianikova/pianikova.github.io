@@ -14,7 +14,7 @@ Do not import `IEObjectProvider` from `mcore` or `metadata.md`. Do not import `T
 
 For `IEObjectTypeNames.STRING`, always set a finite length with `setStringQualifiers(length, false)` unless a scenario explicitly requires a fixed string with `true`. Default to `length <= 100`. Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires the larger length and the current EDT model accepts it. An unlimited or oversized string can produce SU8 markers such as "Строка не может быть неограниченной длины" or "Переменная длина строки должна быть внутри диапазона от 0 до 100".
 
-Never pass a nullable proxy directly to `TypeDescriptionBuilder.addType(...)`. `typeProvider.getProxy(...)` may return `null` for specific metadata names that do not exist in the current project. Check the proxy first and either stop with a clear message or fall back to a generic type such as `IEObjectTypeNames.CATALOG_REF`, `DOCUMENT_REF`, `STRING`, or `NUMBER`.
+Never pass a nullable proxy directly to `TypeDescriptionBuilder.addType(...)`. `typeProvider.getProxy(...)` may return `null` for specific metadata names that do not exist in the current project. Check the proxy first and stop with a clear message when the user requested a concrete type. Fall back to a generic type such as `IEObjectTypeNames.CATALOG_REF` or `ENUM_REF` only when the user explicitly wants polymorphic "any catalog" / "any enum" behavior.
 
 ### Preflight-blocked patterns
 
@@ -31,6 +31,15 @@ TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, 
 
 // WRONG: do not pass Ecore literals to TypeDescriptionBuilder.
 new TypeDescriptionBuilder().addType(EcorePackage.Literals.ESTRING).build();
+
+// WRONG: concrete business reference requested, but generic reference used.
+TypeItem supplierType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF); // for CatalogRef.Контрагенты
+TypeItem kindType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ENUM_REF);        // for EnumRef.ВидыТоваров
+
+// WRONG: these helper APIs are not the JShell-safe EDT TypeItem path.
+typeProvider.createProxy(...);
+IDtConstants.getCatalogRefQName(...);
+IDtConstants.getEnumRefQName(...);
 ```
 
 Use this canonical EDT pattern instead:
@@ -45,6 +54,14 @@ TypeDescription stringTypeDesc = new TypeDescriptionBuilder()
     .addType(stringType)
     .setStringQualifiers(100, false)
     .build();
+
+TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.Контрагенты");
+TypeItem pictureRef = (TypeItem)typeProvider.getProxy("CatalogRef.ХранимыеФайлы");
+TypeItem kindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
+if (suppliersRef == null || pictureRef == null || kindRef == null) {
+    System.err.println("ERROR: Missing concrete reference type");
+    return null;
+}
 ```
 
 ### ⚠️ CRITICAL: TypeDescription Must Be Created Inside Transaction
@@ -216,21 +233,36 @@ attribute.setType(typeDesc);
 
 **Pattern 5: Specific Catalog Reference (Requires existing catalog)**
 ```java
-TypeItem productsRef = (TypeItem)typeProvider.getProxy("Catalog.Products");
+TypeItem productsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
 if (productsRef == null) {
-    System.err.println("ERROR: Catalog.Products does not exist");
+    System.err.println("ERROR: CatalogRef.Products does not exist");
     return null; // Stop creation
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder().addType(productsRef).build();
 attribute.setType(typeDesc);
 ```
 
-**Pattern 6: Fallback Pattern (Specific → Generic)**
+**Pattern 5b: Specific Enum Reference (Requires existing enum)**
 ```java
-TypeItem unitsRef = (TypeItem)typeProvider.getProxy("Catalog.Units");
+TypeItem productKindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
+if (productKindRef == null) {
+    System.err.println("ERROR: EnumRef.ВидыТоваров does not exist");
+    return null; // Stop creation
+}
+TypeDescription typeDesc = new TypeDescriptionBuilder().addType(productKindRef).build();
+attribute.setType(typeDesc);
+```
+
+**Pattern 6: Explicit Polymorphic Fallback Only**
+
+Use this only when the user explicitly accepts "any catalog reference". Do not use
+it for concrete requests such as `CatalogRef.Контрагенты`.
+
+```java
+TypeItem unitsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Units");
 TypeDescription typeDesc;
 if (unitsRef == null) {
-    System.out.println("WARNING: Catalog.Units not found, using generic CATALOG_REF");
+    System.out.println("WARNING: CatalogRef.Units not found, using generic CATALOG_REF");
     TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
     typeDesc = new TypeDescriptionBuilder().addType(catalogRef).build();
 } else {
@@ -254,11 +286,11 @@ attribute.setType(typeDesc);
 **Solution**: Validate `typeProvider.getProxy(...)` returns non-null before `addType(...)`
 
 **Error**: `The 'no null' constraint is violated` in `TypeDescriptionBuilder.addType`
-**Solution**: A `TypeItem` proxy is null. Do not call `addType(proxy)` until `proxy != null`; use a generic fallback or create the referenced metadata first.
+**Solution**: A `TypeItem` proxy is null. Do not call `addType(proxy)` until `proxy != null`; create the referenced metadata first. Use a generic fallback only for explicitly polymorphic fields.
 
 **Error**: SU8 - Scale > Precision
 **Solution**: Ensure `scale <= precision` for Number types
 
 **Error**: Type not found for specific FQN
-**Solution**: Use fallback pattern or ensure referenced metadata exists first
+**Solution**: Ensure referenced metadata exists first. Use generic fallback only for explicitly polymorphic fields.
 

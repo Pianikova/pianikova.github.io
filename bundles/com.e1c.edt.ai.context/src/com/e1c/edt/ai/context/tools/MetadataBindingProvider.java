@@ -292,7 +292,12 @@ public class MetadataBindingProvider
             + "types, TypeDescriptionBuilder.setNumberQualifiers uses (scale, precision, nonNegative), for example "
             + "Number(10,2) is setNumberQualifiers(2, 10, false). For string types, do not use "
             + "setStringQualifiers with length greater than 100 unless the user explicitly requires it and the "
-            + "EDT model accepts it; default to setStringQualifiers(100, false), not 150 or 1000. For registers, link registrar documents via "
+            + "EDT model accepts it; default to setStringQualifiers(100, false), not 150 or 1000. If the user "
+            + "requested a concrete reference type such as CatalogRef.Контрагенты, CatalogRef.ХранимыеФайлы, "
+            + "or EnumRef.ВидыТоваров, verify that the assigned TypeItem is the exact proxy "
+            + "typeProvider.getProxy(\"CatalogRef.Контрагенты\"), getProxy(\"CatalogRef.ХранимыеФайлы\"), or "
+            + "getProxy(\"EnumRef.ВидыТоваров\"); do not use generic IEObjectTypeNames.CATALOG_REF or ENUM_REF "
+            + "unless the field is intentionally polymorphic. For registers, link registrar documents via "
             + "document.getRegisterRecords().add(register). Fix relevant markers before reporting success or starting "
             + "another 1C metadata CRUD operation.";
     }
