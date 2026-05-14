@@ -11,7 +11,51 @@ import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.platform.IEObjectProvider;
 import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
 import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
+// For metadata reference types (CatalogRef.X / EnumRef.Y / DocumentRef.Z / ...):
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
 ```
+
+## ⚠️ How to resolve `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X` in JShell
+
+**Do NOT use** `typeProvider.getProxy("CatalogRef.X")` for metadata
+reference types in JShell. The global `IEObjectProvider` type index is
+populated asynchronously by EDT and is **not refreshed within a JShell
+session** — it returns `null` for every Catalog / Enum / Document / etc.
+that was created or even already existed when the project opened during
+this session. This is the most common reason an LLM falls back to generic
+`IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` or to a `String` placeholder.
+
+**Use** `MdProducedTypesUtil.getProducedType(mdObject, eClass)` instead.
+It reads the produced `TypeItem` directly from the EMF object — works
+inside the same transaction the dependency was created in, and across
+transactions of the same session.
+
+```java
+Catalog suppliers = (Catalog)transaction.getTopObjectByFqn("Catalog.Контрагенты");
+if (suppliers == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Контрагенты — create it first");
+}
+TypeItem suppliersRef = MdProducedTypesUtil.getProducedType(
+    suppliers, MdTypePackage.Literals.MD_REF_TYPE);   // "CatalogRef.Контрагенты"
+
+attribute.setType(new TypeDescriptionBuilder().addType(suppliersRef).build());
+```
+
+`MdTypePackage.Literals.*` mapping:
+
+| User intent                              | EClass literal           | `TypeItem.name`                         |
+|------------------------------------------|--------------------------|-----------------------------------------|
+| `СправочникСсылка.X` / `EnumRef.X` / ... | `MD_REF_TYPE`            | `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X` |
+| `СправочникОбъект.X`                     | `MD_OBJECT_TYPE`         | `CatalogObject.X` / `DocumentObject.X`  |
+| `СправочникСписок.X`                     | `MD_LIST_TYPE`           | `CatalogList.X` / `DocumentList.X`      |
+| Табличная часть, row-type                | `MD_ROW_TYPE`            | `CatalogTabularSectionRow.X.Y`          |
+| `ОпределяемыйТип`                        | `MD_USER_DEFINED_TYPE`   | `DefinedType.X` (returns `TypeSet`)     |
+
+`typeProvider.getProxy(IEObjectTypeNames.STRING)` /  `NUMBER` / `BOOLEAN`
+/ `DATE` is the correct path for **primitive built-in types** — keep
+using it for those. The `null`-on-metadata-refs issue is specific to
+metadata-produced reference types.
 
 Do not import `IEObjectProvider` from `mcore` or `metadata.md`. Do not import `TypeDescriptionBuilder` from `dt.md`.
 

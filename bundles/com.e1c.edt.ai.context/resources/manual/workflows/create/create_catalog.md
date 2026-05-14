@@ -1,5 +1,176 @@
 ﻿## Safe Workflow: Create Catalog
 
+> 🛑 **STOP — read PRE-FLIGHT first, before writing any code.**
+> Skipping PRE-FLIGHT is the most common reason this scenario fails on
+> reference attributes.
+
+### ⚠️ Critical API note — how to resolve `CatalogRef.X` / `EnumRef.X` inside JShell
+
+**Do NOT use `typeProvider.getProxy("CatalogRef.X")` for metadata reference
+types.** That global type index is populated asynchronously by EDT and is
+**not refreshed inside a JShell session** even after the producing
+transaction commits. It returns `null` for every freshly-created Catalog /
+Enum / Document — the only thing it knows about are primitive types
+(`STRING`, `NUMBER`, ...). Relying on it is the single biggest reason this
+scenario fails and the LLM falls back to generic `IEObjectTypeNames.CATALOG_REF`
+or to a `String` placeholder.
+
+**Use this instead** — `MdProducedTypesUtil.getProducedType(mdObject, eClass)`.
+It reads the `TypeItem` directly from the EMF object you already hold
+(or fetched via `getTopObjectByFqn`), so it works on objects created earlier
+in the same transaction **and** on objects created in a previous transaction
+of the same JShell session.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+Catalog suppliersCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Контрагенты");
+TypeItem suppliersRef = MdProducedTypesUtil.getProducedType(
+    suppliersCatalog, MdTypePackage.Literals.MD_REF_TYPE);  // "CatalogRef.Контрагенты"
+```
+
+EClass mapping (`MdTypePackage.Literals.*`):
+
+| What user asks for                  | EClass literal       | Resulting `TypeItem.name`               |
+|-------------------------------------|----------------------|-----------------------------------------|
+| `СправочникСсылка.X` (`CatalogRef`) | `MD_REF_TYPE`        | `CatalogRef.X` / `DocumentRef.X` / ...  |
+| `СправочникОбъект.X` (`CatalogObject`) | `MD_OBJECT_TYPE`  | `CatalogObject.X`                       |
+| `СправочникСписок.X` (`CatalogList`)| `MD_LIST_TYPE`       | `CatalogList.X`                         |
+| Перечисление-ссылка                 | `MD_REF_TYPE`        | `EnumRef.X`                             |
+| Табличная часть, row-type           | `MD_ROW_TYPE`        | `CatalogTabularSectionRow.X.Y`          |
+| `ОпределяемыйТип`                   | `MD_USER_DEFINED_TYPE` | `DefinedType.X` (TypeSet)             |
+
+`typeProvider.getProxy(...)` is still the correct way to resolve **primitive
+built-in types** — `IEObjectTypeNames.STRING`, `NUMBER`, `BOOLEAN`, `DATE`.
+Keep using it for those.
+
+### PRE-FLIGHT (mandatory)
+
+Before you generate the catalog-creation code, do this **in order**:
+
+1. **Extract every reference the user named**, including Russian forms like
+   `СправочникСсылка.X` → `CatalogRef.X`, `ПеречислениеСсылка.Y` → `EnumRef.Y`,
+   `ДокументСсылка.Z` → `DocumentRef.Z`, `ПланВидовХарактеристикСсылка.W` →
+   `ChartOfCharacteristicTypesRef.W`. Build an explicit dependency list.
+2. **Probe existence of every dependency in one small JShell call** using
+   `transaction.getTopObjectByFqn("Catalog.X")` / `"Enum.Y"` / etc.
+   Print a structured `MISSING: ...` / `ALL_EXIST` summary via
+   `System.out.println(...)` (returning a value from `globalContext.execute`
+   alone does not appear in `std_out`).
+3. **For every missing dependency, create it first** with its own scenario
+   (`create_enum`, `create_catalog`, ...) in a separate JShell transaction.
+   After each creation call `GetMarkers` with `marker_type: "1c"` on the new
+   `.mdo` and fix any errors.
+4. **Create the main catalog**, and for every reference attribute use
+   `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`
+   where `depMdObject = transaction.getTopObjectByFqn("Catalog.X")` /
+   `"Enum.X"` / etc. **Never** use `typeProvider.getProxy("CatalogRef.X")`
+   for this — see the critical API note above.
+
+### Hard rules — never violate
+
+- ❌ **Never create the catalog "partially" without the reference attributes
+  the user asked for.** That is treated as a failed operation even if
+  `compilation_errors` and `runtime_errors` are empty.
+- ❌ **Never silently swap a requested `CatalogRef.X` / `EnumRef.X` for
+  `String` or for generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF`.**
+- ❌ **Never finish the task with "пользователь, добавь поля вручную"** for
+  metadata attributes that this manual supports.
+- ❌ **Never call `typeProvider.getProxy("CatalogRef.X")`** for a metadata
+  reference inside JShell — it always returns `null` for freshly-created
+  objects. Use `MdProducedTypesUtil.getProducedType(...)`.
+- ✅ If a precondition cannot be satisfied, throw `IllegalStateException`
+  from inside the BM task. `System.err.println(...) + return null` is **not**
+  a failure — JShell will report success.
+
+### Pre-flight dependency probe (copy and adapt)
+
+```java
+{
+    IProject project = workspaceRoot.getProject("MyProject");
+    IBmModel bmModel = modelManager.getModel(project);
+    IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
+
+    String result = globalContext.execute(new AbstractBmTask<String>("Probe deps") {
+        @Override
+        public String execute(IBmTransaction transaction, IProgressMonitor monitor) {
+            String[] requiredFqns = {
+                "Catalog.Контрагенты",
+                "Catalog.ХранимыеФайлы",
+                "Enum.ВидыТоваров"
+            };
+            StringBuilder missing = new StringBuilder();
+            for (String fqn : requiredFqns) {
+                if (transaction.getTopObjectByFqn(fqn) == null) {
+                    missing.append(fqn).append("; ");
+                }
+            }
+            return missing.length() == 0 ? "ALL_EXIST" : "MISSING: " + missing;
+        }
+    });
+    System.out.println(result);
+    return result;
+}
+```
+
+If the probe returns `MISSING: ...`, your next JShell calls **must** be
+`create_enum` / `create_catalog` / ... for the missing FQNs, **one
+top-level object per JShell transaction**, each followed by `GetMarkers`.
+Only after every dependency is created do you submit the main
+`create_catalog` transaction.
+
+### Worked example — Catalog.Номенклатура with cross-object references
+
+User asks: создать `Catalog.Номенклатура` со ссылочными реквизитами
+`Поставщик → CatalogRef.Контрагенты`,
+`Картинка → CatalogRef.ХранимыеФайлы`,
+`Вид → EnumRef.ВидыТоваров`,
+плюс строковые `Артикул`, `Штрихкод`, `Описание`.
+Зависимостей в проекте нет.
+
+Correct ordering of JShell calls (each in its own transaction):
+
+1. **Probe** — script above, expect `MISSING: Catalog.Контрагенты; Catalog.ХранимыеФайлы; Enum.ВидыТоваров;`.
+2. **Create Enum.ВидыТоваров** (with values `Товар`, `Услуга`) — `create_enum`. Then `GetMarkers` on its `.mdo`.
+3. **Create Catalog.Контрагенты** — minimal catalog. Then `GetMarkers` on its `.mdo`.
+4. **Create Catalog.ХранимыеФайлы** — same. Then `GetMarkers` on its `.mdo`.
+5. **Create Catalog.Номенклатура with the full attribute set**, resolving
+   each reference attribute via
+   `MdProducedTypesUtil.getProducedType(transaction.getTopObjectByFqn("Catalog.Контрагенты"), MdTypePackage.Literals.MD_REF_TYPE)`.
+   Then `GetMarkers` on its `.mdo`.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+// Inside the main `Catalog.Номенклатура` BM task:
+Catalog suppliersCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Контрагенты");
+if (suppliersCatalog == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Контрагенты — create it first");
+}
+TypeItem suppliersRef = MdProducedTypesUtil.getProducedType(
+    suppliersCatalog, MdTypePackage.Literals.MD_REF_TYPE);
+
+CatalogAttribute supplier = mdFactory.createCatalogAttribute();
+supplier.setName("Поставщик");
+supplier.getSynonym().put("ru", "Поставщик");
+supplier.setUuid(UUID.randomUUID());
+supplier.setType(new TypeDescriptionBuilder().addType(suppliersRef).build());
+catalog.getAttributes().add(supplier);
+
+// And the same pattern for ХранимыеФайлы and ВидыТоваров — fetch the dep
+// MdObject by FQN, build a fresh TypeDescription per attribute.
+```
+
+Note: steps 2–4 can in fact be merged into one BM transaction with the
+main catalog now that `MdProducedTypesUtil` reads the type directly from
+the EMF object (no global index dependency). The "one transaction per
+top object" rule still applies if you want incremental marker checks —
+prefer that when zero-dependency proven projects are not your target.
+
+---
+
 > вљ пёЏ **HierarchyType вЂ” only two valid constants in EDT API.**
 > Use ONLY `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` (default) or `HierarchyType.HIERARCHY_OF_ITEMS`.
 > Other names from 1C:Enterprise classic API (`HIERARCHY_GROUPS`, `HIERARCHY_HIERARCHICAL`, `HIERARCHY_NONE`) **do not exist** and cause `cannot find symbol`.
