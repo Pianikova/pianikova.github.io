@@ -12,9 +12,7 @@ Never store one `TypeDescription` and assign it to two attributes.
 Do not send JShell code with these EDT patterns:
 
 ```java
-// WRONG: EDT string qualifiers above 100 are rejected by current validation.
-new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(150, false).build();
-new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false).build();
+// WRONG: do not call setStringQualifiers with length 150, 1000, or any value above 100.
 
 // WRONG: Ecore data types are not EDT TypeItem values.
 TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
@@ -77,8 +75,13 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         warehouse.getSynonym().put("ru", "Склад");
         TypeItem catalogRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Warehouses");
         if (catalogRefType == null) {
-            System.err.println("ERROR: Cannot resolve CatalogRef.Warehouses");
-            return null;
+            if (transaction.getTopObjectByFqn("Catalog.Warehouses") == null) {
+                throw new IllegalStateException("Missing referenced catalog: Catalog.Warehouses");
+            }
+            Type t = McoreFactory.eINSTANCE.createType();
+            t.setName("CatalogRef.Warehouses");
+            t.setNameRu("СправочникСсылка.Warehouses");
+            catalogRefType = t;
         }
         TypeDescription warehouseType = new TypeDescriptionBuilder()
             .addType(catalogRefType)
@@ -101,8 +104,13 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         product.getSynonym().put("ru", "Номенклатура");
         TypeItem productsRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
         if (productsRefType == null) {
-            System.err.println("ERROR: Cannot resolve CatalogRef.Products");
-            return null;
+            if (transaction.getTopObjectByFqn("Catalog.Products") == null) {
+                throw new IllegalStateException("Missing referenced catalog: Catalog.Products");
+            }
+            Type t = McoreFactory.eINSTANCE.createType();
+            t.setName("CatalogRef.Products");
+            t.setNameRu("СправочникСсылка.Products");
+            productsRefType = t;
         }
         TypeDescription productType = new TypeDescriptionBuilder()
             .addType(productsRefType)
@@ -168,6 +176,7 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 - **Never reuse the same `TypeDescription` instance for multiple children.** `TypeDescription` is containment; assigning it to another attribute moves it away from the previous owner and causes `type is required` markers. Reuse `TypeItem`, not `TypeDescription`.
 - **For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first.** For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`, not `.setNumberQualifiers(10, 2, false)`.
 - **For concrete references, use exact TypeItem proxies.** `CatalogRef.Номенклатура` means `typeProvider.getProxy("CatalogRef.Номенклатура")`, not generic `IEObjectTypeNames.CATALOG_REF`; `EnumRef.ВидыТоваров` means `typeProvider.getProxy("EnumRef.ВидыТоваров")`, not generic `ENUM_REF`. Keep `"Catalog.Номенклатура"` for `transaction.getTopObjectByFqn(...)` only.
+- If `getProxy("CatalogRef.Name")` is null but `transaction.getTopObjectByFqn("Catalog.Name")` exists, create a named `McoreFactory.eINSTANCE.createType()` fallback. Never replace a requested reference with `String`.
 - **Before `attachTopObject`, verify all document attributes and tabular section attributes have non-null/non-empty `getType()`**
 - **Check before creating** to avoid `BmFqnAlreadyInUseException`
 

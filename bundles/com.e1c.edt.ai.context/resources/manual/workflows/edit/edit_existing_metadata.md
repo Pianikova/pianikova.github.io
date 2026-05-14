@@ -96,7 +96,8 @@ return register;
 
 **Enum:**
 ```java
-Enum enumObj = (Enum)transaction.getTopObjectByFqn("Enum.Statuses");
+com._1c.g5.v8.dt.metadata.mdclass.Enum enumObj =
+    (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.Statuses");
 enumObj.getEnumValues().get(0).setName("Active");
 return enumObj;
 ```

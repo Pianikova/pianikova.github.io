@@ -21,9 +21,7 @@ Never pass a nullable proxy directly to `TypeDescriptionBuilder.addType(...)`. `
 Do not send JShell code with these EDT patterns. They are known to create compile errors or 1C validation markers:
 
 ```java
-// WRONG: string length is too large for the current EDT metadata validation.
-new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(150, false).build();
-new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false).build();
+// WRONG: do not call setStringQualifiers with length 150, 1000, or any value above 100.
 
 // WRONG: EcorePackage data types are not EDT TypeItem values.
 TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
@@ -35,6 +33,18 @@ new TypeDescriptionBuilder().addType(EcorePackage.Literals.ESTRING).build();
 // WRONG: concrete business reference requested, but generic reference used.
 TypeItem supplierType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF); // for CatalogRef.Контрагенты
 TypeItem kindType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ENUM_REF);        // for EnumRef.ВидыТоваров
+
+// WRONG: concrete reference requested, but silently changed to String.
+TypeDescription supplierType = new TypeDescriptionBuilder()
+    .addType(stringType)
+    .setStringQualifiers(100, false)
+    .build(); // for CatalogRef.Контрагенты
+
+// WRONG: blocking precondition hidden in stderr; JShell sees no runtime error.
+if (supplierRef == null) {
+    System.err.println("ERROR: Cannot resolve CatalogRef.Контрагенты");
+    return null;
+}
 
 // WRONG: these helper APIs are not the JShell-safe EDT TypeItem path.
 typeProvider.createProxy(...);
@@ -58,9 +68,40 @@ TypeDescription stringTypeDesc = new TypeDescriptionBuilder()
 TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.Контрагенты");
 TypeItem pictureRef = (TypeItem)typeProvider.getProxy("CatalogRef.ХранимыеФайлы");
 TypeItem kindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
-if (suppliersRef == null || pictureRef == null || kindRef == null) {
-    System.err.println("ERROR: Missing concrete reference type");
-    return null;
+if (suppliersRef == null) {
+    suppliersRef = namedType("CatalogRef.Контрагенты", "СправочникСсылка.Контрагенты");
+}
+if (pictureRef == null) {
+    pictureRef = namedType("CatalogRef.ХранимыеФайлы", "СправочникСсылка.ХранимыеФайлы");
+}
+if (kindRef == null) {
+    kindRef = namedType("EnumRef.ВидыТоваров", "ПеречислениеСсылка.ВидыТоваров");
+}
+```
+
+When the referenced top object exists but the dynamic type index is not ready yet,
+`typeProvider.getProxy("CatalogRef.X")` can temporarily return `null`. Use this
+JShell-safe fallback instead of replacing the field with `String`:
+
+```java
+TypeItem namedType(String name, String nameRu) {
+    Type type = McoreFactory.eINSTANCE.createType();
+    type.setName(name);
+    type.setNameRu(nameRu);
+    return type;
+}
+
+TypeItem requiredRef(IBmTransaction transaction, IEObjectProvider typeProvider,
+    String objectFqn, String typeName, String typeNameRu) {
+    TypeItem result = (TypeItem)typeProvider.getProxy(typeName);
+    if (result != null) {
+        return result;
+    }
+    if (transaction.getTopObjectByFqn(objectFqn) != null) {
+        return namedType(typeName, typeNameRu);
+    }
+    throw new IllegalStateException("Missing referenced metadata object for " + typeName
+        + ": " + objectFqn);
 }
 ```
 
@@ -235,8 +276,7 @@ attribute.setType(typeDesc);
 ```java
 TypeItem productsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
 if (productsRef == null) {
-    System.err.println("ERROR: CatalogRef.Products does not exist");
-    return null; // Stop creation
+    productsRef = namedType("CatalogRef.Products", "СправочникСсылка.Products");
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder().addType(productsRef).build();
 attribute.setType(typeDesc);
@@ -246,8 +286,7 @@ attribute.setType(typeDesc);
 ```java
 TypeItem productKindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
 if (productKindRef == null) {
-    System.err.println("ERROR: EnumRef.ВидыТоваров does not exist");
-    return null; // Stop creation
+    productKindRef = namedType("EnumRef.ВидыТоваров", "ПеречислениеСсылка.ВидыТоваров");
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder().addType(productKindRef).build();
 attribute.setType(typeDesc);
@@ -286,7 +325,7 @@ attribute.setType(typeDesc);
 **Solution**: Validate `typeProvider.getProxy(...)` returns non-null before `addType(...)`
 
 **Error**: `The 'no null' constraint is violated` in `TypeDescriptionBuilder.addType`
-**Solution**: A `TypeItem` proxy is null. Do not call `addType(proxy)` until `proxy != null`; create the referenced metadata first. Use a generic fallback only for explicitly polymorphic fields.
+**Solution**: A `TypeItem` proxy is null. Do not call `addType(proxy)` until `proxy != null`; create the referenced metadata first. If the top object exists but the type index has not caught up, use the `namedType(...)` fallback. Use a generic fallback only for explicitly polymorphic fields.
 
 **Error**: SU8 - Scale > Precision
 **Solution**: Ensure `scale <= precision` for Number types

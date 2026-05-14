@@ -354,6 +354,11 @@ public class JShellMcpTool
         description.append("\n- Choose `scope` from the allowed values listed in the `scope` parameter. ")
             .append("Scope-specific required next steps are returned in JSON field `required_next_step` by the matching `IJShellBindingProvider`");
         description.append("\n- For `scope: \"edt\"` metadata CRUD, include the changed top-level entities and their `.mdo` paths in `response_description` when possible; after execution, follow `required_next_step` by calling GetMarkers with `path` for each changed entity, not a broad project-wide cleanup");
+        description.append("\n- For `scope: \"edt\"`, do not narrow or simplify the user's requested metadata CRUD. ")
+            .append("If the user requested reference attributes (`CatalogRef.*`, `EnumRef.*`, etc.), create those exact ")
+            .append("attributes or fail with a blocking exception; do not replace them with `String`, omit them, or describe partial work as success");
+        description.append("\n- For EDT `Enum` metadata in JShell, never use the simple type name `Enum`; use ")
+            .append("`com._1c.g5.v8.dt.metadata.mdclass.Enum` to avoid ambiguity with `java.lang.Enum`");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
 
@@ -372,6 +377,7 @@ public class JShellMcpTool
         description.append("\n- `request_description` describes what will be done and is shown as request markdown");
         description.append("\n- `response_description` describes what was done and is shown as response markdown");
         description.append("\n- For EDT CRUD, `response_description` should name the changed top-level objects and known `.mdo` paths so the next GetMarkers call can be scoped");
+        description.append("\n- `request_description` and `response_description` must match the actual user request and executed code; do not change them to a smaller task such as \"only string attributes\" unless the user explicitly asked for that");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())

@@ -260,6 +260,8 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.core.platform.*;",
             "import com._1c.g5.v8.dt.platform.*;",
             "import com._1c.g5.v8.dt.mcore.McorePackage;",
+            "import com._1c.g5.v8.dt.mcore.McoreFactory;",
+            "import com._1c.g5.v8.dt.mcore.Type;",
             "import com._1c.g5.v8.dt.mcore.TypeDescription;",
             "import com._1c.g5.v8.dt.mcore.TypeItem;",
             "import com._1c.g5.v8.dt.platform.core.typeinfo.*;",
@@ -278,7 +280,11 @@ public class MetadataBindingProvider
             return "";
         }
 
-        return "Call GetMarkers with marker_type \"1c\" scoped to each changed top-level entity .mdo path when "
+        return "Before reporting success, compare the original user request, request_description, executed code, "
+            + "and response_description. If any requested metadata object, attribute, tabular section, enum value, "
+            + "type, reference, registrar, or property was omitted or narrowed, run a corrective JShell operation "
+            + "for the same changed entity or fail explicitly; markers cannot detect missing requested features. "
+            + "Call GetMarkers with marker_type \"1c\" scoped to each changed top-level entity .mdo path when "
             + "that path is known or can be derived. Fix only markers relevant to the entities changed by this "
             + "CRUD operation. Do not fix unrelated project-wide markers. Use project-wide GetMarkers only for "
             + "changes that can affect other objects, such as delete, rename, registrar links, references, "
@@ -297,7 +303,12 @@ public class MetadataBindingProvider
             + "or EnumRef.ВидыТоваров, verify that the assigned TypeItem is the exact proxy "
             + "typeProvider.getProxy(\"CatalogRef.Контрагенты\"), getProxy(\"CatalogRef.ХранимыеФайлы\"), or "
             + "getProxy(\"EnumRef.ВидыТоваров\"); do not use generic IEObjectTypeNames.CATALOG_REF or ENUM_REF "
-            + "unless the field is intentionally polymorphic. For registers, link registrar documents via "
+            + "unless the field is intentionally polymorphic. If a concrete reference proxy is null but the "
+            + "referenced top object exists in this transaction/project, create a named Mcore Type fallback "
+            + "with McoreFactory.eINSTANCE.createType(), setName(\"CatalogRef.Name\")/setNameRu(\"СправочникСсылка.Name\") "
+            + "or setName(\"EnumRef.Name\")/setNameRu(\"ПеречислениеСсылка.Name\"), and use that TypeItem. Never replace "
+            + "a requested reference with String and never report success after printing ERROR to stderr; throw "
+            + "IllegalStateException for blocking preconditions. For registers, link registrar documents via "
             + "document.getRegisterRecords().add(register). Fix relevant markers before reporting success or starting "
             + "another 1C metadata CRUD operation.";
     }

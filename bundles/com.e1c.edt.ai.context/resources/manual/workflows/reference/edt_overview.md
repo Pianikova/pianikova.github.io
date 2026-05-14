@@ -1133,8 +1133,13 @@ Unresolved specific proxies may happen for typos, non-existent metadata, or refe
 ```java
 TypeItem proxy = (TypeItem)typeProvider.getProxy("CatalogRef.Units");
 if (proxy == null) {
-    System.err.println("ERROR: Cannot resolve CatalogRef.Units");
-    return null;
+    if (transaction.getTopObjectByFqn("Catalog.Units") == null) {
+        throw new IllegalStateException("Missing referenced catalog: Catalog.Units");
+    }
+    Type t = McoreFactory.eINSTANCE.createType();
+    t.setName("CatalogRef.Units");
+    t.setNameRu("СправочникСсылка.Units");
+    proxy = t;
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(proxy)

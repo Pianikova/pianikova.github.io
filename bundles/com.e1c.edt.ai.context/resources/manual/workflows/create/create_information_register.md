@@ -8,9 +8,7 @@
 Do not send JShell code with these EDT patterns:
 
 ```java
-// WRONG: current EDT validation can reject variable string lengths above 100.
-new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(150, false).build();
-new TypeDescriptionBuilder().addType(stringType).setStringQualifiers(1000, false).build();
+// WRONG: do not call setStringQualifiers with length 150, 1000, or any value above 100.
 
 // WRONG: Ecore data types are not EDT TypeItem values.
 TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);

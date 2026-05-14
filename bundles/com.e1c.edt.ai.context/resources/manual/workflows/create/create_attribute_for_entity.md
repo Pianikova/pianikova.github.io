@@ -53,8 +53,13 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem catalogRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Counterparties");
 if (catalogRefType == null) {
-    System.err.println("ERROR: Cannot resolve CatalogRef.Counterparties");
-    return null;
+    if (transaction.getTopObjectByFqn("Catalog.Counterparties") == null) {
+        throw new IllegalStateException("Missing referenced catalog: Catalog.Counterparties");
+    }
+    Type t = McoreFactory.eINSTANCE.createType();
+    t.setName("CatalogRef.Counterparties");
+    t.setNameRu("СправочникСсылка.Counterparties");
+    catalogRefType = t;
 }
 TypeDescription counterpartyType = new TypeDescriptionBuilder()
     .addType(catalogRefType)
@@ -114,6 +119,7 @@ if (authors != null) {
 - Every attribute derived from `BasicFeature` must have `setType(...)` before it is added to the parent collection
 - When the user gives a concrete reference (`CatalogRef.Контрагенты`, `CatalogRef.ХранимыеФайлы`, `EnumRef.ВидыТоваров`), use the exact proxy (`"CatalogRef.Контрагенты"`, `"CatalogRef.ХранимыеФайлы"`, `"EnumRef.ВидыТоваров"`). Do not use generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` as a final type.
 - If a concrete reference proxy is null, stop and report the missing referenced metadata. Do not silently create a generic placeholder unless the user explicitly asked for polymorphic "any catalog/any enum".
+- If a concrete reference proxy is null but `transaction.getTopObjectByFqn("Catalog.Name")` / `"Enum.Name"` exists, create a named `McoreFactory.eINSTANCE.createType()` fallback with the exact `CatalogRef.Name` / `EnumRef.Name`. Do not replace the field with `String`.
 - Do not use `typeProvider.createProxy(...)` or `IDtConstants.get*RefQName(...)`; use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Use `"Catalog.Name"` / `"Enum.Name"` only for metadata object FQNs in `transaction.getTopObjectByFqn(...)`.
 - Never reuse one `TypeDescription` instance for multiple children. It is an EMF containment object and moves to the latest owner. Reuse `TypeItem` proxies, then build a new `TypeDescription` per child.
 - Before attaching or finishing a bulk CRUD transaction, loop through all new `BasicFeature` children and fail if `getType() == null || getType().getTypes().isEmpty()`
