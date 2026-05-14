@@ -66,6 +66,7 @@ public class StagingViewEnhancer
     private final ISkillExecutor skillExecutor;
     private CancellationTokenSource reviewChangesCancellationToken = new CancellationTokenSource();
     private CancellationTokenSource createCommitMessageCancellationToken = new CancellationTokenSource();
+    private volatile boolean commitMessageGenerating;
 
     @Inject
     public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions,
@@ -181,13 +182,21 @@ public class StagingViewEnhancer
                             createCommitMessageCancellationToken.cancel();
                             createCommitMessageCancellationToken = newCancellationToken;
                             var baseMessage = commitMessageComponent.getCommitMessage().trim();
+                            commitMessageGenerating = true;
+                            createMessageButton.setEnabled(false);
                             createCommitMessageUsingSkills(baseMessage, diffs, newCancellationToken,
-                                commitMessageComponent, commitMessages);
+                                commitMessageComponent, commitMessages, createMessageButton);
                         }
                     });
 
                     addStageListener(stagingView,
-                        isEnabled -> dispatcher.dispatch(() -> createMessageButton.setEnabled(isEnabled)));
+                        isEnabled -> dispatcher.dispatch(() -> {
+                            if (commitMessageGenerating && isEnabled)
+                            {
+                                return;
+                            }
+                            createMessageButton.setEnabled(isEnabled);
+                        }));
 
                     reflection.getField(StagingView.class, stagingView, "commitButton", Button.class)
                         .ifPresent(button -> {
@@ -220,11 +229,20 @@ public class StagingViewEnhancer
     @SuppressWarnings("nls")
     private void createCommitMessageUsingSkills(String baseMessage, List<GitDiff> diffs,
         ICancellationToken cancellationToken, CommitMessageComponent commitMessageComponent,
-        ArrayList<CommitMessageInfo> commitMessages)
+        ArrayList<CommitMessageInfo> commitMessages, ToolItem createMessageButton)
     {
+        Runnable finishGeneration = () -> dispatcher.dispatch(() -> {
+            commitMessageGenerating = false;
+            if (!createMessageButton.isDisposed())
+            {
+                createMessageButton.setEnabled(true);
+            }
+        });
+
         var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
             if (diffs.isEmpty())
                 {
+                    finishGeneration.run();
                     return;
                 }
 
@@ -291,7 +309,7 @@ public class StagingViewEnhancer
             }).exceptionally(error -> {
                 log.logError(error);
                 return null;
-                });
+                }).whenComplete((r, t) -> finishGeneration.run());
         }, false, cancellationToken);
         job.schedule();
     }
