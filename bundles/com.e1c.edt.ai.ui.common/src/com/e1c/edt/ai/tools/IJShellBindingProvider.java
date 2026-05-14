@@ -46,10 +46,14 @@ public interface IJShellBindingProvider
     Collection<Class<?>> getSignificantClasses();
 
     /**
-     * Returns array of import statements that should be pre-imported in JShell sessions.
-     * This allows providers to contribute commonly used imports for their specific context.
+     * Returns import statements that should be pre-imported in JShell sessions.
+     * <p>
+     * Keep this list curated and scope-specific: prefer explicit imports for stable,
+     * frequently used API types, avoid wildcard imports, and avoid importing classes
+     * with ambiguous simple names. The list is a convenience baseline, not a complete
+     * replacement for scenario-specific manual guidance.
      *
-     * @return Array of import statements, or empty array if none
+     * @return Import statements, or empty collection if none
      */
     Collection<String> getImports();
 

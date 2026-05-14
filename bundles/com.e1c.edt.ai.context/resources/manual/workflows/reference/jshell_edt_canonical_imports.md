@@ -4,22 +4,38 @@ Use this card before writing JShell snippets for EDT metadata APIs. It prevents 
 
 ## Required Imports
 
+The `edt` JShell scope pre-imports the common safe EDT classes. Do not add
+wildcard imports. Add only explicit imports for scenario-specific classes that
+are not already available in the session.
+
 ```java
+import java.util.UUID;
 import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.bm.integration.AbstractBmTask;
 import com._1c.g5.v8.bm.integration.IBmTransaction;
 import com._1c.g5.v8.bm.integration.IBmModel;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.mcore.McoreFactory;
 import com._1c.g5.v8.dt.mcore.McorePackage;
+import com._1c.g5.v8.dt.mcore.Type;
 import com._1c.g5.v8.dt.mcore.TypeDescription;
 import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.platform.IEObjectProvider;
 import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
 import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
-import com._1c.g5.v8.dt.metadata.mdclass.*;
+import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
+import com._1c.g5.v8.dt.metadata.mdclass.CatalogAttribute;
+import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+import com._1c.g5.v8.dt.metadata.mdclass.Document;
+import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
+import com._1c.g5.v8.dt.metadata.mdclass.HierarchyType;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
 ```
+
+For EDT enum metadata use the fully-qualified class name
+`com._1c.g5.v8.dt.metadata.mdclass.Enum`. Do not import it and do not write the
+simple name `Enum`, because it conflicts with `java.lang.Enum` in JShell.
 
 ## Do Not Use These Packages
 
