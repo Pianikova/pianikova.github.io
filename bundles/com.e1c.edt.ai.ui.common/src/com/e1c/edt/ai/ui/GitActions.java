@@ -17,21 +17,13 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jgit.lib.Repository;
 
 import com.e1c.edt.ai.AIContext;
-import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IObservable;
-import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
-import com.e1c.edt.ai.Observables;
-import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ITools;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
-import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
-import com.e1c.edt.ai.assistent.model.ToolInvokeRequestContent;
-import com.e1c.edt.ai.assistent.model.ToolInvokeResponse;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -43,14 +35,12 @@ public class GitActions implements IGitActions
     private final ISettings settings;
     private final IGitTools gitTools;
     private final ITools tools;
-    private final IResourceProvider resourceProvider;
     private final IChat chat;
     private Job currentJob;
 
     @Inject
     public GitActions(ILog log, IDispatcher dispatcher, IProjectIdProvider projectIdProvider, ISettings settings,
-        IGitTools gitTools, ITools tools, IResourceProvider resourceProvider,
-        IChat chat)
+        IGitTools gitTools, ITools tools, IChat chat)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
@@ -58,7 +48,6 @@ public class GitActions implements IGitActions
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(gitTools);
         Preconditions.checkNotNull(tools);
-        Preconditions.checkNotNull(resourceProvider);
         Preconditions.checkNotNull(chat);
         this.log = log;
         this.dispatcher = dispatcher;
@@ -66,29 +55,7 @@ public class GitActions implements IGitActions
         this.settings = settings;
         this.gitTools = gitTools;
         this.tools = tools;
-        this.resourceProvider = resourceProvider;
         this.chat = chat;
-    }
-
-    @Override
-    public IObservable<CommitMessage> ceateGitCommitMessageSource(String baseCommitMessage, List<GitDiff> diffs,
-        ICancellationToken cancellationToken)
-    {
-        return Observables.create(observer -> {
-            var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
-                try
-                {
-                    getGitCommitMessage(baseCommitMessage, diffs, observer, cancellationToken);
-                }
-                catch (Exception error)
-                {
-                    log.logError(error);
-                    observer.onError(error);
-                }
-            }, false, cancellationToken);
-            runJob(job);
-            return Closeables.Empty;
-        });
     }
 
     @Override
@@ -145,112 +112,6 @@ public class GitActions implements IGitActions
         request.finalText = finalText;
         return tools.feedbackAsync(commitMessage.getProjectId(), request, cancellationToken)
             .thenApplyAsync(response -> response.map(i -> i.uuid));
-    }
-
-    @SuppressWarnings("nls")
-    private void getGitCommitMessage(String baseCommitMessage, List<GitDiff> diffs,
-        IObserver<CommitMessage> observer, ICancellationToken cancellationToken)
-    {
-        var diff = getDiff(diffs, cancellationToken);
-        ProjectId firstProjectId = null;
-        var diffText = new StringBuilder();
-        for (var diffItem : diff.entrySet())
-        {
-            if (cancellationToken.isCanceled())
-            {
-                break;
-            }
-
-            if (firstProjectId == null)
-            {
-                firstProjectId = diffItem.getKey();
-            }
-            else
-            {
-                diffText.append(System.lineSeparator());
-            }
-
-            diffText.append(diffItem.getValue());
-        }
-
-        if (firstProjectId == null)
-        {
-            observer.onCompleted();
-            return;
-        }
-
-        final var projectId = firstProjectId;
-        var toolInvokeRequest = new ToolInvokeRequest();
-        toolInvokeRequest.toolName = "raw";
-        toolInvokeRequest.uiLanguage = settings.getLanguage();
-        toolInvokeRequest.programmingLanguage = "git diff";
-        var content = new ToolInvokeRequestContent();
-        toolInvokeRequest.content = content;
-        content.instruction = resourceProvider.getTextResource(IResourceProvider.PROMTS_GIT_COMMIT)
-            .orElse("")
-            .replace("${language}", settings.getLanguage())
-            .replace("${base_commit_message}",
-                Optional.ofNullable(baseCommitMessage == null || baseCommitMessage.isBlank() ? null : baseCommitMessage)
-                    .orElse("no additional lines"))
-            .replace("${git_dif}", diffText.toString());
-
-        log.trace(TracingSources.API_CALLS, "Prompt", () -> content.instruction);
-        var message = new StringBuilder();
-        var uudi = new StringBuilder();
-        var invokeSource = tools.createInvokeSource(firstProjectId, toolInvokeRequest, cancellationToken);
-        invokeSource.subscribe(new IObserver<ToolInvokeResponse>()
-        {
-            @Override
-            public void onNext(ToolInvokeResponse value)
-            {
-                var content = value.content;
-                if (value.uuid != null)
-                {
-                    uudi.setLength(0);
-                    uudi.append(value.uuid);
-                }
-
-                if (content != null)
-                {
-                    var text = content.text;
-                    if (text != null)
-                    {
-                        if (value.finished)
-                        {
-                            text = text.trim();
-                        }
-                        else
-                        {
-                            synchronized (message)
-                            {
-                                message.append(text);
-                                text = message.toString().trim();
-                            }
-                        }
-
-                        if (!text.isBlank())
-                        {
-                            observer.onNext(new CommitMessage(projectId, uudi.toString(), text));
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void onError(Throwable error)
-            {
-                uudi.setLength(0);
-                observer.onError(error);
-            }
-
-            @Override
-            public void onCompleted()
-            {
-                uudi.setLength(0);
-                observer.onCompleted();
-            }
-        });
-
     }
 
     @SuppressWarnings("nls")

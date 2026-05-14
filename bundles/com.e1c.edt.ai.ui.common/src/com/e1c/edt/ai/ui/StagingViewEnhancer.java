@@ -5,8 +5,10 @@ package com.e1c.edt.ai.ui;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Stack;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -33,11 +35,17 @@ import org.eclipse.ui.forms.widgets.Section;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IObserver;
+import com.e1c.edt.ai.IConversationFacade;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
+import com.e1c.edt.ai.assistent.SendUserMessageRequest;
+import com.e1c.edt.ai.assistent.model.ProjectId;
+import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
+import com.e1c.edt.ai.skills.ISkillExecutor;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -50,25 +58,40 @@ public class StagingViewEnhancer
     private final IReflection reflection;
     private final IWidgets widgets;
     private final IGitActions gitActions;
+    private final IConversationFacade conversationFacade;
+    private final IProjectIdProvider projectIdProvider;
     private final ISettings settings;
     private final IStateService stateService;
+    private final ILog log;
+    private final ISkillExecutor skillExecutor;
     private CancellationTokenSource reviewChangesCancellationToken = new CancellationTokenSource();
     private CancellationTokenSource createCommitMessageCancellationToken = new CancellationTokenSource();
+    private volatile boolean commitMessageGenerating;
 
     @Inject
     public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions,
-        ISettings settings, IStateService stateService)
+        IConversationFacade conversationFacade, IProjectIdProvider projectIdProvider, ILog log, ISettings settings,
+        IStateService stateService,
+        ISkillExecutor skillExecutor)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(reflection);
         Preconditions.checkNotNull(widgets);
         Preconditions.checkNotNull(gitActions);
+        Preconditions.checkNotNull(conversationFacade);
+        Preconditions.checkNotNull(projectIdProvider);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(stateService);
+        Preconditions.checkNotNull(log);
+        Preconditions.checkNotNull(skillExecutor);
+        this.skillExecutor = skillExecutor;
+        this.log = log;
         this.dispatcher = dispatcher;
         this.reflection = reflection;
         this.widgets = widgets;
         this.gitActions = gitActions;
+        this.conversationFacade = conversationFacade;
+        this.projectIdProvider = projectIdProvider;
         this.settings = settings;
         this.stateService = stateService;
     }
@@ -159,50 +182,21 @@ public class StagingViewEnhancer
                             createCommitMessageCancellationToken.cancel();
                             createCommitMessageCancellationToken = newCancellationToken;
                             var baseMessage = commitMessageComponent.getCommitMessage().trim();
-                            var commitMessageSource =
-                                gitActions.ceateGitCommitMessageSource(baseMessage, diffs, newCancellationToken);
-                            commitMessageSource.subscribe(new IObserver<CommitMessage>()
-                            {
-                                @Override
-                                public void onNext(CommitMessage commitMessage)
-                                {
-                                    dispatcher.dispatch(() -> {
-                                        if (newCancellationToken.isCanceled())
-                                        {
-                                            return;
-                                        }
-
-                                        var message = commitMessage.getMessage();
-                                        if (!baseMessage.isBlank())
-                                        {
-                                            message =
-                                                baseMessage + System.lineSeparator() + System.lineSeparator() + message;
-                                        }
-
-                                        commitMessageComponent.setCommitMessage(message);
-                                        commitMessageComponent.updateUI();
-                                        commitMessages.clear();
-                                        commitMessages.add(new CommitMessageInfo(commitMessage, newCancellationToken));
-                                    });
-                                }
-
-                                @Override
-                                public void onError(Throwable error)
-                                {
-                                    //
-                                }
-
-                                @Override
-                                public void onCompleted()
-                                {
-                                    //
-                                }
-                            });
+                            commitMessageGenerating = true;
+                            createMessageButton.setEnabled(false);
+                            createCommitMessageUsingSkills(baseMessage, diffs, newCancellationToken,
+                                commitMessageComponent, commitMessages, createMessageButton);
                         }
                     });
 
                     addStageListener(stagingView,
-                        isEnabled -> dispatcher.dispatch(() -> createMessageButton.setEnabled(isEnabled)));
+                        isEnabled -> dispatcher.dispatch(() -> {
+                            if (commitMessageGenerating && isEnabled)
+                            {
+                                return;
+                            }
+                            createMessageButton.setEnabled(isEnabled);
+                        }));
 
                     reflection.getField(StagingView.class, stagingView, "commitButton", Button.class)
                         .ifPresent(button -> {
@@ -230,6 +224,94 @@ public class StagingViewEnhancer
                 }
             }
         }
+    }
+
+    @SuppressWarnings("nls")
+    private void createCommitMessageUsingSkills(String baseMessage, List<GitDiff> diffs,
+        ICancellationToken cancellationToken, CommitMessageComponent commitMessageComponent,
+        ArrayList<CommitMessageInfo> commitMessages, ToolItem createMessageButton)
+    {
+        Runnable finishGeneration = () -> dispatcher.dispatch(() -> {
+            commitMessageGenerating = false;
+            if (!createMessageButton.isDisposed())
+            {
+                createMessageButton.setEnabled(true);
+            }
+        });
+
+        var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
+            if (diffs.isEmpty())
+                {
+                    finishGeneration.run();
+                    return;
+                }
+
+            var repository = diffs.get(0).getRepository();
+            var workingDirectory = repository.getWorkTree().getAbsolutePath();
+
+            var optionalProjectId = diffs.stream()
+                .flatMap(diff -> diff.getPaths().stream())
+                .map(path -> projectIdProvider.getProjectId(path, cancellationToken))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .findFirst();
+
+            var projectId = optionalProjectId.orElse(ProjectId.Default);
+
+            // @formatter:off
+            SkillExecutionRequest skillRequest = new SkillExecutionRequest("git-commit",
+                Map.of("user_text", baseMessage,
+                       "working_directory", workingDirectory,
+                       "max_commit_count", String.valueOf(5)));
+            // @formatter:on
+
+            skillExecutor.executeAsync(skillRequest, cancellationToken).handle((response, exception) -> {
+                if (exception != null)
+                {
+                    log.logError(exception);
+                }
+                return response;
+            }).thenCompose(result -> {
+                if (result == null)
+                {
+                    return CompletableFuture.completedFuture(null);
+                }
+
+                var request = new SendUserMessageRequest(projectId, result.getPrompt(), null, true);
+
+                return conversationFacade.sendAsync(request, cancellationToken);
+            }).thenAccept(resultMessage -> {
+                if (resultMessage == null || cancellationToken.isCanceled())
+                    {
+                        return;
+                    }
+
+                var generatedMessage = resultMessage.getText();
+
+                if (generatedMessage == null || generatedMessage.isBlank())
+                {
+                    log.logError("Generated commit message is null or empty");
+                    return;
+                }
+
+                var commitMessage =
+                    new CommitMessage(projectId, resultMessage.getSession().getReplyToMessageUuid(), generatedMessage);
+                dispatcher.dispatch(() -> {
+                    if (cancellationToken.isCanceled())
+                    {
+                        return;
+                    }
+                    commitMessageComponent.setCommitMessage(generatedMessage);
+                    commitMessageComponent.updateUI();
+                    commitMessages.clear();
+                    commitMessages.add(new CommitMessageInfo(commitMessage, cancellationToken));
+                });
+            }).exceptionally(error -> {
+                log.logError(error);
+                return null;
+                }).whenComplete((r, t) -> finishGeneration.run());
+        }, false, cancellationToken);
+        job.schedule();
     }
 
     @SuppressWarnings("nls")

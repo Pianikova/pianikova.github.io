@@ -21,6 +21,7 @@ public class AIModule
     {
         // @formatter:off
         install(new AssistentModule());
+
         bind(ParametersParser.class).in(Singleton.class);
         bind(new TypeLiteral<IValidator<String>>() { /**/ }).annotatedWith(Names.named(PARAMETERS)).to(ParametersParser.class);
         bind(new TypeLiteral<IParser<String, Parameters>>(){ /**/ }).to(ParametersParser.class);
@@ -54,6 +55,8 @@ public class AIModule
         bind(ILinkProvider.class).to(LinkProvider.class).in(Singleton.class);
         bind(IProjectTools.class).to(ProjectTools.class).in(Singleton.class);
         bind(ITraceScenario.class).to(TraceScenario.class).in(Singleton.class);
+        bind(IConversationFacade.class).to(ConversationFacade.class).in(Singleton.class);
+        bind(RegexTemplateProcessor.class).in(Singleton.class);
         // @formatter:on
     }
 }

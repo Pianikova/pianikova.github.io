@@ -16,9 +16,10 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.skills.SkillsModule;
 import com.e1c.edt.ai.tools.EditRollback;
-import com.e1c.edt.ai.tools.JShellSessionManager;
 import com.e1c.edt.ai.tools.JShellReflectionWarmUp;
+import com.e1c.edt.ai.tools.JShellSessionManager;
 import com.e1c.edt.ai.tools.MCPToolsModule;
 import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
@@ -44,6 +45,7 @@ public class AIUICommonModule
         // @formatter:off
         install(new AIModule());
         install(new MCPToolsModule());
+        install(new SkillsModule());
 
         // inirializables
         var initializableBinder = Multibinder.newSetBinder(binder(), IInitializable.class);
