@@ -1,7 +1,7 @@
-## Safe Workflow: Create Document
+﻿## Safe Workflow: Create Document
 
-Before writing code, decide which attributes are custom. Do not create document attributes named `Date`, `Дата`,
-`Number`, `Номер`, `Posted`, `Проведен`, `Ref`, `Ссылка`, `DeletionMark`, or `ПометкаУдаления`: these are standard
+Before writing code, decide which attributes are custom. Do not create document attributes named `Date`, `Р”Р°С‚Р°`,
+`Number`, `РќРѕРјРµСЂ`, `Posted`, `РџСЂРѕРІРµРґРµРЅ`, `Ref`, `РЎСЃС‹Р»РєР°`, `DeletionMark`, or `РџРѕРјРµС‚РєР°РЈРґР°Р»РµРЅРёСЏ`: these are standard
 document properties and EDT reports SU45 name/type markers if they are added as custom attributes.
 
 When a document has many attributes, prefer small helper methods that return a NEW `TypeDescription` on every call.
@@ -18,7 +18,7 @@ Do not send JShell code with these EDT patterns:
 TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
 TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, v8project);
 
-// WRONG: the requested type is CatalogRef.Номенклатура, but this is generic CatalogRef.
+// WRONG: the requested type is CatalogRef.РќРѕРјРµРЅРєР»Р°С‚СѓСЂР°, but this is generic CatalogRef.
 TypeItem productType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
 ```
 
@@ -57,7 +57,7 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         // Create document
         Document document = mdFactory.createDocument();
         document.setName("GoodsReceipt");
-        document.getSynonym().put("ru", "Приход товаров");
+        document.getSynonym().put("ru", "РџСЂРёС…РѕРґ С‚РѕРІР°СЂРѕРІ");
 
         // Set document number type - IMPORTANT: use correct enum constant
         document.setNumberType(DocumentNumberType.NUMBER);
@@ -72,16 +72,13 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         // Add warehouse attribute (Catalog reference)
         DocumentAttribute warehouse = mdFactory.createDocumentAttribute();
         warehouse.setName("Warehouse");
-        warehouse.getSynonym().put("ru", "Склад");
+        warehouse.getSynonym().put("ru", "РЎРєР»Р°Рґ");
         TypeItem catalogRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Warehouses");
         if (catalogRefType == null) {
             if (transaction.getTopObjectByFqn("Catalog.Warehouses") == null) {
                 throw new IllegalStateException("Missing referenced catalog: Catalog.Warehouses");
             }
-            Type t = McoreFactory.eINSTANCE.createType();
-            t.setName("CatalogRef.Warehouses");
-            t.setNameRu("СправочникСсылка.Warehouses");
-            catalogRefType = t;
+            throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
         }
         TypeDescription warehouseType = new TypeDescriptionBuilder()
             .addType(catalogRefType)
@@ -89,28 +86,25 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         warehouse.setType(warehouseType);
         document.getAttributes().add(warehouse);
 
-        // ⚠️ WARNING: Do NOT create "Date" attribute - it conflicts with standard document property
+        // вљ пёЏ WARNING: Do NOT create "Date" attribute - it conflicts with standard document property
         // Documents have standard attributes: Date, Number, Posted, Ref - these are built-in
         // Add custom attributes only (do not use names: Date, Number, Posted, DeletionMark, Ref)
 
         // Add tabular section with typed line attributes
         DocumentTabularSection products = mdFactory.createDocumentTabularSection();
         products.setName("Products");
-        products.getSynonym().put("ru", "Товары");
+        products.getSynonym().put("ru", "РўРѕРІР°СЂС‹");
         products.setUuid(UUID.randomUUID());
 
         TabularSectionAttribute product = mdFactory.createTabularSectionAttribute();
         product.setName("Product");
-        product.getSynonym().put("ru", "Номенклатура");
+        product.getSynonym().put("ru", "РќРѕРјРµРЅРєР»Р°С‚СѓСЂР°");
         TypeItem productsRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
         if (productsRefType == null) {
             if (transaction.getTopObjectByFqn("Catalog.Products") == null) {
                 throw new IllegalStateException("Missing referenced catalog: Catalog.Products");
             }
-            Type t = McoreFactory.eINSTANCE.createType();
-            t.setName("CatalogRef.Products");
-            t.setNameRu("СправочникСсылка.Products");
-            productsRefType = t;
+            throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
         }
         TypeDescription productType = new TypeDescriptionBuilder()
             .addType(productsRefType)
@@ -121,7 +115,7 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 
         TabularSectionAttribute quantity = mdFactory.createTabularSectionAttribute();
         quantity.setName("Quantity");
-        quantity.getSynonym().put("ru", "Количество");
+        quantity.getSynonym().put("ru", "РљРѕР»РёС‡РµСЃС‚РІРѕ");
         TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
         TypeDescription quantityType = new TypeDescriptionBuilder()
             .addType(numberType)
@@ -175,16 +169,16 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 - **Every `DocumentAttribute` and `TabularSectionAttribute` must call `setType(...)`** before `add(...)`; otherwise EDT reports `md-legacy-emf-check` / `type is required`
 - **Never reuse the same `TypeDescription` instance for multiple children.** `TypeDescription` is containment; assigning it to another attribute moves it away from the previous owner and causes `type is required` markers. Reuse `TypeItem`, not `TypeDescription`.
 - **For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first.** For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`, not `.setNumberQualifiers(10, 2, false)`.
-- **For concrete references, use exact TypeItem proxies.** `CatalogRef.Номенклатура` means `typeProvider.getProxy("CatalogRef.Номенклатура")`, not generic `IEObjectTypeNames.CATALOG_REF`; `EnumRef.ВидыТоваров` means `typeProvider.getProxy("EnumRef.ВидыТоваров")`, not generic `ENUM_REF`. Keep `"Catalog.Номенклатура"` for `transaction.getTopObjectByFqn(...)` only.
-- If `getProxy("CatalogRef.Name")` is null but `transaction.getTopObjectByFqn("Catalog.Name")` exists, create a named `McoreFactory.eINSTANCE.createType()` fallback. Never replace a requested reference with `String`.
+- **For concrete references, use exact TypeItem proxies.** `CatalogRef.РќРѕРјРµРЅРєР»Р°С‚СѓСЂР°` means `typeProvider.getProxy("CatalogRef.РќРѕРјРµРЅРєР»Р°С‚СѓСЂР°")`, not generic `IEObjectTypeNames.CATALOG_REF`; `EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ` means `typeProvider.getProxy("EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ")`, not generic `ENUM_REF`. Keep `"Catalog.РќРѕРјРµРЅРєР»Р°С‚СѓСЂР°"` for `transaction.getTopObjectByFqn(...)` only.
+- If `getProxy("CatalogRef.Name")` or another exact reference proxy is null but the referenced top object exists, do not create a transient `McoreFactory.eINSTANCE.createType()` fallback. Validate the referenced object, let EDT refresh produced types, then retry the exact `typeProvider.getProxy(...)`. Never replace a requested reference with `String` or a generic root type.
 - **Before `attachTopObject`, verify all document attributes and tabular section attributes have non-null/non-empty `getType()`**
 - **Check before creating** to avoid `BmFqnAlreadyInUseException`
 
-**⚠️ CRITICAL: Standard Document Attributes**
+**вљ пёЏ CRITICAL: Standard Document Attributes**
 - **NEVER create custom attributes with names matching standard document properties**
 - Standard document attributes (built-in, cannot be overridden): `Date`, `Number`, `Posted`, `Ref`, `DeletionMark`
-- Russian standard names are also reserved: `Дата`, `Номер`, `Проведен`, `Ссылка`, `ПометкаУдаления`
-- Trying to create an attribute named "Date" will cause validation error: "Некорректное значение свойства \"name\" реквизита \"Date\". Совпадает с именем стандартного реквизита"
+- Russian standard names are also reserved: `Р”Р°С‚Р°`, `РќРѕРјРµСЂ`, `РџСЂРѕРІРµРґРµРЅ`, `РЎСЃС‹Р»РєР°`, `РџРѕРјРµС‚РєР°РЈРґР°Р»РµРЅРёСЏ`
+- Trying to create an attribute named "Date" will cause validation error: "РќРµРєРѕСЂСЂРµРєС‚РЅРѕРµ Р·РЅР°С‡РµРЅРёРµ СЃРІРѕР№СЃС‚РІР° \"name\" СЂРµРєРІРёР·РёС‚Р° \"Date\". РЎРѕРІРїР°РґР°РµС‚ СЃ РёРјРµРЅРµРј СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ СЂРµРєРІРёР·РёС‚Р°"
 - Only create custom attributes with unique names (e.g., Warehouse, Customer, Amount, etc.)
 
 **Register Registers for Accumulation/Accounting Registers:**

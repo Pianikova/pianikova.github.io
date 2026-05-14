@@ -332,36 +332,21 @@ public class JShellMcpTool
 		var description = new StringBuilder();
         description.append("Executes Java code using JShell REPL. Preserves state across executions.");
 		description.append("\n\n**IMPORTANT:**");
-        description.append("\n- For EDT metadata or Eclipse API code generation, you MUST call ")
+        description.append("\n- For API code generation, call ")
             .append(JShellManualMcpTool.TOOL_NAME)
-            .append(" first to get a scenario-specific template");
+            .append(" first when a scenario-specific guide is available");
         description.append("\n- Use ").append(JShellReflectionMcpTool.TOOL_NAME)
             .append(" before execution only when unsure about packages, types, enum constants, methods, fields, constructors, or signatures not already covered by an exact ")
             .append(JShellManualMcpTool.TOOL_NAME).append(" guide");
         description.append("\n- NEVER invent Java API calls, method overloads, enum constants, package names, or type names. ")
             .append("If the exact API is not already proven by tool output, call ")
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" first");
-        description.append("\n- For baseline top-level EDT metadata CRUD, trust exact ").append(JShellManualMcpTool.TOOL_NAME)
-            .append(" scenarios and API cards; do not call ").append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" merely to re-check listed factories, collections, FQN prefixes, or safe setters");
-        description.append("\n- Known EDT enum constants from the manual do NOT need reflection: ")
-            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
-            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`");
-        description.append("\n- For TypeDescriptionBuilder, validate every `typeProvider.getProxy(...)` result before `addType(...)`; null proxies cause runtime `IllegalArgumentException`");
-        description.append("\n- For EDT string TypeDescription values, default to `setStringQualifiers(100, false)` or smaller. Do not use length greater than 100, such as 150 or 1000, unless the user explicitly requires it and the current EDT model accepts it");
         description.append("\n- If a previous execution failed with `cannot find symbol`, `method not found`, or `package does not exist`, use ")
             .append(JShellReflectionMcpTool.TOOL_NAME).append(" with `suggested_reflection_queries` instead of guessing APIs");
         description.append("\n- Choose `scope` from the allowed values listed in the `scope` parameter. ")
             .append("Scope-specific required next steps are returned in JSON field `required_next_step` by the matching `IJShellBindingProvider`");
         description.append("\n- Scope providers pre-import common safe API classes. Do not add redundant wildcard imports; ")
             .append("when a missing type is truly needed, add an explicit import or use a fully-qualified class name");
-        description.append("\n- For `scope: \"edt\"` metadata CRUD, include the changed top-level entities and their `.mdo` paths in `response_description` when possible; after execution, follow `required_next_step` by calling GetMarkers with `path` for each changed entity, not a broad project-wide cleanup");
-        description.append("\n- For `scope: \"edt\"`, do not narrow or simplify the user's requested metadata CRUD. ")
-            .append("If the user requested reference attributes (`CatalogRef.*`, `EnumRef.*`, etc.), create those exact ")
-            .append("attributes or fail with a blocking exception; do not replace them with `String`, omit them, or describe partial work as success");
-        description.append("\n- For EDT `Enum` metadata in JShell, never use the simple type name `Enum`; use ")
-            .append("`com._1c.g5.v8.dt.metadata.mdclass.Enum` to avoid ambiguity with `java.lang.Enum`. ")
-            .append("Do not import `com._1c.g5.v8.dt.metadata.mdclass.Enum`");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
 
@@ -373,14 +358,11 @@ public class JShellMcpTool
 		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");
         description.append("\n- Output MUST be in main thread for result capture");
         description.append("\n- DO NOT use without a value `return;` - always return any value (e.g., `return null;`)");
-        description.append("\n- Non-trivial EDT snippets SHOULD be wrapped in `{ ... }` to keep local variables local in persistent JShell sessions");
+        description.append("\n- Non-trivial snippets SHOULD be wrapped in `{ ... }` to keep local variables local in persistent JShell sessions");
         description.append("\n- Calls with the same `repl_session_id` are executed sequentially; wait for the previous result before relying on changed session state");
-        description.append("\n- Do not run ").append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" in parallel with a JShell metadata change for the same project/session; wait for the JShell result first");
         description.append("\n- `request_description` describes what will be done and is shown as request markdown");
         description.append("\n- `response_description` describes what was done and is shown as response markdown");
-        description.append("\n- For EDT CRUD, `response_description` should name the changed top-level objects and known `.mdo` paths so the next GetMarkers call can be scoped");
-        description.append("\n- `request_description` and `response_description` must match the actual user request and executed code; do not change them to a smaller task such as \"only string attributes\" unless the user explicitly asked for that");
+        description.append("\n- `request_description` and `response_description` must match the actual user request and executed code");
 
 		description.append("\n\n**Available bindings:**");
 		if (!bindingProviders.isEmpty())
@@ -405,8 +387,7 @@ public class JShellMcpTool
             .append(" once with all uncertain Java API names/signatures before writing calls that depend on them");
         description.append("\n4. Use ").append(TOOL_NAME).append(" with that ID to execute code");
         description.append("\n5. Follow JSON field `required_next_step` when it is returned by the active binding provider");
-        description.append("\n6. For EDT CRUD, validate changed `.mdo` paths first and fix only markers relevant to the changed entities");
-		description.append("\n7. Reuse same ID to maintain state");
+		description.append("\n6. Reuse same ID to maintain state");
 
 		// Add restricted types information
         var restrictedTypes = restrictedTypesProvider.getRestrictedTypes();

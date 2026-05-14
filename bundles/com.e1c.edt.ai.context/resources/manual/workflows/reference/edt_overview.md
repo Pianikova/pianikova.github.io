@@ -1127,7 +1127,7 @@ catalog.setHierarchyType(HierarchyType.HIERARCHY_OF_ITEMS);
 
 **TypeDescriptionBuilder:** always validate `typeProvider.getProxy(...)` before `addType(...)`.
 If the proxy is null, do not call `addType(null)`: stop and create the referenced metadata first.
-Use a generic fallback type only when the user explicitly asked for a polymorphic "any catalog" / "any enum" reference.
+Use a generic root type only when the user explicitly asked for a polymorphic "any catalog" / "any enum" reference.
 Unresolved specific proxies may happen for typos, non-existent metadata, or references to objects that are not yet visible.
 
 ```java
@@ -1136,10 +1136,7 @@ if (proxy == null) {
     if (transaction.getTopObjectByFqn("Catalog.Units") == null) {
         throw new IllegalStateException("Missing referenced catalog: Catalog.Units");
     }
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("CatalogRef.Units");
-    t.setNameRu("СправочникСсылка.Units");
-    proxy = t;
+    throw new IllegalStateException("CatalogRef.Units is not available yet. Run a scoped marker check for Catalog.Units, let EDT refresh produced types, then retry exact typeProvider.getProxy(\"CatalogRef.Units\").");
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(proxy)

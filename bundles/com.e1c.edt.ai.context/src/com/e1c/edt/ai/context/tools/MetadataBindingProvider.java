@@ -58,8 +58,6 @@ import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
 import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
 import com.e1c.edt.ai.tools.IJShellBindingProvider;
 import com.e1c.edt.ai.tools.JShellBindingDescription;
-import com.e1c.edt.ai.tools.JShellExecutionContext;
-import com.e1c.edt.ai.tools.JShellExecutionResult;
 import com.e1c.edt.ai.tools.ManualResourceLoader;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -148,12 +146,7 @@ public class MetadataBindingProvider
         var bindings = new HashMap<String, JShellBindingDescription>();
 
         bindings.put("mdFactory", new JShellBindingDescription("Factory for creating 1C metadata objects",
-            bindingDoc("mdFactory"), MdClassFactory.eINSTANCE, MdClassFactory.class,
-            "**⚠️ RESTRICTION: Cannot be used outside BM transaction.** Use `mdFactory` ONLY in "
-                + "AbstractBmTask.execute() body, where IBmTransaction is available. Do not use attachTopObject() for existing objects. "
-                + "**IMPORTANT**: Objects created with mdFactory MUST have UUIDs set via "
-                + "manual assignment: `object.setUuid(UUID.randomUUID())`. "
-                + "NOTE: `modelFactory.fillDefaultReferences()` may timeout in JShell due to OSGi service limitations."));
+            bindingDoc("mdFactory"), MdClassFactory.eINSTANCE, MdClassFactory.class));
 
         bindings.put("fqnGenerator", new JShellBindingDescription(
             "Generates FQNs (Fully Qualified Names) for top-level metadata objects. Required before attachTopObject().",
@@ -182,22 +175,15 @@ public class MetadataBindingProvider
     @Override
     public String getUseCases()
     {
-        return "- Create and edit 1C metadata objects in BM transactions"
-            + "\n- Resolve IV8Project, BM model, and all top-level configuration entities"
-            + "\n- Build TypeDescription for attributes, dimensions, and resources"
-            + "\n- Attach new top-level objects with generated FQN"
-            + "\n- Remove existing objects through parent collections and transaction detach"
-            + "\n- For detailed workflows and templates, use `JShellManual`"
-            + "\n- Use enhanced methods with object existence checks and error handling";
+        return "- Use this scope when the matched manual resource requires these bindings"
+            + "\n- For scenario workflow, validation, and API usage rules, use `JShellManual`";
     }
 
     @SuppressWarnings("nls")
     @Override
     public String getDescription()
     {
-        return "1C metadata API: Create, edit, and delete top-level 1C metadata entities and common child objects. "
-            + "Includes factories (mdFactory, modelFactory), FQN generator, BM model with transactions, "
-            + "and resource lookup for Eclipse integration.";
+        return "Binding provider for the `edt` scope. Detailed usage guidance is stored in manual markdown resources.";
     }
 
     @Override
@@ -270,8 +256,6 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.core.platform.IV8Project;",
             "import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;",
             "import com._1c.g5.v8.dt.mcore.McorePackage;",
-            "import com._1c.g5.v8.dt.mcore.McoreFactory;",
-            "import com._1c.g5.v8.dt.mcore.Type;",
             "import com._1c.g5.v8.dt.mcore.TypeDescription;",
             "import com._1c.g5.v8.dt.mcore.TypeItem;",
             "import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;",
@@ -316,80 +300,4 @@ public class MetadataBindingProvider
         // @formatter:on
     }
 
-    @SuppressWarnings("nls")
-    @Override
-    public String getRequiredNextStep(JShellExecutionContext context)
-    {
-        if (context == null || context.result == null || hasExecutionErrors(context.result)
-            || !isLikelyMetadataMutation(context.code))
-        {
-            return "";
-        }
-
-        return "Before reporting success, compare the original user request, request_description, executed code, "
-            + "and response_description. If any requested metadata object, attribute, tabular section, enum value, "
-            + "type, reference, registrar, or property was omitted or narrowed, run a corrective JShell operation "
-            + "for the same changed entity or fail explicitly; markers cannot detect missing requested features. "
-            + "Call GetMarkers with marker_type \"1c\" scoped to each changed top-level entity .mdo path when "
-            + "that path is known or can be derived. Fix only markers relevant to the entities changed by this "
-            + "CRUD operation. Do not fix unrelated project-wide markers. Use project-wide GetMarkers only for "
-            + "changes that can affect other objects, such as delete, rename, registrar links, references, "
-            + "command interfaces, or configuration-level changes; even then, filter fixes to the changed "
-            + "entities and directly affected references. Inspect all relevant 1C markers for the changed "
-            + "entity/top object, including errors, warnings, and infos; do not check only errors. If SU45/type "
-            + "markers appear, ensure every BasicFeature child "
-            + "has its own fresh TypeDescription instance; do not reuse one TypeDescription across multiple "
-            + "attributes, dimensions, or resources. For document CRUD, do not create custom attributes named "
-            + "Date/Дата, Number/Номер, Posted/Проведен, Ref/Ссылка, or DeletionMark/ПометкаУдаления. For numeric "
-            + "types, TypeDescriptionBuilder.setNumberQualifiers uses (scale, precision, nonNegative), for example "
-            + "Number(10,2) is setNumberQualifiers(2, 10, false). For string types, do not use "
-            + "setStringQualifiers with length greater than 100 unless the user explicitly requires it and the "
-            + "EDT model accepts it; default to setStringQualifiers(100, false), not 150 or 1000. If the user "
-            + "requested a concrete reference type such as CatalogRef.Контрагенты, CatalogRef.ХранимыеФайлы, "
-            + "or EnumRef.ВидыТоваров, verify that the assigned TypeItem is the exact proxy "
-            + "typeProvider.getProxy(\"CatalogRef.Контрагенты\"), getProxy(\"CatalogRef.ХранимыеФайлы\"), or "
-            + "getProxy(\"EnumRef.ВидыТоваров\"); do not use generic IEObjectTypeNames.CATALOG_REF or ENUM_REF "
-            + "unless the field is intentionally polymorphic. If a concrete reference proxy is null but the "
-            + "referenced top object exists in this transaction/project, create a named Mcore Type fallback "
-            + "with McoreFactory.eINSTANCE.createType(), setName(\"CatalogRef.Name\")/setNameRu(\"СправочникСсылка.Name\") "
-            + "or setName(\"EnumRef.Name\")/setNameRu(\"ПеречислениеСсылка.Name\"), and use that TypeItem. Never replace "
-            + "a requested reference with String and never report success after printing ERROR to stderr; throw "
-            + "IllegalStateException for blocking preconditions. For registers, link registrar documents via "
-            + "document.getRegisterRecords().add(register). Fix relevant markers before reporting success or starting "
-            + "another 1C metadata CRUD operation.";
-    }
-
-    private boolean hasExecutionErrors(JShellExecutionResult result)
-    {
-        return result.compilationErrors != null && !result.compilationErrors.isEmpty()
-            || result.runtimeErrors != null && !result.runtimeErrors.isEmpty();
-    }
-
-    private boolean isLikelyMetadataMutation(String code)
-    {
-        if (code == null || code.isBlank())
-        {
-            return false;
-        }
-
-        var hasMetadataContext = containsAny(code,
-            "mdFactory", "modelFactory", "modelManager", "fqnGenerator", "IBmTransaction", "IBmModel", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
-            "IBmGlobalEditingContext", "Configuration", "com._1c.g5.v8.dt.metadata", "com._1c.g5.v8.bm"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-        var hasMutation = containsAny(code,
-            "globalContext.execute", "new AbstractBmTask", "attachTopObject", "detachTopObject", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            ".set", ".add(", ".remove(", ".clear()"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-        return hasMetadataContext && hasMutation;
-    }
-
-    private boolean containsAny(String text, String... fragments)
-    {
-        for (var fragment : fragments)
-        {
-            if (text.contains(fragment))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
 }

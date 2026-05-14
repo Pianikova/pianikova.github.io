@@ -1,4 +1,4 @@
-## Scenario: Create Attribute For Entity
+﻿## Scenario: Create Attribute For Entity
 
 ### Correct child types
 - `Catalog` -> `CatalogAttribute`
@@ -56,10 +56,7 @@ if (catalogRefType == null) {
     if (transaction.getTopObjectByFqn("Catalog.Counterparties") == null) {
         throw new IllegalStateException("Missing referenced catalog: Catalog.Counterparties");
     }
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("CatalogRef.Counterparties");
-    t.setNameRu("СправочникСсылка.Counterparties");
-    catalogRefType = t;
+    throw new IllegalStateException("Reference type CatalogRef.Counterparties is not available yet; retry after EDT refreshes produced types.");
 }
 TypeDescription counterpartyType = new TypeDescriptionBuilder()
     .addType(catalogRefType)
@@ -81,20 +78,20 @@ quantity.setType(quantityType);
 products.getAttributes().add(quantity);
 ```
 
-### Recovery pattern for real error (`Catalog.Авторы` -> `Страна`)
+### Recovery pattern for real error (`Catalog.РђРІС‚РѕСЂС‹` -> `РЎС‚СЂР°РЅР°`)
 ```java
 IV8Project v8project = projectManager.getProject(project);
-Catalog authors = (Catalog)transaction.getTopObjectByFqn("Catalog.Авторы");
+Catalog authors = (Catalog)transaction.getTopObjectByFqn("Catalog.РђРІС‚РѕСЂС‹");
 if (authors != null) {
     IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
         .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
     CatalogAttribute country = authors.getAttributes().stream()
-        .filter(a -> "Страна".equals(a.getName()))
+        .filter(a -> "РЎС‚СЂР°РЅР°".equals(a.getName()))
         .findFirst()
         .orElse(null);
     if (country == null) {
         country = mdFactory.createCatalogAttribute();
-        country.setName("Страна");
+        country.setName("РЎС‚СЂР°РЅР°");
         country.setUuid(UUID.randomUUID());
         TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
         TypeDescription countryType = new TypeDescriptionBuilder()
@@ -117,9 +114,9 @@ if (authors != null) {
 ### Rules
 - Always choose the child class that matches the parent entity
 - Every attribute derived from `BasicFeature` must have `setType(...)` before it is added to the parent collection
-- When the user gives a concrete reference (`CatalogRef.Контрагенты`, `CatalogRef.ХранимыеФайлы`, `EnumRef.ВидыТоваров`), use the exact proxy (`"CatalogRef.Контрагенты"`, `"CatalogRef.ХранимыеФайлы"`, `"EnumRef.ВидыТоваров"`). Do not use generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` as a final type.
+- When the user gives a concrete reference (`CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹`, `CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹`, `EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ`), use the exact proxy (`"CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹"`, `"CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹"`, `"EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ"`). Do not use generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` as a final type.
 - If a concrete reference proxy is null, stop and report the missing referenced metadata. Do not silently create a generic placeholder unless the user explicitly asked for polymorphic "any catalog/any enum".
-- If a concrete reference proxy is null but `transaction.getTopObjectByFqn("Catalog.Name")` / `"Enum.Name"` exists, create a named `McoreFactory.eINSTANCE.createType()` fallback with the exact `CatalogRef.Name` / `EnumRef.Name`. Do not replace the field with `String`.
+- If a concrete reference proxy is null but `transaction.getTopObjectByFqn("Catalog.Name")` / `"Enum.Name"` exists, do not create a transient `McoreFactory.eINSTANCE.createType()` fallback. It is not a persistable project-produced type. Finish the referenced-object transaction, let EDT refresh produced types, then retry with `typeProvider.getProxy("CatalogRef.Name")` / `getProxy("EnumRef.Name")`.
 - Do not use `typeProvider.createProxy(...)` or `IDtConstants.get*RefQName(...)`; use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Use `"Catalog.Name"` / `"Enum.Name"` only for metadata object FQNs in `transaction.getTopObjectByFqn(...)`.
 - Never reuse one `TypeDescription` instance for multiple children. It is an EMF containment object and moves to the latest owner. Reuse `TypeItem` proxies, then build a new `TypeDescription` per child.
 - Before attaching or finishing a bulk CRUD transaction, loop through all new `BasicFeature` children and fail if `getType() == null || getType().getTypes().isEmpty()`
@@ -130,3 +127,4 @@ if (authors != null) {
 ### Required post-check
 
 After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.
+

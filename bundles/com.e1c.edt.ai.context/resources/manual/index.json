@@ -1960,7 +1960,7 @@
     "scope": "edt",
     "category": "reference",
     "title": "TypeDescriptionBuilder Best Practices",
-    "summary": "Best practices for using TypeDescriptionBuilder inside transactions.",
+    "summary": "Best practices for TypeDescriptionBuilder, exact reference TypeItem proxies, and safe creation order for reference types.",
     "guide": "workflows/reference/typedescription_best_practices.md",
     "bindings": [
       "workspaceRoot",
@@ -1972,7 +1972,11 @@
       "TypeDescriptionBuilder",
       "transaction context",
       "IEObjectProvider",
-      "best practices"
+      "best practices",
+      "CatalogRef",
+      "EnumRef",
+      "reference types",
+      "creation order"
     ]
   },
   {
@@ -1980,7 +1984,7 @@
     "scope": "edt",
     "category": "reference",
     "title": "Metadata Object Coverage",
-    "summary": "Maintenance map from 1C metadata object kinds to JShellManual scenario ids and reusable templates.",
+    "summary": "Maintenance map from 1C metadata object kinds to JShellManual scenario ids, reusable templates, and cross-reference creation order.",
     "guide": "workflows/reference/metadata_object_coverage.md",
     "bindings": [
       "workspaceRoot",

@@ -1,6 +1,6 @@
-## Safe Workflow: Create Catalog
+﻿## Safe Workflow: Create Catalog
 
-> ⚠️ **HierarchyType — only two valid constants in EDT API.**
+> вљ пёЏ **HierarchyType вЂ” only two valid constants in EDT API.**
 > Use ONLY `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` (default) or `HierarchyType.HIERARCHY_OF_ITEMS`.
 > Other names from 1C:Enterprise classic API (`HIERARCHY_GROUPS`, `HIERARCHY_HIERARCHICAL`, `HIERARCHY_NONE`) **do not exist** and cause `cannot find symbol`.
 
@@ -19,9 +19,9 @@ Catalog created = globalContext.execute(new AbstractBmTask<Catalog>("Create cata
         catalog.setName("Products");
         catalog.getSynonym().put("ru", "Products");
         catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);
-        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS);       // does NOT exist
-        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_HIERARCHICAL); // does NOT exist
-        // ❌ catalog.setHierarchyType(HierarchyType.HIERARCHY_NONE);         // does NOT exist — omit the call instead
+        // вќЊ catalog.setHierarchyType(HierarchyType.HIERARCHY_GROUPS);       // does NOT exist
+        // вќЊ catalog.setHierarchyType(HierarchyType.HIERARCHY_HIERARCHICAL); // does NOT exist
+        // вќЊ catalog.setHierarchyType(HierarchyType.HIERARCHY_NONE);         // does NOT exist вЂ” omit the call instead
         catalog.setCodeLength(9);
         catalog.setDescriptionLength(150);
 
@@ -60,16 +60,16 @@ Catalog created = globalContext.execute(new AbstractBmTask<Catalog>("Create cata
 | `HierarchyType.HIERARCHY_OF_ITEMS`             | `HierarchyType.HIERARCHY_HIERARCHICAL`            |
 | _(omit `setHierarchyType` for non-hierarchical)_ | `HierarchyType.HIERARCHY_NONE`                  |
 
-For a non-hierarchical catalog simply do not call `setHierarchyType(...)` —
+For a non-hierarchical catalog simply do not call `setHierarchyType(...)` вЂ”
 the platform default is correct.
 
 ### Safe reference type pattern
 
-When the user names a concrete reference type such as `CatalogRef.Контрагенты`,
-`CatalogRef.ХранимыеФайлы`, or `EnumRef.ВидыТоваров`, resolve that exact metadata
-reference type with `typeProvider.getProxy("CatalogRef.Контрагенты")`,
-`typeProvider.getProxy("CatalogRef.ХранимыеФайлы")`, or
-`typeProvider.getProxy("EnumRef.ВидыТоваров")`. Do not silently replace it with
+When the user names a concrete reference type such as `CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹`,
+`CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹`, or `EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ`, resolve that exact metadata
+reference type with `typeProvider.getProxy("CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹")`,
+`typeProvider.getProxy("CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹")`, or
+`typeProvider.getProxy("EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ")`. Do not silently replace it with
 generic `IEObjectTypeNames.CATALOG_REF` or `IEObjectTypeNames.ENUM_REF`; generic
 reference types are valid only when the user explicitly asks for "any catalog" /
 "any enum" polymorphism.
@@ -86,10 +86,7 @@ if (unitsRef == null) {
     if (transaction.getTopObjectByFqn("Catalog.Units") == null) {
         throw new IllegalStateException("Missing referenced catalog: Catalog.Units");
     }
-    Type unitsType = McoreFactory.eINSTANCE.createType();
-    unitsType.setName("CatalogRef.Units");
-    unitsType.setNameRu("СправочникСсылка.Units");
-    unitsRef = unitsType; // Type index fallback; still the exact CatalogRef.Units type
+    throw new IllegalStateException("CatalogRef.Units is not available yet. Run a scoped marker check for Catalog.Units, let EDT refresh produced types, then retry exact typeProvider.getProxy(\"CatalogRef.Units\").");
 }
 TypeDescription strictType = new TypeDescriptionBuilder()
     .addType(unitsRef)
@@ -100,35 +97,26 @@ article.setType(strictType);
 Concrete Russian-name example:
 
 ```java
-TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.Контрагенты");
-TypeItem pictureRef = (TypeItem)typeProvider.getProxy("CatalogRef.ХранимыеФайлы");
-TypeItem kindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
+TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹");
+TypeItem pictureRef = (TypeItem)typeProvider.getProxy("CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹");
+TypeItem kindRef = (TypeItem)typeProvider.getProxy("EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ");
 if (suppliersRef == null) {
-    if (transaction.getTopObjectByFqn("Catalog.Контрагенты") == null) {
-        throw new IllegalStateException("Missing referenced catalog: Catalog.Контрагенты");
+    if (transaction.getTopObjectByFqn("Catalog.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹") == null) {
+        throw new IllegalStateException("Missing referenced catalog: Catalog.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹");
     }
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("CatalogRef.Контрагенты");
-    t.setNameRu("СправочникСсылка.Контрагенты");
-    suppliersRef = t;
+    throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
 }
 if (pictureRef == null) {
-    if (transaction.getTopObjectByFqn("Catalog.ХранимыеФайлы") == null) {
-        throw new IllegalStateException("Missing referenced catalog: Catalog.ХранимыеФайлы");
+    if (transaction.getTopObjectByFqn("Catalog.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹") == null) {
+        throw new IllegalStateException("Missing referenced catalog: Catalog.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹");
     }
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("CatalogRef.ХранимыеФайлы");
-    t.setNameRu("СправочникСсылка.ХранимыеФайлы");
-    pictureRef = t;
+    throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
 }
 if (kindRef == null) {
-    if (transaction.getTopObjectByFqn("Enum.ВидыТоваров") == null) {
-        throw new IllegalStateException("Missing referenced enum: Enum.ВидыТоваров");
+    if (transaction.getTopObjectByFqn("Enum.Р’РёРґС‹РўРѕРІР°СЂРѕРІ") == null) {
+        throw new IllegalStateException("Missing referenced enum: Enum.Р’РёРґС‹РўРѕРІР°СЂРѕРІ");
     }
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("EnumRef.ВидыТоваров");
-    t.setNameRu("ПеречислениеСсылка.ВидыТоваров");
-    kindRef = t;
+    throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
 }
 supplierAttribute.setType(new TypeDescriptionBuilder().addType(suppliersRef).build());
 pictureAttribute.setType(new TypeDescriptionBuilder().addType(pictureRef).build());
@@ -142,7 +130,7 @@ IV8Project v8project = projectManager.getProject(project);
 // Create information register with dimensions of different types
 InformationRegister prices = mdFactory.createInformationRegister();
 prices.setName("Prices");
-prices.getSynonym().put("ru", "Цены");
+prices.getSynonym().put("ru", "Р¦РµРЅС‹");
 
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
@@ -165,10 +153,7 @@ if (priceTypesRef == null) {
     if (transaction.getTopObjectByFqn("Catalog.PriceTypes") == null) {
         throw new IllegalStateException("Missing referenced catalog: Catalog.PriceTypes");
     }
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("CatalogRef.PriceTypes");
-    t.setNameRu("СправочникСсылка.PriceTypes");
-    priceTypesRef = t;
+    throw new IllegalStateException("CatalogRef.PriceTypes is not available yet. Run a scoped marker check for Catalog.PriceTypes, let EDT refresh produced types, then retry exact typeProvider.getProxy(\"CatalogRef.PriceTypes\").");
 }
 TypeDescription priceTypesType = new TypeDescriptionBuilder()
     .addType(priceTypesRef)
@@ -201,7 +186,7 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
 // Dimension: Account (specific ChartOfAccounts reference)
 AccountingRegisterDimension accountDim = mdFactory.createAccountingRegisterDimension();
 accountDim.setName("Account");
-TypeItem coaRef = (TypeItem)typeProvider.getProxy("ChartOfAccounts.ПланСчетов");
+TypeItem coaRef = (TypeItem)typeProvider.getProxy("ChartOfAccounts.РџР»Р°РЅРЎС‡РµС‚РѕРІ");
 TypeDescription coaType = new TypeDescriptionBuilder()
     .addType(coaRef)
     .build();
@@ -210,7 +195,7 @@ accReg.getDimensions().add(accountDim);
 ```
 
 ### JShell-safe UUID strategy
-⚠️ **WARNING:** `modelFactory.fillDefaultReferences()` may timeout in JShell due to OSGi service limitations.
+вљ пёЏ **WARNING:** `modelFactory.fillDefaultReferences()` may timeout in JShell due to OSGi service limitations.
 Prefer manual UUID assignment (Option 1) for reliable JShell execution.
 
 ```java
@@ -239,7 +224,7 @@ transaction.attachTopObject((IBmObject)catalog, fqn);
 
 ### Common Mistake: Not setting UUIDs
 ```java
-// ❌ WRONG - UUIDs not set, validation fails
+// вќЊ WRONG - UUIDs not set, validation fails
 Catalog catalog = mdFactory.createCatalog();
 catalog.setName("Products");
 transaction.attachTopObject((IBmObject)catalog, fqn);
@@ -248,7 +233,7 @@ transaction.attachTopObject((IBmObject)catalog, fqn);
 
 ### Important notes
 - Validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
-- References to metadata objects created in the same unfinished scenario may be unavailable through `getProxy(...)` until EDT refreshes dynamic type indexes. If the referenced top object exists, create a named `McoreFactory.eINSTANCE.createType()` fallback with the exact `CatalogRef.Name` / `EnumRef.Name`; do not report success with a generic or string placeholder.
+- References to metadata objects created in the same unfinished scenario may be unavailable through `getProxy(...)` until EDT refreshes dynamic type indexes. If the referenced top object exists but the exact `CatalogRef.Name` / `EnumRef.Name` proxy is still `null`, do not create a transient fallback type. Validate the referenced object, let EDT refresh produced types, then retry exact `typeProvider.getProxy(...)`.
 - Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, or `IDtConstants.getEnumRefQName(...)` for EDT TypeDescription creation in JShell. Use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Top-object FQNs are still `"Catalog.Name"` / `"Enum.Name"` for `transaction.getTopObjectByFqn(...)`; TypeItem names are `"CatalogRef.Name"` / `"EnumRef.Name"`.
 - For blocking preconditions, throw `IllegalStateException`. Do not only print `ERROR` to `System.err` and `return null`, because that can make JShell look successful.
 

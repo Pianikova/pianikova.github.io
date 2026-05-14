@@ -179,7 +179,7 @@ public class EclipsePlatformBindingProvider
         desc.append("- Prefer inspection first, mutation second\n");
         desc.append("- Guard against `null` active window/page/editor\n");
         desc.append("- Use `System.out.println(...)` for visible JShell output\n");
-        desc.append("- Resolve `IProject` from `workspaceRoot` before moving into EDT metadata APIs\n");
+        desc.append("- Resolve `IProject` from `workspaceRoot` before passing it to project-specific APIs\n");
         desc.append("\n## Starter snippet\n");
         desc.append("```java\n");
         desc.append("var window = workbench.getActiveWorkbenchWindow();\n");

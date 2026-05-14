@@ -163,10 +163,7 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.Контрагенты");
 if (suppliersRef == null) {
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("CatalogRef.Контрагенты");
-    t.setNameRu("СправочникСсылка.Контрагенты");
-    suppliersRef = t;
+    throw new IllegalStateException("CatalogRef.Контрагенты is not available yet. Create Catalog.Контрагенты first, run a scoped marker check, let EDT refresh produced types, then retry exact typeProvider.getProxy(\"CatalogRef.Контрагенты\").");
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(suppliersRef)
@@ -211,10 +208,7 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
     .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 TypeItem productKindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
 if (productKindRef == null) {
-    Type t = McoreFactory.eINSTANCE.createType();
-    t.setName("EnumRef.ВидыТоваров");
-    t.setNameRu("ПеречислениеСсылка.ВидыТоваров");
-    productKindRef = t;
+    throw new IllegalStateException("EnumRef.ВидыТоваров is not available yet. Create Enum.ВидыТоваров first, run a scoped marker check, let EDT refresh produced types, then retry exact typeProvider.getProxy(\"EnumRef.ВидыТоваров\").");
 }
 TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(productKindRef)
@@ -251,7 +245,7 @@ TypeDescription unitsType = new TypeDescriptionBuilder()
 - Use generic IEObjectTypeNames only when polymorphism is desired
 - Build the type before assigning it to attributes, dimensions, resources, constants, or defined types
 - Always validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
-- If a specific metadata proxy like `"CatalogRef.Units"` is null, do not call `addType(null)`. If the referenced top object exists but the dynamic type index is not ready, create a named `McoreFactory.eINSTANCE.createType()` fallback with `setName("CatalogRef.Units")` and `setNameRu("СправочникСсылка.Units")`. Use a generic fallback such as `IEObjectTypeNames.CATALOG_REF` only when the user explicitly asked for polymorphic reference type.
+- If a specific metadata proxy like `"CatalogRef.Units"` is null, do not call `addType(null)`. If the referenced top object exists but the dynamic type index is not ready, do not create a transient `McoreFactory.eINSTANCE.createType()` fallback. Validate the referenced object, let EDT refresh produced types, then retry exact `typeProvider.getProxy(...)`. Use a generic type such as `IEObjectTypeNames.CATALOG_REF` only when the user explicitly asked for polymorphic reference type.
 - Specific references only work for metadata objects that already exist and are visible to the current transaction
 - Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, or `IDtConstants.getEnumRefQName(...)`; use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Use `"Catalog.Name"` / `"Enum.Name"` only for top-object metadata FQNs.
 - Never replace requested `CatalogRef.*` / `EnumRef.*` fields with `String`. Throw `IllegalStateException` if the referenced top object is missing.
