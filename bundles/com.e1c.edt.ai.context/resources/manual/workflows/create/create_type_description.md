@@ -211,6 +211,13 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 
 ### Document reference
 
+Use generic `IEObjectTypeNames.DOCUMENT_REF` only for an intentionally
+polymorphic "any document reference" value. For a concrete type like
+`DocumentRef.SalesOrder`, resolve it through `MdProducedTypesUtil` from
+`transaction.getTopObjectByFqn("Document.SalesOrder")`.
+
+#### Generic document reference
+
 ```java
 IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE

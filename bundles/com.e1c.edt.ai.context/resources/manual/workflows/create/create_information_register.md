@@ -23,6 +23,11 @@ TypeItem productsRef = MdProducedTypesUtil.getProducedType(
     productsDep, MdTypePackage.Literals.MD_REF_TYPE);
 ```
 
+Never call `MdProducedTypesUtil.getProducedType(...)` with a null dependency.
+If `transaction.getTopObjectByFqn(...)` returns null, stop with
+`IllegalStateException` and create the missing dependency first. Passing null
+causes a runtime `NullPointerException` inside `MdProducedTypesUtil`.
+
 ### Recommended bindings
 - `workspaceRoot`, `projectManager`, `modelManager`, `mdFactory`, `fqnGenerator`
 
@@ -67,14 +72,20 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
         register.getSynonym().put("ru", "Prices");
         register.setUuid(UUID.randomUUID());
 
+        Catalog productsDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+        if (productsDep == null) {
+            throw new IllegalStateException("Missing dependency: Catalog.Products — create it first");
+        }
+        TypeItem productsRef = MdProducedTypesUtil.getProducedType(
+            productsDep, MdTypePackage.Literals.MD_REF_TYPE);
+
         InformationRegisterDimension product = mdFactory.createInformationRegisterDimension();
         product.setName("Product");
         product.setUuid(UUID.randomUUID());
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-        TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
         TypeDescription productType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(productsRef)
             .build();
 
         product.setType(productType);
@@ -94,6 +105,18 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
         price.setType(priceType);
         register.getResources().add(price);
 
+        InformationRegisterAttribute comment = mdFactory.createInformationRegisterAttribute();
+        comment.setName("Comment");
+        comment.setUuid(UUID.randomUUID());
+        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+        TypeDescription commentType = new TypeDescriptionBuilder()
+            .addType(stringType)
+            .setStringQualifiers(100, false)
+            .build();
+
+        comment.setType(commentType);
+        register.getAttributes().add(comment);
+
         String fqn = fqnGenerator.generateStandaloneObjectFqn(register.eClass(), register.getName()).toString();
         transaction.attachTopObject((IBmObject)register, fqn);
         configuration.getInformationRegisters().add(register);
@@ -104,15 +127,26 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
 
 ### Notes
 - InformationRegister usually needs at least one dimension and often one resource
+- If the user requested register attributes ("requisites"), create them with
+  `mdFactory.createInformationRegisterAttribute()` and add them to
+  `register.getAttributes()`. Do not stop after dimensions and resources just
+  because `GetMarkers` is clean; markers validate the metadata, not the full
+  business requirement.
 - Every new feature derived from BasicFeature must have `setType(...)`
 - Never reuse one `TypeDescription` instance across dimensions, resources, or attributes. Reuse `TypeItem` proxies only.
 - For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
 - Use a specific reference type like `CatalogRef.Products` when you need a strict typed dimension
+- For `DocumentRef.X`, `EnumRef.X`, and `CatalogRef.X` dimensions, fetch the referenced top object and verify it is non-null before calling `MdProducedTypesUtil.getProducedType(...)`. A missing dependency is a blocking precondition, not something to fix with a generic `String` or root reference type.
 - If a dimension, resource, or attribute uses `IEObjectTypeNames.STRING`, build it with finite qualifiers, for example `.setStringQualifiers(100, false)`. Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires it and the current EDT model accepts it. Otherwise `GetMarkers` can report SU8: "Строка не может быть неограниченной длины" or "Переменная длина строки должна быть внутри диапазона от 0 до 100".
 
 ### Required post-check
 
 After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo`. Fix only markers relevant to the changed entity before reporting success.
+
+Also read the register back in JShell and verify the requested child
+collections by name: `getDimensions()`, `getResources()`, and
+`getAttributes()`. A `total_markers: 0` result does not prove that every
+dimension/resource/attribute from the user's task was created.
 
 **Derive the `.mdo` path directly from the FQN — do not `Glob` to find it.**
 For an `InformationRegister.<Name>` the path is always:

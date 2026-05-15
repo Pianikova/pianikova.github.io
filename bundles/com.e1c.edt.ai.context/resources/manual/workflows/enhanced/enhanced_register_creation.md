@@ -6,6 +6,13 @@ This workflow provides comprehensive register creation (Information, Accumulatio
 - Type validation and error handling
 - Complete validation before attachment
 
+For concrete register dimensions such as product, customer, document, or
+status, do not use generic `IEObjectTypeNames.CATALOG_REF` / `DOCUMENT_REF` /
+`ENUM_REF` unless polymorphism is the business requirement. Fetch the referenced
+metadata object in the same BM transaction and resolve the produced `TypeItem`
+with `MdProducedTypesUtil.getProducedType(...)`. A missing dependency is a
+blocking precondition.
+
 ### Pattern for All Register Types:
 
 ```java
@@ -62,9 +69,14 @@ InformationRegister result = globalContext.execute(new AbstractBmTask<Informatio
             return null;
         }
 
-        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
+        Catalog productsCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+        if (productsCatalog == null) {
+            throw new IllegalStateException("Missing dependency: Catalog.Products");
+        }
+        TypeItem productRefType = MdProducedTypesUtil.getProducedType(
+            productsCatalog, MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription productType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(productRefType)
             .build();
         product.setType(productType);
         register.getDimensions().add(product);
@@ -117,5 +129,6 @@ InformationRegister result = globalContext.execute(new AbstractBmTask<Informatio
 - [ ] For CalculationRegister: Recalculation objects need UUID
 - [ ] Wrap ALL UUID assignments in try-catch blocks
 - [ ] Abort creation if any UUID assignment fails
+- [ ] Resolve concrete metadata references via `MdProducedTypesUtil.getProducedType(...)`; never pass a `null` dependency object
 - [ ] After the transaction completes, run `GetMarkers` with `marker_type: "1c"` and fix new validation markers
 

@@ -42,7 +42,7 @@ issue is specific to project-produced reference types like `"CatalogRef.Products
 - Modify existing objects directly (no `attachTopObject()` needed)
 - After every metadata CRUD operation, run the `GetMarkers` tool with `marker_type: "1c"` and inspect remaining 1C markers before reporting success
 - If a workflow needs more than one unknown EDT type, method, factory, field, or enum, call `JShellReflection` once with the full `queries` array before writing JShell code
-- Use canonical imports from `jshell_edt_canonical_imports`: `AbstractBmTask` and `IBmTransaction` are in `com._1c.g5.v8.bm.integration`, not in `com._1c.g5.v8.dt.bm.integration`
+- Use canonical imports from `jshell_edt_canonical_imports`: `AbstractBmTask` is in `com._1c.g5.v8.bm.integration`; `IBmTransaction` is in `com._1c.g5.v8.bm.core`. Do not import either one from `com._1c.g5.v8.dt.bm.integration`.
 - In persistent JShell sessions, wrap non-trivial snippets in `{ ... }` blocks to avoid stale top-level variables and `NoSuchFieldError`
 
 **❌ PROHIBITED:**

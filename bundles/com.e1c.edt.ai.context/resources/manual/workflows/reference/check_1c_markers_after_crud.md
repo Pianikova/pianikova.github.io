@@ -2,6 +2,11 @@
 
 After any create, edit, or delete operation on 1C metadata objects, run the `GetMarkers` tool before considering the task complete. EDT validation markers often appear only after the BM transaction is applied and the project markers are refreshed. Inspect all relevant severities for the changed entity: errors, warnings, and infos. Do not check only errors.
 
+Reading objects back with JShell, counting metadata collections, or printing
+"EXISTS" for FQNs is useful diagnostic output, but it is not validation. A
+CRUD operation is not complete until the relevant `GetMarkers` result was
+checked after the transaction.
+
 Default rule: validate the exact changed top-level entity first. If JShell changed `Catalog.Товары`, `Document.ПоступлениеТоваров`, or `AccumulationRegister.ОстаткиТоваров`, call `GetMarkers` with `path` to that entity's `.mdo` file and fix only markers relevant to that entity. Do not use project-wide marker output as a todo list for unrelated old problems.
 
 ### Required post-check

@@ -26,9 +26,14 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Add tabula
 
             IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
                 .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-            TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
+            Catalog productsCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+            if (productsCatalog == null) {
+                throw new IllegalStateException("Missing dependency: Catalog.Products");
+            }
+            TypeItem productRefType = MdProducedTypesUtil.getProducedType(
+                productsCatalog, MdTypePackage.Literals.MD_REF_TYPE);
             TypeDescription typeDesc = new TypeDescriptionBuilder()
-                .addType(catalogRefType)
+                .addType(productRefType)
                 .build();
 
             product.setType(typeDesc);
@@ -59,3 +64,9 @@ For this scenario, the parent is typically a `Document` or `Catalog`:
 Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
 
 Use project-wide markers only when the change can affect references between metadata objects or when the path truly cannot be derived.
+
+For tabular section columns that reference a concrete metadata object, resolve
+`CatalogRef.X`, `EnumRef.X`, or `DocumentRef.X` through
+`MdProducedTypesUtil.getProducedType(...)` after checking that
+`transaction.getTopObjectByFqn(...)` returned a non-null dependency. Generic
+`IEObjectTypeNames.CATALOG_REF` is only for intentionally polymorphic columns.

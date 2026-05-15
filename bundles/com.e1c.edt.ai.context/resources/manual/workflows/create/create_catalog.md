@@ -78,6 +78,12 @@ Before you generate the catalog-creation code, do this **in order**:
 - ✅ **Every `CatalogAttribute` must receive a non-empty `TypeDescription`
   before `catalog.getAttributes().add(attribute)`.** Do not rely on a later
   fix-up transaction for simple fields such as name/surname/description.
+- ❌ **Never create custom catalog attributes named `Код`, `Code`,
+  `Наименование`, or `Description`.** Catalog already has standard code and
+  description fields. Configure them with `catalog.setCodeLength(...)`,
+  `catalog.setCodeType(...)` when needed, and
+  `catalog.setDescriptionLength(...)`. Creating child attributes with those
+  names produces SU45 markers: "coincides with a standard attribute name".
 - ❌ **Never create the catalog "partially" without the reference attributes
   the user asked for.** That is treated as a failed operation even if
   `compilation_errors` and `runtime_errors` are empty.
@@ -409,6 +415,9 @@ transaction.attachTopObject((IBmObject)catalog, fqn);
 
 ### Important notes
 - Validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
+- Do not model the standard 1C catalog fields `Код` and `Наименование` as
+  `CatalogAttribute` children. They are built into `Catalog`; use
+  `setCodeLength(...)` and `setDescriptionLength(...)` instead.
 - Use `typeProvider.getProxy(...)` for primitive built-in types only: `STRING`, `NUMBER`, `BOOLEAN`, `DATE`.
 - For metadata-produced references such as `CatalogRef.Name` or `EnumRef.Name`, fetch the referenced top object with `transaction.getTopObjectByFqn("Catalog.Name")` / `"Enum.Name"` and resolve the `TypeItem` with `MdProducedTypesUtil.getProducedType(dep, MdTypePackage.Literals.MD_REF_TYPE)`.
 - Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, `IDtConstants.getEnumRefQName(...)`, transient `McoreFactory` types, or generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` as fallbacks for concrete persisted metadata references.

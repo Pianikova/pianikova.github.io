@@ -41,6 +41,9 @@ CalculationRegister register = globalContext.execute(new AbstractBmTask<Calculat
 
         // Set ChartOfCalculationTypes reference
         ChartOfCalculationTypes chart = (ChartOfCalculationTypes)transaction.getTopObjectByFqn("ChartOfCalculationTypes.ВидыРасчетов");
+        if (chart == null) {
+            throw new IllegalStateException("Missing dependency: ChartOfCalculationTypes");
+        }
         register.setChartOfCalculationTypes(chart);
 
         // Add dimension (base dimension)
@@ -51,9 +54,14 @@ CalculationRegister register = globalContext.execute(new AbstractBmTask<Calculat
 
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-        TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
+        Catalog employeesCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Employees");
+        if (employeesCatalog == null) {
+            throw new IllegalStateException("Missing dependency: Catalog.Employees");
+        }
+        TypeItem employeeRefType = MdProducedTypesUtil.getProducedType(
+            employeesCatalog, MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription employeeType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(employeeRefType)
             .build();
 
         employee.setType(employeeType);

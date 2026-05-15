@@ -1,5 +1,20 @@
 ## Safe Workflow: Create Subsystem
 
+### Canonical imports
+
+```java
+import java.util.UUID;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+import com._1c.g5.v8.dt.metadata.mdclass.Subsystem;
+```
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IBmModel bmModel = modelManager.getModel(project);

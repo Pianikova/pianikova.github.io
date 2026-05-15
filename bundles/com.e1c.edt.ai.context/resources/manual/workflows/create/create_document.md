@@ -66,13 +66,13 @@ right one or compilation fails with `package does not exist` or
 |-------------------------------|--------------------------------------|------------------------------------------------|
 | `IBmObject`                   | `com._1c.g5.v8.bm.core`              | low-level BM persistence interface             |
 | `AbstractBmTask<T>`           | `com._1c.g5.v8.bm.integration`       | high-level transactional API                   |
-| `IBmTransaction`              | `com._1c.g5.v8.bm.integration`       | passed into `AbstractBmTask.execute`           |
+| `IBmTransaction`              | `com._1c.g5.v8.bm.core`              | passed into `AbstractBmTask.execute`           |
 | `IBmModel`                    | `com._1c.g5.v8.bm.integration`       | obtained from `modelManager.getModel(project)` |
 | `IBmGlobalEditingContext`     | `com._1c.g5.v8.bm.integration`       | `bmModel.getGlobalContext()`                   |
 
-If a class name starts with `IBm` and is used inside a BM task body, it
-is **almost always** `com._1c.g5.v8.bm.integration` — except `IBmObject`,
-which is `com._1c.g5.v8.bm.core`. Do not mix the two.
+If a class name starts with `IBm`, do not guess the package from the prefix.
+`IBmObject` and `IBmTransaction` are in `com._1c.g5.v8.bm.core`; `IBmModel`
+and `IBmGlobalEditingContext` are in `com._1c.g5.v8.bm.integration`.
 
 #### JShell session hygiene
 

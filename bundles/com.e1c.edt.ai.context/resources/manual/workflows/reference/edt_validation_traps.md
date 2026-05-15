@@ -35,6 +35,23 @@ Objects that implement type/value semantics usually need `TypeDescription`:
 
 Use `TypeDescriptionBuilder` with `IEObjectProvider` and `IEObjectTypeNames`. Do not hand-build type XML or string names.
 
+## Standard attributes are not custom attributes
+
+Do not create child attributes whose names duplicate standard 1C attributes.
+For catalogs, `Код` / `Code` and `Наименование` / `Description` are standard
+fields of the catalog itself. Set their behavior on the top-level `Catalog`
+with `setCodeLength(...)`, `setCodeType(...)` when needed, and
+`setDescriptionLength(...)`.
+
+Observed markers:
+
+- `SU45: Некорректное значение свойства "name" реквизита "Код". Совпадает с именем стандартного реквизита`
+- `SU45: Некорректное значение свойства "name" реквизита "Наименование". Совпадает с именем стандартного реквизита`
+
+The fix is to remove the duplicate child attributes, not to rename standard
+catalog fields in place. Apply the same caution to document standard fields
+such as `Дата`, `Номер`, `Проведен`, `Ссылка`, and `ПометкаУдаления`.
+
 ## ExchangePlan
 
 `ExchangePlan` scenarios that participate in exchange usually need `thisNode`. Use the `set_exchange_plan_thisnode` workflow.

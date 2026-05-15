@@ -45,9 +45,14 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
 
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-        TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
+        Catalog warehousesCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Warehouses");
+        if (warehousesCatalog == null) {
+            throw new IllegalStateException("Missing dependency: Catalog.Warehouses");
+        }
+        TypeItem warehouseRefType = MdProducedTypesUtil.getProducedType(
+            warehousesCatalog, MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription warehouseType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(warehouseRefType)
             .build();
 
         warehouse.setType(warehouseType);
