@@ -5,6 +5,7 @@ package com.e1c.edt.ai.tools;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,7 +37,7 @@ public class JShellMcpTool
 	public static final String TOOL_NAME = "JShell"; //$NON-NLS-1$
 
 	private static String QuestionExample =
-        "{\"scope\":\"eclipse\",\"request_description\":\"Read active Eclipse window title.\",\"response_description\":\"Active Eclipse window title was printed.\",\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\"}"; //$NON-NLS-1$
+        "{\"scope\":\"eclipse\",\"request_description\":\"Read active Eclipse window title.\",\"response_description\":\"Active Eclipse window title was printed.\",\"code\":\"var window = workbench.getActiveWorkbenchWindow();\\nif (window != null) { System.out.println(\\\"Active window: \\\" + window.getShell().getText()); }\",\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"manual_ids\":[\"active_workbench\"]}"; //$NON-NLS-1$
 
 	private static String AnswerExample =
         "{\"return_value\":null,\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"std_out\":\"Active window: Eclipse\\n\",\"std_err\":\"\"}"; //$NON-NLS-1$
@@ -50,13 +51,14 @@ public class JShellMcpTool
 	private final IRestrictedTypesProvider restrictedTypesProvider;
     private final IJShellReflectionQuerySuggester reflectionQuerySuggester;
     private final IDispatcher dispatcher;
+    private final Set<IJShellManualProvider> manualProviders;
     private final ConcurrentHashMap<String, Object> sessionLocks = new ConcurrentHashMap<>();
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
 		IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
         IRestrictedTypesProvider restrictedTypesProvider, IJShellReflectionQuerySuggester reflectionQuerySuggester,
-        IDispatcher dispatcher)
+        IDispatcher dispatcher, Set<IJShellManualProvider> manualProviders)
 	{
 		Preconditions.checkNotNull(json);
 		Preconditions.checkNotNull(messageFactory);
@@ -66,6 +68,7 @@ public class JShellMcpTool
 		Preconditions.checkNotNull(restrictedTypesProvider);
         Preconditions.checkNotNull(reflectionQuerySuggester);
         Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(manualProviders);
 
 		this.json = json;
 		this.messageFactory = messageFactory;
@@ -75,6 +78,7 @@ public class JShellMcpTool
 		this.restrictedTypesProvider = restrictedTypesProvider;
         this.reflectionQuerySuggester = reflectionQuerySuggester;
         this.dispatcher = dispatcher;
+        this.manualProviders = manualProviders;
 		this.spec = createSpecification();
 	}
 
@@ -194,6 +198,37 @@ public class JShellMcpTool
         {
             throw new ToolException("Unsupported `scope`: " + request.scope + ". Allowed values: "
                 + String.join(", ", getAllowedScopes()) + ".", null, ToolErrorType.RETRYABLE);
+        }
+        validateManualIds(request);
+    }
+
+    @SuppressWarnings("nls")
+    private void validateManualIds(Request request)
+    {
+        if (request.manualIds == null || request.manualIds.isEmpty())
+        {
+            throw new ToolException(
+                "Missing required parameter `manual_ids`. Call " + JShellManualMcpTool.TOOL_NAME
+                    + " first and pass back the `manual_id` value(s) you received."
+                    + " This parameter forces you to load the scenario-specific guide"
+                    + " before any EDT metadata or project CRUD via " + TOOL_NAME + ".",
+                null, ToolErrorType.RETRYABLE);
+        }
+        var knownIds = manualProviders.stream()
+            .flatMap(provider -> provider.getManualEntries().stream())
+            .map(JShellManualEntry::getId)
+            .collect(Collectors.toSet());
+        var unknown = request.manualIds.stream()
+            .filter(id -> id == null || id.isBlank() || !knownIds.contains(id))
+            .collect(Collectors.toList());
+        if (!unknown.isEmpty())
+        {
+            throw new ToolException(
+                "Unknown or blank `manual_ids`: " + unknown
+                    + ". Each id must be an exact `manual_id` returned by " + JShellManualMcpTool.TOOL_NAME
+                    + ". Call " + JShellManualMcpTool.TOOL_NAME
+                    + " to obtain the catalog of valid `manual_id` values, then retry.",
+                null, ToolErrorType.RETRYABLE);
         }
     }
 
@@ -332,14 +367,16 @@ public class JShellMcpTool
 		var description = new StringBuilder();
         description.append("Executes Java code using JShell REPL. Preserves state across executions.");
 		description.append("\n\n**IMPORTANT:**");
-        description.append("\n- You **MUST** call ")
-            .append(JShellManualMcpTool.TOOL_NAME)
-            .append(" before **any** EDT metadata or project CRUD via JShell — create, edit, rename, delete, move, attach, detach, link, unlink — including operations on Catalog, Document, Enum, register, ChartOf*, BusinessProcess, Task, ExchangePlan, CommonModule, CommonAttribute, Subsystem, DefinedType, Constant, configuration project, configuration itself, and any other metadata or project entity. Match the user's intent to a scenario id (e.g. `create_catalog`, `edit_existing_object`, `rename_object`, `delete_metadata_object`, `add_tabular_section`, `add_document_registers`, `create_configuration_project`) and load that guide first. Do not improvise the operation from memory or from a different scenario's pattern; do not combine `create_*` + manual cleanup as a substitute for `rename_object` or a delete-refactoring scenario. If you are unsure which scenario applies, call ")
-            .append(JShellManualMcpTool.TOOL_NAME)
-            .append(" with a best-guess id and read the returned `available_scenarios` list; pick the closest match and load that. This rule is absolute — skipping the manual on EDT CRUD has produced orphan `.mdo` files, stale `Configuration.mdo` entries, broken references, and silent partial success in past runs");
-        description.append("\n- For non-EDT-CRUD API code generation, still call ")
-            .append(JShellManualMcpTool.TOOL_NAME)
-            .append(" first when a scenario-specific guide is available");
+        description.append("\n- The `manual_ids` parameter is required and validated against the live scenario catalog. ")
+            .append("Call ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" first, read the `manual_id` from its response, and pass it back here. Calls with empty `manual_ids`")
+            .append(" or unknown ids are rejected before execution. This applies to every EDT metadata or project CRUD")
+            .append(" via ").append(TOOL_NAME)
+            .append(" — create, edit, rename, delete, move, attach, detach, link, unlink — on Catalog,")
+            .append(" Document, Enum, register, ChartOf*, BusinessProcess, Task, ExchangePlan, CommonModule,")
+            .append(" CommonAttribute, Subsystem, DefinedType, Constant, configuration project, configuration, etc.")
+            .append(" Do not improvise rename/delete from a `create_*` pattern: load `rename_object` or the matching")
+            .append(" delete-refactoring scenario first");
         description.append("\n- Use ").append(JShellReflectionMcpTool.TOOL_NAME)
             .append(" before execution only when unsure about packages, types, enum constants, methods, fields, constructors, or signatures not already covered by an exact ")
             .append(JShellManualMcpTool.TOOL_NAME).append(" guide");
@@ -413,6 +450,9 @@ public class JShellMcpTool
         description.append("\n- `response_description` (required): Short user-visible description of what was done");
 		description.append("\n- `code` (required): Complete Java statements ending with `;`");
 		description.append("\n- `repl_session_id` (required): Session ID from JShellSession tool");
+        description.append("\n- `manual_ids` (required): Non-empty array of `manual_id` strings from ")
+            .append(JShellManualMcpTool.TOOL_NAME)
+            .append(". Validated against the live catalog — invented ids are rejected");
 
 		description.append("\n\nExample: `").append(QuestionExample).append("`");
 		description.append("\nResponse: `").append(AnswerExample).append("`");
@@ -450,6 +490,18 @@ public class JShellMcpTool
 		sessionIdProp.description = "Session ID (UUID string) from " + JShellSessionMcpTool.TOOL_NAME + " tool (required)";
 		properties.put("repl_session_id", sessionIdProp);
 
+		var manualIdsProp = new McpToolCallProperty();
+		manualIdsProp.type = "array";
+		manualIdsProp.description = "Required non-empty array of `manual_id` strings returned by "
+		    + JShellManualMcpTool.TOOL_NAME
+		    + " for the scenario(s) you loaded for this call. Each value MUST be the exact `manual_id` from a real "
+		    + JShellManualMcpTool.TOOL_NAME
+		    + " response (it is validated against the live scenario catalog). Calls with empty `manual_ids` or unknown ids are rejected before execution. This parameter exists to force you to call "
+		    + JShellManualMcpTool.TOOL_NAME
+		    + " before any EDT metadata or project CRUD via " + TOOL_NAME
+		    + " — create, edit, rename, delete, move, attach, detach, link, unlink. Do not invent ids.";
+		properties.put("manual_ids", manualIdsProp);
+
 		parameters.properties = properties;
 		var required = new ArrayList<String>();
 		required.add("code");
@@ -457,6 +509,7 @@ public class JShellMcpTool
         required.add("scope");
         required.add("request_description");
         required.add("response_description");
+        required.add("manual_ids");
 		parameters.required = required;
 
 		spec.function.parameters = parameters;
@@ -479,6 +532,9 @@ public class JShellMcpTool
 
 		@SerializedName("repl_session_id")
         public String sessionId;
+
+		@SerializedName("manual_ids")
+		public List<String> manualIds;
 	}
 }
 

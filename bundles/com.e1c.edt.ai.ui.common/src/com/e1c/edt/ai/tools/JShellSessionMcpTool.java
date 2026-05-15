@@ -121,8 +121,10 @@ public class JShellSessionMcpTool
 
 		description.append("\n\n**When to use:**");
         description.append("\n- **AFTER** calling ").append(JShellManualMcpTool.TOOL_NAME)
-            .append(" to get the scenario-specific template. For any EDT metadata or project CRUD via JShell (create, edit, rename, delete, move, attach, detach, link, unlink), loading the matching manual scenario first is **MANDATORY** — see the ")
-            .append(JShellMcpTool.TOOL_NAME).append(" tool description for the full rule");
+            .append(" to get the scenario-specific template and its `manual_id`. ")
+            .append(JShellMcpTool.TOOL_NAME)
+            .append(" rejects calls whose required `manual_ids` parameter is empty or contains ids not in the live catalog,")
+            .append(" so you must load a manual scenario first regardless");
         description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" for execution");
         description.append("\n- To check available bindings");
         description.append("\n- To get a fresh `repl_session_id` for JShell and JShellReflection calls");

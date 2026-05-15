@@ -284,7 +284,7 @@ public class JShellManualMcpTool
     private Details toDetails(JShellManualEntry entry)
     {
         var details = new Details();
-        details.id = entry.getId();
+        details.manualId = entry.getId();
         details.scope = entry.getScope();
         details.category = entry.getCategory();
         details.title = entry.getTitle();
@@ -297,7 +297,7 @@ public class JShellManualMcpTool
     private CompactSummary toCompactSummary(JShellManualEntry entry)
     {
         var summary = new CompactSummary();
-        summary.id = entry.getId();
+        summary.manualId = entry.getId();
         summary.category = entry.getCategory();
         return summary;
     }
@@ -387,10 +387,14 @@ public class JShellManualMcpTool
         sb.append(buildCategoryListing());
 
         sb.append("\n\nResponse shape:\n");
-        sb.append("- `matched_scenarios`: hits with full guide_markdown.\n");
-        sb.append("- `available_scenarios`: compact `{id, category}` directory; present only when match is fuzzy or absent.\n");
+        sb.append("- `matched_scenarios`: hits with full guide_markdown and the scenario `manual_id`.\n");
+        sb.append("- `available_scenarios`: compact `{manual_id, category}` directory; present only when match is fuzzy or absent.\n");
         sb.append("- `suggestions`: did-you-mean list when no match (instead of error).\n");
         sb.append("- `status`: exact | fuzzy | not_matched | browse | directory.\n\n");
+        sb.append("The `manual_id` from `matched_scenarios` MUST be passed back to ").append(JShellMcpTool.TOOL_NAME)
+            .append(" in its required `manual_ids` parameter. ").append(JShellMcpTool.TOOL_NAME)
+            .append(" rejects calls whose `manual_ids` is empty or contains ids not in this catalog, so loading")
+            .append(" a scenario here is the only way to obtain a valid id.\n\n");
 
         sb.append("Suggested workflow:\n");
         sb.append("1. Call ").append(TOOL_NAME).append(" with a convention-matching scenario id.\n");
@@ -505,8 +509,8 @@ public class JShellManualMcpTool
 
     private static class CompactSummary
     {
-        @SerializedName("id")
-        public String id;
+        @SerializedName("manual_id")
+        public String manualId;
 
         @SerializedName("category")
         public String category;
@@ -514,8 +518,8 @@ public class JShellManualMcpTool
 
     private static class Details
     {
-        @SerializedName("id")
-        public String id;
+        @SerializedName("manual_id")
+        public String manualId;
 
         @SerializedName("scope")
         public String scope;
