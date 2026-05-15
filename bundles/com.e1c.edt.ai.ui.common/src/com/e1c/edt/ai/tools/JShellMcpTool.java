@@ -332,7 +332,12 @@ public class JShellMcpTool
 		var description = new StringBuilder();
         description.append("Executes Java code using JShell REPL. Preserves state across executions.");
 		description.append("\n\n**IMPORTANT:**");
-        description.append("\n- For API code generation, call ")
+        description.append("\n- You **MUST** call ")
+            .append(JShellManualMcpTool.TOOL_NAME)
+            .append(" before **any** EDT metadata or project CRUD via JShell — create, edit, rename, delete, move, attach, detach, link, unlink — including operations on Catalog, Document, Enum, register, ChartOf*, BusinessProcess, Task, ExchangePlan, CommonModule, CommonAttribute, Subsystem, DefinedType, Constant, configuration project, configuration itself, and any other metadata or project entity. Match the user's intent to a scenario id (e.g. `create_catalog`, `edit_existing_object`, `rename_object`, `delete_metadata_object`, `add_tabular_section`, `add_document_registers`, `create_configuration_project`) and load that guide first. Do not improvise the operation from memory or from a different scenario's pattern; do not combine `create_*` + manual cleanup as a substitute for `rename_object` or a delete-refactoring scenario. If you are unsure which scenario applies, call ")
+            .append(JShellManualMcpTool.TOOL_NAME)
+            .append(" with a best-guess id and read the returned `available_scenarios` list; pick the closest match and load that. This rule is absolute — skipping the manual on EDT CRUD has produced orphan `.mdo` files, stale `Configuration.mdo` entries, broken references, and silent partial success in past runs");
+        description.append("\n- For non-EDT-CRUD API code generation, still call ")
             .append(JShellManualMcpTool.TOOL_NAME)
             .append(" first when a scenario-specific guide is available");
         description.append("\n- Use ").append(JShellReflectionMcpTool.TOOL_NAME)
@@ -380,8 +385,8 @@ public class JShellMcpTool
 		}
 
 		description.append("\n\n**Workflow:**");
-        description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME)
-            .append(" to get guidance for the scenario");
+        description.append("\n1. **MUST** call ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" for every EDT metadata or project CRUD scenario before generating code (create, edit, rename, delete, move, attach, detach, link, unlink on any metadata object or configuration). For non-EDT-CRUD code, still call it when a scenario-specific guide is available");
 		description.append("\n2. Call ").append(JShellSessionMcpTool.TOOL_NAME).append(" to create/get session and ID");
         description.append("\n3. If the manual exact guide does not cover needed APIs, call ").append(JShellReflectionMcpTool.TOOL_NAME)
             .append(" once with all uncertain Java API names/signatures before writing calls that depend on them");

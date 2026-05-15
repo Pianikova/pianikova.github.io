@@ -14,6 +14,8 @@ Top-level metadata objects and child metadata objects need UUIDs. This includes 
 
 For edit/delete, load existing top objects with `transaction.getTopObjectByFqn(...)`. Do not create a replacement object with the same name.
 
+The same rule applies to retried create workflows. Before `transaction.attachTopObject(...)`, check the target FQN. If it already exists, a second attach will fail with `BmFqnAlreadyInUseException: FQN '<Type>.<Name>' is already in use`. Continue by editing/verifying the existing object or stop with a clear precondition failure.
+
 ## Configuration project creation
 
 Create the Eclipse project structure before EDT services start reading project settings. At minimum, ensure project folders that EDT expects exist, especially `.settings`, `DT-INF`, and the metadata root. Prefer an EDT project creation/import API over raw file creation when available.
@@ -40,6 +42,19 @@ Use `TypeDescriptionBuilder` with `IEObjectProvider` and `IEObjectTypeNames`. Do
 ## BusinessProcess and Task
 
 Business process content is not valid as only a named top-level object. Create or resolve the related `Task`, then call `businessProcess.setTask(task)` in the same BM transaction. Missing task produces SU45 for property `task`: task is not selected.
+
+## DocumentNumerator and document numbering
+
+When a document has `Document.getNumerator() != null`, its numbering properties must match the assigned `DocumentNumerator`. Do not change only `Document.setNumberLength(...)` on one document that uses a shared numerator.
+
+Observed marker:
+
+`SU45: Некорректное значение свойства "numberLength". Указан нумератор. Свойства документа должны совпадать с соответствующими свойствами нумератора.`
+
+Fix by choosing one consistent model:
+- change the `DocumentNumerator` length/type and all documents that reference it in one BM workflow;
+- or keep the document number length equal to the numerator;
+- or remove/change the numerator reference intentionally, then validate all affected documents.
 
 ## Registers
 

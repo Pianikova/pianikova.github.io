@@ -11,17 +11,23 @@ Generic workflow for editing any existing metadata object safely.
 
 ### Required post-check
 
-After editing metadata, call `GetMarkers` for the changed file or the whole project:
+After editing metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo`. Fix new 1C markers relevant to the changed entity before reporting the edit as complete.
 
-```json
-{
-  "project_name": "MyProject",
-  "marker_type": "1c",
-  "max_count": 50
-}
-```
+**Derive the `.mdo` path directly from the FQN — do not `Glob` to find it.**
+Schema: `<projectRoot>/src/<TypePluralFolder>/<Name>/<Name>.mdo`. Common cases for this scenario:
 
-Fix new 1C markers before reporting the edit as complete.
+| FQN prefix                      | `.mdo` path                                          |
+|---------------------------------|------------------------------------------------------|
+| `Catalog.<Name>`                | `src/Catalogs/<Name>/<Name>.mdo`                     |
+| `Document.<Name>`               | `src/Documents/<Name>/<Name>.mdo`                    |
+| `Enum.<Name>`                   | `src/Enums/<Name>/<Name>.mdo`                        |
+| `InformationRegister.<Name>`    | `src/InformationRegisters/<Name>/<Name>.mdo`         |
+| `AccumulationRegister.<Name>`   | `src/AccumulationRegisters/<Name>/<Name>.mdo`        |
+| `DocumentJournal.<Name>`        | `src/DocumentJournals/<Name>/<Name>.mdo`             |
+
+Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
+
+Fall back to a project-wide marker check (`{ "project_name": "MyProject", "marker_type": "1c", "max_count": 50 }`) only when the change affects references between metadata objects or when the path truly cannot be derived.
 
 ### Generic Pattern:
 ```java

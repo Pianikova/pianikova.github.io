@@ -6,7 +6,82 @@ Default rule: validate the exact changed top-level entity first. If JShell chang
 
 ### Required post-check
 
-Use a file-scoped marker request when the changed metadata file is known or can be derived:
+Use a file-scoped marker request when the changed metadata file is known or can be derived.
+
+#### `.mdo` path layout — derive directly from FQN, do not guess
+
+Every top-level metadata object lives in its own folder named after the
+object, and the `.mdo` file inside that folder has the same name. The
+folder under `src/` is the **plural-English** form of the metadata type,
+not the FQN prefix used in `getTopObjectByFqn(...)`:
+
+```
+<projectRoot>/src/<TypePluralFolder>/<Name>/<Name>.mdo
+```
+
+Use the project's path separator as-is (`\\` on Windows, `/` on Linux/macOS).
+Filenames and folder names are case-sensitive — copy the user-visible
+`Name` exactly, including Cyrillic. The `.mdo` extension is lowercase.
+
+| FQN prefix (in JShell)             | `src/` folder                         | Example `.mdo` path                                                           |
+|------------------------------------|---------------------------------------|-------------------------------------------------------------------------------|
+| `Configuration`                    | `Configuration`                       | `src/Configuration/Configuration.mdo`                                         |
+| `Catalog.Name`                     | `Catalogs`                            | `src/Catalogs/Name/Name.mdo`                                                  |
+| `Document.Name`                    | `Documents`                           | `src/Documents/Name/Name.mdo`                                                 |
+| `Enum.Name`                        | `Enums`                               | `src/Enums/Name/Name.mdo`                                                     |
+| `InformationRegister.Name`         | `InformationRegisters`                | `src/InformationRegisters/Name/Name.mdo`                                      |
+| `AccumulationRegister.Name`        | `AccumulationRegisters`               | `src/AccumulationRegisters/Name/Name.mdo`                                     |
+| `AccountingRegister.Name`          | `AccountingRegisters`                 | `src/AccountingRegisters/Name/Name.mdo`                                       |
+| `CalculationRegister.Name`         | `CalculationRegisters`                | `src/CalculationRegisters/Name/Name.mdo`                                      |
+| `ChartOfAccounts.Name`             | `ChartsOfAccounts`                    | `src/ChartsOfAccounts/Name/Name.mdo`                                          |
+| `ChartOfCharacteristicTypes.Name`  | `ChartsOfCharacteristicTypes`         | `src/ChartsOfCharacteristicTypes/Name/Name.mdo`                               |
+| `ChartOfCalculationTypes.Name`     | `ChartsOfCalculationTypes`            | `src/ChartsOfCalculationTypes/Name/Name.mdo`                                  |
+| `BusinessProcess.Name`             | `BusinessProcesses`                   | `src/BusinessProcesses/Name/Name.mdo`                                         |
+| `Task.Name`                        | `Tasks`                               | `src/Tasks/Name/Name.mdo`                                                     |
+| `ExchangePlan.Name`                | `ExchangePlans`                       | `src/ExchangePlans/Name/Name.mdo`                                             |
+| `CommonModule.Name`                | `CommonModules`                       | `src/CommonModules/Name/Name.mdo`                                             |
+| `CommonAttribute.Name`             | `CommonAttributes`                    | `src/CommonAttributes/Name/Name.mdo`                                          |
+| `Constant.Name`                    | `Constants`                           | `src/Constants/Name/Name.mdo`                                                 |
+| `DataProcessor.Name`               | `DataProcessors`                      | `src/DataProcessors/Name/Name.mdo`                                            |
+| `Report.Name`                      | `Reports`                             | `src/Reports/Name/Name.mdo`                                                   |
+| `Role.Name`                        | `Roles`                               | `src/Roles/Name/Name.mdo`                                                     |
+| `Subsystem.Name`                   | `Subsystems`                          | `src/Subsystems/Name/Name.mdo`                                                |
+| `FilterCriterion.Name`             | `FilterCriteria`                      | `src/FilterCriteria/Name/Name.mdo`                                            |
+| `Sequence.Name`                    | `Sequences`                           | `src/Sequences/Name/Name.mdo`                                                 |
+| `DefinedType.Name`                 | `DefinedTypes`                        | `src/DefinedTypes/Name/Name.mdo`                                              |
+| `SettingsStorage.Name`             | `SettingsStorages`                    | `src/SettingsStorages/Name/Name.mdo`                                          |
+| `XDTOPackage.Name`                 | `XDTOPackages`                        | `src/XDTOPackages/Name/Name.mdo`                                              |
+| `WebService.Name`                  | `WebServices`                         | `src/WebServices/Name/Name.mdo`                                               |
+| `HTTPService.Name`                 | `HTTPServices`                        | `src/HTTPServices/Name/Name.mdo`                                              |
+| `WSReference.Name`                 | `WSReferences`                        | `src/WSReferences/Name/Name.mdo`                                              |
+| `IntegrationService.Name`         | `IntegrationServices`                 | `src/IntegrationServices/Name/Name.mdo`                                       |
+| `DocumentJournal.Name`             | `DocumentJournals`                    | `src/DocumentJournals/Name/Name.mdo`                                          |
+| `DocumentNumerator.Name`           | `DocumentNumerators`                  | `src/DocumentNumerators/Name/Name.mdo`                                        |
+| `Style.Name`                       | `Styles`                              | `src/Styles/Name/Name.mdo`                                                    |
+| `StyleItem.Name`                   | `StyleItems`                          | `src/StyleItems/Name/Name.mdo`                                                |
+| `Language.Name`                    | `Languages`                           | `src/Languages/Name/Name.mdo`                                                 |
+| `EventSubscription.Name`           | `EventSubscriptions`                  | `src/EventSubscriptions/Name/Name.mdo`                                        |
+| `ScheduledJob.Name`                | `ScheduledJobs`                       | `src/ScheduledJobs/Name/Name.mdo`                                             |
+| `FunctionalOption.Name`            | `FunctionalOptions`                   | `src/FunctionalOptions/Name/Name.mdo`                                         |
+| `FunctionalOptionsParameter.Name`  | `FunctionalOptionsParameters`         | `src/FunctionalOptionsParameters/Name/Name.mdo`                               |
+| `SessionParameter.Name`            | `SessionParameters`                   | `src/SessionParameters/Name/Name.mdo`                                         |
+| `CommonForm.Name`                  | `CommonForms`                         | `src/CommonForms/Name/Name.mdo`                                               |
+| `CommonCommand.Name`               | `CommonCommands`                      | `src/CommonCommands/Name/Name.mdo`                                            |
+| `CommandGroup.Name`                | `CommandGroups`                       | `src/CommandGroups/Name/Name.mdo`                                             |
+| `CommonTemplate.Name`              | `CommonTemplates`                     | `src/CommonTemplates/Name/Name.mdo`                                           |
+| `CommonPicture.Name`               | `CommonPictures`                      | `src/CommonPictures/Name/Name.mdo`                                            |
+| `ExternalDataSource.Name`          | `ExternalDataSources`                 | `src/ExternalDataSources/Name/Name.mdo`                                       |
+
+If you are unsure which plural-folder name a metadata type uses, derive
+it from `<projectRoot>/src/` listing (one-time `Glob` with pattern
+`src/*/<Name>/<Name>.mdo`) instead of guessing. Common LLM mistakes:
+
+- ❌ `src/Catalogs/Номенклатура.mdo` (missing intermediate folder)
+- ❌ `src/Catalogs/Номенклатура/Номенклатура.mdO` (wrong case extension)
+- ❌ `src/Catalog/Номенклатура/...` (singular folder)
+- ❌ `src/Catalogs/Nomenclature/...` (transliteration of a Cyrillic name)
+- ❌ `src/Catalogs/НоменклатураTypo/...` (any character drift from the
+  exact `Name` used in `getTopObjectByFqn("Catalog.Name")`)
 
 ```json
 {

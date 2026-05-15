@@ -1,5 +1,26 @@
 ## Safe Workflow: Create CalculationRegister
 
+### ⚠️ Resolving concrete `CatalogRef.X` / `ChartOfCalculationTypesRef.X` dimensions
+
+For concrete metadata reference dimensions (e.g. `CatalogRef.Employees`
+instead of the generic `IEObjectTypeNames.CATALOG_REF` shown below), do
+**NOT** use `typeProvider.getProxy("CatalogRef.Employees")` — it returns
+`null` in JShell. Use
+`MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`
+where `depMdObject = transaction.getTopObjectByFqn("Catalog.Employees")` (or
+`"ChartOfCalculationTypes.X"`, etc.). If the dep is `null`, throw
+`IllegalStateException` — create it first. Primitive types (`NUMBER`, etc.)
+still use `typeProvider.getProxy(...)`.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+// inside the BM transaction, when concrete reference is needed:
+Catalog empDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Employees");
+if (empDep == null) throw new IllegalStateException("Missing Catalog.Employees — create it first");
+TypeItem employeeRefConcrete = MdProducedTypesUtil.getProducedType(empDep, MdTypePackage.Literals.MD_REF_TYPE);
+```
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
@@ -103,4 +124,17 @@ Do not report success while this marker remains unless the user explicitly asked
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed register `.mdo` when known or derivable. For Mode B, fix markers relevant to the changed register and its registrar links before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed register `.mdo`. For Mode B, fix markers relevant to the changed register and its registrar links before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.
+
+**Derive the `.mdo` path directly from the FQN — do not `Glob` to find it.**
+For this scenario:
+
+| FQN prefix                            | `.mdo` path                                              |
+|---------------------------------------|----------------------------------------------------------|
+| `CalculationRegister.<Name>`          | `src/CalculationRegisters/<Name>/<Name>.mdo`             |
+| `ChartOfCalculationTypes.<Name>`      | `src/ChartsOfCalculationTypes/<Name>/<Name>.mdo`         |
+| `Document.<Name>`                     | `src/Documents/<Name>/<Name>.mdo` (registrar doc)        |
+
+Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
+
+Use project-wide markers only when the change can affect references between metadata objects or when the path truly cannot be derived.

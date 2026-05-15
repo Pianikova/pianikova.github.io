@@ -83,6 +83,8 @@ if (subsystem != null) {
 - ❌ **NEVER** use `EcoreUtil.delete()` for top-level metadata objects (causes `UnsupportedOperationException`)
 - ❌ **NEVER** skip `detachTopObject()` call (object will remain in transaction state)
 - Check if object exists before attempting deletion to avoid NullPointerException
+- For a multi-object delete, delete all requested objects in one BM task when the safe order is known, then run one project-wide `GetMarkers`.
+- Do not rerun a successful delete transaction unless a verification read or marker check shows that an object still exists. A second run can hide the real result behind `NOT_FOUND` noise.
 
 ### Required post-check
 
@@ -95,6 +97,19 @@ After deleting metadata, call `GetMarkers` project-wide because references may b
   "max_count": 50
 }
 ```
+
+**Derive the dependent objects' `.mdo` paths directly from their FQNs — do not `Glob` to find them.** EDT removes the deleted object's own file as part of the delete, so do not target it with a per-path `GetMarkers` — markers will surface on the **dependent** files that referenced it. The dependent paths follow `<projectRoot>/src/<TypePluralFolder>/<Name>/<Name>.mdo`. Common cases:
+
+| Dependent FQN prefix            | `.mdo` path                                          |
+|---------------------------------|------------------------------------------------------|
+| `Catalog.<Name>`                | `src/Catalogs/<Name>/<Name>.mdo`                     |
+| `Document.<Name>`               | `src/Documents/<Name>/<Name>.mdo`                    |
+| `InformationRegister.<Name>`    | `src/InformationRegisters/<Name>/<Name>.mdo`         |
+| `AccumulationRegister.<Name>`   | `src/AccumulationRegisters/<Name>/<Name>.mdo`        |
+| `CommonModule.<Name>`           | `src/CommonModules/<Name>/<Name>.mdo`                |
+| `Subsystem.<Name>`              | `src/Subsystems/<Name>/<Name>.mdo`                   |
+
+Copy `<Name>` exactly — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping. Project-wide markers remain the primary tool here because delete operations can break references the script cannot enumerate ahead of time.
 
 ### Important notes
 

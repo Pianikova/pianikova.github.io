@@ -1,5 +1,7 @@
 ## Add Document Registers (Set Up Registrars on Document Side)
 
+Call `JShell` with `scope: "edt"` for this workflow.
+
 Registrars are configured on the **document** side through `Document.getRegisterRecords()`.
 This creates a bidirectional relationship: document → register.
 
@@ -7,6 +9,20 @@ This creates a bidirectional relationship: document → register.
 Registrars are managed from the document side only.
 
 ```java
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+import com._1c.g5.v8.dt.metadata.mdclass.Document;
+
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
 IBmModel bmModel = modelManager.getModel(project);
@@ -91,10 +107,23 @@ with an existing `AccumulationRegister`, `AccountingRegister`, or
 After adding registers, verify:
 ```java
 System.out.println("Document registers: " + document.getRegisterRecords().size());
-document.getRegisterRecords().forEach(reg ->
-    System.out.println("  " + reg.getName() + " (" + reg.eClass().getName() + ")"));
+for (BasicRegister reg : document.getRegisterRecords()) {
+    System.out.println("  " + reg.getName() + " (" + reg.eClass().getName() + ")");
+}
 ```
 
 ### Required post-check
 
 After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for the project, but fix only markers on changed entities and directly affected references before reporting success.
+
+**Derive the `.mdo` paths of the changed entities directly from their FQNs — do not `Glob` to find them.**
+For this scenario, the changed entity is the document (its `registerRecords` collection); the linked registers may also report markers:
+
+| FQN prefix                       | `.mdo` path                                       |
+|----------------------------------|---------------------------------------------------|
+| `Document.<Name>`                | `src/Documents/<Name>/<Name>.mdo`                 |
+| `AccumulationRegister.<Name>`    | `src/AccumulationRegisters/<Name>/<Name>.mdo`     |
+| `AccountingRegister.<Name>`      | `src/AccountingRegisters/<Name>/<Name>.mdo`       |
+| `CalculationRegister.<Name>`     | `src/CalculationRegisters/<Name>/<Name>.mdo`      |
+
+Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping. A scoped per-document path check is usually enough; fall back to project-wide markers only if cross-object references may have broken.

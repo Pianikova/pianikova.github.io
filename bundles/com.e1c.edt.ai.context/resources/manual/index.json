@@ -36,6 +36,45 @@
     ]
   },
   {
+    "id": "add_documents_to_sequence",
+    "scope": "edt",
+    "category": "composite",
+    "title": "Add Documents To Sequence",
+    "summary": "Configure which documents participate in a sequence through Sequence.getDocuments().",
+    "guide": "workflows/composite/add_documents_to_sequence.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "sequence",
+      "sequence documents",
+      "getDocuments",
+      "последовательность"
+    ]
+  },
+  {
+    "id": "assign_document_numerator",
+    "scope": "edt",
+    "category": "composite",
+    "title": "Assign Document Numerator",
+    "summary": "Attach documents to a DocumentNumerator and keep numbering properties aligned to avoid SU45.",
+    "guide": "workflows/composite/assign_document_numerator.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager"
+    ],
+    "keywords": [
+      "document numerator",
+      "setNumerator",
+      "numberLength",
+      "SU45",
+      "нумератор"
+    ]
+  },
+  {
     "id": "add_tabular_section",
     "scope": "edt",
     "category": "composite",
@@ -755,7 +794,7 @@
       "createMethod": "createDocumentNumerator()",
       "collection": "getDocumentNumerators()",
       "setupBlock": "",
-      "notes": "Attach documents to the numerator later through document properties inside a BM transaction.",
+      "notes": "Set numbering details with setNumberType(DocumentNumberType.NUMBER), setNumberLength(int), and setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL) when required. Attach documents later with Document.setNumerator(DocumentNumerator) and keep each document's numberType, numberLength, and numberPeriodicity aligned with the numerator to avoid SU45.",
       "sampleName": "MainNumerator",
       "extraSetup": ""
     }
@@ -1193,7 +1232,7 @@
       "createMethod": "createSequence()",
       "collection": "getSequences()",
       "setupBlock": "",
-      "notes": "After sequence creation, add dimensions and connect participating objects through sequence settings.",
+      "notes": "After sequence creation, connect participating documents with sequence.getDocuments().add(document). There is no setDocuments(...) method in the tested EDT API.",
       "sampleName": "DocumentsSequence",
       "extraSetup": ""
     }
@@ -2443,6 +2482,29 @@
       "подсистема",
       "отчет",
       "обработка"
+    ]
+  },
+  {
+    "id": "scaffold_business_configuration",
+    "scope": "edt",
+    "category": "composite",
+    "title": "Scaffold Business Configuration",
+    "summary": "Guardrails for broad business-configuration scaffolding requests: stage creation, validate markers, and report real coverage.",
+    "guide": "workflows/composite/scaffold_business_configuration.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "business configuration",
+      "full configuration",
+      "под ключ",
+      "магазин",
+      "maximum variety",
+      "scaffold"
     ]
   },
   {

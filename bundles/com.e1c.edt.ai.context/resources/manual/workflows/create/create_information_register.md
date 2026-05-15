@@ -1,5 +1,28 @@
 ## Safe Workflow: Create InformationRegister
 
+### ⚠️ Critical API note — resolving `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X` in JShell
+
+**Do NOT use `typeProvider.getProxy("CatalogRef.X")` for metadata reference
+types.** That global type index is populated asynchronously by EDT and is
+**not refreshed within a JShell session** — it returns `null` for every
+Catalog / Document / Enum. Resolve metadata reference types via
+`MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`
+where `depMdObject = transaction.getTopObjectByFqn("Catalog.X")` / etc.
+Primitive types (`STRING`, `NUMBER`, ...) still use
+`typeProvider.getProxy(IEObjectTypeNames.STRING)`.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+Catalog productsDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+if (productsDep == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Products — create it first");
+}
+TypeItem productsRef = MdProducedTypesUtil.getProducedType(
+    productsDep, MdTypePackage.Literals.MD_REF_TYPE);
+```
+
 ### Recommended bindings
 - `workspaceRoot`, `projectManager`, `modelManager`, `mdFactory`, `fqnGenerator`
 
@@ -89,4 +112,15 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo`. Fix only markers relevant to the changed entity before reporting success.
+
+**Derive the `.mdo` path directly from the FQN — do not `Glob` to find it.**
+For an `InformationRegister.<Name>` the path is always:
+
+```
+<projectRoot>/src/InformationRegisters/<Name>/<Name>.mdo
+```
+
+Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn("InformationRegister.<Name>")` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
+
+Use project-wide markers only when the change can affect references between metadata objects or when the path truly cannot be derived.

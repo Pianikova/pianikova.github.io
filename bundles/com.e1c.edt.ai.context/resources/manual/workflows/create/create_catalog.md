@@ -70,6 +70,14 @@ Before you generate the catalog-creation code, do this **in order**:
 
 ### Hard rules — never violate
 
+- ✅ **Before creating a catalog, check `transaction.getTopObjectByFqn("Catalog.<Name>")`.**
+  If it is non-null, do not call `transaction.attachTopObject(...)` with the
+  same FQN. Treat the object as already created and either verify/edit it
+  intentionally or stop with a clear message. Re-running a broad prompt after
+  partial success must continue from existing objects, not recreate them.
+- ✅ **Every `CatalogAttribute` must receive a non-empty `TypeDescription`
+  before `catalog.getAttributes().add(attribute)`.** Do not rely on a later
+  fix-up transaction for simple fields such as name/surname/description.
 - ❌ **Never create the catalog "partially" without the reference attributes
   the user asked for.** That is treated as a failed operation even if
   `compilation_errors` and `runtime_errors` are empty.
@@ -80,6 +88,11 @@ Before you generate the catalog-creation code, do this **in order**:
 - ❌ **Never call `typeProvider.getProxy("CatalogRef.X")`** for a metadata
   reference inside JShell — it always returns `null` for freshly-created
   objects. Use `MdProducedTypesUtil.getProducedType(...)`.
+- ❌ **Do not use very large string lengths (`setStringQualifiers(500, ...)`,
+  `1000`, `2000`, ...) in ordinary JShell CRUD scenarios unless an exact
+  long-text workflow is known and verified for this EDT version.** Prefer
+  conservative lengths up to `100` for ordinary text attributes while testing
+  metadata CRUD.
 - ✅ If a precondition cannot be satisfied, throw `IllegalStateException`
   from inside the BM task. `System.err.println(...) + return null` is **not**
   a failure — JShell will report success.
@@ -236,14 +249,13 @@ the platform default is correct.
 
 ### Safe reference type pattern
 
-When the user names a concrete reference type such as `CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹`,
-`CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹`, or `EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ`, resolve that exact metadata
-reference type with `typeProvider.getProxy("CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹")`,
-`typeProvider.getProxy("CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹")`, or
-`typeProvider.getProxy("EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ")`. Do not silently replace it with
-generic `IEObjectTypeNames.CATALOG_REF` or `IEObjectTypeNames.ENUM_REF`; generic
-reference types are valid only when the user explicitly asks for "any catalog" /
-"any enum" polymorphism.
+When the user names a concrete reference type such as `CatalogRef.Units`,
+`CatalogRef.Контрагенты`, or `EnumRef.ВидыТоваров`, resolve that exact metadata
+reference type from the referenced metadata object with
+`MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`.
+Do not use `typeProvider.getProxy("CatalogRef.X")` for metadata-produced refs
+inside JShell; keep `typeProvider.getProxy(...)` for primitive built-in types
+such as `STRING`, `NUMBER`, `BOOLEAN`, and `DATE`.
 
 Completeness guard: if the user asked for reference attributes, the catalog
 creation code must create those attributes in the same operation or throw a
@@ -252,13 +264,12 @@ reference attributes, or describe the catalog as complete when requested fields
 were skipped.
 
 ```java
-TypeItem unitsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Units");
-if (unitsRef == null) {
-    if (transaction.getTopObjectByFqn("Catalog.Units") == null) {
-        throw new IllegalStateException("Missing referenced catalog: Catalog.Units");
-    }
-    throw new IllegalStateException("CatalogRef.Units is not available yet. Run a scoped marker check for Catalog.Units, let EDT refresh produced types, then retry exact typeProvider.getProxy(\"CatalogRef.Units\").");
+Catalog unitsCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Units");
+if (unitsCatalog == null) {
+    throw new IllegalStateException("Missing referenced catalog: Catalog.Units");
 }
+TypeItem unitsRef = MdProducedTypesUtil.getProducedType(
+    unitsCatalog, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription strictType = new TypeDescriptionBuilder()
     .addType(unitsRef)
     .build();
@@ -268,27 +279,17 @@ article.setType(strictType);
 Concrete Russian-name example:
 
 ```java
-TypeItem suppliersRef = (TypeItem)typeProvider.getProxy("CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹");
-TypeItem pictureRef = (TypeItem)typeProvider.getProxy("CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹");
-TypeItem kindRef = (TypeItem)typeProvider.getProxy("EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ");
-if (suppliersRef == null) {
-    if (transaction.getTopObjectByFqn("Catalog.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹") == null) {
-        throw new IllegalStateException("Missing referenced catalog: Catalog.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹");
-    }
-    throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
-}
-if (pictureRef == null) {
-    if (transaction.getTopObjectByFqn("Catalog.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹") == null) {
-        throw new IllegalStateException("Missing referenced catalog: Catalog.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹");
-    }
-    throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
-}
-if (kindRef == null) {
-    if (transaction.getTopObjectByFqn("Enum.Р’РёРґС‹РўРѕРІР°СЂРѕРІ") == null) {
-        throw new IllegalStateException("Missing referenced enum: Enum.Р’РёРґС‹РўРѕРІР°СЂРѕРІ");
-    }
-    throw new IllegalStateException("Exact reference TypeItem is not available yet. Run a scoped marker check for the referenced object, let EDT refresh produced types, then retry exact typeProvider.getProxy(...).");
-}
+Catalog suppliersCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Контрагенты");
+Catalog pictureCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.ХранимыеФайлы");
+com._1c.g5.v8.dt.metadata.mdclass.Enum kindEnum =
+    (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.ВидыТоваров");
+if (suppliersCatalog == null) throw new IllegalStateException("Missing referenced catalog: Catalog.Контрагенты");
+if (pictureCatalog == null) throw new IllegalStateException("Missing referenced catalog: Catalog.ХранимыеФайлы");
+if (kindEnum == null) throw new IllegalStateException("Missing referenced enum: Enum.ВидыТоваров");
+
+TypeItem suppliersRef = MdProducedTypesUtil.getProducedType(suppliersCatalog, MdTypePackage.Literals.MD_REF_TYPE);
+TypeItem pictureRef = MdProducedTypesUtil.getProducedType(pictureCatalog, MdTypePackage.Literals.MD_REF_TYPE);
+TypeItem kindRef = MdProducedTypesUtil.getProducedType(kindEnum, MdTypePackage.Literals.MD_REF_TYPE);
 supplierAttribute.setType(new TypeDescriptionBuilder().addType(suppliersRef).build());
 pictureAttribute.setType(new TypeDescriptionBuilder().addType(pictureRef).build());
 kindAttribute.setType(new TypeDescriptionBuilder().addType(kindRef).build());
@@ -309,7 +310,12 @@ IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
 // Dimension 1: Product (specific catalog reference)
 InformationRegisterDimension productDim = mdFactory.createInformationRegisterDimension();
 productDim.setName("Product");
-TypeItem productsRef = (TypeItem)typeProvider.getProxy("CatalogRef.Products");
+Catalog productsCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+if (productsCatalog == null) {
+    throw new IllegalStateException("Missing referenced catalog: Catalog.Products");
+}
+TypeItem productsRef = MdProducedTypesUtil.getProducedType(
+    productsCatalog, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription productType = new TypeDescriptionBuilder()
     .addType(productsRef)
     .build();
@@ -319,13 +325,12 @@ prices.getDimensions().add(productDim);
 // Dimension 2: PriceType (specific catalog reference when the exact catalog is required)
 InformationRegisterDimension priceTypeDim = mdFactory.createInformationRegisterDimension();
 priceTypeDim.setName("PriceType");
-TypeItem priceTypesRef = (TypeItem)typeProvider.getProxy("CatalogRef.PriceTypes");
-if (priceTypesRef == null) {
-    if (transaction.getTopObjectByFqn("Catalog.PriceTypes") == null) {
-        throw new IllegalStateException("Missing referenced catalog: Catalog.PriceTypes");
-    }
-    throw new IllegalStateException("CatalogRef.PriceTypes is not available yet. Run a scoped marker check for Catalog.PriceTypes, let EDT refresh produced types, then retry exact typeProvider.getProxy(\"CatalogRef.PriceTypes\").");
+Catalog priceTypesCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.PriceTypes");
+if (priceTypesCatalog == null) {
+    throw new IllegalStateException("Missing referenced catalog: Catalog.PriceTypes");
 }
+TypeItem priceTypesRef = MdProducedTypesUtil.getProducedType(
+    priceTypesCatalog, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription priceTypesType = new TypeDescriptionBuilder()
     .addType(priceTypesRef)
     .build();
@@ -404,10 +409,34 @@ transaction.attachTopObject((IBmObject)catalog, fqn);
 
 ### Important notes
 - Validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
-- References to metadata objects created in the same unfinished scenario may be unavailable through `getProxy(...)` until EDT refreshes dynamic type indexes. If the referenced top object exists but the exact `CatalogRef.Name` / `EnumRef.Name` proxy is still `null`, do not create a transient fallback type. Validate the referenced object, let EDT refresh produced types, then retry exact `typeProvider.getProxy(...)`.
-- Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, or `IDtConstants.getEnumRefQName(...)` for EDT TypeDescription creation in JShell. Use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Top-object FQNs are still `"Catalog.Name"` / `"Enum.Name"` for `transaction.getTopObjectByFqn(...)`; TypeItem names are `"CatalogRef.Name"` / `"EnumRef.Name"`.
+- Use `typeProvider.getProxy(...)` for primitive built-in types only: `STRING`, `NUMBER`, `BOOLEAN`, `DATE`.
+- For metadata-produced references such as `CatalogRef.Name` or `EnumRef.Name`, fetch the referenced top object with `transaction.getTopObjectByFqn("Catalog.Name")` / `"Enum.Name"` and resolve the `TypeItem` with `MdProducedTypesUtil.getProducedType(dep, MdTypePackage.Literals.MD_REF_TYPE)`.
+- Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, `IDtConstants.getEnumRefQName(...)`, transient `McoreFactory` types, or generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` as fallbacks for concrete persisted metadata references.
 - For blocking preconditions, throw `IllegalStateException`. Do not only print `ERROR` to `System.err` and `return null`, because that can make JShell look successful.
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo`. Fix only markers relevant to the changed entity before reporting success.
+
+**Derive the `.mdo` path directly from the FQN — do not `Glob` to find it.**
+Schema: `<projectRoot>/src/<TypePluralFolder>/<Name>/<Name>.mdo`.
+For the types you may create from this scenario:
+
+| FQN prefix             | `.mdo` path                                    |
+|------------------------|------------------------------------------------|
+| `Catalog.<Name>`       | `src/Catalogs/<Name>/<Name>.mdo`               |
+| `Enum.<Name>`          | `src/Enums/<Name>/<Name>.mdo`                  |
+| `Document.<Name>`      | `src/Documents/<Name>/<Name>.mdo`              |
+| `InformationRegister.<Name>` | `src/InformationRegisters/<Name>/<Name>.mdo` |
+| `AccumulationRegister.<Name>` | `src/AccumulationRegisters/<Name>/<Name>.mdo` |
+| `ChartOfAccounts.<Name>` | `src/ChartsOfAccounts/<Name>/<Name>.mdo`     |
+
+Rules: use the project's path separator (`\\` on Windows, `/` on Linux); copy
+`<Name>` exactly from the FQN you used in `getTopObjectByFqn("Catalog.<Name>")`
+— same case, same Cyrillic; extension is lowercase `.mdo`. For the full
+FQN → folder mapping (registers, plans, business processes, services,
+forms, etc.) see the `check_1c_markers_after_crud` scenario.
+
+Use project-wide markers only when the change can affect references between
+metadata objects (delete, rename, registrar links, command interfaces,
+configuration-level changes) or when the path truly cannot be derived.

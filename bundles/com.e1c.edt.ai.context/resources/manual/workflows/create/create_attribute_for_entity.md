@@ -1,5 +1,28 @@
 ﻿## Scenario: Create Attribute For Entity
 
+### ⚠️ Critical API note — resolving `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X` in JShell
+
+**Do NOT use `typeProvider.getProxy("CatalogRef.X")` for metadata reference
+types.** The global `IEObjectProvider` type index is populated asynchronously
+by EDT and is **not refreshed within a JShell session** — it returns `null`
+for every freshly-created Catalog / Document / Enum and even existing ones.
+Use `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`
+where `depMdObject = transaction.getTopObjectByFqn("Catalog.X")` / `"Enum.X"`
+/ etc. Primitive types (`STRING`, `NUMBER`, `BOOLEAN`, `DATE`) still use
+`typeProvider.getProxy(IEObjectTypeNames.STRING)` — keep that idiom.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+Catalog counterpartiesDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Counterparties");
+if (counterpartiesDep == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Counterparties — create it first");
+}
+TypeItem counterpartiesRef = MdProducedTypesUtil.getProducedType(
+    counterpartiesDep, MdTypePackage.Literals.MD_REF_TYPE);
+```
+
 ### Correct child types
 - `Catalog` -> `CatalogAttribute`
 - `Document` -> `DocumentAttribute`
@@ -49,15 +72,12 @@ document.getAttributes().add(counterparty); // md-legacy-emf-check: type is requ
 DocumentAttribute counterparty = mdFactory.createDocumentAttribute();
 counterparty.setName("Counterparty");
 counterparty.setUuid(UUID.randomUUID());
-IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
-    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-TypeItem catalogRefType = (TypeItem)typeProvider.getProxy("CatalogRef.Counterparties");
-if (catalogRefType == null) {
-    if (transaction.getTopObjectByFqn("Catalog.Counterparties") == null) {
-        throw new IllegalStateException("Missing referenced catalog: Catalog.Counterparties");
-    }
-    throw new IllegalStateException("Reference type CatalogRef.Counterparties is not available yet; retry after EDT refreshes produced types.");
+Catalog counterpartiesDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Counterparties");
+if (counterpartiesDep == null) {
+    throw new IllegalStateException("Missing referenced catalog: Catalog.Counterparties — create it first");
 }
+TypeItem catalogRefType = MdProducedTypesUtil.getProducedType(
+    counterpartiesDep, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription counterpartyType = new TypeDescriptionBuilder()
     .addType(catalogRefType)
     .build();
@@ -114,10 +134,9 @@ if (authors != null) {
 ### Rules
 - Always choose the child class that matches the parent entity
 - Every attribute derived from `BasicFeature` must have `setType(...)` before it is added to the parent collection
-- When the user gives a concrete reference (`CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹`, `CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹`, `EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ`), use the exact proxy (`"CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹"`, `"CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹"`, `"EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ"`). Do not use generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` as a final type.
-- If a concrete reference proxy is null, stop and report the missing referenced metadata. Do not silently create a generic placeholder unless the user explicitly asked for polymorphic "any catalog/any enum".
-- If a concrete reference proxy is null but `transaction.getTopObjectByFqn("Catalog.Name")` / `"Enum.Name"` exists, do not create a transient `McoreFactory.eINSTANCE.createType()` fallback. It is not a persistable project-produced type. Finish the referenced-object transaction, let EDT refresh produced types, then retry with `typeProvider.getProxy("CatalogRef.Name")` / `getProxy("EnumRef.Name")`.
-- Do not use `typeProvider.createProxy(...)` or `IDtConstants.get*RefQName(...)`; use `typeProvider.getProxy("CatalogRef.Name")`, `typeProvider.getProxy("EnumRef.Name")`, etc. Use `"Catalog.Name"` / `"Enum.Name"` only for metadata object FQNs in `transaction.getTopObjectByFqn(...)`.
+- When the user gives a concrete reference (`CatalogRef.РљРѕРЅС‚СЂР°РіРµРЅС‚С‹`, `CatalogRef.РҐСЂР°РЅРёРјС‹РµР¤Р°Р№Р»С‹`, `EnumRef.Р’РёРґС‹РўРѕРІР°СЂРѕРІ`), resolve it via `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)` where `depMdObject = transaction.getTopObjectByFqn("Catalog.X")` / `"Enum.X"`. Do not use generic `IEObjectTypeNames.CATALOG_REF` / `ENUM_REF` as a final type, and do not use `typeProvider.getProxy("CatalogRef.X")` — it returns `null` in JShell.
+- If `transaction.getTopObjectByFqn("Catalog.Name")` returns `null`, throw `IllegalStateException` and stop — the dependency must be created first. Otherwise call `MdProducedTypesUtil.getProducedType(...)` directly; do not wait for any "type index refresh" and do not create a transient `McoreFactory.eINSTANCE.createType()` fallback. Never replace a requested reference with `String` or a generic root type.
+- Do not use `typeProvider.createProxy(...)` or `IDtConstants.get*RefQName(...)`. Use `"Catalog.Name"` / `"Enum.Name"` for top-object FQNs in `transaction.getTopObjectByFqn(...)` and resolve produced `TypeItem`s via `MdProducedTypesUtil`.
 - Never reuse one `TypeDescription` instance for multiple children. It is an EMF containment object and moves to the latest owner. Reuse `TypeItem` proxies, then build a new `TypeDescription` per child.
 - Before attaching or finishing a bulk CRUD transaction, loop through all new `BasicFeature` children and fail if `getType() == null || getType().getTypes().isEmpty()`
 - `CatalogAttribute`, `DocumentAttribute`, and `TabularSectionAttribute` are the most common sources of `md-legacy-emf-check` when `type` is omitted
@@ -126,5 +145,22 @@ if (authors != null) {
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.
+After adding an attribute, call `GetMarkers` with `marker_type: "1c"` and `path` to the **parent** top-level object's `.mdo` — never to the attribute itself (attributes are not top-level objects and have no `.mdo` of their own). Fix only markers relevant to the changed entity before reporting success.
+
+**Derive the `.mdo` path directly from the FQN of the parent — do not `Glob` to find it.**
+Schema: `<projectRoot>/src/<TypePluralFolder>/<ParentName>/<ParentName>.mdo`.
+After adding a `CatalogAttribute` to `Catalog.Products`, the `.mdo` to check is `src/Catalogs/Products/Products.mdo` — not anything under the attribute's name.
+
+| Parent FQN                          | `.mdo` path                                          |
+|-------------------------------------|------------------------------------------------------|
+| `Catalog.<Name>`                    | `src/Catalogs/<Name>/<Name>.mdo`                     |
+| `Document.<Name>`                   | `src/Documents/<Name>/<Name>.mdo`                    |
+| `InformationRegister.<Name>`        | `src/InformationRegisters/<Name>/<Name>.mdo`         |
+| `AccumulationRegister.<Name>`       | `src/AccumulationRegisters/<Name>/<Name>.mdo`        |
+| `BusinessProcess.<Name>`            | `src/BusinessProcesses/<Name>/<Name>.mdo`            |
+| `Task.<Name>`                       | `src/Tasks/<Name>/<Name>.mdo`                        |
+
+Copy `<ParentName>` exactly from the FQN you used in `getTopObjectByFqn("Catalog.<ParentName>")` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
+
+Use project-wide markers only when the change can affect references between metadata objects or when the path truly cannot be derived.
 

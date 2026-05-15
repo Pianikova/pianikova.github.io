@@ -120,9 +120,10 @@ public class JShellSessionMcpTool
 		description.append("\n- Session preserves state between JShell calls");
 
 		description.append("\n\n**When to use:**");
+        description.append("\n- **AFTER** calling ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" to get the scenario-specific template. For any EDT metadata or project CRUD via JShell (create, edit, rename, delete, move, attach, detach, link, unlink), loading the matching manual scenario first is **MANDATORY** — see the ")
+            .append(JShellMcpTool.TOOL_NAME).append(" tool description for the full rule");
         description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" for execution");
-        description.append("\n- After calling ").append(JShellManualMcpTool.TOOL_NAME)
-            .append(" to get a scenario-specific template");
         description.append("\n- To check available bindings");
         description.append("\n- To get a fresh `repl_session_id` for JShell and JShellReflection calls");
 

@@ -10,9 +10,12 @@ are not already available in the session.
 
 ```java
 import java.util.UUID;
+import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
 import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.bm.integration.AbstractBmTask;
-import com._1c.g5.v8.bm.integration.IBmTransaction;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.core.IBmTransaction;
 import com._1c.g5.v8.bm.integration.IBmModel;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.mcore.McoreFactory;
@@ -27,10 +30,24 @@ import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
 import com._1c.g5.v8.dt.metadata.mdclass.CatalogAttribute;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
 import com._1c.g5.v8.dt.metadata.mdclass.Document;
+import com._1c.g5.v8.dt.metadata.mdclass.DocumentJournal;
+import com._1c.g5.v8.dt.metadata.mdclass.DocumentNumerator;
+import com._1c.g5.v8.dt.metadata.mdclass.DocumentNumberPeriodicity;
+import com._1c.g5.v8.dt.metadata.mdclass.DocumentNumberType;
+import com._1c.g5.v8.dt.metadata.mdclass.RealTimePosting;
+import com._1c.g5.v8.dt.metadata.mdclass.Sequence;
 import com._1c.g5.v8.dt.metadata.mdclass.EnumValue;
 import com._1c.g5.v8.dt.metadata.mdclass.HierarchyType;
+import org.eclipse.core.resources.ICommand;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectDescription;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 ```
 
 For EDT enum metadata use the fully-qualified class name
@@ -40,7 +57,7 @@ simple name `Enum`, because it conflicts with `java.lang.Enum` in JShell.
 ## Do Not Use These Packages
 
 - `com._1c.g5.v8.dt.bm.integration.AbstractBmTask` is wrong. Use `com._1c.g5.v8.bm.integration.AbstractBmTask`.
-- `com._1c.g5.v8.dt.bm.integration.IBmTransaction` is wrong. Use `com._1c.g5.v8.bm.integration.IBmTransaction`.
+- `com._1c.g5.v8.dt.bm.integration.IBmTransaction` and `com._1c.g5.v8.bm.integration.IBmTransaction` are wrong. Use `com._1c.g5.v8.bm.core.IBmTransaction`.
 - `com._1c.g5.v8.dt.mcore.IEObjectProvider` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectProvider`.
 - `com._1c.g5.v8.dt.metadata.md.IEObjectTypeNames` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectTypeNames`.
 - `com._1c.g5.v8.dt.md.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
@@ -66,6 +83,10 @@ If a snippet must define top-level values, use unique names. A repeated top-leve
 - `HTTPService`: use `setRootURL(...)` and `getRootURL()`. Do not use `getRootUrl()`.
 - `WebService`: use `setNamespace(...)` and `getNamespace()`. Do not use `getNamespaceName()`.
 - `XDTOPackage`: `setNamespace(...)` is required for a valid baseline object; use `getNamespace()` to verify.
+- `DocumentNumerator`: use `setNumberType(DocumentNumberType.NUMBER)`, `setNumberLength(int)`, and `setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL)` when numbering details are required.
+- `Document`: use `setNumerator(DocumentNumerator)` to attach a document to a numerator; keep document number type, length, and periodicity aligned with the assigned numerator.
+- `Sequence`: use `getDocuments().add(document)` to include participating documents. There is no `setDocuments(...)`.
+- `DocumentJournal`: use `getRegisteredDocuments().add(document)` to include documents. There is no `getDocuments()` or `setDocuments(...)` for this relationship.
 
 ## Reflection Workflow
 

@@ -100,21 +100,26 @@ TypeDescription amount = new TypeDescriptionBuilder()
 
 Concrete 1C reference types are project-produced `TypeItem` names. They are not Java classes, and `JShellReflection` cannot resolve `CatalogRef.Контрагенты` or `EnumRef.ВидыТоваров`.
 
-Use exact proxies:
+Use `MdProducedTypesUtil.getProducedType(...)` from the referenced metadata object:
 
 ```java
-TypeItem supplierRef = (TypeItem)typeProvider.getProxy("CatalogRef.Контрагенты");
-if (supplierRef == null) {
-    throw new IllegalStateException("CatalogRef.Контрагенты is not available. Create Catalog.Контрагенты first and retry after EDT updates produced types.");
+Catalog suppliers = (Catalog)transaction.getTopObjectByFqn("Catalog.Контрагенты");
+if (suppliers == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Контрагенты");
 }
+TypeItem supplierRef = MdProducedTypesUtil.getProducedType(
+    suppliers, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription supplierType = new TypeDescriptionBuilder()
     .addType(supplierRef)
     .build();
 
-TypeItem kindRef = (TypeItem)typeProvider.getProxy("EnumRef.ВидыТоваров");
-if (kindRef == null) {
-    throw new IllegalStateException("EnumRef.ВидыТоваров is not available. Create Enum.ВидыТоваров first and retry after EDT updates produced types.");
+com._1c.g5.v8.dt.metadata.mdclass.Enum itemKinds =
+    (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.ВидыТоваров");
+if (itemKinds == null) {
+    throw new IllegalStateException("Missing dependency: Enum.ВидыТоваров");
 }
+TypeItem kindRef = MdProducedTypesUtil.getProducedType(
+    itemKinds, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription kindType = new TypeDescriptionBuilder()
     .addType(kindRef)
     .build();
@@ -133,7 +138,7 @@ Recommended sequence:
 1. Create independent classifiers and plans that produce reference types:
    `Catalog`, `Enum`, `ChartOfAccounts`, `ChartOfCalculationTypes`, `ChartOfCharacteristicTypes`, `ExchangePlan`, `BusinessProcess`, `Task`, `Document`, `DocumentJournal`, `DocumentNumerator`, `Sequence`, `Report`, `DataProcessor`, `SettingsStorage`, `FilterCriterion`.
 2. Run scoped `GetMarkers` for each created target `.mdo`.
-3. Let EDT update produced types. If `typeProvider.getProxy("...Ref.Name")` is still `null`, refresh/build or retry in a new JShell operation; do not use a generic/string/transient fallback.
+3. Resolve produced reference types from the dependency object with `MdProducedTypesUtil.getProducedType(dep, MdTypePackage.Literals.MD_REF_TYPE)`. Do not use `typeProvider.getProxy("...Ref.Name")` for metadata-produced refs in JShell.
 4. Create dependent objects and fields that reference those targets:
    catalog/document attributes, tabular section attributes, register dimensions/resources, common attributes, constants, chart value types, command parameters.
 5. Create registers after their dimensions' reference targets exist. For recorder-dependent registers, create/link registrar documents before reporting completion.
@@ -142,11 +147,11 @@ Recommended sequence:
 
 Common examples:
 
-| Needed type | Create first | Use exact proxy later |
+| Needed type | Create first | Resolve later |
 | --- | --- | --- |
-| `CatalogRef.Контрагенты` | `Catalog.Контрагенты` | `typeProvider.getProxy("CatalogRef.Контрагенты")` |
-| `CatalogRef.ХранимыеФайлы` | `Catalog.ХранимыеФайлы` | `typeProvider.getProxy("CatalogRef.ХранимыеФайлы")` |
-| `EnumRef.ВидыТоваров` | `Enum.ВидыТоваров` | `typeProvider.getProxy("EnumRef.ВидыТоваров")` |
+| `CatalogRef.Контрагенты` | `Catalog.Контрагенты` | `MdProducedTypesUtil.getProducedType(catalog, MdTypePackage.Literals.MD_REF_TYPE)` |
+| `CatalogRef.ХранимыеФайлы` | `Catalog.ХранимыеФайлы` | `MdProducedTypesUtil.getProducedType(catalog, MdTypePackage.Literals.MD_REF_TYPE)` |
+| `EnumRef.ВидыТоваров` | `Enum.ВидыТоваров` | `MdProducedTypesUtil.getProducedType(enumObj, MdTypePackage.Literals.MD_REF_TYPE)` |
 | document registrar refs | target `Document.*` | link via register/document recorder APIs |
 | accounting dimensions | `ChartOfAccounts.*` | exact chart/account produced types after chart exists |
 | calculation dimensions | `ChartOfCalculationTypes.*` | exact calculation type produced types after chart exists |
@@ -181,8 +186,8 @@ attr2.setType(shared);
 
 | Symptom | Action |
 | --- | --- |
-| `The 'no null' constraint is violated` in `addType` | Check which proxy is `null`; create the referenced metadata first or retry after produced types refresh. |
-| `Failed to persist reference value` | Remove transient/manual `Type` fallback and use an exact project-produced `TypeItem` proxy. |
+| `The 'no null' constraint is violated` in `addType` | Check whether the dependency object is `null`; create the referenced metadata first, then resolve via `MdProducedTypesUtil.getProducedType(...)`. |
+| `Failed to persist reference value` | Remove transient/manual `Type` fallback and use a project-produced `TypeItem` from `MdProducedTypesUtil`. |
 | `type` marker on attribute/dimension/resource | Assign a fresh non-empty `TypeDescription` before adding or saving the child. |
 | String length/range marker | Use `.setStringQualifiers(100, false)` or a smaller valid requested length. |
 | Number scale/precision marker | Ensure `scale <= precision` and use `setNumberQualifiers(scale, precision, nonNegative)`. |
