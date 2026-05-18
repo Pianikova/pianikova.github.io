@@ -11,6 +11,12 @@ Critical TypeDescription rule: `TypeDescription` is an EMF containment object. D
 Do not create document attributes named `Date`, `Дата`, `Number`, `Номер`, `Posted`, `Проведен`, `Ref`, `Ссылка`,
 `DeletionMark`, or `ПометкаУдаления`. They are standard document properties.
 
+For concrete metadata references, use the canonical imports from
+`jshell_edt_canonical_imports` and resolve the produced type with
+`MdProducedTypesUtil.getProducedType(dep, MdTypePackage.Literals.MD_REF_TYPE)`.
+Use generic `IEObjectTypeNames.CATALOG_REF` only when the user explicitly asks
+for a polymorphic "any catalog" value.
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
@@ -63,9 +69,14 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Create doc
             return null;
         }
 
-        TypeItem catalogRefType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
+        Catalog warehousesCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Warehouses");
+        if (warehousesCatalog == null) {
+            throw new IllegalStateException("Missing dependency: Catalog.Warehouses");
+        }
+        TypeItem warehouseRefType = MdProducedTypesUtil.getProducedType(
+            warehousesCatalog, MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription warehouseType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(warehouseRefType)
             .build();
         warehouse.setType(warehouseType);
         document.getAttributes().add(warehouse);
@@ -92,8 +103,14 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Create doc
             return null;
         }
 
+        Catalog productsCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+        if (productsCatalog == null) {
+            throw new IllegalStateException("Missing dependency: Catalog.Products");
+        }
+        TypeItem productRefType = MdProducedTypesUtil.getProducedType(
+            productsCatalog, MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription productType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(productRefType)
             .build();
         product.setType(productType);
         products.getAttributes().add(product);
@@ -158,6 +175,7 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Create doc
 - [ ] Wrap ALL UUID assignments in try-catch blocks
 - [ ] Abort creation if any UUID assignment fails
 - [ ] Build a fresh `TypeDescription` for each `DocumentAttribute` and `TabularSectionAttribute`; never reuse one instance across multiple children
+- [ ] For concrete `CatalogRef.X`, `EnumRef.X`, and `DocumentRef.X`, fetch the dependency with `transaction.getTopObjectByFqn(...)`, fail if it is `null`, then call `MdProducedTypesUtil.getProducedType(dep, MdTypePackage.Literals.MD_REF_TYPE)`
 - [ ] Use `setNumberQualifiers(scale, precision, nonNegative)` with scale first, for example `setNumberQualifiers(2, 10, false)` for `Number(10,2)`
 - [ ] Do not add custom attributes whose names duplicate standard document properties such as `Date`/`Дата` or `Number`/`Номер`
 - [ ] Before `attachTopObject`, verify every child `getType()` is non-null and non-empty

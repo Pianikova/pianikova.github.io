@@ -4,7 +4,35 @@ This workflow creates a minimal EDT 1C:Enterprise configuration project in the E
 
 Critical rule: create required project files first, then enable V8 nature and Xtext builder. If V8 nature is enabled before `DT-INF/PROJECT.PMF`, `src/Configuration/Configuration.mdo`, and `.settings` exist, EDT lifecycle can start on a half-created project. The result may be visible in workspace but not resolvable through `projectManager`.
 
-Import rule: if explicit imports are needed, use `com._1c.g5.v8.dt.core.platform.IV8Project`. Do not import `com._1c.g5.v8.dt.core.IV8Project`; that package does not contain `IV8Project`.
+Hard stop: a plain Eclipse project is not a 1C configuration project. Do not create only `.project` and then try to make a `Configuration` object through BM. Until `.settings`, `DT-INF/PROJECT.PMF`, `src/Configuration/Configuration.mdo`, the V8 nature, and the Xtext builder exist, `projectManager.getProject(IProject)` can return `null`, and that is a failed configuration creation.
+
+Never report success when the verification prints `V8Project is null`, `BM model is null`, or `Configuration object is not accessible`. Stop, inspect the project structure, and recreate or repair the project with the full workflow below.
+
+Import rule: if explicit imports are needed, use the imports below exactly. In a fresh JShell session the `edt` scope may not already contain Eclipse resource classes such as `NullProgressMonitor` or `IProjectDescription`. Do not send the project creation snippet until these classes are imported or fully qualified.
+
+```java
+import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
+import java.util.UUID;
+import org.eclipse.core.resources.ICommand;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IProjectDescription;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+```
+
+Use `com._1c.g5.v8.dt.core.platform.IV8Project`. Do not import `com._1c.g5.v8.dt.core.IV8Project`; that package does not contain `IV8Project`.
 
 ```java
 String projectName = "MyNewConfiguration";
@@ -148,6 +176,8 @@ try {
 ### Rules
 
 - Create a plain Eclipse project first.
+- Do not stop after `projectHandle.create(...)` / `projectHandle.open(...)`. That creates only an Eclipse container, not an EDT configuration project.
+- In a fresh session, import or fully qualify `NullProgressMonitor`, `IProjectDescription`, `ResourcesPlugin`, `IFolder`, `IFile`, `IResource`, `ICommand`, `CoreException`, and `ByteArrayInputStream` before running the snippet. Missing these imports causes JShell `cannot find symbol` compilation errors before any project files are created.
 - Create `.settings`, `DT-INF/PROJECT.PMF`, `src`, and `src/Configuration/Configuration.mdo` before enabling V8 nature.
 - `PROJECT.PMF` must be manifest format, not XML.
 - `Configuration.mdo` must use `http://g5.1c.ru/v8/dt/metadata/mdclass`.
@@ -155,11 +185,13 @@ try {
 - Add Xtext builder after required files exist: `org.eclipse.xtext.ui.shared.xtextBuilder`.
 - During verification, use `projectManager.getProject(projectHandle)`, not `projectManager.getProject(projectName)`.
 - Verify `IV8Project`, `IBmModel`, and top object `Configuration`.
-- After creation, run `GetMarkers` with `marker_type: "1c"` for the project.
+- After creating a new configuration project, run `GetMarkers` with `marker_type: "1c"` for the project because project initialization touches project-level files and the root `Configuration.mdo`. This project-wide check is specific to project creation; for ordinary 1C metadata CRUD, use `GetMarkers` with `path` to each changed top-level `.mdo` and do not fix unrelated project-wide markers.
 
 ### Known failure signs
 
 - Project appears in `GetProjects`, but `projectManager.getProject("Name")` returns `null`: use the `IProject` handle and wait for lifecycle initialization.
+- Project exists on disk with only `.project`, no `DT-INF/PROJECT.PMF`, and no `src/Configuration/Configuration.mdo`: it is just a plain Eclipse project. Recreate or repair it with this full workflow before any metadata CRUD.
+- `V8Project is null` in JShell output is a failure, even if the tool response description says "configuration created successfully".
 - `NoSuchFileException` for `.settings`: create `.settings` before enabling V8 nature.
 - `ProjectManifestException`: check `DT-INF/PROJECT.PMF` format and `Runtime-Version`.
 - BM model exists but `Configuration` is not accessible: check `src/Configuration/Configuration.mdo` namespace and root element.

@@ -1,5 +1,35 @@
 ## API Compatibility Notes
 
+### ⚠️ Critical API note — resolving `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X` in JShell
+
+**Do NOT use `typeProvider.getProxy("CatalogRef.X")` for metadata reference
+types.** The global `IEObjectProvider` type index is populated asynchronously
+by EDT and is **not refreshed within a JShell session** — it returns `null`
+for every freshly-created Catalog / Document / Enum / Chart / etc., and for
+ones that already existed when the project opened. Use
+`MdProducedTypesUtil.getProducedType(mdObject, eClass)` instead — it reads
+the produced `TypeItem` directly from the EMF object you fetched via
+`transaction.getTopObjectByFqn(...)`.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+Catalog dep = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+if (dep == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Products — create it first");
+}
+TypeItem productsRef = MdProducedTypesUtil.getProducedType(
+    dep, MdTypePackage.Literals.MD_REF_TYPE);  // "CatalogRef.Products"
+```
+
+`MdTypePackage.Literals.*` mapping: `MD_REF_TYPE` → `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X` / `BusinessProcessRef.X` / `TaskRef.X` / `ChartOf...Ref.X` / `ExchangePlanRef.X`; `MD_OBJECT_TYPE` → `CatalogObject.X`; `MD_LIST_TYPE` → `CatalogList.X`; `MD_ROW_TYPE` → `CatalogTabularSectionRow.X.Y`; `MD_USER_DEFINED_TYPE` → `DefinedType.X` (returns `TypeSet`).
+
+Primitive types (`STRING`, `NUMBER`, `BOOLEAN`, `DATE`) and **generic
+polymorphic** reference roots (`IEObjectTypeNames.CATALOG_REF`, etc.) still
+use `typeProvider.getProxy(...)` — keep that idiom. The `null`-on-metadata-refs
+issue is specific to project-produced reference types like `"CatalogRef.Products"`.
+
 ### ⚠️ CRITICAL RULES - Follow These to Avoid Failures
 
 #### Transaction Management
@@ -12,7 +42,7 @@
 - Modify existing objects directly (no `attachTopObject()` needed)
 - After every metadata CRUD operation, run the `GetMarkers` tool with `marker_type: "1c"` and inspect remaining 1C markers before reporting success
 - If a workflow needs more than one unknown EDT type, method, factory, field, or enum, call `JShellReflection` once with the full `queries` array before writing JShell code
-- Use canonical imports from `jshell_edt_canonical_imports`: `AbstractBmTask` and `IBmTransaction` are in `com._1c.g5.v8.bm.integration`, not in `com._1c.g5.v8.dt.bm.integration`
+- Use canonical imports from `jshell_edt_canonical_imports`: `AbstractBmTask` is in `com._1c.g5.v8.bm.integration`; `IBmTransaction` is in `com._1c.g5.v8.bm.core`. Do not import either one from `com._1c.g5.v8.dt.bm.integration`.
 - In persistent JShell sessions, wrap non-trivial snippets in `{ ... }` blocks to avoid stale top-level variables and `NoSuchFieldError`
 
 **❌ PROHIBITED:**
@@ -62,7 +92,7 @@ document.setNumberPeriodicity(DocumentNumberPeriodicity.YEAR);
 - Use `RegisterWriteMode.INDEPENDENT` or `RegisterWriteMode.RECORDER_SUBORDINATE`
 - Use specific child factories (`createInformationRegisterDimension/Resource`); generic `createRegisterDimension/Resource` is not valid in mdFactory
 - Contains: resources, attributes, dimensions (all require types)
-- String dimensions/resources/attributes must use finite string qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can return SU8 "Строка не может быть неограниченной длины"
+- String dimensions/resources/attributes must use finite string qualifiers, for example `.setStringQualifiers(100, false)`, otherwise `GetMarkers` can return SU8 "Строка не может быть неограниченной длины". Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires it and the current EDT model accepts it.
 
 **AccumulationRegister (РегистрНакопления):**
 - Use `AccumulationRegisterType.BALANCE` or `AccumulationRegisterType.TURNOVERS`
@@ -227,7 +257,11 @@ TypeItem undefinedType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UNDEF
 TypeItem valueType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.VALUESTORAGE);
 TypeItem uuidType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.UUID);
 
-// Primary metadata reference types
+// Primary metadata reference types. These are generic polymorphic roots.
+// For a concrete user request like CatalogRef.Контрагенты or EnumRef.ВидыТоваров,
+// resolve via MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)
+// where depMdObject = transaction.getTopObjectByFqn("Catalog.Контрагенты") / "Enum.ВидыТоваров".
+// Do NOT use typeProvider.getProxy("CatalogRef.X") — it returns null in JShell.
 TypeItem catalogRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
 TypeItem documentRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.DOCUMENT_REF);
 TypeItem enumRef = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.ENUM_REF);
@@ -337,8 +371,14 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(catalogRefType)
     .build();
 
-// Specific catalog reference (requires existing catalog)
-TypeItem catalogType = (TypeItem)typeProvider.getProxy("Catalog.Products");
+// Specific catalog reference (requires existing catalog).
+// ⚠️ Use MdProducedTypesUtil — NOT typeProvider.getProxy("CatalogRef.Products"), which returns null in JShell.
+Catalog productsDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+if (productsDep == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Products — create it first");
+}
+TypeItem catalogType = MdProducedTypesUtil.getProducedType(
+    productsDep, MdTypePackage.Literals.MD_REF_TYPE);
 typeDesc = new TypeDescriptionBuilder()
     .addType(catalogType)
     .build();
@@ -351,8 +391,14 @@ typeDesc = new TypeDescriptionBuilder()
     .addType(documentRefType)
     .build();
 
-// Specific document reference
-TypeItem documentType = (TypeItem)typeProvider.getProxy("Document.GoodsReceipt");
+// Specific document reference — note: TypeItem name is "DocumentRef.X", not "Document.X".
+// ⚠️ Use MdProducedTypesUtil — NOT typeProvider.getProxy("DocumentRef.GoodsReceipt") (null in JShell).
+Document grDep = (Document)transaction.getTopObjectByFqn("Document.GoodsReceipt");
+if (grDep == null) {
+    throw new IllegalStateException("Missing dependency: Document.GoodsReceipt — create it first");
+}
+TypeItem documentType = MdProducedTypesUtil.getProducedType(
+    grDep, MdTypePackage.Literals.MD_REF_TYPE);
 typeDesc = new TypeDescriptionBuilder()
     .addType(documentType)
     .build();
@@ -365,8 +411,15 @@ typeDesc = new TypeDescriptionBuilder()
     .addType(enumRefType)
     .build();
 
-// Specific enum reference
-TypeItem enumType = (TypeItem)typeProvider.getProxy("Enum.OrderStatus");
+// Specific enum reference.
+// ⚠️ Use MdProducedTypesUtil — NOT typeProvider.getProxy("EnumRef.OrderStatus"), which returns null in JShell.
+com._1c.g5.v8.dt.metadata.mdclass.Enum orderStatusDep =
+    (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.OrderStatus");
+if (orderStatusDep == null) {
+    throw new IllegalStateException("Missing dependency: Enum.OrderStatus — create it first");
+}
+TypeItem enumType = MdProducedTypesUtil.getProducedType(
+    orderStatusDep, MdTypePackage.Literals.MD_REF_TYPE);
 typeDesc = new TypeDescriptionBuilder()
     .addType(enumType)
     .build();
@@ -427,8 +480,14 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(accRegRef)
     .build();
 
-// Specific accumulation register
-TypeItem accReg = (TypeItem)typeProvider.getProxy("AccumulationRegister.GoodsInStock");
+// Specific accumulation register — use MdProducedTypesUtil, NOT typeProvider.getProxy("AccumulationRegisterRef.X").
+AccumulationRegister stockDep =
+    (AccumulationRegister)transaction.getTopObjectByFqn("AccumulationRegister.GoodsInStock");
+if (stockDep == null) {
+    throw new IllegalStateException("Missing dependency: AccumulationRegister.GoodsInStock");
+}
+TypeItem accReg = MdProducedTypesUtil.getProducedType(
+    stockDep, MdTypePackage.Literals.MD_REF_TYPE);
 typeDesc = new TypeDescriptionBuilder()
     .addType(accReg)
     .build();
@@ -469,8 +528,14 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(coaRef)
     .build();
 
-// Specific chart of accounts
-TypeItem coa = (TypeItem)typeProvider.getProxy("ChartOfAccounts.ПланСчетов");
+// Specific chart of accounts — use MdProducedTypesUtil, NOT typeProvider.getProxy("ChartOfAccountsRef.X").
+ChartOfAccounts coaDep =
+    (ChartOfAccounts)transaction.getTopObjectByFqn("ChartOfAccounts.ПланСчетов");
+if (coaDep == null) {
+    throw new IllegalStateException("Missing dependency: ChartOfAccounts.ПланСчетов");
+}
+TypeItem coa = MdProducedTypesUtil.getProducedType(
+    coaDep, MdTypePackage.Literals.MD_REF_TYPE);
 typeDesc = new TypeDescriptionBuilder()
     .addType(coa)
     .build();
@@ -558,27 +623,46 @@ typeDesc = new TypeDescriptionBuilder()
 
 ### Specific Metadata Type References
 
-To reference specific metadata objects, use fully qualified names (FQN):
+To reference specific metadata objects, fetch the dependency MdObject via
+`transaction.getTopObjectByFqn(...)` and resolve its produced `TypeItem`
+through `MdProducedTypesUtil`. Do **NOT** call
+`typeProvider.getProxy("CatalogRef.X")` / `"DocumentRef.X"` / `"EnumRef.X"`
+etc. — they return `null` in JShell.
+
 ```java
-// Specific catalog
-TypeItem productsRef = (TypeItem)typeProvider.getProxy("Catalog.Products");
-TypeItem nomenclatureRef = (TypeItem)typeProvider.getProxy("Catalog.Номенклатура");
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
 
-// Specific document
-TypeItem goodsReceiptRef = (TypeItem)typeProvider.getProxy("Document.GoodsReceipt");
-TypeItem salesOrderRef = (TypeItem)typeProvider.getProxy("Document.ЗаказКлиента");
+// Specific catalog → "CatalogRef.Products"
+Catalog productsDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+TypeItem productsRef = MdProducedTypesUtil.getProducedType(productsDep, MdTypePackage.Literals.MD_REF_TYPE);
 
-// Specific enum
-TypeItem orderStatusRef = (TypeItem)typeProvider.getProxy("Enum.OrderStatus");
-TypeItem sexRef = (TypeItem)typeProvider.getProxy("Enum.Пол");
+// Specific document → "DocumentRef.GoodsReceipt"
+Document grDep = (Document)transaction.getTopObjectByFqn("Document.GoodsReceipt");
+TypeItem goodsReceiptRef = MdProducedTypesUtil.getProducedType(grDep, MdTypePackage.Literals.MD_REF_TYPE);
 
-// Specific registers
-TypeItem goodsStockRef = (TypeItem)typeProvider.getProxy("AccumulationRegister.GoodsInStock");
-TypeItem pricesRef = (TypeItem)typeProvider.getProxy("InformationRegister.Prices");
+// Specific enum → "EnumRef.OrderStatus"
+com._1c.g5.v8.dt.metadata.mdclass.Enum osDep =
+    (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.OrderStatus");
+TypeItem orderStatusRef = MdProducedTypesUtil.getProducedType(osDep, MdTypePackage.Literals.MD_REF_TYPE);
 
-// Specific charts/plans
-TypeItem planOfAccounts = (TypeItem)typeProvider.getProxy("ChartOfAccounts.ПланСчетов");
-TypeItem chartOfCalc = (TypeItem)typeProvider.getProxy("ChartOfCalculationTypes.ВидыРасчетов");
+// Specific registers → "AccumulationRegisterRef.GoodsInStock", "InformationRegisterRef.Prices"
+AccumulationRegister stockDep =
+    (AccumulationRegister)transaction.getTopObjectByFqn("AccumulationRegister.GoodsInStock");
+TypeItem goodsStockRef = MdProducedTypesUtil.getProducedType(stockDep, MdTypePackage.Literals.MD_REF_TYPE);
+InformationRegister pricesDep =
+    (InformationRegister)transaction.getTopObjectByFqn("InformationRegister.Prices");
+TypeItem pricesRef = MdProducedTypesUtil.getProducedType(pricesDep, MdTypePackage.Literals.MD_REF_TYPE);
+
+// Specific charts/plans → "ChartOfAccountsRef.ПланСчетов", "ChartOfCalculationTypesRef.ВидыРасчетов"
+ChartOfAccounts coaDep =
+    (ChartOfAccounts)transaction.getTopObjectByFqn("ChartOfAccounts.ПланСчетов");
+TypeItem planOfAccounts = MdProducedTypesUtil.getProducedType(coaDep, MdTypePackage.Literals.MD_REF_TYPE);
+ChartOfCalculationTypes cctDep =
+    (ChartOfCalculationTypes)transaction.getTopObjectByFqn("ChartOfCalculationTypes.ВидыРасчетов");
+TypeItem chartOfCalc = MdProducedTypesUtil.getProducedType(cctDep, MdTypePackage.Literals.MD_REF_TYPE);
+
+// In every case: throw IllegalStateException if the dep MdObject is null — create it first.
 ```
 
 ### Type Qualifiers (Advanced)
@@ -666,7 +750,7 @@ attribute.setType(compositeType);
 - **Business Process/Task references**: Use `BUSINESS_PROCESS_REF` and `TASK_REF` for workflow metadata
 - **ANY_REF**: Universal reference type - use when any reference type is acceptable
 - **CHARACTERISTIC**: Universal characteristic type for flexible attribute handling
-- **Specific metadata references**: Use FQN like `"Catalog.Products"` - requires metadata to exist in configuration
+- **Specific metadata reference TypeItems**: resolve via `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)` where `depMdObject = transaction.getTopObjectByFqn("Catalog.Products")` / `"Enum.OrderStatus"`. Do NOT call `typeProvider.getProxy("CatalogRef.Products")` — it returns `null` in JShell. Use `"Catalog.Products"` / `"Enum.OrderStatus"` only for top-object FQNs in `transaction.getTopObjectByFqn(...)`.
 
 ### Complete Example
 
@@ -1013,9 +1097,13 @@ catalog.setCodeLength(9); // ✅ Correct property
 
 ### ❌ Pitfall #7: Incorrect top-level object deletion
 
-**Error:** `UnsupportedOperationException`
+**Errors:** `UnsupportedOperationException`, or repeated
+`Resource ... .mdo does not exist` errors from background context/index walkers.
 
-**Problem:** Using `EcoreUtil.delete()` for top-level metadata objects causes exception.
+**Problem:** Using `EcoreUtil.delete()` for top-level metadata objects causes
+an exception. Manually removing the object from `Configuration` and calling
+`detachTopObject(...)` can delete the file but leave stale EDT platform-object
+references for background services.
 
 ```java
 // ❌ WRONG CODE for top-level objects
@@ -1035,6 +1123,13 @@ EcoreUtil.delete(attr); // Works correctly for child objects
 **IMPORTANT:** Remove from parent collection and detach from transaction.
 **Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.
 **Note:** Deleting a catalog will cascade delete all its attributes, tabular sections, forms, and templates.
+
+**Updated JShell rule:** for top-level metadata objects, prefer
+`delete_metadata_object` and `IMdRefactoringService.createMdObjectDeleteRefactoring(...)`.
+Do not use manual `configuration.getX().remove(...) + detachTopObject(...)`
+in CRUD scenarios; it can leave stale platform-object references for EDT
+background context sync. `EcoreUtil.delete(...)` remains valid for child
+objects such as attributes.
 ### ❌ Pitfall #8: Incorrect Enum Constants in JShell
 
 **Error:** Compilation error - cannot find symbol or type mismatch
@@ -1123,16 +1218,15 @@ catalog.setHierarchyType(HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS);
 catalog.setHierarchyType(HierarchyType.HIERARCHY_OF_ITEMS);
 ```
 
-**TypeDescriptionBuilder:** always validate `typeProvider.getProxy(...)` before `addType(...)`.
-If the proxy is null, do not call `addType(null)`: stop, create the referenced metadata first, or use a generic fallback type.
-Unresolved specific proxies may happen for typos, non-existent metadata, or references to objects that are not yet visible.
+**TypeDescriptionBuilder:** for primitive proxies always validate `typeProvider.getProxy(...)` before `addType(...)`. For concrete metadata reference types use `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)` and validate `depMdObject` — `typeProvider.getProxy("CatalogRef.X")` returns `null` in JShell and must not be used. Use a generic root type (`IEObjectTypeNames.CATALOG_REF`, etc.) only when the user explicitly asked for a polymorphic "any catalog" / "any enum" reference.
 
 ```java
-TypeItem proxy = (TypeItem)typeProvider.getProxy("Catalog.Units");
-if (proxy == null) {
-    System.err.println("ERROR: Cannot resolve Catalog.Units");
-    return null;
+Catalog unitsDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Units");
+if (unitsDep == null) {
+    throw new IllegalStateException("Missing referenced catalog: Catalog.Units — create it first");
 }
+TypeItem proxy = MdProducedTypesUtil.getProducedType(
+    unitsDep, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription typeDesc = new TypeDescriptionBuilder()
     .addType(proxy)
     .build();

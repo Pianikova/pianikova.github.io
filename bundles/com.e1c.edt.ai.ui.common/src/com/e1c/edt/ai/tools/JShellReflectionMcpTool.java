@@ -32,7 +32,7 @@ public class JShellReflectionMcpTool
     public static final String TOOL_NAME = "JShellReflection"; //$NON-NLS-1$
 
     private static final String QUESTION_EXAMPLE =
-        "{\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"queries\":[\"com._1c.g5.v8.dt.metadata.mdclass\",\"TypeDescriptionBuilder.set*\"]}"; //$NON-NLS-1$
+        "{\"repl_session_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"queries\":[\"java.util\",\"ArrayList.add*\"]}"; //$NON-NLS-1$
 
     private final IJson json;
     private final IMcpToolsCallMessageFactory messageFactory;
@@ -132,9 +132,7 @@ public class JShellReflectionMcpTool
 
         var queriesProperty = new McpToolCallProperty();
         queriesProperty.type = "array";
-        queriesProperty.description = "Required array of API search strings. Supports `*` wildcards. Examples: "
-            + "`com._1c.g5.v8.dt.metadata.mdclass`, `com._1c.g5.v8.dt.metadata.mdclass.*HierarchyType`, "
-            + "`TypeDescriptionBuilder.setNumberQualifiers`, `TypeDescriptionBuilder.set*`.";
+        queriesProperty.description = "Required array of API search strings. Supports `*` wildcards.";
         properties.put("queries", queriesProperty);
 
         var sessionIdProperty = new McpToolCallProperty();
@@ -161,18 +159,9 @@ public class JShellReflectionMcpTool
             .append(" when unsure about packages, types, enum constants, methods, fields, constructors, or signatures.");
         description.append("\n\nUse this tool to determine the exact Java API. Do not rely on memory or guesswork for ")
             .append("method names, overloads, enum constants, package names, or type names.");
-        description.append("\n\nEDT batch-first workflow: before writing JShell code that touches more than one EDT type, ")
-            .append("factory method, enum, field, or method, collect all unknown API names and call ")
+        description.append("\n\nWhen multiple API names are unknown, collect them and call ")
             .append(TOOL_NAME)
-            .append(" once with the full `queries` array. Prefer one broad batch call over many small calls.");
-        description.append("\n\nDo NOT use this tool only to re-check baseline top-level CRUD already returned by an exact ")
-            .append(JShellManualMcpTool.TOOL_NAME)
-            .append(" scenario or EDT metadata API card. For those cases, use the manual directly. Use reflection only for ")
-            .append("unknown child objects, form internals, module internals, enum constants, overloads, or APIs not covered by the manual.");
-        description.append("\n\nKnown EDT enum constants already covered by the manual do not need reflection: ")
-            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
-            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`. ")
-            .append("Do not look up `AccumulationRegisterType.REMAINDERS`; use `BALANCE` for remainder/balance registers.");
+            .append(" once with the full `queries` array.");
         description.append("\n\nAccepts multiple search strings in one call and returns results in the same order.");
         description.append("\nQueries are API symbols, package names, or wildcard member searches, not Java statements. ")
             .append("Do not send `import ...` statements; use `com.example.package`, `SomeType`, or `SomeType.set*`. ")

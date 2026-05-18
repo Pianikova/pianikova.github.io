@@ -121,12 +121,17 @@ public class EclipsePlatformBindingProvider
     {
         // @formatter:off
 		return List.of(
-            "import org.eclipse.swt.widgets.*;",
-			"import org.eclipse.swt.*;",
-			"import org.eclipse.ui.*;",
-			"import org.eclipse.jface.operation.*;",
-			"import org.eclipse.core.runtime.*;",
-			"import org.eclipse.core.commands.common.*;",
+            "import org.eclipse.swt.SWT;",
+            "import org.eclipse.swt.widgets.Display;",
+            "import org.eclipse.swt.widgets.Shell;",
+            "import org.eclipse.ui.IEditorPart;",
+            "import org.eclipse.ui.IWorkbench;",
+            "import org.eclipse.ui.IWorkbenchPage;",
+            "import org.eclipse.ui.IWorkbenchWindow;",
+            "import org.eclipse.jface.operation.IRunnableContext;",
+            "import org.eclipse.core.runtime.IAdaptable;",
+            "import org.eclipse.core.runtime.IProgressMonitor;",
+            "import org.eclipse.core.commands.common.EventManager;",
 			"import java.util.UUID;",
 			"import java.io.ByteArrayInputStream;",
             "import java.io.UnsupportedEncodingException;"
@@ -174,7 +179,7 @@ public class EclipsePlatformBindingProvider
         desc.append("- Prefer inspection first, mutation second\n");
         desc.append("- Guard against `null` active window/page/editor\n");
         desc.append("- Use `System.out.println(...)` for visible JShell output\n");
-        desc.append("- Resolve `IProject` from `workspaceRoot` before moving into EDT metadata APIs\n");
+        desc.append("- Resolve `IProject` from `workspaceRoot` before passing it to project-specific APIs\n");
         desc.append("\n## Starter snippet\n");
         desc.append("```java\n");
         desc.append("var window = workbench.getActiveWorkbenchWindow();\n");

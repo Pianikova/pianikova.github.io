@@ -284,7 +284,7 @@ public class JShellManualMcpTool
     private Details toDetails(JShellManualEntry entry)
     {
         var details = new Details();
-        details.id = entry.getId();
+        details.manualId = entry.getId();
         details.scope = entry.getScope();
         details.category = entry.getCategory();
         details.title = entry.getTitle();
@@ -297,7 +297,7 @@ public class JShellManualMcpTool
     private CompactSummary toCompactSummary(JShellManualEntry entry)
     {
         var summary = new CompactSummary();
-        summary.id = entry.getId();
+        summary.manualId = entry.getId();
         summary.category = entry.getCategory();
         return summary;
     }
@@ -366,37 +366,18 @@ public class JShellManualMcpTool
         var sb = new StringBuilder();
         sb.append("Provides scenario-oriented guidance for writing Java code for ").append(JShellMcpTool.TOOL_NAME)
             .append(".\n\n");
-        sb.append("You MUST use this tool before ").append(JShellMcpTool.TOOL_NAME)
-            .append(" when working with EDT metadata API or Eclipse platform API.\n");
-        sb.append("For exact manual hits, the listed baseline top-level CRUD factory, collection, FQN prefix, and safe setters ")
-            .append("are already proven guidance. Do not call ")
-            .append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" only to re-check those baseline calls. ")
+        sb.append("Use this tool to retrieve scenario-oriented markdown guidance before writing ")
+            .append(JShellMcpTool.TOOL_NAME)
+            .append(" code for APIs covered by the manual.\n");
+        sb.append("The authoritative workflow rules are in the matched markdown guides. ")
             .append("Use ").append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" for unknown child objects, form internals, module internals, enum constants, overloads, or APIs not covered by the matched guide.\n");
-        sb.append("If you need more than one unknown EDT type or method, call ")
-            .append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" once with the full `queries` list. Known register constants in the manual do not need reflection: ")
-            .append("`RegisterWriteMode.INDEPENDENT`, `RegisterWriteMode.RECORDER_SUBORDINATE`, ")
-            .append("`AccumulationRegisterType.BALANCE`, `AccumulationRegisterType.TURNOVERS`.\n");
-        sb.append("For 1C metadata CRUD, after every JShell create, update/edit, or delete, the mandatory next tool is ")
-            .append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" with `marker_type: \"1c\"` and `path` for each changed top-level `.mdo` file when the path is known ")
-            .append("or can be derived. Check all relevant markers for the changed entity, including errors, warnings, ")
-            .append("and infos; do not check only errors. Do not fix unrelated project-wide markers. Use project-wide ")
-            .append("GetMarkers only for delete, rename, registrar/reference changes, command interfaces, configuration-level ")
-            .append("changes, or when the changed `.mdo` path cannot be derived. Do not report success and do not start ")
-            .append("the next CRUD operation before checking scoped markers.\n");
-        sb.append("Use it for create/edit/delete/look-up scenarios, for workbench/editor/workspace code, and ")
-            .append("for any code that uses bindings like `mdFactory`, `modelManager`, `projectManager`, ")
-            .append("`workspaceRoot`, `workbench`, `resourceLookup`, or `fqnGenerator`.\n\n");
+            .append(" for APIs not covered by the matched guide.\n\n");
         sb.append("When calling ").append(JShellMcpTool.TOOL_NAME)
             .append(", always pass `scope`, `request_description`, and `response_description`. ")
-            .append("Use `scope: \"edt\"` for 1C metadata API and `scope: \"eclipse\"` for Eclipse workspace/UI API. ")
+            .append("Use the scope that matches the selected binding provider. ")
             .append("The request description says what will be done; the response description says what was done. ")
-            .append("For EDT CRUD, put changed top-level object names and known `.mdo` paths in `response_description`. ")
             .append("After ").append(JShellMcpTool.TOOL_NAME)
-            .append(", inspect JSON field `required_next_step`; for EDT CRUD it can require marker validation.\n\n");
+            .append(", inspect JSON field `required_next_step` when present.\n\n");
 
         sb.append("Naming convention: scenario ids are `<verb>_<entity>`, e.g. `create_catalog`, ")
             .append("`edit_information_register`, `delete_attribute`, `add_tabular_section`. ")
@@ -406,26 +387,26 @@ public class JShellManualMcpTool
         sb.append(buildCategoryListing());
 
         sb.append("\n\nResponse shape:\n");
-        sb.append("- `matched_scenarios`: hits with full guide_markdown.\n");
-        sb.append("- `available_scenarios`: compact `{id, category}` directory; present only when match is fuzzy or absent.\n");
+        sb.append("- `matched_scenarios`: hits with full guide_markdown and the scenario `manual_id`.\n");
+        sb.append("- `available_scenarios`: compact `{manual_id, category}` directory; present only when match is fuzzy or absent.\n");
         sb.append("- `suggestions`: did-you-mean list when no match (instead of error).\n");
         sb.append("- `status`: exact | fuzzy | not_matched | browse | directory.\n\n");
+        sb.append("The `manual_id` from `matched_scenarios` MUST be passed back to ").append(JShellMcpTool.TOOL_NAME)
+            .append(" in its required `manual_ids` parameter. ").append(JShellMcpTool.TOOL_NAME)
+            .append(" rejects calls whose `manual_ids` is empty or contains ids not in this catalog, so loading")
+            .append(" a scenario here is the only way to obtain a valid id.\n\n");
 
         sb.append("Suggested workflow:\n");
         sb.append("1. Call ").append(TOOL_NAME).append(" with a convention-matching scenario id.\n");
         sb.append("2. If status is `not_matched` or `fuzzy`, refine using `suggestions` or `available_scenarios`.\n");
         sb.append("3. Create or reuse a session with ").append(JShellSessionMcpTool.TOOL_NAME).append(".\n");
-        sb.append("4. Skip ").append(JShellReflectionMcpTool.TOOL_NAME)
-            .append(" for exact manual baseline CRUD. Use it only for API calls not already proven by the matched guide, ")
-            .append("and batch all unknown queries in one call.\n");
+        sb.append("4. Use ").append(JShellReflectionMcpTool.TOOL_NAME)
+            .append(" only for API calls not already proven by the matched guide, ")
+            .append("and batch unknown queries in one call.\n");
         sb.append("5. Execute the generated code with ").append(JShellMcpTool.TOOL_NAME).append(".\n");
-        sb.append("6. After code changes project resources or metadata, call ").append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" for the changed file first when known. Use `marker_type: \"problem\"` for build/validation issues, ")
-            .append("`marker_type: \"1c\"` for 1C/BSL markers, and `marker_type: \"ai_marker\"` ")
-            .append("for AIError/AIWarning/AIInfo markers. For `marker_type: \"1c\"`, inspect all relevant severities, ")
-            .append("not only errors, and fix only markers related to the entities changed by the JShell operation.\n");
+        sb.append("6. Follow the matched markdown guide for validation and follow-up tools.\n");
         sb.append("7. If ").append(JShellMcpTool.TOOL_NAME)
-            .append(" returns an EDT/Eclipse preflight error, return to ").append(TOOL_NAME)
+            .append(" returns an API-specific error, return to ").append(TOOL_NAME)
             .append(" with a better matching scenario id.\n");
         return sb.toString();
     }
@@ -528,8 +509,8 @@ public class JShellManualMcpTool
 
     private static class CompactSummary
     {
-        @SerializedName("id")
-        public String id;
+        @SerializedName("manual_id")
+        public String manualId;
 
         @SerializedName("category")
         public String category;
@@ -537,8 +518,8 @@ public class JShellManualMcpTool
 
     private static class Details
     {
-        @SerializedName("id")
-        public String id;
+        @SerializedName("manual_id")
+        public String manualId;
 
         @SerializedName("scope")
         public String scope;

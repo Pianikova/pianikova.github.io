@@ -1,5 +1,30 @@
 ## Scenario: Create TypeDescription
 
+### ⚠️ Critical API note — resolving `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X` in JShell
+
+**Do NOT use `typeProvider.getProxy("CatalogRef.X")` for metadata reference
+types.** The global `IEObjectProvider` type index is populated asynchronously
+by EDT and is **not refreshed within a JShell session** — it returns `null`
+for every Catalog / Document / Enum, including ones that already existed
+when the project opened. Use `MdProducedTypesUtil.getProducedType(mdObject, eClass)`
+instead — it reads the produced `TypeItem` directly from the EMF object.
+Primitive types (`STRING`, `NUMBER`, `BOOLEAN`, `DATE`) still use
+`typeProvider.getProxy(IEObjectTypeNames.STRING)` — keep that idiom.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+Catalog dep = (Catalog)transaction.getTopObjectByFqn("Catalog.Контрагенты");
+if (dep == null) {
+    throw new IllegalStateException("Missing dependency: Catalog.Контрагенты — create it first");
+}
+TypeItem suppliersRef = MdProducedTypesUtil.getProducedType(
+    dep, MdTypePackage.Literals.MD_REF_TYPE);  // "CatalogRef.Контрагенты"
+```
+
+`MdTypePackage.Literals.*` mapping: `MD_REF_TYPE` → `CatalogRef.X` / `EnumRef.X` / `DocumentRef.X`; `MD_OBJECT_TYPE` → `CatalogObject.X`; `MD_LIST_TYPE` → `CatalogList.X`; `MD_ROW_TYPE` → `CatalogTabularSectionRow.X.Y`; `MD_USER_DEFINED_TYPE` → `DefinedType.X`.
+
 ### String
 
 ```java
@@ -29,7 +54,31 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 Use `TypeDescriptionBuilder.setStringQualifiers(int length, boolean fixed)`.
 The builder constructs the qualifier internally via `McoreFactory.eINSTANCE`,
 so this path is JShell-safe (no OSGi service involved, no `modelFactory`).
-Prefer `length <= 100` unless reflection or the target EDT model proves that a larger value is valid.
+Default to `length <= 100`. Do not use values greater than 100, such as `150` or `1000`, unless the user explicitly requires the larger length and the current EDT model accepts it. Recent EDT validation can reject variable string lengths outside `0..100`.
+
+### Preflight-blocked patterns
+
+Do not send JShell code with these EDT patterns:
+
+```java
+// WRONG: do not call setStringQualifiers with length 150, 1000, or any value above 100.
+
+// WRONG: Ecore data types are not EDT TypeItem values.
+TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
+TypeItem numberType = (TypeItem)modelFactory.create(EcorePackage.Literals.EINT, v8project);
+
+// WRONG: TypeDescriptionBuilder.addType expects EDT TypeItem, not Ecore literals.
+new TypeDescriptionBuilder().addType(EcorePackage.Literals.ESTRING).build();
+```
+
+Use `IEObjectProvider` and `IEObjectTypeNames`:
+
+```java
+IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+    .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+TypeItem numberType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.NUMBER);
+```
 
 ```java
 IV8Project v8project = projectManager.getProject(project);
@@ -126,6 +175,30 @@ TypeDescription dateOnly = new TypeDescriptionBuilder()
 
 ### Catalog reference
 
+Use generic `IEObjectTypeNames.CATALOG_REF` only for an intentionally polymorphic
+"any catalog reference" value. If the requested type is concrete, for example
+`CatalogRef.Контрагенты`, resolve it via `MdProducedTypesUtil.getProducedType(...)`
+(NOT `typeProvider.getProxy("CatalogRef.X")` — see the critical API note above).
+
+#### Specific catalog reference
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+Catalog suppliersDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Контрагенты");
+if (suppliersDep == null) {
+    throw new IllegalStateException("Missing referenced catalog: Catalog.Контрагенты — create it first");
+}
+TypeItem suppliersRef = MdProducedTypesUtil.getProducedType(
+    suppliersDep, MdTypePackage.Literals.MD_REF_TYPE);
+TypeDescription typeDesc = new TypeDescriptionBuilder()
+    .addType(suppliersRef)
+    .build();
+```
+
+#### Generic catalog reference
+
 ```java
 IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
@@ -137,6 +210,13 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 ```
 
 ### Document reference
+
+Use generic `IEObjectTypeNames.DOCUMENT_REF` only for an intentionally
+polymorphic "any document reference" value. For a concrete type like
+`DocumentRef.SalesOrder`, resolve it through `MdProducedTypesUtil` from
+`transaction.getTopObjectByFqn("Document.SalesOrder")`.
+
+#### Generic document reference
 
 ```java
 IV8Project v8project = projectManager.getProject(project);
@@ -150,6 +230,30 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 
 ### Enum reference
 
+Use generic `IEObjectTypeNames.ENUM_REF` only for an intentionally polymorphic
+"any enum reference" value. For a concrete type like `EnumRef.ВидыТоваров`,
+resolve it via `MdProducedTypesUtil.getProducedType(...)`.
+
+#### Specific enum reference
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+
+com._1c.g5.v8.dt.metadata.mdclass.Enum kindDep =
+    (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.ВидыТоваров");
+if (kindDep == null) {
+    throw new IllegalStateException("Missing referenced enum: Enum.ВидыТоваров — create it first");
+}
+TypeItem productKindRef = MdProducedTypesUtil.getProducedType(
+    kindDep, MdTypePackage.Literals.MD_REF_TYPE);
+TypeDescription typeDesc = new TypeDescriptionBuilder()
+    .addType(productKindRef)
+    .build();
+```
+
+#### Generic enum reference
+
 ```java
 IV8Project v8project = projectManager.getProject(project);
 IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
@@ -162,25 +266,36 @@ TypeDescription typeDesc = new TypeDescriptionBuilder()
 
 ### Validate proxy before addType
 
+For primitive types (`STRING`, `NUMBER`, ...) validate the `typeProvider.getProxy(...)` result. For metadata reference types use `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)` and validate `depMdObject` instead — the produced type call itself does not return `null` for an existing top object.
+
 ```java
-TypeItem unitsRef = (TypeItem)typeProvider.getProxy("Catalog.Units");
-if (unitsRef == null) {
-    System.err.println("ERROR: Cannot resolve type proxy Catalog.Units");
-    return null;
+// Primitive — validate the proxy
+TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+if (stringType == null) {
+    throw new IllegalStateException("Cannot resolve STRING type");
 }
+
+// Metadata reference — validate the dep MdObject
+Catalog unitsDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Units");
+if (unitsDep == null) {
+    throw new IllegalStateException("Missing referenced catalog: Catalog.Units — create it first");
+}
+TypeItem unitsRef = MdProducedTypesUtil.getProducedType(
+    unitsDep, MdTypePackage.Literals.MD_REF_TYPE);
 TypeDescription unitsType = new TypeDescriptionBuilder()
     .addType(unitsRef)
     .build();
 ```
 
 ### Rules
-- Prefer a specific proxy like `Catalog.Products` when the business rule is narrow
+- Prefer a specific proxy like `CatalogRef.Products` when the business rule is narrow
 - Use generic IEObjectTypeNames only when polymorphism is desired
 - Build the type before assigning it to attributes, dimensions, resources, constants, or defined types
 - Always validate `typeProvider.getProxy(...)` before `addType(...)`; `null` causes `IllegalArgumentException`
-- If a specific metadata proxy like `"Catalog.Units"` is null, do not call `addType(null)`. Use a generic fallback such as `IEObjectTypeNames.CATALOG_REF` or create the missing metadata first.
+- For specific metadata references (`CatalogRef.X`, `EnumRef.X`, `DocumentRef.X`, ...), resolve via `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`. Do not call `typeProvider.getProxy("CatalogRef.X")` — it returns `null` in JShell. If `transaction.getTopObjectByFqn("Catalog.X")` returns `null`, throw `IllegalStateException`. Do not create a transient `McoreFactory.eINSTANCE.createType()` fallback. Use a generic type like `IEObjectTypeNames.CATALOG_REF` only when the user explicitly asked for a polymorphic reference type.
 - Specific references only work for metadata objects that already exist and are visible to the current transaction
-- When a specific proxy is unavailable, fall back to a generic type like `IEObjectTypeNames.CATALOG_REF`
+- Do not use `typeProvider.createProxy(...)`, `IDtConstants.getCatalogRefQName(...)`, or `IDtConstants.getEnumRefQName(...)`. Use `"Catalog.Name"` / `"Enum.Name"` for top-object FQNs in `transaction.getTopObjectByFqn(...)` and resolve produced `TypeItem`s via `MdProducedTypesUtil`.
+- Never replace requested `CatalogRef.*` / `EnumRef.*` fields with `String`. Throw `IllegalStateException` if the referenced top object is missing.
 - Set qualifiers via the builder's fluent methods — they internally use `McoreFactory.eINSTANCE` and are JShell-safe
 
 ### ❌ Anti-patterns — methods that DO NOT exist on TypeDescriptionBuilder

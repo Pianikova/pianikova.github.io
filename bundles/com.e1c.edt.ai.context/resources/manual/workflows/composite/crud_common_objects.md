@@ -44,4 +44,8 @@ Safe CommonModule read rule: print `getName()`, `getSynonym()`, and other proven
 
 ## Delete
 
-Remove from the matching `Configuration` collection and detach the top object by FQN. Then run `GetMarkers`.
+Use `delete_metadata_object`: resolve the top-level `MdObject`, execute
+`IMdRefactoringService.createMdObjectDeleteRefactoring(...)`, refresh the
+project, then run project-wide `GetMarkers`. Do not remove from the
+`Configuration` collection and call `detachTopObject(...)` manually for
+top-level deletes.

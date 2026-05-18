@@ -183,6 +183,9 @@ public class JShellSessionManager
         var session = new JShellSession(sessionId, shell, sessionClassLoader, outBuffer, errBuffer,
             restrictedTypesValidator, bindingProviders, sessionImports);
 
+        // Set encoding for UTF-8 support
+        session.execute("System.setProperty(\"file.encoding\", \"UTF-8\");");
+
         // Pre-import commonly used packages from providers
         for (var imports : snapshot.importsByProvider.values())
         {

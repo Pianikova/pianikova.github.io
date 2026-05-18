@@ -30,4 +30,18 @@ Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Delete attri
 
 ### Required post-check
 
-After deleting an attribute or other child metadata object, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.
+After deleting an attribute or other child metadata object, call `GetMarkers` with `marker_type: "1c"` and `path` to the **parent** top-level object's `.mdo` (attributes have no `.mdo` of their own). Fix only markers relevant to the changed entity before reporting success.
+
+**Derive the `.mdo` path directly from the FQN of the parent — do not `Glob` to find it.**
+Schema: `<projectRoot>/src/<TypePluralFolder>/<ParentName>/<ParentName>.mdo`. Common cases:
+
+| Parent FQN                     | `.mdo` path                                       |
+|--------------------------------|---------------------------------------------------|
+| `Catalog.<Name>`               | `src/Catalogs/<Name>/<Name>.mdo`                  |
+| `Document.<Name>`              | `src/Documents/<Name>/<Name>.mdo`                 |
+| `InformationRegister.<Name>`   | `src/InformationRegisters/<Name>/<Name>.mdo`      |
+| `AccumulationRegister.<Name>`  | `src/AccumulationRegisters/<Name>/<Name>.mdo`     |
+
+Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
+
+Use project-wide markers only when the deleted attribute was referenced from outside its parent (e.g. via DCS, query language, common modules) or when the path truly cannot be derived.

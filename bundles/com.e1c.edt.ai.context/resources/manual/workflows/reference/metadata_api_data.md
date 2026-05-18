@@ -38,9 +38,17 @@ Composite operation: use `add_registered_documents_to_journal` to configure regi
 Factory: `mdFactory.createDocumentNumerator()`
 Collection: `configuration.getDocumentNumerators()`
 FQN prefix: `DocumentNumerator`
-Safe optional setters: none for baseline CRUD.
+Common safe setters:
+- `setNumberLength(int)`
+- `setNumberType(DocumentNumberType)` when the workflow needs a non-default number type.
+- `setNumberPeriodicity(DocumentNumberPeriodicity)` when the workflow needs explicit periodicity.
+- `setCheckUnique(boolean)` when uniqueness behavior is part of the requested business rule.
 
-Document links and numbering details are version-sensitive; use one batch reflection when configuring them.
+Use `Document.setNumerator(DocumentNumerator)` to attach documents to a numerator. Keep `Document.setNumberType(...)`, `Document.setNumberLength(...)`, and `Document.setNumberPeriodicity(...)` aligned with the numerator values.
+
+Documents that reference the same numerator must keep numbering properties aligned with it. If `Document.getNumerator() != null`, do not change only `Document.setNumberLength(...)` or only the numerator length. Update the numerator and every document that uses it in the same workflow, then run markers for all affected `.mdo` files. Otherwise EDT reports SU45: document numbering properties must match the assigned numerator.
+
+Document links and advanced numbering details are version-sensitive; use one batch reflection when configuring unknown properties.
 
 ## Sequence
 
@@ -49,7 +57,7 @@ Collection: `configuration.getSequences()`
 FQN prefix: `Sequence`
 Safe optional setters: none for baseline CRUD.
 
-Sequence document membership is a composite operation; do not invent collection names.
+Sequence document membership is configured on the sequence side through `Sequence.getDocuments().add(document)`. There is no `Sequence.setDocuments(...)`. Fetch each document with `transaction.getTopObjectByFqn("Document.<Name>")`, add it to `sequence.getDocuments()`, then run markers for the sequence and affected documents.
 
 ## Enum
 

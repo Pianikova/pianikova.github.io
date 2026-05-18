@@ -66,3 +66,13 @@ journal.getRegisteredDocuments().forEach(doc ->
 ### Required post-check
 
 After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for the project, but fix only markers on changed entities and directly affected references before reporting success.
+
+**Derive the `.mdo` paths of the changed entities directly from their FQNs — do not `Glob` to find them.**
+For this scenario the primary changed entity is the journal; the registered documents may also surface markers:
+
+| FQN prefix                | `.mdo` path                                  |
+|---------------------------|----------------------------------------------|
+| `DocumentJournal.<Name>`  | `src/DocumentJournals/<Name>/<Name>.mdo`     |
+| `Document.<Name>`         | `src/Documents/<Name>/<Name>.mdo`            |
+
+Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping. A scoped path check on the journal `.mdo` is usually enough; fall back to project-wide markers only when cross-object references may have broken.

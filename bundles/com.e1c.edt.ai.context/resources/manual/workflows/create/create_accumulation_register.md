@@ -1,5 +1,27 @@
 ## Safe Workflow: Create AccumulationRegister
 
+Call `JShell` with `scope: "edt"` for this workflow.
+
+### ⚠️ Resolving concrete `CatalogRef.X` / `DocumentRef.X` dimensions
+
+If a dimension or resource must reference a specific catalog/document (e.g.
+`CatalogRef.Warehouses` instead of the generic `IEObjectTypeNames.CATALOG_REF`
+shown below), do **NOT** use `typeProvider.getProxy("CatalogRef.Warehouses")`
+— it returns `null` in JShell. Use
+`MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`
+where `depMdObject = (Catalog)transaction.getTopObjectByFqn("Catalog.Warehouses")`.
+If the dep is `null`, throw `IllegalStateException` — create it first.
+Primitive types (`NUMBER`, etc.) still use `typeProvider.getProxy(...)`.
+
+```java
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+// inside the BM transaction, when concrete reference is needed:
+Catalog whDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Warehouses");
+if (whDep == null) throw new IllegalStateException("Missing Catalog.Warehouses — create it first");
+TypeItem warehouseRef = MdProducedTypesUtil.getProducedType(whDep, MdTypePackage.Literals.MD_REF_TYPE);
+```
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
@@ -23,9 +45,14 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
 
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-        TypeItem catalogRefType = typeProvider.getProxy(IEObjectTypeNames.CATALOG_REF);
+        Catalog warehousesCatalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Warehouses");
+        if (warehousesCatalog == null) {
+            throw new IllegalStateException("Missing dependency: Catalog.Warehouses");
+        }
+        TypeItem warehouseRefType = MdProducedTypesUtil.getProducedType(
+            warehousesCatalog, MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription warehouseType = new TypeDescriptionBuilder()
-            .addType(catalogRefType)
+            .addType(warehouseRefType)
             .build();
 
         warehouse.setType(warehouseType);
@@ -61,6 +88,7 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
 });
 ```
 **Note:** Registers require at least one Dimension. Resources are optional but recommended.
+**Note:** In Java code use generated enum constants `AccumulationRegisterType.BALANCE` and `AccumulationRegisterType.TURNOVERS`. The `.mdo` XML may serialize them as `Balance` / `Turnovers`, but those are not the Java constants to write in JShell.
 **Note:** `AccumulationRegisterDimension` does not have `setBalance(...)`; do not call it in JShell examples.
 **Note:** Each dimension/resource/attribute needs its own fresh `TypeDescription`; do not reuse one instance.
 **Note:** For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
@@ -91,4 +119,15 @@ Do not report success while this marker remains unless the user explicitly asked
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed register `.mdo` when known or derivable. For Mode B, fix markers relevant to the changed register and its registrar links before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed register `.mdo`. For Mode B, fix markers relevant to the changed register and its registrar links before reporting success. For Mode A, explicitly report that registrar linking is still required if SU45 remains.
+
+**Derive the `.mdo` path directly from the FQN — do not `Glob` to find it.**
+For an `AccumulationRegister.<Name>` the path is always:
+
+```
+<projectRoot>/src/AccumulationRegisters/<Name>/<Name>.mdo
+```
+
+If you also linked or created a registrar document, its `.mdo` lives at `src/Documents/<DocName>/<DocName>.mdo`. Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
+
+Use project-wide markers only when the change can affect references between metadata objects or when the path truly cannot be derived.

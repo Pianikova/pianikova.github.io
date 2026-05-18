@@ -377,7 +377,7 @@ public class GetMarkersMcpTool implements IMcpTool
         if (messages.contains("Переменная длина строки должна быть внутри диапазона"))
         {
             next.append(" For string qualifiers, use a valid finite length for this EDT version, usually ")
-                .append("setStringQualifiers(100, false); avoid large values such as 1000.");
+                .append("setStringQualifiers(100, false); avoid values greater than 100, including 150 and 1000.");
         }
         if (messages.contains("Некорректный состав регистраторов регистра")
             || messages.contains("регистратором для регистра"))
@@ -421,6 +421,7 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("\n- `marker_type: \"1c\"` returns 1C validation markers of all severities. After 1C metadata CRUD, pass `path` to each changed top-level `.mdo` file when known or derivable, inspect only markers relevant to the changed entities/top objects, including errors, warnings, and infos, and do not check only errors.");
         description.append("\n- After JShell CRUD, do not use project-wide results to fix unrelated existing markers. Use project-wide `GetMarkers` only for delete, rename, registrar links, references, command interfaces, configuration-level changes, or when the changed `.mdo` path cannot be derived; even then, filter fixes to the changed entities and directly affected references.");
         description.append("\n- If returned 1C markers contain SU45/type-required messages for attributes, dimensions, or resources, the next action is to fix the metadata with JShell. Each BasicFeature child needs its own fresh TypeDescription instance; do not reuse one TypeDescription across several children.");
+        description.append("\n- If returned 1C markers mention string qualifier length/range, fix JShell code to use `setStringQualifiers(100, false)` or a smaller valid value. Do not use values greater than 100, such as 150 or 1000, unless the user explicitly requires it and the current EDT model accepts it.");
         description.append("\n- Non-empty marker responses include JSON field `required_next_step`; follow it before reporting success.");
         description.append("\n- After changing one 1C entity, prefer `path` to the changed `.mdo` file when known; otherwise use project scope only as a fallback. For references, delete, rename, registrars, and command interfaces, use project scope but fix only affected markers.");
         description.append("\n- For 1C CRUD validation, use `max_count` large enough (for example 200) and paginate until all relevant markers are inspected.");

@@ -113,28 +113,21 @@ public class JShellSessionMcpTool
 		spec.function.name = TOOL_NAME;
 
 		var description = new StringBuilder();
-        description.append("Creates a new JShell REPL session.");
+		description.append("Creates a new JShell REPL session.");
 		description.append("\n\n**Purpose:**");
-		description.append("\n- JShell provides access to Eclipse API");
-		description.append("\n- Use when you need to perform Eclipse-specific operations not available via other tools");
+		description.append("\n- JShell provides access to APIs exposed by installed binding providers");
+		description.append("\n- Use when you need to perform operations not available via other tools");
 		description.append("\n- Session preserves state between JShell calls");
 
 		description.append("\n\n**When to use:**");
+        description.append("\n- **AFTER** calling ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" to get the scenario-specific template and its `manual_id`. ")
+            .append(JShellMcpTool.TOOL_NAME)
+            .append(" rejects calls whose required `manual_ids` parameter is empty or contains ids not in the live catalog,")
+            .append(" so you must load a manual scenario first regardless");
         description.append("\n- Before calling ").append(JShellMcpTool.TOOL_NAME).append(" for execution");
-        description.append("\n- After calling ").append(JShellManualMcpTool.TOOL_NAME)
-            .append(" to get a scenario-specific template");
         description.append("\n- To check available bindings");
         description.append("\n- To get a fresh `repl_session_id` for JShell and JShellReflection calls");
-
-        description.append("\n\n**Required flow for EDT/Eclipse scenarios:**");
-        description.append("\n1. Call ").append(JShellManualMcpTool.TOOL_NAME).append(" first");
-        description.append("\n2. Call ").append(TOOL_NAME).append(" to get a session");
-        description.append("\n3. Call ").append(JShellMcpTool.TOOL_NAME)
-            .append(" to execute the prepared code; for EDT CRUD, its `response_description` should name changed ")
-            .append("top-level objects and known `.mdo` paths");
-        description.append("\n4. For EDT CRUD, call ").append(GetMarkersMcpTool.TOOL_NAME)
-            .append(" with `marker_type: \"1c\"` and `path` for each changed `.mdo` when possible; fix only markers ")
-            .append("related to changed entities or directly affected references");
 
         description.append("\n\n**Usage:**");
         description.append("\n- Takes no parameters");
@@ -158,7 +151,7 @@ public class JShellSessionMcpTool
                 .collect(Collectors.joining(", ")));
 
 		description.append("\n\n### Available bindings:");
-		description.append("\nPre-configured Eclipse objects available in JShell sessions:");
+		description.append("\nPre-configured objects available in JShell sessions:");
 		if (!bindingProviders.isEmpty())
 		{
 			for (var provider : bindingProviders)

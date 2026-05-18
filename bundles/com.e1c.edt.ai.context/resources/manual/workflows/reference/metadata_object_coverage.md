@@ -77,6 +77,50 @@ of adding a guessed top-level template.
 | Event subscriptions | `create_event_subscription` |
 | Bots | `create_bot` |
 
+### Creation Order For Cross-References
+
+When several 1C metadata objects are created together, do not create dependent
+attributes with placeholder types. Create objects that produce reference types
+first, check markers, let EDT update produced types, and only then create
+dependent objects that use exact `TypeItem` proxies.
+
+Recommended order:
+
+1. Root configuration/project setup.
+2. Independent classifiers and catalogs/enums/plans: `Catalog`, `Enum`,
+   `ChartOfCharacteristicTypes`, `ChartOfAccounts`, `ChartOfCalculationTypes`,
+   `ExchangePlan`, `DefinedType`, `SettingsStorage`, `FilterCriterion`.
+3. Documents, document journals, document numerators, and sequences. If registers
+   will use documents as registrars, create the registrar documents before
+   final register validation.
+4. Business processes and tasks. A `BusinessProcess` must have a valid `Task`;
+   create the task first or in the same transaction and assign it.
+5. Registers. Create dimensions/resources after their referenced catalogs,
+   enums, documents, plans, or charts exist. Link registrar documents when the
+   register mode requires recorders.
+6. Objects that consume existing metadata through attributes or parameters:
+   constants, common attributes, catalog/document attributes, tabular section
+   attributes, command parameters, chart value types, service parameters.
+7. Forms, commands, modules, templates, routes, service operations, XDTO details,
+   and external data source internals after their owner metadata object exists.
+
+Reference type examples:
+
+| Reference needed later | Create/validate first |
+|---|---|
+| `CatalogRef.<Name>` | `Catalog.<Name>` |
+| `EnumRef.<Name>` | `Enum.<Name>` |
+| `DocumentRef.<Name>` and registrar links | `Document.<Name>` |
+| chart/account reference types | matching `ChartOfAccounts.<Name>` |
+| calculation type references | matching `ChartOfCalculationTypes.<Name>` |
+| characteristic references/value types | matching `ChartOfCharacteristicTypes.<Name>` and its value type |
+| exchange-plan references | matching `ExchangePlan.<Name>` |
+| business process task relation | matching `Task.<Name>` |
+
+Use exact `typeProvider.getProxy("...Ref.Name")` only after the target object
+exists. If the exact proxy is still `null`, retry after EDT refresh/build/indexing
+instead of using `String`, generic roots, or transient `McoreFactory` types.
+
 ### Present In MdType.xcore, Not Configuration Top-Level
 
 `MdType.xcore` also contains runtime type families for external standalone

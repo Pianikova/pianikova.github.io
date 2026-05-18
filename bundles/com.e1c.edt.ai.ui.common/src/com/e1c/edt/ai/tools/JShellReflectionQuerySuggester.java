@@ -4,7 +4,6 @@
 package com.e1c.edt.ai.tools;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,7 @@ public class JShellReflectionQuerySuggester
     private static final Pattern COMPILER_LOCATION_CLASS_PATTERN =
         Pattern.compile("(?i)location\\s*:\\s*class\\s+([\\w.$]+)"); //$NON-NLS-1$
 
-    private static final Map<String, List<String>> EDT_ALIASES = edtAliases();
+    private static final Map<String, List<String>> ALIASES = Map.of();
 
     @Override
     public List<String> suggestForQuery(String query, int limit)
@@ -147,11 +146,11 @@ public class JShellReflectionQuerySuggester
     private void addAliasSuggestions(Set<String> suggestions, String query)
     {
         var normalized = stripWildcards(query);
-        var aliases = EDT_ALIASES.get(normalized);
+        var aliases = ALIASES.get(normalized);
         if (aliases == null)
         {
             var simpleName = normalized.substring(normalized.lastIndexOf('.') + 1);
-            aliases = EDT_ALIASES.get(simpleName);
+            aliases = ALIASES.get(simpleName);
         }
         if (aliases == null)
         {
@@ -162,41 +161,6 @@ public class JShellReflectionQuerySuggester
             suggestions.add(alias);
             suggestions.add(alias + ".*"); //$NON-NLS-1$
         }
-    }
-
-    private static Map<String, List<String>> edtAliases()
-    {
-        var aliases = new LinkedHashMap<String, List<String>>();
-        aliases.put("IEObjectProvider", List.of("com._1c.g5.v8.dt.platform.IEObjectProvider")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("IEObjectTypeNames", List.of("com._1c.g5.v8.dt.platform.IEObjectTypeNames")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("TypeDescriptionBuilder", //$NON-NLS-1$
-            List.of("com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder")); //$NON-NLS-1$
-        aliases.put("TypeDescription", List.of("com._1c.g5.v8.dt.mcore.TypeDescription")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("TypeItem", List.of("com._1c.g5.v8.dt.mcore.TypeItem")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("NumberQualifiers", List.of("com._1c.g5.v8.dt.mcore.NumberQualifiers")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("McoreFactory", List.of("com._1c.g5.v8.dt.mcore.McoreFactory")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("IBmObject", List.of("com._1c.g5.v8.bm.core.IBmObject")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("IV8Project", List.of("com._1c.g5.v8.dt.core.platform.IV8Project")); //$NON-NLS-1$ //$NON-NLS-2$
-        aliases.put("IV8ProjectManager", //$NON-NLS-1$
-            List.of("com._1c.g5.v8.dt.core.platform.IV8ProjectManager")); //$NON-NLS-1$
-        aliases.put("IBmModelManager", //$NON-NLS-1$
-            List.of("com._1c.g5.v8.dt.core.platform.IBmModelManager")); //$NON-NLS-1$
-        aliases.put("RegisterWriteMode", //$NON-NLS-1$
-            List.of("com._1c.g5.v8.dt.metadata.mdclass.RegisterWriteMode")); //$NON-NLS-1$
-        aliases.put("AccumulationRegisterType", //$NON-NLS-1$
-            List.of("com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType")); //$NON-NLS-1$
-        aliases.put("Turnovers", //$NON-NLS-1$
-            List.of("AccumulationRegisterType.*", //$NON-NLS-1$
-                "com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType.*")); //$NON-NLS-1$
-        aliases.put("Remainders", //$NON-NLS-1$
-            List.of("AccumulationRegisterType.*", //$NON-NLS-1$
-                "com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType.*")); //$NON-NLS-1$
-        aliases.put("Independent", //$NON-NLS-1$
-            List.of("RegisterWriteMode.*", //$NON-NLS-1$
-                "com._1c.g5.v8.dt.metadata.mdclass.RegisterWriteMode.*")); //$NON-NLS-1$
-        aliases.put("McorePackage.Literals.TYPE_ITEM", //$NON-NLS-1$
-            List.of("com._1c.g5.v8.dt.mcore.McorePackage.Literals.TYPE_ITEM", "McorePackage.Literals.TYPE_ITEM")); //$NON-NLS-1$ //$NON-NLS-2$
-        return Map.copyOf(aliases);
     }
 
     private List<String> limit(LinkedHashSet<String> suggestions, int limit)

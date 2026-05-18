@@ -1,5 +1,20 @@
 ## Safe Workflow: Create Subsystem
 
+### Canonical imports
+
+```java
+import java.util.UUID;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+import com._1c.g5.v8.dt.metadata.mdclass.Subsystem;
+```
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 IBmModel bmModel = modelManager.getModel(project);
@@ -80,4 +95,15 @@ transaction.attachTopObject((IBmObject)subsystem, fqn);
 
 ### Required post-check
 
-After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo` when known or derivable. Fix only markers relevant to the changed entity before reporting success. Use project-wide markers only for affected references or when the path cannot be derived.
+After creating metadata, call `GetMarkers` with `marker_type: "1c"` and `path` to the changed top-level `.mdo`. Fix only markers relevant to the changed entity before reporting success.
+
+**Derive the `.mdo` path directly from the FQN — do not `Glob` to find it.**
+For a `Subsystem.<Name>` the path is always:
+
+```
+<projectRoot>/src/Subsystems/<Name>/<Name>.mdo
+```
+
+Nested subsystems still live at the top level of `src/Subsystems/` — their FQN includes the parent (e.g. `Subsystem.Parent.Subsystem.Child`), but their `.mdo` is at `src/Subsystems/<Child>/<Child>.mdo`. Copy `<Name>` exactly from the FQN — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
+
+Use project-wide markers only when the change can affect references between metadata objects or when the path truly cannot be derived.
