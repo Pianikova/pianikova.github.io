@@ -2,12 +2,33 @@
 
 Generic workflow for editing any existing metadata object safely.
 
+If the user asks to add requisites/attributes to an existing catalog, use
+`edit_catalog` first. If the user asks to add requisites/attributes to an
+existing document, use `edit_document` first. These cards contain concrete
+child-attribute recipes. Do not use the generic example below as a substitute
+for setting child `type`.
+
 ### Core Rules:
 - ✅ **Load** existing object from BM transaction
 - ✅ **Modify** properties directly on the loaded object
 - ✅ **Return** the modified object
 - ❌ **NEVER use** `attachTopObject()` for existing objects
 - ❌ **NEVER use** `transaction.detachTopObject()` for existing objects
+- ❌ **NEVER edit `.mdo` text directly** for metadata CRUD from JShell prompts
+- ❌ **NEVER invent helper APIs** such as `EnumTypeUtil.createEnumRefType`,
+  `TypeItemUtil.getTypeByName`, `StringQualifiersUtil`, or
+  `v8project.getModel().createTypeDescription()`
+- ❌ **NEVER stop with "внесите вручную"** for supported child metadata such as
+  `CatalogAttribute`, `DocumentAttribute`, or register fields
+
+### JShell imports
+
+`manual_ids` do not execute imports from manual cards. If the edit snippet uses
+child classes or enum constants such as `DocumentAttribute`,
+`TabularSectionAttribute`, `RealTimePosting`, `InformationRegisterAttribute`,
+or `MdProducedTypesUtil`, import them in the same JShell session or use fully
+qualified names. See `jshell_edt_canonical_imports` for the canonical package
+list.
 
 ### Required post-check
 
@@ -28,6 +49,15 @@ Schema: `<projectRoot>/src/<TypePluralFolder>/<Name>/<Name>.mdo`. Common cases f
 Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping.
 
 Fall back to a project-wide marker check (`{ "project_name": "MyProject", "marker_type": "1c", "max_count": 50 }`) only when the change affects references between metadata objects or when the path truly cannot be derived.
+
+### Readback rule
+
+After editing attributes, tabular sections, or register fields, read back the
+child collections by name and print the first `TypeItem` with `getName()`.
+Do not print a `TypeItem` object directly and do not call `getTypeId()`: JShell
+prints implementation identities like `TypeImpl@...`, not the 1C type name.
+Also print or assert the count by child name. Each requested child must exist
+exactly once. `GetMarkers` may not report duplicate business attributes.
 
 ### Generic Pattern:
 ```java
@@ -50,11 +80,18 @@ Document result = globalContext.execute(new AbstractBmTask<Document>("Edit docum
             document.setNumberType(DocumentNumberType.NUMBER);
 
             // STEP 3: Add/Remove child objects through collections
-            // Add attribute
+            // Add attribute. Generic example only: concrete document attribute
+            // edits should use edit_document.
+            boolean alreadyExists = document.getAttributes().stream()
+                .anyMatch(a -> "NewAttribute".equals(a.getName()));
+            if (alreadyExists) {
+                throw new IllegalStateException("NewAttribute already exists; repair it instead of adding a duplicate");
+            }
             DocumentAttribute attr = mdFactory.createDocumentAttribute();
             attr.setName("NewAttribute");
             attr.setUuid(UUID.randomUUID());
-            // ... set type ...
+            // Set a real TypeDescription before add(...); see create_attribute_for_entity.
+            // Never add a BasicFeature child while type is null or empty.
             document.getAttributes().add(attr);
 
             // Remove attribute by finding and deleting

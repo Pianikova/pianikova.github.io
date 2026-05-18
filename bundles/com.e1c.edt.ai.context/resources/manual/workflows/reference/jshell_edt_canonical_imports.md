@@ -8,6 +8,12 @@ The `edt` JShell scope pre-imports the common safe EDT classes. Do not add
 wildcard imports. Add only explicit imports for scenario-specific classes that
 are not already available in the session.
 
+Passing `manual_ids` to a JShell tool call does not execute the imports shown
+in that manual card. If a snippet uses classes such as `DocumentAttribute`,
+`RealTimePosting`, `InformationRegisterAttribute`, `MdProducedTypesUtil`, or
+`MdTypePackage`, import them in the same JShell session first or use their
+fully-qualified names directly in the snippet.
+
 ```java
 import java.util.UUID;
 import java.io.ByteArrayInputStream;
@@ -135,6 +141,20 @@ if (realization != null) {
 - `Document`: use `setNumerator(DocumentNumerator)` to attach a document to a numerator; keep document number type, length, and periodicity aligned with the assigned numerator.
 - `Sequence`: use `getDocuments().add(document)` to include participating documents. There is no `setDocuments(...)`.
 - `DocumentJournal`: use `getRegisteredDocuments().add(document)` to include documents. There is no `getDocuments()` or `setDocuments(...)` for this relationship.
+- `TypeItem`: use `getName()` when printing or verifying the resolved type
+  name such as `CatalogRef.Клиенты` or `EnumRef.СтатусыКлиентов`. Do not call
+  `getTypeId()`; that method is not available on EDT `TypeItem` in JShell.
+  Do not call `getLinkedMdObject()` either; it is not available on EDT
+  `TypeItem` in JShell. For concrete references, `getName()` already includes
+  the referenced metadata name.
+  Do not rely on `TypeItem.toString()` for final readback either: it prints an
+  implementation identity like `TypeImpl@...`, not the business type name.
+- Primitive `TypeItem` values must also be null-checked. If
+  `typeProvider.getProxy(IEObjectTypeNames.BOOLEAN)` (or another primitive)
+  returns `null`, use `typeProvider.createProxy(IEObjectTypeNames.BOOLEAN)` as
+  a fallback and throw `IllegalStateException` if it is still `null`. Never pass
+  a null `TypeItem` to `TypeDescriptionBuilder.addType(...)`; that causes
+  `The 'no null' constraint is violated`.
 
 ## Reflection Workflow
 

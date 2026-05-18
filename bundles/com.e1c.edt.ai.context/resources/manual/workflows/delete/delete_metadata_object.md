@@ -1,94 +1,143 @@
 ## Scenario: Delete Metadata Object
 
-### Safe pattern
+Top-level metadata deletion must use EDT refactoring, not a hand-written
+`configuration.getX().remove(...) + transaction.detachTopObject(...)` BM task.
+
+Manual detach can remove the `.mdo` file while other EDT services still hold
+platform object URIs or dependent index objects. In the EDT/AI context sync this
+shows up as repeated log errors like:
+
+```text
+Resource /<Project>/src/Catalogs/<Name>/<Name>.mdo does not exist
+at ...PlatformObjectManager.doCreateResource(...)
+at ...EntitiesWalker.walk(...)
+```
+
+### Canonical path — IMdRefactoringService
+
+Use the same service EDT UI uses for delete. It removes the top object, rewrites
+references, deletes files and dependent resources, and lets EDT refresh indexes.
+
 ```java
+import java.util.Arrays;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.ServiceReference;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
+import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
+import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
+import com._1c.g5.v8.dt.refactoring.core.IRefactoring;
+
 IProject project = workspaceRoot.getProject("MyProject");
 IBmModel bmModel = modelManager.getModel(project);
 IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
 
-globalContext.execute(new AbstractBmTask<Void>("Delete object") {
+Catalog catalog = globalContext.execute(new AbstractBmTask<Catalog>("Lookup catalog to delete") {
     @Override
-    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {
-        Configuration configuration = (Configuration)transaction.getTopObjectByFqn("Configuration");
-        Catalog catalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
-        if (catalog != null) {
-            configuration.getCatalogs().remove(catalog);
-            transaction.detachTopObject((IBmObject)catalog);
-            System.out.println("Catalog deleted successfully");
-        }
-        return null;
+    public Catalog execute(IBmTransaction transaction, IProgressMonitor monitor) {
+        return (Catalog)transaction.getTopObjectByFqn("Catalog.TempCatalog");
+    }
+});
+
+if (catalog == null) {
+    System.out.println("Catalog.TempCatalog already absent");
+} else {
+    var bundle = FrameworkUtil.getBundle(IMdRefactoringService.class);
+    var ctx = bundle.getBundleContext();
+    ServiceReference<IMdRefactoringService> serviceRef =
+        ctx.getServiceReference(IMdRefactoringService.class);
+    if (serviceRef == null) {
+        throw new IllegalStateException("IMdRefactoringService is not registered; do not fall back to detachTopObject");
+    }
+
+    IMdRefactoringService refactoringService = ctx.getService(serviceRef);
+    try {
+        IRefactoring refactoring =
+            refactoringService.createMdObjectDeleteRefactoring(Arrays.asList((MdObject)catalog));
+        refactoring.perform();
+        project.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor());
+        System.out.println("Deleted Catalog.TempCatalog via IMdRefactoringService");
+    } finally {
+        ctx.ungetService(serviceRef);
+    }
+}
+```
+
+### Object lookup examples
+
+Fetch the object in a short BM task, then perform refactoring outside that task.
+The refactoring opens its own write operations internally.
+
+```java
+Document document = globalContext.execute(new AbstractBmTask<Document>("Lookup document to delete") {
+    @Override
+    public Document execute(IBmTransaction transaction, IProgressMonitor monitor) {
+        return (Document)transaction.getTopObjectByFqn("Document.TempDocument");
     }
 });
 ```
 
-### Delete different object types
-
-**Catalog:**
 ```java
-Catalog catalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
-if (catalog != null) {
-    configuration.getCatalogs().remove(catalog);
-    transaction.detachTopObject((IBmObject)catalog);
-}
+InformationRegister register =
+    globalContext.execute(new AbstractBmTask<InformationRegister>("Lookup register to delete") {
+        @Override
+        public InformationRegister execute(IBmTransaction transaction, IProgressMonitor monitor) {
+            return (InformationRegister)transaction.getTopObjectByFqn("InformationRegister.TempRegister");
+        }
+    });
 ```
 
-**Document:**
 ```java
-Document document = (Document)transaction.getTopObjectByFqn("Document.GoodsReceipt");
-if (document != null) {
-    configuration.getDocuments().remove(document);
-    transaction.detachTopObject((IBmObject)document);
-}
+com._1c.g5.v8.dt.metadata.mdclass.Enum enumObject =
+    globalContext.execute(new AbstractBmTask<com._1c.g5.v8.dt.metadata.mdclass.Enum>("Lookup enum to delete") {
+        @Override
+        public com._1c.g5.v8.dt.metadata.mdclass.Enum execute(IBmTransaction transaction, IProgressMonitor monitor) {
+            return (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.TempEnum");
+        }
+    });
 ```
 
-**Accumulation Register:**
-```java
-AccumulationRegister register = (AccumulationRegister)transaction.getTopObjectByFqn("AccumulationRegister.GoodsInStock");
-if (register != null) {
-    configuration.getAccumulationRegisters().remove(register);
-    transaction.detachTopObject((IBmObject)register);
-}
-```
-
-**Information Register:**
-```java
-InformationRegister register = (InformationRegister)transaction.getTopObjectByFqn("InformationRegister.Prices");
-if (register != null) {
-    configuration.getInformationRegisters().remove(register);
-    transaction.detachTopObject((IBmObject)register);
-}
-```
-
-**Enum:**
-```java
-com._1c.g5.v8.dt.metadata.mdclass.Enum enumObj = (com._1c.g5.v8.dt.metadata.mdclass.Enum)transaction.getTopObjectByFqn("Enum.Statuses");
-if (enumObj != null) {
-    configuration.getEnums().remove(enumObj);
-    transaction.detachTopObject((IBmObject)enumObj);
-}
-```
-
-**Subsystem:**
-```java
-Subsystem subsystem = (Subsystem)transaction.getTopObjectByFqn("Subsystem.MySubsystem");
-if (subsystem != null) {
-    configuration.getSubsystems().remove(subsystem);
-    transaction.detachTopObject((IBmObject)subsystem);
-}
-```
+Pass the fetched object as `(MdObject)object` to
+`createMdObjectDeleteRefactoring(Arrays.asList(...))`.
 
 ### Rules
-- ✅ Remove top-level objects from the correct `Configuration` collection first
-- ✅ Then call `transaction.detachTopObject((IBmObject)object)`
-- ❌ **NEVER** use `EcoreUtil.delete()` for top-level metadata objects (causes `UnsupportedOperationException`)
-- ❌ **NEVER** skip `detachTopObject()` call (object will remain in transaction state)
-- Check if object exists before attempting deletion to avoid NullPointerException
-- For a multi-object delete, delete all requested objects in one BM task when the safe order is known, then run one project-wide `GetMarkers`.
-- Do not rerun a successful delete transaction unless a verification read or marker check shows that an object still exists. A second run can hide the real result behind `NOT_FOUND` noise.
+
+- Use `IMdRefactoringService.createMdObjectDeleteRefactoring(...)` for
+  top-level `MdObject` deletes: catalogs, documents, enums, registers,
+  common modules, reports, data processors, subsystems, roles, and similar
+  standalone metadata.
+- Do not use `configuration.getX().remove(object)` plus
+  `transaction.detachTopObject((IBmObject)object)` for top-level deletes in
+  JShell CRUD scenarios. That can leave stale platform-object references for
+  background context sync and index walkers.
+- Do not use `EcoreUtil.delete(...)` for top-level metadata objects.
+- It is safe for a delete to be idempotent: if `getTopObjectByFqn(...)` returns
+  `null`, print that the object is already absent and stop.
+- For child objects inside a parent top-level object, such as attributes or
+  tabular sections, use the dedicated child workflow. Child deletion can use
+  `EcoreUtil.delete(child)` and must validate the parent `.mdo`.
 
 ### Required post-check
 
-After deleting metadata, call `GetMarkers` project-wide because references may break outside the deleted object's file:
+After top-level deletion:
+
+1. Refresh the Eclipse project with
+   `project.refreshLocal(IResource.DEPTH_INFINITE, new NullProgressMonitor())`
+   after `refactoring.perform()`.
+2. Run `GetMarkers` project-wide because references may break outside the
+   deleted object's own file.
+3. Read back `transaction.getTopObjectByFqn("<Type>.<Name>")` and verify it is
+   `null`.
+4. Do not call `GetMarkers` with `path` to the deleted object's `.mdo`; the
+   file is gone. If dependent markers exist, validate the dependent objects'
+   `.mdo` files.
 
 ```json
 {
@@ -98,63 +147,10 @@ After deleting metadata, call `GetMarkers` project-wide because references may b
 }
 ```
 
-**Derive the dependent objects' `.mdo` paths directly from their FQNs — do not `Glob` to find them.** EDT removes the deleted object's own file as part of the delete, so do not target it with a per-path `GetMarkers` — markers will surface on the **dependent** files that referenced it. The dependent paths follow `<projectRoot>/src/<TypePluralFolder>/<Name>/<Name>.mdo`. Common cases:
+### Testing note
 
-| Dependent FQN prefix            | `.mdo` path                                          |
-|---------------------------------|------------------------------------------------------|
-| `Catalog.<Name>`                | `src/Catalogs/<Name>/<Name>.mdo`                     |
-| `Document.<Name>`               | `src/Documents/<Name>/<Name>.mdo`                    |
-| `InformationRegister.<Name>`    | `src/InformationRegisters/<Name>/<Name>.mdo`         |
-| `AccumulationRegister.<Name>`   | `src/AccumulationRegisters/<Name>/<Name>.mdo`        |
-| `CommonModule.<Name>`           | `src/CommonModules/<Name>/<Name>.mdo`                |
-| `Subsystem.<Name>`              | `src/Subsystems/<Name>/<Name>.mdo`                   |
-
-Copy `<Name>` exactly — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping. Project-wide markers remain the primary tool here because delete operations can break references the script cannot enumerate ahead of time.
-
-### Important notes
-
-**Deleting a catalog/document/register will cascade delete:**
-- All attributes and tabular sections
-- All forms and templates
-- All modules (manager module, object module, etc.)
-- All child objects
-
-**Check before deletion:**
-```java
-String objectFqn = "Catalog.Products";
-if (transaction.getTopObjectByFqn(objectFqn) != null) {
-    // Object exists, safe to delete
-} else {
-    System.out.println("Object not found: " + objectFqn);
-}
-```
-
-### Common mistakes
-
-**❌ WRONG - Using EcoreUtil.delete() for top-level objects**
-```java
-Catalog catalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
-EcoreUtil.delete(catalog); // ❌ UnsupportedOperationException!
-```
-
-**❌ WRONG - Forgetting to remove from collection**
-```java
-Catalog catalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
-transaction.detachTopObject((IBmObject)catalog); // ❌ Object remains in configuration!
-```
-
-**❌ WRONG - Not checking if object exists**
-```java
-Catalog catalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
-configuration.getCatalogs().remove(catalog); // ❌ NullPointerException if null!
-```
-
-**✅ CORRECT - Complete deletion pattern**
-```java
-Catalog catalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
-if (catalog != null) {
-    configuration.getCatalogs().remove(catalog);
-    transaction.detachTopObject((IBmObject)catalog);
-    System.out.println("Catalog deleted successfully");
-}
-```
+Avoid adding artificial "create then delete a temporary top-level object" steps
+to broad business prompts unless the goal is specifically to test delete
+refactoring. Most real 1C developer tasks validate delete behavior by removing
+an obsolete object that is known to be unused or by deleting a child attribute
+from an existing object.

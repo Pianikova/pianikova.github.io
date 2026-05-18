@@ -37,4 +37,8 @@ Attributes, tabular sections, enum values, dimensions, resources, forms, command
 
 ## Delete
 
-Remove from the matching `Configuration` collection, detach by FQN, then run `GetMarkers`.
+Use `delete_metadata_object`: resolve the top-level `MdObject`, execute
+`IMdRefactoringService.createMdObjectDeleteRefactoring(...)`, refresh the
+project, then run project-wide `GetMarkers`. Do not remove from the
+`Configuration` collection and call `detachTopObject(...)` manually for
+top-level deletes.

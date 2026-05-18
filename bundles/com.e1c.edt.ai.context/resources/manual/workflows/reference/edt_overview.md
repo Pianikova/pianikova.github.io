@@ -1097,9 +1097,13 @@ catalog.setCodeLength(9); // ✅ Correct property
 
 ### ❌ Pitfall #7: Incorrect top-level object deletion
 
-**Error:** `UnsupportedOperationException`
+**Errors:** `UnsupportedOperationException`, or repeated
+`Resource ... .mdo does not exist` errors from background context/index walkers.
 
-**Problem:** Using `EcoreUtil.delete()` for top-level metadata objects causes exception.
+**Problem:** Using `EcoreUtil.delete()` for top-level metadata objects causes
+an exception. Manually removing the object from `Configuration` and calling
+`detachTopObject(...)` can delete the file but leave stale EDT platform-object
+references for background services.
 
 ```java
 // ❌ WRONG CODE for top-level objects
@@ -1119,6 +1123,13 @@ EcoreUtil.delete(attr); // Works correctly for child objects
 **IMPORTANT:** Remove from parent collection and detach from transaction.
 **Note:** Do NOT use `EcoreUtil.delete()` for top-level objects - it causes `UnsupportedOperationException`.
 **Note:** Deleting a catalog will cascade delete all its attributes, tabular sections, forms, and templates.
+
+**Updated JShell rule:** for top-level metadata objects, prefer
+`delete_metadata_object` and `IMdRefactoringService.createMdObjectDeleteRefactoring(...)`.
+Do not use manual `configuration.getX().remove(...) + detachTopObject(...)`
+in CRUD scenarios; it can leave stale platform-object references for EDT
+background context sync. `EcoreUtil.delete(...)` remains valid for child
+objects such as attributes.
 ### ❌ Pitfall #8: Incorrect Enum Constants in JShell
 
 **Error:** Compilation error - cannot find symbol or type mismatch

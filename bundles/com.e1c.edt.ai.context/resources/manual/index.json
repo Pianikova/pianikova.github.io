@@ -1552,7 +1552,9 @@
     "guide": "workflows/delete/delete_attribute.md",
     "bindings": [
       "workspaceRoot",
-      "modelManager"
+      "projectManager",
+      "modelManager",
+      "mdFactory"
     ],
     "keywords": [
       "delete attribute",
@@ -1584,7 +1586,7 @@
     "scope": "edt",
     "category": "delete",
     "title": "Delete Top-Level Metadata Object",
-    "summary": "Reusable template for deleting a top-level metadata object through its Configuration collection and BM detach.",
+    "summary": "Reusable template for deleting a top-level metadata object through IMdRefactoringService.",
     "bindings": [
       "workspaceRoot",
       "modelManager"
@@ -1593,7 +1595,8 @@
       "delete top-level object",
       "delete metadata object",
       "remove metadata",
-      "top-level delete template"
+      "top-level delete template",
+      "IMdRefactoringService"
     ],
     "template": "top-level-delete",
     "vars": {
@@ -1603,7 +1606,7 @@
       "fqnPrefix": "Catalog",
       "sampleName": "Products",
       "collection": "getCatalogs()",
-      "notes": "Replace the type, FQN prefix, sample name, and Configuration collection with the exact metadata object you are deleting."
+      "notes": "Replace the type, FQN prefix, and sample name with the exact metadata object you are deleting. Do not use the Configuration collection for manual detach deletes."
     }
   },
   {
@@ -1611,7 +1614,7 @@
     "scope": "edt",
     "category": "delete",
     "title": "Delete Metadata Object",
-    "summary": "Delete top-level metadata objects through the parent collection and transaction detach.",
+    "summary": "Delete top-level metadata objects through IMdRefactoringService so EDT cleans files, references, and dependent resources.",
     "guide": "workflows/delete/delete_metadata_object.md",
     "bindings": [
       "workspaceRoot",
@@ -1619,7 +1622,8 @@
     ],
     "keywords": [
       "delete metadata",
-      "detach top object",
+      "refactoring delete",
+      "IMdRefactoringService",
       "remove object"
     ]
   },
@@ -1755,6 +1759,57 @@
     ]
   },
   {
+    "id": "edit_catalog",
+    "scope": "edt",
+    "category": "edit",
+    "title": "Edit Catalog",
+    "summary": "Add or repair attributes on an existing Catalog, including EnumRef, String, and Boolean types.",
+    "guide": "workflows/edit/edit_catalog.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "edit catalog",
+      "catalog attribute",
+      "add catalog attribute",
+      "existing catalog",
+      "доработать справочник",
+      "добавить реквизит",
+      "Справочник.Клиенты",
+      "Catalog.Клиенты"
+    ]
+  },
+  {
+    "id": "edit_document",
+    "scope": "edt",
+    "category": "edit",
+    "title": "Edit Document",
+    "summary": "Add, repair, read back, and de-duplicate attributes on an existing Document.",
+    "guide": "workflows/edit/edit_document.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "edit document",
+      "document attribute",
+      "add document attribute",
+      "add_document_attributes",
+      "existing document",
+      "duplicate document attribute",
+      "cleanup document attributes",
+      "доработать документ",
+      "добавить реквизит документа",
+      "Документ.ОбращениеКлиента",
+      "Document.ОбращениеКлиента"
+    ]
+  },
+  {
     "id": "edit_existing_object",
     "scope": "edt",
     "category": "edit",
@@ -1769,6 +1824,11 @@
     ],
     "keywords": [
       "edit",
+      "edit catalog",
+      "existing catalog",
+      "add catalog attribute",
+      "доработать справочник",
+      "добавить реквизит",
       "existing object",
       "update metadata"
     ]
