@@ -259,29 +259,6 @@ public class WriteMcpTool
                     var response = new StringBuilder();
                     response.append("File written: \"").append(path).append("\".\n");
 
-                    var fileExt = projectFile.getFileExtension();
-                    if (fileExt != null)
-                    {
-                        fileExt = fileExt.toLowerCase();
-                        switch (fileExt)
-                        {
-                        case "bsl":
-                            response.append("ACTION REQUIRED: check that corresponding \"")
-                                .append(projectFile.getProjectRelativePath()
-                                    .removeFileExtension()
-                                    .addFileExtension("mdo")
-                                    .toPortableString())
-                                .append("\" file exists or create it.\n");
-                            break;
-                        case "mdo":
-                        case "form":
-                            response.append(
-                                "ACTION REQUIRED: verify that the file \"src/Configuration/Configuration.mdo\" has been updated with the new configuration item. Use `"
-                                    + EditMcpTool.TOOL_NAME + "` tool.");
-                            break;
-                        }
-                    }
-
                     // Add response markdown with content details
                     var newLines = content.split("\\r?\\n", -1).length;
                     var changes = new StringBuilder();
@@ -421,8 +398,6 @@ public class WriteMcpTool
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Fails if the file already exists and is not empty; empty files can be overwritten. Use `" + EditMcpTool.TOOL_NAME + "` to modify existing non-empty files.");
         description.append("\n- Verify the target folder and naming patterns before creating files.");
-        description.append("\n- Some file types require companions (e.g., .bsl needs a matching .mdo).");
-        description.append("\n- Avoid creating docs (*.md/README) unless the user explicitly asks.");
         description.append("\n- Avoid emojis unless explicitly requested.");
         description.append("\n- For temporary files, create them in the system temporary folder: `" + getTempDirectory() + "`.");
         description.append("\n\nRelated tools:");

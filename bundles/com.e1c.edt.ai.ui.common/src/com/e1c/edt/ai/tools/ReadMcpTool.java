@@ -27,7 +27,6 @@ import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.IProjectTools;
-import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -80,13 +79,12 @@ public class ReadMcpTool
     private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IFiles files;
-    private final ISettings settings;
 
     @Inject
     public ReadMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IProjectTools projectTools, IMarkdownUtils markdownUtils, IFiles files, ISettings settings)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IFiles files)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -96,7 +94,6 @@ public class ReadMcpTool
         Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(files);
-        Preconditions.checkNotNull(settings);
 
         this.json = json;
         this.messageFactory = messageFactory;
@@ -106,7 +103,6 @@ public class ReadMcpTool
         this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.files = files;
-        this.settings = settings;
         spec = createSpecification();
     }
 
@@ -176,19 +172,6 @@ public class ReadMcpTool
 
             if (!isProjectFile)
             {
-                if (!settings.isExperimental())
-                {
-                    var response = new HashMap<String, Object>();
-                    response.put("content", "");
-                    response.put("note", "The file \"" + path + "\" is not part of any project.");
-
-                    details.responseMarkdown =
-                        MessageFormat.format(Messages.ReadTemplate, files.getDisplayedFileName(new File(path)),
-                            markdownUtils.createStyledText("0/0", TextColor.RED, FontWeight.BOLD, false, .3));
-
-                    return messageFactory.createMessage(this, call, json.serialize(response), details);
-                }
-
                 // File is not part of any project - use Java file I/O
                 try
                 {
