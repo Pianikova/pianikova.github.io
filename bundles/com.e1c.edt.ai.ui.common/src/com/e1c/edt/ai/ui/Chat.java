@@ -949,6 +949,7 @@ public class Chat
                 if (window != null)
                 {
                     window.setMember(IDE_API, handler);
+                    handler.setWebEngine(webEngine);
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
                     var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
                         settings.getClientUniqueId(), settings.getLanguage(), settings.getTheme());
