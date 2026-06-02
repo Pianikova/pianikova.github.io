@@ -29,6 +29,8 @@ public interface IChat
 
     void continueChat(String chatId, String text);
 
+    void reviewCodeWithDetails(AIContext ctx, String codeSnippet, String details);
+
     /**
      * Starts microphone recording and streams the captured audio to the chat page via JavaScript.
      * If already recording, does nothing.

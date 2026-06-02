@@ -341,6 +341,21 @@ public class EditorPositionManager
                 }
 			}
 
+            // Проверка: столбцы не должны выходить за пределы длины соответствующих строк
+            // Это предотвращает ситуацию, когда offset(endLine)+endColumn может указывать на следующую строку или за пределы документа
+            try
+            {
+                var startLineLength = document.getLineLength(startLine);
+                startColumn = Math.min(startColumn, startLineLength);
+
+                var endLineLength = document.getLineLength(endLine);
+                endColumn = Math.min(endColumn, endLineLength);
+            }
+            catch (Exception e)
+            {
+                log.logError("Error getting line length for column bounds check: " + e.getMessage());
+            }
+
 			final var startOffset =
 				Math.max(0, Math.min(document.getLineOffset(startLine) + startColumn, document.getLength()));
 			final var endOffset =

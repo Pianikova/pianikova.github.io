@@ -4,20 +4,19 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Stack;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.egit.ui.internal.dialogs.CommitMessageComponent;
-import org.eclipse.egit.ui.internal.staging.StagingEntry;
 import org.eclipse.egit.ui.internal.staging.StagingView;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -27,11 +26,10 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
-import org.eclipse.swt.widgets.Tree;
-import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.forms.widgets.Section;
 
+import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
@@ -64,6 +62,7 @@ public class StagingViewEnhancer
     private final IStateService stateService;
     private final ILog log;
     private final ISkillExecutor skillExecutor;
+    private final IChat chat;
     private CancellationTokenSource reviewChangesCancellationToken = new CancellationTokenSource();
     private CancellationTokenSource createCommitMessageCancellationToken = new CancellationTokenSource();
     private volatile boolean commitMessageGenerating;
@@ -71,8 +70,7 @@ public class StagingViewEnhancer
     @Inject
     public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions,
         IConversationFacade conversationFacade, IProjectIdProvider projectIdProvider, ILog log, ISettings settings,
-        IStateService stateService,
-        ISkillExecutor skillExecutor)
+        IStateService stateService, ISkillExecutor skillExecutor, IChat chat)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(reflection);
@@ -84,6 +82,8 @@ public class StagingViewEnhancer
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(skillExecutor);
+        Preconditions.checkNotNull(chat);
+        this.chat = chat;
         this.skillExecutor = skillExecutor;
         this.log = log;
         this.dispatcher = dispatcher;
@@ -134,9 +134,7 @@ public class StagingViewEnhancer
                     var newCancellationToken = new CancellationTokenSource();
                     reviewChangesCancellationToken.cancel();
                     reviewChangesCancellationToken = newCancellationToken;
-                    var stagingEntries = getStagingEntries(stagedViewer.getTree());
-                    var diffs = getDiffs(stagingEntries);
-                    gitActions.reviewGitChanges(diffs, reviewChangesCancellationToken);
+                    performSelfReview(newCancellationToken);
                 }
             };
 
@@ -176,15 +174,13 @@ public class StagingViewEnhancer
                         public void widgetSelected(SelectionEvent e)
                         {
                             commitMessages.clear();
-                            var stagingEntries = getStagingEntries(stagedViewer.getTree());
-                            var diffs = getDiffs(stagingEntries);
                             var newCancellationToken = new CancellationTokenSource();
                             createCommitMessageCancellationToken.cancel();
                             createCommitMessageCancellationToken = newCancellationToken;
                             var baseMessage = commitMessageComponent.getCommitMessage().trim();
                             commitMessageGenerating = true;
                             createMessageButton.setEnabled(false);
-                            createCommitMessageUsingSkills(baseMessage, diffs, newCancellationToken,
+                            createCommitMessageUsingSkills(baseMessage, newCancellationToken,
                                 commitMessageComponent, commitMessages, createMessageButton);
                         }
                     });
@@ -227,9 +223,44 @@ public class StagingViewEnhancer
     }
 
     @SuppressWarnings("nls")
-    private void createCommitMessageUsingSkills(String baseMessage, List<GitDiff> diffs,
-        ICancellationToken cancellationToken, CommitMessageComponent commitMessageComponent,
-        ArrayList<CommitMessageInfo> commitMessages, ToolItem createMessageButton)
+    private void performSelfReview(CancellationTokenSource newCancellationToken)
+    {
+        var workingDirectory = getWorkingDirectory();
+
+        if (workingDirectory == null)
+        {
+            log.logError("Working directory not found");
+            return;
+        }
+
+        final var projId =
+            projectIdProvider.getProjectId(workingDirectory, newCancellationToken).orElse(ProjectId.Default);
+
+        SkillExecutionRequest skillRequest =
+            new SkillExecutionRequest("git-review", Map.of("working_directory", workingDirectory));
+
+
+        skillExecutor.executeAsync(skillRequest, newCancellationToken).thenAccept(result -> {
+            var prompt = result.getPrompt();
+            if (prompt != null)
+            {
+                var ctx = new AIContext(projId, "", (IDocument)null); //$NON-NLS-1$
+                dispatcher.dispatchAsync(() -> chat.reviewCodeWithDetails(ctx, null, prompt));
+            }
+            else
+            {
+                log.logError("Git review skill returned null prompt");
+            }
+        }).exceptionally(error -> {
+            log.logError(error);
+            return null;
+        });
+    }
+
+    @SuppressWarnings("nls")
+    private void createCommitMessageUsingSkills(String baseMessage, ICancellationToken cancellationToken,
+        CommitMessageComponent commitMessageComponent, ArrayList<CommitMessageInfo> commitMessages,
+        ToolItem createMessageButton)
     {
         Runnable finishGeneration = () -> dispatcher.dispatch(() -> {
             commitMessageGenerating = false;
@@ -240,23 +271,18 @@ public class StagingViewEnhancer
         });
 
         var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
-            if (diffs.isEmpty())
-                {
-                    finishGeneration.run();
-                    return;
-                }
+            var workingDirectory = getWorkingDirectory();
 
-            var repository = diffs.get(0).getRepository();
-            var workingDirectory = repository.getWorkTree().getAbsolutePath();
+            if (workingDirectory == null)
+            {
+                log.logError("Working directory not found");
+                finishGeneration.run();
+                return;
+            }
 
-            var optionalProjectId = diffs.stream()
-                .flatMap(diff -> diff.getPaths().stream())
-                .map(path -> projectIdProvider.getProjectId(path, cancellationToken))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .findFirst();
+            final var projectId =
+                projectIdProvider.getProjectId(workingDirectory, cancellationToken).orElse(ProjectId.Default);
 
-            var projectId = optionalProjectId.orElse(ProjectId.Default);
 
             // @formatter:off
             SkillExecutionRequest skillRequest = new SkillExecutionRequest("git-commit",
@@ -309,9 +335,18 @@ public class StagingViewEnhancer
             }).exceptionally(error -> {
                 log.logError(error);
                 return null;
-                }).whenComplete((r, t) -> finishGeneration.run());
+            }).whenComplete((r, t) -> finishGeneration.run());
         }, false, cancellationToken);
         job.schedule();
+    }
+
+    private String getWorkingDirectory()
+    {
+        return Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
+            .filter(project -> project.isOpen())
+            .map(project -> project.getLocation().toOSString())
+            .findFirst()
+            .orElse(null);
     }
 
     @SuppressWarnings("nls")
@@ -368,43 +403,6 @@ public class StagingViewEnhancer
 
         var messageInfo = commitMessages.get(0);
         gitActions.feedbackAsync(messageInfo.message, finalText, messageInfo.cancellationToken);
-    }
-
-    private List<StagingEntry> getStagingEntries(Tree tree)
-    {
-        var stagingEntries = new ArrayList<StagingEntry>();
-        var stack = new Stack<TreeItem>();
-        for (var child : tree.getItems())
-        {
-            stack.push(child);
-        }
-
-        while (!stack.isEmpty())
-        {
-            var item = stack.pop();
-            var data = item.getData();
-            if (data instanceof StagingEntry)
-            {
-                stagingEntries.add((StagingEntry)data);
-            }
-
-            for (var child : item.getItems())
-            {
-                stack.push(child);
-            }
-        }
-
-        return stagingEntries;
-    }
-
-    private List<GitDiff> getDiffs(List<StagingEntry> stagingEntries)
-    {
-        return stagingEntries.stream()
-            .collect(Collectors.groupingBy(StagingEntry::getRepository))
-            .entrySet()
-            .stream()
-            .map(i -> new GitDiff(i.getKey(), i.getValue().stream().map(j -> j.getPath()).collect(Collectors.toList())))
-            .collect(Collectors.toList());
     }
 
     private static class CommitMessageInfo
