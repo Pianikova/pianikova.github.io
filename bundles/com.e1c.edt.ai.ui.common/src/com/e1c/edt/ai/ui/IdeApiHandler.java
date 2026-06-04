@@ -23,8 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
-import javafx.scene.web.WebEngine;
-
 public class IdeApiHandler
 {
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
@@ -40,8 +38,6 @@ public class IdeApiHandler
     private final IMarkdownUtils markdownUtils;
     private final IWeb web;
     private final IEditRollback editRollback;
-    private volatile MicrophoneRecorder microphoneRecorder;
-    private volatile WebEngine webEngine;
     private boolean isReady;
 
     @Inject
@@ -273,33 +269,14 @@ public class IdeApiHandler
     }
 
     /**
-     * Sets the WebEngine for voice recording callbacks.
-     * Must be called before voice recording starts.
-     */
-    public void setWebEngine(WebEngine engine)
-    {
-        this.webEngine = engine;
-    }
-
-    /**
      * Starts recording from the default microphone.
      * Streams PCM chunks to JS via {@code window.onVoiceChunk(base64, durationMs)}.
      * Called from JavaScript via {@code window.ideApi.startVoiceRecording()}.
      */
     public void startVoiceRecording()
     {
-        if (microphoneRecorder != null && microphoneRecorder.isRecording())
-        {
-            return;
-        }
-        if (webEngine == null)
-        {
-            log.trace(TracingSources.CHAT, AI_CHAT, () -> "Cannot start voice recording: WebEngine not set"); //$NON-NLS-1$
-            return;
-        }
-        microphoneRecorder = new MicrophoneRecorder(webEngine);
-        microphoneRecorder.startVoiceRecording();
-        log.trace(TracingSources.CHAT, AI_CHAT, () -> "Voice recording started"); //$NON-NLS-1$
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "ideApi.startVoiceRecording() called from JS"); //$NON-NLS-1$
+        chatProvider.get().startVoiceRecording();
     }
 
     /**
@@ -311,13 +288,8 @@ public class IdeApiHandler
      */
     public String stopVoiceRecording()
     {
-        if (microphoneRecorder == null)
-        {
-            return "stopped"; //$NON-NLS-1$
-        }
-        String result = microphoneRecorder.stopVoiceRecording();
-        log.trace(TracingSources.CHAT, AI_CHAT, () -> "Voice recording stopped"); //$NON-NLS-1$
-        return result;
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "ideApi.stopVoiceRecording() called from JS"); //$NON-NLS-1$
+        return chatProvider.get().stopVoiceRecording();
     }
 
     public boolean isReady()

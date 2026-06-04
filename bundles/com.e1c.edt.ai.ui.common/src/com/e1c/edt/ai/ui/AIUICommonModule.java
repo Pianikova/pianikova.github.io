@@ -133,6 +133,7 @@ public class AIUICommonModule
         bind(INotifications.class).to(Notifications.class).in(Singleton.class);
         bind(IWeb.class).to(Web.class).in(Singleton.class);
         bind(IPreferences.class).to(Preferences.class).in(Singleton.class);
+        bind(IMicrophoneRecorder.class).to(MicrophoneRecorder.class).in(Singleton.class);
         // @formatter:on
     }
 }

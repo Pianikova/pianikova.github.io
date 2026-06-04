@@ -4,7 +4,6 @@
 package com.e1c.edt.ai.ui;
 
 import java.io.ByteArrayOutputStream;
-import java.util.Base64;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.sound.sampled.AudioFormat;
@@ -13,20 +12,22 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 
-import javafx.application.Platform;
-import javafx.scene.web.WebEngine;
+import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.TracingSources;
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 
 /**
- * Captures audio from the microphone and streams Base64 PCM chunks to JavaScript
- * via the WebKit bridge.
+ * Captures audio from the default microphone and streams raw PCM chunks to a
+ * {@link IMicrophoneRecorder.Listener}.
  * <p>
- * JS contract:
- *   window.onVoiceChunk(base64, durationMs) — called every ~1s with PCM audio chunk
- *   window.onVoiceStateChange(state) — called with 'recording' or 'stopped'
- *   window.onVoiceError(message) — called on errors
+ * This class is concerned only with voice recording — it does not know how the audio is delivered.
  */
 public class MicrophoneRecorder
+    implements IMicrophoneRecorder
 {
+    private static final String VOICE = "Voice"; //$NON-NLS-1$
+
     private static final float SAMPLE_RATE = 16000f;
     private static final int SAMPLE_SIZE_BITS = 16;
     private static final int CHANNELS = 1;
@@ -37,26 +38,36 @@ public class MicrophoneRecorder
     private static final int BYTES_PER_CHUNK =
         (int)(SAMPLE_RATE * (SAMPLE_SIZE_BITS / 8) * CHANNELS * CHUNK_DURATION_MS / 1000);
 
-    private final WebEngine webEngine;
+    private final ILog log;
     private final AtomicBoolean recording = new AtomicBoolean(false);
     private TargetDataLine microphone;
     private Thread captureThread;
 
-    public MicrophoneRecorder(WebEngine webEngine)
+    @Inject
+    public MicrophoneRecorder(ILog log)
     {
-        this.webEngine = webEngine;
+        Preconditions.checkNotNull(log);
+        this.log = log;
     }
 
-    /**
-     * Starts recording from the default microphone.
-     * If already recording, does nothing.
-     */
-    public void startVoiceRecording()
+    @SuppressWarnings("nls")
+    @Override
+    public void start(Listener listener)
     {
+        if (listener == null)
+        {
+            throw new IllegalArgumentException("listener must not be null");
+        }
+
         if (recording.getAndSet(true))
         {
+            log.trace(TracingSources.CHAT, VOICE, () -> "start ignored: already recording");
             return;
         }
+
+        log.trace(TracingSources.CHAT, VOICE,
+            () -> "start: sampleRate=" + SAMPLE_RATE + " bits=" + SAMPLE_SIZE_BITS + " channels=" + CHANNELS
+                + " bytesPerChunk=" + BYTES_PER_CHUNK);
 
         try
         {
@@ -65,36 +76,43 @@ public class MicrophoneRecorder
 
             if (!AudioSystem.isLineSupported(info))
             {
-                callJs("onVoiceError", "'Microphone not available or format not supported'"); //$NON-NLS-1$ //$NON-NLS-2$
                 recording.set(false);
+                log.trace(TracingSources.CHAT, VOICE, () -> "start failed: line not supported for format " + format);
+                listener.onError("Microphone not available or format not supported");
                 return;
             }
 
             microphone = (TargetDataLine)AudioSystem.getLine(info);
             microphone.open(format);
             microphone.start();
+            log.trace(TracingSources.CHAT, VOICE, () -> "microphone line opened and started");
 
-            callJs("onVoiceStateChange", "'recording'"); //$NON-NLS-1$ //$NON-NLS-2$
+            listener.onStarted();
 
-            captureThread = new Thread(this::captureLoop, "voice-capture"); //$NON-NLS-1$
+            captureThread = new Thread(() -> captureLoop(listener), "voice-capture");
             captureThread.setDaemon(true);
             captureThread.start();
         }
         catch (LineUnavailableException e)
         {
-            callJs("onVoiceError", "'" + escapeJs(e.getMessage()) + "'"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             recording.set(false);
+            log.trace(TracingSources.CHAT, VOICE, () -> "start failed: line unavailable: " + e.getMessage());
+            log.logError(e);
+            listener.onError(e.getMessage());
         }
     }
 
-    /**
-     * Stops recording, sends last chunk, closes audio line.
-     *
-     * @return "stopped" for JS compatibility
-     */
-    public String stopVoiceRecording()
+    @SuppressWarnings("nls")
+    @Override
+    public void stop()
     {
-        recording.set(false);
+        if (!recording.getAndSet(false))
+        {
+            log.trace(TracingSources.CHAT, VOICE, () -> "stop ignored: not recording");
+            return;
+        }
+
+        log.trace(TracingSources.CHAT, VOICE, () -> "stop requested");
 
         if (microphone != null)
         {
@@ -108,6 +126,8 @@ public class MicrophoneRecorder
             try
             {
                 captureThread.join(2000);
+                boolean stillAlive = captureThread.isAlive();
+                log.trace(TracingSources.CHAT, VOICE, () -> "capture thread joined, stillAlive=" + stillAlive);
             }
             catch (InterruptedException ignored)
             {
@@ -115,41 +135,45 @@ public class MicrophoneRecorder
             }
             captureThread = null;
         }
-
-        callJs("onVoiceStateChange", "'stopped'"); //$NON-NLS-1$ //$NON-NLS-2$
-        return "stopped"; //$NON-NLS-1$
     }
 
-    /**
-     * @return {@code true} if currently recording
-     */
+    @Override
     public boolean isRecording()
     {
         return recording.get();
     }
 
-    private void captureLoop()
+    @SuppressWarnings("nls")
+    private void captureLoop(Listener listener)
     {
+        log.trace(TracingSources.CHAT, VOICE, () -> "capture loop started");
         byte[] buffer = new byte[4096];
         ByteArrayOutputStream chunkBuffer = new ByteArrayOutputStream();
         long chunkStartTime = System.currentTimeMillis();
+        long totalBytes = 0;
+        int chunkCount = 0;
 
-        while (recording.get() && microphone != null && microphone.isOpen())
+        TargetDataLine line;
+        while (recording.get() && (line = microphone) != null && line.isOpen())
         {
-            int bytesRead = microphone.read(buffer, 0, buffer.length);
+            int bytesRead = line.read(buffer, 0, buffer.length);
             if (bytesRead <= 0)
             {
+                log.trace(TracingSources.CHAT, VOICE, () -> "read returned no data: bytesRead=" + bytesRead);
                 continue;
             }
 
+            totalBytes += bytesRead;
             chunkBuffer.write(buffer, 0, bytesRead);
 
             if (chunkBuffer.size() >= BYTES_PER_CHUNK)
             {
                 long durationMs = System.currentTimeMillis() - chunkStartTime;
-                byte[] pcmData = chunkBuffer.toByteArray();
-                String base64 = Base64.getEncoder().encodeToString(pcmData);
-                callJs("onVoiceChunk", "'" + base64 + "', " + durationMs); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                byte[] pcm = chunkBuffer.toByteArray();
+                final int n = ++chunkCount;
+                log.trace(TracingSources.CHAT, VOICE,
+                    () -> "emit chunk #" + n + ": " + pcm.length + " bytes, durationMs=" + durationMs);
+                listener.onChunk(pcm, durationMs);
 
                 chunkBuffer.reset();
                 chunkStartTime = System.currentTimeMillis();
@@ -160,33 +184,17 @@ public class MicrophoneRecorder
         if (chunkBuffer.size() > 0)
         {
             long durationMs = System.currentTimeMillis() - chunkStartTime;
-            byte[] pcmData = chunkBuffer.toByteArray();
-            String base64 = Base64.getEncoder().encodeToString(pcmData);
-            callJs("onVoiceChunk", "'" + base64 + "', " + durationMs); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            byte[] pcm = chunkBuffer.toByteArray();
+            final int n = ++chunkCount;
+            log.trace(TracingSources.CHAT, VOICE,
+                () -> "emit final chunk #" + n + ": " + pcm.length + " bytes, durationMs=" + durationMs);
+            listener.onChunk(pcm, durationMs);
         }
-    }
 
-    @SuppressWarnings("nls")
-    private void callJs(String functionName, String args)
-    {
-        Platform.runLater(() -> {
-            try
-            {
-                webEngine.executeScript("if(window." + functionName + ") window." + functionName + "(" + args + ")");
-            }
-            catch (Exception e)
-            {
-                System.err.println("[MicrophoneRecorder] JS call failed: " + e.getMessage());
-            }
-        });
-    }
-
-    private static String escapeJs(String s)
-    {
-        if (s == null)
-        {
-            return ""; //$NON-NLS-1$
-        }
-        return s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+        final long total = totalBytes;
+        final int chunks = chunkCount;
+        log.trace(TracingSources.CHAT, VOICE,
+            () -> "capture loop finished: totalBytes=" + total + " chunks=" + chunks);
+        listener.onStopped();
     }
 }

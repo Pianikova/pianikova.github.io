@@ -28,4 +28,17 @@ public interface IChat
     void addToolsResult(String chatId, String messageId, McpCallToolsResult result);
 
     void continueChat(String chatId, String text);
+
+    /**
+     * Starts microphone recording and streams the captured audio to the chat page via JavaScript.
+     * If already recording, does nothing.
+     */
+    void startVoiceRecording();
+
+    /**
+     * Stops microphone recording.
+     *
+     * @return "stopped" for JS compatibility
+     */
+    String stopVoiceRecording();
 }
