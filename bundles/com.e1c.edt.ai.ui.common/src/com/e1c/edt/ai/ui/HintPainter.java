@@ -161,6 +161,11 @@ class HintPainter
             return;
         }
 
+        if (event.widget != textWidget)
+        {
+            return;
+        }
+
         if (!showBlank && hintText.isBlank())
         {
             return;

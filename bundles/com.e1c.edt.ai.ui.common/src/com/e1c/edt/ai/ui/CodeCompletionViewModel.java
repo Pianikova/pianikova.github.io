@@ -206,6 +206,11 @@ class CodeCompletionViewModel
 
         synchronized (lockObject)
         {
+            if (this.textWidget != null && this.sourceViewer != null && !this.textWidget.isDisposed())
+            {
+                deactivate(this.textWidget, this.sourceViewer);
+            }
+
             reset();
             lastSession = null;
             isTextModifed = false;
