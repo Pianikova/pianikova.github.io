@@ -117,6 +117,7 @@ public class Chat
 
     private WebView webView;
     private ChatKey lastChatKey;
+    private CompletableFuture<Void> initFuture;
     private String lastDialogPath;
     private ChangeListener<Number> widthListener;
     private ChangeListener<Number> heightListener;
@@ -750,7 +751,8 @@ public class Chat
             var chatUrl = settings.getChatUrl();
             var newChatKey = new ChatKey(chatUrl, settings.getClientToken());
             boolean needsInit;
-            // Narrow lock: only guard mutation of lastChatKey/handler state.
+            CompletableFuture<Void> currentInit;
+            // Narrow lock: only guard mutation of lastChatKey/handler/initFuture state.
             // Do NOT hold the monitor during blocking future waits or syncExec
             // dispatches below — that is a UI-thread deadlock risk.
             synchronized (chatStateLock)
@@ -760,39 +762,71 @@ public class Chat
                 {
                     handler.reset();
                     lastChatKey = newChatKey;
+                    initFuture = new CompletableFuture<>();
                 }
+                currentInit = initFuture;
             }
 
             if (needsInit)
             {
-                var futureOpt = dispatcher.dispatch(() -> {
-                    var webEngine = getEngine();
-                    return initialize(webEngine, () -> {
-                        webEngine.load(chatUrl.toString());
-                    });
-                });
-                if (futureOpt.isPresent())
+                try
                 {
-                    try
+                    var futureOpt = dispatcher.dispatch(() -> {
+                        var webEngine = getEngine();
+                        return initialize(webEngine, () -> {
+                            webEngine.load(chatUrl.toString());
+                        });
+                    });
+                    if (futureOpt.isPresent())
                     {
-                        futureOpt.get().get(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS);
+                        try
+                        {
+                            futureOpt.get().get(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS);
+                        }
+                        catch (TimeoutException error)
+                        {
+                            log.warning(AI_CHAT, () -> "Chat initialization timed out"); //$NON-NLS-1$
+                        }
+                        catch (InterruptedException error)
+                        {
+                            Thread.currentThread().interrupt();
+                            log.warning(AI_CHAT, () -> "Chat initialization interrupted"); //$NON-NLS-1$
+                        }
+                        catch (ExecutionException error)
+                        {
+                            log.warning(AI_CHAT, () -> "Chat initialization failed: " + error); //$NON-NLS-1$
+                        }
                     }
-                    catch (TimeoutException error)
+
+                    wink(32);
+                }
+                finally
+                {
+                    if (currentInit != null)
                     {
-                        log.warning(AI_CHAT, () -> "Chat initialization timed out");
-                    }
-                    catch (InterruptedException error)
-                    {
-                        Thread.currentThread().interrupt();
-                        log.warning(AI_CHAT, () -> "Chat initialization interrupted");
-                    }
-                    catch (ExecutionException error)
-                    {
-                        log.warning(AI_CHAT, () -> "Chat initialization failed: " + error);
+                        currentInit.complete(null);
                     }
                 }
-
-                wink(32);
+            }
+            else if (currentInit != null)
+            {
+                try
+                {
+                    currentInit.get(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS);
+                }
+                catch (TimeoutException error)
+                {
+                    log.warning(AI_CHAT, () -> "Awaiting chat initialization timed out"); //$NON-NLS-1$
+                }
+                catch (InterruptedException error)
+                {
+                    Thread.currentThread().interrupt();
+                    log.warning(AI_CHAT, () -> "Awaiting chat initialization interrupted"); //$NON-NLS-1$
+                }
+                catch (ExecutionException error)
+                {
+                    log.warning(AI_CHAT, () -> "Awaiting chat initialization failed: " + error); //$NON-NLS-1$
+                }
             }
 
             chatAction.run();
@@ -1027,6 +1061,10 @@ public class Chat
     private void reset()
     {
         contexts.invalidateAll();
-        lastChatKey = null;
+        synchronized (chatStateLock)
+        {
+            lastChatKey = null;
+            initFuture = null;
+        }
     }
 }
