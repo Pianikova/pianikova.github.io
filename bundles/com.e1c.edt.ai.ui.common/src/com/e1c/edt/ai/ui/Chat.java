@@ -239,7 +239,8 @@ public class Chat
                     }
 
                     var script = String.format(
-                        "window.chatApi.add_tool_calls_result(%s, %s, window.calls_messages, window.unknown_messages);",
+                        "(window.chatApi && typeof window.chatApi.add_tool_calls_result === 'function') ? "
+                            + "window.chatApi.add_tool_calls_result(%s, %s, window.calls_messages, window.unknown_messages) : null;",
                         javaScript.escape(chatId, EMPTY_STRING), javaScript.escape(messageId, EMPTY_STRING));
                     executeScriptWithLogging(script);
                 });
@@ -259,7 +260,9 @@ public class Chat
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
             {
-                var script = String.format("window.chatApi.continue_chat(%s, %s);",
+                var script = String.format(
+                    "(window.chatApi && typeof window.chatApi.continue_chat === 'function') ? "
+                        + "window.chatApi.continue_chat(%s, %s) : null;",
                     javaScript.escape(text, EMPTY_STRING), javaScript.escape(chatId, NULL_VALUE));
                 dispatcher.dispatchAsync(() -> executeScriptWithLogging(script));
             }
@@ -626,7 +629,9 @@ public class Chat
         ContextInfo contextInfo)
     {
         var script = new StringBuilder();
-        script.append("window.chatApi.");
+        script.append("(window.chatApi && typeof window.chatApi.");
+        script.append(topic);
+        script.append(" === 'function') ? window.chatApi.");
         script.append(topic);
         script.append('(');
         script.append(javaScript.escape(subject, EMPTY_STRING));
@@ -664,7 +669,7 @@ public class Chat
         var contextJson = json.serialize(buildContext(ctx));
         script.append(ARGS_SEPARATOR);
         script.append(javaScript.escape(contextJson, NULL_VALUE));
-        script.append(");");
+        script.append(") : null;");
 
         return script.toString();
     }
@@ -963,8 +968,6 @@ public class Chat
                             log.warning(AI_CHAT, () -> "Chat initialization failed: " + error); //$NON-NLS-1$
                         }
                     }
-
-                    wink(32);
                 }
                 finally
                 {
@@ -994,6 +997,12 @@ public class Chat
                     log.warning(AI_CHAT, () -> "Awaiting chat initialization failed: " + error); //$NON-NLS-1$
                 }
             }
+
+            // Ensure window.chatApi is winked/ready before running the action. wink() returns
+            // immediately when already ready, so this is a no-op on the common path; on the
+            // needsInit==false (e.g. after a page reload/warm-up) or slow-load paths it closes
+            // the race that left window.chatApi undefined when the action script ran.
+            wink(32);
 
             chatAction.run();
         }
