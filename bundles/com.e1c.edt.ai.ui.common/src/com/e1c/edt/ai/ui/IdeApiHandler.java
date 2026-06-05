@@ -268,6 +268,30 @@ public class IdeApiHandler
         return href.substring(0, protocolEnd + 3) + pathPart;
     }
 
+    /**
+     * Starts recording from the default microphone.
+     * Streams PCM chunks to JS via {@code window.onVoiceChunk(base64, durationMs)}.
+     * Called from JavaScript via {@code window.ideApi.startVoiceRecording()}.
+     */
+    public void startVoiceRecording()
+    {
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "ideApi.startVoiceRecording() called from JS"); //$NON-NLS-1$
+        chatProvider.get().startVoiceRecording();
+    }
+
+    /**
+     * Stops voice recording. Sends last chunk and notifies JS via
+     * {@code window.onVoiceStateChange('stopped')}.
+     * Called from JavaScript via {@code window.ideApi.stopVoiceRecording()}.
+     *
+     * @return "stopped" for JS compatibility
+     */
+    public String stopVoiceRecording()
+    {
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "ideApi.stopVoiceRecording() called from JS"); //$NON-NLS-1$
+        return chatProvider.get().stopVoiceRecording();
+    }
+
     public boolean isReady()
     {
         return this.isReady;

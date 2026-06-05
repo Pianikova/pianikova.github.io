@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -91,6 +92,7 @@ public class Chat
     private static final Character ARGS_SEPARATOR = ',';
     private static final String WINDOW_CHAT_API_SET_TOOLS = "window.chatApi.set_tools("; //$NON-NLS-1$
     private static final String WINDOW = "window"; //$NON-NLS-1$
+    private static final String VOICE_CHUNK_MEMBER = "voiceChunk"; //$NON-NLS-1$
     private static final String TOPIC_INSERT_CODE = "insert_code"; //$NON-NLS-1$
 
     private final ILog log;
@@ -111,6 +113,7 @@ public class Chat
     private final IProjectTools projectTools;
     private final IContentSourceProvider contentSourceProvider;
     private final IFileSystem fileSystem;
+    private final IMicrophoneRecorder microphoneRecorder;
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).weakKeys().build();
     private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
     private final Object chatStateLock = new Object();
@@ -128,7 +131,8 @@ public class Chat
         IContextEntities contextEntities, IJavaScript javaScript, IStateService stateService,
         ISessionService sessionService, IModuleNameProvider moduleNameProvider, ILocalContext localContext,
         IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools, IEdtLinkHandler linkHandler,
-        IProjectTools projectTools, IContentSourceProvider contentSourceProvider, IFileSystem fileSystem)
+        IProjectTools projectTools, IContentSourceProvider contentSourceProvider, IFileSystem fileSystem,
+        IMicrophoneRecorder microphoneRecorder)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -147,6 +151,7 @@ public class Chat
         Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(microphoneRecorder);
         this.log = log;
         this.settings = settings;
         this.ui = ui;
@@ -165,6 +170,7 @@ public class Chat
         this.projectTools = projectTools;
         this.contentSourceProvider = contentSourceProvider;
         this.fileSystem = fileSystem;
+        this.microphoneRecorder = microphoneRecorder;
 
         stateService.addListener(this);
     }
@@ -259,6 +265,166 @@ public class Chat
             }
             catch (Exception error)
             {
+                log.logError(error);
+            }
+        });
+    }
+
+    @Override
+    public void startVoiceRecording()
+    {
+        if (microphoneRecorder.isRecording())
+        {
+            return;
+        }
+        ensureWebViewExists();
+        microphoneRecorder.start(new VoiceJsListener());
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "Voice recording started"); //$NON-NLS-1$
+    }
+
+    /**
+     * Forwards microphone events to the chat page JavaScript and traces the size of the transferred
+     * audio data, both per chunk and cumulatively over the recording session.
+     */
+    private final class VoiceJsListener
+        implements IMicrophoneRecorder.Listener
+    {
+        private long totalPcmBytes;
+        private long totalBase64Chars;
+        private int chunkCount;
+
+        @SuppressWarnings("nls")
+        @Override
+        public void onChunk(byte[] pcm, long durationMs)
+        {
+            var base64 = Base64.getEncoder().encodeToString(pcm);
+            chunkCount++;
+            totalPcmBytes += pcm.length;
+            totalBase64Chars += base64.length();
+            final int n = chunkCount;
+            final long totalPcm = totalPcmBytes;
+            final long totalB64 = totalBase64Chars;
+            log.trace(TracingSources.CHAT, AI_CHAT,
+                () -> "voice onChunk #" + n + ": pcm=" + pcm.length + " bytes, base64=" + base64.length()
+                    + " chars, durationMs=" + durationMs + " (total: pcm=" + totalPcm + " bytes, base64=" + totalB64
+                    + " chars)");
+            callVoiceChunk(base64, durationMs);
+        }
+
+        @SuppressWarnings("nls")
+        @Override
+        public void onStarted()
+        {
+            log.trace(TracingSources.CHAT, AI_CHAT, () -> "voice onStarted");
+            callVoiceJs("onVoiceStateChange", "`recording`");
+        }
+
+        @SuppressWarnings("nls")
+        @Override
+        public void onStopped()
+        {
+            final int n = chunkCount;
+            final long totalPcm = totalPcmBytes;
+            final long totalB64 = totalBase64Chars;
+            log.trace(TracingSources.CHAT, AI_CHAT,
+                () -> "voice onStopped: sent " + n + " chunks, total pcm=" + totalPcm + " bytes, base64=" + totalB64
+                    + " chars");
+            callVoiceJs("onVoiceStateChange", "`stopped`");
+        }
+
+        @SuppressWarnings("nls")
+        @Override
+        public void onError(String message)
+        {
+            log.trace(TracingSources.CHAT, AI_CHAT, () -> "voice onError: " + message);
+            callVoiceJs("onVoiceError", javaScript.escape(message, EMPTY_STRING));
+        }
+    }
+
+    @Override
+    public String stopVoiceRecording()
+    {
+        microphoneRecorder.stop();
+        log.trace(TracingSources.CHAT, AI_CHAT, () -> "Voice recording stopped"); //$NON-NLS-1$
+        return "stopped"; //$NON-NLS-1$
+    }
+
+    /**
+     * Streams a base64 audio chunk to {@code window.onVoiceChunk(chunk, durationMs)}. The base64
+     * payload is passed via a {@code window} member instead of being embedded into the script text,
+     * so the WebKit engine does not have to parse a large (~40 KB) string literal on every chunk.
+     * Runs on the UI thread.
+     *
+     * @param base64 base64-encoded PCM chunk
+     * @param durationMs chunk duration in milliseconds
+     */
+    @SuppressWarnings("nls")
+    private void callVoiceChunk(String base64, long durationMs)
+    {
+        dispatcher.dispatchAsync(() -> {
+            try
+            {
+                var engine = getEngine();
+                var window = (JSObject)engine.executeScript(WINDOW);
+                if (window == null)
+                {
+                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "cannot find chat window; voice chunk dropped");
+                    return;
+                }
+
+                window.setMember(VOICE_CHUNK_MEMBER, base64);
+                var called = engine.executeScript("window.onVoiceChunk ? (window.onVoiceChunk(window."
+                    + VOICE_CHUNK_MEMBER + "," + durationMs + "),true) : false");
+                if (Boolean.TRUE.equals(called))
+                {
+                    log.trace(TracingSources.CHAT, AI_CHAT,
+                        () -> "voice JS window.onVoiceChunk executed (" + base64.length() + " base64 chars via member)");
+                }
+                else
+                {
+                    log.trace(TracingSources.CHAT, AI_CHAT,
+                        () -> "voice JS callback window.onVoiceChunk is not defined on the page; chunk dropped");
+                }
+            }
+            catch (Exception error)
+            {
+                log.trace(TracingSources.CHAT, AI_CHAT, () -> "voice JS window.onVoiceChunk failed: " + error);
+                log.logError(error);
+            }
+        });
+    }
+
+    /**
+     * Invokes a global {@code window.<functionName>(args)} voice callback on the chat page in a single
+     * guarded {@code executeScript}. The guard's boolean result tells whether the callback exists,
+     * so no separate {@code typeof} probe is needed. Runs on the UI thread.
+     *
+     * @param functionName the JS callback name
+     * @param args the already-escaped JavaScript argument list
+     */
+    @SuppressWarnings("nls")
+    private void callVoiceJs(String functionName, String args)
+    {
+        dispatcher.dispatchAsync(() -> {
+            try
+            {
+                var engine = getEngine();
+                var called = engine.executeScript(
+                    "window." + functionName + " ? (window." + functionName + "(" + args + "),true) : false");
+                if (Boolean.TRUE.equals(called))
+                {
+                    log.trace(TracingSources.CHAT, AI_CHAT,
+                        () -> "voice JS window." + functionName + " executed (args " + args.length() + " chars)");
+                }
+                else
+                {
+                    log.trace(TracingSources.CHAT, AI_CHAT,
+                        () -> "voice JS callback window." + functionName + " is not defined on the page; call dropped");
+                }
+            }
+            catch (Exception error)
+            {
+                log.trace(TracingSources.CHAT, AI_CHAT, () -> "voice JS window." + functionName + " failed: " + error);
                 log.logError(error);
             }
         });
