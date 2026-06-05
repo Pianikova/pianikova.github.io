@@ -94,7 +94,7 @@ public class Tools
             return CompletableFuture.failedFuture(error);
         }
 
-        var client = clientBuilder.create().build();
+        var client = clientBuilder.get();
         var currentRequestBuilder = requestBuilder.POST(bodyPublisher);
         var call = sessionCall.call(projectId, cancellationToken, session -> {
             var request =
@@ -146,7 +146,7 @@ public class Tools
             return;
         }
 
-        var client = clientBuilder.create().build();
+        var client = clientBuilder.get();
         var currentRequestBuilder = requestBuilder;
         var call = sessionCall.call(projectId, cancellationToken, session -> {
             var request =

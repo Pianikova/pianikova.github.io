@@ -5,7 +5,6 @@ package com.e1c.edt.ai.assistent;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
@@ -26,16 +25,20 @@ class TokenCheck
     private final IJson json;
     private final ISettings settings;
     private final IVersionProvider versionProvider;
+    private final IHttpClientBuilder clientBuilder;
 
     @Inject
-    public TokenCheck(IJson json, ISettings settings, IVersionProvider versionProvider)
+    public TokenCheck(IJson json, ISettings settings, IVersionProvider versionProvider,
+        IHttpClientBuilder clientBuilder)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(versionProvider);
+        Preconditions.checkNotNull(clientBuilder);
         this.json = json;
         this.settings = settings;
         this.versionProvider = versionProvider;
+        this.clientBuilder = clientBuilder;
     }
 
     @Override
@@ -78,7 +81,7 @@ class TokenCheck
         }
 
         var request = requestBuilder.POST(BodyPublishers.ofString(requestBody)).build();
-        var client = HttpClient.newHttpClient();
+        var client = clientBuilder.get();
         return client.sendAsync(request, BodyHandlers.ofString())
             .thenApply(HttpResponse::body)
             .thenApply(content -> checkResponse(content))

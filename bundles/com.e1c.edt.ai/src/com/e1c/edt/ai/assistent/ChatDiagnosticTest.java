@@ -81,7 +81,7 @@ public class ChatDiagnosticTest
         req.skillName = "docstring";
 
         var request = context.getJson().serialize(req);
-        var client = context.getHttpClientBuilder().create().build();
+        var client = context.getHttpClientBuilder().get();
         var bodyPublisher = BodyPublishers.ofString(request);
 
         var builderOpt = context.getRequestBuilder().create(facts.getOrDefault("url", ""));

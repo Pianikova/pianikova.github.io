@@ -43,7 +43,7 @@ public class HealthCheckDiagnosticTest
             }
             var builder = builderOpt.get();
 
-            var client = context.getHttpClientBuilder().create().build();
+            var client = context.getHttpClientBuilder().get();
             var request = builder.GET().build();
 
             request = context.getHttpLog().request(request, id(), null);

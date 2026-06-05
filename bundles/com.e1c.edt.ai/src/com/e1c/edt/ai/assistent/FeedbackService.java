@@ -106,8 +106,7 @@ class FeedbackService
     {
         log.request(request, null, body);
         var stopwatch = Stopwatch.createStarted();
-        return clienBuilder.create()
-            .build()
+        return clienBuilder.get()
             .sendAsync(request, BodyHandlers.ofString())
             .thenApply(response -> log.response(response, null, stopwatch, true, true))
             .thenApply(response -> null);

@@ -526,13 +526,17 @@ public class BaseStatusBarControl
     @Override
     public void onServiceStateChange(ServiceState serviceState)
     {
-        dispatcher.dispatch(() -> changeServiceState(serviceState));
+        // Async on purpose: this is called from HTTP response callbacks (e.g. StateService.busy()/close()) that run on
+        // the shared HttpClient's threads. A blocking syncExec here would park those threads on the busy UI thread and
+        // starve every other in-flight request on the shared client. The status bar update is fire-and-forget UI work.
+        dispatcher.dispatchAsync(() -> changeServiceState(serviceState));
     }
 
     @Override
     public void onActionStateChange(ActionState actionState)
     {
-        dispatcher.dispatch(() -> changeActionState(actionState));
+        // Async on purpose: see onServiceStateChange - must not block the calling (HTTP callback) thread on syncExec.
+        dispatcher.dispatchAsync(() -> changeActionState(actionState));
     }
 
     private void changeState(AIState state)

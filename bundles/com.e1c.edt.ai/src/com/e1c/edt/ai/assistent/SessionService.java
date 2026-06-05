@@ -163,8 +163,7 @@ class SessionService
         log.request(request, null, body);
         var stopwatch = Stopwatch.createStarted();
         var busyToken = stateService.busy();
-        return clientBuilder.create()
-            .build()
+        return clientBuilder.get()
             .sendAsync(request, BodyHandlers.ofString())
             .thenApply(response -> log.response(response, null, stopwatch, true, true))
             .thenApply(HttpResponse::body)

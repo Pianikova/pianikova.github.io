@@ -123,7 +123,7 @@ public class SessionDiagnosticTest
             var stopwatch = Stopwatch.createStarted();
             request = context.getHttpLog().request(request, id(), requestBody);
 
-            var client = context.getHttpClientBuilder().create().build();
+            var client = context.getHttpClientBuilder().get();
             HttpResponse<String> response = client.sendAsync(request, BodyHandlers.ofString())
                 .orTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                 .thenApply(

@@ -376,7 +376,7 @@ public class Conversations implements IConversations
         var request = requestBuilder.POST(bodyPublisher).build();
         log.request(request, cancellationToken.toString(), requestBody);
         var stopwatch = Stopwatch.createStarted();
-        var client = clientBuilder.create().build();
+        var client = clientBuilder.get();
 
 
         var asyncRequest = client.sendAsync(request, BodyHandlers.ofLines());
@@ -450,8 +450,7 @@ public class Conversations implements IConversations
         var request = requestBuilder.POST(bodyPublisher).build();
         log.request(request, cancellationToken.toString(), requestBody);
         var stopwatch = Stopwatch.createStarted();
-        return clientBuilder.create()
-            .build()
+        return clientBuilder.get()
             .sendAsync(request, BodyHandlers.ofString())
             .orTimeout(settings.getTimeout().toNanos(), TimeUnit.NANOSECONDS)
             .thenApplyAsync(response -> log.response(response, null, stopwatch, true, true))

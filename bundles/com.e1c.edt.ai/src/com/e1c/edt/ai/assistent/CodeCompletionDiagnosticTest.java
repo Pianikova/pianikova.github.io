@@ -49,7 +49,7 @@ public class CodeCompletionDiagnosticTest
         request.localContext = dummyLocalContext;
         var requestBody = context.getJson().serialize(request);
         var bodyPublisher = BodyPublishers.ofString(requestBody);
-        var client = context.getHttpClientBuilder().create().build();
+        var client = context.getHttpClientBuilder().get();
 
         // trying to call the code completion API endpoint
         var url = context.getSettings().getUrl() + "api/v1/complete"; //$NON-NLS-1$

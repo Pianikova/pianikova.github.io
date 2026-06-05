@@ -164,7 +164,7 @@ class GlobalContextService
             }
         }
 
-        var client = clientBuilder.create().build();
+        var client = clientBuilder.get();
         var currentRequestBuilder = requestBuilder;
         var call = sessionCall.call(projectId, cancellationToken, session -> {
         	var httpRequestBuilder = currentRequestBuilder;
