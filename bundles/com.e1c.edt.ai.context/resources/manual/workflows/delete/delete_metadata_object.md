@@ -134,7 +134,10 @@ After top-level deletion:
 2. Run `GetMarkers` project-wide because references may break outside the
    deleted object's own file.
 3. Read back `transaction.getTopObjectByFqn("<Type>.<Name>")` and verify it is
-   `null`.
+   `null`. If the check uses `AbstractBmTask<String>` or returns any other
+   value, assign the result to a variable and print it with
+   `System.out.println(result)`. Returning a string from `globalContext.execute`
+   alone does not appear in JShell `std_out`.
 4. Do not call `GetMarkers` with `path` to the deleted object's `.mdo`; the
    file is gone. If dependent markers exist, validate the dependent objects'
    `.mdo` files.

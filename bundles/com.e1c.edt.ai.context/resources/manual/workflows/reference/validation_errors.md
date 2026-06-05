@@ -214,6 +214,11 @@ document.getAttributes().add(documentDate);
 
 **Problem:** Creating an AccumulationRegister, AccountingRegister, or CalculationRegister without any document registrars.
 
+For a business request where a document should change stock, write movements,
+or create register records, this is not a manual follow-up. It is the next EDT
+metadata edit. Use `add_document_registers` and execute
+`document.getRegisterRecords().add(register)` in a BM transaction.
+
 **Common Causes:**
 - Creating a register and not configuring any document to record to it
 - Misunderstanding where registrars are configured (on documents, not on registers)

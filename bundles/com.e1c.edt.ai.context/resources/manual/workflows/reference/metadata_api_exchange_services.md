@@ -47,7 +47,9 @@ Safe optional setters:
 Safe getters:
 - `getRootURL()`
 
-Method name is all-caps `URL`. Do not use `getRootUrl()`.
+`rootURL` is required for a marker-clean baseline HTTP service. Missing or
+empty values produce SU45. Method name is all-caps `URL`; do not use
+`getRootUrl()`.
 
 Methods, templates, route patterns, and handlers are child/service details. Use reflection when creating them.
 
@@ -70,9 +72,16 @@ Operations and parameters are child objects. Use reflection for exact operation 
 Factory: `mdFactory.createWSReference()`
 Collection: `configuration.getWsReferences()`
 FQN prefix: `WSReference`
-Safe optional setters: none for baseline CRUD.
+Required baseline setters:
+- `setLocationURL("http://example.com/service?wsdl")`
+Safe getters:
+- `getLocationURL()`
 
-WSDL endpoint, imported service metadata, and namespace details are not baseline CRUD.
+`locationURL` is required to avoid the SU45 "URI is not specified" marker.
+EDT can still report a warning that no WSDL description is found when the URL
+is a placeholder; treat that as expected for a mock CRUD test only if the
+prompt did not require importing a real WSDL. Imported service metadata and
+namespace details are not baseline CRUD.
 
 ## IntegrationService
 
@@ -94,3 +103,10 @@ Safe getters:
 - `getNamespace()`
 
 Namespace is required for a valid baseline XDTO package. Missing namespace produces a 1C validation marker. Schema content, imports, object types, and value types are separate XDTO model operations.
+
+## Delete
+
+For every top-level object in this card, including services and XDTO packages,
+use `delete_metadata_object` and
+`IMdRefactoringService.createMdObjectDeleteRefactoring(...)`. Do not delete via
+`configuration.getX().remove(...) + transaction.detachTopObject(...)`.

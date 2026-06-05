@@ -90,6 +90,11 @@ AccumulationRegister register = globalContext.execute(new AbstractBmTask<Accumul
 **Note:** Registers require at least one Dimension. Resources are optional but recommended.
 **Note:** In Java code use generated enum constants `AccumulationRegisterType.BALANCE` and `AccumulationRegisterType.TURNOVERS`. The `.mdo` XML may serialize them as `Balance` / `Turnovers`, but those are not the Java constants to write in JShell.
 **Note:** `AccumulationRegisterDimension` does not have `setBalance(...)`; do not call it in JShell examples.
+**Note:** Do not use `AccumulationRegisterAttribute` in JShell. In the tested
+EDT API this class is not available. For accumulation registers use
+`AccumulationRegisterDimension` and `AccumulationRegisterResource`; if a
+scenario asks for another register child kind, verify the exact class with one
+batch `JShellReflection` before coding.
 **Note:** Each dimension/resource/attribute needs its own fresh `TypeDescription`; do not reuse one instance.
 **Note:** For numbers, `setNumberQualifiers(scale, precision, nonNegative)` uses scale first. For `Number(10,2)`, call `.setNumberQualifiers(2, 10, false)`.
 
@@ -116,6 +121,10 @@ If the registrar document does not exist, create it in the same BM transaction o
 If you create the register without linking a registrar document, `GetMarkers` can return SU45: "Некорректный состав регистраторов регистра. Ни один из документов не является регистратором для регистра".
 
 Do not report success while this marker remains unless the user explicitly asked to create an invalid intermediate register for later linking.
+If the business request says the document should change stock, make movements,
+or write records to this register, this marker is blocking. Do not answer that
+metadata must be changed manually. Call `JShellManual` for
+`add_document_registers` and execute that workflow.
 
 ### Required post-check
 

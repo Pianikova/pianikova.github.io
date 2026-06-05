@@ -46,6 +46,11 @@ import com._1c.g5.v8.dt.metadata.mdclass.InformationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterAttribute;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterResource;
+import com._1c.g5.v8.dt.metadata.mdclass.HTTPService;
+import com._1c.g5.v8.dt.metadata.mdclass.WebService;
+import com._1c.g5.v8.dt.metadata.mdclass.WSReference;
+import com._1c.g5.v8.dt.metadata.mdclass.IntegrationService;
+import com._1c.g5.v8.dt.metadata.mdclass.XDTOPackage;
 import com._1c.g5.v8.dt.metadata.mdclass.RealTimePosting;
 import com._1c.g5.v8.dt.metadata.mdclass.Sequence;
 import com._1c.g5.v8.dt.metadata.mdclass.Subsystem;
@@ -104,6 +109,36 @@ you just sent.
 
 If a snippet must define top-level values, use unique names. A repeated top-level declaration can produce confusing runtime errors such as `NoSuchFieldError` in later snippets.
 
+## Stale JShell Output
+
+If `std_out`, returned text, or the assistant-facing response plainly belongs
+to a different request than the code just sent, do not trust the result and do
+not continue metadata edits in that `repl_session_id`.
+
+Observed example: a request that created `Catalog.Книги` returned
+`Sequence already exists: Sequence.ПоследовательностьСкладскихДокументов`,
+which was output from an older snippet. Treat this as JShell session state
+corruption or stale execution. Create a fresh `jshellsession`, rerun the current
+operation with explicit imports, then validate with `GetMarkers`.
+
+## Printing Readback Results
+
+`globalContext.execute(...)` can return a value, but JShell does not print that
+return value automatically inside the MCP response. For read/verify snippets,
+assign the result to a variable and call `System.out.println(result)`.
+
+```java
+String result = globalContext.execute(new AbstractBmTask<String>("Verify object") {
+    @Override
+    public String execute(IBmTransaction transaction, IProgressMonitor monitor) {
+        XDTOPackage packageObject =
+            (XDTOPackage)transaction.getTopObjectByFqn("XDTOPackage.CommonSchema");
+        return packageObject == null ? "missing" : packageObject.getNamespace();
+    }
+});
+System.out.println(result);
+```
+
 ## Java Identifiers For Russian Metadata Names
 
 1C metadata names and synonyms are data. Java variable names are code. Do not
@@ -136,6 +171,7 @@ if (realization != null) {
 
 - `HTTPService`: use `setRootURL(...)` and `getRootURL()`. Do not use `getRootUrl()`.
 - `WebService`: use `setNamespace(...)` and `getNamespace()`. Do not use `getNamespaceName()`.
+- `WSReference`: use `setLocationURL(...)` and `getLocationURL()` for the baseline endpoint.
 - `XDTOPackage`: `setNamespace(...)` is required for a valid baseline object; use `getNamespace()` to verify.
 - `DocumentNumerator`: use `setNumberType(DocumentNumberType.NUMBER)`, `setNumberLength(int)`, and `setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL)` when numbering details are required.
 - `Document`: use `setNumerator(DocumentNumerator)` to attach a document to a numerator; keep document number type, length, and periodicity aligned with the assigned numerator.

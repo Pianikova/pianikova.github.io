@@ -6,6 +6,17 @@ Check this file before writing JShell code that mutates metadata. These traps ar
 
 After create, edit, or delete, run `GetMarkers` with `marker_type: "1c"`. Treat non-empty 1C markers as incomplete work.
 
+## Do not trust stale JShell session output
+
+If a JShell response names a different metadata type or object than the current
+request, stop using that `repl_session_id`. Create a fresh `jshellsession` and
+rerun the current operation with explicit imports before making any more
+metadata decisions.
+
+Observed symptom: a catalog create request returned text about an existing
+sequence from a previous snippet. This is not a validation result for the
+catalog. It is a JShell session hygiene failure.
+
 ## Set UUIDs
 
 Top-level metadata objects and child metadata objects need UUIDs. This includes attributes, tabular sections, enum values, dimensions, resources, commands, forms, and service child objects.
@@ -77,6 +88,18 @@ Fix by choosing one consistent model:
 
 Information, accumulation, accounting, and calculation registers often need child dimensions/resources and references to documents, charts, or registrar setup. Use enhanced register workflows for anything beyond minimal top-level CRUD.
 
+If a register marker says that no document is a registrar, and the user asked
+for a complete document workflow or stock/money movements, fix it through
+`add_document_registers`. Do not stop with a manual instruction to edit
+"ЗаписиРегистров"; load the `Document` and register in JShell and call
+`document.getRegisterRecords().add(register)` in a BM transaction.
+
+For accumulation registers, do not use `AccumulationRegisterAttribute` unless
+reflection proves it exists in the installed EDT API. A real JShell run failed
+with `cannot find symbol: class AccumulationRegisterAttribute`. Use
+`AccumulationRegisterDimension` and `AccumulationRegisterResource` for the
+baseline register structure.
+
 ## Forms and templates
 
 Common forms, object forms, report forms, and templates have separate resource/model layers. Do not invent form controls, command bars, or template content from the top-level metadata object API alone.
@@ -84,3 +107,20 @@ Common forms, object forms, report forms, and templates have separate resource/m
 ## Services
 
 HTTP services, web services, WS references, and integration services have safe top-level metadata create flows. Routes, operations, parameters, WSDL details, and channels are child APIs; verify them with one batch `JShellReflection`.
+
+Observed baseline service markers:
+
+- `HTTPService.rootURL` is required. Use `setRootURL("/api")`; the method name
+  uses all-caps `URL`.
+- `WebService.namespace` is required. Use
+  `setNamespace("http://example.com/ws")`.
+- `WSReference.locationURL` is required. Use
+  `setLocationURL("http://example.com/service?wsdl")`. A placeholder endpoint
+  can still produce a warning that no WSDL description is found; for a real
+  integration prompt, use a real WSDL or explicitly explain the warning.
+- `XDTOPackage.namespace` is required. Use
+  `setNamespace("http://example.com/xdto")`.
+
+For deleting any top-level service/XDTO object, use `delete_metadata_object` and
+`IMdRefactoringService.createMdObjectDeleteRefactoring(...)`. Do not remove it
+from a `Configuration` collection and call `transaction.detachTopObject(...)`.

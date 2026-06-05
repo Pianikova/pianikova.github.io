@@ -30,6 +30,12 @@ Do not use `AccumulationRegisterType.REMAINDERS`: this constant is from old 1C t
 
 Dimensions, resources, and registrar document relationships are composite operations. Use `enhanced_register_creation` and `add_document_registers`.
 
+Do not use `AccumulationRegisterAttribute` in JShell. The tested EDT API did
+not expose that class, and JShell compilation failed with `cannot find symbol:
+class AccumulationRegisterAttribute`. Use `AccumulationRegisterDimension` and
+`AccumulationRegisterResource` for baseline accumulation-register content. If
+another child kind is required, verify it with one batch `JShellReflection`.
+
 ## AccountingRegister
 
 Factory: `mdFactory.createAccountingRegister()`

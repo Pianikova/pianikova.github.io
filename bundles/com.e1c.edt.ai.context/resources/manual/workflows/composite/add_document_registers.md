@@ -2,11 +2,30 @@
 
 Call `JShell` with `scope: "edt"` for this workflow.
 
-Registrars are configured on the **document** side through `Document.getRegisterRecords()`.
-This creates a bidirectional relationship: document → register.
+Use this workflow for real 1C developer requests such as:
+- "документ должен увеличивать остатки";
+- "документ должен уменьшать остатки";
+- "сделать движения документа по регистру накопления";
+- "добавить записи регистров";
+- "сделать документ регистратором регистра".
 
-**⚠️ IMPORTANT:** Registers do NOT have `getRegisteredDocuments()` method.
-Registrars are managed from the document side only.
+If the document and register already exist, this is an editable metadata
+operation. Do not answer that the user must change metadata manually. Execute a
+BM transaction, load both top objects by FQN, and add the register to
+`document.getRegisterRecords()` when it is not already present.
+
+This workflow only configures the metadata link that lets a document write to a
+register. Do not treat writing `ObjectModule.bsl` as a replacement for this
+metadata edit: BSL posting code can be a separate follow-up step, but the
+document still must contain the register in `getRegisterRecords()`.
+
+Registrars are configured on the document side through
+`Document.getRegisterRecords()`. This creates the document-to-register
+relationship that EDT uses for accumulation/accounting/calculation register
+validation.
+
+Registers do not have `getRegisteredDocuments()`. Registrars are managed from
+the document side only.
 
 ```java
 import org.eclipse.core.resources.IProject;
@@ -15,79 +34,69 @@ import com._1c.g5.v8.bm.core.IBmTransaction;
 import com._1c.g5.v8.bm.integration.AbstractBmTask;
 import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
 import com._1c.g5.v8.bm.integration.IBmModel;
-import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegister;
-import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
 import com._1c.g5.v8.dt.metadata.mdclass.Document;
 
 IProject project = workspaceRoot.getProject("MyProject");
-IV8Project v8project = projectManager.getProject(project);
 IBmModel bmModel = modelManager.getModel(project);
 IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
 
-globalContext.execute(new AbstractBmTask<Void>("Add document registers") {
+String result = globalContext.execute(new AbstractBmTask<String>("Add document register") {
     @Override
-    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) {
-        Configuration configuration = (Configuration)transaction.getTopObjectByFqn("Configuration");
-
-        // Get the document to configure
-        Document document = (Document)transaction.getTopObjectByFqn("Document.GoodsReceipt");
-
-        // Get the registers to add as registrars.
-        // Only AccumulationRegister, AccountingRegister, and CalculationRegister are valid here.
-        AccumulationRegister stockRegister = (AccumulationRegister)transaction.getTopObjectByFqn("AccumulationRegister.GoodsInStock");
-        AccountingRegister accountingRegister = (AccountingRegister)transaction.getTopObjectByFqn("AccountingRegister.MainLedger");
-        CalculationRegister payrollRegister = (CalculationRegister)transaction.getTopObjectByFqn("CalculationRegister.Payroll");
-
-        if (document != null) {
-            // Add accumulation register as registrar
-            if (stockRegister != null) {
-                document.getRegisterRecords().add(stockRegister);
-                System.out.println("Added: AccumulationRegister.GoodsInStock as registrar");
-            }
-
-            // Add accounting register as registrar
-            if (accountingRegister != null) {
-                document.getRegisterRecords().add(accountingRegister);
-                System.out.println("Added: AccountingRegister.MainLedger as registrar");
-            }
-
-            // Add calculation register as registrar
-            if (payrollRegister != null) {
-                document.getRegisterRecords().add(payrollRegister);
-                System.out.println("Added: CalculationRegister.Payroll as registrar");
-            }
-
-            System.out.println("Document registers configured successfully");
+    public String execute(IBmTransaction transaction, IProgressMonitor monitor) {
+        Document document =
+            (Document)transaction.getTopObjectByFqn("Document.GoodsReceipt");
+        if (document == null) {
+            throw new IllegalStateException("Missing document: Document.GoodsReceipt");
         }
 
-        return null;
+        AccumulationRegister stockRegister =
+            (AccumulationRegister)transaction.getTopObjectByFqn(
+                "AccumulationRegister.GoodsInStock");
+        if (stockRegister == null) {
+            throw new IllegalStateException(
+                "Missing register: AccumulationRegister.GoodsInStock");
+        }
+
+        if (!document.getRegisterRecords().contains(stockRegister)) {
+            document.getRegisterRecords().add(stockRegister);
+            return "Added AccumulationRegister.GoodsInStock to Document.GoodsReceipt";
+        }
+        return "Already linked AccumulationRegister.GoodsInStock to Document.GoodsReceipt";
     }
 });
+System.out.println(result);
 ```
 
-### Key Points:
-- **Document side**: Registrators are configured on `Document.getRegisterRecords()`
-- **No register.getRegisteredDocuments()**: Registers don't have this method
-- **Bidirectional**: Setting document→register establishes both directions
-- **Multiple registers**: One document can have multiple registers
-- **Accumulation registers**: Use for stock/quantity tracking
-- **Accounting registers**: Use for accounting operations
-- **Calculation registers**: Use for payroll and calculation operations
+### Multiple Register Types
 
-### ⚠ CRITICAL: InformationRegister CANNOT be a registrar
-**IMPORTANT**: InformationRegister cannot be added to `Document.getRegisterRecords()`.
-InformationRegister stores periodic data but is NOT a register for documents.
+Only these register types can be document registrars:
+- `AccumulationRegister`
+- `AccountingRegister`
+- `CalculationRegister`
 
-### Valid Register Types for Documents:
-- **AccumulationRegister**: Stock registers (BALANCE or TURNOVERS) - CAN be a registrar
-- **AccountingRegister**: Chart of accounts-based accounting - CAN be a registrar
-- **CalculationRegister**: Payroll and calculation registers - CAN be a registrar
-- **InformationRegister**: Periodic data - CANNOT be a registrar (error: SU45)
-- **Note**: Only AccumulationRegister, AccountingRegister, and CalculationRegister can be document registrars
+`InformationRegister` cannot be added to `Document.getRegisterRecords()`.
+Information registers store periodic data and are not document-movement
+registers.
+
+For accounting or calculation registers, use the same document-side pattern:
+
+```java
+AccountingRegister accounting =
+    (AccountingRegister)transaction.getTopObjectByFqn("AccountingRegister.MainLedger");
+CalculationRegister calculation =
+    (CalculationRegister)transaction.getTopObjectByFqn("CalculationRegister.Payroll");
+
+if (accounting != null && !document.getRegisterRecords().contains(accounting)) {
+    document.getRegisterRecords().add(accounting);
+}
+if (calculation != null && !document.getRegisterRecords().contains(calculation)) {
+    document.getRegisterRecords().add(calculation);
+}
+```
 
 ### Forbidden API / Patterns
 
@@ -96,15 +105,17 @@ Do not use these when configuring document registrars:
 - `mdFactory.createDocumentRegisterRecord()`
 - `register.getRegisteredDocuments()`
 - `Document.getRegisterRecords().add(informationRegister)`
-- Any `InformationRegister` as a document registrar
+- any `InformationRegister` as a document registrar
 
-If `JShellReflection` returns `not-found` for a register-record class or factory
-method, do not invent a replacement class. Use `Document.getRegisterRecords()`
-with an existing `AccumulationRegister`, `AccountingRegister`, or
-`CalculationRegister`.
+If `JShellReflection` returns `not-found` for a register-record class or
+factory method, do not invent a replacement class. Use
+`Document.getRegisterRecords()` with an existing `AccumulationRegister`,
+`AccountingRegister`, or `CalculationRegister`.
 
-### Verification:
-After adding registers, verify:
+### Verification
+
+After adding registers, verify inside the same BM read transaction:
+
 ```java
 System.out.println("Document registers: " + document.getRegisterRecords().size());
 for (BasicRegister reg : document.getRegisterRecords()) {
@@ -112,18 +123,24 @@ for (BasicRegister reg : document.getRegisterRecords()) {
 }
 ```
 
-### Required post-check
+### Required Post-Check
 
-After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for the project, but fix only markers on changed entities and directly affected references before reporting success.
+After changing metadata links, call `GetMarkers` with `marker_type: "1c"` for
+the changed document and the linked register. Fix only markers on changed
+entities and directly affected references before reporting success.
 
-**Derive the `.mdo` paths of the changed entities directly from their FQNs — do not `Glob` to find them.**
-For this scenario, the changed entity is the document (its `registerRecords` collection); the linked registers may also report markers:
+Derive `.mdo` paths directly from FQNs; do not use `Glob` to discover them:
 
-| FQN prefix                       | `.mdo` path                                       |
-|----------------------------------|---------------------------------------------------|
-| `Document.<Name>`                | `src/Documents/<Name>/<Name>.mdo`                 |
-| `AccumulationRegister.<Name>`    | `src/AccumulationRegisters/<Name>/<Name>.mdo`     |
-| `AccountingRegister.<Name>`      | `src/AccountingRegisters/<Name>/<Name>.mdo`       |
-| `CalculationRegister.<Name>`     | `src/CalculationRegisters/<Name>/<Name>.mdo`      |
+| FQN prefix                    | `.mdo` path                                   |
+|-------------------------------|-----------------------------------------------|
+| `Document.<Name>`             | `src/Documents/<Name>/<Name>.mdo`             |
+| `AccumulationRegister.<Name>` | `src/AccumulationRegisters/<Name>/<Name>.mdo` |
+| `AccountingRegister.<Name>`   | `src/AccountingRegisters/<Name>/<Name>.mdo`   |
+| `CalculationRegister.<Name>`  | `src/CalculationRegisters/<Name>/<Name>.mdo`  |
 
-Copy `<Name>` exactly from the FQN you used in `getTopObjectByFqn(...)` — same case, same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the full FQN → folder mapping. A scoped per-document path check is usually enough; fall back to project-wide markers only if cross-object references may have broken.
+Copy `<Name>` exactly from the FQN used in `getTopObjectByFqn(...)`: same case,
+same Cyrillic. Use the project's path separator as-is (`\\` on Windows, `/` on
+Linux). Extension is lowercase `.mdo`. See `check_1c_markers_after_crud` for the
+full FQN-to-folder mapping. A scoped per-document and per-register path check is
+usually enough; fall back to project-wide markers only if cross-object
+references may have broken.

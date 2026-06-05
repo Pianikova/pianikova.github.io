@@ -15,10 +15,10 @@ Objects:
 
 | Type | Factory | Collection | Safe setup |
 | --- | --- | --- | --- |
-| `HTTPService` | `mdFactory.createHTTPService()` | `configuration.getHttpServices()` | `setRootURL("/api")` |
-| `WebService` | `mdFactory.createWebService()` | `configuration.getWebServices()` | `setNamespace("http://example.com/ws")` |
+| `HTTPService` | `mdFactory.createHTTPService()` | `configuration.getHttpServices()` | required `setRootURL("/api")` |
+| `WebService` | `mdFactory.createWebService()` | `configuration.getWebServices()` | required `setNamespace("http://example.com/ws")` |
 | `IntegrationService` | `mdFactory.createIntegrationService()` | `configuration.getIntegrationServices()` | none |
-| `WSReference` | `mdFactory.createWSReference()` | `configuration.getWsReferences()` | none |
+| `WSReference` | `mdFactory.createWSReference()` | `configuration.getWsReferences()` | required `setLocationURL("http://example.com/service?wsdl")` for a marker-clean baseline |
 | `XDTOPackage` | `mdFactory.createXDTOPackage()` | `configuration.getXDTOPackages()` | required `setNamespace("http://example.com/xdto")` |
 
 ## Read
@@ -41,7 +41,23 @@ Safe edits:
 Exact getters:
 - `HTTPService`: `getRootURL()`, not `getRootUrl()`
 - `WebService`: `getNamespace()`, not `getNamespaceName()`
+- `WSReference`: use `getLocationURL()` / `setLocationURL(...)`
 - `XDTOPackage`: `getNamespace()`
+
+When a BM read/verify task returns a `String`, print the returned value outside
+`globalContext.execute(...)`. Returning a string alone does not appear in
+JShell `std_out`.
+
+```java
+String result = globalContext.execute(new AbstractBmTask<String>("Read service") {
+    @Override
+    public String execute(IBmTransaction transaction, IProgressMonitor monitor) {
+        HTTPService service = (HTTPService)transaction.getTopObjectByFqn("HTTPService.OrdersApi");
+        return service == null ? "missing" : "rootURL=" + service.getRootURL();
+    }
+});
+System.out.println(result);
+```
 
 ## Delete
 
@@ -50,6 +66,10 @@ Use `delete_metadata_object`: resolve the top-level `MdObject`, execute
 project, then run project-wide `GetMarkers`. Do not remove from the
 `Configuration` collection and call `detachTopObject(...)` manually for
 top-level deletes.
+
+This applies to `HTTPService`, `WebService`, `IntegrationService`,
+`WSReference`, and `XDTOPackage` too. A create card for a service object is not
+a delete recipe; switch to `delete_metadata_object` for the delete phase.
 
 ## Reflection boundary
 

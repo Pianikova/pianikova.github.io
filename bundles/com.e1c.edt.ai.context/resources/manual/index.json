@@ -14,7 +14,24 @@
     "keywords": [
       "document register",
       "registrar",
-      "register records"
+      "register records",
+      "registerRecords",
+      "getRegisterRecords",
+      "document movements",
+      "stock movements",
+      "increase stock",
+      "decrease stock",
+      "inventory balance",
+      "accumulation register registrar",
+      "записи регистров",
+      "движения документа",
+      "движения по регистру",
+      "регистр накопления",
+      "увеличивать остатки",
+      "уменьшать остатки",
+      "остатки на складе",
+      "документ должен делать движения",
+      "документ должен быть регистратором"
     ]
   },
   {
@@ -764,7 +781,7 @@
       "createMethod": "createDocumentJournal()",
       "collection": "getDocumentJournals()",
       "setupBlock": "",
-      "notes": "DocumentJournal collects document views; related columns and commands can be configured later.",
+      "notes": "DocumentJournal collects document views; related columns and commands can be configured later. Its marker path is src/DocumentJournals/<Name>/<Name>.mdo; do not use src/DocumentJournals/<Name>.mdo.",
       "sampleName": "DocumentsJournal",
       "extraSetup": ""
     }
@@ -794,7 +811,7 @@
       "createMethod": "createDocumentNumerator()",
       "collection": "getDocumentNumerators()",
       "setupBlock": "",
-      "notes": "Set numbering details with setNumberType(DocumentNumberType.NUMBER), setNumberLength(int), and setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL) when required. Attach documents later with Document.setNumerator(DocumentNumerator) and keep each document's numberType, numberLength, and numberPeriodicity aligned with the numerator to avoid SU45.",
+      "notes": "Set numbering details with setNumberType(DocumentNumberType.NUMBER), setNumberLength(int), and setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL) when required. Attach documents later with Document.setNumerator(DocumentNumerator) and keep each document's numberType, numberLength, and numberPeriodicity aligned with the numerator to avoid SU45. Its marker path is src/DocumentNumerators/<Name>/<Name>.mdo; do not use src/DocumentNumerators/<Name>.mdo.",
       "sampleName": "MainNumerator",
       "extraSetup": ""
     }
@@ -1005,7 +1022,7 @@
       "createMethod": "createHTTPService()",
       "collection": "getHttpServices()",
       "setupBlock": "",
-      "notes": "URL templates and HTTP methods are child objects. Keep routing details in follow-up steps.",
+      "notes": "Set rootURL for a marker-clean baseline, for example `service.setRootURL(\"/api\")`. URL templates and HTTP methods are child objects. Keep routing details in follow-up steps. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "OrdersApi",
       "extraSetup": ""
     }
@@ -1055,7 +1072,7 @@
       "createMethod": "createIntegrationService()",
       "collection": "getIntegrationServices()",
       "setupBlock": "",
-      "notes": "Add `IntegrationServiceChannel` objects after the parent service is attached to configuration.",
+      "notes": "Add `IntegrationServiceChannel` objects after the parent service is attached to configuration. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "ERPIntegration",
       "extraSetup": ""
     }
@@ -1232,7 +1249,7 @@
       "createMethod": "createSequence()",
       "collection": "getSequences()",
       "setupBlock": "",
-      "notes": "After sequence creation, connect participating documents with sequence.getDocuments().add(document). There is no setDocuments(...) method in the tested EDT API.",
+      "notes": "After sequence creation, connect participating documents with sequence.getDocuments().add(document). There is no setDocuments(...) method in the tested EDT API. Its marker path is src/Sequences/<Name>/<Name>.mdo; do not use src/Sequences/<Name>.mdo.",
       "sampleName": "DocumentsSequence",
       "extraSetup": ""
     }
@@ -1476,7 +1493,7 @@
       "createMethod": "createWebService()",
       "collection": "getWebServices()",
       "setupBlock": "",
-      "notes": "Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children.",
+      "notes": "Set namespace for a marker-clean baseline, for example `service.setNamespace(\"http://example.com/ws\")`. Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "OrderService",
       "extraSetup": ""
     }
@@ -1506,7 +1523,7 @@
       "createMethod": "createWSReference()",
       "collection": "getWsReferences()",
       "setupBlock": "",
-      "notes": "After creation, fill endpoint and service metadata according to the referenced WSDL contract.",
+      "notes": "Set locationURL for a marker-clean baseline, for example `reference.setLocationURL(\"http://example.com/service?wsdl\")`. For a mock URL, EDT may still warn that WSDL was not found. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "ExternalSoapService",
       "extraSetup": ""
     }
@@ -1538,7 +1555,7 @@
       "createMethod": "createXDTOPackage()",
       "collection": "getXDTOPackages()",
       "setupBlock": "        packageObject.setNamespace(\"http://example.com/xdto/CommonSchema\");\n",
-      "notes": "Namespace is required; missing namespace produces a 1C validation marker. Add XDTO package content and imported types after the package metadata object exists.",
+      "notes": "Namespace is required; missing namespace produces a 1C validation marker. Add XDTO package content and imported types after the package metadata object exists. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "CommonSchema",
       "extraSetup": ""
     }
