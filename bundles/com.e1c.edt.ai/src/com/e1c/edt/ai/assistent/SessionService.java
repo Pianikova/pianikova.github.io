@@ -10,6 +10,7 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Supplier;
 
 import javax.net.ssl.SSLException;
 
@@ -49,6 +50,8 @@ class SessionService
     private final IConfigurationParametersProvider configurationParametersProvider;
     private final IStateService stateService;
     private final ITraceScenario traceScenario;
+    private final Object sessionChainLock = new Object();
+    private CompletableFuture<?> sessionChainTail = CompletableFuture.completedFuture(null);
 
     @Inject
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
@@ -97,7 +100,10 @@ class SessionService
         var builder = requestBuilder.create(settings.getUrl() + "api/v1/create_session"); //$NON-NLS-1$
         if (builder.isEmpty())
         {
-            return CompletableFuture.completedFuture(Optional.empty());
+            // Malformed service URL / unbuildable request is a configuration error a retry cannot fix: fail fast so
+            // SessionCall surfaces it instead of looping through the null-sessionId backoff.
+            return CompletableFuture.failedFuture(
+                new AIClientException("create_session request could not be built (check service URL)", null)); //$NON-NLS-1$
         }
 
         var sessionRequest = new SessionRequest();
@@ -148,7 +154,28 @@ class SessionService
         }
 
         requestBuilder = requestBuilder.POST(BodyPublishers.ofString(requestBody));
-        return getSessionAsync(projectId, requestBuilder.build(), requestBody);
+        var request = requestBuilder.build();
+        return chainSessionRequest(() -> getSessionAsync(projectId, request, requestBody));
+    }
+
+    /**
+     * Serializes the actual create_session sends under the same client token. The server returns HTTP 423 with
+     * {@code error_type "locked"} ("Token is busy right now") for create_session calls that overlap on one token;
+     * the client then mistakes the body for a missing session and retries in a storm. Running the sends one at a
+     * time keeps the server from ever seeing concurrent calls. Each project still gets its own session — this only
+     * orders the sends, it does not share a session across projects.
+     */
+    private CompletableFuture<Optional<Session>> chainSessionRequest(
+        Supplier<CompletableFuture<Optional<Session>>> task)
+    {
+        synchronized (sessionChainLock)
+        {
+            // handle() swallows the previous request's outcome so a failed/timed-out create_session never blocks the
+            // next one; the chain advances regardless of success or error.
+            var result = sessionChainTail.handle((r, e) -> (Void)null).thenCompose(ignored -> task.get());
+            sessionChainTail = result;
+            return result;
+        }
     }
 
     private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, HttpRequest request, String body)
@@ -199,6 +226,7 @@ class SessionService
     private Optional<Session> createCession(ProjectId projectId, HttpResponse<String> response)
     {
         var content = response.body();
+        var status = response.statusCode();
         var session = json.deserialize(content, Session.class);
         if (session.isEmpty() || session.get().sessionId == null)
         {
@@ -206,13 +234,29 @@ class SessionService
             // indistinguishable from a timeout. Log the status code and the (small) body verbatim so we can tell
             // apart a throttle/error envelope from a genuine empty/200 response the server returns for concurrent
             // create_session calls.
-            log.error("create_session response without sessionId (status: " + response.statusCode() + ", parsed: "
+            log.error("create_session response without sessionId (status: " + status + ", parsed: "
                 + session.isPresent() + ", body: " + abbreviate(content) + ")", null);
+
+            if (isFatalStatus(status))
+            {
+                // Auth/bad-request errors will not change on retry: fail the future so SessionCall fails fast and
+                // surfaces the real error, instead of looping the null-sessionId backoff. Transient causes (423
+                // "locked", 429, 408, 5xx, empty/200) fall through to an empty Optional, which SessionCall retries.
+                throw new AIClientException("create_session failed: HTTP " + status, status, abbreviate(content), null);
+            }
+
             return session;
         }
 
         settingsSetter.applySessionParameters(projectId, session.get().userParameters);
         return session;
+    }
+
+    private static boolean isFatalStatus(int status)
+    {
+        // 4xx client errors a retry will not fix (bad token/auth/request), excluding known transient ones:
+        // 423 locked (token busy), 429 rate limit, 408 request timeout.
+        return status >= 400 && status < 500 && status != 423 && status != 429 && status != 408;
     }
 
     @SuppressWarnings("nls")
