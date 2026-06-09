@@ -165,10 +165,14 @@ class SessionService
         var busyToken = stateService.busy();
         return clientBuilder.get()
             .sendAsync(request, BodyHandlers.ofString())
-            .thenApply(response -> log.response(response, null, stopwatch, true, true))
-            .thenApply(HttpResponse::body)
-            .thenApply(content -> createCession(projectId, content))
-            .whenComplete((session, error) -> {
+            // Run post-response work asynchronously so it never executes on the shared HttpClient's response-callback
+            // threads: createCession -> Settings.applySessionParameters takes a global lock and busyToken.close() does
+            // a blocking Display.syncExec on the UI thread. Running those inline starves the shared client's worker
+            // threads and stalls every other in-flight request (the null sessionId + TimeoutException storm). The chat
+            // path in Conversations already uses thenApplyAsync for the same reason.
+            .thenApplyAsync(response -> log.response(response, null, stopwatch, true, true))
+            .thenApplyAsync(response -> createCession(projectId, response))
+            .whenCompleteAsync((session, error) -> {
                 try
                 {
                     busyToken.close();
@@ -191,11 +195,35 @@ class SessionService
             });
     }
 
-    private Optional<Session> createCession(ProjectId projectId, String content)
+    @SuppressWarnings("nls")
+    private Optional<Session> createCession(ProjectId projectId, HttpResponse<String> response)
     {
-        return json.deserialize(content, Session.class).map(response -> {
-            settingsSetter.applySessionParameters(projectId, response.userParameters);
-            return response;
-        });
+        var content = response.body();
+        var session = json.deserialize(content, Session.class);
+        if (session.isEmpty() || session.get().sessionId == null)
+        {
+            // A null sessionId triggers the retry storm in SessionCall but used to be silent here, so it was
+            // indistinguishable from a timeout. Log the status code and the (small) body verbatim so we can tell
+            // apart a throttle/error envelope from a genuine empty/200 response the server returns for concurrent
+            // create_session calls.
+            log.error("create_session response without sessionId (status: " + response.statusCode() + ", parsed: "
+                + session.isPresent() + ", body: " + abbreviate(content) + ")", null);
+            return session;
+        }
+
+        settingsSetter.applySessionParameters(projectId, session.get().userParameters);
+        return session;
+    }
+
+    @SuppressWarnings("nls")
+    private static String abbreviate(String content)
+    {
+        if (content == null)
+        {
+            return "<null>";
+        }
+
+        var oneLine = content.replaceAll("\\s+", " ").strip();
+        return oneLine.length() > 512 ? oneLine.substring(0, 512) + "..." : oneLine;
     }
 }

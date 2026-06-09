@@ -138,7 +138,9 @@ class ProjectTrackingWorkflow
         }
         catch (Exception error)
         {
-            log.trace(TracingSources.API_CALLS, "Sync error", () -> error.toString()); //$NON-NLS-1$
+            var failedState = nextState;
+            log.trace(TracingSources.API_CALLS, "Sync error", //$NON-NLS-1$
+                () -> failedState + " (" + project.getName() + "): " + error); //$NON-NLS-1$ //$NON-NLS-2$
             return LongDelay;
         }
 
