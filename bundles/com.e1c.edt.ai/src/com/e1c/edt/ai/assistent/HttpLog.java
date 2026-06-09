@@ -309,13 +309,35 @@ class HttpLog
     @Override
     public void error(Throwable error, String ref)
     {
-        log.trace(TracingSources.API_CALLS, "API error", () -> error.toString()); //$NON-NLS-1$
+        // Unwrap CompletionException so the underlying cause (e.g. HttpTimeoutException) is visible, and append the
+        // request ref so the failure can be correlated with its "AI request" line. Bare error.toString() of a
+        // CompletionException hid both, making timeout storms impossible to attribute to a specific endpoint.
+        log.trace(TracingSources.API_CALLS, "API error", () -> withRef(unwrap(error).toString(), ref)); //$NON-NLS-1$
     }
 
     @Override
     public void error(String error, String ref)
     {
-        log.trace(TracingSources.API_CALLS, "API error", () -> error); //$NON-NLS-1$
+        log.trace(TracingSources.API_CALLS, "API error", () -> withRef(error, ref)); //$NON-NLS-1$
+    }
+
+    private static Throwable unwrap(Throwable error)
+    {
+        if (error instanceof java.util.concurrent.CompletionException && error.getCause() != null)
+        {
+            return error.getCause();
+        }
+        return error;
+    }
+
+    @SuppressWarnings("nls")
+    private static String withRef(String message, String ref)
+    {
+        if (ref == null || ref.isBlank())
+        {
+            return message;
+        }
+        return message + " [" + ref + "]";
     }
 
     private Optional<String> extractBody(Object body)
