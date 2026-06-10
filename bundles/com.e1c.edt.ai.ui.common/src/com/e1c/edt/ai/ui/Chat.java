@@ -183,6 +183,13 @@ public class Chat
     }
 
     @Override
+    public void reviewCodeWithDetails(AIContext ctx, String codeSnippet, String details)
+    {
+        Preconditions.checkNotNull(details);
+        chat("review_code", codeSnippet, details, ctx); //$NON-NLS-1$
+    }
+
+    @Override
     public void explainCode(AIContext ctx, String codeSnippet)
     {
         Preconditions.checkNotNull(codeSnippet);
