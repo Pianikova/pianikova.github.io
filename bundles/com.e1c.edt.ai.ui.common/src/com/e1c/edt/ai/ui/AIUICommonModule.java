@@ -53,11 +53,14 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(ContextMenuInterceptor.class);
         initializableBinder.addBinding().to(ClipboardManager.class);
         initializableBinder.addBinding().to(DialogsEnhancer.class);
-        initializableBinder.addBinding().to(ResourceListener.class);
         initializableBinder.addBinding().to(UpdateService.class);
         initializableBinder.addBinding().to(Notificator.class);
-        initializableBinder.addBinding().to(ActiveProjectTracker.class);
         initializableBinder.addBinding().to(JShellSessionManager.class);
+        // NOTE: ActiveProjectTracker and ResourceListener drive global-context tracking
+        // (scan + hash of every workspace file). They are intentionally NOT registered here
+        // because this module is shared by both the EDT and the plain-Eclipse plugins, and
+        // global context must be synchronized ONLY by the EDT plugin. They are registered in
+        // the EDT-specific com.e1c.edt.ai.ui.AIUIModule instead.
         initializableBinder.addBinding().to(JShellReflectionWarmUp.class);
 
         bind(UI.class).in(Singleton.class);
@@ -66,10 +69,8 @@ public class AIUICommonModule
         bind(ClipboardManager.class).in(Singleton.class);
         bind(IClipboard.class).to(ClipboardManager.class);
         bind(DialogsEnhancer.class).in(Singleton.class);
-        bind(ResourceListener.class).in(Singleton.class);
         bind(UpdateService.class).in(Singleton.class);
         bind(Notificator.class).in(Singleton.class);
-        bind(ActiveProjectTracker.class).in(Singleton.class);
 
         // view enhancers
         var viewEnhancerBinder = Multibinder.newSetBinder(binder(), IViewEnhancer.class);

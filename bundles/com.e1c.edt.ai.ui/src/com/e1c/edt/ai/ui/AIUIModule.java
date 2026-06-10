@@ -21,6 +21,7 @@ import com.e1c.edt.ai.tools.EditRollback;
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 
 public class AIUIModule
@@ -57,6 +58,16 @@ public class AIUIModule
         bind(IProjectBuilder.class).to(ProjectBuilder.class).in(Singleton.class);
         bind(ISpecializedEditorOpener.class).to(EdtSpecializedEditorOpener.class).in(Singleton.class);
         bind(IEditRollback.class).to(EditRollback.class).in(Singleton.class);
+
+        // Global-context tracking is EDT-only: scans + hashes every workspace file and syncs it
+        // to the server. The plain-Eclipse plugin must NOT do this, so these initializables live
+        // here rather than in the shared AIUICommonModule. (Multibinder contributions are additive
+        // across modules, so they join the IInitializable set declared in AIUICommonModule.)
+        var initializableBinder = Multibinder.newSetBinder(binder(), IInitializable.class);
+        initializableBinder.addBinding().to(ActiveProjectTracker.class);
+        initializableBinder.addBinding().to(ResourceListener.class);
+        bind(ActiveProjectTracker.class).in(Singleton.class);
+        bind(ResourceListener.class).in(Singleton.class);
         // @formatter:on
     }
 }
