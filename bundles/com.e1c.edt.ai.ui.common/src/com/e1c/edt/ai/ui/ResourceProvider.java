@@ -9,7 +9,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import org.osgi.framework.FrameworkUtil;
 
@@ -80,5 +83,52 @@ public class ResourceProvider implements IResourceProvider
             log.logError(error);
             return Optional.empty();
         }
+    }
+
+    @Override
+    public Set<String> listChildNames(String dirPath)
+    {
+        var names = new LinkedHashSet<String>();
+
+        var optionalResources = settings.getResources();
+        if (optionalResources.isPresent())
+        {
+            var dir = Paths.get(optionalResources.get(), dirPath);
+            if (Files.isDirectory(dir))
+            {
+                try (Stream<java.nio.file.Path> stream = Files.list(dir))
+                {
+                    stream.forEach(child -> names.add(child.getFileName().toString()));
+                }
+                catch (IOException error)
+                {
+                    log.logError(error);
+                }
+            }
+        }
+
+        var bundle = FrameworkUtil.getBundle(getClass());
+        var normalized = dirPath.endsWith("/") ? dirPath : dirPath + "/"; //$NON-NLS-1$ //$NON-NLS-2$
+        var entries = bundle.getEntryPaths(normalized);
+        if (entries != null)
+        {
+            while (entries.hasMoreElements())
+            {
+                var name = lastSegment(entries.nextElement());
+                if (!name.isEmpty())
+                {
+                    names.add(name);
+                }
+            }
+        }
+
+        return names;
+    }
+
+    private static String lastSegment(String entryPath)
+    {
+        var trimmed = entryPath.endsWith("/") ? entryPath.substring(0, entryPath.length() - 1) : entryPath; //$NON-NLS-1$
+        var slash = trimmed.lastIndexOf('/');
+        return slash < 0 ? trimmed : trimmed.substring(slash + 1);
     }
 }

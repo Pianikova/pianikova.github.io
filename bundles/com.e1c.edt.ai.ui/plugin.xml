@@ -599,4 +599,97 @@
       </markerResolutionGenerator>
    </extension>
 
+   <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            name="%editor.name.markdown"
+            extensions="md"
+            icon="icons/obj16/ai.png"
+            class="org.eclipse.ui.editors.text.TextEditor"
+            id="com.e1c.edt.ai.ui.editors.markdown">
+      </editor>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.navigator.navigatorContent">
+      <navigatorContent
+            id="com.e1c.edt.ai.ui.navigator.workmate"
+            name="%navigator.workmate.name"
+            contentProvider="com.e1c.edt.ai.ui.navigator.WorkmateNavigatorContentProvider"
+            labelProvider="com.e1c.edt.ai.ui.navigator.WorkmateNavigatorLabelProvider"
+            icon="icons/obj16/ai.png"
+            activeByDefault="true"
+            priority="normal">
+         <triggerPoints>
+            <or>
+               <instanceof value="org.eclipse.core.resources.IWorkspaceRoot"/>
+               <instanceof value="org.eclipse.core.resources.IProject"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.WorkmateRootNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.ScopeNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.SkillsGroupNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.SkillNode"/>
+            </or>
+         </triggerPoints>
+         <possibleChildren>
+            <or>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.WorkmateRootNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.ScopeNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.WorkmateFileNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.SkillsGroupNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.SkillNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.SkillToolNode"/>
+            </or>
+         </possibleChildren>
+      </navigatorContent>
+      <actionProvider
+            class="com.e1c.edt.ai.ui.navigator.WorkmateNavigatorActionProvider"
+            id="com.e1c.edt.ai.ui.navigator.workmate.actions">
+         <enablement>
+            <or>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.WorkmateFileNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.SkillNode"/>
+               <instanceof value="com.e1c.edt.ai.ui.navigator.SkillToolNode"/>
+            </or>
+         </enablement>
+      </actionProvider>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.navigator.viewer">
+      <viewerContentBinding viewerId="com._1c.g5.v8.dt.ui2.navigator">
+         <includes>
+            <contentExtension isRoot="true" pattern="com.e1c.edt.ai.ui.navigator.workmate"/>
+         </includes>
+      </viewerContentBinding>
+      <viewerContentBinding viewerId="org.eclipse.ui.navigator.ProjectExplorer">
+         <includes>
+            <contentExtension pattern="com.e1c.edt.ai.ui.navigator.workmate"/>
+         </includes>
+      </viewerContentBinding>
+      <viewerActionBinding viewerId="com._1c.g5.v8.dt.ui2.navigator">
+         <includes>
+            <actionExtension pattern="com.e1c.edt.ai.ui.navigator.workmate.actions"/>
+         </includes>
+      </viewerActionBinding>
+      <viewerActionBinding viewerId="org.eclipse.ui.navigator.ProjectExplorer">
+         <includes>
+            <actionExtension pattern="com.e1c.edt.ai.ui.navigator.workmate.actions"/>
+         </includes>
+      </viewerActionBinding>
+   </extension>
+
+   <extension
+         point="org.eclipse.ui.decorators">
+      <decorator
+            id="com.e1c.edt.ai.ui.navigator.workmateFileDecorator"
+            label="%decorator.workmate.label"
+            lightweight="true"
+            state="true"
+            class="com.e1c.edt.ai.ui.navigator.WorkmateFileDecorator">
+         <enablement>
+            <objectClass name="org.eclipse.core.resources.IFile"/>
+         </enablement>
+      </decorator>
+   </extension>
+
 </plugin>

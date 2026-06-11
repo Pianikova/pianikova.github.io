@@ -16,7 +16,9 @@ public class SkillsModule
     @Override
     protected void configure()
     {
+        bind(ISkillResourceResolver.class).to(SkillResourceResolver.class).in(Singleton.class);
         bind(ISkillRepository.class).to(SkillRepository.class).in(Singleton.class);
+        bind(ISkillRegistry.class).to(SkillRegistry.class).in(Singleton.class);
         bind(ISkillMdParser.class).to(SkillMdParser.class).in(Singleton.class);
         bind(ISkillCache.class).to(SkillCache.class).in(Singleton.class);
         bind(SkillTemplateProcessor.class).in(Singleton.class);

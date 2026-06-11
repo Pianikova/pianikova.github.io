@@ -25,6 +25,8 @@ import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
 import com.e1c.edt.ai.ui.handlers.ICodeTools;
 import com.e1c.edt.ai.ui.handlers.IFixDialog;
+import com.e1c.edt.ai.ui.handlers.ISkillFileOpener;
+import com.e1c.edt.ai.ui.handlers.SkillFileOpener;
 import com.e1c.edt.ai.ui.preferences.DiagnosticReportDialogProvider;
 import com.e1c.edt.ai.ui.preferences.IDiagnosticReportDialogProvider;
 import com.e1c.edt.ai.ui.preferences.PreferenceStoreToSettingsStoreAdapter;
@@ -121,6 +123,8 @@ public class AIUICommonModule
         bind(IGitTools.class).to(GitTools.class).in(Singleton.class);
         bind(IGitActions.class).to(GitActions.class).in(Singleton.class);
         bind(IResourceProvider.class).to(ResourceProvider.class).in(Singleton.class);
+        bind(IWorkmateLocations.class).to(WorkmateLocations.class).in(Singleton.class);
+        bind(ISkillFileOpener.class).to(SkillFileOpener.class).in(Singleton.class);
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
         bind(ITextActions.class).to(TextActions.class).in(Singleton.class);

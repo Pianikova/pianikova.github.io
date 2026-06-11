@@ -389,6 +389,7 @@ public abstract class BaseActivator
     protected void initializeImageRegistry(ImageRegistry registry)
     {
         registry.put(Images.AI, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/ai.png"));
+        registry.put(Images.WORKMATE_MD, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/workmate_md.png"));
         registry.put(Images.INFO, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/info.png"));
         registry.put(Images.WARNING, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/warning.png"));
         registry.put(Images.ERROR, imageDescriptorFromPlugin(getPluginId(), "icons/obj16/error.png"));

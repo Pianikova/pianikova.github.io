@@ -6,6 +6,7 @@ package com.e1c.edt.ai.ui;
 public class Images
 {
     public static final String AI = "AI"; //$NON-NLS-1$
+    public static final String WORKMATE_MD = "WORKMATE_MD"; //$NON-NLS-1$
     public static final String INFO = "INFO"; //$NON-NLS-1$
     public static final String WARNING = "WARNING"; //$NON-NLS-1$
     public static final String ERROR = "ERROR"; //$NON-NLS-1$

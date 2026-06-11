@@ -3,9 +3,11 @@
  */
 package com.e1c.edt.ai.skills;
 
+import java.nio.file.Path;
+import java.util.Optional;
+
 import com.e1c.edt.ai.assistent.SkillErrorCode;
 import com.e1c.edt.ai.assistent.SkillExecutionException;
-import com.e1c.edt.ai.ui.IResourceProvider;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -16,34 +18,46 @@ import com.google.inject.Inject;
 public class SkillRepository
     implements ISkillRepository
 {
-    private static final String SKILLS_DIR = "skills"; //$NON-NLS-1$
-    private static final String SKILL_MD = "SKILL.md"; //$NON-NLS-1$
-    private static final String TOOLS_DIR = "tools"; //$NON-NLS-1$
+    static final String SKILLS_DIR = "skills"; //$NON-NLS-1$
+    static final String SKILL_MD = "SKILL.md"; //$NON-NLS-1$
+    static final String TOOLS_DIR = "tools"; //$NON-NLS-1$
 
-    private final IResourceProvider resourceProvider;
+    private final ISkillResourceResolver resolver;
 
     @Inject
-    public SkillRepository(IResourceProvider resourceProvider)
+    public SkillRepository(ISkillResourceResolver resolver)
     {
-        Preconditions.checkNotNull(resourceProvider);
-        this.resourceProvider = resourceProvider;
+        Preconditions.checkNotNull(resolver);
+        this.resolver = resolver;
     }
 
     @Override
-    public String loadSkillMarkdown(String skillId)
+    public String loadSkillMarkdown(String skillId, Optional<Path> projectRoot)
     {
-        String path = SKILLS_DIR + "/" + skillId + "/" + SKILL_MD; //$NON-NLS-1$ //$NON-NLS-2$
-        return resourceProvider.getTextResource(path)
+        String path = skillMarkdownPath(skillId);
+        return resolver.resolve(path, projectRoot)
+            .map(ResolvedSkillResource::getContent)
             .orElseThrow(
                 () -> new SkillExecutionException(SkillErrorCode.SKILL_NOT_FOUND, "Resource not found: " + path)); //$NON-NLS-1$
     }
 
     @Override
-    public String loadToolRequestSchema(String skillId, String toolId)
+    public String loadToolRequestSchema(String skillId, String toolId, Optional<Path> projectRoot)
     {
-        String resourcePath = SKILLS_DIR + "/" + skillId + "/" + TOOLS_DIR + "/" + toolId + ".json"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-        return resourceProvider.getTextResource(resourcePath)
+        String path = toolSchemaPath(skillId, toolId);
+        return resolver.resolve(path, projectRoot)
+            .map(ResolvedSkillResource::getContent)
             .orElseThrow(() -> new SkillExecutionException(SkillErrorCode.TOOL_REQEST_NOT_FOUND,
-                "Resource not found: " + resourcePath)); //$NON-NLS-1$
+                "Resource not found: " + path)); //$NON-NLS-1$
+    }
+
+    public static String skillMarkdownPath(String skillId)
+    {
+        return SKILLS_DIR + "/" + skillId + "/" + SKILL_MD; //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    public static String toolSchemaPath(String skillId, String toolId)
+    {
+        return SKILLS_DIR + "/" + skillId + "/" + TOOLS_DIR + "/" + toolId + ".json"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     }
 }
