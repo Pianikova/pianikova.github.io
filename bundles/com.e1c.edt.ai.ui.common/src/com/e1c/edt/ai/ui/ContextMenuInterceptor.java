@@ -102,6 +102,12 @@ public class ContextMenuInterceptor
                     {
                         text.addModifyListener(modifyListener);
                     }
+
+                    @Override
+                    public void removeModifyListener(ModifyListener modifyListener)
+                    {
+                        text.removeModifyListener(modifyListener);
+                    }
                 });
             }
 
@@ -143,6 +149,12 @@ public class ContextMenuInterceptor
                     public void addModifyListener(ModifyListener modifyListener)
                     {
                         text.addModifyListener(modifyListener);
+                    }
+
+                    @Override
+                    public void removeModifyListener(ModifyListener modifyListener)
+                    {
+                        text.removeModifyListener(modifyListener);
                     }
                 });
             }
@@ -256,8 +268,18 @@ public class ContextMenuInterceptor
         var textListener = new TextListener(text, menuItem, allowForEmptyText);
         text.getControl().addFocusListener(textListener);
         text.addModifyListener(textListener);
+        menuItem.addDisposeListener(e -> removeTextListener(text, textListener));
         menuItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> executeAction(text, textAction, textListener)));
         return menuItem;
+    }
+
+    private void removeTextListener(IText text, TextListener textListener)
+    {
+        if (!text.getControl().isDisposed())
+        {
+            text.getControl().removeFocusListener(textListener);
+            text.removeModifyListener(textListener);
+        }
     }
 
     private void executeAction(IText text, TextAction textAction, TextListener textListener)
@@ -314,6 +336,8 @@ public class ContextMenuInterceptor
         void selectAll();
 
         void addModifyListener(ModifyListener modifyListener);
+
+        void removeModifyListener(ModifyListener modifyListener);
     }
 
     private final class TextListener
@@ -354,7 +378,7 @@ public class ContextMenuInterceptor
 
         private void setIsEnabled()
         {
-            if (menuItem != null)
+            if (menuItem != null && !menuItem.isDisposed() && !text.getControl().isDisposed())
             {
                 menuItem.setEnabled(settings.isEnabled() && (allowForEmptyText || !text.getContent().trim().isBlank()));
             }
