@@ -7,12 +7,8 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.jface.viewers.IColorProvider;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IMemento;
 import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
@@ -34,7 +30,7 @@ import com.google.inject.Inject;
  */
 public class WorkmateNavigatorLabelProvider
     extends LabelProvider
-    implements ICommonLabelProvider, IColorProvider
+    implements ICommonLabelProvider
 {
     private static final String WORKMATE_MD = "WORKMATE.md"; //$NON-NLS-1$
 
@@ -133,38 +129,11 @@ public class WorkmateNavigatorLabelProvider
     @Override
     public String getDescription(Object element)
     {
-        if (element instanceof WorkmateFileNode && !workmateExists((WorkmateFileNode)element))
-        {
-            return Messages.hint_useChat;
-        }
         if (element instanceof SkillNode)
         {
             return ((SkillNode)element).getDescriptor().getDescription().orElse(null);
         }
         return null;
-    }
-
-    @Override
-    public Color getForeground(Object element)
-    {
-        // A not-yet-created WORKMATE.md is shown disabled (grey): it is created via chat, not here.
-        if (element instanceof WorkmateFileNode && !workmateExists((WorkmateFileNode)element))
-        {
-            return Display.getDefault().getSystemColor(SWT.COLOR_GRAY);
-        }
-        return null;
-    }
-
-    @Override
-    public Color getBackground(Object element)
-    {
-        return null;
-    }
-
-    private boolean workmateExists(WorkmateFileNode node)
-    {
-        ensureInjected();
-        return resolver != null && resolver.existsAt(node.getLevel(), WORKMATE_MD, projectRoot(node.getProject()));
     }
 
     private String scopeLabel(SkillSource level)
