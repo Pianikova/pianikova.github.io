@@ -232,8 +232,10 @@ class ProjectTrackingWorkflow
         var now = clock.now();
         for (var file : files)
         {
-            // Skip files that don't exist on disk
-            if (!file.getLocation().toFile().exists())
+            // Skip files that don't exist on disk. getLocation() is null for resources without a local
+            // path (e.g. linked/virtual), so guard against it before touching the filesystem.
+            var location = file.getLocation();
+            if (location == null || !location.toFile().exists())
             {
                 continue;
             }
@@ -247,6 +249,12 @@ class ProjectTrackingWorkflow
                 return new Result(ProjectTrackingWorkflowState.SCAN, ShortDelay);
             }
         }
+
+        // Drop tracked entries for files that no longer exist (e.g. deleted) and are not backed by an open
+        // document, so filesToHash does not retain stale ProjectFiles indefinitely. IResource.exists() is an
+        // in-memory workspace check, not disk I/O.
+        filesToHash.values()
+            .removeIf(tracked -> tracked.aiCtx.getDocument() == null && !tracked.file.exists());
 
         var newFilesToHashCount = 0;
         for (var file : filesToHash.values())

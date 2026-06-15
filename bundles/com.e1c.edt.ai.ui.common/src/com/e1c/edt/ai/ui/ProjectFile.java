@@ -20,9 +20,9 @@ public class ProjectFile
     public final String path;
     public final AIContext aiCtx;
     public final IFile file;
-    private LocalDateTime updateTime;
-    private String hash;
-    private long modificationStamp = -1;
+    private volatile LocalDateTime updateTime;
+    private volatile String hash;
+    private volatile long modificationStamp = -1;
 
     public ProjectFile(AIContext aiCtx, String path, IFile file, LocalDateTime updateTime)
     {

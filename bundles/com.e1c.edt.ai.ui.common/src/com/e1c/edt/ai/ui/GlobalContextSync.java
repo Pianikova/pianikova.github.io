@@ -119,10 +119,9 @@ class GlobalContextSync implements IGlobalContextSync
     public CompletableFuture<Boolean> syncUnknown(AIContext aiContext, List<EntityValue> unknownValues, int maxDept,
         ICancellationToken cancellationToken)
     {
-        var feature = CompletableFuture.completedFuture(true);
         if (unknownValues == null || unknownValues.isEmpty())
         {
-            return feature;
+            return CompletableFuture.completedFuture(true);
         }
 
         try
@@ -135,13 +134,13 @@ class GlobalContextSync implements IGlobalContextSync
             var statistics = statisticsProvider.get();
             var response = new GlobalContextUpdateResponse();
             response.unknownValues = unknownValues;
-            var optionalResult = Optional.ofNullable(response);
+            var optionalResult = Optional.of(response);
             while (maxDept-- > 0 && optionalResult.isPresent())
             {
                 var result = optionalResult.get();
                 if (result.isEmpty())
                 {
-                    return feature;
+                    return CompletableFuture.completedFuture(true);
                 }
 
                 var vals = result.unknownValues;
@@ -180,63 +179,44 @@ class GlobalContextSync implements IGlobalContextSync
 
                 if (fileUpdates.isEmpty())
                 {
-                    return feature;
+                    return CompletableFuture.completedFuture(true);
                 }
 
+                // Collect this round's updates into a fresh local list (no shared mutable state, no racing
+                // async callback clearing it under us), then send them in a single call. The server's unknown
+                // values feed the next loop iteration, bounded by maxDept.
                 var updates = new ArrayList<GlobalContextUpdate>();
                 for (var fileUpdate : fileUpdates.values())
                 {
-                    var newUpdates = globalContext.getUpdates(
+                    updates.addAll(globalContext.getUpdates(
                         new AIContext(aiContext.getProjectId(), fileUpdate.filePath, aiContext.getDocument()),
                         fileUpdate.fileHash, fileUpdate.hashes, fileUpdate.fields, statistics,
-                        cancellationToken);
+                        cancellationToken));
+                }
 
-                    if (newUpdates.isEmpty())
-                    {
-                        continue;
-                    }
-
-                    synchronized (updates)
-                    {
-                        updates.addAll(newUpdates);
-                    }
-
-                    feature = feature.thenCompose(i -> {
-                        ArrayList<GlobalContextUpdate> latestUpdates;
-                        synchronized (updates)
-                        {
-                            latestUpdates = new ArrayList<>(updates);
-                            updates.clear();
-                        }
-
-                        if (cancellationToken.isCanceled() || latestUpdates.isEmpty())
-                        {
-                            return CompletableFuture.completedFuture(true);
-                        }
-
-                        return syncUpdates(aiContext, latestUpdates, 5, statistics,
-                            cancellationToken);
-                    });
-
-                    try
-                    {
-                        var timeout = settings.getTimeout();
-                        optionalResult = globalContextService
-                            .update(aiContext.getProjectId(), updates, 10, statistics, cancellationToken)
-                            .get(timeout.toNanos(), TimeUnit.NANOSECONDS);
-                    }
-                    catch (TimeoutException error)
-                    {
-                        log.warning(TracingSources.SYNC,
-                            () -> "Global context update timed out after " //$NON-NLS-1$
-                                + settings.getTimeout());
-                        return CompletableFuture.completedFuture(false);
-                    }
+                if (updates.isEmpty())
+                {
+                    return CompletableFuture.completedFuture(true);
                 }
 
                 if (cancellationToken.isCanceled())
                 {
-                    return feature;
+                    return CompletableFuture.completedFuture(false);
+                }
+
+                try
+                {
+                    var timeout = settings.getTimeout();
+                    optionalResult = globalContextService
+                        .update(aiContext.getProjectId(), updates, 10, statistics, cancellationToken)
+                        .get(timeout.toNanos(), TimeUnit.NANOSECONDS);
+                }
+                catch (TimeoutException error)
+                {
+                    log.warning(TracingSources.SYNC,
+                        () -> "Global context update timed out after " //$NON-NLS-1$
+                            + settings.getTimeout());
+                    return CompletableFuture.completedFuture(false);
                 }
             }
         }
@@ -246,7 +226,7 @@ class GlobalContextSync implements IGlobalContextSync
             return CompletableFuture.completedFuture(false);
         }
 
-        return feature;
+        return CompletableFuture.completedFuture(true);
     }
 
     private static class FileUpdates

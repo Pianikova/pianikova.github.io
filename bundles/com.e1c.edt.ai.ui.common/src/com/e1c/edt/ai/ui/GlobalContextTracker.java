@@ -53,7 +53,7 @@ class GlobalContextTracker
             return Optional.empty();
         }
 
-        if (project == null || !project.exists())
+        if (project == null || !project.isAccessible())
         {
             return Optional.empty();
         }
@@ -109,16 +109,25 @@ class GlobalContextTracker
 
     private void track(JobContext jobCtx, String workflowKey, IProjectTrackingWorkflow workflow)
     {
-        // IDE is closing or AI is disabled
-        if (jobCtx.CancellationTokenSource.isCanceled() || !settings.isEnabled())
+        // Stop if we have been evicted from the registry (e.g. onServiceStateChange cleared it, or another
+        // workflow replaced us). Without this guard the self-rescheduling loop below would keep running
+        // forever after eviction, and a later track(...) call would start a second, duplicate loop for the
+        // same project — leaking jobs and doubling sync traffic on every service-state change.
+        if (projectWorkflows.get(workflowKey) != workflow)
         {
-            projectWorkflows.clear();
             return;
         }
 
-        if (!workflow.getProject().exists())
+        // IDE is closing or AI is disabled
+        if (jobCtx.CancellationTokenSource.isCanceled() || !settings.isEnabled())
         {
-            projectWorkflows.remove(workflowKey);
+            projectWorkflows.remove(workflowKey, workflow);
+            return;
+        }
+
+        if (!workflow.getProject().isAccessible())
+        {
+            projectWorkflows.remove(workflowKey, workflow);
             return;
         }
 
@@ -129,7 +138,11 @@ class GlobalContextTracker
         }
         finally
         {
-            scheduleTracking(workflowKey, workflow, delay.toMillis());
+            // Reschedule only while we are still the registered workflow for this project.
+            if (projectWorkflows.get(workflowKey) == workflow)
+            {
+                scheduleTracking(workflowKey, workflow, delay.toMillis());
+            }
         }
     }
 
