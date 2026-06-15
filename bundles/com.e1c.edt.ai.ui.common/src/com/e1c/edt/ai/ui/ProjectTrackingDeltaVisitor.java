@@ -3,6 +3,9 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.Set;
+
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.runtime.CoreException;
 
@@ -16,6 +19,7 @@ import com.google.inject.Inject;
 class ProjectTrackingDeltaVisitor
     implements IProjectTrackingDeltaVisitor
 {
+    private static final Set<String> EXTENSIONS = Set.of("bsl", "mdo", "form"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
     private final ILog log;
     private final IGlobalContextTracker globalContextTracker;
 
@@ -31,12 +35,36 @@ class ProjectTrackingDeltaVisitor
     @Override
     public boolean visit(IResourceDelta delta) throws CoreException
     {
-        if ((delta.getKind() & (IResourceDelta.REMOVED | IResourceDelta.MOVED_TO)) != 0)
+        var resource = delta.getResource();
+        if (resource == null)
+        {
+            return true;
+        }
+
+        // Keep descending into containers; only individual files of the tracked kinds are synced.
+        if (resource.getType() != IResource.FILE)
+        {
+            return true;
+        }
+
+        var ext = resource.getFileExtension();
+        if (ext == null || !EXTENSIONS.contains(ext.toLowerCase()))
+        {
+            return false;
+        }
+
+        var kind = delta.getKind();
+        var addedOrRemoved = (kind == IResourceDelta.ADDED || kind == IResourceDelta.REMOVED);
+        // A CHANGED delta fires for marker/derived-flag updates too; only react to actual content changes.
+        var contentChanged =
+            kind == IResourceDelta.CHANGED && (delta.getFlags() & IResourceDelta.CONTENT) != 0;
+        if (addedOrRemoved || contentChanged)
         {
             track(delta);
         }
 
-        return true;
+        // A file has no children to visit.
+        return false;
     }
 
     @SuppressWarnings("nls")

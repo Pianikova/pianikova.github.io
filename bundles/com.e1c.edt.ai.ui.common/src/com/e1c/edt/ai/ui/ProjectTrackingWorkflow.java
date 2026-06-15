@@ -43,6 +43,9 @@ class ProjectTrackingWorkflow
     private final static Duration ExtraLongDelay = Duration.ofSeconds(30);
     private final static Duration LongDelay = Duration.ofSeconds(3);
     private final static Duration ShortDelay = Duration.ofMillis(10);
+    // Added/changed/removed files are now discovered live via resource deltas (ProjectTrackingDeltaVisitor),
+    // so a full project re-scan is only a reconcile safety net for events that were missed and runs rarely.
+    private final static int HashCyclesBetweenScans = 20;
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;
     private final IHashTools hashTools;
@@ -206,7 +209,7 @@ class ProjectTrackingWorkflow
 
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
-        if (iterationCount < 5)
+        if (iterationCount < HashCyclesBetweenScans)
         {
             iterationCount++;
             return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
