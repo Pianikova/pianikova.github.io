@@ -56,10 +56,21 @@ class CodeProvider
             return Optional.empty();
         }
 
+        var uniqueName = method.getUniqueName();
+        if (uniqueName == null)
+        {
+            return Optional.empty();
+        }
+
         var methodNode = NodeModelUtils.getNode(method);
+        if (methodNode == null)
+        {
+            return Optional.empty();
+        }
+
         var startOffest = methodNode.getTotalOffset();
         var endOffest = methodNode.getTotalEndOffset();
-        return Optional.of(new CodeMethod(method.getUniqueName(), startOffest, endOffest, Optional.of(parseResult)));
+        return Optional.of(new CodeMethod(uniqueName, startOffest, endOffest, Optional.of(parseResult)));
     }
 
     @Override
@@ -79,7 +90,7 @@ class CodeProvider
 
         for (var curMethod : EcoreUtil2.getAllContentsOfType(rootSemantic, Method.class))
         {
-            if (curMethod.getUniqueName().equals(method.getUniqueName()))
+            if (method.getUniqueName().equals(curMethod.getUniqueName()))
             {
                 var methodNode = NodeModelUtils.getNode(curMethod);
                 if (methodNode == null)
