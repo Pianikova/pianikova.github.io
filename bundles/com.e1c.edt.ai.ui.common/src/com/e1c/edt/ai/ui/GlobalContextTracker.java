@@ -23,6 +23,11 @@ import com.google.inject.Provider;
 class GlobalContextTracker
     implements IGlobalContextTracker, IStateListener
 {
+    // A workflow that returns a delay at or below this keeps running in the same job execution; a longer delay
+    // triggers a real reschedule. Keeps the tight INIT/SCAN/HASH/SYNC transitions (~10ms) out of the scheduler.
+    private static final Duration ImmediateRescheduleThreshold = Duration.ofMillis(50);
+    // Backstop so a workflow with continuous work cannot monopolize the job thread indefinitely.
+    private static final int MaxInlineTransitions = 50;
     private final ISettings settings;
     private final IDispatcher dispatcher;
     private final IStateService stateService;
@@ -109,32 +114,43 @@ class GlobalContextTracker
 
     private void track(JobContext jobCtx, String workflowKey, IProjectTrackingWorkflow workflow)
     {
-        // Stop if we have been evicted from the registry (e.g. onServiceStateChange cleared it, or another
-        // workflow replaced us). Without this guard the self-rescheduling loop below would keep running
-        // forever after eviction, and a later track(...) call would start a second, duplicate loop for the
-        // same project — leaking jobs and doubling sync traffic on every service-state change.
-        if (projectWorkflows.get(workflowKey) != workflow)
-        {
-            return;
-        }
-
-        // IDE is closing or AI is disabled
-        if (jobCtx.CancellationTokenSource.isCanceled() || !settings.isEnabled())
-        {
-            projectWorkflows.remove(workflowKey, workflow);
-            return;
-        }
-
-        if (!workflow.getProject().isAccessible())
-        {
-            projectWorkflows.remove(workflowKey, workflow);
-            return;
-        }
-
         var delay = Duration.ofSeconds(5);
         try
         {
-            delay = workflow.nextState(jobCtx.Monitor, jobCtx.CancellationTokenSource);
+            // Run consecutive near-immediate transitions within this single job execution instead of
+            // rescheduling a fresh Job every ~10ms (which churns the job scheduler). Hand control back with a
+            // real reschedule once the workflow asks for a longer pause, hits the inline-step cap, or must
+            // stop. Each nextState() does bounded work (scan / hash<=1000 / sync<=1000), so the loop makes
+            // forward progress rather than spinning.
+            for (var step = 0; step < MaxInlineTransitions; step++)
+            {
+                // Stop if we have been evicted from the registry (e.g. another workflow replaced us). Without
+                // this guard the loop would keep running after eviction and a later track(...) call would
+                // start a second, duplicate loop for the same project.
+                if (projectWorkflows.get(workflowKey) != workflow)
+                {
+                    return;
+                }
+
+                // IDE is closing or AI is disabled
+                if (jobCtx.CancellationTokenSource.isCanceled() || !settings.isEnabled())
+                {
+                    projectWorkflows.remove(workflowKey, workflow);
+                    return;
+                }
+
+                if (!workflow.getProject().isAccessible())
+                {
+                    projectWorkflows.remove(workflowKey, workflow);
+                    return;
+                }
+
+                delay = workflow.nextState(jobCtx.Monitor, jobCtx.CancellationTokenSource);
+                if (delay.compareTo(ImmediateRescheduleThreshold) > 0)
+                {
+                    break;
+                }
+            }
         }
         finally
         {
@@ -149,7 +165,17 @@ class GlobalContextTracker
     @Override
     public void onServiceStateChange(ServiceState serviceState)
     {
-        projectWorkflows.clear();
+        // The server session rotates on these states (ResponseCache invalidates its cache), so the server has
+        // lost the context we previously synced. Ask each live workflow to re-sync on its own tracking thread
+        // instead of dropping and recreating workflows — the old projectWorkflows.clear() churned background
+        // jobs and discarded scan/hash progress on every state change.
+        if (serviceState == ServiceState.SETTINGS_CHANGED || serviceState == ServiceState.SESSION_EXPIRED)
+        {
+            for (var workflow : projectWorkflows.values())
+            {
+                workflow.requestReset();
+            }
+        }
     }
 
     @Override

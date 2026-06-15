@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
@@ -59,7 +58,7 @@ class ProjectTrackingWorkflow
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
     private IProject project;
     private ProjectId projectId;
-    private String sessionId;
+    private volatile boolean resetRequested;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
     private int iterationCount = Integer.MAX_VALUE;
 
@@ -112,8 +111,10 @@ class ProjectTrackingWorkflow
             return ExtraLongDelay;
         }
 
-        if (checkSessionChanged())
+        // Apply a pending reset on the tracking thread (requestReset() may be called from any thread).
+        if (resetRequested)
         {
+            resetRequested = false;
             reset();
         }
 
@@ -156,24 +157,10 @@ class ProjectTrackingWorkflow
         return LongDelay;
     }
 
-    private boolean checkSessionChanged()
+    @Override
+    public void requestReset()
     {
-        try
-        {
-            var session = sessionService.getSessionAsync(projectId).get();
-            var curSessionId = session.map(i -> i.sessionId).orElse(""); //$NON-NLS-1$
-            if (!curSessionId.equals(sessionId))
-            {
-                sessionId = curSessionId;
-                return true;
-            }
-        }
-        catch (InterruptedException | ExecutionException error)
-        {
-            log.logError(error);
-        }
-
-        return false;
+        resetRequested = true;
     }
 
     private void reset()
@@ -228,7 +215,14 @@ class ProjectTrackingWorkflow
         progressMonitor.subTask(Messages.CodeCompletionBackgroundScanSubtaskName);
         if (!settings.sendGlobalContext(projectId))
         {
-            return new Result(ProjectTrackingWorkflowState.INIT, LongDelay);
+            // The server decides per project (via the session it returns) whether global context is synced,
+            // and exposes that through sendGlobalContext(). Establish the session asynchronously so those
+            // parameters get applied, then keep re-checking the gate. getSessionAsync() is cached, so this is
+            // a cheap no-op once the session exists. Without it the workflow would never sync until some other
+            // path (e.g. code completion) happened to create the session — global context sync is expected to
+            // begin right at EDT startup.
+            sessionService.getSessionAsync(projectId);
+            return new Result(ProjectTrackingWorkflowState.SCAN, LongDelay);
         }
 
         List<IFile> files = fileScaner.scan(project);
