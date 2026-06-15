@@ -142,7 +142,7 @@ public class StagingViewEnhancer
             stagedToolBarManager.add(selfReviewAction);
             stagedToolBarManager.update(true);
             addStageListener(stagingView,
-                isEnabled -> dispatcher.dispatch(() -> selfReviewAction.setEnabled(isEnabled)));
+                isEnabled -> dispatcher.dispatchAsync(() -> selfReviewAction.setEnabled(isEnabled)));
         }
 
         var commitMessageSection =
@@ -186,7 +186,11 @@ public class StagingViewEnhancer
                     });
 
                     addStageListener(stagingView,
-                        isEnabled -> dispatcher.dispatch(() -> {
+                        isEnabled -> dispatcher.dispatchAsync(() -> {
+                            if (createMessageButton.isDisposed())
+                            {
+                                return;
+                            }
                             if (commitMessageGenerating && isEnabled)
                             {
                                 return;
