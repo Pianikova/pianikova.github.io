@@ -79,10 +79,13 @@ public class SkillFileOpener
     @Override
     public void openWorkmate(SkillSource level, Optional<IProject> project)
     {
-        // WORKMATE.md is created via chat (the LLM Write tool), not from the navigator: open only when
-        // it already exists.
-        openOrCreate(level, project, List.of(IWorkmateLocations.WORKMATE_DIR, WORKMATE_MD_SEGMENT), () -> "", //$NON-NLS-1$
-            false, WORKMATE_MD_SEGMENT + scopeSuffix(level));
+        // Same behaviour as skills: create the override from the effective default (bundled WORKMATE.md
+        // or an inherited level) and open it.
+        openOrCreate(level, project, List.of(IWorkmateLocations.WORKMATE_DIR, WORKMATE_MD_SEGMENT),
+            () -> resolver.resolve(WORKMATE_MD_SEGMENT, project.flatMap(locations::projectRoot))
+                .map(ResolvedSkillResource::getContent)
+                .orElse(""), //$NON-NLS-1$
+            true, WORKMATE_MD_SEGMENT + scopeSuffix(level));
     }
 
     @Override

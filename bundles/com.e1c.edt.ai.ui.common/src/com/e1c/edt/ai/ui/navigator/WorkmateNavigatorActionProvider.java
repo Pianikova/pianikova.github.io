@@ -74,8 +74,7 @@ public class WorkmateNavigatorActionProvider
         var element = selectedElement();
         if (canOpen(element))
         {
-            var openLabel = element instanceof WorkmateFileNode ? Messages.action_open : Messages.action_openCreate;
-            menu.add(new Action(openLabel)
+            menu.add(new Action(Messages.action_openCreate)
             {
                 @Override
                 public void run()
@@ -98,20 +97,13 @@ public class WorkmateNavigatorActionProvider
     }
 
     /**
-     * Skill and tool nodes are always openable (created on demand). A WORKMATE.md node is openable only
-     * once the file exists, since it is created via chat.
+     * Workmate, skill and tool nodes are all openable: the override file is created on demand from the
+     * effective default.
      */
     private boolean canOpen(Object element)
     {
-        if (element instanceof SkillNode || element instanceof SkillToolNode)
-        {
-            return true;
-        }
-        if (element instanceof WorkmateFileNode)
-        {
-            return overrideExists(element);
-        }
-        return false;
+        return element instanceof WorkmateFileNode || element instanceof SkillNode
+            || element instanceof SkillToolNode;
     }
 
     private void open(Object element)

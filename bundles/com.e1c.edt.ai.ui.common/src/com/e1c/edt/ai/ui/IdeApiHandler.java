@@ -3,8 +3,15 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
@@ -38,14 +45,16 @@ public class IdeApiHandler
     private final IMarkdownUtils markdownUtils;
     private final IWeb web;
     private final IEditRollback editRollback;
+    private final IWorkmateLocations locations;
     private boolean isReady;
 
     @Inject
     public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
         Provider<IChat> chatProvider, IJson json,
         IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager,
-        IMarkdownUtils markdownUtils, IWeb web, IEditRollback editRollback)
+        IMarkdownUtils markdownUtils, IWeb web, IEditRollback editRollback, IWorkmateLocations locations)
     {
+        Preconditions.checkNotNull(locations);
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(dispatcher);
@@ -70,6 +79,7 @@ public class IdeApiHandler
         this.markdownUtils = markdownUtils;
         this.web = web;
         this.editRollback = editRollback;
+        this.locations = locations;
     }
 
     public void wink(String parameter)
@@ -317,5 +327,152 @@ public class IdeApiHandler
     public boolean rollbackEdit(String path, String oldContent, String newContent, boolean replaceAll)
     {
         return editRollback.rollback(path, oldContent, newContent, replaceAll);
+    }
+
+    // --- WORKMATE.md rules for the chat (window.ideApi.*) -------------------------------------------
+    // Paths are computed via IWorkmateLocations (same source as the navigator/opener). Content getters
+    // return the raw per-level file, or null when it does not exist (the chat decides what to inject;
+    // the bundled default is intentionally NOT returned here).
+
+    private static final String WORKMATE_MD = "WORKMATE.md"; //$NON-NLS-1$
+
+    /** @return path to {@code ~/.workmate/WORKMATE.md} (user level), or {@code null}. */
+    public String getCommonRulesPath()
+    {
+        return rulesPath(locations.userHome());
+    }
+
+    /** @return content of the user-level rules file, or {@code null} if missing/empty. */
+    public String getCommonRulesContent()
+    {
+        return rulesContent(locations.userHome());
+    }
+
+    /** @return JSON {@code {"path","content"}} for the user-level rules, or {@code null}. */
+    public String getCommonRules()
+    {
+        return rulesJson(getCommonRulesPath(), getCommonRulesContent());
+    }
+
+    /** @return path to {@code <workspace>/.workmate/WORKMATE.md}, or {@code null}. */
+    public String getWorkspaceRulesPath()
+    {
+        return rulesPath(locations.workspaceRoot());
+    }
+
+    /** @return content of the workspace-level rules file, or {@code null} if missing/empty. */
+    public String getWorkspaceRulesContent()
+    {
+        return rulesContent(locations.workspaceRoot());
+    }
+
+    /** @return JSON {@code {"path","content"}} for the workspace-level rules, or {@code null}. */
+    public String getWorkspaceRules()
+    {
+        return rulesJson(getWorkspaceRulesPath(), getWorkspaceRulesContent());
+    }
+
+    /**
+     * @param projectName the project name.
+     * @return path to {@code <project>/.workmate/WORKMATE.md}, or {@code null} if the project is unknown.
+     */
+    public String getProjectRulesPath(String projectName)
+    {
+        var project = project(projectName);
+        return project == null ? null : rulesPath(locations.projectRoot(project));
+    }
+
+    /**
+     * @param projectName the project name.
+     * @return content of the project-level rules file, or {@code null} if missing/empty/unknown project.
+     */
+    public String getProjectRulesContent(String projectName)
+    {
+        var project = project(projectName);
+        return project == null ? null : rulesContent(locations.projectRoot(project));
+    }
+
+    /**
+     * @param projectName the project name.
+     * @return JSON {@code {"path","content"}} for the project-level rules, or {@code null}.
+     */
+    public String getProjectRules(String projectName)
+    {
+        return rulesJson(getProjectRulesPath(projectName), getProjectRulesContent(projectName));
+    }
+
+    /**
+     * @return JSON {@code {"<project>": {"path","content"}, ...}} for every project that has a non-empty
+     *     rules file, or {@code null} when none do.
+     */
+    @SuppressWarnings("nls")
+    public String getProjectsRules()
+    {
+        var result = new HashMap<String, Object>();
+        for (var project : ResourcesPlugin.getWorkspace().getRoot().getProjects())
+        {
+            var path = getProjectRulesPath(project.getName());
+            var content = getProjectRulesContent(project.getName());
+            if (path != null && content != null)
+            {
+                var info = new HashMap<String, String>();
+                info.put("path", path);
+                info.put("content", content);
+                result.put(project.getName(), info);
+            }
+        }
+        return result.isEmpty() ? null : json.serialize(result);
+    }
+
+    private static String rulesPath(java.util.Optional<Path> base)
+    {
+        return base.map(root -> IWorkmateLocations.resolve(root, List.of(IWorkmateLocations.WORKMATE_DIR, WORKMATE_MD))
+            .toAbsolutePath().toString()).orElse(null);
+    }
+
+    private String rulesContent(java.util.Optional<Path> base)
+    {
+        return base.map(root -> readFileContent(IWorkmateLocations.resolve(root, //
+            List.of(IWorkmateLocations.WORKMATE_DIR, WORKMATE_MD)))).orElse(null);
+    }
+
+    @SuppressWarnings("nls")
+    private String rulesJson(String path, String content)
+    {
+        if (path == null || content == null)
+        {
+            return null;
+        }
+        var result = new HashMap<String, String>();
+        result.put("path", path);
+        result.put("content", content);
+        return json.serialize(result);
+    }
+
+    private IProject project(String projectName)
+    {
+        if (projectName == null)
+        {
+            return null;
+        }
+        var project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+        return project != null && project.exists() ? project : null;
+    }
+
+    private String readFileContent(Path filePath)
+    {
+        if (filePath == null || !Files.exists(filePath) || filePath.toFile().length() == 0)
+        {
+            return null;
+        }
+        try
+        {
+            return Files.readString(filePath, StandardCharsets.UTF_8);
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+            return null;
+        }
     }
 }
