@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IFile;
@@ -43,6 +42,9 @@ class ProjectTrackingWorkflow
     private final static Duration ExtraLongDelay = Duration.ofSeconds(30);
     private final static Duration LongDelay = Duration.ofSeconds(3);
     private final static Duration ShortDelay = Duration.ofMillis(10);
+    // Added/changed/removed files are now discovered live via resource deltas (ProjectTrackingDeltaVisitor),
+    // so a full project re-scan is only a reconcile safety net for events that were missed and runs rarely.
+    private final static int HashCyclesBetweenScans = 20;
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;
     private final IHashTools hashTools;
@@ -56,7 +58,7 @@ class ProjectTrackingWorkflow
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
     private IProject project;
     private ProjectId projectId;
-    private String sessionId;
+    private volatile boolean resetRequested;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
     private int iterationCount = Integer.MAX_VALUE;
 
@@ -109,8 +111,10 @@ class ProjectTrackingWorkflow
             return ExtraLongDelay;
         }
 
-        if (checkSessionChanged())
+        // Apply a pending reset on the tracking thread (requestReset() may be called from any thread).
+        if (resetRequested)
         {
+            resetRequested = false;
             reset();
         }
 
@@ -153,24 +157,10 @@ class ProjectTrackingWorkflow
         return LongDelay;
     }
 
-    private boolean checkSessionChanged()
+    @Override
+    public void requestReset()
     {
-        try
-        {
-            var session = sessionService.getSessionAsync(projectId).get();
-            var curSessionId = session.map(i -> i.sessionId).orElse(""); //$NON-NLS-1$
-            if (!curSessionId.equals(sessionId))
-            {
-                sessionId = curSessionId;
-                return true;
-            }
-        }
-        catch (InterruptedException | ExecutionException error)
-        {
-            log.logError(error);
-        }
-
-        return false;
+        resetRequested = true;
     }
 
     private void reset()
@@ -206,7 +196,7 @@ class ProjectTrackingWorkflow
 
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
-        if (iterationCount < 5)
+        if (iterationCount < HashCyclesBetweenScans)
         {
             iterationCount++;
             return new Result(ProjectTrackingWorkflowState.HASH, LongDelay);
@@ -225,15 +215,24 @@ class ProjectTrackingWorkflow
         progressMonitor.subTask(Messages.CodeCompletionBackgroundScanSubtaskName);
         if (!settings.sendGlobalContext(projectId))
         {
-            return new Result(ProjectTrackingWorkflowState.INIT, LongDelay);
+            // The server decides per project (via the session it returns) whether global context is synced,
+            // and exposes that through sendGlobalContext(). Establish the session asynchronously so those
+            // parameters get applied, then keep re-checking the gate. getSessionAsync() is cached, so this is
+            // a cheap no-op once the session exists. Without it the workflow would never sync until some other
+            // path (e.g. code completion) happened to create the session — global context sync is expected to
+            // begin right at EDT startup.
+            sessionService.getSessionAsync(projectId);
+            return new Result(ProjectTrackingWorkflowState.SCAN, LongDelay);
         }
 
         List<IFile> files = fileScaner.scan(project);
         var now = clock.now();
         for (var file : files)
         {
-            // Skip files that don't exist on disk
-            if (!file.getLocation().toFile().exists())
+            // Skip files that don't exist on disk. getLocation() is null for resources without a local
+            // path (e.g. linked/virtual), so guard against it before touching the filesystem.
+            var location = file.getLocation();
+            if (location == null || !location.toFile().exists())
             {
                 continue;
             }
@@ -247,6 +246,12 @@ class ProjectTrackingWorkflow
                 return new Result(ProjectTrackingWorkflowState.SCAN, ShortDelay);
             }
         }
+
+        // Drop tracked entries for files that no longer exist (e.g. deleted) and are not backed by an open
+        // document, so filesToHash does not retain stale ProjectFiles indefinitely. IResource.exists() is an
+        // in-memory workspace check, not disk I/O.
+        filesToHash.values()
+            .removeIf(tracked -> tracked.aiCtx.getDocument() == null && !tracked.file.exists());
 
         var newFilesToHashCount = 0;
         for (var file : filesToHash.values())

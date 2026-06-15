@@ -134,7 +134,7 @@ public class SessionCall
                 }
             }
 
-            return taskSupplier.apply(session).whenComplete((response, throwable) -> {
+            taskSupplier.apply(session).whenComplete((response, throwable) -> {
                 if (throwable == null)
                 {
                     var statusCode = response.statusCode();
@@ -164,6 +164,11 @@ public class SessionCall
                         throwable instanceof CompletionException ? throwable.getCause() : throwable);
                 }
             });
+
+            // Always hand back the shared result future, never the per-attempt HTTP future: the caller's
+            // completion handler (which releases the busy token) must fire on the final outcome, not on an
+            // intermediate response that is about to be retried.
+            return result;
         });
     }
 
