@@ -40,6 +40,13 @@ class FileScaner
     public List<IFile> scan(IProject project)
     {
         var files = new ArrayList<IFile>();
+        // The project may be closed concurrently between the caller's accessibility check and
+        // the traversal below; in that case accept() throws and we just return what we have.
+        if (!project.isAccessible())
+        {
+            return files;
+        }
+
         try
         {
             project.accept(resource -> {
@@ -93,7 +100,11 @@ class FileScaner
         }
         catch (CoreException error)
         {
-            log.logError(error);
+            // A project closed mid-traversal is an expected race, not an error worth surfacing.
+            if (project.isAccessible())
+            {
+                log.logError(error);
+            }
         }
 
         return files;

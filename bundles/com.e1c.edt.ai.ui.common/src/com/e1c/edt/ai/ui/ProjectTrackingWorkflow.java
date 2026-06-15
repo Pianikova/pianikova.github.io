@@ -104,7 +104,7 @@ class ProjectTrackingWorkflow
     @Override
     public Duration nextState(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
-        if (!settings.isEnabled() || !project.exists())
+        if (!settings.isEnabled() || !project.isAccessible())
         {
             return ExtraLongDelay;
         }
