@@ -513,7 +513,7 @@
       "createMethod": "createCommonForm()",
       "collection": "getCommonForms()",
       "setupBlock": "",
-      "notes": "Form structure and controls are separate layers. Start by creating the top-level metadata object.",
+      "notes": "Form structure and controls are separate layers. Start by creating the top-level metadata object, then generate the form layout with the `create_object_form` scenario (pass this CommonForm as basicForm to formGenerator).",
       "sampleName": "UniversalSearchForm",
       "extraSetup": ""
     }
@@ -603,10 +603,113 @@
       "createMethod": "createCommonTemplate()",
       "collection": "getCommonTemplates()",
       "setupBlock": "",
-      "notes": "Template binary or text content is maintained separately after the metadata object exists.",
+      "notes": "Template binary or text content is maintained separately after the metadata object exists. Fill the body (DataCompositionSchema / SpreadsheetDocument) with the `fill_template_content` scenario.",
       "sampleName": "PrintLayout",
       "extraSetup": ""
     }
+  },
+  {
+    "id": "create_object_form",
+    "scope": "edt",
+    "category": "create",
+    "title": "Create Object Form",
+    "summary": "Create a form owned by a metadata object (CatalogForm/DocumentForm/...), generate its default structure, and persist it as an external .form resource.",
+    "guide": "workflows/create/create_object_form.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator",
+      "formGenerator",
+      "formFieldGenerator",
+      "editingLanguageManager"
+    ],
+    "keywords": [
+      "form",
+      "object form",
+      "catalog form",
+      "document form",
+      "create form",
+      "default form",
+      "форма",
+      "форма элемента",
+      "форма списка",
+      "создать форму",
+      "форма справочника",
+      "форма документа"
+    ]
+  },
+  {
+    "id": "edit_form",
+    "scope": "edt",
+    "category": "edit",
+    "title": "Edit Form",
+    "summary": "Load an existing form structure and add attributes/fields/groups with formFactory.",
+    "guide": "workflows/edit/edit_form.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "formFactory"
+    ],
+    "keywords": [
+      "edit form",
+      "add form field",
+      "form attribute",
+      "form group",
+      "изменить форму",
+      "добавить поле на форму",
+      "реквизит формы"
+    ]
+  },
+  {
+    "id": "create_object_template",
+    "scope": "edt",
+    "category": "create",
+    "title": "Create Object Template",
+    "summary": "Create a Template (макет) owned by a metadata object with a chosen TemplateType.",
+    "guide": "workflows/create/create_object_template.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory"
+    ],
+    "keywords": [
+      "template",
+      "object template",
+      "макет",
+      "макет объекта",
+      "создать макет",
+      "печатная форма",
+      "табличный документ",
+      "СКД",
+      "схема компоновки данных"
+    ]
+  },
+  {
+    "id": "fill_template_content",
+    "scope": "edt",
+    "category": "create",
+    "title": "Fill Template Content",
+    "summary": "Attach DataCompositionSchema or SpreadsheetDocument content to an existing template via setTemplate(...).",
+    "guide": "workflows/create/fill_template_content.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "dcsFactory",
+      "moxelFactory"
+    ],
+    "keywords": [
+      "template content",
+      "DataCompositionSchema",
+      "SpreadsheetDocument",
+      "fill template",
+      "содержимое макета",
+      "заполнить макет",
+      "табличный документ",
+      "СКД",
+      "схема компоновки данных"
+    ]
   },
   {
     "id": "create_configuration_project",
@@ -1149,7 +1252,13 @@
     ],
     "keywords": [
       "report",
-      "analytics"
+      "analytics",
+      "отчёт",
+      "отчет",
+      "отчёт со схемой компоновки",
+      "отчёт с СКД",
+      "СКД",
+      "схема компоновки данных"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1159,7 +1268,7 @@
       "createMethod": "createReport()",
       "collection": "getReports()",
       "setupBlock": "",
-      "notes": "Metadata object creation does not create layouts, forms, or module code automatically.",
+      "notes": "Metadata object creation does not create layouts, forms, or module code automatically. To add a layout/DataCompositionSchema (СКД) template to this report, do NOT hand-write .dcs/.mxl/.mdo XML with file tools — instead run the `create_object_template` scenario (Report.getTemplates(), TemplateType.DATA_COMPOSITION_SCHEMA) followed by `fill_template_content` (dcsFactory + template.setTemplate(...)). To add a form, use `create_object_form`.",
       "sampleName": "SalesAnalysis",
       "extraSetup": ""
     }
