@@ -19,6 +19,12 @@ import com.google.inject.Singleton;
  * - [!abc] / [^abc] - negated character class
  * - {a,b,c} - matches any of the comma-separated alternatives (supports nesting and wildcards)
  * - Path separators can be / or \
+ *
+ * Anchoring (gitignore-style): a pattern that contains no path separator is NOT
+ * anchored to the base directory - it is matched against the file name (the last
+ * path segment) at any depth. So "*abc*" matches "a/b/MyAbcFile.bsl". A pattern
+ * that contains a "/" stays anchored and is matched segment-by-segment (use "**"
+ * to span directories), so "src/*.bsl" only matches files directly under "src".
  */
 @Singleton
 public class PatternMatcher
@@ -30,6 +36,15 @@ public class PatternMatcher
 	{
 		String normalizedPath = path.replace("\\", "/");
 		String normalizedPattern = pattern.replace("\\", "/");
+
+		// gitignore-style semantics: a separator-less pattern is matched against the
+		// file name (last segment) at any depth, so "*abc*" finds nested files too.
+		if (normalizedPattern.indexOf('/') < 0)
+		{
+			String[] pathParts = normalizedPath.split("/");
+			String fileName = pathParts.length == 0 ? normalizedPath : pathParts[pathParts.length - 1];
+			return matchSegment(fileName, normalizedPattern);
+		}
 
 		String[] pathParts = normalizedPath.split("/");
 		String[] patternParts = normalizedPattern.split("/");

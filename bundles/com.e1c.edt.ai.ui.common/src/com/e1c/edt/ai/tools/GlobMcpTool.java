@@ -329,15 +329,17 @@ public class GlobMcpTool
 		description.append("\n\nUsage:");
 		description.append("\n- Arguments must be a single JSON object.");
 		description.append("\n- Lists directory contents with configurable depth and optional pattern matching.");
-		description.append("\n- By default, behaves like ls command - shows current directory contents with depth=1 and pattern=\"*\".");
+		description.append("\n- By default uses pattern=\"*\" and depth=3, listing names down to three levels. Set depth=0 for an ls-like listing of the root only.");
         description.append("\n- Supports glob patterns with path separators (\"/\" or \"\\\\\"):");
-        description.append("\n  - \"*.bsl\" - matches files in root directory only");
-        description.append("\n  - \"src/**/*.bsl\" - matches .bsl files anywhere under src/");
-        description.append("\n  - \"**/*.java\" - matches .java files in any subdirectory");
-        description.append("\n  - \"**/test_*.py\" - matches test_*.py files in any subdirectory");
-        description.append("\n  - \"*\" - matches any name");
-        description.append("\n  - \"?\" - matches any single character");
-        description.append("\n  - \"**\" - matches any number of directory segments (including zero)");
+        description.append("\n  - A pattern WITHOUT \"/\" is matched against the file/directory name at ANY depth:");
+        description.append("\n    - \"*.bsl\" - all .bsl files at any depth");
+        description.append("\n    - \"*Module*\" - any name containing \"Module\" at any depth (e.g. src/Catalogs/Контрагенты/ManagerModule.bsl)");
+        description.append("\n  - A pattern WITH \"/\" is anchored to the search root and matched segment by segment:");
+        description.append("\n    - \"src/*.bsl\" - .bsl files directly under src/ only");
+        description.append("\n    - \"src/**/*.bsl\" - .bsl files anywhere under src/");
+        description.append("\n    - \"**/*.java\" - .java files in any subdirectory");
+        description.append("\n    - \"**/test_*.py\" - test_*.py files in any subdirectory");
+        description.append("\n- Wildcards: \"*\" (any characters), \"?\" (single character), \"**\" (any number of directory segments, including zero).");
 		description.append("\n- Returns matching file and directory paths sorted by modification time.");
 		description.append("\n- Use this tool when you need to explore directory structure or list files.");
 		description.append("\n- Depth parameter controls how deep to traverse subdirectories (0 = only root, 1 = root + one level, etc.).");
@@ -359,7 +361,7 @@ public class GlobMcpTool
 		var patternProp = new McpToolCallProperty();
 		patternProp.type = "string";
         patternProp.description =
-            "The search pattern to match files or directories. Supports glob patterns with path separators: \"*.bsl\", \"src/**/*.bsl\", \"**/*.java\", \"**/test_*.py\". Wildcards: '*' (any characters), '?' (single character), '**' (any number of directory segments). If omitted, all files and directories are matched. Default: \"*\"";
+            "The search pattern to match files or directories. A pattern without \"/\" matches the name at any depth (\"*.bsl\", \"*Module*\"); a pattern with \"/\" is anchored to the search root (\"src/*.bsl\", \"src/**/*.bsl\", \"**/*.java\", \"**/test_*.py\"). Wildcards: '*' (any characters), '?' (single character), '**' (any number of directory segments). If omitted, all files and directories are matched. Default: \"*\"";
 		properties.put("pattern", patternProp);
 
 		var depthProp = new McpToolCallProperty();

@@ -171,7 +171,9 @@ public class PatternMatcherTest
 	public void testPatternDoesNotMatchLongerPath()
 	{
 		assertFalse(matcher.matches("test.bsl", "test")); //$NON-NLS-1$ //$NON-NLS-2$
-		assertFalse(matcher.matches("src/test.bsl", "test.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+		// A separator-less pattern matches the file name at any depth (gitignore-style),
+		// so "test.bsl" now matches "src/test.bsl".
+		assertTrue(matcher.matches("src/test.bsl", "test.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
 	}
 
 	@Test
@@ -234,7 +236,8 @@ public class PatternMatcherTest
 	@Test
 	public void testRealWorldPatterns()
 	{
-        assertFalse(matcher.matches("src/MainModule.bsl", "*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+        // Separator-less pattern matches the file name at any depth (gitignore-style).
+        assertTrue(matcher.matches("src/MainModule.bsl", "*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
 		assertFalse(matcher.matches("src/MainModule.bsl", "*.java")); //$NON-NLS-1$ //$NON-NLS-2$
 		assertTrue(matcher.matches("src/module/test.bsl", "**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
 		assertFalse(matcher.matches("src/module/test.java", "**/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
@@ -531,6 +534,31 @@ public class PatternMatcherTest
         assertTrue(matcher.matches("Module1.bsl", "{Module,Catalog}[0-9].bsl")); //$NON-NLS-1$ //$NON-NLS-2$
         assertTrue(matcher.matches("Catalog5.bsl", "{Module,Catalog}[0-9].bsl")); //$NON-NLS-1$ //$NON-NLS-2$
         assertFalse(matcher.matches("Other5.bsl", "{Module,Catalog}[0-9].bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    @Test
+    public void testSeparatorlessPatternMatchesNestedFiles()
+    {
+        // Reproduces the reported bug: a separator-less pattern like "*Module*" must find files
+        // in nested folders, not only at the root (real 1C/EDT layout: src/<kind>/<name>/<file>).
+        assertTrue(matcher.matches("ManagerModule.bsl", "*Module*")); //$NON-NLS-1$ //$NON-NLS-2$
+        assertTrue(matcher.matches("CommonModules/ОбщегоНазначения/Module.bsl", "*Module*")); //$NON-NLS-1$ //$NON-NLS-2$
+        assertTrue(matcher.matches("src/Catalogs/Контрагенты/ManagerModule.bsl", "*Module*")); //$NON-NLS-1$ //$NON-NLS-2$
+        assertTrue(matcher.matches("src\\Documents\\ПоступлениеТоваров\\ObjectModule.bsl", "*Module*")); //$NON-NLS-1$ //$NON-NLS-2$
+
+        // The file name still has to contain the pattern.
+        assertFalse(matcher.matches("src/Catalogs/Контрагенты/Контрагенты.mdo", "*Module*")); //$NON-NLS-1$ //$NON-NLS-2$
+        // Only the file name is matched, not the folders, so "Catalogs" in the path is ignored.
+        assertFalse(matcher.matches("src/Catalogs/Контрагенты/Module.bsl", "*Catalogs*")); //$NON-NLS-1$ //$NON-NLS-2$
+
+        // Other separator-less patterns also match at any depth.
+        assertTrue(matcher.matches("src/CommonModules/Служебный/Module.bsl", "*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+        assertTrue(matcher.matches("src/Catalogs/Контрагенты/Контрагенты.mdo", "*.mdo")); //$NON-NLS-1$ //$NON-NLS-2$
+        assertTrue(matcher.matches("src/Catalogs/Контрагенты/Контрагенты.mdo", "Контрагенты.*")); //$NON-NLS-1$ //$NON-NLS-2$
+
+        // A pattern WITH a separator stays anchored - it does not match deeper paths.
+        assertFalse(matcher.matches("src/CommonModules/Служебный/Module.bsl", "src/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
+        assertTrue(matcher.matches("src/Module.bsl", "src/*.bsl")); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     @Test
