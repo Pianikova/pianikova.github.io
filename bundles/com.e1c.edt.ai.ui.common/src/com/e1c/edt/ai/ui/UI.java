@@ -122,7 +122,27 @@ class UI
     @Override
     public synchronized Optional<SourceViewer> getLastSourceViewer()
     {
+            // Resolve the source viewer of the currently active editor at call time. The focus-tracked
+        // lastSourceViewer can get pinned to a stale editor (e.g. after a workspace restore with several
+        // projects, when a FocusIn arrives while the next editor is still materializing), which made all
+        // context-menu actions operate against the first project. Fall back to the tracked field when there
+        // is no active editor or we are off the UI thread (getActivePage() returns empty there).
+        var activeSourceViewer = getActiveSourceViewer();
+        if (activeSourceViewer.isPresent())
+        {
+            return activeSourceViewer;
+        }
+
         return Optional.ofNullable(lastSourceViewer);
+    }
+
+    private Optional<SourceViewer> getActiveSourceViewer()
+    {
+        return getActivePage()
+            .map(IWorkbenchPage::getActiveEditor)
+            .map(editor -> editor.getAdapter(ITextOperationTarget.class))
+            .filter(SourceViewer.class::isInstance)
+            .map(SourceViewer.class::cast);
     }
 
     @Override

@@ -147,8 +147,17 @@ public class CodeTools
 
     private Optional<Content> getContent(SourceViewer sourceViewer)
     {
-        return textWidgetInfoProvider.getLastMouseOffset(sourceViewer.getTextWidget())
-            .map(offset -> contentProvider.get(sourceViewer.getTextWidget(), offset));
+        var textWidget = sourceViewer.getTextWidget();
+        if (textWidget == null || textWidget.isDisposed())
+        {
+            return Optional.empty();
+        }
+
+        // Fall back to the caret offset when no mouse offset was recorded for this widget. The mouse offset
+        // is only tracked for the widget the code-completion view model is active on; right-clicking an editor
+        // that was never focus-tracked would otherwise leave no offset and the action would silently do nothing.
+        var offset = textWidgetInfoProvider.getLastMouseOffset(textWidget).orElseGet(textWidget::getCaretOffset);
+        return Optional.of(contentProvider.get(textWidget, offset));
     }
 
     private Optional<TargetMethod> getTargetMethod(SourceViewer sourceViewer)
