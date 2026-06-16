@@ -645,14 +645,17 @@
     "scope": "edt",
     "category": "edit",
     "title": "Edit Form",
-    "summary": "Show an object requisite on a form: ensure the metadata attribute exists, then add a FormField bound to it (via the version-aware modelFactory).",
+    "summary": "Show an object requisite on a form: ensure the metadata attribute exists, then regenerate the form via formGenerator so the attribute appears as a field.",
     "guide": "workflows/edit/edit_form.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
       "modelManager",
-      "modelFactory",
-      "formFactory"
+      "mdFactory",
+      "formGenerator",
+      "formFieldGenerator",
+      "editingLanguageManager",
+      "fqnGenerator"
     ],
     "keywords": [
       "edit form",

@@ -1,89 +1,77 @@
-## Safe Workflow: Edit an existing Form (add a visible field bound to an attribute)
+## Safe Workflow: Show an object requisite on a form (by regenerating the form)
 
-Loads an existing form structure and adds a **visible input field** bound to a data path, or adds a
-form attribute / group. Use this after `create_object_form`, or to modify any existing form.
+To make a requisite visible on an object form, the reliable approach is **regeneration**: ensure the
+metadata attribute exists, then regenerate the form's default structure with `formGenerator` — the
+regenerated form includes every object attribute as a proper, fully-initialised field. This reuses
+the proven `create_object_form` generation path instead of hand-building a `FormField` (which is
+fragile: fields need version-aware defaults like `userVisible`, the right `ExtInfo`, a valid
+`dataPath`, and unique ids).
 
-### What "вывести реквизит на форму" means (two layers — do both)
+> **Tradeoff:** regeneration **replaces** the form's structure, so any custom layout is lost. Use it
+> for default/auto-generated forms or when "просто покажи реквизит" is acceptable. Do not use it to
+> preserve a hand-customised form.
 
-To **show a catalog/document requisite on the form** you need two things:
-1. the **metadata attribute** must exist on the object (e.g. `Catalog.Номенклатура` must have an
-   attribute `Комментарий`). If it does not, create it first with `edit_catalog`/`edit_document` —
-   a form field can only bind to an existing data path.
-2. a **`FormField`** on the form whose `dataPath` is `<mainAttribute>.<attributeName>` (e.g.
-   `Объект.Комментарий`). This step adds that field.
+### What "вывести реквизит X на форму" means (two layers — do both, in order)
 
-If the user names a requisite that is not yet a metadata attribute, do step 1 first (separate BM
-task via `edit_catalog`), then step 2 here. Never bind a field to a non-existent attribute — it
-fails with `IllegalStateException: Attribute not found`.
+1. The **metadata attribute** X must exist on the object (`CatalogAttribute`/`DocumentAttribute`).
+   If missing, create it first with `edit_catalog`/`edit_document` **in its own BM task**. A form can
+   only show an existing attribute. (A `FormAttribute` is form-local data — NOT the object requisite;
+   never substitute it.)
+2. **Regenerate the form** (this scenario) so the new attribute appears as a field.
 
 ### Hard rules — never violate
 
-- ⛔ **Do NOT add a `FormAttribute` named like the requisite and call it done.** A `FormAttribute` is
-  **form-local data**, not the object's requisite, and it shows **nothing** on the form. "Вывести
-  реквизит X на форму" = a **metadata `CatalogAttribute`/`DocumentAttribute` X** (create with
-  `edit_catalog`/`edit_document` if missing) **plus a `FormField`** bound to `<mainAttribute>.X`.
-  Adding only a form attribute is a **failed** result.
-- ⛔ **Two steps, in order:** (1) ensure the metadata attribute X exists on the object (separate BM
-  task via `edit_catalog`/`edit_document`); (2) add the `FormField` (this scenario). If X is not yet
-  a metadata attribute, do step 1 first — do not substitute a form attribute for it.
-- ⛔ **Load, do not recreate.** Get the form structure via `catalogForm.getForm()` (the loaded
-  `com._1c.g5.v8.dt.form.model.Form`). Never `attachTopObject` the form or the owner again
-  (`BmFqnAlreadyInUseException`). Modifying the loaded `Form` inside the global-context task
-  auto-saves `Form.form` on commit.
-- ⛔ **Create form items with the version-aware `modelFactory`, NOT the bare `FormFactory`.**
-  `modelFactory.create(FormPackage.Literals.FORM_FIELD, form, version)` initialises mandatory
-  defaults (`userVisible`, etc.); `FormFactory.eINSTANCE.createFormField()` does NOT → you get
-  "обязательное свойство 'userVisible'" and similar markers. `version = projectManager.getProject(project).getVersion()`.
-  (`FormFactory.eINSTANCE.createDataPath()` is fine for the data path — it has no such defaults.)
-- ✅ **Unique item id** for every new `FormItem`: `FormIdentifierService.INSTANCE.getNextItemId(form)`.
-- ✅ **Field must have** `type` (`ManagedFormFieldType.INPUT_FIELD`) and a matching `extInfo`
-  created via the same factory: `modelFactory.create(FormPackage.Literals.INPUT_FIELD_EXT_INFO, version)`.
-- ✅ **Bind to an existing data path**; the first segment is the **main attribute** name
-  (`form.getAttributes()` where `isMain()` — usually `Объект`/`Object`), then the attribute name.
-- ✅ **Add to** `form.getItems()` (or a `FormGroup`'s `getItems()`). `form.getGroup()` is a layout
-  enum (`FormChildrenGroup`), NOT a container — do not call `.getItems()` on it.
+- ⛔ **Attribute first.** If X is not yet a `CatalogAttribute`/`DocumentAttribute`, run
+  `edit_catalog`/`edit_document` first (separate task). Regenerating before the attribute exists
+  produces a form without the field.
+- ⛔ **Replace, don't double-attach.** The form structure is a top object at the form's
+  external-property FQN. To regenerate: **detach the old structure** (`transaction.detachTopObject((IBmObject)catalogForm.getForm())`)
+  before attaching the new one, else `attachTopObject` throws `BmFqnAlreadyInUseException`.
+- ⛔ **Detach + regenerate + attach in ONE atomic BM task** (single `globalContext.execute`). Detach
+  is destructive: a detach without a committed re-attach leaves the form with no `Form.form` file
+  (registered but broken). Never split detach and attach across tasks.
+- ⛔ **Regenerate EXACTLY ONCE.** Run the regeneration task a single time. After it commits and
+  `GetMarkers` is clean, **STOP** — do not detach/regenerate again. Repeated regenerations thrash the
+  form resource and, combined with the tool-round limit, can leave it broken.
+- ⛔ **`columnCount` non-null** for OBJECT/FOLDER/CONSTANTS/RECORD/REPORT generator types (e.g. `1`);
+  LIST/CHOICE ignore it (see `create_object_form`).
+- ⚠️ Two `FormType` enums: use the **generator** `com._1c.g5.v8.dt.form.generator.FormType`
+  (`OBJECT` for an item form, `LIST` for a list form).
 
-### Worked example — add field `Комментарий` to Catalog.Номенклатура item form
+### Worked example — show `Производитель` on Catalog.Номенклатура item form
 
-Prerequisite: `Catalog.Номенклатура` already has attribute `Комментарий` (else run `edit_catalog`
+Prerequisite: `Catalog.Номенклатура` already has attribute `Производитель` (else run `edit_catalog`
 first, in its own BM task).
 
 ```java
+import com._1c.g5.v8.dt.form.generator.FormType;
+import com._1c.g5.v8.dt.form.generator.FormFieldInfo;
 import com._1c.g5.v8.dt.form.model.Form;
-import com._1c.g5.v8.dt.form.model.FormField;
-import com._1c.g5.v8.dt.form.model.FormAttribute;
-import com._1c.g5.v8.dt.form.model.DataPath;
-import com._1c.g5.v8.dt.form.model.ManagedFormFieldType;
-import com._1c.g5.v8.dt.form.model.FormFactory;
-import com._1c.g5.v8.dt.form.model.FormPackage;
-import com._1c.g5.v8.dt.form.model.FieldExtInfo;
-import com._1c.g5.v8.dt.form.service.FormIdentifierService;
-import com._1c.g5.v8.dt.core.platform.IV8Project;
-import com._1c.g5.v8.dt.platform.version.Version;
+import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
 import com._1c.g5.v8.dt.metadata.mdclass.CatalogForm;
+import com._1c.g5.v8.dt.metadata.mdclass.AbstractForm;
+import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
+import com._1c.g5.v8.dt.metadata.mdclass.ScriptVariant;
+import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.platform.version.Version;
 
 IProject project = workspaceRoot.getProject("MyProject");
 IV8Project v8project = projectManager.getProject(project);
-Version version = v8project.getVersion();
 IBmModel bmModel = modelManager.getModel(project);
 IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
 
-String result = globalContext.execute(new AbstractBmTask<String>("Add form field") {
+String result = globalContext.execute(new AbstractBmTask<String>("Regenerate form") {
     @Override
     public String execute(IBmTransaction transaction, IProgressMonitor monitor) {
         Catalog owner = (Catalog)transaction.getTopObjectByFqn("Catalog.Номенклатура");
         if (owner == null) {
             throw new IllegalStateException("Missing owner: Catalog.Номенклатура");
         }
-        // metadata attribute must already exist (create via edit_catalog otherwise)
-        boolean attrExists = owner.getAttributes().stream()
-            .anyMatch(a -> "Комментарий".equals(a.getName()));
-        if (!attrExists) {
+        if (owner.getAttributes().stream().noneMatch(a -> "Производитель".equals(a.getName()))) {
             throw new IllegalStateException(
-                "Attribute Catalog.Номенклатура.Комментарий does not exist — create it with edit_catalog first");
+                "Attribute Catalog.Номенклатура.Производитель does not exist — create it with edit_catalog first");
         }
-
         CatalogForm catalogForm = null;
         for (CatalogForm f : owner.getForms()) {
             if ("ФормаЭлемента".equals(f.getName())) { catalogForm = f; break; }
@@ -91,52 +79,41 @@ String result = globalContext.execute(new AbstractBmTask<String>("Add form field
         if (catalogForm == null) {
             throw new IllegalStateException("Form ФормаЭлемента not found; create it with create_object_form");
         }
-        Form form = (Form)catalogForm.getForm();
-        if (form == null) {
-            throw new IllegalStateException("Form structure not loaded; (re)create it with create_object_form");
+
+        // 1) detach the old structure (FQN is already in use)
+        AbstractForm old = catalogForm.getForm();
+        if (old != null) {
+            transaction.detachTopObject((IBmObject)old);
         }
 
-        // main attribute name (Объект/Object) → data path prefix
-        String mainAttr = form.getAttributes().stream()
-            .filter(FormAttribute::isMain).map(FormAttribute::getName).findFirst()
-            .orElseThrow(() -> new IllegalStateException("Form has no main attribute"));
+        // 2) regenerate (same proven path as create_object_form)
+        ScriptVariant scriptVariant = v8project.getScriptVariant();
+        Version version = v8project.getVersion();
+        String languageCode = editingLanguageManager.getEditingLanguageCode(project);
+        FormType genType = FormType.OBJECT;            // item form; use LIST for a list form
+        Integer columnCount = Integer.valueOf(1);      // REQUIRED for OBJECT
+        FormFieldInfo rootField =
+            formFieldGenerator.getFormGeneratorFields(owner, genType, scriptVariant, version);
+        Form form = formGenerator.generateForm(owner, catalogForm, genType, scriptVariant,
+            languageCode, version, rootField, columnCount, null);
 
-        // idempotency: do not add the same field twice
-        boolean fieldExists = form.getItems().stream()
-            .anyMatch(i -> i instanceof FormField && "Комментарий".equals(((FormField)i).getName()));
-        if (fieldExists) {
-            return "field already exists";
-        }
+        // 3) link + attach the regenerated structure
+        form.setMdForm(catalogForm);
+        String formFqn = fqnGenerator.generateExternalPropertyFqn(
+            catalogForm, MdClassPackage.Literals.BASIC_FORM__FORM);
+        transaction.attachTopObject((IBmObject)form, formFqn);
 
-        DataPath dataPath = FormFactory.eINSTANCE.createDataPath();
-        dataPath.getSegments().add(mainAttr);
-        dataPath.getSegments().add("Комментарий");
-
-        // version-aware factory → mandatory defaults (userVisible, …) are initialised
-        FormField field = modelFactory.create(FormPackage.Literals.FORM_FIELD, form, version);
-        field.setId(FormIdentifierService.INSTANCE.getNextItemId(form));
-        field.setName("Комментарий");
-        field.setDataPath(dataPath);
-        field.setType(ManagedFormFieldType.INPUT_FIELD);
-        field.setExtInfo((FieldExtInfo)modelFactory.create(FormPackage.Literals.INPUT_FIELD_EXT_INFO, version));
-        form.getItems().add(field);
-
-        return "added field Комментарий";
+        return catalogForm.getName();
     }
 });
-System.out.println(result);
+System.out.println("Regenerated form: " + result);
 return result;
 ```
-
-> A `FormAttribute` (form-local data) is a different, advanced thing and is **not** how you show an
-> object requisite — do not use it as a shortcut here. The visible control is the `FormField` above,
-> bound to the object's metadata attribute via the main-attribute data path.
 
 ### Required post-check
 
 Call `GetMarkers` (`marker_type:"1c"`) on the owner's `.mdo`
-(`src/Catalogs/<OwnerName>/<OwnerName>.mdo`) and confirm a `<items xsi:type="form:FormField">` with
-your `<dataPath>` segments appears in
-`src/Catalogs/<OwnerName>/Forms/<FormName>/Form.form`. **Success = a FormField bound to the data
-path exists** (and the metadata attribute exists). A run that added only a form attribute, or left
-no FormField in `Form.form`, is **not** done — finish it. Fix only markers relevant to your change.
+(`src/Catalogs/<OwnerName>/<OwnerName>.mdo`) and confirm `Form.form` was rewritten and contains a
+`<items xsi:type="form:FormField">` whose `<dataPath>` ends with the attribute name. Markers must be
+clean. If the field is absent, the metadata attribute was likely missing (step 1) — add it and
+regenerate again.
