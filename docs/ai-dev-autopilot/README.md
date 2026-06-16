@@ -50,7 +50,7 @@ time), and writes the transcript to `outbox/<id>.json` (same `<id>` as the reque
 ```json
 {
   "prompt": "сделай форму элемента для справочника Номенклатура",
-  "project": "Склад",
+  "project": "<ProjectName>",
   "is_chat": true,
   "skill": "custom"
 }
@@ -59,7 +59,7 @@ time), and writes the transcript to `outbox/<id>.json` (same `<id>` as the reque
 | field             | required | meaning                                                                                                                                                                                                             |
 |-------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `prompt`          | yes      | user message sent to the assistant (a new conversation is forced each turn)                                                                                                                                         |
-| `project`         | no       | 1C project name to target; if omitted/not found, a project-less context is used                                                                                                                                     |
+| `project`         | no       | 1C project name to target; if omitted/not found, a project-less context is used. In tests, pass the real project name from your environment; never hard-code README examples or translated guesses. |
 | `is_chat`         | no       | override the conversation `is_chat` flag; omit to use the default (`false`)                                                                                                                                         |
 | `skill`           | no       | override the conversation skill (`custom`/`raw`/`system`/`docstring`/`explain`/`review`/`modify`); omit to use the default (`custom`)                                                                               |
 | `preamble`        | no       | agent preamble prepended to the prompt: omit/`null` → built-in default preamble (drives the model to run JShellManual→JShell→GetMarkers to completion); `""` → bare prompt, no preamble; any string → that preamble |
@@ -78,7 +78,7 @@ filename order.
 {
   "id": "001",
   "prompt": "…",
-  "project": "Склад",
+  "project": "<ProjectName>",
   "final_text": "assistant's final message to the user",
   "tool_calls": [
     { "tool": "jshellmanual", "arguments": "{…}", "result": "{…}", "error": null },
@@ -126,6 +126,42 @@ The scenarios live in
 
 So: edit `.md` / `index.json`, then submit the next prompt — the assistant sees the new content.
 
+### Live resource caveat: `resources/manual` vs `bin/manual`
+
+`resources/manual` is the source-of-truth that should be committed. In a running Eclipse/EDT
+workspace, however, the active bundle may read a copied resource tree under
+`bundles/com.e1c.edt.ai.context/bin/manual/`. If a transcript still shows old `guide_markdown`
+after you edited `resources/manual`, check the live copy:
+
+```
+bundles/com.e1c.edt.ai.context/bin/manual/
+```
+
+For the current no-restart test loop, copy the changed `.md` / `index.json` files from
+`resources/manual` to the matching `bin/manual` path, then submit the next request. Keep the real
+change in `resources/manual`; `bin/manual` is only a runtime mirror for the already-running EDT.
+
+### If `index.json` reloads but the guide body is stale
+
+Sometimes the catalog metadata hot-reloads (new `summary`, `keywords`, `bindings` appear), but the
+Markdown guide body returned by `JShellManual` is still the old content. Verify this with a
+non-mutating request such as:
+
+```json
+{
+  "prompt": "Вызови JShellManual для сценария edit_form и напиши первую строку guide_markdown. Ничего в проекте не меняй.",
+  "project": "<ProjectName>",
+  "is_chat": true,
+  "skill": "custom",
+  "max_tool_rounds": 5
+}
+```
+
+If the guide body is stale, create a new guide file name (for example
+`workflows/edit/edit_form_regenerate.md`) and change the scenario's `guide` field in `index.json`
+to the new path. Then sync `index.json` and the new guide to `bin/manual` if needed. This forces the
+running catalog to read the fresh body without a restart.
+
 > Editing Java (bindings in `MetadataBindingProvider`, the harness itself) **does** require a
 > recompile + restart. Iterate on markdown/JSON, not Java, inside the loop.
 
@@ -146,9 +182,22 @@ Judge each transcript on:
    follow-up `getmarkers` (`marker_type:"1c"`) on the owner `.mdo` (and the artifact) is clean.
 5. **No punting** — the assistant must not finish with "сделайте вручную" / hand-write raw XML
    for something a scenario covers.
+6. **Low-friction execution** — a scenario that eventually succeeds after many wrong JShell
+   attempts still needs improvement. Count `tool_calls`, JShell calls, `compilation_errors`,
+   `runtime_errors`, and duration. Repeated compile/runtime failures mean the guide is still too
+   vague or contains a misleading example.
 
 When a failure mode is found, fix it in the scenario (clearer hard rule, correct factory package,
 required argument, cross-link, keywords) and re-run. Each fix should be small and verifiable.
+
+Suggested quality bands:
+
+| Result                                                    | Interpretation                                                                        |
+|-----------------------------------------------------------|---------------------------------------------------------------------------------------|
+| Pass with no final errors, artifact exists, markers clean | Good baseline                                                                         |
+| Pass but with repeated compile/runtime attempts           | Improve the guide anyway; remove misleading snippets and move exact signatures upward |
+| Empty `final_text` or read-only-only tools                | Preamble/agentic flow or guide first-action problem                                   |
+| Success text but missing file/markers dirty               | Failure; strengthen post-check and completeness guard                                 |
 
 ---
 
@@ -159,6 +208,9 @@ required argument, cross-link, keywords) and re-run. Each fix should be small an
 - Requests run **serially**; do not expect parallelism.
 - Mutating scenarios change the test project (create catalogs/forms/templates). Clean up stray
   artifacts between runs, or target a throwaway configuration project.
+- Repeated tests can leave partially-created/broken artifacts, such as a form metadata object
+  without `Form.form`, a template metadata object without `Template.dcs`/`Template.mxl`, or a child
+  attribute without `TypeDescription`. A good scenario should repair such states idempotently.
 - The harness writes an informational `[dev-autopilot] started …` line to the EDT log on startup.
 
 ---
@@ -212,6 +264,21 @@ Editing the Java `bindings/*.md` text is live too; editing actual Java is NOT (n
 `safe_uuid_assignment`, `typedescription_best_practices`, `child_elements_uuid_importance`,
 `check_1c_markers_after_crud`, `validation_errors`, `edt_validation_traps`, `edt_overview`. When a rule
 is general, put it in/realign with a reference card and link to it rather than copy-pasting.
+
+### Maintenance discipline for external LLMs
+
+When using this README as context for another LLM, instruct it to work in small recursive passes:
+
+1. Pick one narrow surface (for example forms, templates, registers, service objects, or one child
+   object family).
+2. Run one realistic short Russian prompt.
+3. Diagnose the transcript and disk state.
+4. Apply the smallest Markdown/JSON fix.
+5. Re-run with a new id and a fresh prompt/name.
+6. Record a changelog entry before moving to the next surface.
+
+Do not let the LLM "improve everything" by mass-editing manuals without tests. The manuals are
+most valuable when each rule is tied to an observed transcript failure.
 
 ## 10. 1C entity reference (the universe to cover)
 
@@ -286,6 +353,16 @@ automatically; send `"preamble": ""` to test the truly bare prompt.
   `почему документ открывается стандартной формой`, `хочу свою печатную форму у накладной`,
   `добавь скидку в номенклатуру и выведи на форму`.
 
+Add more prompts as you discover weak areas. Include both clean-create and repair-style prompts:
+
+- **Repair:** `у справочника Номенклатура есть форма элемента, но она не открывается`,
+  `макет есть, но файла Template.dcs нет`, `у реквизита Бренд ошибка типа, исправь`,
+  `форма создана, но реквизит не выводится`.
+- **Rare entities:** `создай план обмена ОбменСКассой`, `создай XDTO-пакет Интеграция`,
+  `создай подписку на событие ПередЗаписьюНоменклатуры`, `создай критерий отбора АктивныеТовары`.
+- **Composite:** `создай документ Поступление и регистр Остатки, документ должен делать движения`,
+  `создай журнал документов Продажи и добавь туда РеализацияТоваров`.
+
 ## 12. How to author / improve a scenario guide
 
 Mirror `workflows/create/create_catalog.md` and `create_object_form.md`. A solid guide has:
@@ -312,13 +389,33 @@ Mirror `workflows/create/create_catalog.md` and `create_object_form.md`. A solid
    ones first, resolve reference types via `MdProducedTypesUtil.getProducedType(dep, MdTypePackage.Literals.MD_REF_TYPE)`).
 4. **One worked example** (copy-pasteable, with explicit imports — manual cards do NOT auto-import).
    Prefer small, incremental snippets (one logical step per `JShell` call) to waste fewer tool rounds.
+   Do **not** put dangerous or obsolete anti-patterns in copy-pasteable code fences. If the model
+   repeatedly copies a wrong signature (for example an obsolete `generateForm(..., columnCount, null)`),
+   remove the bad snippet entirely and state the prohibition in prose.
 5. **Idempotency** — check existence before creating; on re-run, continue from existing objects.
+   Include repair behavior for common partial states, not only clean-create behavior.
 6. **Required post-check** — call `GetMarkers` (`marker_type:"1c"`) on the changed top object's `.mdo`
    (derive the path from the FQN; for children/forms/templates use the owner's `.mdo`) and treat
    relevant markers as failure until fixed.
 
 Keep the technical depth in the guide (the user prompt won't have it). Each fix should be small,
 targeted at one observed failure, and re-verified through the loop.
+
+### Changelog template for recursive improvement
+
+Keep a short log next to your notes or in the final response of the external LLM:
+
+```text
+Prompt/id:
+Observed failure:
+Transcript evidence:
+Disk/marker evidence:
+Manual/index change:
+Why this fix is minimal:
+Retest prompt/id:
+Retest result:
+Remaining risk:
+```
 
 ## 13. Editing `index.json` (discoverability)
 
