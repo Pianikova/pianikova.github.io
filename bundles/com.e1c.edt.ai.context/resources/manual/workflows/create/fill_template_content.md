@@ -5,6 +5,17 @@ Run after `create_object_template` (or `create_common_template`).
 
 ### Hard rules — never violate
 
+- ⛔ **NEVER re-create or re-attach the owner or the template.** Both already exist — resolve the
+  owner with `transaction.getTopObjectByFqn(...)` and find the `Template` in `owner.getTemplates()`.
+  Do not call `attachTopObject(owner, …)` (throws `BmFqnAlreadyInUseException`) and do not recreate
+  the template. This step builds the content object, calls `template.setTemplate(content)`, **and
+  attaches the content as a top object** (see next rule).
+- ⛔ **The content MUST be attached as a top object, or it is NOT written to disk.** `setTemplate`
+  alone only updates the in-memory model — the `.dcs`/`.mxl` file is produced only when the content
+  is attached via its external-property FQN:
+  `transaction.attachTopObject((IBmObject)content, fqnGenerator.generateExternalPropertyFqn(template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE))`.
+  This mirrors how a form's structure is persisted (`BASIC_FORM__FORM`). Omitting it is the most
+  common reason the template body never appears on disk.
 - ❌ **Never hand-write template files with the file tools** (`Write`/`Edit` on `*.dcs`, `*.mxl`,
   `Template.mdo`, settings `*.xml`). Hand-written DCS/spreadsheet XML is fragile, version-specific,
   and is not registered with the report/owner model — it produces a broken or unloadable template.
@@ -16,20 +27,22 @@ Run after `create_object_template` (or `create_common_template`).
 - ✅ If the template does not exist yet, run `create_object_template` first; do not create the
   template metadata here.
 
-### How template content is stored
+### How template content is stored (required two steps)
 
 `BasicTemplate.getTemplate()/setTemplate(EObject)` is a transient `@ExternalProperty` reference.
-You create the content model with the matching factory and set it on the template:
+To actually persist the body to disk you must do **both**:
 
 ```java
-template.setTemplate(content);
+template.setTemplate(content);                                  // 1) link content to the template
+String contentFqn = fqnGenerator.generateExternalPropertyFqn(   // 2) attach content as a top object
+    template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);
+transaction.attachTopObject((IBmObject)content, contentFqn);    //    -> EDT writes the .dcs/.mxl file
 ```
 
-EDT persists `content` to a **separate resource file** on commit — there is **no** manual
-"register" call (`IExternalPropertyManager` only resolves owners/references, it does not set
-content). Persistence of external content from a JShell transaction is best-effort: **always**
-verify with `GetMarkers` and by checking the produced file. If the file is not written, report
-"template metadata created; open the template to add content" rather than reporting false success.
+The global editing context auto-saves on commit, but **only attached top objects (and the modified
+owner) are written**. `setTemplate(...)` without `attachTopObject(...)` leaves the content
+in-memory only — no `.dcs`/`.mxl` file. Always verify with `GetMarkers` and by checking the
+produced file on disk.
 
 ### Content factory by TemplateType
 
@@ -45,8 +58,10 @@ and write the body file with the file tools, rather than via these EMF factories
 ### Example — DataCompositionSchema content
 
 ```java
+import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.metadata.mdclass.Template;
 import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;
+import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
 import com._1c.g5.v8.dt.dcs.model.schema.DcsFactory;
 import com._1c.g5.v8.dt.dcs.model.schema.DataCompositionSchema;
 
@@ -75,6 +90,9 @@ String result = globalContext.execute(new AbstractBmTask<String>("Fill template 
         DataCompositionSchema schema = DcsFactory.eINSTANCE.createDataCompositionSchema();
         // add data sources / data sets here as required by the report
         template.setTemplate(schema);
+        String contentFqn = fqnGenerator.generateExternalPropertyFqn(
+            template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);
+        transaction.attachTopObject((IBmObject)schema, contentFqn);   // persists Template.dcs
 
         return template.getName();
     }
@@ -92,6 +110,9 @@ import com._1c.g5.v8.dt.moxel.SpreadsheetDocument;
 // inside the BM task, template.getTemplateType() == TemplateType.SPREADSHEET_DOCUMENT
 SpreadsheetDocument document = MoxelFactory.eINSTANCE.createSpreadsheetDocument();
 template.setTemplate(document);   // an empty spreadsheet is a valid blank template
+String contentFqn = fqnGenerator.generateExternalPropertyFqn(
+    template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);
+transaction.attachTopObject((IBmObject)document, contentFqn);   // persists Template.mxl
 ```
 
 ### Required post-check
@@ -101,7 +122,7 @@ was written, e.g.:
 
 ```
 src/Reports/SalesAnalysis/Templates/ОсновнаяСхемаКомпоновкиДанных/Template.dcs   (DCS)
-src/Catalogs/Products/Templates/ПечатнаяФорма/Template.mxl                       (spreadsheet)
+src/Catalogs/Products/Templates/ПечатнаяФорма/Template.mxlx                      (spreadsheet)
 ```
 
 If the file is missing or markers appear, the template metadata still exists — report that and

@@ -645,11 +645,13 @@
     "scope": "edt",
     "category": "edit",
     "title": "Edit Form",
-    "summary": "Load an existing form structure and add attributes/fields/groups with formFactory.",
+    "summary": "Show an object requisite on a form: ensure the metadata attribute exists, then add a FormField bound to it (via the version-aware modelFactory).",
     "guide": "workflows/edit/edit_form.md",
     "bindings": [
       "workspaceRoot",
+      "projectManager",
       "modelManager",
+      "modelFactory",
       "formFactory"
     ],
     "keywords": [
@@ -659,6 +661,7 @@
       "form group",
       "изменить форму",
       "добавить поле на форму",
+      "вывести реквизит на форму",
       "реквизит формы"
     ]
   },
@@ -672,7 +675,10 @@
     "bindings": [
       "workspaceRoot",
       "modelManager",
-      "mdFactory"
+      "mdFactory",
+      "fqnGenerator",
+      "dcsFactory",
+      "moxelFactory"
     ],
     "keywords": [
       "template",
@@ -696,6 +702,7 @@
     "bindings": [
       "workspaceRoot",
       "modelManager",
+      "fqnGenerator",
       "dcsFactory",
       "moxelFactory"
     ],
