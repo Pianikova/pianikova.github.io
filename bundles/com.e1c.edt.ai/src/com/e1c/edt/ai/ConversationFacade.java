@@ -77,12 +77,16 @@ public class ConversationFacade
         boolean isNewConversation = request.isForceNewConversation() || request.getConversationSession() == null
             || request.getConversationSession().isNewConversation();
 
-        var conversationFuture = isNewConversation ? createConversationAsync(request.getProjectId(), cancellationToken)
+        var conversationFuture = isNewConversation ? createConversationAsync(request, cancellationToken)
             : CompletableFuture.completedFuture(request.getConversationSession().getConversationId());
         return conversationFuture.thenCompose(conversationId -> {
             var parentUuid = isNewConversation ? null : request.getConversationSession().getReplyToMessageUuid();
 
             ConversationAskRequest askRequest = createAskRequest(request.getMessage(), parentUuid);
+            if (request.getMaxToolRounds() != null)
+            {
+                askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
+            }
             return collectAssistantResult(request.getProjectId(), conversationId, askRequest, cancellationToken);
         });
     }
@@ -98,20 +102,23 @@ public class ConversationFacade
      * @param cancellationToken токен для отмены операции
      * @return {@link CompletableFuture} с UUID созданного диалога
      */
-    private CompletableFuture<String> createConversationAsync(ProjectId projectId, ICancellationToken cancellationToken)
+    private CompletableFuture<String> createConversationAsync(SendUserMessageRequest request,
+        ICancellationToken cancellationToken)
     {
         if (cancellationToken.isCanceled())
         {
             return CompletableFuture.failedFuture(new CancellationException("Cancelled")); //$NON-NLS-1$
         }
         ConversationRequest conversationRequest = new ConversationRequest();
-        conversationRequest.skillName = "custom"; //$NON-NLS-1$
+        conversationRequest.skillName = request.getSkillName() != null ? request.getSkillName() : "custom"; //$NON-NLS-1$
         conversationRequest.uiLanguage = settings.getLanguage();
         conversationRequest.programmingLanguage = "1c"; //$NON-NLS-1$
-        conversationRequest.isChat = false; /* иначе отображается в списке чатов */
+        // Default false so dev/helper conversations are not listed as chats; the dev-autopilot
+        // may override this to mirror the interactive chat (is_chat=true).
+        conversationRequest.isChat = request.getChat() != null ? request.getChat().booleanValue() : false;
         conversationRequest.scriptLanguage = settings.getLanguage();
 
-        return conversations.createConversationAsync(projectId, conversationRequest, cancellationToken)
+        return conversations.createConversationAsync(request.getProjectId(), conversationRequest, cancellationToken)
             .thenCompose(optionalResponse -> {
                 if (optionalResponse.isEmpty() || optionalResponse.get().uuid == null
                     || optionalResponse.get().uuid.isBlank())

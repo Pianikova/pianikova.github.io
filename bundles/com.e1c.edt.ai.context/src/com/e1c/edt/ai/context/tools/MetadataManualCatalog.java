@@ -42,20 +42,56 @@ public class MetadataManualCatalog
 
     private final ManualResourceLoader loader = new ManualResourceLoader(MetadataManualCatalog.class, "/manual"); //$NON-NLS-1$
     private final IJson json;
-    private final List<JShellManualEntry> entries;
+    private volatile List<JShellManualEntry> entries;
+    private volatile long indexMtime;
 
     @Inject
     public MetadataManualCatalog(IJson json)
     {
         Preconditions.checkNotNull(json);
         this.json = json;
-        this.entries = loadEntries();
+        reload();
     }
 
+    /**
+     * Returns the manual entries, hot-reloading {@code index.json} when its underlying file
+     * changed since the last load. In a packaged (jarred) bundle the modification time is
+     * unavailable, so the entries are loaded once and cached (production behaviour). In a
+     * self-hosted/dev launch the index resolves to a file, so edits are picked up without an
+     * EDT restart. Guide markdown bodies are always read lazily and are already live.
+     */
     @Override
-    public Collection<JShellManualEntry> getManualEntries()
+    public synchronized Collection<JShellManualEntry> getManualEntries()
     {
+        long current = currentIndexMtime();
+        if (entries == null || (current > 0 && current != indexMtime))
+        {
+            reload();
+        }
         return Collections.unmodifiableList(entries);
+    }
+
+    private void reload()
+    {
+        this.entries = loadEntries();
+        this.indexMtime = currentIndexMtime();
+    }
+
+    private long currentIndexMtime()
+    {
+        try
+        {
+            var url = MetadataManualCatalog.class.getResource(INDEX_RESOURCE);
+            if (url == null)
+            {
+                return 0L;
+            }
+            return url.openConnection().getLastModified();
+        }
+        catch (Exception e)
+        {
+            return 0L;
+        }
     }
 
     private List<JShellManualEntry> loadEntries()

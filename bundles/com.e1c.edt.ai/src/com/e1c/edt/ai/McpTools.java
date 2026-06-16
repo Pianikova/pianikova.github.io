@@ -35,23 +35,26 @@ public class McpTools
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IJson json;
+    private final IDevToolCallRecorder devRecorder;
     private final Cache<String, List<McpToolCallSpecification>> specsCache =
         CacheBuilder.newBuilder().maximumSize(1).expireAfterWrite(1, TimeUnit.HOURS).build();
 
     @Inject
     public McpTools(ILog log, ISettings settings, Set<IMcpTool> tools, IMcpToolsCallMessageFactory messageFactory,
-        IJson json)
+        IJson json, IDevToolCallRecorder devRecorder)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(json);
+        Preconditions.checkNotNull(devRecorder);
 
         this.log = log;
         this.settings = settings;
         this.messageFactory = messageFactory;
         this.json = json;
+        this.devRecorder = devRecorder;
 
         if (!settings.isExperimental())
         {
@@ -182,11 +185,15 @@ public class McpTools
                         .thenApply(response -> {
                             log.trace(TracingSources.TOOLS, "McpTools",
                                 () -> "Tool response: " + toolName + ", result: " + json.serialize(response));
+                            devRecorder.recordCall(toolName, json.serialize(call.function.arguments),
+                                response != null ? response.content : null, null);
                             return response;
                         })
                         .exceptionally(error -> {
                             log.trace(TracingSources.TOOLS, "McpTools",
                                 () -> "Tool exception: " + toolName + ", error: " + error.toString());
+                            devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null,
+                                error.toString());
                             log.warning("AI Tool failed", () -> {
                                 var message = new StringBuilder();
                                 message.append(error.toString());

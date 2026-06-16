@@ -27,4 +27,10 @@ public class ConversationAskRequest
      * </ul>
      */
     public JsonElement content;
+
+    /**
+     * Максимальное число раундов выполнения инструментов для этого запроса. Клиентское поле
+     * (не отправляется на сервер). {@code 0} — использовать значение по умолчанию.
+     */
+    public transient int maxToolRounds;
 }

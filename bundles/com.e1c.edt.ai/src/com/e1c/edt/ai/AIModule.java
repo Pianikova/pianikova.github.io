@@ -57,6 +57,8 @@ public class AIModule
         bind(ITraceScenario.class).to(TraceScenario.class).in(Singleton.class);
         bind(IConversationFacade.class).to(ConversationFacade.class).in(Singleton.class);
         bind(RegexTemplateProcessor.class).in(Singleton.class);
+        bind(IDevToolCallRecorder.class).to(DevToolCallRecorder.class).in(Singleton.class);
+        bind(IDevAutopilot.class).to(DevAutopilot.class).in(Singleton.class);
         // @formatter:on
     }
 }
