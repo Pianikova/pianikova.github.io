@@ -126,4 +126,6 @@ src/Catalogs/Products/Templates/ПечатнаяФорма/Template.mxlx        
 ```
 
 If the file is missing or markers appear, the template metadata still exists — report that and
-advise filling the body in the template editor. Do not loop retrying `setTemplate(...)`.
+rerun this scenario only after fixing the concrete JShell/API error that prevented
+`attachTopObject(...)` from committing. Do not tell the user to fill the body manually for
+`DATA_COMPOSITION_SCHEMA` or `SPREADSHEET_DOCUMENT`; those content types are covered here.

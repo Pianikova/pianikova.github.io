@@ -107,7 +107,14 @@
     "keywords": [
       "tabular section",
       "document tabular section",
-      "catalog tabular section"
+      "catalog tabular section",
+      "табличная часть",
+      "табличную часть",
+      "табличной частью",
+      "ТЧ",
+      "строки документа",
+      "товары документа",
+      "реквизиты табличной части"
     ]
   },
   {
@@ -182,7 +189,15 @@
     "keywords": [
       "accumulation register",
       "register",
-      "create register"
+      "create register",
+      "регистр накопления",
+      "создай регистр накопления",
+      "остатки",
+      "обороты",
+      "измерение",
+      "ресурс",
+      "регистр с измерением",
+      "регистр с ресурсом"
     ]
   },
   {
@@ -202,7 +217,14 @@
       "attribute",
       "catalog attribute",
       "document attribute",
-      "register attribute"
+      "register attribute",
+      "реквизит",
+      "добавить реквизит",
+      "добавь реквизит",
+      "реквизит справочника",
+      "реквизит документа",
+      "реквизит регистра",
+      "поле объекта"
     ]
   },
   {
@@ -305,7 +327,13 @@
     "keywords": [
       "catalog",
       "create catalog",
-      "metadata object"
+      "metadata object",
+      "справочник",
+      "создай справочник",
+      "создать справочник",
+      "иерархический справочник",
+      "справочник с реквизитом",
+      "справочник со ссылкой"
     ]
   },
   {
@@ -614,7 +642,7 @@
     "category": "create",
     "title": "Create Object Form",
     "summary": "Create a form owned by a metadata object (CatalogForm/DocumentForm/...), generate its default structure, and persist it as an external .form resource.",
-    "guide": "workflows/create/create_object_form.md",
+    "guide": "workflows/create/create_object_form_generate.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -635,9 +663,14 @@
       "форма",
       "форма элемента",
       "форма списка",
-      "создать форму",
+      "форма объекта",
       "форма справочника",
-      "форма документа"
+      "форма документа",
+      "нет формы",
+      "сделай форму",
+      "добавь форму",
+      "создать форму",
+      "создай форму"
     ]
   },
   {
@@ -645,8 +678,8 @@
     "scope": "edt",
     "category": "edit",
     "title": "Edit Form",
-    "summary": "Show an object requisite on a form: ensure the metadata attribute exists, then regenerate the form via formGenerator so the attribute appears as a field.",
-    "guide": "workflows/edit/edit_form.md",
+    "summary": "Show an object requisite on a form: ensure the metadata attribute exists, then regenerate via formGenerator.generateForm(..., columnCount) with exactly 8 arguments.",
+    "guide": "workflows/edit/edit_form_regenerate.md",
     "bindings": [
       "workspaceRoot",
       "projectManager",
@@ -689,7 +722,12 @@
       "макет",
       "макет объекта",
       "создать макет",
+      "создай макет",
       "печатная форма",
+      "печатную форму",
+      "форма печати",
+      "ценник",
+      "Ценник",
       "табличный документ",
       "СКД",
       "схема компоновки данных"
@@ -716,6 +754,10 @@
       "fill template",
       "содержимое макета",
       "заполнить макет",
+      "заполни макет",
+      "добавить схему компоновки данных",
+      "добавь схему компоновки данных",
+      "макет СКД",
       "табличный документ",
       "СКД",
       "схема компоновки данных"
@@ -867,7 +909,15 @@
     ],
     "keywords": [
       "document",
-      "create document"
+      "create document",
+      "документ",
+      "создай документ",
+      "создать документ",
+      "документ с табличной частью",
+      "накладная",
+      "заказ",
+      "реализация",
+      "поступление"
     ]
   },
   {
@@ -1125,7 +1175,14 @@
     "keywords": [
       "http service",
       "rest",
-      "url template"
+      "url template",
+      "HTTP-сервис",
+      "HTTP сервис",
+      "создай HTTP-сервис",
+      "создать HTTP-сервис",
+      "эндпоинт",
+      "метод HTTP",
+      "URL шаблон"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1157,7 +1214,13 @@
     "keywords": [
       "information register",
       "register",
-      "create information register"
+      "create information register",
+      "регистр сведений",
+      "создай регистр сведений",
+      "периодический регистр",
+      "срез последних",
+      "измерение",
+      "ресурс"
     ]
   },
   {
@@ -1602,7 +1665,12 @@
     "keywords": [
       "web service",
       "soap",
-      "operation"
+      "operation",
+      "web-сервис",
+      "web сервис",
+      "веб-сервис",
+      "SOAP",
+      "операция web-сервиса"
     ],
     "template": "top-level-create",
     "vars": {

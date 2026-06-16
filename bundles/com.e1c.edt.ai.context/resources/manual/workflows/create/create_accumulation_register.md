@@ -2,6 +2,13 @@
 
 Call `JShell` with `scope: "edt"` for this workflow.
 
+Before coding, load `jshell_edt_canonical_imports` or copy its exact imports. In particular:
+`TypeDescriptionBuilder` is `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`;
+`IEObjectProvider` / `IEObjectTypeNames` are in `com._1c.g5.v8.dt.platform`;
+`IV8Project` is in `com._1c.g5.v8.dt.core.platform`; `IBmModel` is in
+`com._1c.g5.v8.bm.integration`. Do not try nearby `dt.mcore.*`, `dt.core.project.*`, or
+`dt.bm.model.*` packages.
+
 ### ⚠️ Resolving concrete `CatalogRef.X` / `DocumentRef.X` dimensions
 
 If a dimension or resource must reference a specific catalog/document (e.g.

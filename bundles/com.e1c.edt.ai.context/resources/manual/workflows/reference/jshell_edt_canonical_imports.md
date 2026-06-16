@@ -82,13 +82,22 @@ simple name `Enum`, because it conflicts with `java.lang.Enum` in JShell.
 - `com._1c.g5.v8.bm.integration.IProgressMonitor` is wrong. Use `org.eclipse.core.runtime.IProgressMonitor`.
 - `com._1c.g5.v8.dt.mcore.IEObjectProvider` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectProvider`.
 - `com._1c.g5.v8.dt.mcore.IEObjectTypeNames` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectTypeNames`.
+- `com._1c.g5.v8.dt.mcore.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
 - `com._1c.g5.v8.dt.metadata.md.IEObjectTypeNames` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectTypeNames`.
 - `com._1c.g5.v8.dt.md.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
 - `com._1c.g5.v8.dt.metadata.mdtype.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
 - `MdProducedTypesUtil` is not in the default package. Import `com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil` or use that FQN.
 - `MdTypePackage` is not in the default package. Import `com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage` or use that FQN.
 - `com._1c.g5.v8.dt.core.IV8Project` is wrong. Use `com._1c.g5.v8.dt.core.platform.IV8Project`.
+- `com._1c.g5.v8.dt.core.project.IV8Project` is wrong. Use `com._1c.g5.v8.dt.core.platform.IV8Project`.
 - `com._1c.g5.v8.dt.core.IV8ProjectManager` is wrong. Use `com._1c.g5.v8.dt.core.platform.IV8ProjectManager`.
+- `com._1c.g5.v8.dt.core.model.IBmModel` is wrong. Use `com._1c.g5.v8.bm.integration.IBmModel`.
+- `com._1c.g5.v8.dt.bm.model.IBmModel` is wrong. Use `com._1c.g5.v8.bm.integration.IBmModel`.
+- `com._1c.g5.v8.dt.bm.model.IBmGlobalEditingContext` is wrong. Use `com._1c.g5.v8.bm.integration.IBmGlobalEditingContext`.
+- `com._1c.g5.v8.bm.model.IBmModel` is wrong. Use `com._1c.g5.v8.bm.integration.IBmModel`.
+- `com._1c.g5.v8.bm.model.IBmGlobalEditingContext` is wrong. Use `com._1c.g5.v8.bm.integration.IBmGlobalEditingContext`.
+- `com._1c.g5.v8.dt.form.model.FormType` is wrong for generation. Use `com._1c.g5.v8.dt.form.generator.FormType`.
+- `com._1c.g5.v8.dt.form.model.FormDataPath` is not the route for object attributes. Do not hand-build data paths for "show object attribute on form"; use `formGenerator.generateForm(...)`.
 
 ## Persistent JShell Scope
 

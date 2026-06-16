@@ -14,16 +14,39 @@ fragile: fields need version-aware defaults like `userVisible`, the right `ExtIn
 ### What "вывести реквизит X на форму" means (two layers — do both, in order)
 
 1. The **metadata attribute** X must exist on the object (`CatalogAttribute`/`DocumentAttribute`).
-   If missing, create it first with `edit_catalog`/`edit_document` **in its own BM task**. A form can
-   only show an existing attribute. (A `FormAttribute` is form-local data — NOT the object requisite;
-   never substitute it.)
+   If missing, create it first with `create_attribute_for_entity` or the Step A snippet below **in
+   its own BM task**. A form can only show an existing object attribute. A `FormAttribute` is
+   form-local data — NOT the object requisite; never substitute it.
 2. **Regenerate the form** (this scenario) so the new attribute appears as a field.
+
+For combined prompts like "добавь на форму элемента справочника Номенклатура реквизит Бренд",
+execute exactly this sequence:
+
+1. Check `Catalog.Номенклатура.getAttributes()`; if `Бренд` is absent, create `CatalogAttribute`
+   with a non-empty `TypeDescription`.
+2. Find existing `ФормаЭлемента`; if it exists, regenerate it once. Do not call
+   `create_object_form` and do not create another `CatalogForm`.
+3. If `ФормаЭлемента` is missing, run the full `create_object_form` workflow. Never create only
+   the `CatalogForm` metadata.
 
 ### Hard rules — never violate
 
 - ⛔ **Attribute first.** If X is not yet a `CatalogAttribute`/`DocumentAttribute`, run
-  `edit_catalog`/`edit_document` first (separate task). Regenerating before the attribute exists
-  produces a form without the field.
+  `create_attribute_for_entity` (or the object-specific edit workflow) first in a separate BM task.
+  Regenerating before the attribute exists produces a form without the field. Do not retry
+  regeneration when the runtime error says "реквизит ... не найден" — switch to the attribute
+  scenario, create the metadata attribute, then return here.
+- ❌ **Do not hand-build form fields for object attributes.** Avoid direct `FormAttribute`,
+  `DataPath`, `FormField`, `setSegments(...)`, `setDataPath(...)`, `setAutoMarkIncomplete(...)`,
+  `setAutoMaxWidth(...)`, `FormField.ViewMode`, `FormField.EditMode`, `form.model.FormType`, or
+  boolean `setUserVisible(...)` code for this task. Those APIs are version-sensitive and caused
+  repeated JShell compile failures. Use `formGenerator.generateForm(...)` once instead.
+- ⚠️ `catalogForm.getForm()` returns `AbstractForm`, not `com._1c.g5.v8.dt.form.model.Form`.
+  Store the old value as `AbstractForm old = catalogForm.getForm();` only for detach. The new
+  generated value is `Form form = formGenerator.generateForm(...)`.
+- ⛔ **Existing form means regenerate, not create.** If `owner.getForms()` already contains
+  `ФормаЭлемента`, do not switch to `create_object_form` and do not throw "form already exists" as
+  a final answer. Continue with the regeneration task below.
 - ⛔ **Replace, don't double-attach.** The form structure is a top object at the form's
   external-property FQN. To regenerate: **detach the old structure** (`transaction.detachTopObject((IBmObject)catalogForm.getForm())`)
   before attaching the new one, else `attachTopObject` throws `BmFqnAlreadyInUseException`.
@@ -38,10 +61,68 @@ fragile: fields need version-aware defaults like `userVisible`, the right `ExtIn
 - ⚠️ Two `FormType` enums: use the **generator** `com._1c.g5.v8.dt.form.generator.FormType`
   (`OBJECT` for an item form, `LIST` for a list form).
 
-### Worked example — show `Производитель` on Catalog.Номенклатура item form
+### Step A example — create missing object attribute first
 
-Prerequisite: `Catalog.Номенклатура` already has attribute `Производитель` (else run `edit_catalog`
-first, in its own BM task).
+Run this only if the object attribute is absent. This creates a normal string
+`CatalogAttribute`; adjust the type if the user requested a reference or number.
+
+```java
+import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.mcore.McorePackage;
+import com._1c.g5.v8.dt.mcore.TypeDescription;
+import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.platform.IEObjectProvider;
+import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
+import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
+import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
+import com._1c.g5.v8.dt.metadata.mdclass.CatalogAttribute;
+
+IProject project = workspaceRoot.getProject("MyProject");
+IV8Project v8project = projectManager.getProject(project);
+IBmModel bmModel = modelManager.getModel(project);
+IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
+
+String attrResult = globalContext.execute(new AbstractBmTask<String>("Ensure catalog attribute") {
+    @Override
+    public String execute(IBmTransaction transaction, IProgressMonitor monitor) {
+        Catalog owner = (Catalog)transaction.getTopObjectByFqn("Catalog.Номенклатура");
+        if (owner == null) {
+            throw new IllegalStateException("Missing owner: Catalog.Номенклатура");
+        }
+        for (CatalogAttribute existing : owner.getAttributes()) {
+            if ("Бренд".equals(existing.getName())) {
+                return "Attribute already exists: Бренд";
+            }
+        }
+        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
+            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
+        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
+        if (stringType == null) {
+            stringType = (TypeItem)typeProvider.createProxy(IEObjectTypeNames.STRING);
+        }
+        if (stringType == null) {
+            throw new IllegalStateException("Cannot resolve primitive type: STRING");
+        }
+        TypeDescription type = new TypeDescriptionBuilder()
+            .addType(stringType)
+            .setStringQualifiers(100, false)
+            .build();
+
+        CatalogAttribute attr = mdFactory.createCatalogAttribute();
+        attr.setName("Бренд");
+        attr.setUuid(UUID.randomUUID());
+        attr.setType(type);
+        owner.getAttributes().add(attr);
+        return "Created attribute: Бренд";
+    }
+});
+System.out.println(attrResult);
+```
+
+### Step B example — show `Производитель` on Catalog.Номенклатура item form
+
+Prerequisite: `Catalog.Номенклатура` already has attribute `Производитель` (else run
+`create_attribute_for_entity` or Step A first, in its own BM task).
 
 ```java
 import com._1c.g5.v8.dt.form.generator.FormType;
@@ -95,7 +176,7 @@ String result = globalContext.execute(new AbstractBmTask<String>("Regenerate for
         FormFieldInfo rootField =
             formFieldGenerator.getFormGeneratorFields(owner, genType, scriptVariant, version);
         Form form = formGenerator.generateForm(owner, catalogForm, genType, scriptVariant,
-            languageCode, version, rootField, columnCount, null);
+            languageCode, version, rootField, columnCount);
 
         // 3) link + attach the regenerated structure
         form.setMdForm(catalogForm);

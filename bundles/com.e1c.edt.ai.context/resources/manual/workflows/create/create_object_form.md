@@ -34,7 +34,8 @@ structure** with `formGenerator`, links it back to the metadata, and persists it
   inside the generator — passing `null` causes a `NullPointerException` deep in
   `FormGenerator`/`ItemFormContainGenerator` (empty `runtime_errors` is **not** guaranteed; it is a
   real NPE). Pass a concrete value, e.g. `1`. Only `LIST`/`CHOICE`/`FOLDER_CHOICE`/`RECORD_SET`
-  ignore `columnCount` (there you may pass `null`). `interfaceCompatibilityMode` may be `null`.
+  ignore `columnCount` (there you may pass `null`). In this EDT build the method has 8 arguments
+  and ends with `columnCount`; do not pass a ninth `interfaceCompatibilityMode` argument.
 
 ### Choosing the form factory method and generator FormType
 
@@ -96,7 +97,7 @@ String formName = globalContext.execute(new AbstractBmTask<String>("Create objec
         FormFieldInfo rootField =
             formFieldGenerator.getFormGeneratorFields(owner, genType, scriptVariant, version);
         Form form = formGenerator.generateForm(owner, catalogForm, genType, scriptVariant,
-            languageCode, version, rootField, columnCount, null);   // last arg = interfaceCompatibilityMode (nullable)
+            languageCode, version, rootField, columnCount);
 
         // STEP 3 (required) — link + persist the structure as an external resource
         form.setMdForm(catalogForm);
