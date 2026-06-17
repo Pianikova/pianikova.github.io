@@ -58,81 +58,6 @@ public class GetMarkersMcpTool implements IMcpTool
         + "  \"max_count\": 3,\n"
         + "  \"marker_type\": \"ai_marker\"\n"
         + "}";
-
-    @SuppressWarnings("nls")
-    private static String AnswerExample =
-        "{\n"
-        + "  \"markers\": [\n"
-        + "    {\n"
-        + "    \"path\": \"C:/Projects/MyProject/MyProject/CommonModules/AIModule/Module.bsl\",\n"
-        + "    \"start_line\": 45,\n"
-        + "    \"message\": \"AI error (AIError)\",\n"
-        + "    \"type\": \"ai_marker\",\n"
-        + "    \"severity\": \"error\",\n"
-        + "    \"priority\": \"high\",\n"
-        + "    \"marker_highlighted_text\": \"calculateTotal(items)\"\n"
-        + "    },\n"
-        + "    {\n"
-        + "    \"id\": 1001,\n"
-        + "    \"path\": \"C:/Projects/MyProject/MyProject/Forms/MyForm/Module.bsl\",\n"
-        + "    \"start_line\": 5,\n"
-        + "    \"message\": \"Syntax error: missing semicolon\",\n"
-        + "    \"type\": \"problem\",\n"
-        + "    \"severity\": \"error\",\n"
-        + "    \"priority\": \"high\",\n"
-        + "    \"marker_highlighted_text\": \"a = 1 / 0;\"\n"
-        + "    },\n"
-        + "    {\n"
-        + "    \"id\": 4001,\n"
-        + "    \"path\": \"C:/Projects/MyProject/MyProject/CommonModules/AIModule/Module.bsl\",\n"
-        + "    \"start_line\": 30,\n"
-        + "    \"message\": \"AI warning (AIWarning)\",\n"
-        + "    \"type\": \"ai_marker\",\n"
-        + "    \"severity\": \"warning\",\n"
-        + "    \"priority\": \"high\",\n"
-        + "    \"marker_highlighted_text\": \"calculateTotal(items)\"\n"
-        + "    }\n"
-        + "  ],\n"
-        + "  \"total_markers\": 5\n"
-        + "}";
-
-    @SuppressWarnings("nls")
-    private static String QuestionExampleWithPath =
-        "{\n"
-        + "  \"project_name\": \"MyProject\",\n"
-        + "  \"path\": \"src/MyModule/Module.bsl\",\n"
-        + "  \"max_count\": 5\n"
-        + "}";
-
-    @SuppressWarnings("nls")
-    private static String AnswerExampleWithPath =
-        "{\n"
-        + "  \"markers\": [\n"
-        + "    {\n"
-        + "    \"id\": 1001,\n"
-        + "    \"path\": \"C:/Projects/MyProject/MyProject/src/MyModule/Module.bsl\",\n"
-        + "    \"start_line\": 5,\n"
-        + "    \"message\": \"Syntax error: missing semicolon\",\n"
-        + "    \"type\": \"problem\",\n"
-        + "    \"severity\": \"error\",\n"
-        + "    \"priority\": \"high\",\n"
-        + "    \"location\": \"line: 5 /MyProject/src/MyModule/Module.bsl\",\n"
-        + "    \"marker_highlighted_text\": \"a = 1 / 0;\"\n"
-        + "    },\n"
-        + "    {\n"
-        + "    \"id\": 4002,\n"
-        + "    \"path\": \"C:/Projects/MyProject/MyProject/src/MyModule/Module.bsl\",\n"
-        + "    \"start_line\": 15,\n"
-        + "    \"message\": \"Variable 'x' is never used\",\n"
-        + "    \"type\": \"problem\",\n"
-        + "    \"severity\": \"warning\",\n"
-        + "    \"priority\": \"normal\",\n"
-        + "    \"location\": \"line: 15 /MyProject/src/MyModule/Module.bsl\",\n"
-        + "    \"marker_highlighted_text\": \"var x = 10;\"\n"
-        + "    }\n"
-        + "  ],\n"
-        + "  \"total_markers\": 2\n"
-        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -455,57 +380,7 @@ public class GetMarkersMcpTool implements IMcpTool
         }
         description.append("\n- ai_marker includes AI marker types: AIError, AIWarning, AIInfo.");
 
-        description.append("\n\nResponse contains:");
-        description.append("\n- markers: Array of marker objects");
-        description.append("\n  - id: Unique marker identifier (long number)");
-        description.append("\n  - absolute_path: Absolute file system path (OS-dependent format)");
-        description.append("\n  - relative_path: Project-relative path");
-        description.append(
-            "\n  - start_line: Line number (-1 if unknown). An integer value indicating the line number for a marker. It is 1-relative.");
-        description.append("\n  - message: Marker description");
-        description.append("\n  - type: Marker type (");
-        boolean first = true;
-        for (var type : MarkerType.values())
-        {
-            if (!first)
-            {
-                description.append(", ");
-            }
-            description.append(type.getDisplayName());
-            first = false;
-        }
-        description.append(")");
-        description.append("\n  - severity: For problems and AI markers (error, warning, info)");
-        description.append("\n  - priority: For problems, tasks and AI markers (high, normal, low)");
-        description.append("\n  - done: For bookmarks and tasks (true/false)");
-        description.append(
-            "\n  - location: Human-readable location string. The location is a human-readable (localized) string which can be used to distinguish between markers on a resource. As such it should be concise and aimed at users.");
-        description
-            .append(
-                "\n  - marker_highlighted_text: Code fragment associated with the marker (substring of the file at the marker's position)");
-        description.append("\n  - source_id: Source identifier for bookmarks");
-        description.append("\n- total_markers: Total number of markers available");
-        description.append(
-            "\n- markers_incomplete: true if background 1C validation did not finish within the timeout, so the marker list may be partial and more markers may appear later. When true, do not report success on an empty or clean result; call GetMarkers again to re-check.");
-        description.append("\n\nExample request:");
-        description.append("\n").append(QuestionExample);
-        description.append("\nExample response:");
-        description.append("\n").append(AnswerExample);
-        description.append("\n\nExample request with path parameter:");
-        description.append("\n").append(QuestionExampleWithPath);
-        description.append("\nExample response with path parameter:");
-        description.append("\n").append(AnswerExampleWithPath);
-        description.append("\n\nNote: If not all markers are returned, the response markdown will include:");
-        description.append("\n- Total marker count");
-        description.append("\n- Number of remaining markers");
-        description.append("\n- Pagination suggestion with example request to retrieve remaining markers");
-        description.append("\n\nExample of pagination response markdown:");
-        description.append("\n```\n**5** markers loaded (**10** total)\n");
-        description.append("\n**Additional markers available:** 5 more marker(s) not shown.\n");
-        description.append("\nTo retrieve remaining markers, use pagination:\n");
-        description.append("- Set `first_index`: 5\n");
-        description.append("- Keep or adjust `max_count`: 5\n");
-        description.append("\n**Example:**```json\n{\n  \"project_name\": \"MyProject\",\n  \"first_index\": 5,\n  \"max_count\": 5,\n  \"marker_type\": \"ai_marker\"\n}```\n```");
+        description.append("\n\nResponse: JSON with `markers` (each marker: id, absolute_path, relative_path, start_line, message, type, severity (error/warning/info), priority (high/normal/low), location, marker_highlighted_text, source_id), `total_markers`, `markers_incomplete`, and `required_next_step`. When results are truncated the response shows the total and a pagination hint.");
 
         spec.function.description = description.toString();
 

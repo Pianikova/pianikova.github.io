@@ -59,25 +59,6 @@ public class GlobMcpTool
             + "}\n\n" + "// Find all Java files in any subdirectory:\n" + "{\n" + "  \"pattern\": \"**/*.java\"\n"
 		+ "}";
 
-	@SuppressWarnings("nls")
-	private static String AnswerExample =
-		"{\n"
-		+ "  \"tree\": \"Documents/\\n"
-		+ " ├── Document1/\\n"
-		+ " │   ├── ManagerModule.bsl\\n"
-		+ " │   ├── ObjectModule.bsl\\n"
-		+ " │   └── Document1.mdo\\n"
-		+ " └── ...\",\n"
-		+ "  \"items\": [\n"
-		+ "    {\"path\": \"/home/user/workspace/Documents/Document1/ManagerModule.bsl\", \"type\": \"file\", \"modified\": 1734567890000},\n"
-		+ "    {\"path\": \"/home/user/workspace/Documents\", \"type\": \"directory\", \"modified\": 1734567890000}\n"
-		+ "  ],\n"
-		+ "  \"stats\": {\n"
-		+ "    \"total_items\": 35,\n"
-		+ "    \"max_depth_reached\": 2\n"
-		+ "  }\n"
-		+ "}";
-
 	private final IJson json;
 	private final McpToolCallSpecification spec;
 	private final IMcpToolsCallMessageFactory messageFactory;
@@ -343,10 +324,6 @@ public class GlobMcpTool
 		description.append("\n- Returns matching file and directory paths sorted by modification time.");
 		description.append("\n- Use this tool when you need to explore directory structure or list files.");
 		description.append("\n- Depth parameter controls how deep to traverse subdirectories (0 = only root, 1 = root + one level, etc.).");
-		description.append("\n\nExample:");
-		description.append("\n  Q: "); description.append(QuestionExample);
-		description.append("\n  A: "); description.append(AnswerExample);
-
 		spec.function.description = description.toString();
 
 		var parameters = new McpToolCallParameters();

@@ -59,15 +59,6 @@ public class ReadMcpTool
         + "  \"first_line\": 1,\n"
         + "  \"lines_number\": 10\n"
         + "}";
-
-    @SuppressWarnings("nls")
-    private static String AnswerExample =
-        "{\n"
-        + "  \"content\": \"     1: // Module\\n     2: Procedure Test()\\n     3:     Message(\\\"Hello\\\");\\n     4: EndProcedure\\n     5:\\n     6: Procedure AnotherTest()\\n     7:     Var x = 10;\\n     8: EndProcedure\",\n"
-        + "  \"charset_name\": \"UTF-8\",\n"
-        + "  \"total_lines\": 42,\n"
-        + "  \"note\": \"There are more lines in the file that were not read. Increase lines_number parameter to read more content.\"\n"
-        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -353,10 +344,6 @@ public class ReadMcpTool
         description.append("\n- Format: `<a href=\"edt-file://full_path:line:column:finish_line:finish_column\" title=\"description\">text</a>`");
         description.append("\n- Line and column numbers are 0-based integers.");
         description.append("\n- Example: `<a href=\"edt-file://C:/Projects/MyProject/src/Module.bsl:10:0:20:50\">Procedure in Module.bsl</a>`");
-        description.append("\n\nExample:");
-        description.append("\n  Q: "); description.append(QuestionExample);
-        description.append("\n  A: "); description.append(AnswerExample);
-
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();

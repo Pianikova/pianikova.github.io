@@ -64,23 +64,6 @@ public class FindMcpTool
         + "  \"first_index\": 0,\n"
         + "  \"max_count\": 64\n"
         + "}";
-    @SuppressWarnings("nls")
-    private static String AnswerExample =
-        "{\n"
-        + "  \"results\": [\n"
-        + "    {\n"
-        + "      \"project_name\": \"core-api\",\n"
-        + "      \"path\": \"/home/user/workspace/projects/core-api/src/services/TestUserService.bsl\",\n"
-        + "      \"offset\": 243,\n"
-        + "      \"length\": 16,\n"
-        + "      \"line_offset\": 15,\n"
-        + "      \"line_length\": 16,\n"
-        + "      \"line_number\": 12,\n"
-        + "      \"line_content\": \"function TestUserService()\"\n"
-        + "    }\n"
-        + "  ],\n"
-        + "  \"total_results\": 245\n"
-        + "}";
     // @formatter:on
 
     private final IJson json;
@@ -446,9 +429,6 @@ public class FindMcpTool
         description.append("\n- Use `first_index` and `max_count` for pagination. Response includes `total_results` for all matches.");
         description.append("\n\nRelated tools:");
         description.append("\n- Open/edit results: `" + ReadMcpTool.TOOL_NAME + "`, `" + EditMcpTool.TOOL_NAME + "`.");
-        description.append("\n\nExample (content search):");
-        description.append("\n  Q: "); description.append(QuestionExample);
-        description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();

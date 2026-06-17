@@ -54,9 +54,6 @@ public class EditMcpTool
         + "  \"new_content\": \"Procedure Test()\\n    SetId(9);\\nEndProcedure\",\n"
         + "  \"replace_all\": false\n"
         + "}";
-    @SuppressWarnings("nls")
-    private static String AnswerExample =
-        "File updated: \"C:/Projects/AccountingSystem/src/MainModule.bsl\"";
     // @formatter:on
 
     private final IJson json;
@@ -498,9 +495,6 @@ public class EditMcpTool
         description.append("\n- Delete files: `" + DeleteMcpTool.TOOL_NAME + "`.");
         description.append("\n- MUST use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and `" + SetMarkersMcpTool.TOOL_NAME
             + "` to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
-        description.append("\n\nExample:");
-        description.append("\n  Q: "); description.append(QuestionExample);
-        description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();
