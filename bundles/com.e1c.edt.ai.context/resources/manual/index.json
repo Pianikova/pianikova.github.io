@@ -1616,7 +1616,12 @@
     ],
     "keywords": [
       "task",
-      "create task"
+      "create task",
+      "задача",
+      "создай задачу",
+      "реквизит адресации",
+      "адресация",
+      "исполнитель"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1626,7 +1631,7 @@
       "createMethod": "createTask()",
       "collection": "getTasks()",
       "setupBlock": "        task.setAutonumbering(true);\n",
-      "notes": "Tasks often mirror BusinessProcess patterns. Use TaskAttribute/TaskTabularSection for child objects.",
+      "notes": "Child objects: regular attributes via mdFactory.createTaskAttribute() → task.getAttributes().add(...); tabular sections via createTaskTabularSection(). ADDRESSING attributes (реквизиты адресации) via mdFactory.createAddressingAttribute() → task.getAddressingAttributes().add(...); set its uuid and a TypeDescription. Build the TypeDescription exactly as in create_catalog: primitives via IEObjectProvider.getProxy(IEObjectTypeNames.STRING/...); a reference (e.g. an 'Исполнитель' performer pointing to CatalogRef.X) via MdProducedTypesUtil.getProducedType(transaction.getTopObjectByFqn(\"Catalog.X\"), MdTypePackage.Literals.MD_REF_TYPE). Do NOT call .create() on platform/mcore classes and do NOT cast mdtype.* to TypeItem.",
       "sampleName": "TaskSample",
       "extraSetup": ""
     }
