@@ -1191,8 +1191,8 @@
       "variableName": "service",
       "createMethod": "createHTTPService()",
       "collection": "getHttpServices()",
-      "setupBlock": "",
-      "notes": "Set rootURL for a marker-clean baseline, for example `service.setRootURL(\"/api\")`. URL templates and HTTP methods are child objects. Keep routing details in follow-up steps. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
+      "setupBlock": "        service.setRootURL(\"api\");\n",
+      "notes": "rootURL is MANDATORY and must be a non-empty, latin, URL-safe token (e.g. \"api\", \"shop\") — NOT Cyrillic, no spaces, and prefer no leading slash. An empty or invalid rootURL produces the marker 'Некорректное значение свойства rootURL ... Некорректное значение URL'. The setupBlock already sets it; change \"api\" to a meaningful latin name. URL templates and HTTP methods are child objects added in follow-up steps. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "OrdersApi",
       "extraSetup": ""
     }
@@ -1679,8 +1679,8 @@
       "variableName": "service",
       "createMethod": "createWebService()",
       "collection": "getWebServices()",
-      "setupBlock": "",
-      "notes": "Set namespace for a marker-clean baseline, for example `service.setNamespace(\"http://example.com/ws\")`. Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
+      "setupBlock": "        service.setNamespace(\"http://example.com/ws\");\n",
+      "notes": "namespace is MANDATORY (a valid non-empty URI); the setupBlock already sets it — change the URI to a meaningful one. An empty namespace produces a validation marker. Operations and parameters are child objects added in follow-up steps. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "OrderService",
       "extraSetup": ""
     }
@@ -1709,8 +1709,8 @@
       "variableName": "reference",
       "createMethod": "createWSReference()",
       "collection": "getWsReferences()",
-      "setupBlock": "",
-      "notes": "Set locationURL for a marker-clean baseline, for example `reference.setLocationURL(\"http://example.com/service?wsdl\")`. For a mock URL, EDT may still warn that WSDL was not found. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
+      "setupBlock": "        reference.setLocationURL(\"http://example.com/service?wsdl\");\n",
+      "notes": "locationURL is MANDATORY (a valid non-empty URL); the setupBlock already sets it — change to the real WSDL URL. With a mock URL, EDT may still warn that the WSDL was not found (that warning is expected for a placeholder). For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "ExternalSoapService",
       "extraSetup": ""
     }

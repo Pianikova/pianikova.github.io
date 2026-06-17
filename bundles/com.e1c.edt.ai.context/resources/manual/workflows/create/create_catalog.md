@@ -70,6 +70,10 @@ Before you generate the catalog-creation code, do this **in order**:
 
 ### Hard rules — never violate
 
+- ⛔ **Run inside `bmModel.getGlobalContext().execute(new AbstractBmTask<...>(){...})` — never
+  `modelManager.executeReadWriteTask(...)` / `IBmSingleNamespaceTask`.** Only the global editing
+  context auto-saves to disk; the other entries commit in-memory only (compiles, prints "created",
+  but no `.mdo` is written and it vanishes on restart).
 - ✅ **Before creating a catalog, check `transaction.getTopObjectByFqn("Catalog.<Name>")`.**
   If it is non-null, do not call `transaction.attachTopObject(...)` with the
   same FQN. Treat the object as already created and either verify/edit it

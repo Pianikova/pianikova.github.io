@@ -26,6 +26,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.InformationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterAttribute;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterDimension;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterResource;
+import com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterPeriodicity;
 import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
 import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
 import com._1c.g5.v8.dt.platform.IEObjectProvider;
@@ -60,6 +61,21 @@ Never call `MdProducedTypesUtil.getProducedType(...)` with a null dependency.
 If `transaction.getTopObjectByFqn(...)` returns null, stop with
 `IllegalStateException` and create the missing dependency first. Passing null
 causes a runtime `NullPointerException` inside `MdProducedTypesUtil`.
+
+### Periodicity (for "периодический регистр сведений")
+
+The setter is **`setInformationRegisterPeriodicity(...)`** (NOT `setPeriodicity`). The enum is
+`com._1c.g5.v8.dt.metadata.mdclass.InformationRegisterPeriodicity` with **exactly** these constants —
+do not invent others (e.g. `WITHIN_SESSION` does not exist):
+
+`NONPERIODICAL` (default — non-periodic), `SECOND`, `DAY`, `MONTH`, `QUARTER`, `YEAR`,
+`RECORDER_POSITION` (subordinate to a recorder).
+
+```java
+register.setInformationRegisterPeriodicity(InformationRegisterPeriodicity.DAY); // "периодический" → pick the period the user named
+```
+
+For a non-periodic register omit the call (default is `NONPERIODICAL`).
 
 ### Recommended bindings
 - `workspaceRoot`, `projectManager`, `modelManager`, `mdFactory`, `fqnGenerator`
@@ -104,6 +120,7 @@ globalContext.execute(new AbstractBmTask<Void>("Create information register") {
         register.setName("Prices");
         register.getSynonym().put("ru", "Prices");
         register.setUuid(UUID.randomUUID());
+        register.setInformationRegisterPeriodicity(InformationRegisterPeriodicity.DAY); // omit for non-periodic
 
         Catalog productsDep = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
         if (productsDep == null) {

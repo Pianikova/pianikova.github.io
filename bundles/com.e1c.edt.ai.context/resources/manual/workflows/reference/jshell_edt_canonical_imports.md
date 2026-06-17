@@ -96,6 +96,7 @@ simple name `Enum`, because it conflicts with `java.lang.Enum` in JShell.
 - `com._1c.g5.v8.dt.bm.model.IBmGlobalEditingContext` is wrong. Use `com._1c.g5.v8.bm.integration.IBmGlobalEditingContext`.
 - `com._1c.g5.v8.bm.model.IBmModel` is wrong. Use `com._1c.g5.v8.bm.integration.IBmModel`.
 - `com._1c.g5.v8.bm.model.IBmGlobalEditingContext` is wrong. Use `com._1c.g5.v8.bm.integration.IBmGlobalEditingContext`.
+- `com._1c.g5.v8.dt.bm.integration.IBmModel` / `...IBmGlobalEditingContext` are wrong (no `dt`). The whole `com._1c.g5.v8.dt.bm.integration` package does NOT exist. BM integration types live under `com._1c.g5.v8.bm.integration` (IBmModel, IBmGlobalEditingContext, AbstractBmTask); BM core types under `com._1c.g5.v8.bm.core` (IBmTransaction, IBmObject).
 - `com._1c.g5.v8.dt.form.model.FormType` is wrong for generation. Use `com._1c.g5.v8.dt.form.generator.FormType`.
 - `com._1c.g5.v8.dt.form.model.FormDataPath` is not the route for object attributes. Do not hand-build data paths for "show object attribute on form"; use `formGenerator.generateForm(...)`.
 

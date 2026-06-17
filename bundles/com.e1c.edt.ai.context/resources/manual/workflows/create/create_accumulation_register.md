@@ -2,12 +2,35 @@
 
 Call `JShell` with `scope: "edt"` for this workflow.
 
-Before coding, load `jshell_edt_canonical_imports` or copy its exact imports. In particular:
-`TypeDescriptionBuilder` is `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`;
-`IEObjectProvider` / `IEObjectTypeNames` are in `com._1c.g5.v8.dt.platform`;
-`IV8Project` is in `com._1c.g5.v8.dt.core.platform`; `IBmModel` is in
-`com._1c.g5.v8.bm.integration`. Do not try nearby `dt.mcore.*`, `dt.core.project.*`, or
-`dt.bm.model.*` packages.
+Copy these exact imports into the JShell snippet (do not guess packages; `manual_ids` do not import
+automatically). Wrong guesses like `dt.mcore.IEObjectTypeNames`, `dt.core.project.IV8Project`, or
+`dt.bm.model.*` cause "cannot find symbol" / "package does not exist".
+
+```java
+import java.util.UUID;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.mcore.McorePackage;
+import com._1c.g5.v8.dt.mcore.TypeDescription;
+import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
+import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterDimension;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterResource;
+import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterType;
+import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
+import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
+import com._1c.g5.v8.dt.platform.IEObjectProvider;
+import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
+import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
+```
 
 ### ⚠️ Resolving concrete `CatalogRef.X` / `DocumentRef.X` dimensions
 
