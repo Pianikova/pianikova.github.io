@@ -79,19 +79,35 @@ filename order.
   "id": "001",
   "prompt": "…",
   "project": "<ProjectName>",
+  "conversation_id": "…",
+  "reply_to_message_uuid": "…",
   "final_text": "assistant's final message to the user",
+  "reasoning": "the model's reasoning_content for its final message (if the server returns it)",
+  "assistant_message_count": 3,
   "tool_calls": [
     { "tool": "jshellmanual", "arguments": "{…}", "result": "{…}", "error": null },
     { "tool": "jshell",       "arguments": "{…code…}", "result": "{\"std_out\":…,\"compilation_errors\":[…],\"runtime_errors\":[…]}", "error": null }
   ],
+  "tool_call_count": 5,
+  "stalled": false,
+  "tools_count": 14,
+  "tools_definition_chars": 38000,
   "error": null,
   "duration_ms": 41230
 }
 ```
 
-- `tool_calls` is the ordered list of MCP tool calls the model made this turn (this is where you
-  see which manual scenario was fetched, the JShell code that ran, and any
-  `compilation_errors` / `runtime_errors`).
+- `tool_calls` is the ordered list of MCP tool calls the model made this turn (which manual scenario
+  was fetched, the JShell code that ran, and any `compilation_errors` / `runtime_errors`).
+- `conversation_id` / `reply_to_message_uuid` — the server-side conversation, to cross-reference
+  server logs (each turn forces a fresh conversation).
+- `reasoning` — the final assistant message's `reasoning_content` (chain-of-thought) when the server
+  provides it; the best signal for **why** the model stalled or chose a path.
+- `assistant_message_count` — finished assistant messages (model turns); a stall is typically a
+  single empty message.
+- `stalled` — `true` when no `jshell` ran (the model gathered context and stopped).
+- `tools_count` / `tools_definition_chars` — size of the fixed tool-definition prelude sent every
+  turn (independent of chat history) — use to gauge the "large context" hypothesis.
 - `error` is set only on harness-level failure (bad request, timeout, exception); per-tool errors
   appear inside `tool_calls[].error` / `tool_calls[].result`.
 - Turn timeout is 300s.

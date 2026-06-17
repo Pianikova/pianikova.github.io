@@ -57,6 +57,7 @@ public class DevAutopilot
 
     private final IConversationFacade conversationFacade;
     private final IDevToolCallRecorder recorder;
+    private final IMcpTools mcpTools;
     private final IJson json;
     private final ILog log;
 
@@ -64,14 +65,17 @@ public class DevAutopilot
     private Thread worker;
 
     @Inject
-    public DevAutopilot(IConversationFacade conversationFacade, IDevToolCallRecorder recorder, IJson json, ILog log)
+    public DevAutopilot(IConversationFacade conversationFacade, IDevToolCallRecorder recorder, IMcpTools mcpTools,
+        IJson json, ILog log)
     {
         Preconditions.checkNotNull(conversationFacade);
         Preconditions.checkNotNull(recorder);
+        Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(log);
         this.conversationFacade = conversationFacade;
         this.recorder = recorder;
+        this.mcpTools = mcpTools;
         this.json = json;
         this.log = log;
     }
@@ -246,16 +250,49 @@ public class DevAutopilot
         var message = new SendUserMessageRequest(projectId, promptText, null, true, request.skill, request.isChat,
             maxToolRounds);
 
+        // Fixed-prelude size (helps assess the "large context" hypothesis): all tool definitions
+        // sent on every turn, independent of chat history.
+        captureToolsMetrics(response);
+
         recorder.beginRun();
         try
         {
             var result = conversationFacade.sendAsync(message, CancellationTokens.NONE)
                 .get(TURN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            response.finalText = result != null ? result.getText() : null;
+            if (result != null)
+            {
+                response.finalText = result.getText();
+                response.reasoning = result.getReasoning();
+                response.assistantMessageCount = result.getAssistantMessageCount();
+                if (result.getSession() != null)
+                {
+                    response.conversationId = result.getSession().getConversationId();
+                    response.replyToMessageUuid = result.getSession().getReplyToMessageUuid();
+                }
+            }
         }
         finally
         {
             response.toolCalls = recorder.endRun();
+            response.toolCallCount = response.toolCalls != null ? response.toolCalls.size() : 0;
+            response.stalled = response.toolCalls == null
+                || response.toolCalls.stream().noneMatch(c -> "jshell".equalsIgnoreCase(c.tool)); //$NON-NLS-1$
+        }
+    }
+
+    private void captureToolsMetrics(Response response)
+    {
+        try
+        {
+            var specs = mcpTools.getSpecifications().get(30, TimeUnit.SECONDS);
+            response.toolsCount = specs != null ? specs.size() : 0;
+            response.toolsDefinitionChars = specs != null ? json.serialize(specs).length() : 0;
+        }
+        catch (Exception e)
+        {
+            // diagnostics only — never fail the turn over this
+            response.toolsCount = -1;
+            response.toolsDefinitionChars = -1;
         }
     }
 
@@ -345,11 +382,40 @@ public class DevAutopilot
         @SerializedName("project")
         public String project;
 
+        @SerializedName("conversation_id")
+        public String conversationId;
+
+        @SerializedName("reply_to_message_uuid")
+        public String replyToMessageUuid;
+
         @SerializedName("final_text")
         public String finalText;
 
+        /** Final assistant message's reasoning_content (chain-of-thought) — explains stalls/choices. */
+        @SerializedName("reasoning")
+        public String reasoning;
+
+        /** Number of finished assistant messages (model turns); a stall is typically 1 empty message. */
+        @SerializedName("assistant_message_count")
+        public int assistantMessageCount;
+
         @SerializedName("tool_calls")
         public List<IDevToolCallRecorder.DevToolCall> toolCalls;
+
+        @SerializedName("tool_call_count")
+        public int toolCallCount;
+
+        /** True when the turn ran no `jshell` (the model gathered context and stopped). */
+        @SerializedName("stalled")
+        public boolean stalled;
+
+        /** Number of MCP tool definitions sent every turn (fixed prelude). */
+        @SerializedName("tools_count")
+        public int toolsCount;
+
+        /** Serialized size (chars) of all tool definitions — proxy for fixed-prelude weight. */
+        @SerializedName("tools_definition_chars")
+        public int toolsDefinitionChars;
 
         @SerializedName("error")
         public String error;
