@@ -610,6 +610,8 @@
       </editor>
    </extension>
 
+   <!-- Workmate/Skills navigator nodes are DISABLED. To restore: delete this comment opener line below and the closing line after the viewer extension. -->
+   <!--
    <extension
          point="org.eclipse.ui.navigator.navigatorContent">
       <navigatorContent
@@ -677,6 +679,7 @@
          </includes>
       </viewerActionBinding>
    </extension>
+   -->
 
    <extension
          point="org.eclipse.ui.decorators">
