@@ -246,7 +246,7 @@ public class LocalHistoryMcpTool
 
 			if (!historyEntries.isEmpty())
 			{
-				responseMarkdown.append("\n\n<details><summary>").append(Messages.ViewHistory).append("</summary>\n\n");
+				responseMarkdown.append("\n\n**").append(Messages.ViewHistory).append("**\n\n");
 
 				for (var entry : historyEntries)
 				{
@@ -273,8 +273,6 @@ public class LocalHistoryMcpTool
 
 					responseMarkdown.append("---\n\n");
 				}
-
-				responseMarkdown.append("</details>");
 			}
 			else
 			{

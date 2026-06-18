@@ -347,9 +347,9 @@ public class SearchTextMcpTool
 
             if (!elements.isEmpty())
             {
-                responseMarkdown.append("\n\n<details><summary>")
+                responseMarkdown.append("\n\n**")
                     .append(Messages.SearchResults)
-                    .append("</summary>\n\n");
+                    .append("**\n\n");
 
                 var projectGroups = new HashMap<String, List<Element>>();
                 for (var element : elements)
@@ -380,8 +380,6 @@ public class SearchTextMcpTool
 
                     responseMarkdown.append("\n");
                 }
-
-                responseMarkdown.append("</details>");
             }
 
             details.responseMarkdown = responseMarkdown.toString();

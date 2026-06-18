@@ -142,8 +142,8 @@ public class NavigationHistoryMcpTool
 
             if (!entries.isEmpty())
             {
-                responseMarkdown.append("\n\n<details><summary>").append(Messages.ViewNavigationHistory)
-                    .append("</summary>\n\n");
+                responseMarkdown.append("\n\n**").append(Messages.ViewNavigationHistory)
+                    .append("**\n\n");
 
                 for (var entry : entries)
                 {
@@ -163,8 +163,6 @@ public class NavigationHistoryMcpTool
 
                     responseMarkdown.append("\n");
                 }
-
-                responseMarkdown.append("</details>");
             }
             else
             {

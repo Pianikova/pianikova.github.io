@@ -215,7 +215,7 @@ public abstract class BaseExecuteMcpTool<TRequest extends BaseExecuteRequest>
     {
         var responseMarkdown = new StringBuilder();
         responseMarkdown.append(MessageFormat.format(Messages.ExecutedTemplate, commandLine));
-        responseMarkdown.append("\n\n<details><summary>").append(Messages.ExecutionDetails).append("</summary>\n\n");
+        responseMarkdown.append("\n\n**").append(Messages.ExecutionDetails).append("**\n\n");
 
         responseMarkdown.append("__")
             .append(Messages.ExitCode)
@@ -249,7 +249,6 @@ public abstract class BaseExecuteMcpTool<TRequest extends BaseExecuteRequest>
             responseMarkdown.append("\n```\n");
         }
 
-        responseMarkdown.append("</details>");
         return responseMarkdown.toString();
     }
 

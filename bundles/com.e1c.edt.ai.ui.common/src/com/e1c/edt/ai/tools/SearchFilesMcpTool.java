@@ -265,8 +265,7 @@ public class SearchFilesMcpTool
                 .append(searchPattern)
                 .append("`"); //$NON-NLS-1$
 
-            // Add search results in collapsible section
-            responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
+            responseMarkdown.append("\n\n**").append(Messages.SearchResults).append("**\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
             for (var fileInfo : foundFiles)
             {
@@ -276,8 +275,6 @@ public class SearchFilesMcpTool
 
                 responseMarkdown.append("\n"); //$NON-NLS-1$
             }
-
-            responseMarkdown.append("</details>"); //$NON-NLS-1$
 
             details.responseMarkdown = responseMarkdown.toString();
             details.hideAfter = foundFiles.size() == 0;

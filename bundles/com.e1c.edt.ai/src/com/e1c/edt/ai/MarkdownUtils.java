@@ -472,9 +472,8 @@ public class MarkdownUtils implements IMarkdownUtils
     private void appendDiffSection(StringBuilder result, String fileName, String diffText)
     {
         var title = fileName != null && !fileName.isBlank() ? fileName : "file";
-        result.append("<details><summary>").append(escapeHtml(title)).append("</summary>\n\n");
+        result.append("**").append(escapeHtml(title)).append("**\n\n");
         result.append(buildUnifiedDiff(diffText));
-        result.append("\n</details>");
     }
 
     @SuppressWarnings("nls")
