@@ -6,9 +6,9 @@
   <parent>
     <groupId>com.e1c.edt.ai</groupId>
     <artifactId>bundles</artifactId>
-    <version>1.0.4-SNAPSHOT</version>
+    <version>1.0.5-SNAPSHOT</version>
   </parent>
   <artifactId>com.e1c.edt.ai</artifactId>
-  <version>1.0.4-SNAPSHOT</version>
+  <version>1.0.5-SNAPSHOT</version>
   <packaging>eclipse-plugin</packaging>
 </project>
