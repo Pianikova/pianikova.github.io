@@ -9,6 +9,7 @@ import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.e4.ui.model.application.ui.basic.MPart;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextSelection;
@@ -48,7 +49,7 @@ public class EditorPositionManager
 
 	@Override
 	@SuppressWarnings("nls")
-	public void openFileInEditor(String filePath, IEdtLinkHandler.CursorPositionInfo cursorPosition,
+	public void openFileInEditor(String filePath, String tabTitle, IEdtLinkHandler.CursorPositionInfo cursorPosition,
 		IEdtLinkHandler.SelectionInfo selection)
 	{
 		IEditorPart editor = null;
@@ -130,6 +131,13 @@ public class EditorPositionManager
 				}
 			}
 
+			// If a descriptive tab title is provided, show it on the tab and move the original tab
+			// label (the file name) to the tooltip.
+			if (editor != null)
+			{
+				applyTabTitle(editor, tabTitle);
+			}
+
 			// Restore cursor position and selection if available
 			if (editor != null)
 			{
@@ -152,6 +160,43 @@ public class EditorPositionManager
 		catch (PartInitException e)
 		{
 			log.logError(e);
+		}
+		catch (Exception e)
+		{
+			log.logError(e);
+		}
+	}
+
+	/**
+	 * Replaces the editor tab label with {@code tabTitle}, moving the original tab label (the file name)
+	 * to the tooltip. Does nothing when {@code tabTitle} is null/blank, so the default Eclipse tab name is
+	 * kept. Uses the E4 {@link MPart} of the editor, so it works uniformly for workspace, specialized EDT
+	 * and external (file-store) editors without substituting the editor input.
+	 *
+	 * @param editor the opened editor part
+	 * @param tabTitle the descriptive tab title, or {@code null}/blank to keep the default
+	 */
+	private void applyTabTitle(IEditorPart editor, String tabTitle)
+	{
+		if (tabTitle == null || tabTitle.isBlank())
+		{
+			return;
+		}
+		try
+		{
+			var part = editor.getSite().getService(MPart.class);
+			if (part != null)
+			{
+				// Copy whatever was shown on the tab into the tooltip before overwriting the label.
+				// Fall back to the editor input name if the part label is not populated yet.
+				var previousLabel = part.getLabel();
+				if (previousLabel == null || previousLabel.isBlank())
+				{
+					previousLabel = editor.getEditorInput().getName();
+				}
+				part.setLabel(tabTitle);
+				part.setTooltip(previousLabel);
+			}
 		}
 		catch (Exception e)
 		{

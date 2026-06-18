@@ -57,12 +57,6 @@ public class JShellReflectionMcpTool
     }
 
     @Override
-    public boolean isExperimental()
-    {
-        return true;
-    }
-
-    @Override
     public McpToolCallSpecification getSpecification()
     {
         return specification;

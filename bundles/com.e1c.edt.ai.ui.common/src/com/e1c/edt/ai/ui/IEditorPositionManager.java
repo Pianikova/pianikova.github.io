@@ -14,10 +14,12 @@ public interface IEditorPositionManager
 	 * Opens a file in an editor and optionally restores cursor position or selection
 	 *
 	 * @param filePath the path to the file to open
+	 * @param tabTitle the descriptive tab title (optional, can be null/blank); when present, it replaces the
+	 *            editor tab label and the original tab label is moved to the tooltip
 	 * @param cursorPosition the cursor position information (optional, can be null)
 	 * @param selection the selection information (optional, can be null)
 	 */
-	void openFileInEditor(String filePath, IEdtLinkHandler.CursorPositionInfo cursorPosition,
+	void openFileInEditor(String filePath, String tabTitle, IEdtLinkHandler.CursorPositionInfo cursorPosition,
 		IEdtLinkHandler.SelectionInfo selection);
 
 	/**

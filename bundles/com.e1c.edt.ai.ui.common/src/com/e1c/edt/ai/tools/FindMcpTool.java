@@ -368,10 +368,9 @@ public class FindMcpTool
 
             if (elements.size() > 0)
             {
-                // Add search results in collapsible section
-                responseMarkdown.append("\n\n<details><summary>")
+                responseMarkdown.append("\n\n**")
                     .append(Messages.SearchResults)
-                    .append("</summary>\n\n");
+                    .append("**\n\n");
 
                 // Group results by project for better organization
                 var projectGroups = new HashMap<String, List<Element>>();
@@ -416,8 +415,6 @@ public class FindMcpTool
 
                     responseMarkdown.append("\n");
                 }
-
-                responseMarkdown.append("</details>");
             }
 
             details.responseMarkdown = responseMarkdown.toString();
@@ -698,8 +695,7 @@ public class FindMcpTool
                 .append(isDefaultSearch ? "*" : searchPattern) //$NON-NLS-1$
                 .append("`"); //$NON-NLS-1$
 
-            // Add search results in collapsible section
-            responseMarkdown.append("\n\n<details><summary>").append(Messages.SearchResults).append("</summary>\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
+            responseMarkdown.append("\n\n**").append(Messages.SearchResults).append("**\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
             for (var element : allElements)
             {
@@ -717,8 +713,6 @@ public class FindMcpTool
                     .append(formattedPath)
                     .append("**\n"); //$NON-NLS-1$
             }
-
-            responseMarkdown.append("</details>"); //$NON-NLS-1$
 
             details.responseMarkdown = responseMarkdown.toString();
 

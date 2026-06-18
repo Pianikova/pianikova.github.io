@@ -151,11 +151,7 @@ public class WriteMcpTool
             if (request.content != null)
             {
                 requestMarkdown.append("\n\n");
-                requestMarkdown.append("<details><summary>")
-                    .append(Messages.WriteDetailsSummary)
-                    .append("</summary>\n\n");
                 requestMarkdown.append(markdownUtils.buildGitDiff(path, null, request.content));
-                requestMarkdown.append("\n</details>");
             }
 
             details.requestMarkdown = requestMarkdown.toString();
@@ -269,11 +265,7 @@ public class WriteMcpTool
                     responseMarkdown.append(
                         MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
                     responseMarkdown.append("\n\n");
-                    responseMarkdown.append("<details><summary>")
-                        .append(Messages.WriteDetailsSummary)
-                        .append("</summary>\n\n");
                     responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
-                    responseMarkdown.append("\n</details>");
                     details.responseMarkdown = responseMarkdown.toString();
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
@@ -305,11 +297,7 @@ public class WriteMcpTool
                 responseMarkdown.append(
                     MessageFormat.format(Messages.WrittenTemplate, markdownUtils.formatFilePath(path), changes));
                 responseMarkdown.append("\n\n");
-                responseMarkdown.append("<details><summary>")
-                    .append(Messages.WriteDetailsSummary)
-                    .append("</summary>\n\n");
                 responseMarkdown.append(markdownUtils.buildGitDiff(path, null, content));
-                responseMarkdown.append("\n</details>");
                 details.responseMarkdown = responseMarkdown.toString();
 
                 return messageFactory.createMessage(this, call, response.toString(), details);

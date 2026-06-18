@@ -236,7 +236,7 @@ public class IdeApiHandler
             // Extract position information from href
             var selection = linkHandler.extractSelection(processedHref).orElse(null);
             var cursorPosition = linkHandler.extractCursorPosition(processedHref).orElse(null);
-            editorPositionManager.openFileInEditor(filePath, cursorPosition, selection);
+            editorPositionManager.openFileInEditor(filePath, safeTitle, cursorPosition, selection);
         });
 
         return true;

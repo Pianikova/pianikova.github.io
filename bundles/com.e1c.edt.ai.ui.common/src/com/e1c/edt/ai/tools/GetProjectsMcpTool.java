@@ -223,8 +223,7 @@ public class GetProjectsMcpTool
             responseMarkdown.append(MessageFormat.format(Messages.ProjectsLoadedTemplate,
                 markdownUtils.createStyledText(String.valueOf(projectCount), TextColor.GREEN, FontWeight.BOLD, false)));
 
-            // Add project details in collapsible section
-            responseMarkdown.append("\n\n<details><summary>").append(Messages.ProjectsDetailsTitle).append("</summary>\n\n");
+            responseMarkdown.append("\n\n**").append(Messages.ProjectsDetailsTitle).append("**\n\n");
 
             for (var projectInfo : response)
             {
@@ -248,8 +247,6 @@ public class GetProjectsMcpTool
 
                 responseMarkdown.append("\n");
             }
-
-            responseMarkdown.append("</details>");
 
             details.responseMarkdown = responseMarkdown.toString();
 

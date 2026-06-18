@@ -83,12 +83,6 @@ public class JShellMcpTool
 	}
 
     @Override
-    public boolean isExperimental()
-    {
-        return true;
-    }
-
-    @Override
 	public McpToolCallSpecification getSpecification()
 	{
 		return spec;
@@ -274,7 +268,7 @@ public class JShellMcpTool
     private String buildExecutionDetailsBlock(String code, JShellExecutionResult result)
     {
         var sb = new StringBuilder();
-        sb.append("\n\n<details><summary>Details</summary>\n\n");
+        sb.append("\n\n**Details**\n\n");
         sb.append("```java\n").append(code).append("\n```");
         if (result != null && result.stdOut != null && !result.stdOut.isEmpty())
         {
@@ -284,7 +278,6 @@ public class JShellMcpTool
         {
             sb.append("\n\n```text\n").append(result.stdErr).append("\n```");
         }
-        sb.append("\n</details>");
         return sb.toString();
     }
 
@@ -292,9 +285,8 @@ public class JShellMcpTool
     private String buildCodeDetailsBlock(String code)
     {
         var sb = new StringBuilder();
-        sb.append("\n\n<details><summary>Details</summary>\n\n");
+        sb.append("\n\n**Details**\n\n");
         sb.append("```java\n").append(code).append("\n```");
-        sb.append("\n</details>");
         return sb.toString();
     }
 

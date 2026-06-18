@@ -395,17 +395,14 @@ public class EditMcpTool
     }
 
     /**
-     * Builds the {@code <details>}-wrapped diff block appended after the header line.
+     * Builds the diff block appended after the header line.
      */
     @SuppressWarnings("nls")
     private String buildEditDetailsBlock(String path, String oldContent, String newContent)
     {
         var sb = new StringBuilder();
-        sb.append("\n\n<details><summary>")
-            .append(Messages.EditDetailsSummary)
-            .append("</summary>\n\n");
+        sb.append("\n\n");
         sb.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
-        sb.append("\n</details>");
         return sb.toString();
     }
 

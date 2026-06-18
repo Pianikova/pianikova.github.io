@@ -241,8 +241,7 @@ public class GitCommitsMcpTool
 					.append(maxCommits)
 					.append("`"); //$NON-NLS-1$
 
-				// Add search results in collapsible section
-				responseMarkdown.append("\n\n<details><summary>").append(Messages.CommitsList).append("</summary>\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
+				responseMarkdown.append("\n\n**").append(Messages.CommitsList).append("**\n\n"); //$NON-NLS-1$ //$NON-NLS-2$
 
 				for (var commit : commitInfos)
 				{
@@ -287,8 +286,6 @@ public class GitCommitsMcpTool
 
 					responseMarkdown.append("\n---\n\n");
 				}
-
-				responseMarkdown.append("</details>");
 
 				details.responseMarkdown = responseMarkdown.toString();
 				return messageFactory.createMessage(this, call, content, details);
