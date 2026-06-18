@@ -37,6 +37,12 @@ public class EditingSupport
     @Override
     public boolean canEdit(IFile file)
     {
+        return getObject(file).map(obj -> canEdit(obj)).orElse(true);
+    }
+
+    @Override
+    public boolean canCreate(IFile file)
+    {
         return !isRestrictedFile(file) && getObject(file).map(obj -> canEdit(obj)).orElse(true);
     }
 

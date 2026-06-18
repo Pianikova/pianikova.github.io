@@ -9,6 +9,8 @@ import java.io.UnsupportedEncodingException;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.IContainer;
@@ -50,6 +52,8 @@ public class WriteMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "Write"; //$NON-NLS-1$
+    private static final Set<String> RESTRICTED_EXTENSIONS =
+        Set.of(".form", ".mdo", ".dcs", ".mxl", ".mxlx"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
 
     // @formatter:off
     @SuppressWarnings("nls")
@@ -123,6 +127,12 @@ public class WriteMcpTool
         if (path == null || path.isBlank())
         {
             throw new ToolException("`path` is required.");
+        }
+        if (isRestrictedFile(path))
+        {
+            throw new ToolException("The file \"" + path
+                + "\" cannot be created with `Write`. Create/register forms, metadata, and template body files through EDT metadata workflows, then use `"
+                + EditMcpTool.TOOL_NAME + "` only for existing generated files.");
         }
 
         var content = request.content;
@@ -219,8 +229,8 @@ public class WriteMcpTool
                         }
                     }
 
-                    // Check if the file can be edited using editingSupport
-                    if (!editingSupport.canEdit(projectFile))
+                    // Check if the file can be created using editingSupport
+                    if (!editingSupport.canCreate(projectFile))
                     {
                         throw new ToolException("The file \"" + path
                             + "\" cannot be created. Writing is not supported for this file type or the location is restricted.");
@@ -371,6 +381,19 @@ public class WriteMcpTool
         }
     }
 
+    private static boolean isRestrictedFile(String path)
+    {
+        String lowerPath = path.toLowerCase(Locale.ROOT);
+        for (String extension : RESTRICTED_EXTENSIONS)
+        {
+            if (lowerPath.endsWith(extension))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @SuppressWarnings("nls")
     private static McpToolCallSpecification createSpecification()
     {
@@ -385,6 +408,7 @@ public class WriteMcpTool
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Fails if the file already exists and is not empty; empty files can be overwritten. Use `" + EditMcpTool.TOOL_NAME + "` to modify existing non-empty files.");
+        description.append("\n- MUST NOT create `.form`, `.mdo`, `.dcs`, `.mxl`, or `.mxlx` files. Create those through EDT metadata workflows first, then use `" + EditMcpTool.TOOL_NAME + "` only for existing generated files.");
         description.append("\n- Verify the target folder and naming patterns before creating files.");
         description.append("\n- Avoid emojis unless explicitly requested.");
         description.append("\n- For temporary files, create them in the system temporary folder: `" + getTempDirectory() + "`.");

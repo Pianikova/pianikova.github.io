@@ -490,6 +490,7 @@ public class EditMcpTool
         description.append("\n- Use `replace_all` only when you want to replace every match.");
         description.append("\n- To delete content, set `new_content` to an empty string.");
         description.append("\n- Avoid emojis unless explicitly requested.");
+        description.append("\n- Existing generated `.form` and `.mdo` files may be edited with this tool after reading them first; run validation/markers after changing 1C metadata files.");
         description.append("\n\nRelated tools:");
         description.append("\n- Create new files: `" + WriteMcpTool.TOOL_NAME + "`.");
         description.append("\n- Delete files: `" + DeleteMcpTool.TOOL_NAME + "`.");

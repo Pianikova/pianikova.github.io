@@ -3,6 +3,8 @@
 Creates a form that belongs to a metadata object (e.g. `Catalog.Products`), **generates its
 structure** with `formGenerator`, links it back to the metadata, and persists it as an external
 `.form` resource. The deliverable is a **working form with a layout**, not an empty metadata stub.
+After the default layout exists, targeted layout refinements may be made with `Edit` on the existing
+`Form.form`; never use `Write` to create a `Form.form` file.
 
 > This scenario is for forms **owned by an object**. For a stand-alone `CommonForm` use
 > `create_common_form` first, then run the `formGenerator` steps below (pass the `CommonForm` as

@@ -11,6 +11,16 @@ fragile: fields need version-aware defaults like `userVisible`, the right `ExtIn
 > for default/auto-generated forms or when "просто покажи реквизит" is acceptable. Do not use it to
 > preserve a hand-customised form.
 
+### Direct file editing policy
+
+- `Edit` is allowed for existing generated `Form.form` files when the requested layout change is too
+  detailed for the EDT form API. Always `Read` first, make the smallest exact replacement, then run
+  `GetMarkers` for the owner metadata object.
+- `Write` is forbidden for `Form.form` and `.mdo` files. The form must be created first through the
+  EDT metadata workflow so the default layout/resource exists and is registered in BM.
+- Do not use `Edit` to create a missing form resource. If `Form.form` is absent, run
+  `create_object_form` or regenerate/repair the form through EDT API first.
+
 ### What "вывести реквизит X на форму" means (two layers — do both, in order)
 
 1. The **metadata attribute** X must exist on the object (`CatalogAttribute`/`DocumentAttribute`).

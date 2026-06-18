@@ -4,6 +4,8 @@ Creates a `Template` that belongs to a metadata object (`Catalog`, `Document`, `
 chosen `TemplateType`, **and an empty body of that type attached as a resource** — so the result is a
 complete, openable макет (with a `Template.dcs`/`Template.mxl` file), not a registration without a
 body. To add real content (data sets, cells) afterwards, use `fill_template_content`.
+After the default body exists, targeted changes may be made with `Edit` on the existing generated
+template/body files. Do not use `Write` to create `Template.mdo`, `.dcs`, `.mxl`, or `.mxlx` files.
 
 > For a stand-alone shared template use `create_common_template` (creates a top-level
 > `CommonTemplate`). This scenario is for templates **owned by an object**, added to
@@ -18,8 +20,9 @@ body. To add real content (data sets, cells) afterwards, use `fill_template_cont
   `BmFqnAlreadyInUseException` ("FQN '…' is already in use"). If you just created the owner in a
   previous step, add the template in a **separate** BM task that fetches it by FQN — never paste
   the owner-creation code into the template step. Only the new `Template` child is created here.
-- ❌ **Never hand-write the template with file tools** (`Write`/`Edit` on `Template.mdo`,
-  `*.dcs`, `*.mxl`, settings `*.xml`). Use the model API inside a BM transaction.
+- ❌ **Never create the template with file tools** (`Write` on `Template.mdo`, `*.dcs`, `*.mxl`,
+  settings `*.xml`). Use the model API inside a BM transaction. `Edit` is allowed only after the
+  template/body file already exists and was generated/registered by EDT.
 - ⛔ **Create AND attach an empty body in the SAME task** (for `SPREADSHEET_DOCUMENT` →
   `moxelFactory.createSpreadsheetDocument()`, for `DATA_COMPOSITION_SCHEMA` →
   `dcsFactory.createDataCompositionSchema()`): `template.setTemplate(content)` then

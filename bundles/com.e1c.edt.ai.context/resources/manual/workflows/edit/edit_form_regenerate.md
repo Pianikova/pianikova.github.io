@@ -4,6 +4,20 @@ Use this for requests like "добавь на форму элемента спр
 The safe route is two metadata/model steps: first ensure the object attribute exists, then generate
 or regenerate the form structure with `formGenerator`.
 
+### Direct edit route for existing generated forms
+
+For small layout or caption changes in an existing generated form, such as "change the title of
+field X on Catalog.Y item form", do not use JShell form layout APIs. They are too fragile for
+direct manual construction. Use file tools instead:
+
+1. Use `SearchFiles`/`Read` to find and read the existing `Form.form`
+   (`src/Catalogs/<Owner>/Forms/<FormName>/Form.form` or the matching owner folder).
+2. Use `Edit` with a small exact replacement in that existing `Form.form`.
+3. Run `GetMarkers` with `marker_type:"1c"` for the owner `.mdo`.
+
+`Write` is forbidden for `.form` and `.mdo`. If `Form.form` is missing, first create or repair the
+form through `create_object_form`; never create `Form.form` with `Write`.
+
 CRITICAL for this EDT build: call `generateForm` with exactly 8 arguments:
 
 ```java

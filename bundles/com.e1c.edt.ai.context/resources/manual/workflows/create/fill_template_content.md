@@ -16,10 +16,10 @@ Run after `create_object_template` (or `create_common_template`).
   `transaction.attachTopObject((IBmObject)content, fqnGenerator.generateExternalPropertyFqn(template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE))`.
   This mirrors how a form's structure is persisted (`BASIC_FORM__FORM`). Omitting it is the most
   common reason the template body never appears on disk.
-- ❌ **Never hand-write template files with the file tools** (`Write`/`Edit` on `*.dcs`, `*.mxl`,
-  `Template.mdo`, settings `*.xml`). Hand-written DCS/spreadsheet XML is fragile, version-specific,
-  and is not registered with the report/owner model — it produces a broken or unloadable template.
-  Always go through the EMF factory + `setTemplate(...)` inside a BM transaction (below).
+- ❌ **Never create template files with `Write`** (`*.dcs`, `*.mxl`, `Template.mdo`, settings
+  `*.xml`). The body must first be generated/registered through the EMF factory +
+  `setTemplate(...)` inside a BM transaction (below). After the generated body file exists, `Edit`
+  may be used for small targeted changes, followed by `GetMarkers`.
 - ⛔ **Exact factory packages — do not guess.** The DCS factory is
   `com._1c.g5.v8.dt.dcs.model.schema.DcsFactory` (NOT `com._1c.g5.v8.dt.dcs.util.*`). The
   spreadsheet factory is `com._1c.g5.v8.dt.moxel.MoxelFactory`. Both are exposed as the
