@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.context.tools;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -50,7 +51,10 @@ public class MarkersProvider implements IMarkersProvider
     @Override
     public Stream<MarkerInfo> getMarkers(IProject project, IFile file)
     {
-        var reader = markerManager.createReader(project);
+        // allMarkers=true bypasses the global IMarkerFilterProvider filters (git "branch changes"
+        // scope, hide-legacy, etc.). Those filters are for the Problems view; here we want the full
+        // marker set for the file/project, matching what the BSL editor shows.
+        var reader = markerManager.createReader(List.of(project), true);
         return reader.markers()
             .map(marker -> createMarkerInfo(project, file, marker))
             .filter(marker -> marker.isPresent())

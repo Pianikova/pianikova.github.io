@@ -268,7 +268,7 @@ public class GetMarkersMcpTool implements IMcpTool
             for (var markersProvider : markersProviders)
             {
                 var markers =
-                    markersProvider.getMarkers(project, file).filter(applyMarkerFilters(markerTypeFilter, path));
+                    markersProvider.getMarkers(project, file).filter(applyMarkerFilters(markerTypeFilter));
 
                 allMarkers = Stream.concat(allMarkers, markers);
             }
@@ -401,17 +401,18 @@ public class GetMarkersMcpTool implements IMcpTool
         }
     }
 
-    private static Predicate<MarkerInfo> applyMarkerFilters(MarkerType markerTypeFilter,
-        String path)
+    private static Predicate<MarkerInfo> applyMarkerFilters(MarkerType markerTypeFilter)
     {
+        // Note: file scoping is already done by each provider via the resolved IFile (findMarkers /
+        // targetFile match). Do NOT re-filter by the raw request path string here: it is often
+        // project-relative while marker.path is absolute, so the equality would drop every marker.
         return new Predicate<>()
         {
             @Override
             public boolean test(MarkerInfo marker)
             {
-                return (markerTypeFilter == null
-                    || (marker.type != null && MarkerType.fromTypeId(marker.type) == markerTypeFilter))
-                    && (path == null || path.isBlank() || java.util.Objects.equals(path, marker.path));
+                return markerTypeFilter == null
+                    || (marker.type != null && MarkerType.fromTypeId(marker.type) == markerTypeFilter);
             }
         };
     }
