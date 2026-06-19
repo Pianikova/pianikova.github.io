@@ -15,6 +15,7 @@ import com._1c.g5.v8.dt.core.model.IModelEditingSupport;
 import com._1c.g5.v8.dt.core.model.IModelObjectFactory;
 import com._1c.g5.v8.dt.core.naming.ITopObjectFqnGenerator;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.core.platform.IDerivedDataManagerProvider;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.core.platform.management.IDtHostResourceManager;
@@ -32,6 +33,7 @@ import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMarkersProvider;
 import com.e1c.edt.ai.IMcpTool;
+import com.e1c.edt.ai.IProjectBuilder;
 import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.MarkdownUtils;
@@ -42,6 +44,7 @@ import com.e1c.edt.ai.context.tools.MarkersProvider;
 import com.e1c.edt.ai.context.tools.MetadataBindingProvider;
 import com.e1c.edt.ai.context.tools.MetadataManualCatalog;
 import com.e1c.edt.ai.context.tools.MethodListProvider;
+import com.e1c.edt.ai.context.tools.ProjectBuilder;
 import com.e1c.edt.ai.tools.IJShellBindingProvider;
 import com.e1c.edt.ai.tools.IJShellManualProvider;
 import com.google.inject.Singleton;
@@ -80,6 +83,8 @@ class ContextModule
         bind(IEditingSupport.class).to(EditingSupport.class).in(Singleton.class);
         bind(IMarkdownUtils.class).to(MarkdownUtils.class).in(Singleton.class);
         bind(IMethodListProvider.class).to(MethodListProvider.class).in(Singleton.class);
+        // EDT project "build": waits for the background DD validation to settle and flushes markers.
+        bind(IProjectBuilder.class).to(ProjectBuilder.class).in(Singleton.class);
         var projectDetailsProviderBinder = Multibinder.newSetBinder(binder(), IProjectDetailsProvider.class);
         projectDetailsProviderBinder.addBinding().to(ConfigurationParametersProvider.class);
         bind(MessageDigest.class).toProvider(() -> {
@@ -122,6 +127,7 @@ class ContextModule
         bind(ITextSearchIndexProvider.class).toService();
         bind(IModelEditingSupport.class).toService();
         bind(IMarkerManagerV2.class).toService();
+        bind(IDerivedDataManagerProvider.class).toService();
         bind(ITopObjectFqnGenerator.class).toService();
         bind(IModelObjectFactory.class).toService();
         // @formatter:on
