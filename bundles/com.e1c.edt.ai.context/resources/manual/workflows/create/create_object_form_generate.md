@@ -2,11 +2,15 @@
 
 Use this for missing object-owned forms such as `Catalog.Номенклатура.Form.ФормаЭлемента`.
 The result is complete only when both metadata and `Form.form` are produced.
+After the default layout exists, targeted layout refinements may be made with `Edit` on the existing
+`Form.form`; never use `Write` to create a `Form.form` file.
 
 ### Hard rules
 
 - Do not create only `CatalogForm`/`DocumentForm` metadata. Always call `formGenerator.generateForm`
   and attach the generated `Form` as `BASIC_FORM__FORM`.
+- Do not create `Form.form` with `Write`. If the form resource is missing, create or repair it
+  through this EDT workflow so the form is registered in the BM model.
 - If the form metadata already exists but `catalogForm.getForm()` is null or `Form.form` is missing,
   reuse that existing form metadata and attach a generated structure. Do not create a duplicate form.
 - In this EDT build, `generateForm(...)` has 8 arguments and ends with `Integer columnCount`.

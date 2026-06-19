@@ -19,7 +19,7 @@ public class EditingSupport
     implements IEditingSupport
 {
     @SuppressWarnings("nls")
-    private static final Set<String> RESTRICTED_EXTENSIONS = Set.of(".form", ".mdo");
+    private static final Set<String> RESTRICTED_EXTENSIONS = Set.of(".form", ".mdo", ".dcs", ".mxl", ".mxlx");
 
     private final IBmObjectProvider bmObjectProvider;
     private final IModelEditingSupport modelEditingSupport;
