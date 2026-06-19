@@ -228,7 +228,7 @@ public class GetMarkersMcpTool implements IMcpTool
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
-        return buildWaiter.waitForBuilds(project, cancellationToken).thenCompose(voidResult -> {
+        return buildWaiter.waitForBuilds(project, cancellationToken).thenCompose(markersComplete -> {
             if (cancellationToken.isCanceled())
             {
                 throw new ToolException("Operation cancelled after build wait");
@@ -236,7 +236,7 @@ public class GetMarkersMcpTool implements IMcpTool
 
             return CompletableFuture
                 .supplyAsync(() -> createResponse(project, firstIndex, maxCount, finalMarkerTypeFilter, request.path,
-                    call, cancellationToken, details));
+                    call, cancellationToken, details, markersComplete));
         });
     }
 
@@ -245,7 +245,8 @@ public class GetMarkersMcpTool implements IMcpTool
         String path,
         McpToolCall call,
         ICancellationToken cancellationToken,
-        ToolCallMessageDetails details)
+        ToolCallMessageDetails details,
+        boolean markersComplete)
     {
         IFile file = null;
         if (path != null && !path.isBlank())
@@ -267,7 +268,7 @@ public class GetMarkersMcpTool implements IMcpTool
             for (var markersProvider : markersProviders)
             {
                 var markers =
-                    markersProvider.getMarkers(project, file).filter(applyMarkerFilters(markerTypeFilter, path));
+                    markersProvider.getMarkers(project, file).filter(applyMarkerFilters(markerTypeFilter));
 
                 allMarkers = Stream.concat(allMarkers, markers);
             }
@@ -290,8 +291,9 @@ public class GetMarkersMcpTool implements IMcpTool
             var response = new GetMarkersResponse();
             response.markers = markersPage;
             response.totalMarkers = allMarkersList.size();
+            response.markersIncomplete = !markersComplete;
             response.requiredNextStep = buildRequiredNextStep(markerTypeFilter, path, markersPage, allMarkersList.size(),
-                firstIndex, maxCount);
+                firstIndex, maxCount, markersComplete);
 
             var content = json.serialize(response);
 
@@ -311,14 +313,26 @@ public class GetMarkersMcpTool implements IMcpTool
 
     @SuppressWarnings("nls")
     private String buildRequiredNextStep(MarkerType markerTypeFilter, String path, List<MarkerInfo> returnedMarkers,
-        int totalCount, int firstIndex, int maxCount)
+        int totalCount, int firstIndex, int maxCount, boolean markersComplete)
     {
         if (totalCount == 0)
         {
+            if (!markersComplete)
+            {
+                return "Background 1C validation did not finish within the timeout, so this result may be "
+                    + "incomplete and new markers may still appear. Do not report success on an empty result: call "
+                    + "GetMarkers again for this project (or the changed .mdo path) to re-check.";
+            }
             return null;
         }
 
         var next = new StringBuilder();
+        if (!markersComplete)
+        {
+            next.append("Background 1C validation did not finish within the timeout, so this marker set may be ")
+                .append("incomplete; after fixing the returned markers, call GetMarkers again to re-check for ")
+                .append("additional markers. ");
+        }
         if (markerTypeFilter == MarkerType.M1C)
         {
             next.append("1C markers remain. Do not report success. Fix all relevant markers for the changed ")
@@ -387,17 +401,18 @@ public class GetMarkersMcpTool implements IMcpTool
         }
     }
 
-    private static Predicate<MarkerInfo> applyMarkerFilters(MarkerType markerTypeFilter,
-        String path)
+    private static Predicate<MarkerInfo> applyMarkerFilters(MarkerType markerTypeFilter)
     {
+        // Note: file scoping is already done by each provider via the resolved IFile (findMarkers /
+        // targetFile match). Do NOT re-filter by the raw request path string here: it is often
+        // project-relative while marker.path is absolute, so the equality would drop every marker.
         return new Predicate<>()
         {
             @Override
             public boolean test(MarkerInfo marker)
             {
-                return (markerTypeFilter == null
-                    || (marker.type != null && MarkerType.fromTypeId(marker.type) == markerTypeFilter))
-                    && (path == null || path.isBlank() || java.util.Objects.equals(path, marker.path));
+                return markerTypeFilter == null
+                    || (marker.type != null && MarkerType.fromTypeId(marker.type) == markerTypeFilter);
             }
         };
     }
@@ -470,6 +485,8 @@ public class GetMarkersMcpTool implements IMcpTool
                 "\n  - marker_highlighted_text: Code fragment associated with the marker (substring of the file at the marker's position)");
         description.append("\n  - source_id: Source identifier for bookmarks");
         description.append("\n- total_markers: Total number of markers available");
+        description.append(
+            "\n- markers_incomplete: true if background 1C validation did not finish within the timeout, so the marker list may be partial and more markers may appear later. When true, do not report success on an empty or clean result; call GetMarkers again to re-check.");
         description.append("\n\nExample request:");
         description.append("\n").append(QuestionExample);
         description.append("\nExample response:");
@@ -566,6 +583,9 @@ public class GetMarkersMcpTool implements IMcpTool
 
         @SerializedName("total_markers")
         public int totalMarkers;
+
+        @SerializedName("markers_incomplete")
+        public boolean markersIncomplete;
 
         @SerializedName("required_next_step")
         public String requiredNextStep;

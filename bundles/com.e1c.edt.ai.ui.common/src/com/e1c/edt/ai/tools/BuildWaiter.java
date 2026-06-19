@@ -44,7 +44,7 @@ public class BuildWaiter implements IBuildWaiter
      */
     @Override
     @SuppressWarnings("nls")
-    public CompletableFuture<Void> waitForBuilds(IProject project, ICancellationToken cancellationToken)
+    public CompletableFuture<Boolean> waitForBuilds(IProject project, ICancellationToken cancellationToken)
     {
         var jobManager = Job.getJobManager();
 
@@ -53,20 +53,20 @@ public class BuildWaiter implements IBuildWaiter
             .flatMap(family -> Arrays.stream(jobManager.find(family)))
             .anyMatch(job -> job.getState() == Job.RUNNING || job.getState() == Job.WAITING);
 
-        // If no active jobs are found, return immediately with completed future
-        if (!hasActiveJobs)
-        {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        // If active jobs exist, proceed with asynchronous waiting
-        return CompletableFuture.runAsync(() -> {
+        // Always invoke the builder: in EDT it waits for the background DD validation to settle even
+        // when no Eclipse build jobs are active (1C validation is not an Eclipse Job). The Eclipse
+        // job join is only needed when build-family jobs are actually running.
+        return CompletableFuture.supplyAsync(() -> {
             try
             {
-                builder.build(project, cancellationToken);
-                var monitor = cancellationProgressMonitor.get();
-                monitor.setCancellationToken(cancellationToken);
-                jobManager.join(BUILD_FAMILIES, monitor);
+                boolean complete = builder.build(project, cancellationToken);
+                if (hasActiveJobs)
+                {
+                    var monitor = cancellationProgressMonitor.get();
+                    monitor.setCancellationToken(cancellationToken);
+                    jobManager.join(BUILD_FAMILIES, monitor);
+                }
+                return complete;
             }
             catch (OperationCanceledException e)
             {

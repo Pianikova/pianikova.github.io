@@ -27,11 +27,13 @@ public class ProjectBuilder
     }
 
     @Override
-    public void build(IProject project, ICancellationToken cancellationToken) throws CoreException
+    public boolean build(IProject project, ICancellationToken cancellationToken) throws CoreException
     {
         var monitor = cancellationProgressMonitor.get();
         monitor.setCancellationToken(cancellationToken);
         project.build(IncrementalProjectBuilder.INCREMENTAL_BUILD, monitor);
+        // Eclipse incremental build is synchronous, so markers read afterwards are complete.
+        return true;
     }
 
 }
