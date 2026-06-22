@@ -788,6 +788,108 @@ public class ContentReplacerTest
         assertEquals("Should have 4 removed lines", 4, result.getRemovedLines());
     }
 
+    // Region-replace (minimal IDocument.replace) tests
+
+    @Test
+    public void testRegionReplaceSingleOccurrenceLF()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        String currentContent = "Hello World\nThis is a test\nGoodbye";
+
+        ReplaceResult result = replacer.replace(currentContent, "World", "Universe", "\n", false);
+
+        assertTrue("Should be region replaceable", result.isRegionReplaceable());
+        assertEquals("Offset should point at 'World'", currentContent.indexOf("World"), result.getReplaceOffset());
+        assertEquals("Length should be length of 'World'", "World".length(), result.getReplaceLength());
+        assertEquals("Replacement text should be the new fragment", "Universe", result.getReplacementText());
+        assertRegionMatchesUpdated(currentContent, result);
+    }
+
+    @Test
+    public void testRegionReplaceWithWindowsLineDelimiter()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        // Match spans a line break — replace offset/length must count the two-char \r\n delimiter.
+        String currentContent = "Line1\r\nLine2\r\nLine3";
+
+        ReplaceResult result = replacer.replace(currentContent, "Line2\nLine3", "NewTail", "\r\n", false);
+
+        assertTrue("Should be region replaceable", result.isRegionReplaceable());
+        assertEquals("Offset should point at 'Line2'", currentContent.indexOf("Line2"), result.getReplaceOffset());
+        assertEquals("Length should cover the CRLF span", "Line2\r\nLine3".length(), result.getReplaceLength());
+        assertEquals("Replacement should use CRLF delimiter", "NewTail", result.getReplacementText());
+        assertRegionMatchesUpdated(currentContent, result);
+    }
+
+    @Test
+    public void testRegionReplaceWithBOM()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        // Leading BOM must shift the document offset by one char.
+        String currentContent = "﻿Hello World\nGoodbye";
+
+        ReplaceResult result = replacer.replace(currentContent, "World", "Universe", "\n", false);
+
+        assertTrue("Should be region replaceable", result.isRegionReplaceable());
+        assertEquals("Offset should account for BOM", currentContent.indexOf("World"), result.getReplaceOffset());
+        assertEquals("Length should be length of 'World'", "World".length(), result.getReplaceLength());
+        assertRegionMatchesUpdated(currentContent, result);
+    }
+
+    @Test
+    public void testRegionReplaceInMiddleOfLargeContent()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 500; i++)
+        {
+            sb.append("Procedure P").append(i).append("()\nEndProcedure\n");
+        }
+        String currentContent = sb.toString();
+
+        ReplaceResult result = replacer.replace(currentContent, "Procedure P250()", "Procedure Renamed250()", "\n", false);
+
+        assertTrue("Should be region replaceable", result.isRegionReplaceable());
+        assertEquals("Offset should point at the match", currentContent.indexOf("Procedure P250()"),
+            result.getReplaceOffset());
+        assertRegionMatchesUpdated(currentContent, result);
+    }
+
+    @Test
+    public void testReplaceAllIsNotRegionReplaceable()
+    {
+        ContentReplacer replacer = createContentReplacer();
+        String currentContent = "Line1\nLine2\nLine1\nLine2\nLine1";
+
+        ReplaceResult result = replacer.replace(currentContent, "Line1", "NewLine", "\n", true);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertFalse("replaceAll must fall back to whole-document set", result.isRegionReplaceable());
+    }
+
+    @Test
+    public void testEmptyOriginIsNotRegionReplaceable()
+    {
+        ContentReplacer replacer = createContentReplacer();
+
+        ReplaceResult result = replacer.replace("", "", "NewContent", "\n", false);
+
+        assertTrue("Replacement should be successful", result.isSuccess());
+        assertFalse("Empty origin must fall back to whole-document set", result.isRegionReplaceable());
+    }
+
+    /**
+     * Verifies the core invariant: applying the replacement fragment at the reported offset/length of the
+     * original content reproduces exactly {@link ReplaceResult#getUpdatedContent()}.
+     */
+    private void assertRegionMatchesUpdated(String currentContent, ReplaceResult result)
+    {
+        String applied = currentContent.substring(0, result.getReplaceOffset()) + result.getReplacementText()
+            + currentContent.substring(result.getReplaceOffset() + result.getReplaceLength());
+        assertEquals("Applying the region replace must match the full updated content", result.getUpdatedContent(),
+            applied);
+    }
+
     private ContentReplacer createContentReplacer()
     {
         IReplacements replacements = new Replacements();

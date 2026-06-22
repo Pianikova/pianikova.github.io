@@ -94,8 +94,17 @@ public class ContentReplacer implements IContentReplacer
         int[] start = offsetToLineColumn(strippedOriginal, startOffset);
         int[] end = offsetToLineColumn(strippedOriginal, endOffset);
 
+        // For a single contiguous match we can apply a minimal-region replace on the document instead of
+        // resetting its whole content — this keeps Xtext's re-lexing bounded to the changed span.
+        boolean regionReplaceable = !replaceAll;
+        int bomShift = currentHasBOM ? BOM.length() : 0;
+        int replaceOffset = startOffset + bomShift;
+        int replaceLength = endOffset - startOffset;
+        String replacementText = denormalizeLineDelimiters(normalizedNewContent, detectedLineDelimiter);
+
         return buildResult(normalizedUpdatedContent, detectedLineDelimiter, currentHasBOM, addedLines, removedLines,
-            searchResult.occurrenceCount > 1, start[0], start[1], end[0], end[1]);
+            searchResult.occurrenceCount > 1, start[0], start[1], end[0], end[1], regionReplaceable, replaceOffset,
+            replaceLength, replacementText);
     }
 
     private ReplaceResult replaceWithEmptyOrigin(String normalizedCurrentContent, String normalizedNewContent,
@@ -118,8 +127,10 @@ public class ContentReplacer implements IContentReplacer
         }
 
         // Empty-origin insertion happens at the very start of the content.
+        // Keep the whole-document path here (regionReplaceable = false) — handling the multi-insert
+        // semantics of an empty origin as a minimal region replace is out of scope.
         return buildResult(normalizedUpdatedContent, detectedLineDelimiter, currentHasBOM, addedLines, removedLines, false,
-            1, 1, 1, 1);
+            1, 1, 1, 1, false, 0, 0, null);
     }
 
     /**
@@ -135,12 +146,14 @@ public class ContentReplacer implements IContentReplacer
      */
     private ReplaceResult buildResult(String normalizedUpdatedContent, String detectedLineDelimiter, boolean hadBOM,
         int addedLines, int removedLines, boolean multipleOccurrences, int matchStartLine, int matchStartColumn,
-        int matchEndLine, int matchEndColumn)
+        int matchEndLine, int matchEndColumn, boolean regionReplaceable, int replaceOffset, int replaceLength,
+        String replacementText)
     {
         String updatedContent = denormalizeLineDelimiters(normalizedUpdatedContent, detectedLineDelimiter);
         updatedContent = restoreBOM(updatedContent, hadBOM);
         return new ReplaceResult(updatedContent, addedLines, removedLines, true, multipleOccurrences, matchStartLine,
-            matchStartColumn, matchEndLine, matchEndColumn);
+            matchStartColumn, matchEndLine, matchEndColumn, regionReplaceable, replaceOffset, replaceLength,
+            replacementText);
     }
 
     private ReplacementSearchResult findReplacement(String content, String find, boolean replaceAll)
