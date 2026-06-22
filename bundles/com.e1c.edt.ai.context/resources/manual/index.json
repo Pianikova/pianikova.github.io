@@ -1704,7 +1704,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create WS Reference",
-    "summary": "Create WSReference metadata and configure service connection details later.",
+    "summary": "Create WSReference metadata from a real WSDL URL; ask for the URL instead of creating placeholder stubs.",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -1714,20 +1714,14 @@
     "keywords": [
       "ws reference",
       "soap client",
-      "reference"
+      "reference",
+      "WS-ссылка",
+      "WS ссылка",
+      "WSDL",
+      "создай WS-ссылку",
+      "SOAP клиент"
     ],
-    "template": "top-level-create",
-    "vars": {
-      "title": "WSReference",
-      "typeName": "WSReference",
-      "variableName": "reference",
-      "createMethod": "createWSReference()",
-      "collection": "getWsReferences()",
-      "setupBlock": "        reference.setLocationURL(\"http://example.com/service?wsdl\");\n",
-      "notes": "locationURL is MANDATORY (a valid non-empty URL); the setupBlock already sets it — change to the real WSDL URL. With a mock URL, EDT may still warn that the WSDL was not found (that warning is expected for a placeholder). For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
-      "sampleName": "ExternalSoapService",
-      "extraSetup": ""
-    }
+    "guide": "workflows/create/create_ws_reference_require_url.md"
   },
   {
     "id": "create_xdto_package",
