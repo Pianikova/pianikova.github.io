@@ -77,6 +77,24 @@ public class ProjectTools
             return Optional.empty();
         }
 
+        // A project-relative path (not absolute) is resolved directly against the project. This
+        // matches the tool specs that accept "absolute or project-relative" paths; without it a
+        // relative path would be resolved against the process CWD and never match the project.
+        if (!new File(absolutePath).isAbsolute())
+        {
+            var relativePath = absolutePath.replace('\\', '/');
+            if (relativePath.startsWith("/")) //$NON-NLS-1$
+            {
+                relativePath = relativePath.substring(1);
+            }
+            var projectPrefix = project.getName() + "/"; //$NON-NLS-1$
+            if (relativePath.startsWith(projectPrefix))
+            {
+                relativePath = relativePath.substring(projectPrefix.length());
+            }
+            return Optional.of(project.getFile(new org.eclipse.core.runtime.Path(relativePath)));
+        }
+
         // Get project location
         var projectLocation = project.getLocation();
         if (projectLocation == null)
