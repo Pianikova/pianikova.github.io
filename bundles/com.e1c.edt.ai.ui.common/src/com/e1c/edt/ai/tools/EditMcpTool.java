@@ -304,7 +304,18 @@ public class EditMcpTool
             {
                 try
                 {
-                    fileDocument.setContent(replaceResult.getUpdatedContent());
+                    if (replaceResult.isRegionReplaceable())
+                    {
+                        // Minimal-region replace keeps Xtext's re-lexing bounded to the changed span,
+                        // avoiding a full-document re-tokenization freeze on the UI thread.
+                        fileDocument.replaceRegion(replaceResult.getReplaceOffset(),
+                            replaceResult.getReplaceLength(), replaceResult.getReplacementText());
+                    }
+                    else
+                    {
+                        // replaceAll / empty-origin fall back to a whole-document set.
+                        fileDocument.setContent(replaceResult.getUpdatedContent());
+                    }
                     fileDocument.save();
                     return null;
                 }

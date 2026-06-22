@@ -7,6 +7,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextSelection;
 import org.eclipse.jface.viewers.ISelectionProvider;
@@ -110,6 +111,28 @@ public class FileDocument
         finally
         {
             // Always try to restore cursor position, even if set() failed
+            restoreCursorPosition();
+        }
+    }
+
+    @Override
+    public void replaceRegion(int offset, int length, String text) throws BadLocationException
+    {
+        if (text == null)
+        {
+            text = ""; //$NON-NLS-1$
+        }
+
+        // Save cursor position before modifying document
+        saveCursorPosition();
+
+        try
+        {
+            document.replace(offset, length, text);
+        }
+        finally
+        {
+            // Always try to restore cursor position, even if replace() failed
             restoreCursorPosition();
         }
     }
