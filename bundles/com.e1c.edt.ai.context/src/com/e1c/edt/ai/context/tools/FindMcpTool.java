@@ -86,21 +86,6 @@ public class FindMcpTool
         + "  \"first_index\": 0,\n"
         + "  \"max_count\": 64\n"
         + "}";
-
-    @SuppressWarnings("nls")
-    private static String AnswerExample =
-        "[\n"
-        + "  {\n"
-        + "    \"type\": \"Text file\",\n"
-        + "    \"project_name\": \"MyProject\",\n"
-        + "    \"path\": \"C:/Projects/MyProject/src/CommonModule/Module.bsl\",\n"
-        + "    \"text_fragment\": \"Процедура ОбработкаПроведения(Отказ, Режим)\\n    Если Не Режим = РежимПроведения.Проведение Тогда\\n        Возврат;\\n    КонецЕсли;\",\n"
-        + "    \"fragment_offset\": 45,\n"
-        + "    \"match_length\": 8,\n"
-        + "    \"file_offset\": 234,\n"
-        + "    \"line_number\": 2\n"
-        + "  }\n"
-        + "]";
     // @formatter:on
 
     private final IJson json;
@@ -466,9 +451,6 @@ public class FindMcpTool
         description.append("\n- Narrow by project and type to reduce noise.");
         description.append("\n\nRelated tools:");
         description.append("\n- Fetch by id: `" + GetObjectMcpTool.TOOL_NAME + "`.");
-        description.append("\n\nExample:");
-        description.append("\n  Q: "); description.append(QuestionExample);
-        description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();

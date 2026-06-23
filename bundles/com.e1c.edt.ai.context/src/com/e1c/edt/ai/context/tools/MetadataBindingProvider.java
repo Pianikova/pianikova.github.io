@@ -22,10 +22,16 @@ import com._1c.g5.v8.bm.integration.IBmTask;
 import com._1c.g5.v8.dt.core.model.IModelObjectFactory;
 import com._1c.g5.v8.dt.core.naming.ITopObjectFqnGenerator;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.core.platform.IEditingLanguageManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8Project;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.dcs.model.schema.DcsFactory;
+import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
+import com._1c.g5.v8.dt.form.generator.IFormGenerator;
+import com._1c.g5.v8.dt.form.model.FormFactory;
 import com._1c.g5.v8.dt.mcore.McorePackage;
+import com._1c.g5.v8.dt.moxel.MoxelFactory;
 import com._1c.g5.v8.dt.mcore.TypeDescription;
 import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
@@ -84,12 +90,17 @@ public class MetadataBindingProvider
     private final IResourceLookup resourceLookup;
     private final IModelObjectFactory modelObjectFactory;
     private final IMethodListProvider methodListProvider;
+    private final IFormGenerator formGenerator;
+    private final IFormFieldGenerator formFieldGenerator;
+    private final IEditingLanguageManager editingLanguageManager;
     private final ManualResourceLoader loader;
 
     @Inject
     public MetadataBindingProvider(IV8ProjectManager v8projectManager, IBmModelManager modelManager,
         ITopObjectFqnGenerator topObjectFqnGenerator, IResourceLookup resourceLookup,
-        IModelObjectFactory modelObjectFactory, IMethodListProvider methodListProvider)
+        IModelObjectFactory modelObjectFactory, IMethodListProvider methodListProvider,
+        IFormGenerator formGenerator, IFormFieldGenerator formFieldGenerator,
+        IEditingLanguageManager editingLanguageManager)
     {
         Preconditions.checkNotNull(v8projectManager);
         Preconditions.checkNotNull(modelManager);
@@ -97,6 +108,9 @@ public class MetadataBindingProvider
         Preconditions.checkNotNull(resourceLookup);
         Preconditions.checkNotNull(modelObjectFactory);
         Preconditions.checkNotNull(methodListProvider);
+        Preconditions.checkNotNull(formGenerator);
+        Preconditions.checkNotNull(formFieldGenerator);
+        Preconditions.checkNotNull(editingLanguageManager);
 
         this.v8projectManager = v8projectManager;
         this.modelManager = modelManager;
@@ -104,6 +118,9 @@ public class MetadataBindingProvider
         this.resourceLookup = resourceLookup;
         this.modelObjectFactory = modelObjectFactory;
         this.methodListProvider = methodListProvider;
+        this.formGenerator = formGenerator;
+        this.formFieldGenerator = formFieldGenerator;
+        this.editingLanguageManager = editingLanguageManager;
         this.loader = new ManualResourceLoader(MetadataBindingProvider.class, "/manual"); //$NON-NLS-1$
         this.loader.registerDynamicResolver("method-list", this::renderMethodList); //$NON-NLS-1$
     }
@@ -168,6 +185,30 @@ public class MetadataBindingProvider
             "Maps metadata/model objects to Eclipse resources",
             bindingDoc("resourceLookup"), resourceLookup, IResourceLookup.class));
 
+        bindings.put("formGenerator", new JShellBindingDescription(
+            "Generates the default Form (form.model) structure for a BasicForm owned by a metadata object.",
+            bindingDoc("formGenerator"), formGenerator, IFormGenerator.class));
+
+        bindings.put("formFieldGenerator", new JShellBindingDescription(
+            "Builds the root FormFieldInfo tree required by formGenerator.generateForm(...).",
+            bindingDoc("formFieldGenerator"), formFieldGenerator, IFormFieldGenerator.class));
+
+        bindings.put("formFactory", new JShellBindingDescription(
+            "EMF factory (FormFactory.eINSTANCE) for form.model items: FormGroup, FormField, FormAttribute.",
+            bindingDoc("formFactory"), FormFactory.eINSTANCE, FormFactory.class));
+
+        bindings.put("dcsFactory", new JShellBindingDescription(
+            "EMF factory (DcsFactory.eINSTANCE) for DataCompositionSchema template content.",
+            bindingDoc("dcsFactory"), DcsFactory.eINSTANCE, DcsFactory.class));
+
+        bindings.put("moxelFactory", new JShellBindingDescription(
+            "EMF factory (MoxelFactory.eINSTANCE) for SpreadsheetDocument template content.",
+            bindingDoc("moxelFactory"), MoxelFactory.eINSTANCE, MoxelFactory.class));
+
+        bindings.put("editingLanguageManager", new JShellBindingDescription(
+            "Resolves the current editing language code, required by formGenerator.generateForm(...).",
+            bindingDoc("editingLanguageManager"), editingLanguageManager, IEditingLanguageManager.class));
+
         return bindings;
     }
 
@@ -225,6 +266,12 @@ public class MetadataBindingProvider
             TypeDescription.class,
             TypeItem.class,
             TypeDescriptionBuilder.class,
+            IFormGenerator.class,
+            IFormFieldGenerator.class,
+            FormFactory.class,
+            DcsFactory.class,
+            MoxelFactory.class,
+            IEditingLanguageManager.class,
             IProject.class,
             IWorkspaceRoot.class,
             EcoreUtil.class
@@ -295,6 +342,26 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.platform.IEObjectProvider;",
             "import com._1c.g5.v8.dt.platform.IEObjectTypeNames;",
             "import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;",
+            "import com._1c.g5.v8.dt.platform.version.Version;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.MdObject;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.ScriptVariant;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.InterfaceCompatibilityMode;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.Template;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.CatalogForm;",
+            "import com._1c.g5.v8.dt.metadata.mdclass.DocumentForm;",
+            "import com._1c.g5.v8.dt.form.generator.IFormGenerator;",
+            "import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;",
+            "import com._1c.g5.v8.dt.form.generator.FormType;",
+            "import com._1c.g5.v8.dt.form.generator.FormFieldInfo;",
+            "import com._1c.g5.v8.dt.form.model.Form;",
+            "import com._1c.g5.v8.dt.form.model.FormFactory;",
+            "import com._1c.g5.v8.dt.dcs.model.schema.DcsFactory;",
+            "import com._1c.g5.v8.dt.dcs.model.schema.DataCompositionSchema;",
+            "import com._1c.g5.v8.dt.moxel.MoxelFactory;",
+            "import com._1c.g5.v8.dt.moxel.SpreadsheetDocument;",
+            "import com._1c.g5.v8.dt.core.platform.IEditingLanguageManager;",
             "import org.eclipse.emf.ecore.util.EcoreUtil;"
         );
         // @formatter:on

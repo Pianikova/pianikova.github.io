@@ -163,7 +163,8 @@ public class Conversations implements IConversations
     private void askWithTools(Session session, String conversationId, ConversationAskRequest request,
         IObserver<ConversationAskResponse> observer, ICancellationToken cancellationToken, int depth)
     {
-        if (depth > MAX_TOOL_ROUNDS)
+        int maxToolRounds = request.maxToolRounds > 0 ? request.maxToolRounds : MAX_TOOL_ROUNDS;
+        if (depth > maxToolRounds)
         {
             observer.onError(new IllegalStateException("Too many tool rounds")); //$NON-NLS-1$
             return;
@@ -199,14 +200,15 @@ public class Conversations implements IConversations
                 observer.onCompleted();
                 return;
             }
-            handleToolCalls(session, conversationId, lastResponse, toolCalls, observer, cancellationToken, depth + 1);
+            handleToolCalls(session, conversationId, lastResponse, toolCalls, observer, cancellationToken, depth + 1,
+                maxToolRounds);
         });
 
     }
 
     private void handleToolCalls(Session session, String conversationId, ConversationAskResponse lastResponse,
         ArrayList<McpToolCall> toolCalls, IObserver<ConversationAskResponse> observer,
-        ICancellationToken cancellationToken, int depth)
+        ICancellationToken cancellationToken, int depth, int maxToolRounds)
     {
         if (cancellationToken.isCanceled()) {
             observer.onCompleted();
@@ -242,6 +244,7 @@ public class Conversations implements IConversations
             }
             try {
                 ConversationAskRequest toolRequest = createToolRequest(lastResponse.uuid, toolResult);
+                toolRequest.maxToolRounds = maxToolRounds;
                 askWithTools(session, conversationId, toolRequest, observer, cancellationToken, depth);
             }
             catch (Exception e)

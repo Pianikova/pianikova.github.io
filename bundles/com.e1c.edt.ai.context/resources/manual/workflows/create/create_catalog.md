@@ -70,6 +70,32 @@ Before you generate the catalog-creation code, do this **in order**:
 
 ### Hard rules — never violate
 
+- ✅ **If the prompt asks for a catalog and a form, this is a two-step workflow.**
+  First create the top-level `Catalog` and validate its `.mdo`. Then immediately call
+  `JShellManual` for `create_object_form` and create/repair the generated form structure with
+  `formGenerator`. After `Form.form` exists, immediately run the mandatory safe improvement pass
+  through `edit_form`: read the generated file, apply obvious exact presentation edits when possible,
+  and run `GetMarkers`. If the generated form has standard `Object.Code` / `Object.Description`
+  controls, at least one `Edit` call on `Form.form` is mandatory. Do not stop after the catalog
+  `.mdo` exists or after a raw default form is generated. A final untouched default form is not a
+  completed answer for "создай справочник ... и форму". For a simple catalog with only standard
+  fields, the expected minimal improvement is not a cosmetic form title only: present
+  `Object.Description` as `Наименование`, `Object.Code` as `Код`, and when exact XML movement is
+  safe, group them in a compact `UsualGroup` with `HorizontalIfPossible`, matching common SSL
+  catalog item forms.
+- ✅ **Do not invent attributes.** If the user only says "создай справочник товаров" or
+  "создай справочник товаров и форму", create the catalog with standard code/description only.
+  Add custom attributes (`Артикул`, `Цена`, `Количество`, ...) only when the user explicitly asks
+  for them. Extra guessed attributes increase marker risk and are not part of the request.
+- ⛔ **Run inside `bmModel.getGlobalContext().execute(new AbstractBmTask<...>(){...})` — never
+  `modelManager.executeReadWriteTask(...)` / `IBmSingleNamespaceTask`.** Only the global editing
+  context auto-saves to disk; the other entries commit in-memory only (compiles, prints "created",
+  but no `.mdo` is written and it vanishes on restart).
+- ✅ **Use the exact project name from `GetProjects` / the user request. Never translate it.**
+  If the project is named `Склад`, executable JShell must call
+  `workspaceRoot.getProject("Склад")`, not `"Warehouse"`. If a translated or wrong project name
+  caused `project == null` / `NullPointerException`, start a fresh `jshellsession` and retry with
+  the exact project name before doing any metadata work.
 - ✅ **Before creating a catalog, check `transaction.getTopObjectByFqn("Catalog.<Name>")`.**
   If it is non-null, do not call `transaction.attachTopObject(...)` with the
   same FQN. Treat the object as already created and either verify/edit it
@@ -99,6 +125,10 @@ Before you generate the catalog-creation code, do this **in order**:
   long-text workflow is known and verified for this EDT version.** Prefer
   conservative lengths up to `100` for ordinary text attributes while testing
   metadata CRUD.
+- ✅ **For number attributes, scale comes before precision.** If the user explicitly asks for a
+  number attribute, call `setNumberQualifiers(scale, precision, nonNegative)`, for example
+  `Number(15,2)` is `setNumberQualifiers(2, 15, true)`. Never produce `.mdo` where
+  `<scale>` is greater than `<precision>`.
 - ✅ If a precondition cannot be satisfied, throw `IllegalStateException`
   from inside the BM task. `System.err.println(...) + return null` is **not**
   a failure — JShell will report success.

@@ -1,5 +1,28 @@
 ## Safe Workflow: Create ${title}
 
+Include these imports in the JShell snippet (exact packages — do not guess; `manual_ids` do not
+import automatically). The type-building imports are harmless if unused:
+
+```java
+import java.util.UUID;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
+import com._1c.g5.v8.bm.core.IBmObject;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.dt.core.platform.IV8Project;
+import com._1c.g5.v8.dt.mcore.McorePackage;
+import com._1c.g5.v8.dt.mcore.TypeDescription;
+import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
+import com._1c.g5.v8.dt.metadata.mdclass.${typeName};
+import com._1c.g5.v8.dt.platform.IEObjectProvider;
+import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
+import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
+```
+
 ```java
 IProject project = workspaceRoot.getProject("MyProject");
 ${extraSetup}IBmModel bmModel = modelManager.getModel(project);
@@ -20,6 +43,13 @@ ${setupBlock}        String fqn = fqnGenerator.generateStandaloneObjectFqn(${var
 ```
 
 ### Rules
+- ⛔ **Use ONLY `bmModel.getGlobalContext().execute(new AbstractBmTask<...>(){...})` for create/edit.**
+  It auto-saves changed/attached objects to disk on commit. **NEVER** use
+  `modelManager.executeReadWriteTask(project, new IBmSingleNamespaceTask<...>(){...})` (or any other
+  transaction entry): those commit to the in-memory model only — the object compiles, runs, prints
+  "created successfully", and even shows up via in-memory reads, but **no `.mdo` file is written to
+  disk** and it disappears on restart. If you see no `.mdo` after a "successful" create, you used the
+  wrong transaction entry.
 - `manual_ids` do not execute imports from manual cards. If `${typeName}` or
   another scenario-specific class is not already imported in the JShell
   session, add an explicit import in the same snippet or use the fully

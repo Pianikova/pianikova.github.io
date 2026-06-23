@@ -54,9 +54,6 @@ public class EditMcpTool
         + "  \"new_content\": \"Procedure Test()\\n    SetId(9);\\nEndProcedure\",\n"
         + "  \"replace_all\": false\n"
         + "}";
-    @SuppressWarnings("nls")
-    private static String AnswerExample =
-        "File updated: \"C:/Projects/AccountingSystem/src/MainModule.bsl\"";
     // @formatter:on
 
     private final IJson json;
@@ -493,14 +490,12 @@ public class EditMcpTool
         description.append("\n- Use `replace_all` only when you want to replace every match.");
         description.append("\n- To delete content, set `new_content` to an empty string.");
         description.append("\n- Avoid emojis unless explicitly requested.");
+        description.append("\n- Existing generated `.form` and `.mdo` files may be edited with this tool after reading them first; run validation/markers after changing 1C metadata files.");
         description.append("\n\nRelated tools:");
         description.append("\n- Create new files: `" + WriteMcpTool.TOOL_NAME + "`.");
         description.append("\n- Delete files: `" + DeleteMcpTool.TOOL_NAME + "`.");
         description.append("\n- MUST use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and `" + SetMarkersMcpTool.TOOL_NAME
             + "` to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");
-        description.append("\n\nExample:");
-        description.append("\n  Q: "); description.append(QuestionExample);
-        description.append("\n  A: "); description.append(AnswerExample);
         spec.function.description = description.toString();
 
         var parameters = new McpToolCallParameters();

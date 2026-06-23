@@ -19,7 +19,7 @@ public class EditingSupport
     implements IEditingSupport
 {
     @SuppressWarnings("nls")
-    private static final Set<String> RESTRICTED_EXTENSIONS = Set.of(".form", ".mdo");
+    private static final Set<String> RESTRICTED_EXTENSIONS = Set.of(".form", ".mdo", ".dcs", ".mxl", ".mxlx");
 
     private final IBmObjectProvider bmObjectProvider;
     private final IModelEditingSupport modelEditingSupport;
@@ -36,6 +36,12 @@ public class EditingSupport
 
     @Override
     public boolean canEdit(IFile file)
+    {
+        return getObject(file).map(obj -> canEdit(obj)).orElse(true);
+    }
+
+    @Override
+    public boolean canCreate(IFile file)
     {
         return !isRestrictedFile(file) && getObject(file).map(obj -> canEdit(obj)).orElse(true);
     }

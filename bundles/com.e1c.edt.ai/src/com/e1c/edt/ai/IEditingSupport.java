@@ -9,5 +9,7 @@ public interface IEditingSupport
 {
     boolean canEdit(IFile file);
 
+    boolean canCreate(IFile file);
+
     boolean canDelete(IFile file);
 }

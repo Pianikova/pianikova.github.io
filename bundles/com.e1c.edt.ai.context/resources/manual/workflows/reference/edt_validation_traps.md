@@ -2,6 +2,26 @@
 
 Check this file before writing JShell code that mutates metadata. These traps are based on observed logs and EDT model patterns.
 
+## ⛔ Wrong transaction entry → object not saved to disk
+
+Create/edit metadata ONLY through the global editing context:
+
+```java
+IBmModel bmModel = modelManager.getModel(project);
+bmModel.getGlobalContext().execute(new AbstractBmTask<Void>("...") {
+    public Void execute(IBmTransaction transaction, IProgressMonitor monitor) { /* ... */ return null; }
+});
+```
+
+Only `getGlobalContext().execute(...)` auto-saves changed/attached objects to disk on commit.
+Do **NOT** use `modelManager.executeReadWriteTask(project, new IBmSingleNamespaceTask<...>(){...})`
+or other low-level transaction entries: they commit to the in-memory model only — the snippet
+compiles, runs, prints "created successfully", and in-memory reads see the object, but **no `.mdo`
+file is written** (it disappears on restart). Observed: a ChartOfAccounts "created" via
+`executeReadWriteTask` left `src/ChartsOfAccounts/` empty. If `GetMarkers`/a folder check shows no
+`.mdo` after a successful-looking create, you used the wrong entry — redo it with
+`getGlobalContext().execute(...)`.
+
 ## Always run marker check
 
 After create, edit, or delete, run `GetMarkers` with `marker_type: "1c"`. Treat non-empty 1C markers as incomplete work.

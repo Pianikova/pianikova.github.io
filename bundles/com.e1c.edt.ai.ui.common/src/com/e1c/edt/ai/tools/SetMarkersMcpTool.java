@@ -116,9 +116,6 @@ public class SetMarkersMcpTool
         + "    }\n"
         + "  ]\n"
         + "}";
-
-    @SuppressWarnings("nls")
-    private static String AnswerExample = "Successfully created 5 markers";
     // @formatter:on
 
     private final IJson json;
@@ -565,9 +562,6 @@ public class SetMarkersMcpTool
         description.append(
             "\n- IMPORTANT: if you provide any action_* fields, you must provide all three action fields");
         description.append("\n- If type is not `ai_marker`, omit action_* fields.");
-
-        description.append("\n\nExample request:\n").append(QuestionExample);
-        description.append("\nExample response:\n").append(AnswerExample);
 
         spec.function.description = description.toString();
 

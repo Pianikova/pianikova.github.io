@@ -26,6 +26,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.Version;
 
 import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.IDevAutopilot;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVersionProvider;
@@ -281,6 +282,19 @@ public abstract class BaseActivator
         plugin = this;
         javafx.application.Platform.setImplicitExit(false);
         settings = getInjector().getInstance(ISettings.class);
+        // Dev-autopilot: feedback-loop test harness, started only in experimental mode.
+        // The flag is read once at activation; toggling it requires an EDT restart.
+        if (settings != null && settings.isExperimental())
+        {
+            try
+            {
+                getInjector().getInstance(IDevAutopilot.class).start();
+            }
+            catch (Exception e)
+            {
+                logError(e);
+            }
+        }
         Display.getDefault().disposeExec(() -> {
             CancellationTokens.isStopped = true;
         });
@@ -299,6 +313,18 @@ public abstract class BaseActivator
         if (globalContextTracker instanceof AutoCloseable)
         {
             ((AutoCloseable)globalContextTracker).close();
+        }
+
+        if (settings != null && settings.isExperimental())
+        {
+            try
+            {
+                getInjector().getInstance(IDevAutopilot.class).stop();
+            }
+            catch (Exception e)
+            {
+                logError(e);
+            }
         }
 
         plugin = null;

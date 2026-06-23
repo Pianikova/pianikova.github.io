@@ -16,9 +16,12 @@ import com._1c.g5.v8.dt.core.model.IModelObjectFactory;
 import com._1c.g5.v8.dt.core.naming.ITopObjectFqnGenerator;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IDerivedDataManagerProvider;
+import com._1c.g5.v8.dt.core.platform.IEditingLanguageManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.core.platform.management.IDtHostResourceManager;
+import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
+import com._1c.g5.v8.dt.form.generator.IFormGenerator;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
@@ -130,6 +133,9 @@ class ContextModule
         bind(IDerivedDataManagerProvider.class).toService();
         bind(ITopObjectFqnGenerator.class).toService();
         bind(IModelObjectFactory.class).toService();
+        bind(IFormGenerator.class).toService();
+        bind(IFormFieldGenerator.class).toService();
+        bind(IEditingLanguageManager.class).toService();
         // @formatter:on
     }
 }

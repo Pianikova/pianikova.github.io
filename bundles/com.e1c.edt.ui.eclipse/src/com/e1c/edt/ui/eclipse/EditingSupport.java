@@ -17,6 +17,12 @@ public class EditingSupport
     }
 
     @Override
+    public boolean canCreate(IFile file)
+    {
+        return true;
+    }
+
+    @Override
     public boolean canDelete(IFile file)
     {
         return true;

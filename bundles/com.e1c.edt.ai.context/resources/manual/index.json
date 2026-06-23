@@ -107,7 +107,14 @@
     "keywords": [
       "tabular section",
       "document tabular section",
-      "catalog tabular section"
+      "catalog tabular section",
+      "табличная часть",
+      "табличную часть",
+      "табличной частью",
+      "ТЧ",
+      "строки документа",
+      "товары документа",
+      "реквизиты табличной части"
     ]
   },
   {
@@ -182,7 +189,15 @@
     "keywords": [
       "accumulation register",
       "register",
-      "create register"
+      "create register",
+      "регистр накопления",
+      "создай регистр накопления",
+      "остатки",
+      "обороты",
+      "измерение",
+      "ресурс",
+      "регистр с измерением",
+      "регистр с ресурсом"
     ]
   },
   {
@@ -202,7 +217,14 @@
       "attribute",
       "catalog attribute",
       "document attribute",
-      "register attribute"
+      "register attribute",
+      "реквизит",
+      "добавить реквизит",
+      "добавь реквизит",
+      "реквизит справочника",
+      "реквизит документа",
+      "реквизит регистра",
+      "поле объекта"
     ]
   },
   {
@@ -305,7 +327,21 @@
     "keywords": [
       "catalog",
       "create catalog",
-      "metadata object"
+      "create catalog and form",
+      "catalog with form",
+      "catalog item form",
+      "metadata object",
+      "справочник",
+      "создай справочник",
+      "создать справочник",
+      "создай справочник и форму",
+      "создай справочник товаров и форму",
+      "создай справочник товаров и форму для него",
+      "справочник с формой",
+      "форма справочника",
+      "иерархический справочник",
+      "справочник с реквизитом",
+      "справочник со ссылкой"
     ]
   },
   {
@@ -513,7 +549,7 @@
       "createMethod": "createCommonForm()",
       "collection": "getCommonForms()",
       "setupBlock": "",
-      "notes": "Form structure and controls are separate layers. Start by creating the top-level metadata object.",
+      "notes": "Form structure and controls are separate layers. Start by creating the top-level metadata object, then generate the form layout with the `create_object_form` scenario (pass this CommonForm as basicForm to formGenerator).",
       "sampleName": "UniversalSearchForm",
       "extraSetup": ""
     }
@@ -603,10 +639,172 @@
       "createMethod": "createCommonTemplate()",
       "collection": "getCommonTemplates()",
       "setupBlock": "",
-      "notes": "Template binary or text content is maintained separately after the metadata object exists.",
+      "notes": "Template binary or text content is maintained separately after the metadata object exists. Fill the body (DataCompositionSchema / SpreadsheetDocument) with the `fill_template_content` scenario.",
       "sampleName": "PrintLayout",
       "extraSetup": ""
     }
+  },
+  {
+    "id": "create_object_form",
+    "scope": "edt",
+    "category": "create",
+    "title": "Create Object Form",
+    "summary": "Create a form owned by a metadata object (CatalogForm/DocumentForm/...), generate its default structure, and persist it as an external .form resource.",
+    "guide": "workflows/create/create_object_form_generate.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator",
+      "formGenerator",
+      "formFieldGenerator",
+      "editingLanguageManager"
+    ],
+    "keywords": [
+      "form",
+      "object form",
+      "catalog form",
+      "document form",
+      "register form",
+      "information register form",
+      "accumulation register form",
+      "accounting register form",
+      "calculation register form",
+      "create form",
+      "default form",
+      "форма",
+      "форма элемента",
+      "форма списка",
+      "форма объекта",
+      "форма справочника",
+      "форма документа",
+      "форма регистра",
+      "форма регистра сведений",
+      "форма регистра накопления",
+      "форма регистра бухгалтерии",
+      "форма регистра расчета",
+      "нет формы",
+      "сделай форму",
+      "добавь форму",
+      "создать форму",
+      "создай форму"
+    ]
+  },
+  {
+    "id": "edit_form",
+    "scope": "edt",
+    "category": "edit",
+    "title": "Edit Form",
+    "summary": "Edit or improve an existing generated Form.form with SearchFiles/Read/Edit for small visibility/layout/caption changes; use formGenerator only for structural regeneration.",
+    "guide": "workflows/edit/edit_form_regenerate.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager",
+      "modelManager",
+      "mdFactory",
+      "formGenerator",
+      "formFieldGenerator",
+      "editingLanguageManager",
+      "fqnGenerator"
+    ],
+    "keywords": [
+      "edit form",
+      "add form field",
+      "form attribute",
+      "form group",
+      "existing Form.form",
+      "generated form file",
+      "hide form field",
+      "show form field",
+      "visible false",
+      "visible true",
+      "visibility",
+      "hide Code",
+      "hide field Code",
+      "Object.Code",
+      "layout flag",
+      "small layout edit",
+      "improve form layout",
+      "make form nicer",
+      "default form looks bad",
+      "форма выглядит плохо",
+      "улучши форму",
+      "сделай форму лучше",
+      "form field title",
+      "form caption",
+      "change field title",
+      "change caption",
+      "изменить форму",
+      "поменяй заголовок поля",
+      "заголовок поля",
+      "подпись поля",
+      "добавить поле на форму",
+      "вывести реквизит на форму",
+      "реквизит формы"
+    ]
+  },
+  {
+    "id": "create_object_template",
+    "scope": "edt",
+    "category": "create",
+    "title": "Create Object Template",
+    "summary": "Create a Template (макет) owned by a metadata object with a chosen TemplateType.",
+    "guide": "workflows/create/create_object_template.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "mdFactory",
+      "fqnGenerator",
+      "dcsFactory",
+      "moxelFactory"
+    ],
+    "keywords": [
+      "template",
+      "object template",
+      "макет",
+      "макет объекта",
+      "создать макет",
+      "создай макет",
+      "печатная форма",
+      "печатную форму",
+      "форма печати",
+      "ценник",
+      "Ценник",
+      "табличный документ",
+      "СКД",
+      "схема компоновки данных"
+    ]
+  },
+  {
+    "id": "fill_template_content",
+    "scope": "edt",
+    "category": "create",
+    "title": "Fill Template Content",
+    "summary": "Attach DataCompositionSchema or SpreadsheetDocument content to an existing template via setTemplate(...).",
+    "guide": "workflows/create/fill_template_content.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager",
+      "fqnGenerator",
+      "dcsFactory",
+      "moxelFactory"
+    ],
+    "keywords": [
+      "template content",
+      "DataCompositionSchema",
+      "SpreadsheetDocument",
+      "fill template",
+      "содержимое макета",
+      "заполнить макет",
+      "заполни макет",
+      "добавить схему компоновки данных",
+      "добавь схему компоновки данных",
+      "макет СКД",
+      "табличный документ",
+      "СКД",
+      "схема компоновки данных"
+    ]
   },
   {
     "id": "create_configuration_project",
@@ -754,7 +952,15 @@
     ],
     "keywords": [
       "document",
-      "create document"
+      "create document",
+      "документ",
+      "создай документ",
+      "создать документ",
+      "документ с табличной частью",
+      "накладная",
+      "заказ",
+      "реализация",
+      "поступление"
     ]
   },
   {
@@ -1012,7 +1218,14 @@
     "keywords": [
       "http service",
       "rest",
-      "url template"
+      "url template",
+      "HTTP-сервис",
+      "HTTP сервис",
+      "создай HTTP-сервис",
+      "создать HTTP-сервис",
+      "эндпоинт",
+      "метод HTTP",
+      "URL шаблон"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1021,8 +1234,8 @@
       "variableName": "service",
       "createMethod": "createHTTPService()",
       "collection": "getHttpServices()",
-      "setupBlock": "",
-      "notes": "Set rootURL for a marker-clean baseline, for example `service.setRootURL(\"/api\")`. URL templates and HTTP methods are child objects. Keep routing details in follow-up steps. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
+      "setupBlock": "        service.setRootURL(\"api\");\n",
+      "notes": "rootURL is MANDATORY and must be a non-empty, latin, URL-safe token (e.g. \"api\", \"shop\") — NOT Cyrillic, no spaces, and prefer no leading slash. An empty or invalid rootURL produces the marker 'Некорректное значение свойства rootURL ... Некорректное значение URL'. The setupBlock already sets it; change \"api\" to a meaningful latin name. URL templates and HTTP methods are child objects added in follow-up steps. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "OrdersApi",
       "extraSetup": ""
     }
@@ -1044,7 +1257,13 @@
     "keywords": [
       "information register",
       "register",
-      "create information register"
+      "create information register",
+      "регистр сведений",
+      "создай регистр сведений",
+      "периодический регистр",
+      "срез последних",
+      "измерение",
+      "ресурс"
     ]
   },
   {
@@ -1149,7 +1368,13 @@
     ],
     "keywords": [
       "report",
-      "analytics"
+      "analytics",
+      "отчёт",
+      "отчет",
+      "отчёт со схемой компоновки",
+      "отчёт с СКД",
+      "СКД",
+      "схема компоновки данных"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1159,7 +1384,7 @@
       "createMethod": "createReport()",
       "collection": "getReports()",
       "setupBlock": "",
-      "notes": "Metadata object creation does not create layouts, forms, or module code automatically.",
+      "notes": "Metadata object creation does not create layouts, forms, or module code automatically. To add a layout/DataCompositionSchema (СКД) template to this report, do NOT hand-write .dcs/.mxl/.mdo XML with file tools — instead run the `create_object_template` scenario (Report.getTemplates(), TemplateType.DATA_COMPOSITION_SCHEMA) followed by `fill_template_content` (dcsFactory + template.setTemplate(...)). To add a form, use `create_object_form`.",
       "sampleName": "SalesAnalysis",
       "extraSetup": ""
     }
@@ -1434,7 +1659,12 @@
     ],
     "keywords": [
       "task",
-      "create task"
+      "create task",
+      "задача",
+      "создай задачу",
+      "реквизит адресации",
+      "адресация",
+      "исполнитель"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1444,7 +1674,7 @@
       "createMethod": "createTask()",
       "collection": "getTasks()",
       "setupBlock": "        task.setAutonumbering(true);\n",
-      "notes": "Tasks often mirror BusinessProcess patterns. Use TaskAttribute/TaskTabularSection for child objects.",
+      "notes": "Child objects: regular attributes via mdFactory.createTaskAttribute() → task.getAttributes().add(...); tabular sections via createTaskTabularSection(). ADDRESSING attributes (реквизиты адресации) via mdFactory.createAddressingAttribute() → task.getAddressingAttributes().add(...); set its uuid and a TypeDescription. Build the TypeDescription exactly as in create_catalog: primitives via IEObjectProvider.getProxy(IEObjectTypeNames.STRING/...); a reference (e.g. an 'Исполнитель' performer pointing to CatalogRef.X) via MdProducedTypesUtil.getProducedType(transaction.getTopObjectByFqn(\"Catalog.X\"), MdTypePackage.Literals.MD_REF_TYPE). Do NOT call .create() on platform/mcore classes and do NOT cast mdtype.* to TypeItem.",
       "sampleName": "TaskSample",
       "extraSetup": ""
     }
@@ -1483,7 +1713,12 @@
     "keywords": [
       "web service",
       "soap",
-      "operation"
+      "operation",
+      "web-сервис",
+      "web сервис",
+      "веб-сервис",
+      "SOAP",
+      "операция web-сервиса"
     ],
     "template": "top-level-create",
     "vars": {
@@ -1492,8 +1727,8 @@
       "variableName": "service",
       "createMethod": "createWebService()",
       "collection": "getWebServices()",
-      "setupBlock": "",
-      "notes": "Set namespace for a marker-clean baseline, for example `service.setNamespace(\"http://example.com/ws\")`. Operations and parameters are child objects. Create the service first, then add `Operation` and `Parameter` children. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
+      "setupBlock": "        service.setNamespace(\"http://example.com/ws\");\n",
+      "notes": "namespace is MANDATORY (a valid non-empty URI); the setupBlock already sets it — change the URI to a meaningful one. An empty namespace produces a validation marker. Operations and parameters are child objects added in follow-up steps. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
       "sampleName": "OrderService",
       "extraSetup": ""
     }
@@ -1503,7 +1738,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create WS Reference",
-    "summary": "Create WSReference metadata and configure service connection details later.",
+    "summary": "Create WSReference metadata from a real WSDL URL; ask for the URL instead of creating placeholder stubs.",
     "bindings": [
       "workspaceRoot",
       "modelManager",
@@ -1513,20 +1748,14 @@
     "keywords": [
       "ws reference",
       "soap client",
-      "reference"
+      "reference",
+      "WS-ссылка",
+      "WS ссылка",
+      "WSDL",
+      "создай WS-ссылку",
+      "SOAP клиент"
     ],
-    "template": "top-level-create",
-    "vars": {
-      "title": "WSReference",
-      "typeName": "WSReference",
-      "variableName": "reference",
-      "createMethod": "createWSReference()",
-      "collection": "getWsReferences()",
-      "setupBlock": "",
-      "notes": "Set locationURL for a marker-clean baseline, for example `reference.setLocationURL(\"http://example.com/service?wsdl\")`. For a mock URL, EDT may still warn that WSDL was not found. For delete CRUD, use delete_metadata_object; do not remove from Configuration and detach manually.",
-      "sampleName": "ExternalSoapService",
-      "extraSetup": ""
-    }
+    "guide": "workflows/create/create_ws_reference_require_url.md"
   },
   {
     "id": "create_xdto_package",
@@ -1559,6 +1788,32 @@
       "sampleName": "CommonSchema",
       "extraSetup": ""
     }
+  },
+  {
+    "id": "delete_object_form",
+    "scope": "edt",
+    "category": "delete",
+    "title": "Delete Object Form",
+    "summary": "Delete an object-owned form child and its generated Form.form resource through BM, without file deletion or top-level refactoring.",
+    "guide": "workflows/delete/delete_object_form.md",
+    "bindings": [
+      "workspaceRoot",
+      "modelManager"
+    ],
+    "keywords": [
+      "delete form",
+      "remove form",
+      "delete object form",
+      "remove object form",
+      "delete CatalogForm",
+      "delete DocumentForm",
+      "delete Form.form",
+      "remove Form.form",
+      "удали форму",
+      "удалить форму",
+      "удали форму элемента",
+      "удалить форму элемента"
+    ]
   },
   {
     "id": "delete_attribute",

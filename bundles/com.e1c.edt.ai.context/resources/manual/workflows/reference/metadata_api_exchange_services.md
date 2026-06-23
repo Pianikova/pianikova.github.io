@@ -73,15 +73,15 @@ Factory: `mdFactory.createWSReference()`
 Collection: `configuration.getWsReferences()`
 FQN prefix: `WSReference`
 Required baseline setters:
-- `setLocationURL("http://example.com/service?wsdl")`
+- `setLocationURL("<real user-provided WSDL URL>")`
 Safe getters:
 - `getLocationURL()`
 
 `locationURL` is required to avoid the SU45 "URI is not specified" marker.
-EDT can still report a warning that no WSDL description is found when the URL
-is a placeholder; treat that as expected for a mock CRUD test only if the
-prompt did not require importing a real WSDL. Imported service metadata and
-namespace details are not baseline CRUD.
+Do not use placeholder URLs for real tasks. If `GetMarkers` returns SU22
+("не найдено wsdl описания"), the WSReference is incomplete: ask for a real
+WSDL/import flow or update the object with the real URL before reporting
+success. Imported service metadata and namespace details are not baseline CRUD.
 
 ## IntegrationService
 

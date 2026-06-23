@@ -77,12 +77,16 @@ public class ConversationFacade
         boolean isNewConversation = request.isForceNewConversation() || request.getConversationSession() == null
             || request.getConversationSession().isNewConversation();
 
-        var conversationFuture = isNewConversation ? createConversationAsync(request.getProjectId(), cancellationToken)
+        var conversationFuture = isNewConversation ? createConversationAsync(request, cancellationToken)
             : CompletableFuture.completedFuture(request.getConversationSession().getConversationId());
         return conversationFuture.thenCompose(conversationId -> {
             var parentUuid = isNewConversation ? null : request.getConversationSession().getReplyToMessageUuid();
 
             ConversationAskRequest askRequest = createAskRequest(request.getMessage(), parentUuid);
+            if (request.getMaxToolRounds() != null)
+            {
+                askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
+            }
             return collectAssistantResult(request.getProjectId(), conversationId, askRequest, cancellationToken);
         });
     }
@@ -98,20 +102,23 @@ public class ConversationFacade
      * @param cancellationToken токен для отмены операции
      * @return {@link CompletableFuture} с UUID созданного диалога
      */
-    private CompletableFuture<String> createConversationAsync(ProjectId projectId, ICancellationToken cancellationToken)
+    private CompletableFuture<String> createConversationAsync(SendUserMessageRequest request,
+        ICancellationToken cancellationToken)
     {
         if (cancellationToken.isCanceled())
         {
             return CompletableFuture.failedFuture(new CancellationException("Cancelled")); //$NON-NLS-1$
         }
         ConversationRequest conversationRequest = new ConversationRequest();
-        conversationRequest.skillName = "custom"; //$NON-NLS-1$
+        conversationRequest.skillName = request.getSkillName() != null ? request.getSkillName() : "custom"; //$NON-NLS-1$
         conversationRequest.uiLanguage = settings.getLanguage();
         conversationRequest.programmingLanguage = "1c"; //$NON-NLS-1$
-        conversationRequest.isChat = false; /* иначе отображается в списке чатов */
+        // Default false so dev/helper conversations are not listed as chats; the dev-autopilot
+        // may override this to mirror the interactive chat (is_chat=true).
+        conversationRequest.isChat = request.getChat() != null ? request.getChat().booleanValue() : false;
         conversationRequest.scriptLanguage = settings.getLanguage();
 
-        return conversations.createConversationAsync(projectId, conversationRequest, cancellationToken)
+        return conversations.createConversationAsync(request.getProjectId(), conversationRequest, cancellationToken)
             .thenCompose(optionalResponse -> {
                 if (optionalResponse.isEmpty() || optionalResponse.get().uuid == null
                     || optionalResponse.get().uuid.isBlank())
@@ -212,7 +219,11 @@ public class ConversationFacade
         AtomicReference<String> lastFinishedAssistantUuid = new AtomicReference<>();
         AtomicReference<String> currentAssistantUuid = new AtomicReference<>();
         AtomicReference<String> finalText = new AtomicReference<>(""); //$NON-NLS-1$
+        AtomicReference<String> finalReasoning = new AtomicReference<>(""); //$NON-NLS-1$
+        java.util.concurrent.atomic.AtomicInteger assistantMessageCount =
+            new java.util.concurrent.atomic.AtomicInteger(0);
         ConcurrentHashMap<String, StringBuilder> textByMessageUuid = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, StringBuilder> reasoningByMessageUuid = new ConcurrentHashMap<>();
 
         conversations.createAskSource(projectId, conversationUuid, askRequest, cancellationToken)
             .subscribe(new IObserver<ConversationAskResponse>()
@@ -243,11 +254,23 @@ public class ConversationFacade
                         }
                     }
 
+                    // 2b) дельты reasoning_content
+                    if (value.contentDelta != null && value.contentDelta.reasoningContent != null)
+                    {
+                        String uuid = currentAssistantUuid.get();
+                        if (uuid != null)
+                        {
+                            reasoningByMessageUuid.computeIfAbsent(uuid, k -> new StringBuilder())
+                                .append(value.contentDelta.reasoningContent);
+                        }
+                    }
+
                     // 3) финальный assistant packet
                     if (value.finished && "assistant".equals(value.role) //$NON-NLS-1$
                         && value.uuid != null && !value.uuid.isBlank())
                     {
                         lastFinishedAssistantUuid.set(value.uuid);
+                        assistantMessageCount.incrementAndGet();
 
                         String text = null;
                         if (value.content != null && value.content.content != null)
@@ -261,6 +284,18 @@ public class ConversationFacade
                         }
 
                         finalText.set(text);
+
+                        String reasoning = null;
+                        if (value.content != null && value.content.reasoningContent != null)
+                        {
+                            reasoning = value.content.reasoningContent;
+                        }
+                        else
+                        {
+                            StringBuilder sb = reasoningByMessageUuid.get(value.uuid);
+                            reasoning = sb == null ? "" : sb.toString(); //$NON-NLS-1$
+                        }
+                        finalReasoning.set(reasoning);
                     }
                 }
 
@@ -277,7 +312,8 @@ public class ConversationFacade
 
                     ConversationSession session = new ConversationSession(conversationUuid, replyToUuid);
 
-                    future.complete(new SendMessageResult(finalText.get(), session));
+                    future.complete(new SendMessageResult(finalText.get(), session, finalReasoning.get(),
+                        assistantMessageCount.get()));
                 }
             });
 
