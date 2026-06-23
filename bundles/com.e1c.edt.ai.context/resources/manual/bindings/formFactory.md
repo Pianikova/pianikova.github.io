@@ -10,7 +10,7 @@ existing form).
 
 | Method | Creates |
 |--------|---------|
-| `createForm()` | empty `Form` (prefer `formGenerator` for a usable default) |
+| `createForm()` | empty `Form` (do **not** use for object-owned form creation/repair; use `formGenerator`) |
 | `createFormAttribute()` | `FormAttribute` (form data attribute) |
 | `createFormField()` | `FormField` (input/label/… control bound to a data path) |
 | `createFormGroup()` | `FormGroup` (container) |
@@ -33,6 +33,8 @@ attr.setMain(true);
 form.getAttributes().add(attr);
 ```
 
-`FormItem` ids and `dataPath` binding are non-trivial. For a usable default form prefer
-`formGenerator`; use `formFactory` for targeted additions in `edit_form`, and always run
-`GetMarkers` afterwards.
+`FormItem` ids and `dataPath` binding are non-trivial. For object-owned form creation or repair,
+never fall back to `FormFactory.eINSTANCE.createForm()`: it creates an empty shell and can leave a
+bad default form on disk. Use `formGenerator.generateForm(...)` for the complete default layout.
+Use `formFactory` only for targeted additions in `edit_form`, and always run `GetMarkers`
+afterwards.

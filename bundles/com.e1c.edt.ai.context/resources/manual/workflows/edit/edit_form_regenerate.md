@@ -93,9 +93,13 @@ Never add an obsolete ninth argument after `columnCount`; the extra value does n
   create another `CatalogForm`, and do not finish with "form already exists".
 - If the requested form is missing, run the full `create_object_form` workflow: create `BasicForm`,
   call `formGenerator.generateForm(...)`, `setMdForm(...)`, and attach the form structure through
-  `BASIC_FORM__FORM`. Creating only `CatalogForm` metadata is incomplete.
-- `catalogForm.getForm()` returns `AbstractForm`; store it only as `AbstractForm old` for detach.
-  The newly generated structure is `com._1c.g5.v8.dt.form.model.Form`.
+  the `form` EReference resolved from the `BasicForm` instance. Creating only `CatalogForm` metadata
+  is incomplete.
+- Never use `FormFactory.eINSTANCE.createForm()` to repair or regenerate a form. It creates an empty
+  form shell; fix the `formGenerator` code instead.
+- `catalogForm.getForm()` returns `AbstractForm`; store it only as
+  `com._1c.g5.v8.dt.metadata.mdclass.AbstractForm old` for detach. The newly generated structure
+  is `com._1c.g5.v8.dt.form.model.Form`.
 - For generator `FormType.OBJECT`, pass `Integer.valueOf(1)` as `columnCount`; never pass `null`.
 - In this EDT build, `formGenerator.generateForm(...)` has 8 arguments and ends with
   `Integer columnCount`. Do not pass a ninth `interfaceCompatibilityMode` argument.
@@ -229,7 +233,7 @@ String result = globalContext.execute(new AbstractBmTask<String>("Regenerate ite
             throw new IllegalStateException("Form ФормаЭлемента is missing; run create_object_form full workflow");
         }
 
-        AbstractForm old = catalogForm.getForm();
+        com._1c.g5.v8.dt.metadata.mdclass.AbstractForm old = catalogForm.getForm();
         if (old != null) {
             transaction.detachTopObject((IBmObject)old);
         }
@@ -245,8 +249,10 @@ String result = globalContext.execute(new AbstractBmTask<String>("Regenerate ite
 
         catalogForm.setForm(form);
         form.setMdForm(catalogForm);
+        org.eclipse.emf.ecore.EReference formReference =
+            (org.eclipse.emf.ecore.EReference)catalogForm.eClass().getEStructuralFeature("form");
         String formFqn = fqnGenerator.generateExternalPropertyFqn(
-            catalogForm, MdClassPackage.Literals.BASIC_FORM__FORM);
+            catalogForm, formReference);
         transaction.attachTopObject((IBmObject)form, formFqn);
         return "Regenerated form: " + catalogForm.getName();
     }

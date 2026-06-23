@@ -18,7 +18,10 @@ Never use `Write` to create a `Form.form` file.
   `CalculationRegisterForm`,
   call `formGenerator.generateForm(...)`, set both links (`basicForm.setForm(form)` and
   `form.setMdForm(basicForm)`), and
-  `transaction.attachTopObject(...BASIC_FORM__FORM...)`.
+  attach with `fqnGenerator.generateExternalPropertyFqn(basicForm, basicForm.eClass().getEStructuralFeature("form"))`.
+- Never use `FormFactory.eINSTANCE.createForm()` as a fallback for creation or repair. It creates
+  an empty form shell. If `formGenerator` code fails to compile, fix imports/FQNs or use reflection;
+  do not attach an empty `Form`.
 - Do not use `Write` for `.form` or owner `.mdo` files. Missing `Form.form` means this workflow did
   not finish; repair the EDT API path instead of writing XML.
 - After `Form.form` exists, small layout improvements (visibility, title/caption text, local flags,
@@ -35,6 +38,10 @@ Never use `Write` to create a `Form.form` file.
   table/field captions. Do not edit `ListSettingsComposerUserSettings`, `ListSearchString`,
   `ListSearchControl`, `ListViewStatus`, `FormCommandBar`, `ListCommandBar`, `ContextMenu`, or
   `ExtendedTooltip` merely to satisfy the improvement requirement.
+- Register list forms always have a safe minimum edit. If no better exact field/table caption edit
+  is obvious, change form-level `<autoTitle>true</autoTitle>` to `<autoTitle>false</autoTitle>` and
+  insert a Russian form `<title>` before `<autoUrl>true</autoUrl>`. Example title: `Остатки товаров`
+  or `Цены товаров`. A raw register list form with `autoTitle=true` is not success.
 - Prefer the simple style used by real SSL catalog item forms: `Object.Description` is presented as
   `Наименование`, `Object.Code` as `Код`, and both may be placed into a compact `form:FormGroup`
   (`type` = `UsualGroup`, `extInfo/group` = `HorizontalIfPossible`) named
@@ -51,7 +58,8 @@ Never use `Write` to create a `Form.form` file.
 ### Hard rules
 
 - Do not create only `CatalogForm`/`DocumentForm` metadata. Always call `formGenerator.generateForm`
-  and attach the generated `Form` as `BASIC_FORM__FORM`.
+  and attach the generated `Form` through the `form` EReference resolved from the `BasicForm`
+  instance.
 - Do not stop immediately after `formGenerator` succeeds. Read the generated `Form.form`, perform
   safe exact `Edit` refinements for obvious default presentation issues, then run `GetMarkers`.
   A create-catalog-and-form request like "Создай справочник товаров и форму для него" is incomplete
@@ -60,6 +68,9 @@ Never use `Write` to create a `Form.form` file.
   through this EDT workflow so the form is registered in the BM model.
 - If the form metadata already exists but `catalogForm.getForm()` is null or `Form.form` is missing,
   reuse that existing form metadata and attach a generated structure. Do not create a duplicate form.
+- Do not initialize form metadata variables with `var ... = null`. JShell cannot infer a type from
+  `null`. Use the concrete metadata type, for example `CatalogForm catalogForm = null;`,
+  `DocumentForm documentForm = null;`, `InformationRegisterForm registerForm = null;`, etc.
 - When repairing an existing metadata-only form, `catalogForm.setForm(form)` is mandatory before
   `form.setMdForm(catalogForm)`. Without the forward link, EDT can persist the owner `.mdo`
   reference while no external `Form.form` file is written.
@@ -136,7 +147,7 @@ String result = globalContext.execute(new AbstractBmTask<String>("Create or repa
             owner.setDefaultObjectForm(catalogForm);
         }
 
-        AbstractForm old = catalogForm.getForm();
+        com._1c.g5.v8.dt.metadata.mdclass.AbstractForm old = catalogForm.getForm();
         if (old != null) {
             transaction.detachTopObject((IBmObject)old);
         }
@@ -152,8 +163,10 @@ String result = globalContext.execute(new AbstractBmTask<String>("Create or repa
 
         catalogForm.setForm(form);
         form.setMdForm(catalogForm);
+        org.eclipse.emf.ecore.EReference formReference =
+            (org.eclipse.emf.ecore.EReference)catalogForm.eClass().getEStructuralFeature("form");
         String formFqn = fqnGenerator.generateExternalPropertyFqn(
-            catalogForm, MdClassPackage.Literals.BASIC_FORM__FORM);
+            catalogForm, formReference);
         transaction.attachTopObject((IBmObject)form, formFqn);
         return "Generated form: " + catalogForm.getName();
     }

@@ -8,6 +8,10 @@ and validate the `AccumulationRegister` `.mdo`; then immediately call `JShellMan
 After `Form.form` exists, read it, apply the mandatory safe `Edit` improvement pass, and run
 `GetMarkers`. Do not report success after only the register `.mdo` exists or after a raw untouched
 default form is generated. Never use `Write` for `.form` or owner `.mdo` files.
+For the generated register list form, the minimum required improvement is a form-level title edit:
+replace `<autoTitle>true</autoTitle>` with `<autoTitle>false</autoTitle>` and insert a Russian
+`<title>` before `<autoUrl>true</autoUrl>`. Do this with `Edit` on `Form.form`; do not edit
+`ListSettingsComposerUserSettings` or other service controls to satisfy the requirement.
 
 Use the exact project name from `GetProjects` / the user request. Never call
 `workspaceRoot.getProject()` without a name and never leave `MyProject` in executable JShell.
@@ -56,6 +60,9 @@ If the dep is `null`, throw `IllegalStateException` — create it first.
 Primitive types (`NUMBER`, etc.) still use `typeProvider.getProxy(...)`.
 Do not call `TypeDescriptionBuilder.setStringLength(...)`; that method does not exist. Use
 `setStringQualifiers(length, fixed)` for string dimensions/attributes.
+Do not import or instantiate `AllowedLength` or `StringQualifiers` for this builder. In this EDT
+build `TypeDescriptionBuilder.setStringQualifiers` takes exactly `(int length, boolean fixed)`,
+for example `.setStringQualifiers(100, false)`.
 
 ```java
 import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;

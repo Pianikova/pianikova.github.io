@@ -52,8 +52,11 @@ execute exactly this sequence:
   boolean `setUserVisible(...)` code for this task. Those APIs are version-sensitive and caused
   repeated JShell compile failures. Use `formGenerator.generateForm(...)` once instead.
 - ⚠️ `catalogForm.getForm()` returns `AbstractForm`, not `com._1c.g5.v8.dt.form.model.Form`.
-  Store the old value as `AbstractForm old = catalogForm.getForm();` only for detach. The new
-  generated value is `Form form = formGenerator.generateForm(...)`.
+  Store the old value as `com._1c.g5.v8.dt.metadata.mdclass.AbstractForm old =
+  catalogForm.getForm();` only for detach. The new generated value is
+  `Form form = formGenerator.generateForm(...)`.
+- ⛔ Never use `FormFactory.eINSTANCE.createForm()` to repair or regenerate a form. It creates an
+  empty form shell; fix the `formGenerator` code instead.
 - ⛔ **Existing form means regenerate, not create.** If `owner.getForms()` already contains
   `ФормаЭлемента`, do not switch to `create_object_form` and do not throw "form already exists" as
   a final answer. Continue with the regeneration task below.
@@ -172,7 +175,7 @@ String result = globalContext.execute(new AbstractBmTask<String>("Regenerate for
         }
 
         // 1) detach the old structure (FQN is already in use)
-        AbstractForm old = catalogForm.getForm();
+        com._1c.g5.v8.dt.metadata.mdclass.AbstractForm old = catalogForm.getForm();
         if (old != null) {
             transaction.detachTopObject((IBmObject)old);
         }
@@ -190,8 +193,10 @@ String result = globalContext.execute(new AbstractBmTask<String>("Regenerate for
 
         // 3) link + attach the regenerated structure
         form.setMdForm(catalogForm);
+        org.eclipse.emf.ecore.EReference formReference =
+            (org.eclipse.emf.ecore.EReference)catalogForm.eClass().getEStructuralFeature("form");
         String formFqn = fqnGenerator.generateExternalPropertyFqn(
-            catalogForm, MdClassPackage.Literals.BASIC_FORM__FORM);
+            catalogForm, formReference);
         transaction.attachTopObject((IBmObject)form, formFqn);
 
         return catalogForm.getName();

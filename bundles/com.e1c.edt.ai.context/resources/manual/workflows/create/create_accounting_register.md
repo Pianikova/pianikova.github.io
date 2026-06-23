@@ -6,6 +6,14 @@ and validate the `AccountingRegister` `.mdo`; then immediately call `JShellManua
 After `Form.form` exists, read it, apply the mandatory safe `Edit` improvement pass, and run
 `GetMarkers`. Do not report success after only the register `.mdo` exists or after a raw untouched
 default form is generated. Never use `Write` for `.form` or owner `.mdo` files.
+For the generated register list form, the minimum required improvement is a form-level title edit:
+replace `<autoTitle>true</autoTitle>` with `<autoTitle>false</autoTitle>` and insert a Russian
+`<title>` before `<autoUrl>true</autoUrl>`. Do this with `Edit` on `Form.form`; do not edit
+`ListSettingsComposerUserSettings` or other service controls to satisfy the requirement.
+
+For string dimensions/attributes, use `TypeDescriptionBuilder.setStringQualifiers(int length,
+boolean fixed)`, for example `.setStringQualifiers(100, false)`. Do not import or instantiate
+`AllowedLength` or `StringQualifiers`; do not call `setStringLength(...)`.
 
 Use the exact project name from `GetProjects` / the user request. Never call
 `workspaceRoot.getProject()` without a name and never leave `MyProject` in executable JShell.

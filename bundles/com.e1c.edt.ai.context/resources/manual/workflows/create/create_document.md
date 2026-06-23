@@ -45,6 +45,16 @@ import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
 import java.util.UUID;
 ```
 
+If you do not copy these imports into the JShell snippet, use fully qualified names directly. Do not
+write short names with omitted imports: `DocumentAttribute`, `DocumentTabularSection`,
+`TabularSectionAttribute`, `MdProducedTypesUtil`, and `MdTypePackage` are not built-in JShell
+bindings. Compact snippets should prefer these FQNs:
+`com._1c.g5.v8.dt.metadata.mdclass.DocumentAttribute`,
+`com._1c.g5.v8.dt.metadata.mdclass.DocumentTabularSection`,
+`com._1c.g5.v8.dt.metadata.mdclass.TabularSectionAttribute`,
+`com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil`, and
+`com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage`.
+
 Wrong package paths you must not invent:
 
 - ❌ `com._1c.g5.emf.model.bm.*` (no such package)
@@ -88,6 +98,8 @@ shared classloader may still reference the **old** name and throw
   ask for a fresh `jshellsession` first.
 - Prefer `var` over explicit types for local declarations — JShell
   handles re-declarations of `var`-typed variables more cleanly.
+- Exception: never write `var x = null`; JShell cannot infer a type from `null`. Use an explicit
+  type for nullable metadata variables, for example `DocumentForm documentForm = null;`.
 
 `v8project.getVersion()` is a **method call** that returns a `Version` enum
 value, not an import. Do not write `com._1c.g5.v8.dt.platform.version.X`
@@ -103,12 +115,22 @@ Before writing code, decide which attributes are custom. Do not create document 
 `Number`, `РќРѕРјРµСЂ`, `Posted`, `РџСЂРѕРІРµРґРµРЅ`, `Ref`, `РЎСЃС‹Р»РєР°`, `DeletionMark`, or `РџРѕРјРµС‚РєР°РЈРґР°Р»РµРЅРёСЏ`: these are standard
 document properties and EDT reports SU45 name/type markers if they are added as custom attributes.
 
+Do not invent business attributes, tabular sections, or register movements. If the user only says
+"создай документ <Name> и форму для него", create the document with standard document properties and
+the requested form. Add custom attributes/table sections only when the prompt explicitly names them
+or when another called workflow requires them. If details are missing, ask or create the minimal
+document; do not guess `Контрагент`, `Склад`, `Товары`, `Цена`, `Сумма`, etc.
+
 If the prompt asks for a document and a form, this is a chained workflow. First create and validate
 the `Document` `.mdo`; then immediately call `JShellManual` for `create_object_form` and create or
 repair the generated form structure through EDT `formGenerator`. After `Form.form` exists, read it,
 apply the mandatory safe `Edit` improvement pass, and run `GetMarkers`. Do not report success after
 only the document `.mdo` exists or after a raw untouched default form is generated. Never use `Write`
 for `.form` or owner `.mdo` files.
+
+If the user asks for a concrete reference field such as `CatalogRef.Номенклатура`, do not silently
+fallback to generic `IEObjectTypeNames.CATALOG_REF`. If the referenced object is missing, stop with
+`IllegalStateException` and tell the user the dependency must be created first.
 
 When a document has many attributes, prefer small helper methods that return a NEW `TypeDescription` on every call.
 Never store one `TypeDescription` and assign it to two attributes.

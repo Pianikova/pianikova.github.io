@@ -63,14 +63,26 @@ change is not enough for the mandatory improvement pass when Code/Description co
   user-facing table/field captions. Do not edit `ListSettingsComposerUserSettings`,
   `ListSearchString`, `ListSearchControl`, `ListViewStatus`, `FormCommandBar`, `ListCommandBar`,
   `ContextMenu`, or `ExtendedTooltip` merely to satisfy the improvement requirement.
+- ✅ **Register list forms always have a safe minimum edit.** If the generated form is a register
+  `LIST` form and no better exact field/table caption edit is obvious, change the form-level
+  `<autoTitle>true</autoTitle>` to `<autoTitle>false</autoTitle>` and insert a Russian form
+  `<title>` before `<autoUrl>true</autoUrl>`. Example title: `Остатки товаров` or
+  `Цены товаров`. This counts as the mandatory improvement because it changes the user-facing form
+  title. A raw register list form with `autoTitle=true` is not success.
 - ✅ **Use the real request project name.** Never leave `MyProject` in executable JShell. Check
   `project.exists()`, `projectManager.getProject(project) != null`, and
   `modelManager.getModel(project) != null` before entering the BM task.
+- ✅ **Do not initialize form metadata variables with `var ... = null`.** JShell cannot infer a
+  type from `null`. Use the concrete metadata type, for example `CatalogForm catalogForm = null;`,
+  `DocumentForm documentForm = null;`, `InformationRegisterForm registerForm = null;`, etc.
 - ✅ **Check existence first.** Fetch the owner with `transaction.getTopObjectByFqn("Catalog.<Name>")`
   and inspect `owner.getForms()`. If a form with the requested name already exists, do not
   recreate it — edit it (`edit_form`) or stop.
 - ✅ **Set a UUID** on the `BasicForm` (`form.setUuid(UUID.randomUUID())`) — missing UUID causes SU45.
 - ✅ **Add the form to the owner collection** (`owner.getForms().add(catalogForm)`).
+- ⛔ **Never use `FormFactory.eINSTANCE.createForm()` as a fallback for creation or repair.** It
+  creates an empty form shell. If `formGenerator` code fails to compile, fix imports/FQNs or use
+  reflection; do not attach an empty `Form`.
 - ⚠️ **Two `FormType` enums exist.** The `formGenerator`/`formFieldGenerator` argument uses
   `com._1c.g5.v8.dt.form.generator.FormType` (`GENERIC`, `OBJECT`, `LIST`, …).
   `BasicForm.setFormType(...)` uses `com._1c.g5.v8.dt.metadata.mdclass.FormType`
@@ -166,8 +178,10 @@ String formName = globalContext.execute(new AbstractBmTask<String>("Create objec
         // STEP 3 (required) — link + persist the structure as an external resource
         catalogForm.setForm(form);
         form.setMdForm(catalogForm);
+        org.eclipse.emf.ecore.EReference formReference =
+            (org.eclipse.emf.ecore.EReference)catalogForm.eClass().getEStructuralFeature("form");
         String formFqn = fqnGenerator.generateExternalPropertyFqn(
-            catalogForm, MdClassPackage.Literals.BASIC_FORM__FORM);
+            catalogForm, formReference);
         transaction.attachTopObject((IBmObject)form, formFqn);
 
         return catalogForm.getName();
@@ -194,7 +208,8 @@ the structure file exists, and complete the required safe improvement pass with 
 
 - **`Form.form` exists, at least one safe user-facing `Edit` improvement was made when
   Code/Description controls or other editable business presentation fragments are present, and
-  markers clean → success.** Edits to service-only controls do not satisfy this condition.
+  markers clean → success.** For register list forms, a form-level Russian title edit is always
+  available and required. Edits to service-only controls do not satisfy this condition.
 - **`Form.form` exists but is still the untouched EDT default with Code/Description controls → not
   success.** Run `edit_form`/`Edit` before reporting done.
 - **`Form.form` is missing** → the form is incomplete. This is **not** success: STEP 2/3 did not

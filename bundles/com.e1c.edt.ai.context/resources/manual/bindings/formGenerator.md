@@ -16,8 +16,7 @@ Form generateForm(
     String languageCode,                    // editingLanguageManager.getEditingLanguageCode(project)
     Version version,                        // v8project.getVersion()
     FormFieldInfo rootField,                // formFieldGenerator.getFormGeneratorFields(mdObject, formType, scriptVariant, version)
-    Integer columnCount,                    // nullable; only meaningful for CONSTANT/OBJECT/GROUP/RECORD
-    InterfaceCompatibilityMode mode);       // nullable
+    Integer columnCount);                   // non-null for OBJECT/FOLDER/CONSTANTS/RECORD/REPORT
 ```
 
 Returns a `com._1c.g5.v8.dt.form.model.Form` (never null).
@@ -41,7 +40,9 @@ alone may update the owner `.mdo` but leave `Form.form` absent on disk.
 ```java
 basicForm.setForm(form);
 form.setMdForm(basicForm);
-String formFqn = fqnGenerator.generateExternalPropertyFqn(basicForm, MdClassPackage.Literals.BASIC_FORM__FORM);
+org.eclipse.emf.ecore.EReference formReference =
+    (org.eclipse.emf.ecore.EReference)basicForm.eClass().getEStructuralFeature("form");
+String formFqn = fqnGenerator.generateExternalPropertyFqn(basicForm, formReference);
 transaction.attachTopObject((IBmObject)form, formFqn);
 ```
 
