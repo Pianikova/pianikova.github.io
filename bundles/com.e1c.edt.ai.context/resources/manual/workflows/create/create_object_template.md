@@ -7,6 +7,11 @@ body. To add real content (data sets, cells) afterwards, use `fill_template_cont
 After the default body exists, targeted changes may be made with `Edit` on the existing generated
 template/body files. Do not use `Write` to create `Template.mdo`, `.dcs`, `.mxl`, or `.mxlx` files.
 
+**Creation vs refinement policy:** create and register templates through EDT API in a BM
+transaction. Let EDT create the owner child, default body, external-property FQN, and disk files.
+Only after `Template.mdo` and the body file already exist may the agent use file `Edit` for narrow
+text-level fixes. `Write` is not a template creation mechanism.
+
 > For a stand-alone shared template use `create_common_template` (creates a top-level
 > `CommonTemplate`). This scenario is for templates **owned by an object**, added to
 > `owner.getTemplates()`.
@@ -23,6 +28,12 @@ template/body files. Do not use `Write` to create `Template.mdo`, `.dcs`, `.mxl`
 - ❌ **Never create the template with file tools** (`Write` on `Template.mdo`, `*.dcs`, `*.mxl`,
   settings `*.xml`). Use the model API inside a BM transaction. `Edit` is allowed only after the
   template/body file already exists and was generated/registered by EDT.
+- ⛔ **No raw XML bootstrap.** If `Template.dcs`/`Template.mxl(x)` is missing, the workflow is
+  incomplete. Re-run or repair the EDT API attach step; do not invent a replacement file with
+  `Write`.
+- ✅ **Small post-generation edits are allowed.** For existing generated template files, first
+  `Read`, then use `Edit` with an exact, minimal replacement, and finish with `GetMarkers` on the
+  owner `.mdo`. Keep structural template operations in EDT API.
 - ⛔ **Create AND attach an empty body in the SAME task** (for `SPREADSHEET_DOCUMENT` →
   `moxelFactory.createSpreadsheetDocument()`, for `DATA_COMPOSITION_SCHEMA` →
   `dcsFactory.createDataCompositionSchema()`): `template.setTemplate(content)` then
@@ -38,6 +49,10 @@ template/body files. Do not use `Write` to create `Template.mdo`, `.dcs`, `.mxl`
   `BINARY_DATA`, `GEOGRAPHICAL_SCHEMA`, `GRAPHICAL_SCHEMA`,
   `DATA_COMPOSITION_APPEARANCE_TEMPLATE`, `ACTIVE_DOCUMENT`, `ADD_IN`.
 - ✅ **Add to the owner collection** (`owner.getTemplates().add(template)`).
+- ✅ **Use the real request project name.** Never leave `MyProject` in executable JShell. Before
+  calling `bmModel.getGlobalContext()`, check that `workspaceRoot.getProject(...)` exists and
+  `modelManager.getModel(project)` is non-null. If the owner FQN is missing, throw
+  `IllegalStateException("Missing owner ... create it first")`; do not continue into NPE.
 
 ### `TemplateType` constants (enum `com._1c.g5.v8.dt.metadata.mdclass.TemplateType`)
 
@@ -55,8 +70,14 @@ import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
 import com._1c.g5.v8.dt.moxel.MoxelFactory;
 import com._1c.g5.v8.dt.moxel.SpreadsheetDocument;
 
-IProject project = workspaceRoot.getProject("MyProject");
+IProject project = workspaceRoot.getProject("<ProjectName>");
+if (project == null || !project.exists()) {
+    throw new IllegalStateException("Project not found: <ProjectName>");
+}
 IBmModel bmModel = modelManager.getModel(project);
+if (bmModel == null) {
+    throw new IllegalStateException("BM model is not available: " + project.getName());
+}
 IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
 
 String created = globalContext.execute(new AbstractBmTask<String>("Create object template") {

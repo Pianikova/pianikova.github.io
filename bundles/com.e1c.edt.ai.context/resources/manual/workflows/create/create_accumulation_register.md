@@ -2,6 +2,18 @@
 
 Call `JShell` with `scope: "edt"` for this workflow.
 
+If the prompt asks for an accumulation register and a form, this is a chained workflow. First create
+and validate the `AccumulationRegister` `.mdo`; then immediately call `JShellManual` for
+`create_object_form` and create or repair the generated form structure through EDT `formGenerator`.
+After `Form.form` exists, read it, apply the mandatory safe `Edit` improvement pass, and run
+`GetMarkers`. Do not report success after only the register `.mdo` exists or after a raw untouched
+default form is generated. Never use `Write` for `.form` or owner `.mdo` files.
+
+Use the exact project name from `GetProjects` / the user request. Never call
+`workspaceRoot.getProject()` without a name and never leave `MyProject` in executable JShell.
+Check `project.exists()`, `projectManager.getProject(project) != null`, and
+`modelManager.getModel(project) != null` before entering the BM task.
+
 Copy these exact imports into the JShell snippet (do not guess packages; `manual_ids` do not import
 automatically). Wrong guesses like `dt.mcore.IEObjectTypeNames`, `dt.core.project.IV8Project`, or
 `dt.bm.model.*` cause "cannot find symbol" / "package does not exist".
@@ -42,6 +54,8 @@ shown below), do **NOT** use `typeProvider.getProxy("CatalogRef.Warehouses")`
 where `depMdObject = (Catalog)transaction.getTopObjectByFqn("Catalog.Warehouses")`.
 If the dep is `null`, throw `IllegalStateException` — create it first.
 Primitive types (`NUMBER`, etc.) still use `typeProvider.getProxy(...)`.
+Do not call `TypeDescriptionBuilder.setStringLength(...)`; that method does not exist. Use
+`setStringQualifiers(length, fixed)` for string dimensions/attributes.
 
 ```java
 import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
@@ -53,9 +67,18 @@ TypeItem warehouseRef = MdProducedTypesUtil.getProducedType(whDep, MdTypePackage
 ```
 
 ```java
-IProject project = workspaceRoot.getProject("MyProject");
+IProject project = workspaceRoot.getProject("<ProjectName>");
+if (project == null || !project.exists()) {
+    throw new IllegalStateException("Project not found: <ProjectName>");
+}
 IV8Project v8project = projectManager.getProject(project);
+if (v8project == null) {
+    throw new IllegalStateException("V8 project is not available: " + project.getName());
+}
 IBmModel bmModel = modelManager.getModel(project);
+if (bmModel == null) {
+    throw new IllegalStateException("BM model is not available: " + project.getName());
+}
 IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
 
 AccumulationRegister register = globalContext.execute(new AbstractBmTask<AccumulationRegister>("Create register") {

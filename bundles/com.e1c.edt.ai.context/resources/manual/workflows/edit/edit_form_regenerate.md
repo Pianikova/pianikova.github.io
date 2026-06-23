@@ -6,17 +6,52 @@ or regenerate the form structure with `formGenerator`.
 
 ### Direct edit route for existing generated forms
 
-For small layout or caption changes in an existing generated form, such as "change the title of
-field X on Catalog.Y item form", do not use JShell form layout APIs. They are too fragile for
-direct manual construction. Use file tools instead:
+Prefer this route for small changes and improvements in an existing generated form: hide/show a
+field, change a field title, caption, synonym text, visibility flag, or another local layout flag.
+It is also the allowed route for improving a default generated form when the user says it looks raw,
+bad, poorly arranged, or asks to make it nicer. Examples: "hide field Code", "change the title of
+field X on Catalog.Y item form", "make field X invisible", "improve the default form".
+Run this route after creating a new default form as the mandatory safe improvement pass.
+Do not use JShell form layout APIs for these edits. They are too fragile for direct manual
+construction; EDT already created a valid default layout, so refine the existing file instead.
 
 1. Use `SearchFiles`/`Read` to find and read the existing `Form.form`
    (`src/Catalogs/<Owner>/Forms/<FormName>/Form.form` or the matching owner folder).
-2. Use `Edit` with a small exact replacement in that existing `Form.form`.
-3. Run `GetMarkers` with `marker_type:"1c"` for the owner `.mdo`.
+   If the user named an exact owner (`Catalog.ТоварыLife02`), do not edit a similar owner
+   (`ТоварыLife01`, `Товары`, etc.) when the exact owner/form is missing. Stop and report the
+   missing exact object instead.
+2. Verify the target element exists in that file. For object fields, look for names like
+   `<name>Code</name>` and data-path segments like `<segments>Object.Code</segments>`.
+3. Use `Edit` with a small exact replacement in that existing `Form.form`. For hiding a field,
+   replace only the relevant `<visible>true</visible>`/visibility fragment for that field or its
+   directly associated items. For simple cosmetic improvements, make only exact, reviewable XML
+   changes such as title/caption values, visibility flags, or moving an already existing item block.
+   Do not rewrite the whole form.
+4. Run `GetMarkers` with `marker_type:"1c"` for the owner `.mdo`.
+5. Report success only after the file was edited and markers were checked.
 
-`Write` is forbidden for `.form` and `.mdo`. If `Form.form` is missing, first create or repair the
-form through `create_object_form`; never create `Form.form` with `Write`.
+`Write` is forbidden for `.form` and `.mdo`. `Edit` is allowed only for an existing file that was
+read first. If `Form.form` is missing, first create or repair the form through `create_object_form`;
+never create `Form.form` with `Write`.
+
+If the requested target is absent from the existing `Form.form`, stop and report that the form does
+not contain that field/control yet. Do not switch to `Task skill="design"`, do not hand-build form
+layout objects, and do not silently regenerate the form unless the user's request is structural
+("add/show requisite X" or "regenerate the form"). For a missing object requisite, create the
+metadata requisite first and then regenerate through `formGenerator`; for a missing standard field
+such as `Code`, explain that the current generated form has no `Object.Code` control to edit.
+
+### Decision table
+
+| Request type | Route |
+|--------------|-------|
+| Create missing form | `create_object_form` via EDT API/generator |
+| Existing form, hide/show field | `SearchFiles`/`Read` -> `Edit` existing `Form.form` -> `GetMarkers` |
+| Existing form, change title/caption | `SearchFiles`/`Read` -> `Edit` existing `Form.form` -> `GetMarkers` |
+| Existing default form, make nicer/improve | `SearchFiles`/`Read` -> small `Edit` refinements -> `GetMarkers` |
+| Just created default form | `Read` generated `Form.form` -> safe presentation `Edit` if possible -> `GetMarkers` |
+| Add missing object requisite and show it | create/repair metadata attribute, then regenerate with `formGenerator` |
+| `Form.form` missing or broken | repair through EDT API; do not `Write` raw XML |
 
 CRITICAL for this EDT build: call `generateForm` with exactly 8 arguments:
 
@@ -32,6 +67,13 @@ Never add an obsolete ninth argument after `columnCount`; the extra value does n
 - Do not create `FormAttribute`, `FormField`, `DataPath`, `FormDataPath`, or `FormItem` manually
   for object attributes. Do not call `setSegments`, `setDataPath`, `setAutoMaxWidth`,
   `FormField.ViewMode`, `FormField.EditMode`, or `form.model.FormType`.
+- Do not dismiss default generated forms as failed or "bad" merely because they are simple. If the
+  user wants a nicer layout, improve the existing `Form.form` with precise `Edit` operations.
+- After any successful form creation, run a safe improvement pass through this route. Prefer obvious
+  user-facing fixes such as `Code` -> `Код` and `Description` -> `Наименование` captions/titles
+  when the exact controls are present. If title/caption nodes are absent, add a safe form title or
+  group title by editing existing XML structure. If no exact safe replacement is available, keep the
+  generated layout and report that it was inspected.
 - If the object attribute is absent, create a real `CatalogAttribute`/`DocumentAttribute` first
   with a non-empty `TypeDescription`. A form-local attribute is not a metadata requisite.
 - For simple string attributes, prefer copying a known-good string `TypeDescription` from an
@@ -42,6 +84,8 @@ Never add an obsolete ninth argument after `columnCount`; the extra value does n
   guesses like `Warehouse` in executable JShell. For Step A do not call `projectManager.getProject`;
   only `modelManager.getModel(project)` is needed. If it is null, the project name is wrong or the
   project is not open; throw a clear error instead of letting a `NullPointerException` escape.
+- Never switch from the exact requested owner to a fuzzy match. A request for `ТоварыLife02` must not
+  read or edit `ТоварыLife01` just because it is the nearest existing catalog.
 - Wrap each JShell snippet in `{ ... }` so failed attempts do not leave stale top-level variables.
   After an early `NullPointerException` from project/model lookup, create a fresh `jshellsession`
   before retrying.
@@ -199,6 +243,7 @@ String result = globalContext.execute(new AbstractBmTask<String>("Regenerate ite
         Form form = formGenerator.generateForm(owner, catalogForm, genType, scriptVariant,
             languageCode, version, rootField, Integer.valueOf(1));
 
+        catalogForm.setForm(form);
         form.setMdForm(catalogForm);
         String formFqn = fqnGenerator.generateExternalPropertyFqn(
             catalogForm, MdClassPackage.Literals.BASIC_FORM__FORM);

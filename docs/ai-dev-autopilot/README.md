@@ -50,9 +50,7 @@ time), and writes the transcript to `outbox/<id>.json` (same `<id>` as the reque
 ```json
 {
   "prompt": "сделай форму элемента для справочника Номенклатура",
-  "project": "<ProjectName>",
-  "is_chat": true,
-  "skill": "custom"
+  "project": "<ProjectName>"
 }
 ```
 
@@ -60,10 +58,26 @@ time), and writes the transcript to `outbox/<id>.json` (same `<id>` as the reque
 |-------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `prompt`          | yes      | user message sent to the assistant (a new conversation is forced each turn)                                                                                                                                         |
 | `project`         | no       | 1C project name to target; if omitted/not found, a project-less context is used. In tests, pass the real project name from your environment; never hard-code README examples or translated guesses. |
-| `is_chat`         | no       | override the conversation `is_chat` flag; omit to use the default (`false`)                                                                                                                                         |
-| `skill`           | no       | override the conversation skill (`custom`/`raw`/`system`/`docstring`/`explain`/`review`/`modify`); omit to use the default (`custom`)                                                                               |
 | `preamble`        | no       | agent preamble prepended to the prompt: omit/`null` → built-in default preamble (drives the model to run JShellManual→JShell→GetMarkers to completion); `""` → bare prompt, no preamble; any string → that preamble |
-| `max_tool_rounds` | no       | cap on tool-execution rounds for the turn; omit → harness default (30). Multi-artifact tasks (object + form/template + content) plus self-correction need more than the chat default of 10                          |
+| `max_tool_rounds` | no       | cap on tool-execution rounds for the turn; omit → harness default (200). Multi-artifact tasks (object + form/template + content) plus self-correction need far more than the chat default of 10                     |
+
+Do **not** put `skill` or `is_chat` into normal `inbox/<id>.json` requests. The dev-autopilot
+conversation should run as chat mode (`is_chat=true`) with the `custom` skill by default. Keep
+normal request files to `{ "prompt": "...", "project": "..." }` plus only the rare overrides you
+are intentionally testing (`preamble`, `max_tool_rounds`).
+
+For diagnostics only, you may compare routing with:
+
+```json
+{
+  "prompt": "В форме элемента справочника Номенклатура скрой поле Код",
+  "project": "<ProjectName>",
+  "skill": "raw"
+}
+```
+
+Use this to isolate custom-skill policy issues. Do not make `skill:"raw"` the normal inbox format
+unless that is the experiment under test.
 
 > **Why the preamble.** The dev/helper conversation (skill `custom`) lacks the interactive chat's
 > agent system prompt, so a bare prompt makes the model gather context and stop. The default
@@ -167,8 +181,6 @@ non-mutating request such as:
 {
   "prompt": "Вызови JShellManual для сценария edit_form и напиши первую строку guide_markdown. Ничего в проекте не меняй.",
   "project": "<ProjectName>",
-  "is_chat": true,
-  "skill": "custom",
   "max_tool_rounds": 5
 }
 ```

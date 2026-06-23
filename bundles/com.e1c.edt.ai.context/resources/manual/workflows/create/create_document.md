@@ -103,6 +103,13 @@ Before writing code, decide which attributes are custom. Do not create document 
 `Number`, `РќРѕРјРµСЂ`, `Posted`, `РџСЂРѕРІРµРґРµРЅ`, `Ref`, `РЎСЃС‹Р»РєР°`, `DeletionMark`, or `РџРѕРјРµС‚РєР°РЈРґР°Р»РµРЅРёСЏ`: these are standard
 document properties and EDT reports SU45 name/type markers if they are added as custom attributes.
 
+If the prompt asks for a document and a form, this is a chained workflow. First create and validate
+the `Document` `.mdo`; then immediately call `JShellManual` for `create_object_form` and create or
+repair the generated form structure through EDT `formGenerator`. After `Form.form` exists, read it,
+apply the mandatory safe `Edit` improvement pass, and run `GetMarkers`. Do not report success after
+only the document `.mdo` exists or after a raw untouched default form is generated. Never use `Write`
+for `.form` or owner `.mdo` files.
+
 When a document has many attributes, prefer small helper methods that return a NEW `TypeDescription` on every call.
 Never store one `TypeDescription` and assign it to two attributes.
 

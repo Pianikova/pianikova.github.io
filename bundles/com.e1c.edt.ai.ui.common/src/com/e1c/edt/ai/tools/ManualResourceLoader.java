@@ -35,7 +35,6 @@ public final class ManualResourceLoader
 
     private final Class<?> anchor;
     private final String root;
-    private final Map<String, String> cache = new HashMap<>();
     private final Map<String, Function<String, String>> dynamicResolvers = new HashMap<>();
 
     /**
@@ -70,18 +69,13 @@ public final class ManualResourceLoader
     }
 
     /**
-     * Load resource content as raw text without any substitution. Cached.
+     * Load resource content as raw text without any substitution.
      *
      * @param relativePath path relative to root (no leading slash)
      * @return raw file contents
      */
     public String loadRaw(String relativePath)
     {
-        var cached = cache.get(relativePath);
-        if (cached != null)
-        {
-            return cached;
-        }
         var fullPath = root + "/" + relativePath; //$NON-NLS-1$
         try (InputStream stream = anchor.getResourceAsStream(fullPath))
         {
@@ -91,9 +85,7 @@ public final class ManualResourceLoader
             }
             try (var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8)))
             {
-                var content = reader.lines().collect(Collectors.joining("\n")); //$NON-NLS-1$
-                cache.put(relativePath, content);
-                return content;
+                return reader.lines().collect(Collectors.joining("\n")); //$NON-NLS-1$
             }
         }
         catch (IOException e)

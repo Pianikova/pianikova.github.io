@@ -20,12 +20,20 @@ Run after `create_object_template` (or `create_common_template`).
   `*.xml`). The body must first be generated/registered through the EMF factory +
   `setTemplate(...)` inside a BM transaction (below). After the generated body file exists, `Edit`
   may be used for small targeted changes, followed by `GetMarkers`.
+- ✅ **Use `Edit` only as refinement.** Once EDT has produced the body file, file `Edit` may adjust
+  a small known text fragment in an existing `.dcs`/`.mxl(x)`/`Template.mdo` resource. Always read
+  the file first, keep the replacement exact and minimal, and validate the owner `.mdo` with
+  `GetMarkers`. If the file does not exist, return to this EDT API workflow instead of `Write`.
 - ⛔ **Exact factory packages — do not guess.** The DCS factory is
   `com._1c.g5.v8.dt.dcs.model.schema.DcsFactory` (NOT `com._1c.g5.v8.dt.dcs.util.*`). The
   spreadsheet factory is `com._1c.g5.v8.dt.moxel.MoxelFactory`. Both are exposed as the
   pre-bound `dcsFactory` / `moxelFactory` session variables — use those rather than importing.
 - ✅ If the template does not exist yet, run `create_object_template` first; do not create the
   template metadata here.
+- ✅ **Use the real request project name.** Never leave `MyProject` in executable JShell. Check
+  `project.exists()` and `modelManager.getModel(project) != null` before `getGlobalContext()`.
+  Missing project, missing BM model, missing owner, and missing template must be explicit
+  `IllegalStateException`s, not `NullPointerException`s.
 
 ### How template content is stored (required two steps)
 
@@ -65,8 +73,14 @@ import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
 import com._1c.g5.v8.dt.dcs.model.schema.DcsFactory;
 import com._1c.g5.v8.dt.dcs.model.schema.DataCompositionSchema;
 
-IProject project = workspaceRoot.getProject("MyProject");
+IProject project = workspaceRoot.getProject("<ProjectName>");
+if (project == null || !project.exists()) {
+    throw new IllegalStateException("Project not found: <ProjectName>");
+}
 IBmModel bmModel = modelManager.getModel(project);
+if (bmModel == null) {
+    throw new IllegalStateException("BM model is not available: " + project.getName());
+}
 IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
 
 String result = globalContext.execute(new AbstractBmTask<String>("Fill template content") {

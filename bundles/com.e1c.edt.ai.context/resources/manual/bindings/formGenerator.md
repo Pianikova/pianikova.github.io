@@ -33,10 +33,13 @@ The `formGenerator` argument uses the **generator** enum. Import it explicitly t
 
 ### Persisting the generated form
 
-The generated `Form` is an external-property object: link it back with `form.setMdForm(basicForm)`
-and attach it as a top object using the external-property FQN:
+The generated `Form` is an external-property object. Set both sides of the
+`BasicForm` <-> `Form` link before attaching it as a top object. This is
+especially important when repairing an existing metadata-only form: `form.setMdForm(...)`
+alone may update the owner `.mdo` but leave `Form.form` absent on disk.
 
 ```java
+basicForm.setForm(form);
 form.setMdForm(basicForm);
 String formFqn = fqnGenerator.generateExternalPropertyFqn(basicForm, MdClassPackage.Literals.BASIC_FORM__FORM);
 transaction.attachTopObject((IBmObject)form, formFqn);

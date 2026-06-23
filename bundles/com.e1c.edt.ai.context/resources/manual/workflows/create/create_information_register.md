@@ -1,5 +1,17 @@
 ## Safe Workflow: Create InformationRegister
 
+If the prompt asks for an information register and a form, this is a chained workflow. First create
+and validate the `InformationRegister` `.mdo`; then immediately call `JShellManual` for
+`create_object_form` and create or repair the generated form structure through EDT `formGenerator`.
+After `Form.form` exists, read it, apply the mandatory safe `Edit` improvement pass, and run
+`GetMarkers`. Do not report success after only the register `.mdo` exists or after a raw untouched
+default form is generated. Never use `Write` for `.form` or owner `.mdo` files.
+
+Use the exact project name from `GetProjects` / the user request. Never call
+`workspaceRoot.getProject()` without a name and never leave `MyProject` in executable JShell.
+Check `project.exists()`, `projectManager.getProject(project) != null`, and
+`modelManager.getModel(project) != null` before entering the BM task.
+
 ### Canonical imports
 
 Copy these imports into the JShell session when creating registers with
@@ -86,6 +98,7 @@ Do not send JShell code with these EDT patterns:
 
 ```java
 // WRONG: do not call setStringQualifiers with length 150, 1000, or any value above 100.
+// WRONG: TypeDescriptionBuilder has no setStringLength(...); use setStringQualifiers(length, fixed).
 
 // WRONG: Ecore data types are not EDT TypeItem values.
 TypeItem stringType = (TypeItem)modelFactory.create(EcorePackage.Literals.ESTRING, v8project);
@@ -108,9 +121,18 @@ TypeDescription dimensionType = new TypeDescriptionBuilder()
 
 ### Example
 ```java
-IProject project = workspaceRoot.getProject("MyProject");
+IProject project = workspaceRoot.getProject("<ProjectName>");
+if (project == null || !project.exists()) {
+    throw new IllegalStateException("Project not found: <ProjectName>");
+}
 IV8Project v8project = projectManager.getProject(project);
+if (v8project == null) {
+    throw new IllegalStateException("V8 project is not available: " + project.getName());
+}
 IBmModel bmModel = modelManager.getModel(project);
+if (bmModel == null) {
+    throw new IllegalStateException("BM model is not available: " + project.getName());
+}
 IBmGlobalEditingContext globalContext = bmModel.getGlobalContext();
 globalContext.execute(new AbstractBmTask<Void>("Create information register") {
     @Override
