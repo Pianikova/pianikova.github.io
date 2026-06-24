@@ -8,6 +8,7 @@ import java.util.Objects;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
+import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
@@ -161,6 +162,10 @@ public class ClientAIPreferencePage
             Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator);
         setLabelTooltip(validatorField, Messages.ClientAIPreferencePage_Parameters_Tooltip);
         addField(validatorField);
+
+        var showStatusBarField = new BooleanFieldEditor(ISettingsStore.SHOW_STATUS_BAR,
+            Messages.ClientAIPreferencePage_ShowStatusBar, parent);
+        addField(showStatusBarField);
     }
 
     private void setLabelTooltip(org.eclipse.jface.preference.FieldEditor editor, String tooltip)

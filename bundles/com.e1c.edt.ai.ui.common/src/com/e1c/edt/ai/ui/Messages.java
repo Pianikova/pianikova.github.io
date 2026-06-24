@@ -15,6 +15,7 @@ public class Messages
 {
     private static final String BUNDLE_NAME = "com.e1c.edt.ai.ui.messages"; //$NON-NLS-1$
     public static String AIName;
+    public static String Hide;
     public static String Activation;
     public static String CodeCompletionJobName;
     public static String BackgroundJobName;

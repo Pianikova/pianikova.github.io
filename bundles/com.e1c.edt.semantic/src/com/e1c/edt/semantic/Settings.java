@@ -24,6 +24,12 @@ class Settings
     }
 
     @Override
+    public boolean isStatusBarVisible()
+    {
+        return true;
+    }
+
+    @Override
     public boolean hasClientToken()
     {
         return true;

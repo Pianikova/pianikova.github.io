@@ -12,4 +12,6 @@ public interface ISettingsSetter
     void applySessionParameters(ProjectId projectId, Parameters sessionParameters);
 
     void setCodeCompletionPolicy(CodeCompletionPolicy codeCompletionPolicy);
+
+    void setStatusBarVisible(boolean visible);
 }

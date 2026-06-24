@@ -79,6 +79,19 @@ public class PreferenceStoreToSettingsStoreAdapter implements ISettingsStore
     }
 
     @Override
+    public void setBoolean(String key, boolean value)
+    {
+        try
+        {
+            preferenceStore.setValue(key, value);
+        }
+        catch (Exception error)
+        {
+            //
+        }
+    }
+
+    @Override
     public <T> Optional<T> getValue(String key, Class<T> classOfT)
     {
         var value = preferenceStore.getString(key);

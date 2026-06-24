@@ -76,6 +76,18 @@ public class Settings
         return hasClientToken() && CodeCompletionPolicy.MANUAL.isMeet(getCodeCompletionPolicy());
     }
 
+    @Override
+    public boolean isStatusBarVisible()
+    {
+        return settingsStore.getBoolean(ISettingsStore.SHOW_STATUS_BAR).orElse(Boolean.TRUE);
+    }
+
+    @Override
+    public void setStatusBarVisible(boolean visible)
+    {
+        settingsStore.setBoolean(ISettingsStore.SHOW_STATUS_BAR, visible);
+    }
+
     public boolean hasClientToken()
     {
         return clientTokenValidator.isValid(getClientToken());

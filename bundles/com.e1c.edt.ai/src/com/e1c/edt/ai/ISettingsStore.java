@@ -12,6 +12,7 @@ public interface ISettingsStore
     public final static String CODE_COMPLETION_LINES_COUNT = "stringPreferenceCodeCompletionLinesCount"; //$NON-NLS-1$
     public final static String LANGUAGE = "stringPreferenceLanguage"; //$NON-NLS-1$
     public final static String PARAMETERS = "stringPreferenceLLMParameters"; //$NON-NLS-1$
+    public final static String SHOW_STATUS_BAR = "booleanPreferenceShowStatusBar"; //$NON-NLS-1$
 
     public final static int MIN_ASSISTANT_TEXT_SIZE = 16;
     public final static int DEFAULT_CODE_COMPLETION_LINES_COUNT = 5;
@@ -24,6 +25,8 @@ public interface ISettingsStore
     Optional<Integer> getInt(String key);
 
     Optional<Boolean> getBoolean(String key);
+
+    void setBoolean(String key, boolean value);
 
     <T> Optional<T> getValue(String key, Class<T> classOfT);
 

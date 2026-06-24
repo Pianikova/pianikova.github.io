@@ -19,6 +19,8 @@ public interface ISettings
 
     boolean isEnabled();
 
+    boolean isStatusBarVisible();
+
     boolean hasClientToken();
 
     String getClientToken();

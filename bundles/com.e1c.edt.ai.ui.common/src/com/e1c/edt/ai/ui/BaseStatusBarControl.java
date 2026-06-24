@@ -72,6 +72,8 @@ public class BaseStatusBarControl
     private final CodeCompletionPolicy[] policies;
     private final String[] policyNames;
     private Font font;
+    private Composite composite;
+    private GridData canvasGridData;
     private Canvas statusCanvas;
     private CCombo policyCombo;
     private DefaultToolTip policyTooltip;
@@ -121,7 +123,7 @@ public class BaseStatusBarControl
     @Override
     protected Control createControl(Composite parent)
     {
-        var composite = new Composite(parent, SWT.NONE);
+        composite = new Composite(parent, SWT.NONE);
         var gridLayout = new GridLayout(1, false);
         gridLayout.marginWidth = 2;
         gridLayout.marginHeight = 0;
@@ -159,7 +161,7 @@ public class BaseStatusBarControl
             }
         });
 
-        var canvasGridData = new GridData(SWT.FILL, SWT.FILL, true, true);
+        canvasGridData = new GridData(SWT.FILL, SWT.FILL, true, true);
         canvasGridData.widthHint = 120;
         statusCanvas.setLayoutData(canvasGridData);
 
@@ -263,8 +265,25 @@ public class BaseStatusBarControl
 
         policyCombo.setVisible(false); // Hide combo, will be shown programmatically
 
+        // Right-click context menu with a single "Hide" item to hide the status bar control
+        var contextMenu = new org.eclipse.swt.widgets.Menu(statusCanvas);
+        var hideItem = new org.eclipse.swt.widgets.MenuItem(contextMenu, SWT.NONE);
+        hideItem.setText(Messages.Hide);
+        hideItem.addListener(SWT.Selection, new Listener()
+        {
+            @Override
+            public void handleEvent(Event event)
+            {
+                hideStatusBar();
+            }
+        });
+        statusCanvas.setMenu(contextMenu);
+
         parent.getParent().setRedraw(true);
         composite.addDisposeListener(this);
+
+        // Honor a previously hidden state on startup
+        applyStatusBarVisibility();
 
         // Force redraw with delay to ensure layout is complete
         dispatcher.dispatch(() -> {
@@ -453,6 +472,39 @@ public class BaseStatusBarControl
         }
     }
 
+    private void hideStatusBar()
+    {
+        settingsSetter.setStatusBarVisible(false);
+        applyStatusBarVisibility();
+    }
+
+    /**
+     * Collapses or expands the status bar control to match the current
+     * {@link ISettings#isStatusBarVisible()} setting. The control is never
+     * disposed, so re-enabling the setting simply shows it again.
+     */
+    private void applyStatusBarVisibility()
+    {
+        if (composite == null || composite.isDisposed())
+        {
+            return;
+        }
+
+        var visible = settings.isStatusBarVisible();
+        composite.setVisible(visible);
+        if (canvasGridData != null)
+        {
+            canvasGridData.exclude = !visible;
+            canvasGridData.widthHint = visible ? 120 : 0;
+        }
+
+        var trim = composite.getParent();
+        if (trim != null && !trim.isDisposed())
+        {
+            trim.requestLayout();
+        }
+    }
+
     private Color getCurrentStatusColor()
     {
         if (colorOnline == null || colorBusy == null || colorOff == null || colorDisabled == null
@@ -564,6 +616,10 @@ public class BaseStatusBarControl
         statusCanvas.setToolTipText(info);
         policyCombo.select(policy.getIndex());
         policyTooltip.setText(policy.getDescription());
+
+        // Re-apply visibility so toggling the preference shows/hides the control live
+        applyStatusBarVisibility();
+
         statusCanvas.redraw();
     }
 
