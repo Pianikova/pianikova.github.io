@@ -94,8 +94,8 @@ public class ConversationFacade
     /**
      * Асинхронно создаёт новый диалог с настройками по умолчанию.
      * <p>
-     * Использует настройки языка из {@link ISettings}, программный язык "1c",
-     * скилл "custom". Диалог создаётся как скрытый (не отображается в списке чатов).
+     * Использует настройки языка из {@link ISettings}, программный язык "1c".
+     * Диалог создаётся как скрытый (не отображается в списке чатов).
      * </p>
      *
      * @param projectId идентификатор проекта
@@ -110,7 +110,7 @@ public class ConversationFacade
             return CompletableFuture.failedFuture(new CancellationException("Cancelled")); //$NON-NLS-1$
         }
         ConversationRequest conversationRequest = new ConversationRequest();
-        conversationRequest.skillName = request.getSkillName() != null ? request.getSkillName() : "custom"; //$NON-NLS-1$
+        conversationRequest.skillName = request.getSkillName() != null ? request.getSkillName() : "raw"; //$NON-NLS-1$
         conversationRequest.uiLanguage = settings.getLanguage();
         conversationRequest.programmingLanguage = "1c"; //$NON-NLS-1$
         // Default false so dev/helper conversations are not listed as chats; the dev-autopilot

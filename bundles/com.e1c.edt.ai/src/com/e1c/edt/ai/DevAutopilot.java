@@ -247,7 +247,11 @@ public class DevAutopilot
         // Multi-artifact metadata tasks (object + form/template + content) plus self-correction
         // need more than the default 10 tool rounds; default the harness to a higher cap.
         Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(30);
-        var message = new SendUserMessageRequest(projectId, promptText, null, true, request.skill, request.isChat,
+        // The dev-autopilot must run on the "custom" skill regardless of the ConversationFacade
+        // default (which is "raw"). Honor an explicit per-request override (e.g. "raw" for routing
+        // diagnostics); otherwise force "custom".
+        String skill = request.skill != null ? request.skill : "custom"; //$NON-NLS-1$
+        var message = new SendUserMessageRequest(projectId, promptText, null, true, skill, request.isChat,
             maxToolRounds);
 
         // Fixed-prelude size (helps assess the "large context" hypothesis): all tool definitions
