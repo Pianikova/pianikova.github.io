@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -48,7 +49,6 @@ public class ReadMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "Read"; //$NON-NLS-1$
-    private static final int MAX_LINES = McpToolConstants.MAX_READ_LINES;
     private static final int LINE_NUMBER_WIDTH = 7;
 
     // @formatter:off
@@ -131,9 +131,9 @@ public class ReadMcpTool
             : McpToolConstants.DEFAULT_READ_LINES;
 
         // Apply maximum lines limit
-        if (linesNumber > MAX_LINES)
+        if (linesNumber > McpToolConstants.MAX_READ_LINES)
         {
-            linesNumber = MAX_LINES;
+            linesNumber = McpToolConstants.MAX_READ_LINES;
         }
 
         if (call.callKind == ToolCallKind.RENDER)
@@ -168,9 +168,9 @@ public class ReadMcpTool
                 {
                     if (!fileSystem.fileExists(path))
                     {
-                        var response = new HashMap<String, Object>();
-                        response.put("content", "");
+                        var response = new LinkedHashMap<String, Object>();
                         response.put("note", "The file \"" + path + "\" does not exist.");
+                        response.put("content", "");
 
                         details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
                             files.getDisplayedFileName(new File(path)),
@@ -200,8 +200,7 @@ public class ReadMcpTool
                             }
                         }
 
-                        var response = new HashMap<String, Object>();
-                        response.put("content", resultContent.toString());
+                        var response = new LinkedHashMap<String, Object>();
                         response.put("charset_name", "UTF-8");
                         response.put("total_lines", totalLines);
 
@@ -211,6 +210,9 @@ public class ReadMcpTool
                             response.put("note",
                                 "There are more lines in the file that were not read. Increase lines_number parameter to read more content.");
                         }
+
+                        // Large field last so it is dropped first if the response is truncated.
+                        response.put("content", resultContent.toString());
 
                         // Add response markdown
                         var styledLineNumber = markdownUtils.createStyledText(
@@ -259,10 +261,10 @@ public class ReadMcpTool
 
             if (optionalDocument.isEmpty())
             {
-                var response = new HashMap<String, Object>();
-                response.put("content", "");
+                var response = new LinkedHashMap<String, Object>();
                 response.put("note",
                     "The file \"" + path + "\" does not exist within the IDE project context.");
+                response.put("content", "");
 
                 details.responseMarkdown = MessageFormat.format(Messages.ReadTemplate,
                     files.getDisplayedFileName(new File(path)),
@@ -332,7 +334,7 @@ public class ReadMcpTool
         description.append("\n- IMPORTANT: Each line is prefixed with a 7-digit line number and colon (e.g., `    123:`); strip it before editing.");
         description.append("\n- Send only the raw JSON object (no code fences or extra text).");
         description.append("\n- Example (single line is OK): {\"path\":\"C:/Projects/MyProject/src/MainModule.bsl\",\"first_line\":1,\"lines_number\":200}");
-        description.append("\n- Defaults: `first_line` = 1, `lines_number` = 2000; capped at " + MAX_LINES + ".");
+        description.append("\n- Defaults: `first_line` = 1, `lines_number` = " + McpToolConstants.DEFAULT_READ_LINES + "; capped at " + McpToolConstants.MAX_READ_LINES + ".");
         description.append("\n- Preserve exact whitespace and line endings (\\r, \\n, \\t).");
         description.append("\n- If you plan to edit, read a larger chunk to make `origin_content` unique.");
         description.append("\n\nRelated tools:");
@@ -362,7 +364,7 @@ public class ReadMcpTool
 
         var linesNumberProp = new McpToolCallProperty();
         linesNumberProp.type = "integer";
-        linesNumberProp.description = "Number of lines to read. Default is 2000, maximum is " + MAX_LINES + ".";
+        linesNumberProp.description = "Number of lines to read. Default is " + McpToolConstants.DEFAULT_READ_LINES + ", maximum is " + McpToolConstants.MAX_READ_LINES + ".";
         properties.put("lines_number", linesNumberProp);
 
         parameters.properties = properties;
@@ -410,12 +412,6 @@ public class ReadMcpTool
     private static class Response
     {
         /**
-         * File content with line number prefixes (8-character header with colon).
-         */
-        @SerializedName("content")
-        public String content;
-
-        /**
          * File encoding, for example, "UTF-8", "windows-1251", "KOI8-R", "UTF-16", "UTF-32", etc.
          */
         @SerializedName("charset_name")
@@ -432,6 +428,13 @@ public class ReadMcpTool
          */
         @SerializedName("total_lines")
         public Integer totalLines;
+
+        /**
+         * File content with line number prefixes (8-character header with colon).
+         * Declared last (large field) so it is dropped first if the response is truncated.
+         */
+        @SerializedName("content")
+        public String content;
     }
 }
 

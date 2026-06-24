@@ -491,14 +491,15 @@ public class JShellManualMcpTool
         @SerializedName("category")
         public String category;
 
-        @SerializedName("matched_scenarios")
-        public List<Details> matchedScenarios;
-
         @SerializedName("suggestions")
         public List<CompactSummary> suggestions;
 
         @SerializedName("available_scenarios")
         public List<CompactSummary> availableScenarios;
+
+        // Largest field last so it is dropped first if the response is truncated.
+        @SerializedName("matched_scenarios")
+        public List<Details> matchedScenarios;
     }
 
     private static class CompactSummary
@@ -524,11 +525,12 @@ public class JShellManualMcpTool
         @SerializedName("title")
         public String title;
 
-        @SerializedName("summary")
-        public String summary;
-
         @SerializedName("recommended_bindings")
         public List<String> recommendedBindings;
+
+        // Large fields last so they are dropped first if the response is truncated.
+        @SerializedName("summary")
+        public String summary;
 
         @SerializedName("guide_markdown")
         public String guideMarkdown;

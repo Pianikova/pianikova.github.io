@@ -453,9 +453,6 @@ public class GetMarkersMcpTool implements IMcpTool
     // Response DTO with pagination information
     private static class GetMarkersResponse
     {
-        @SerializedName("markers")
-        public List<MarkerInfo> markers;
-
         @SerializedName("total_markers")
         public int totalMarkers;
 
@@ -464,5 +461,9 @@ public class GetMarkersMcpTool implements IMcpTool
 
         @SerializedName("required_next_step")
         public String requiredNextStep;
+
+        // Large field last so it is dropped first if the response is truncated.
+        @SerializedName("markers")
+        public List<MarkerInfo> markers;
     }
 }

@@ -15,18 +15,19 @@ public class CommandDescription
     @SerializedName("command_name")
     public String name;
 
-    @SerializedName("command_description")
-    public String description;
-
     @SerializedName("command_return_is_defined")
     public boolean returnIsDefined;
 
     @SerializedName("command_return_type_id")
     public String returnTypeId;
 
+    @SerializedName("hot_key")
+    public String hotKey;
+
     @SerializedName("parameters")
     public List<CommandParameter> parameters;
 
-    @SerializedName("hot_key")
-    public String hotKey;
+    // Large field last so it is dropped first if the response is truncated.
+    @SerializedName("command_description")
+    public String description;
 }

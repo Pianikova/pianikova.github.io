@@ -15,11 +15,12 @@ public class JShellReflectionQueryResult
     @SerializedName("kind")
     public String kind;
 
-    @SerializedName("results")
-    public List<JShellReflectionSearchResult> results;
-
     @SerializedName("truncated")
     public boolean truncated;
+
+    // Large fields last so they are dropped first if the response is truncated.
+    @SerializedName("results")
+    public List<JShellReflectionSearchResult> results;
 
     @SerializedName("suggestions")
     public List<String> suggestions;

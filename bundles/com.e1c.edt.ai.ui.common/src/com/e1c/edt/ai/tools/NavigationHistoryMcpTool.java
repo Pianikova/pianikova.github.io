@@ -333,10 +333,11 @@ public class NavigationHistoryMcpTool
 
     private static class NavigationHistoryResponse
     {
-        @SerializedName("entries")
-        public List<NavigationEntry> entries;
-
         @SerializedName("has_more")
         public boolean hasMore;
+
+        // Large field last so it is dropped first if the response is truncated.
+        @SerializedName("entries")
+        public List<NavigationEntry> entries;
     }
 }

@@ -573,11 +573,12 @@ public class FindMcpTool
 
     private static class FindResponse
     {
-        @SerializedName("results")
-        public List<Element> results;
-
         @SerializedName("total_results")
         public int totalResults;
+
+        // Large field last so it is dropped first if the response is truncated.
+        @SerializedName("results")
+        public List<Element> results;
     }
 
     /**

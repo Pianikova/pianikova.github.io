@@ -357,10 +357,11 @@ public class LocalHistoryMcpTool
 
 	private static class LocalHistoryResponse
 	{
-		@SerializedName("entries")
-		public List<LocalHistoryEntry> entries;
-
 		@SerializedName("has_more")
 		public boolean hasMore;
+
+		// Large field last so it is dropped first if the response is truncated.
+		@SerializedName("entries")
+		public List<LocalHistoryEntry> entries;
 	}
 }

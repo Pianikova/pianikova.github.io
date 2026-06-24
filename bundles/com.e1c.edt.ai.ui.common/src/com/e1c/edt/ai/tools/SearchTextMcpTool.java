@@ -511,11 +511,12 @@ public class SearchTextMcpTool
 
     private static class SearchTextResponse
     {
-        @SerializedName("results")
-        public List<Element> results;
-
         @SerializedName("total_results")
         public int totalResults;
+
+        // Large field last so it is dropped first if the response is truncated.
+        @SerializedName("results")
+        public List<Element> results;
     }
 
     private String formatFilePathPatterns(List<String> patterns)

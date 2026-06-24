@@ -392,13 +392,14 @@ public class GlobMcpTool
 
 	private static class Result
 	{
+		@SerializedName("stats")
+		public Stats stats;
+
+		// Large fields last so they are dropped first if the response is truncated.
 		@SerializedName("tree")
 		public String tree;
 
 		@SerializedName("items")
 		public List<ItemInfo> items;
-
-		@SerializedName("stats")
-		public Stats stats;
 	}
 }

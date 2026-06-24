@@ -389,13 +389,14 @@ public class ListMcpTool
 		@SerializedName("path")
 		public String path;
 
-		@SerializedName("tree")
-		public String tree;
-
 		@SerializedName("count")
 		public int count;
 
 		@SerializedName("truncated")
 		public boolean truncated;
+
+		// Large field last so it is dropped first if the response is truncated.
+		@SerializedName("tree")
+		public String tree;
 	}
 }

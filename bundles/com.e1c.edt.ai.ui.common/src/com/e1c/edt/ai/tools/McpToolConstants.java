@@ -11,10 +11,10 @@ public final class McpToolConstants
 {
     // File operation constants
     /** Maximum number of lines that can be read from a file */
-    public static final int MAX_READ_LINES = 3000;
+    public static final int MAX_READ_LINES = 1000;
 
     /** Default number of lines to read when not specified */
-    public static final int DEFAULT_READ_LINES = 1000;
+    public static final int DEFAULT_READ_LINES = 500;
 
     // Search and result constants
     /** Default maximum number of elements for search results */

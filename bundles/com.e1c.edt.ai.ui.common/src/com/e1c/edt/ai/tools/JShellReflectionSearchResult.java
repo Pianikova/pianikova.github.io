@@ -15,9 +15,10 @@ public class JShellReflectionSearchResult
     @SerializedName("fqn")
     public String fqn;
 
-    @SerializedName("items")
-    public List<String> items;
-
     @SerializedName("truncated")
     public boolean truncated;
+
+    // Large field last so it is dropped first if the response is truncated.
+    @SerializedName("items")
+    public List<String> items;
 }

@@ -831,14 +831,15 @@ public class LocalChangesMcpTool
 		@SerializedName("to_history_location")
 		public String toHistoryLocation;
 
-		@SerializedName("diff_text")
-		public String diffText;
-
 		@SerializedName("context_lines")
 		public int contextLines;
 
 		@SerializedName("has_changes")
 		public boolean hasChanges;
+
+		// Large field last so it is dropped first if the response is truncated.
+		@SerializedName("diff_text")
+		public String diffText;
 	}
 
 	private static class RevisionSelector

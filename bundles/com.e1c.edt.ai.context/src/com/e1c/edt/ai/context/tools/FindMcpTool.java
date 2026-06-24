@@ -640,12 +640,6 @@ public class FindMcpTool
         public String path;
 
         /**
-         * Text fragment containing the search match
-         */
-        @SerializedName("text_fragment")
-        public String textFragment;
-
-        /**
          * Offset of the match within the text fragment
          */
         @SerializedName("fragment_offset")
@@ -668,6 +662,13 @@ public class FindMcpTool
          */
         @SerializedName("line_number")
         public long lineNumber;
+
+        /**
+         * Text fragment containing the search match.
+         * Large field last so it is dropped first if the response is truncated.
+         */
+        @SerializedName("text_fragment")
+        public String textFragment;
     }
 
     /**
@@ -677,12 +678,6 @@ public class FindMcpTool
     private static class TextSearchModelElement
         extends Element
     {
-        /**
-         * Property value containing the search text
-         */
-        @SerializedName("property_value")
-        public String propertyValue;
-
         /**
          * ID of the top-level metadata object
          */
@@ -706,6 +701,13 @@ public class FindMcpTool
          */
         @SerializedName("match_length")
         public int matchLength;
+
+        /**
+         * Property value containing the search text.
+         * Large field last so it is dropped first if the response is truncated.
+         */
+        @SerializedName("property_value")
+        public String propertyValue;
     }
 
     /**

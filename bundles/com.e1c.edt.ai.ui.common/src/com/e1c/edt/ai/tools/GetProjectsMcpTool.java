@@ -326,17 +326,9 @@ public class GetProjectsMcpTool
         @SerializedName("is_current")
         public Boolean isCurrent;
 
-        /* Project description. */
-        @SerializedName("description")
-        public String description;
-
         /* Session id. */
         @SerializedName("session_id")
         public String sessionId;
-
-        /* Project comment. */
-        @SerializedName("comment")
-        public String comment;
 
         /* Build commands for the project. */
         @SerializedName("build_commands")
@@ -346,7 +338,15 @@ public class GetProjectsMcpTool
         @SerializedName("natures")
         public List<String> natures;
 
-        /* Additional project details. */
+        /* Project description. Large field last so it is dropped first if the response is truncated. */
+        @SerializedName("description")
+        public String description;
+
+        /* Project comment. Large field last so it is dropped first if the response is truncated. */
+        @SerializedName("comment")
+        public String comment;
+
+        /* Additional project details. Large field last so it is dropped first if the response is truncated. */
         @SerializedName("details")
         public Map<String, Object> details;
     }

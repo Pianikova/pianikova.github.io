@@ -205,7 +205,7 @@ class JShellSession
             error.stackTrace = e.getMessage();
             result.stdOut = outBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
             result.stdErr = errBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
-            populateSessionResult(result);
+            result.availableBindings = new ArrayList<>(cachedAvailableBindings);
             return result;
         }
         catch (ThreadDeath e)
@@ -223,7 +223,7 @@ class JShellSession
             result.runtimeErrors.add(error);
             result.stdOut = outBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
             result.stdErr = errBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
-            populateSessionResult(result);
+            result.availableBindings = new ArrayList<>(cachedAvailableBindings);
             return result;
         }
 
@@ -231,7 +231,7 @@ class JShellSession
         result.stdErr = errBuffer.toString(java.nio.charset.StandardCharsets.UTF_8);
 
         // Fill session result fields
-        populateSessionResult(result);
+        result.availableBindings = new ArrayList<>(cachedAvailableBindings);
 
         return result;
 	}

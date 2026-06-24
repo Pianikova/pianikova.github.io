@@ -319,10 +319,11 @@ public class GetObjectMcpTool
         @SerializedName("top_object_id")
         public Long topObjectId; // Changed to Long to support null
 
-        @SerializedName("object_model")
-        public Object objectModel;
-
         @SerializedName("path")
         public String path;
+
+        // Large field last so it is dropped first if the response is truncated.
+        @SerializedName("object_model")
+        public Object objectModel;
     }
 }

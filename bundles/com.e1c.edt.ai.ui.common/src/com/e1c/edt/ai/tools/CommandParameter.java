@@ -15,11 +15,12 @@ public class CommandParameter
     @SerializedName("name")
     public String name;
 
-    @SerializedName("value")
-    public String value;
-
     @SerializedName("is_optional")
     public boolean isOptional;
+
+    // Large fields last so they are dropped first if the response is truncated.
+    @SerializedName("value")
+    public String value;
 
     @SerializedName("values")
     public Map<Object, Object> values;

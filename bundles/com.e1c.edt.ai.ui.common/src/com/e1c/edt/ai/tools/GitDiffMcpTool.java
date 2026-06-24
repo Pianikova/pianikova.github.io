@@ -439,12 +439,6 @@ public class GitDiffMcpTool
 		public Boolean uncommittedChanges;
 
 		/**
-		 * Git diff content in standard format.
-		 */
-		@SerializedName("diff_text")
-		public String diffText;
-
-		/**
 		 * Number of context lines used.
 		 */
 		@SerializedName("context_lines")
@@ -455,5 +449,11 @@ public class GitDiffMcpTool
 		 */
 		@SerializedName("has_changes")
 		public boolean hasChanges;
+
+		/**
+		 * Git diff content in standard format. Large field last so it is dropped first if the response is truncated.
+		 */
+		@SerializedName("diff_text")
+		public String diffText;
 	}
 }

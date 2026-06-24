@@ -405,37 +405,37 @@ public class GitCommitsMcpTool
 		public String formattedTime;
 
 		/**
-		 * Commit message.
+		 * Number of changed files.
+		 */
+		@SerializedName("changed_files_count")
+		public int changedFilesCount;
+
+		/**
+		 * Commit message. Large field last so it is dropped first if the response is truncated.
 		 */
 		@SerializedName("message")
 		public String message;
 
 		/**
-		 * List of changed files in this commit.
+		 * List of changed files in this commit. Large field last so it is dropped first if the response is truncated.
 		 */
 		@SerializedName("changed_files")
 		public List<String> changedFiles;
-
-		/**
-		 * Number of changed files.
-		 */
-		@SerializedName("changed_files_count")
-		public int changedFilesCount;
 	}
 
 	private static class GitCommitsResponse
 	{
 		/**
-		 * List of commits returned.
-		 */
-		@SerializedName("commits")
-		public List<CommitInfo> commits;
-
-		/**
 		 * Indicates whether there are more commits available to retrieve.
 		 */
 		@SerializedName("has_more")
 		public boolean hasMore;
+
+		/**
+		 * List of commits returned. Large field last so it is dropped first if the response is truncated.
+		 */
+		@SerializedName("commits")
+		public List<CommitInfo> commits;
 	}
 }
 
