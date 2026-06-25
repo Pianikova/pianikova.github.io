@@ -118,10 +118,21 @@ public class ProposalsProvider
                     try
                     {
                         return dispatcher.dispatch(() -> {
-                            var result = assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                            // skip second page of context helper
-                            assistProcessor.computeCompletionProposals(sourceViewer, offset);
-                            return result;
+                            try
+                            {
+                                var result = assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                                // skip second page of context helper
+                                assistProcessor.computeCompletionProposals(sourceViewer, offset);
+                                return result;
+                            }
+                            catch (Throwable error)
+                            {
+                                // a third-party completion computer registered in the editor may fail with an
+                                // Error (e.g. Recommenders -> NoClassDefFoundError: javax/annotation/PostConstruct);
+                                // such foreign failures must not escape into the SWT event loop
+                                log.logError(error);
+                                return null;
+                            }
                         });
                     }
                     catch (Exception error)
