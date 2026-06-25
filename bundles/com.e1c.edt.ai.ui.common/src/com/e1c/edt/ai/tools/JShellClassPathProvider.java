@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.tools;
 
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -56,8 +57,20 @@ class JShellClassPathProvider
 				return;
 			}
 
-			var location = codeSource.getLocation().toURI();
-			var path = Paths.get(location);
+			Path path;
+			try
+			{
+				path = Paths.get(codeSource.getLocation().toURI());
+			}
+			catch (URISyntaxException e)
+			{
+				// The code source URL may contain characters that are illegal in a URI
+				// (e.g. spaces or parentheses in the installation directory such as
+				// "1C_EDT (Lite) 2026.1 (2)"). Fall back to OSGi bundle resolution,
+				// which uses the raw file path and tolerates such characters.
+				addBundleClassPathFor(shell, clazz);
+				return;
+			}
 			shell.addToClasspath(path.toString());
 			addBinIfPresent(shell, path);
 		}

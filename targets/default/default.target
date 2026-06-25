@@ -471,10 +471,10 @@
         <unit id="org.sonatype.m2e.mavenarchiver.feature.feature.group" version="0.17.5.202002191804"/>
     </location>
 
-    <!-- Jakarta Annotations for Java 11+ compatibility -->
+    <!-- javax.annotation for Java 11+ (JSR-250 removed from JDK; Recommenders / Equinox DS need the javax namespace) -->
     <location includeAllPlatforms="false" includeConfigurePhase="true" includeMode="slicer" includeSource="true" type="InstallableUnit">
-        <unit id="jakarta.annotation-api" version="2.1.1"/>
-        <repository location="http://boreas.dept07/artifactory/p2-releases/orbit-aggregation-4.38.0/"/>
+        <unit id="javax.annotation" version="0.0.0"/>
+        <repository id="artifactory" location="http://boreas.dept07/artifactory/p2-releases/orbit/R20211213173813/"/>
     </location>
 </locations>
 </target>
