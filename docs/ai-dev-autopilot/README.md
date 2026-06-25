@@ -98,11 +98,15 @@ filename order.
   "final_text": "assistant's final message to the user",
   "reasoning": "the model's reasoning_content for its final message (if the server returns it)",
   "assistant_message_count": 3,
+  "auto_continue_count": 0,
   "tool_calls": [
     { "tool": "jshellmanual", "arguments": "{…}", "result": "{…}", "error": null },
     { "tool": "jshell",       "arguments": "{…code…}", "result": "{\"std_out\":…,\"compilation_errors\":[…],\"runtime_errors\":[…]}", "error": null }
   ],
   "tool_call_count": 5,
+  "tool_error_count": 0,
+  "jshell_error_count": 0,
+  "has_tool_failures": false,
   "stalled": false,
   "tools_count": 14,
   "tools_definition_chars": 38000,
@@ -119,7 +123,11 @@ filename order.
   provides it; the best signal for **why** the model stalled or chose a path.
 - `assistant_message_count` — finished assistant messages (model turns); a stall is typically a
   single empty message.
+- `auto_continue_count` — number of automatic "continue with tools" nudges the harness sent inside
+  the same request when the model read manuals or wrote "создам/начну" but stopped before JShell.
 - `stalled` — `true` when no `jshell` ran (the model gathered context and stopped).
+- `tool_error_count`, `jshell_error_count`, `has_tool_failures` — aggregate failure flags. Treat
+  `has_tool_failures:true` as a failed/dirty run even if the final assistant text says success.
 - `tools_count` / `tools_definition_chars` — size of the fixed tool-definition prelude sent every
   turn (independent of chat history) — use to gauge the "large context" hypothesis.
 - `error` is set only on harness-level failure (bad request, timeout, exception); per-tool errors
@@ -208,12 +216,15 @@ Judge each transcript on:
 3. **No `compilation_errors` / `runtime_errors`** in the final successful `jshell` call.
 4. **Artifact really produced** — `Form.form` / `Template.dcs` / `Template.mxl` exists, and a
    follow-up `getmarkers` (`marker_type:"1c"`) on the owner `.mdo` (and the artifact) is clean.
+   For configuration-project creation, also verify that the created Eclipse project name exactly
+   matches the requested name from the prompt; a semantically related or "corrected" name is a
+   failure even if EDT initialization and markers are clean.
 5. **No punting** — the assistant must not finish with "сделайте вручную" / hand-write raw XML
    for something a scenario covers.
 6. **Low-friction execution** — a scenario that eventually succeeds after many wrong JShell
    attempts still needs improvement. Count `tool_calls`, JShell calls, `compilation_errors`,
-   `runtime_errors`, and duration. Repeated compile/runtime failures mean the guide is still too
-   vague or contains a misleading example.
+   `runtime_errors`, `auto_continue_count`, and duration. Repeated compile/runtime failures or
+   auto-continues mean the guide is still too vague or contains a misleading example.
 
 When a failure mode is found, fix it in the scenario (clearer hard rule, correct factory package,
 required argument, cross-link, keywords) and re-run. Each fix should be small and verifiable.
@@ -223,7 +234,7 @@ Suggested quality bands:
 | Result                                                    | Interpretation                                                                        |
 |-----------------------------------------------------------|---------------------------------------------------------------------------------------|
 | Pass with no final errors, artifact exists, markers clean | Good baseline                                                                         |
-| Pass but with repeated compile/runtime attempts           | Improve the guide anyway; remove misleading snippets and move exact signatures upward |
+| Pass but `has_tool_failures:true` or repeated compile/runtime attempts | Failed/dirty baseline; improve the guide or harness before calling the scenario reliable |
 | Empty `final_text` or read-only-only tools                | Preamble/agentic flow or guide first-action problem                                   |
 | Success text but missing file/markers dirty               | Failure; strengthen post-check and completeness guard                                 |
 

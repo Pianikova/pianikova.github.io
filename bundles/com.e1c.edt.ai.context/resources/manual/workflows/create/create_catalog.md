@@ -129,6 +129,11 @@ Before you generate the catalog-creation code, do this **in order**:
   number attribute, call `setNumberQualifiers(scale, precision, nonNegative)`, for example
   `Number(15,2)` is `setNumberQualifiers(2, 15, true)`. Never produce `.mdo` where
   `<scale>` is greater than `<precision>`.
+- ❌ **Never import, instantiate, or configure `NumberQualifiers` directly in JShell.**
+  It is abstract in this EDT API. Do not write `new NumberQualifiers()`,
+  `numberQualifiers.setPrecision(...)`, or `numberQualifiers.setScale(...)`.
+  Use only the builder call above; for `Number(10,2)` write
+  `.setNumberQualifiers(2, 10, false)`.
 - ✅ If a precondition cannot be satisfied, throw `IllegalStateException`
   from inside the BM task. `System.err.println(...) + return null` is **not**
   a failure — JShell will report success.

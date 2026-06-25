@@ -18,6 +18,24 @@ Use the exact project name from `GetProjects` / the user request. Never call
 Check `project.exists()`, `projectManager.getProject(project) != null`, and
 `modelManager.getModel(project) != null` before entering the BM task.
 
+### Hard rules from observed failures
+
+Prefer the canonical patterns in this file over model memory or old snippets:
+
+- Java enum constants are `AccumulationRegisterType.BALANCE` and
+  `AccumulationRegisterType.TURNOVERS`. Do not write `REMAINS`, `TURNOVER`,
+  `Balance`, or `Turnovers` in JShell Java code.
+- For `Number(precision, scale)`, `TypeDescriptionBuilder` takes
+  `setNumberQualifiers(scale, precision, nonNegative)`. For `Number(10,3)`,
+  write `.setNumberQualifiers(3, 10, false)`, not `.setNumberQualifiers(10, 3, false)`.
+- For a concrete catalog/document/enum reference, never call
+  `typeProvider.getProxy("Catalog.X")` and never fall back to
+  `IEObjectTypeNames.CATALOG_REF`. Load the dependency with
+  `transaction.getTopObjectByFqn("Catalog.X")`, fail if it is missing, then use
+  `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`.
+- If JShell returns compilation or runtime errors, do not continue with the next object and do not
+  report success. Fix the failing snippet first, then run `GetMarkers`.
+
 Copy these exact imports into the JShell snippet (do not guess packages; `manual_ids` do not import
 automatically). Wrong guesses like `dt.mcore.IEObjectTypeNames`, `dt.core.project.IV8Project`, or
 `dt.bm.model.*` cause "cannot find symbol" / "package does not exist".
