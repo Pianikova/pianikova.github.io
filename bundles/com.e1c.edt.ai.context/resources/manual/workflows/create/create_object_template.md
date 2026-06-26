@@ -35,7 +35,9 @@ text-level fixes. `Write` is not a template creation mechanism.
   `Read`, then use `Edit` with an exact, minimal replacement, and finish with `GetMarkers` on the
   owner `.mdo`. Keep structural template operations in EDT API.
 - ⛔ **Create AND attach an empty body in the SAME task** (for `SPREADSHEET_DOCUMENT` →
-  `moxelFactory.createSpreadsheetDocument()`, for `DATA_COMPOSITION_SCHEMA` →
+  `SheetFactory.createSpreadsheetDocument()` — **not** the bare `moxelFactory.createSpreadsheetDocument()`,
+  which omits the mandatory printSettings/viewSettings/formats/columns and leaves the `.mxlx` unloadable
+  (`Unsupported embedded object type ... EObjectImpl`); for `DATA_COMPOSITION_SCHEMA` →
   `dcsFactory.createDataCompositionSchema()`): `template.setTemplate(content)` then
   `transaction.attachTopObject((IBmObject)content, fqnGenerator.generateExternalPropertyFqn(template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE))`.
   Creating only the `Template` metadata leaves the макет **without a body file on disk** — that is
@@ -67,8 +69,8 @@ import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.metadata.mdclass.Template;
 import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;
 import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
-import com._1c.g5.v8.dt.moxel.MoxelFactory;
 import com._1c.g5.v8.dt.moxel.SpreadsheetDocument;
+import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 
 IProject project = workspaceRoot.getProject("<ProjectName>");
 if (project == null || !project.exists()) {
@@ -101,8 +103,9 @@ String created = globalContext.execute(new AbstractBmTask<String>("Create object
         template.setUuid(UUID.randomUUID());
         owner.getTemplates().add(template);
 
-        // 2) empty body + attach as a top object -> writes Template.mxl on commit
-        SpreadsheetDocument body = MoxelFactory.eINSTANCE.createSpreadsheetDocument();
+        // 2) empty body + attach as a top object -> writes Template.mxlx on commit
+        // Use SheetFactory (not the bare MoxelFactory) so the document is fully initialised and loadable.
+        SpreadsheetDocument body = SheetFactory.createSpreadsheetDocument();
         template.setTemplate(body);
         String contentFqn = fqnGenerator.generateExternalPropertyFqn(
             template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);

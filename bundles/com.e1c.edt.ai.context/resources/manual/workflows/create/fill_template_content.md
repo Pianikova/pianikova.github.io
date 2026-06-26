@@ -56,8 +56,14 @@ produced file on disk.
 
 | TemplateType | factory binding | create method | content type |
 |--------------|-----------------|---------------|--------------|
-| `DATA_COMPOSITION_SCHEMA` | `dcsFactory` | `createDataCompositionSchema()` | `DataCompositionSchema` |
-| `SPREADSHEET_DOCUMENT` | `moxelFactory` | `createSpreadsheetDocument()` | `SpreadsheetDocument` |
+| `DATA_COMPOSITION_SCHEMA` | `dcsFactory` | `DcsFactory.eINSTANCE.createDataCompositionSchema()` | `DataCompositionSchema` |
+| `SPREADSHEET_DOCUMENT` | `SheetFactory` | `SheetFactory.createSpreadsheetDocument()` | `SpreadsheetDocument` |
+
+> ⛔ For `SPREADSHEET_DOCUMENT` do **not** use the bare `MoxelFactory.eINSTANCE.createSpreadsheetDocument()`.
+> It omits the mandatory `printSettings`/`viewSettings`/`formats`/`columns`/`defaultFormatIndex`, so the
+> `.mxlx` never persists/loads and the editor fails with
+> `Unsupported embedded object type ... EObjectImpl`. Use `SheetFactory.createSpreadsheetDocument()`
+> (package `com._1c.g5.v8.dt.moxel.sheet`, pre-imported in the `edt` scope), which initialises them.
 
 Other types (`TEXT_DOCUMENT`, `HTML_DOCUMENT`, `BINARY_DATA`, …) are stored as plain
 text/binary resources — for those, create the `Template` metadata with the right `TemplateType`
@@ -118,11 +124,11 @@ return result;
 ### Example — SpreadsheetDocument content (blank table)
 
 ```java
-import com._1c.g5.v8.dt.moxel.MoxelFactory;
 import com._1c.g5.v8.dt.moxel.SpreadsheetDocument;
+import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 
 // inside the BM task, template.getTemplateType() == TemplateType.SPREADSHEET_DOCUMENT
-SpreadsheetDocument document = MoxelFactory.eINSTANCE.createSpreadsheetDocument();
+SpreadsheetDocument document = SheetFactory.createSpreadsheetDocument();   // fully initialised blank table
 template.setTemplate(document);   // an empty spreadsheet is a valid blank template
 String contentFqn = fqnGenerator.generateExternalPropertyFqn(
     template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);

@@ -202,7 +202,10 @@ public class MetadataBindingProvider
             bindingDoc("dcsFactory"), DcsFactory.eINSTANCE, DcsFactory.class));
 
         bindings.put("moxelFactory", new JShellBindingDescription(
-            "EMF factory (MoxelFactory.eINSTANCE) for SpreadsheetDocument template content.",
+            "EMF factory (MoxelFactory.eINSTANCE) for SpreadsheetDocument template content. NOTE: do not build a"
+                + " spreadsheet body with the bare createSpreadsheetDocument() — use"
+                + " SheetFactory.createSpreadsheetDocument() (see the moxelFactory manual) so the mandatory"
+                + " printSettings/viewSettings/formats/columns are initialised and the .mxlx persists/opens.",
             bindingDoc("moxelFactory"), MoxelFactory.eINSTANCE, MoxelFactory.class));
 
         bindings.put("editingLanguageManager", new JShellBindingDescription(
@@ -271,6 +274,7 @@ public class MetadataBindingProvider
             FormFactory.class,
             DcsFactory.class,
             MoxelFactory.class,
+            com._1c.g5.v8.dt.moxel.sheet.SheetFactory.class,
             IEditingLanguageManager.class,
             IProject.class,
             IWorkspaceRoot.class,
@@ -361,6 +365,7 @@ public class MetadataBindingProvider
             "import com._1c.g5.v8.dt.dcs.model.schema.DataCompositionSchema;",
             "import com._1c.g5.v8.dt.moxel.MoxelFactory;",
             "import com._1c.g5.v8.dt.moxel.SpreadsheetDocument;",
+            "import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;",
             "import com._1c.g5.v8.dt.core.platform.IEditingLanguageManager;",
             "import org.eclipse.emf.ecore.util.EcoreUtil;"
         );
