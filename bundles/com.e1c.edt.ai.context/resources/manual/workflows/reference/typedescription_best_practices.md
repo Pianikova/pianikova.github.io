@@ -11,6 +11,15 @@ import com._1c.g5.v8.dt.mcore.TypeItem;
 import com._1c.g5.v8.dt.platform.IEObjectProvider;
 import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
 import com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder;
+```
+
+⛔ **Wrong packages that cause `cannot find symbol` — never use:**
+- `com._1c.g5.v8.dt.mcore.TypeDescriptionBuilder` — does NOT exist; use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`
+- `com._1c.g5.v8.dt.mcore.IEObjectTypeNames` — does NOT exist; use `com._1c.g5.v8.dt.platform.IEObjectTypeNames`
+- `com._1c.g5.v8.dt.core.mcore.TypeDescriptionBuilder` — does NOT exist (invented package)
+- `StringQualifiers.setAllowedLength(boolean)` — method does NOT exist; set string length via `TypeDescriptionBuilder.setStringQualifiers(int length, boolean fixed)`, e.g. `.setStringQualifiers(100, false)`
+
+```java
 // For metadata reference types (CatalogRef.X / EnumRef.Y / DocumentRef.Z / ...):
 import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
 import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;

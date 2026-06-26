@@ -83,6 +83,11 @@ simple name `Enum`, because it conflicts with `java.lang.Enum` in JShell.
 - `com._1c.g5.v8.dt.mcore.IEObjectProvider` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectProvider`.
 - `com._1c.g5.v8.dt.mcore.IEObjectTypeNames` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectTypeNames`.
 - `com._1c.g5.v8.dt.mcore.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
+- `com._1c.g5.v8.dt.core.mcore.TypeDescription` is wrong (package does not exist). Use `com._1c.g5.v8.dt.mcore.TypeDescription`.
+- `com._1c.g5.v8.dt.core.mcore.TypeDescriptionBuilder` is wrong (package does not exist). Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
+- `com._1c.g5.v8.dt.mcore.HierarchyType` is wrong. Use `com._1c.g5.v8.dt.metadata.mdclass.HierarchyType`.
+- `com._1c.g5.v8.dt.mcore.LocalizedString` does not exist. Set localized names via `object.getSynonym().put("ru", "value")`.
+- `com._1c.g5.v8.dt.mcore.LanguageItem` does not exist. Use `object.getSynonym().put("ru", "value")` instead.
 - `com._1c.g5.v8.dt.metadata.md.IEObjectTypeNames` is wrong. Use `com._1c.g5.v8.dt.platform.IEObjectTypeNames`.
 - `com._1c.g5.v8.dt.md.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.
 - `com._1c.g5.v8.dt.metadata.mdtype.TypeDescriptionBuilder` is wrong. Use `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder`.

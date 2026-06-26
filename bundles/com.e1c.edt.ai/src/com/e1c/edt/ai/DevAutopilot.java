@@ -42,7 +42,7 @@ public class DevAutopilot
 
     private static final long POLL_INTERVAL_MS = 1000L;
     private static final long TURN_TIMEOUT_SECONDS = 300L;
-    private static final int MAX_AUTO_CONTINUES = 3;
+    private static final int MAX_AUTO_CONTINUES = 5;
 
     /**
      * Default agent preamble prepended to the user prompt. The dev/helper conversation (skill
@@ -51,15 +51,7 @@ public class DevAutopilot
      * empty string to send the bare prompt).
      */
     private static final String DEFAULT_PREAMBLE =
-        "Ты работаешь в 1C:EDT. Это операция над конфигурациями, метаданными, формами или макетами 1С. " //$NON-NLS-1$
-            + "Выполни задачу до конца, используя инструменты: сначала вызови JShellManual, чтобы получить подходящий " //$NON-NLS-1$
-            + "сценарий, затем JShellSession (scope edt), затем JShell для выполнения кода сценария, затем GetMarkers " //$NON-NLS-1$
-            + "(marker_type \"1c\") для проверки результата. Не отвечай одним планом и не останавливайся, пока артефакт " //$NON-NLS-1$
-            + "(объект/форма/макет, файлы .mdo/.form/.dcs/.mxl) не создан и маркеры не проверены. Не предлагай сделать " //$NON-NLS-1$
-            + "это вручную и не пиши XML руками, если есть сценарий. Для широких продолжений вроде " //$NON-NLS-1$
-            + "\"Добавь все необходимое\" в заданном проекте не задавай уточняющий вопрос: вызови JShellManual " //$NON-NLS-1$
-            + "для scenario scaffold_business_configuration и создай минимальный проверяемый набор объектов " //$NON-NLS-1$
-            + "по домену проекта.\n\nЗадача: "; //$NON-NLS-1$
+        "Не отвечай одним планом и не останавливайся.\n\nЗадача: "; //$NON-NLS-1$
 
     private final IConversationFacade conversationFacade;
     private final IDevToolCallRecorder recorder;

@@ -242,9 +242,12 @@ prefer that when zero-dependency proven projects are not your target.
 
 ---
 
-> вљ пёЏ **HierarchyType вЂ” only two valid constants in EDT API.**
+> ⛔ **HierarchyType — only two valid constants in EDT API.**
 > Use ONLY `HierarchyType.HIERARCHY_FOLDERS_AND_ITEMS` (default) or `HierarchyType.HIERARCHY_OF_ITEMS`.
 > Other names from 1C:Enterprise classic API (`HIERARCHY_GROUPS`, `HIERARCHY_HIERARCHICAL`, `HIERARCHY_NONE`) **do not exist** and cause `cannot find symbol`.
+>
+> ⛔ **HierarchyType is in `com._1c.g5.v8.dt.metadata.mdclass`, NOT in `com._1c.g5.v8.dt.mcore`.**
+> Always import: `import com._1c.g5.v8.dt.metadata.mdclass.HierarchyType;`
 
 ```java
 IProject project = workspaceRoot.getProject("MyProject");

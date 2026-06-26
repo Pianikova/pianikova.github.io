@@ -1,5 +1,21 @@
 ## Scaffold Business Configuration
 
+> ⛔ **IMPORT RULES — violations cause `cannot find symbol` and waste tool rounds:**
+> - `TypeDescriptionBuilder` → `com._1c.g5.v8.dt.platform.core.typeinfo.TypeDescriptionBuilder` (NOT `mcore`)
+> - `IEObjectTypeNames` → `com._1c.g5.v8.dt.platform.IEObjectTypeNames` (NOT `mcore`)
+> - `IEObjectProvider` → `com._1c.g5.v8.dt.platform.IEObjectProvider` (NOT `mcore`)
+> - `HierarchyType` → `com._1c.g5.v8.dt.metadata.mdclass.HierarchyType` (NOT `mcore`)
+> - `MdProducedTypesUtil` → `import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;` (not in default package)
+> - `MdTypePackage` → `import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;` (not in default package)
+> - `LocalizedString` / `LanguageItem` — do NOT exist; use `object.getSynonym().put("ru", "...")`
+> - `StringQualifiers.setAllowedLength(boolean)` — does NOT exist; use `TypeDescriptionBuilder.setStringQualifiers(int length, boolean fixed)`
+>
+> - `NullProgressMonitor` → `org.eclipse.core.runtime.NullProgressMonitor` (import required; not in default JShell scope)
+> - `Subsystem.getContainedObjects()` — does NOT exist; use `subsystem.getContent().add(obj)` to add objects to subsystem content
+> - Adding to `subsystem.getContent()` before the object is attached via `attachTopObject` → `BmAssertionException: Failed to persist reference value`; always attach first
+>
+> ⛔ **`NoSuchFieldError: result` in JShell** — caused by redeclaring a top-level variable named `result` in the same session. Always wrap verification/readback code in `{ ... }` anonymous blocks, and never use bare `String result = ...` or `Object result = ...` at the top level of a JShell snippet.
+
 Use this guardrail for broad user requests such as "create a full configuration for a shop/accounting workflow".
 
 Also use this guardrail for vague follow-up prompts after a configuration project has just been created, such as `Добавь все необходимое`, `добавь все нужное`, `наполни конфигурацию`, or `сделай минимальную рабочую конфигурацию`. In that case, infer the business domain from the target project/configuration name when possible, and keep the implementation deliberately small and verifiable.
@@ -34,6 +50,21 @@ For a bakery/пекарня/булочная project, the default minimal first 
 
 Keep this slice small if tool budget or API uncertainty is high. It is better to create fewer objects with clean markers than to create many partial objects.
 
+### Turn time budget — keep the slice small
+
+Each assistant turn has a hard **300-second timeout**. A broad prompt ("добавь всё", "улучшенные
+формы и макеты и другие сущности") will always timeout if the model tries to create everything at
+once. To stay within budget:
+
+- **Per turn: at most 2–3 top-level objects + their direct child content (attributes, forms, one template).**
+- Create in this order within a single turn: 1–2 catalogs → their forms → one spreadsheet template.
+  Stop and run `GetMarkers`. Report exactly what was created and what remains.
+- Do NOT attempt documents + registers + forms + templates + subsystems in one turn.
+  Each family is a separate turn for a broad prompt.
+- If you finish a batch and time remains, add at most one more object — never try to "do everything"
+  in one shot.
+- End the turn with a clear status: "Created: X, Y, Z. Remaining for next turn: A, B, C."
+
 ### Required approach
 
 - Create a new configuration project first and verify that `IV8Project`, `IBmModel`, and top object `Configuration` are accessible.
@@ -45,6 +76,7 @@ Keep this slice small if tool budget or API uncertainty is high. It is better to
 - Choose a realistic, limited first slice: catalogs/enums/constants, then documents/tabular sections, then registers and cross-object links.
 - Dependency order is mandatory: create and marker-check all catalogs/enums/constants first; then run a JShell preflight that verifies every referenced `Catalog.X`/`Enum.X` exists; only then create documents; create/link registers after all referenced documents exist. Do not create a document that references `Catalog.Контрагенты` until `transaction.getTopObjectByFqn("Catalog.Контрагенты")` returns non-null.
 - Before each top-level object creation, probe `transaction.getTopObjectByFqn("<Type>.<Name>")`. If it already exists, continue by reading/verifying/editing that object; do not call `attachTopObject(...)` again for the same FQN. Broad configuration prompts often fail halfway and are then retried, so creation code must be restartable from a partial project.
+- **Create all objects of the same type in ONE JShell call with per-object existence checks.** Do not split subsystem creation across two or more JShell calls — a second call that recreates the same FQN causes `BmFqnAlreadyInUseException`. Pattern: `if (transaction.getTopObjectByFqn("Subsystem.X") == null) { /* create */ }` for every name inside a single BM transaction.
 - Use only top-level metadata objects confirmed by manual or `MdClass.xcore`; do not treat child objects as standalone CRUD objects.
 - Use `JShellManual` before each metadata family batch, not only before the first project/catalog/document step. For example, call the register workflow before registers, the service workflow before service objects, and the common-object workflow before modules/reports/processors. Use `JShellReflection` only for exact missing API facts after the closest manual card is loaded.
 - For accumulation registers, copy the safe patterns from `create_accumulation_register` exactly. Use only `AccumulationRegisterType.BALANCE` or `AccumulationRegisterType.TURNOVERS`; never use `REMAINS` or `TURNOVER`. For a concrete `Catalog.X`/`Document.X`/`Enum.X` reference, resolve a produced reference type with `MdProducedTypesUtil.getProducedType(...)`; do not call `typeProvider.getProxy("Catalog.X")` and do not silently fall back to generic `IEObjectTypeNames.CATALOG_REF`. For numeric resources, remember that `.setNumberQualifiers(scale, precision, nonNegative)` is scale first, so `Number(10,3)` is `.setNumberQualifiers(3, 10, false)`.

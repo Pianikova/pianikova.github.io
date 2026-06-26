@@ -75,7 +75,30 @@ if (parentSubsystem != null) {
 }
 ```
 
+### Adding metadata objects to subsystem content
+
+```java
+// Correct: use getContent() to add objects to a subsystem
+subsystem.getContent().add(catalog);
+subsystem.getContent().add(document);
+```
+
+⛔ `getContainedObjects()` does NOT exist on `Subsystem`. Use `getContent()`.
+⛔ Adding cross-object references (subsystem content) may fail with `BmAssertionException: Failed to persist reference value` if the referenced object is not yet attached as a top object. Always `attachTopObject` the referenced object BEFORE adding it to `subsystem.getContent()`.
+
 ### Common Mistakes
+
+**❌ WRONG - Using non-existent LocalizedString / LanguageItem classes for synonym**
+```java
+// LocalizedString, LanguageItem do NOT exist in com._1c.g5.v8.dt.mcore — compile error
+LocalizedString synonym = McoreFactory.eINSTANCE.createLocalizedString();
+LanguageItem item = McoreFactory.eINSTANCE.createLanguageItem();
+```
+
+**✅ CORRECT - Use getSynonym().put(languageCode, value)**
+```java
+subsystem.getSynonym().put("ru", "МояПодсистема");
+```
 
 **❌ WRONG - Not setting UUID**
 ```java

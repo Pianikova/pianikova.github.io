@@ -184,3 +184,9 @@ System.out.println(result);
 Run `GetMarkers` on the owner's `.mdo`, confirm
 `src/Catalogs/<OwnerName>/Forms/<FormName>/Form.form` exists, and confirm the safe improvement pass
 changed the existing `Form.form` through `Edit` unless no safe exact edit was available.
+
+⛔ **Do NOT use `Glob` with a relative path** (e.g. `src/Catalogs/Товары`) to verify `Form.form`.
+`Glob` requires the full absolute path rooted at the project location. Derive it from the JShell
+binding: `project.getLocation().toOSString() + "/src/Catalogs/" + ownerName + "/Forms/" + formName + "/Form.form"`,
+or skip the file-existence check entirely — `Form.form` is guaranteed to exist after a successful
+`attachTopObject` call and a clean `GetMarkers`.

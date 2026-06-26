@@ -196,3 +196,10 @@ try {
 - `NoSuchFileException` for `.settings`: create `.settings` before enabling V8 nature.
 - `ProjectManifestException`: check `DT-INF/PROJECT.PMF` format and `Runtime-Version`.
 - BM model exists but `Configuration` is not accessible: check `src/Configuration/Configuration.mdo` namespace and root element.
+
+### After project creation — if the request also asks to add metadata
+
+If the original prompt asks to add metadata objects (справочники, документы, регистры, формы, макеты)
+**after** creating the configuration, do not start creating them directly. Call
+`JShellManual(scaffold_business_configuration)` next and follow its guardrail for the first slice.
+This ensures dependency order, time-budget management, and marker validation are applied.
