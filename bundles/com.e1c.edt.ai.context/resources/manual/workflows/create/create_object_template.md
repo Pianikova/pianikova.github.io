@@ -2,14 +2,16 @@
 
 Creates a `Template` that belongs to a metadata object (`Catalog`, `Document`, `Report`, …) with a
 chosen `TemplateType`, **and an empty body of that type attached as a resource** — so the result is a
-complete, openable макет (with a `Template.dcs`/`Template.mxl` file), not a registration without a
-body. To add real content (data sets, cells) afterwards, use `fill_template_content`.
+complete, openable макет (with a `Template.dcs`/`Template.mxlx` file), not a registration without a
+body. The `Template` child metadata is stored inside the owner `.mdo`; there is no separate
+`Templates/<TemplateName>/<TemplateName>.mdo` for object-owned templates. To add real content
+(data sets, cells) afterwards, use `fill_template_content`.
 After the default body exists, targeted changes may be made with `Edit` on the existing generated
-template/body files. Do not use `Write` to create `Template.mdo`, `.dcs`, `.mxl`, or `.mxlx` files.
+template/body files. Do not use `Write` to create owner `.mdo`, `.dcs`, `.mxl`, or `.mxlx` files.
 
 **Creation vs refinement policy:** create and register templates through EDT API in a BM
 transaction. Let EDT create the owner child, default body, external-property FQN, and disk files.
-Only after `Template.mdo` and the body file already exist may the agent use file `Edit` for narrow
+Only after the owner `.mdo` contains `<templates ...>` and the body file already exists may the agent use file `Edit` for narrow
 text-level fixes. `Write` is not a template creation mechanism.
 
 > For a stand-alone shared template use `create_common_template` (creates a top-level
@@ -25,7 +27,7 @@ text-level fixes. `Write` is not a template creation mechanism.
   `BmFqnAlreadyInUseException` ("FQN '…' is already in use"). If you just created the owner in a
   previous step, add the template in a **separate** BM task that fetches it by FQN — never paste
   the owner-creation code into the template step. Only the new `Template` child is created here.
-- ❌ **Never create the template with file tools** (`Write` on `Template.mdo`, `*.dcs`, `*.mxl`,
+- ❌ **Never create the template with file tools** (`Write` on owner `.mdo`, `*.dcs`, `*.mxl`,
   settings `*.xml`). Use the model API inside a BM transaction. `Edit` is allowed only after the
   template/body file already exists and was generated/registered by EDT.
 - ⛔ **No raw XML bootstrap.** If `Template.dcs`/`Template.mxl(x)` is missing, the workflow is
@@ -55,6 +57,11 @@ text-level fixes. `Write` is not a template creation mechanism.
   calling `bmModel.getGlobalContext()`, check that `workspaceRoot.getProject(...)` exists and
   `modelManager.getModel(project)` is non-null. If the owner FQN is missing, throw
   `IllegalStateException("Missing owner ... create it first")`; do not continue into NPE.
+- ✅ **Verify the body through Eclipse resources before any file tool.** After commit, use the same
+  `IProject` and `project.getFile("src/.../Template.mxlx").exists()` (or `Template.dcs`) to verify
+  the body. If this prints `Body exists: true`, the body check is complete: do not call `Glob` or
+  `Read` just to inspect/search the template folder. Do not guess the workspace path for `Read`, and
+  do not call `Glob`.
 
 ### `TemplateType` constants (enum `com._1c.g5.v8.dt.metadata.mdclass.TemplateType`)
 
@@ -115,8 +122,14 @@ String created = globalContext.execute(new AbstractBmTask<String>("Create object
     }
 });
 System.out.println("Created template: " + created);
+System.out.println("Project path: " + project.getLocation().toOSString());
+System.out.println("Body exists: " +
+    project.getFile("src/Catalogs/Products/Templates/ПечатнаяФорма/Template.mxlx").exists());
 return created;
 ```
+
+When this JShell call prints `Body exists: true`, do not run `Glob` or `Read` to re-check the body
+file. The only required external validation is `GetMarkers` on the owner `.mdo`.
 
 For a `DATA_COMPOSITION_SCHEMA` template, use `dcsFactory.createDataCompositionSchema()` as the body
 (writes `Template.dcs`). To add real content (data sets, cells) afterwards, run `fill_template_content`.
@@ -124,7 +137,37 @@ For a `DATA_COMPOSITION_SCHEMA` template, use `dcsFactory.createDataCompositionS
 ### Required post-check
 
 A `Template` is a child object — call `GetMarkers` with `marker_type: "1c"` on the **owner's**
-`.mdo` (`src/Catalogs/<OwnerName>/<OwnerName>.mdo`) and confirm the body file exists at
+`.mdo` using a project-relative path (`src/Catalogs/<OwnerName>/<OwnerName>.mdo`) and confirm the body file exists at
 `src/Catalogs/<OwnerName>/Templates/<TemplateName>/Template.<ext>` (`.mxlx`/`.mxl` for
 SpreadsheetDocument, `.dcs` for DataCompositionSchema). A missing body file means the content was not attached (step 2) —
 that is incomplete, not success. Fix only markers relevant to the new template before reporting.
+
+Do **not** call `GetMarkers` on
+`src/Catalogs/<OwnerName>/Templates/<TemplateName>/<TemplateName>.mdo`: that file does not exist for
+object-owned templates. The metadata lives in the owner `.mdo`; the template body lives in
+`Template.mxlx` or `Template.dcs`.
+
+Do **not** call `Glob` to find template files. Avoid both wildcard paths like `**/Catalogs/...` and
+rootless paths like `src/Catalogs`. A successful `Glob` is still a dirty scenario because it is an
+unnecessary directory search; use the deterministic paths directly from the known project root,
+owner kind, owner name, and template name:
+
+```text
+<projectRoot>/src/Catalogs/<OwnerName>/<OwnerName>.mdo
+<projectRoot>/src/Catalogs/<OwnerName>/Templates/<TemplateName>/Template.mxlx
+```
+
+For other owners, replace `Catalogs` with the owner folder (`Documents`, `Reports`, ...). For
+`GetMarkers`, use the project-relative owner path with `project_name`; do not pass invented
+absolute paths such as `C:\EDT_projects\...` or default-workspace guesses such as
+`C:\Users\...\eclipse-workspace\...`. To verify body existence, use the Eclipse resource API in
+JShell:
+
+```java
+project.getFile("src/Catalogs/<OwnerName>/Templates/<TemplateName>/Template.mxlx").exists()
+```
+
+If a file tool is still needed, build the absolute path only from `project.getLocation().toOSString()`
+printed by JShell and the deterministic relative path. Do not use `java.io.File` in JShell: it is
+restricted. Do not call `Glob` for template verification, do not use `**` as a directory, and do not
+pass `src/...` to `Glob`.

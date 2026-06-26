@@ -619,30 +619,29 @@
     "scope": "edt",
     "category": "create",
     "title": "Create Common Template",
-    "summary": "Create CommonTemplate metadata and fill template content afterwards.",
+    "summary": "Create CommonTemplate metadata and attach a valid Template.dcs/Template.mxlx body in the same EDT API transaction.",
+    "guide": "workflows/create/create_common_template.md",
     "bindings": [
       "workspaceRoot",
       "modelManager",
       "mdFactory",
-      "fqnGenerator"
+      "fqnGenerator",
+      "dcsFactory",
+      "moxelFactory"
     ],
     "keywords": [
       "common template",
+      "shared template",
+      "spreadsheet template",
+      "tabular template",
       "template",
+      "common макет",
+      "общий макет",
+      "create common template",
+      "создай общий макет",
+      "печатный макет",
       "макет"
-    ],
-    "template": "top-level-create",
-    "vars": {
-      "title": "CommonTemplate",
-      "typeName": "CommonTemplate",
-      "variableName": "template",
-      "createMethod": "createCommonTemplate()",
-      "collection": "getCommonTemplates()",
-      "setupBlock": "",
-      "notes": "Template binary or text content is maintained separately after the metadata object exists. Fill the body (DataCompositionSchema / SpreadsheetDocument) with the `fill_template_content` scenario.",
-      "sampleName": "PrintLayout",
-      "extraSetup": ""
-    }
+    ]
   },
   {
     "id": "create_object_form",
@@ -762,6 +761,13 @@
     "keywords": [
       "template",
       "object template",
+      "owned template",
+      "print layout",
+      "object макет",
+      "макет печати",
+      "печатный макет",
+      "добавь макет",
+      "создай макет печати",
       "макет",
       "макет объекта",
       "создать макет",

@@ -70,6 +70,16 @@ Before you generate the catalog-creation code, do this **in order**:
 
 ### Hard rules — never violate
 
+- ✅ **Use exact packages from this workflow; do not guess imports.** Observed bad imports:
+  `com._1c.g5.v8.dt.core.project.IV8Project`,
+  `com._1c.g5.v8.dt.metadata.mcore.*`, and
+  `com._1c.g5.v8.dt.metadata.mdclass.CodeType`,
+  `com._1c.g5.v8.dt.mcore.util.McorePackage`, and
+  `com._1c.g5.v8.bm.core.IBmModel` do not work in JShell. Use
+  `com._1c.g5.v8.dt.core.platform.IV8Project`, `com._1c.g5.v8.dt.mcore.*`, and avoid setting code
+  type unless required. `IBmModel` is `com._1c.g5.v8.bm.integration.IBmModel`. If code type is
+  required, verify the exact enum with `JShellReflection` instead of inventing `CodeType` or
+  `CatalogCodeType.String`.
 - ✅ **If the prompt asks for a catalog and a form, this is a two-step workflow.**
   First create the top-level `Catalog` and validate its `.mdo`. Then immediately call
   `JShellManual` for `create_object_form` and create/repair the generated form structure with
@@ -98,9 +108,16 @@ Before you generate the catalog-creation code, do this **in order**:
   the exact project name before doing any metadata work.
 - ✅ **Before creating a catalog, check `transaction.getTopObjectByFqn("Catalog.<Name>")`.**
   If it is non-null, do not call `transaction.attachTopObject(...)` with the
-  same FQN. Treat the object as already created and either verify/edit it
-  intentionally or stop with a clear message. Re-running a broad prompt after
-  partial success must continue from existing objects, not recreate them.
+  same FQN. Treat the object as already created and continue with the requested
+  follow-up work (for example `create_object_template` or `create_object_form`).
+  Do not throw `IllegalStateException("Catalog already exists ...")` in a broad
+  prompt after partial success; that makes retries dirty. Re-running a broad
+  prompt after partial success must continue from existing objects, not recreate
+  them.
+- ✅ **For a simple catalog prompt, do not use `TypeDescriptionBuilder` at all.** A request like
+  "создай справочник X" or "создай справочник X и табличный макет Y" needs only standard
+  code/description settings on `Catalog`; no custom `CatalogAttribute`, no `McorePackage`, no
+  primitive type provider.
 - ✅ **Every `CatalogAttribute` must receive a non-empty `TypeDescription`
   before `catalog.getAttributes().add(attribute)`.** Do not rely on a later
   fix-up transaction for simple fields such as name/surname/description.
@@ -239,6 +256,10 @@ Catalog created = globalContext.execute(new AbstractBmTask<Catalog>("Create cata
     @Override
     public Catalog execute(IBmTransaction transaction, IProgressMonitor monitor) {
         Configuration configuration = (Configuration)transaction.getTopObjectByFqn("Configuration");
+        Catalog existing = (Catalog)transaction.getTopObjectByFqn("Catalog.Products");
+        if (existing != null) {
+            return existing; // partial retry: continue with follow-up work, do not reattach
+        }
 
         Catalog catalog = mdFactory.createCatalog();
         catalog.setName("Products");
@@ -250,24 +271,8 @@ Catalog created = globalContext.execute(new AbstractBmTask<Catalog>("Create cata
         catalog.setCodeLength(9);
         catalog.setDescriptionLength(150);
 
-        CatalogAttribute article = mdFactory.createCatalogAttribute();
-        article.setName("Article");
-        article.getSynonym().put("ru", "Article");
-
-        IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
-            .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
-        TypeItem stringType = (TypeItem)typeProvider.getProxy(IEObjectTypeNames.STRING);
-        TypeDescription typeDesc = new TypeDescriptionBuilder()
-            .addType(stringType)
-            .setStringQualifiers(100, false)
-            .build();
-
-        article.setType(typeDesc);
-        catalog.getAttributes().add(article);
-
         // Set UUIDs manually (RECOMMENDED for JShell - avoids OSGi timeout)
         catalog.setUuid(UUID.randomUUID());
-        article.setUuid(UUID.randomUUID());
 
         String fqn = fqnGenerator.generateStandaloneObjectFqn(catalog.eClass(), catalog.getName()).toString();
         transaction.attachTopObject((IBmObject)catalog, fqn);
@@ -412,6 +417,10 @@ accReg.getDimensions().add(accountDim);
 ```
 
 ### JShell-safe UUID strategy
+
+The attribute part of this example is only for prompts that explicitly ask for a custom attribute.
+For a simple catalog request, use the standard code/description-only create example above and skip
+all `CatalogAttribute` / `TypeDescriptionBuilder` code.
 вљ пёЏ **WARNING:** `modelFactory.fillDefaultReferences()` may timeout in JShell due to OSGi service limitations.
 Prefer manual UUID assignment (Option 1) for reliable JShell execution.
 
@@ -484,3 +493,10 @@ forms, etc.) see the `check_1c_markers_after_crud` scenario.
 Use project-wide markers only when the change can affect references between
 metadata objects (delete, rename, registrar links, command interfaces,
 configuration-level changes) or when the path truly cannot be derived.
+
+If the prompt also asks for a template/layout (`макет`, `табличный макет`, `печатный макет`), do not
+stop after catalog creation: run `create_object_template`. After that scenario prints
+`Body exists: true` from `project.getFile("src/Catalogs/<Name>/Templates/<Template>/Template.mxlx").exists()`,
+the body check is complete: do not call `Glob` or `Read` to inspect/search the template folder. A
+successful `Glob` is still a dirty scenario. Finish with `GetMarkers` on the catalog owner `.mdo`;
+for object-owned templates there is no `Templates/<Template>/<Template>.mdo`.

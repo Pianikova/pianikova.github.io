@@ -214,8 +214,11 @@ Judge each transcript on:
    OBJECT/FOLDER/CONSTANTS/RECORD/REPORT, then `setMdForm` + `attachTopObject(…BASIC_FORM__FORM…)`.
    templates: `mdFactory.createTemplate()` + `dcsFactory`/`moxelFactory` + `template.setTemplate(...)`.
 3. **No `compilation_errors` / `runtime_errors`** in the final successful `jshell` call.
-4. **Artifact really produced** — `Form.form` / `Template.dcs` / `Template.mxl` exists, and a
-   follow-up `getmarkers` (`marker_type:"1c"`) on the owner `.mdo` (and the artifact) is clean.
+4. **Artifact really produced** — `Form.form` / `Template.dcs` / `Template.mxlx` exists, and a
+   follow-up `getmarkers` (`marker_type:"1c"`) on the owner `.mdo` is clean. Object-owned
+   templates do not have `Templates/<TemplateName>/<TemplateName>.mdo`; their child metadata is
+   serialized in the owner `.mdo`, while the body is `Templates/<TemplateName>/Template.mxlx` or
+   `Template.dcs`.
    For configuration-project creation, also verify that the created Eclipse project name exactly
    matches the requested name from the prompt; a semantically related or "corrected" name is a
    failure even if EDT initialization and markers are clean.
@@ -248,7 +251,7 @@ Suggested quality bands:
 - Mutating scenarios change the test project (create catalogs/forms/templates). Clean up stray
   artifacts between runs, or target a throwaway configuration project.
 - Repeated tests can leave partially-created/broken artifacts, such as a form metadata object
-  without `Form.form`, a template metadata object without `Template.dcs`/`Template.mxl`, or a child
+  without `Form.form`, a template metadata object without `Template.dcs`/`Template.mxlx`, or a child
   attribute without `TypeDescription`. A good scenario should repair such states idempotently.
 - The harness writes an informational `[dev-autopilot] started …` line to the EDT log on startup.
 
@@ -418,6 +421,17 @@ Mirror `workflows/create/create_catalog.md` and `create_object_form.md`. A solid
    - ⛔ **External-property content** (form structure, template body) persists to disk **only** when
      attached as a top object: `attachTopObject(content, fqnGenerator.generateExternalPropertyFqn(parent, MdClassPackage.Literals.BASIC_FORM__FORM | BASIC_TEMPLATE__TEMPLATE))`.
      `setForm/setTemplate` alone is in-memory only.
+   - ⛔ **Templates:** do not use `Glob` to verify `Template.mxlx`/`Template.dcs`, and do not guess
+     workspace roots such as `C:\EDT_projects\...` or `C:\Users\...\eclipse-workspace\...`. Verify
+     body existence through the same `IProject` with
+     `project.getFile("src/.../Templates/<Name>/Template.mxlx").exists()` or build an absolute path
+     only from `project.getLocation().toOSString()`.
+   - ✅ **DCS template body:** use `dcsFactory.createDataCompositionSchema()`; if a type import is
+     needed, it is `com._1c.g5.v8.dt.dcs.model.schema.DataCompositionSchema`. There is no
+     `DataCompositionSchemaFactory` in this API.
+   - ⛔ **JShell sandbox:** do not use `java.io.File` for checks; it is restricted. Use Eclipse
+     resources (`project.getFile(...)`) or a file tool with an exact path derived from the real
+     project location.
    - ⛔ **Forms:** `formGenerator.generateForm(...)` needs a **non-null `columnCount`** for
      `OBJECT/FOLDER/CONSTANTS/RECORD/REPORT` (it is unboxed to `int`) — pass e.g. `1`.
    - ❌ **Never hand-write** `.mdo`/`.form`/`.dcs`/`.mxl`/settings XML with file tools — use the model API.
@@ -435,7 +449,9 @@ Mirror `workflows/create/create_catalog.md` and `create_object_form.md`. A solid
    Include repair behavior for common partial states, not only clean-create behavior.
 6. **Required post-check** — call `GetMarkers` (`marker_type:"1c"`) on the changed top object's `.mdo`
    (derive the path from the FQN; for children/forms/templates use the owner's `.mdo`) and treat
-   relevant markers as failure until fixed.
+   relevant markers as failure until fixed. For object-owned templates remember that there is no
+   `Templates/<TemplateName>/<TemplateName>.mdo`; metadata is serialized in the owner `.mdo`, while
+   the body is `Template.mxlx` or `Template.dcs`.
 
 Keep the technical depth in the guide (the user prompt won't have it). Each fix should be small,
 targeted at one observed failure, and re-verified through the loop.
