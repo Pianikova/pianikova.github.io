@@ -16,6 +16,10 @@ fragile: fields need version-aware defaults like `userVisible`, the right `ExtIn
 - `Edit` is allowed for existing generated `Form.form` files when the requested layout change is too
   detailed for the EDT form API. Always `Read` first, make the smallest exact replacement, then run
   `GetMarkers` for the owner metadata object.
+- When editing localized form text (`<title>`, captions, group titles), every inserted block must
+  contain `<key>ru</key>` before `<value>...`. Do not insert a bare
+  `<title><value>...</value></title>` block; EDT reports SU46 because `LocalStringMapEntry.key` is
+  required.
 - `Write` is forbidden for `Form.form` and `.mdo` files. The form must be created first through the
   EDT metadata workflow so the default layout/resource exists and is registered in BM.
 - Do not use `Edit` to create a missing form resource. If `Form.form` is absent, run

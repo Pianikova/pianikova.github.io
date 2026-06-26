@@ -53,6 +53,20 @@ change is not enough for the mandatory improvement pass when Code/Description co
 - ✅ **Refine only after generation.** When the user asks to tweak an existing generated form
   ("hide field", "change title/caption", "make visible=false"), route to `edit_form`: read the
   existing `Form.form`, apply a small `Edit`, then validate with `GetMarkers`.
+- ⛔ **Localized form text needs a language key.** When `Edit` adds or replaces localized XML such
+  as `<title>`, field titles/captions, or group titles, do not insert only `<value>...</value>`.
+  Use the valid LocalString shape:
+
+  ```xml
+  <title>
+    <key>ru</key>
+    <value>Номенклатура</value>
+  </title>
+  ```
+
+  A block like `<title><value>...</value></title>` produces SU46
+  (`LocalStringMapEntry ... key is required`). If SU46 appears after a form edit, repair each
+  affected localized block by adding `<key>ru</key>` before `<value>`.
 - ✅ **Do not report an untouched default form as success.** After creating a form for requests like
   "Создай справочник товаров и форму для него", read the generated `Form.form` and perform at least
   one safe exact `Edit` when `Object.Code` / `Object.Description` controls are present. Examples:
@@ -66,7 +80,7 @@ change is not enough for the mandatory improvement pass when Code/Description co
 - ✅ **Register list forms always have a safe minimum edit.** If the generated form is a register
   `LIST` form and no better exact field/table caption edit is obvious, change the form-level
   `<autoTitle>true</autoTitle>` to `<autoTitle>false</autoTitle>` and insert a Russian form
-  `<title>` before `<autoUrl>true</autoUrl>`. Example title: `Остатки товаров` or
+  `<title>` with `<key>ru</key>` before `<autoUrl>true</autoUrl>`. Example title: `Остатки товаров` or
   `Цены товаров`. This counts as the mandatory improvement because it changes the user-facing form
   title. A raw register list form with `autoTitle=true` is not success.
 - ✅ **Use the real request project name.** Never leave `MyProject` in executable JShell. Check

@@ -27,6 +27,10 @@ Never use `Write` to create a `Form.form` file.
 - After `Form.form` exists, small layout improvements (visibility, title/caption text, local flags,
   simple ordering/grouping changes that can be expressed as exact XML moves/replacements) should use
   the `edit_form` route: `SearchFiles`/`Read` -> `Edit` existing `Form.form` -> `GetMarkers`.
+- Localized form XML edited this way must include a language key. For `<title>`, field captions,
+  group titles, and similar LocalString blocks, use `<key>ru</key>` before `<value>...`. Never add a
+  bare `<title><value>...</value></title>` block; EDT reports SU46 because
+  `LocalStringMapEntry.key` is required.
 - A newly generated default form must not be reported as fully done until this safe improvement pass
   has been applied. At minimum, read the generated `Form.form` and improve obvious machine defaults.
   For Russian metadata with `Object.Code` / `Object.Description`, do at least one exact `Edit`, such
@@ -40,7 +44,7 @@ Never use `Write` to create a `Form.form` file.
   `ExtendedTooltip` merely to satisfy the improvement requirement.
 - Register list forms always have a safe minimum edit. If no better exact field/table caption edit
   is obvious, change form-level `<autoTitle>true</autoTitle>` to `<autoTitle>false</autoTitle>` and
-  insert a Russian form `<title>` before `<autoUrl>true</autoUrl>`. Example title: `Остатки товаров`
+  insert a Russian form `<title>` with `<key>ru</key>` before `<autoUrl>true</autoUrl>`. Example title: `Остатки товаров`
   or `Цены товаров`. A raw register list form with `autoTitle=true` is not success.
 - Prefer the simple style used by real SSL catalog item forms: `Object.Description` is presented as
   `Наименование`, `Object.Code` as `Код`, and both may be placed into a compact `form:FormGroup`

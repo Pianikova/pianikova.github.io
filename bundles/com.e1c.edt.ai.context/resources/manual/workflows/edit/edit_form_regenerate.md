@@ -27,6 +27,8 @@ construction; EDT already created a valid default layout, so refine the existing
    directly associated items. For simple cosmetic improvements, make only exact, reviewable XML
    changes such as title/caption values, visibility flags, or moving an already existing item block.
    Do not rewrite the whole form.
+   Any inserted localized title/caption block must include `<key>ru</key>` before `<value>...`;
+   never insert a bare `<title><value>...</value></title>` block.
 4. Run `GetMarkers` with `marker_type:"1c"` for the owner `.mdo`.
 5. Report success only after the file was edited and markers were checked.
 
@@ -74,6 +76,9 @@ Never add an obsolete ninth argument after `columnCount`; the extra value does n
   when the exact controls are present. If title/caption nodes are absent, add a safe form title or
   group title by editing existing XML structure. If no exact safe replacement is available, keep the
   generated layout and report that it was inspected.
+- If `GetMarkers` reports SU46 / `LocalStringMapEntry ... key is required` for `Form.form`, repair
+  the edited localized XML: add `<key>ru</key>` before each `<value>` in the affected `<title>` or
+  caption block.
 - If the object attribute is absent, create a real `CatalogAttribute`/`DocumentAttribute` first
   with a non-empty `TypeDescription`. A form-local attribute is not a metadata requisite.
 - For simple string attributes, prefer copying a known-good string `TypeDescription` from an

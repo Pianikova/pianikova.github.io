@@ -10,6 +10,22 @@ If a target project is already supplied, do not stop with a clarifying question 
 
 This guide is executable, not informational. After reading it, do not answer "создам..." or stop. Immediately continue with tool calls in this order for `Добавь все необходимое`: `JShellManual(create_catalog)`, `JShellManual(create_document)`, `JShellManual(create_accumulation_register)`, `JShellSession(scope edt)`, JShell creation snippets, then `GetMarkers`.
 
+If the user explicitly asks to add **forms and templates/layouts** (`формы и макеты`, `формы и
+печатные формы`, `макеты печати`), treat that as part of the deliverable for the chosen first
+slice, not as an optional polish step:
+
+- Before creating forms, call `JShellManual(create_object_form)` and follow the generator workflow.
+  After each generated `Form.form`, run the safe `Edit` improvement pass. Any localized title/caption
+  inserted into `Form.form` must include `<key>ru</key>` before `<value>...`; a bare
+  `<title><value>...</value></title>` causes SU46.
+- Before creating templates/layouts, call `JShellManual(create_object_template)` for object-owned
+  templates and `JShellManual(create_common_template)` for shared templates. Create the body through
+  EDT API (`Template.mxlx`/`Template.dcs`), never with `Write`.
+- A broad "forms and templates" request is incomplete if only one arbitrary template is created.
+  For a minimal shop slice, create at least item/list forms for the main catalogs, document forms for
+  the main documents, and one print spreadsheet template for each main printable document. If tool
+  budget forces a smaller set, report the exact coverage and remaining forms/templates explicitly.
+
 For a bakery/пекарня/булочная project, the default minimal first slice is:
 
 - catalogs: `Номенклатура`, `Контрагенты`;
