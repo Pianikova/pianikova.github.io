@@ -32,7 +32,10 @@ import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
 import com._1c.g5.v8.dt.metadata.mdclass.Document;
 import com._1c.g5.v8.dt.metadata.mdclass.DocumentAttribute;
+import com._1c.g5.v8.dt.metadata.mdclass.DocumentNumberPeriodicity;
+import com._1c.g5.v8.dt.metadata.mdclass.DocumentNumberType;
 import com._1c.g5.v8.dt.metadata.mdclass.DocumentTabularSection;
+import com._1c.g5.v8.dt.metadata.mdclass.RealTimePosting;
 import com._1c.g5.v8.dt.metadata.mdclass.TabularSectionAttribute;
 import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.AccumulationRegisterDimension;
@@ -47,13 +50,31 @@ import java.util.UUID;
 
 If you do not copy these imports into the JShell snippet, use fully qualified names directly. Do not
 write short names with omitted imports: `DocumentAttribute`, `DocumentTabularSection`,
-`TabularSectionAttribute`, `MdProducedTypesUtil`, and `MdTypePackage` are not built-in JShell
+`TabularSectionAttribute`, `DocumentNumberType`, `DocumentNumberPeriodicity`, `RealTimePosting`,
+`MdProducedTypesUtil`, and `MdTypePackage` are not built-in JShell
 bindings. Compact snippets should prefer these FQNs:
 `com._1c.g5.v8.dt.metadata.mdclass.DocumentAttribute`,
+`com._1c.g5.v8.dt.metadata.mdclass.DocumentNumberType`,
+`com._1c.g5.v8.dt.metadata.mdclass.DocumentNumberPeriodicity`,
+`com._1c.g5.v8.dt.metadata.mdclass.RealTimePosting`,
 `com._1c.g5.v8.dt.metadata.mdclass.DocumentTabularSection`,
 `com._1c.g5.v8.dt.metadata.mdclass.TabularSectionAttribute`,
 `com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil`, and
 `com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage`.
+
+### Hard rules from observed failures
+
+- Copy the canonical imports above into every document JShell snippet that uses short class names.
+  If you omit imports, use fully-qualified names directly. Do not write `MdTypePackage.Literals...`,
+  `MdProducedTypesUtil...`, `DocumentAttribute`, or `RealTimePosting...` as short names unless their
+  imports are present in the same JShell code block.
+- Do not continue to the next metadata family after a document JShell snippet returns
+  `compilation_errors` or `runtime_errors`. Fix the snippet first, then run `GetMarkers`.
+- Prefer omitting `setRealTimePosting(...)` in generic document creation. Only set it when the user
+  explicitly asks for a real-time posting mode; then either import
+  `com._1c.g5.v8.dt.metadata.mdclass.RealTimePosting` or write the fully-qualified enum constant.
+- For number attributes, do not instantiate `NumberQualifiers`; use
+  `.setNumberQualifiers(scale, precision, nonNegative)`.
 
 Wrong package paths you must not invent:
 
@@ -147,15 +168,14 @@ the `TypeItem` directly from the EMF object you fetched via
 `transaction.getTopObjectByFqn(...)`.
 
 ```java
-import com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil;
-import com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage;
-
 Catalog warehouses = (Catalog)transaction.getTopObjectByFqn("Catalog.Warehouses");
 if (warehouses == null) {
     throw new IllegalStateException("Missing dependency: Catalog.Warehouses — create it first");
 }
-TypeItem warehouseRef = MdProducedTypesUtil.getProducedType(
-    warehouses, MdTypePackage.Literals.MD_REF_TYPE); // "CatalogRef.Warehouses"
+TypeItem warehouseRef =
+    com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil.getProducedType(
+        warehouses,
+        com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage.Literals.MD_REF_TYPE); // "CatalogRef.Warehouses"
 ```
 
 EClass mapping: `MD_REF_TYPE` → `CatalogRef.X` / `DocumentRef.X` / `EnumRef.X`;
@@ -220,14 +240,14 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         document.setNumberType(DocumentNumberType.NUMBER);
         document.setNumberLength(9);
         document.setNumberPeriodicity(DocumentNumberPeriodicity.NONPERIODICAL);
-        document.setRealTimePosting(RealTimePosting.DENY);
+        // Do not set RealTimePosting in generic snippets unless the user explicitly asks for it.
 
         // Create type provider INSIDE transaction
         IEObjectProvider typeProvider = IEObjectProvider.Registry.INSTANCE
             .get(McorePackage.Literals.TYPE_ITEM, v8project.getVersion());
 
         // Add warehouse attribute (Catalog reference)
-        DocumentAttribute warehouse = mdFactory.createDocumentAttribute();
+        var warehouse = mdFactory.createDocumentAttribute();
         warehouse.setName("Warehouse");
         warehouse.getSynonym().put("ru", "РЎРєР»Р°Рґ");
         // Resolve CatalogRef.Warehouses via MdProducedTypesUtil — NOT via typeProvider.getProxy("CatalogRef.Warehouses").
@@ -235,8 +255,10 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         if (warehousesDep == null) {
             throw new IllegalStateException("Missing referenced catalog: Catalog.Warehouses — create it first");
         }
-        TypeItem catalogRefType = MdProducedTypesUtil.getProducedType(
-            warehousesDep, MdTypePackage.Literals.MD_REF_TYPE);
+        TypeItem catalogRefType =
+            com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil.getProducedType(
+                warehousesDep,
+                com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription warehouseType = new TypeDescriptionBuilder()
             .addType(catalogRefType)
             .build();
@@ -260,8 +282,10 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
         if (productsDep == null) {
             throw new IllegalStateException("Missing referenced catalog: Catalog.Products — create it first");
         }
-        TypeItem productsRefType = MdProducedTypesUtil.getProducedType(
-            productsDep, MdTypePackage.Literals.MD_REF_TYPE);
+        TypeItem productsRefType =
+            com._1c.g5.v8.dt.metadata.mdclass.util.MdProducedTypesUtil.getProducedType(
+                productsDep,
+                com._1c.g5.v8.dt.metadata.mdtype.MdTypePackage.Literals.MD_REF_TYPE);
         TypeDescription productType = new TypeDescriptionBuilder()
             .addType(productsRefType)
             .build();
@@ -284,7 +308,7 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 
         // Validate all child TypeDescription values before attach.
         // TypeDescription is containment: never reuse the same instance across children.
-        for (DocumentAttribute attribute : document.getAttributes()) {
+        for (var attribute : document.getAttributes()) {
             if (attribute.getType() == null || attribute.getType().getTypes().isEmpty()) {
                 System.err.println("ERROR: Missing TypeDescription for document attribute: " + attribute.getName());
                 return null;
@@ -318,7 +342,8 @@ Document document = globalContext.execute(new AbstractBmTask<Document>("Create d
 - **DocumentNumberType.NUMBER** (not `Number`) - use correct enum constant
 - **DocumentNumberPeriodicity.NONPERIODICAL** (not `Nonperiodical`) - use correct enum constant
 - **Do not call `document.setPosted(...)`** - this method is not present in EDT API
-- **`setRealTimePosting(...)` expects `RealTimePosting` enum** such as `RealTimePosting.DENY` or `RealTimePosting.ALLOW`
+- **Prefer omitting `setRealTimePosting(...)`** in generic document creation. If the user explicitly
+  asks for it, import `RealTimePosting` or use the fully-qualified enum constant.
 - **TypeDescriptionBuilder** must be used INSIDE the transaction
 - **IEObjectProvider** must use `v8project.getVersion()` for version compatibility
 - **UUIDs** MUST be set for document and all attributes to avoid SU45 errors

@@ -8,8 +8,10 @@ After `Form.form` exists, read it, apply the mandatory safe `Edit` improvement p
 default form is generated. Never use `Write` for `.form` or owner `.mdo` files.
 For the generated register list form, the minimum required improvement is a form-level title edit:
 replace `<autoTitle>true</autoTitle>` with `<autoTitle>false</autoTitle>` and insert a Russian
-`<title>` before `<autoUrl>true</autoUrl>`. Do this with `Edit` on `Form.form`; do not edit
-`ListSettingsComposerUserSettings` or other service controls to satisfy the requirement.
+`<title>` with `<key>ru</key>` before `<autoUrl>true</autoUrl>`. Do this with `Edit` on `Form.form`;
+do not edit `ListSettingsComposerUserSettings` or other service controls to satisfy the
+requirement. Never insert a bare `<title><value>...</value></title>` block; it produces SU46
+because `LocalStringMapEntry.key` is required.
 
 For string dimensions/attributes, use `TypeDescriptionBuilder.setStringQualifiers(int length,
 boolean fixed)`, for example `.setStringQualifiers(100, false)`. Do not import or instantiate

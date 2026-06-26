@@ -16,6 +16,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.eclipse.core.resources.ResourcesPlugin;
 
+import com.e1c.edt.ai.assistent.ConversationSession;
+import com.e1c.edt.ai.assistent.SendMessageResult;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
@@ -40,6 +42,7 @@ public class DevAutopilot
 
     private static final long POLL_INTERVAL_MS = 1000L;
     private static final long TURN_TIMEOUT_SECONDS = 300L;
+    private static final int MAX_AUTO_CONTINUES = 5;
 
     /**
      * Default agent preamble prepended to the user prompt. The dev/helper conversation (skill
@@ -48,12 +51,7 @@ public class DevAutopilot
      * empty string to send the bare prompt).
      */
     private static final String DEFAULT_PREAMBLE =
-        "Ты работаешь в 1C:EDT с открытой конфигурацией. Это операция над метаданными/формами/макетами 1С. " //$NON-NLS-1$
-            + "Выполни задачу до конца, используя инструменты: сначала вызови JShellManual, чтобы получить подходящий " //$NON-NLS-1$
-            + "сценарий, затем JShellSession (scope edt), затем JShell для выполнения кода сценария, затем GetMarkers " //$NON-NLS-1$
-            + "(marker_type \"1c\") для проверки результата. Не отвечай одним планом и не останавливайся, пока артефакт " //$NON-NLS-1$
-            + "(объект/форма/макет, файлы .mdo/.form/.dcs/.mxl) не создан и маркеры не проверены. Не предлагай сделать " //$NON-NLS-1$
-            + "это вручную и не пиши XML руками, если есть сценарий.\n\nЗадача: "; //$NON-NLS-1$
+        "Не отвечай одним планом и не останавливайся.\n\nЗадача: "; //$NON-NLS-1$
 
     private final IConversationFacade conversationFacade;
     private final IDevToolCallRecorder recorder;
@@ -246,14 +244,12 @@ public class DevAutopilot
         var promptText = applyPreamble(request);
         // Multi-artifact metadata tasks (object + form/template + content) plus self-correction
         // need more than the default 10 tool rounds; default the harness to a higher cap.
-        Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(30);
+        Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(200);
         // The dev-autopilot must run on the "custom" skill regardless of the ConversationFacade
         // default (which is "raw"). Honor an explicit per-request override (e.g. "raw" for routing
         // diagnostics); otherwise force "custom".
         String skill = request.skill != null ? request.skill : "custom"; //$NON-NLS-1$
-        var message = new SendUserMessageRequest(projectId, promptText, null, true, skill, request.isChat,
-            maxToolRounds);
-
+        Boolean isChat = request.isChat != null ? request.isChat : Boolean.TRUE;
         // Fixed-prelude size (helps assess the "large context" hypothesis): all tool definitions
         // sent on every turn, independent of chat history.
         captureToolsMetrics(response);
@@ -261,18 +257,31 @@ public class DevAutopilot
         recorder.beginRun();
         try
         {
-            var result = conversationFacade.sendAsync(message, CancellationTokens.NONE)
-                .get(TURN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-            if (result != null)
+            ConversationSession session = null;
+            String nextPrompt = promptText;
+            boolean forceNewConversation = true;
+            for (int autoContinue = 0; autoContinue <= MAX_AUTO_CONTINUES; autoContinue++)
             {
-                response.finalText = result.getText();
-                response.reasoning = result.getReasoning();
-                response.assistantMessageCount = result.getAssistantMessageCount();
-                if (result.getSession() != null)
+                var message = new SendUserMessageRequest(projectId, nextPrompt, session, forceNewConversation, skill,
+                    isChat, maxToolRounds);
+                SendMessageResult result = conversationFacade.sendAsync(message, CancellationTokens.NONE)
+                    .get(TURN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                if (result != null)
                 {
-                    response.conversationId = result.getSession().getConversationId();
-                    response.replyToMessageUuid = result.getSession().getReplyToMessageUuid();
+                    applyResult(response, result);
                 }
+                if (!shouldAutoContinue(result, autoContinue))
+                {
+                    break;
+                }
+                session = result.getSession();
+                if (session == null)
+                {
+                    break;
+                }
+                response.autoContinueCount = autoContinue + 1;
+                nextPrompt = autoContinuePrompt(request);
+                forceNewConversation = false;
             }
         }
         finally
@@ -281,7 +290,92 @@ public class DevAutopilot
             response.toolCallCount = response.toolCalls != null ? response.toolCalls.size() : 0;
             response.stalled = response.toolCalls == null
                 || response.toolCalls.stream().noneMatch(c -> "jshell".equalsIgnoreCase(c.tool)); //$NON-NLS-1$
+            captureToolFailureMetrics(response);
         }
+    }
+
+    private void captureToolFailureMetrics(Response response)
+    {
+        if (response.toolCalls == null)
+        {
+            return;
+        }
+        response.toolErrorCount = (int)response.toolCalls.stream()
+            .filter(c -> c.error != null && !c.error.isBlank())
+            .count();
+        response.jshellErrorCount = (int)response.toolCalls.stream()
+            .filter(c -> "jshell".equalsIgnoreCase(c.tool)) //$NON-NLS-1$
+            .filter(c -> hasNonEmptyJsonArray(c.result, "compilation_errors") //$NON-NLS-1$
+                || hasNonEmptyJsonArray(c.result, "runtime_errors")) //$NON-NLS-1$
+            .count();
+        response.hasToolFailures = response.toolErrorCount > 0 || response.jshellErrorCount > 0;
+    }
+
+    private boolean hasNonEmptyJsonArray(String text, String field)
+    {
+        if (text == null || text.isBlank())
+        {
+            return false;
+        }
+        String marker = "\"" + field + "\""; //$NON-NLS-1$ //$NON-NLS-2$
+        int index = text.indexOf(marker);
+        if (index < 0)
+        {
+            return false;
+        }
+        int colon = text.indexOf(':', index + marker.length());
+        if (colon < 0)
+        {
+            return false;
+        }
+        int bracket = text.indexOf('[', colon + 1);
+        if (bracket < 0)
+        {
+            return false;
+        }
+        int valueStart = bracket + 1;
+        while (valueStart < text.length() && Character.isWhitespace(text.charAt(valueStart)))
+        {
+            valueStart++;
+        }
+        return valueStart < text.length() && text.charAt(valueStart) != ']';
+    }
+
+    private void applyResult(Response response, SendMessageResult result)
+    {
+        response.finalText = result.getText();
+        response.reasoning = result.getReasoning();
+        response.assistantMessageCount += result.getAssistantMessageCount();
+        if (result.getSession() != null)
+        {
+            response.conversationId = result.getSession().getConversationId();
+            response.replyToMessageUuid = result.getSession().getReplyToMessageUuid();
+        }
+    }
+
+    private boolean shouldAutoContinue(SendMessageResult result, int autoContinue)
+    {
+        if (result == null || autoContinue >= MAX_AUTO_CONTINUES || result.getSession() == null)
+        {
+            return false;
+        }
+        String text = result.getText() != null ? result.getText().trim().toLowerCase() : ""; //$NON-NLS-1$
+        String reasoning = result.getReasoning() != null ? result.getReasoning().toLowerCase() : ""; //$NON-NLS-1$
+        if (text.isBlank())
+        {
+            return true;
+        }
+        return text.startsWith("создам") || text.startsWith("начну") //$NON-NLS-1$ //$NON-NLS-2$
+            || reasoning.contains("начну с создания") || reasoning.contains("теперь начну") //$NON-NLS-1$ //$NON-NLS-2$
+            || reasoning.contains("следующий шаг") || reasoning.contains("нужно вызвать jshell"); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private String autoContinuePrompt(Request request)
+    {
+        return targetProjectInstruction(request)
+            + "Продолжай немедленно инструментами в этой же задаче. Не отвечай планом и не пиши \"создам\". " //$NON-NLS-1$
+            + "Следующее действие должно быть tool call: JShellManual, JShellSession, JShell или GetMarkers. " //$NON-NLS-1$
+            + "Если нужные manual уже прочитаны, сразу выполняй JShell-код и затем проверяй маркеры."; //$NON-NLS-1$
     }
 
     private void captureToolsMetrics(Response response)
@@ -305,13 +399,28 @@ public class DevAutopilot
         // null preamble => default agent preamble; blank preamble => bare prompt; otherwise custom.
         if (request.preamble == null)
         {
-            return DEFAULT_PREAMBLE + request.prompt;
+            return DEFAULT_PREAMBLE + targetProjectInstruction(request) + request.prompt;
         }
         if (request.preamble.isBlank())
         {
             return request.prompt;
         }
-        return request.preamble + "\n\n" + request.prompt; //$NON-NLS-1$
+        return request.preamble + "\n\n" + targetProjectInstruction(request) + request.prompt; //$NON-NLS-1$
+    }
+
+    private String targetProjectInstruction(Request request)
+    {
+        if (request.project == null || request.project.isBlank())
+        {
+            return ""; //$NON-NLS-1$
+        }
+        return "Целевой проект запроса: \"" + request.project //$NON-NLS-1$
+            + "\". Это точный идентификатор проекта, а не доменное слово; похожие имена других проектов запрещены. " //$NON-NLS-1$
+            + "Все чтение, JShell-код, GetMarkers и изменения должны относиться к этому проекту. " //$NON-NLS-1$
+            + "Не используй NavigationHistory/current editor как цель, если он указывает на другой проект; " //$NON-NLS-1$
+            + "для продолжений вроде \"Добавь все необходимое\" работай с целевым проектом через " //$NON-NLS-1$
+            + "scaffold_business_configuration и минимальный проверяемый набор объектов. " //$NON-NLS-1$
+            + "Нельзя изменять файлы других проектов.\n\n"; //$NON-NLS-1$
     }
 
     private ProjectId resolveProjectId(String projectName)
@@ -370,7 +479,7 @@ public class DevAutopilot
         @SerializedName("preamble")
         public String preamble;
 
-        /** Optional tool-round cap; null → harness default (30). */
+        /** Optional tool-round cap; null → harness default (200). */
         @SerializedName("max_tool_rounds")
         public Integer maxToolRounds;
     }
@@ -403,11 +512,27 @@ public class DevAutopilot
         @SerializedName("assistant_message_count")
         public int assistantMessageCount;
 
+        /** Number of automatic "continue with tools" nudges sent inside this harness request. */
+        @SerializedName("auto_continue_count")
+        public int autoContinueCount;
+
         @SerializedName("tool_calls")
         public List<IDevToolCallRecorder.DevToolCall> toolCalls;
 
         @SerializedName("tool_call_count")
         public int toolCallCount;
+
+        /** Tool calls that returned a top-level tool error. */
+        @SerializedName("tool_error_count")
+        public int toolErrorCount;
+
+        /** JShell calls whose result contains compilation_errors or runtime_errors. */
+        @SerializedName("jshell_error_count")
+        public int jshellErrorCount;
+
+        /** True when any tool or JShell execution failed at least once during the request. */
+        @SerializedName("has_tool_failures")
+        public boolean hasToolFailures;
 
         /** True when the turn ran no `jshell` (the model gathered context and stopped). */
         @SerializedName("stalled")

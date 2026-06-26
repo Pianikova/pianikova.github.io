@@ -16,12 +16,12 @@ Run after `create_object_template` (or `create_common_template`).
   `transaction.attachTopObject((IBmObject)content, fqnGenerator.generateExternalPropertyFqn(template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE))`.
   This mirrors how a form's structure is persisted (`BASIC_FORM__FORM`). Omitting it is the most
   common reason the template body never appears on disk.
-- ❌ **Never create template files with `Write`** (`*.dcs`, `*.mxl`, `Template.mdo`, settings
+- ❌ **Never create template files with `Write`** (`*.dcs`, `*.mxl`, owner `.mdo`, settings
   `*.xml`). The body must first be generated/registered through the EMF factory +
   `setTemplate(...)` inside a BM transaction (below). After the generated body file exists, `Edit`
   may be used for small targeted changes, followed by `GetMarkers`.
 - ✅ **Use `Edit` only as refinement.** Once EDT has produced the body file, file `Edit` may adjust
-  a small known text fragment in an existing `.dcs`/`.mxl(x)`/`Template.mdo` resource. Always read
+  a small known text fragment in an existing `.dcs`/`.mxl(x)` resource or in the owner `.mdo`. Always read
   the file first, keep the replacement exact and minimal, and validate the owner `.mdo` with
   `GetMarkers`. If the file does not exist, return to this EDT API workflow instead of `Write`.
 - ⛔ **Exact factory packages — do not guess.** The DCS factory is
@@ -34,6 +34,9 @@ Run after `create_object_template` (or `create_common_template`).
   `project.exists()` and `modelManager.getModel(project) != null` before `getGlobalContext()`.
   Missing project, missing BM model, missing owner, and missing template must be explicit
   `IllegalStateException`s, not `NullPointerException`s.
+- ✅ **Verify the body through Eclipse resources before any file tool.** Use the same `IProject` and
+  `project.getFile("src/.../Template.mxlx").exists()` (or `Template.dcs`). Do not guess the
+  workspace path for `Read`, and do not call `Glob`.
 
 ### How template content is stored (required two steps)
 
@@ -56,8 +59,14 @@ produced file on disk.
 
 | TemplateType | factory binding | create method | content type |
 |--------------|-----------------|---------------|--------------|
-| `DATA_COMPOSITION_SCHEMA` | `dcsFactory` | `createDataCompositionSchema()` | `DataCompositionSchema` |
-| `SPREADSHEET_DOCUMENT` | `moxelFactory` | `createSpreadsheetDocument()` | `SpreadsheetDocument` |
+| `DATA_COMPOSITION_SCHEMA` | `dcsFactory` | `DcsFactory.eINSTANCE.createDataCompositionSchema()` | `DataCompositionSchema` |
+| `SPREADSHEET_DOCUMENT` | `SheetFactory` | `SheetFactory.createSpreadsheetDocument()` | `SpreadsheetDocument` |
+
+> ⛔ For `SPREADSHEET_DOCUMENT` do **not** use the bare `MoxelFactory.eINSTANCE.createSpreadsheetDocument()`.
+> It omits the mandatory `printSettings`/`viewSettings`/`formats`/`columns`/`defaultFormatIndex`, so the
+> `.mxlx` never persists/loads and the editor fails with
+> `Unsupported embedded object type ... EObjectImpl`. Use `SheetFactory.createSpreadsheetDocument()`
+> (package `com._1c.g5.v8.dt.moxel.sheet`, pre-imported in the `edt` scope), which initialises them.
 
 Other types (`TEXT_DOCUMENT`, `HTML_DOCUMENT`, `BINARY_DATA`, …) are stored as plain
 text/binary resources — for those, create the `Template` metadata with the right `TemplateType`
@@ -118,11 +127,11 @@ return result;
 ### Example — SpreadsheetDocument content (blank table)
 
 ```java
-import com._1c.g5.v8.dt.moxel.MoxelFactory;
 import com._1c.g5.v8.dt.moxel.SpreadsheetDocument;
+import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 
 // inside the BM task, template.getTemplateType() == TemplateType.SPREADSHEET_DOCUMENT
-SpreadsheetDocument document = MoxelFactory.eINSTANCE.createSpreadsheetDocument();
+SpreadsheetDocument document = SheetFactory.createSpreadsheetDocument();   // fully initialised blank table
 template.setTemplate(document);   // an empty spreadsheet is a valid blank template
 String contentFqn = fqnGenerator.generateExternalPropertyFqn(
     template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);
@@ -131,13 +140,37 @@ transaction.attachTopObject((IBmObject)document, contentFqn);   // persists Temp
 
 ### Required post-check
 
-Call `GetMarkers` with `marker_type: "1c"` on the owner's `.mdo` and confirm the content file
-was written, e.g.:
+Call `GetMarkers` with `marker_type: "1c"` on the owner's `.mdo` using a project-relative path and
+confirm the content file was written, e.g.:
 
 ```
 src/Reports/SalesAnalysis/Templates/ОсновнаяСхемаКомпоновкиДанных/Template.dcs   (DCS)
 src/Catalogs/Products/Templates/ПечатнаяФорма/Template.mxlx                      (spreadsheet)
 ```
+
+For object-owned templates there is no `Templates/<TemplateName>/<TemplateName>.mdo`. The child
+metadata is serialized inside the owner `.mdo` as `<templates ...>`. Validate that owner `.mdo`,
+then check the separate body file (`Template.mxlx` or `Template.dcs`).
+
+Do not use `Glob` to find template files. Avoid wildcard directories such as `**/Catalogs/...` and
+rootless directories such as `src/Catalogs`. The file location is deterministic:
+
+```text
+<projectRoot>/src/<OwnerFolder>/<OwnerName>/Templates/<TemplateName>/Template.mxlx
+<projectRoot>/src/<OwnerFolder>/<OwnerName>/Templates/<TemplateName>/Template.dcs
+```
+
+For `GetMarkers`, prefer the project-relative owner `.mdo` path with `project_name`; never invent an
+absolute root like `C:\EDT_projects\...` or a default workspace such as
+`C:\Users\...\eclipse-workspace\...`. Verify the body with the Eclipse resource API in JShell:
+
+```java
+project.getFile("src/<OwnerFolder>/<OwnerName>/Templates/<TemplateName>/Template.mxlx").exists()
+```
+
+If a file tool is still needed, build the absolute path only from `project.getLocation().toOSString()`
+printed by JShell and the deterministic relative path. Do not use `java.io.File` in JShell: it is
+restricted. Do not call `Glob` for template verification.
 
 If the file is missing or markers appear, the template metadata still exists — report that and
 rerun this scenario only after fixing the concrete JShell/API error that prevented

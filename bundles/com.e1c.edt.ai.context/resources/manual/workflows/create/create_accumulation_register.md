@@ -10,13 +10,33 @@ After `Form.form` exists, read it, apply the mandatory safe `Edit` improvement p
 default form is generated. Never use `Write` for `.form` or owner `.mdo` files.
 For the generated register list form, the minimum required improvement is a form-level title edit:
 replace `<autoTitle>true</autoTitle>` with `<autoTitle>false</autoTitle>` and insert a Russian
-`<title>` before `<autoUrl>true</autoUrl>`. Do this with `Edit` on `Form.form`; do not edit
-`ListSettingsComposerUserSettings` or other service controls to satisfy the requirement.
+`<title>` with `<key>ru</key>` before `<autoUrl>true</autoUrl>`. Do this with `Edit` on `Form.form`;
+do not edit `ListSettingsComposerUserSettings` or other service controls to satisfy the
+requirement. Never insert a bare `<title><value>...</value></title>` block; it produces SU46
+because `LocalStringMapEntry.key` is required.
 
 Use the exact project name from `GetProjects` / the user request. Never call
 `workspaceRoot.getProject()` without a name and never leave `MyProject` in executable JShell.
 Check `project.exists()`, `projectManager.getProject(project) != null`, and
 `modelManager.getModel(project) != null` before entering the BM task.
+
+### Hard rules from observed failures
+
+Prefer the canonical patterns in this file over model memory or old snippets:
+
+- Java enum constants are `AccumulationRegisterType.BALANCE` and
+  `AccumulationRegisterType.TURNOVERS`. Do not write `REMAINS`, `TURNOVER`,
+  `Balance`, or `Turnovers` in JShell Java code.
+- For `Number(precision, scale)`, `TypeDescriptionBuilder` takes
+  `setNumberQualifiers(scale, precision, nonNegative)`. For `Number(10,3)`,
+  write `.setNumberQualifiers(3, 10, false)`, not `.setNumberQualifiers(10, 3, false)`.
+- For a concrete catalog/document/enum reference, never call
+  `typeProvider.getProxy("Catalog.X")` and never fall back to
+  `IEObjectTypeNames.CATALOG_REF`. Load the dependency with
+  `transaction.getTopObjectByFqn("Catalog.X")`, fail if it is missing, then use
+  `MdProducedTypesUtil.getProducedType(depMdObject, MdTypePackage.Literals.MD_REF_TYPE)`.
+- If JShell returns compilation or runtime errors, do not continue with the next object and do not
+  report success. Fix the failing snippet first, then run `GetMarkers`.
 
 Copy these exact imports into the JShell snippet (do not guess packages; `manual_ids` do not import
 automatically). Wrong guesses like `dt.mcore.IEObjectTypeNames`, `dt.core.project.IV8Project`, or

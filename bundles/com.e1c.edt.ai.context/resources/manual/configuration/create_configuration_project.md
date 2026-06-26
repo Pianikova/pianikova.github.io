@@ -175,6 +175,7 @@ try {
 
 ### Rules
 
+- Treat the requested project name as an exact literal. Do not correct, lemmatize, translate, or substitute it. `Булочная` must stay `Булочная` everywhere.
 - Create a plain Eclipse project first.
 - Do not stop after `projectHandle.create(...)` / `projectHandle.open(...)`. That creates only an Eclipse container, not an EDT configuration project.
 - In a fresh session, import or fully qualify `NullProgressMonitor`, `IProjectDescription`, `ResourcesPlugin`, `IFolder`, `IFile`, `IResource`, `ICommand`, `CoreException`, and `ByteArrayInputStream` before running the snippet. Missing these imports causes JShell `cannot find symbol` compilation errors before any project files are created.
@@ -195,3 +196,10 @@ try {
 - `NoSuchFileException` for `.settings`: create `.settings` before enabling V8 nature.
 - `ProjectManifestException`: check `DT-INF/PROJECT.PMF` format and `Runtime-Version`.
 - BM model exists but `Configuration` is not accessible: check `src/Configuration/Configuration.mdo` namespace and root element.
+
+### After project creation — if the request also asks to add metadata
+
+If the original prompt asks to add metadata objects (справочники, документы, регистры, формы, макеты)
+**after** creating the configuration, do not start creating them directly. Call
+`JShellManual(scaffold_business_configuration)` next and follow its guardrail for the first slice.
+This ensures dependency order, time-budget management, and marker validation are applied.
