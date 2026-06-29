@@ -133,6 +133,8 @@ public class AIUICommonModule
         bind(IEditRollback.class).to(EditRollback.class).in(Singleton.class);
         bind(IEdtLinkHandler.class).to(EdtLinkHandler.class).in(Singleton.class);
         bind(IEditorPositionManager.class).to(EditorPositionManager.class).in(Singleton.class);
+        bind(IDiffPreviewStore.class).to(DiffPreviewStore.class).in(Singleton.class);
+        bind(IDiffPreviewOpener.class).to(DiffPreviewOpener.class).in(Singleton.class);
         bind(IDiagnosticReportDialogProvider.class).to(DiagnosticReportDialogProvider.class).in(Singleton.class);
         bind(IThemeManager.class).to(ThemeManager.class).in(Singleton.class);
         bind(INotifications.class).to(Notifications.class).in(Singleton.class);

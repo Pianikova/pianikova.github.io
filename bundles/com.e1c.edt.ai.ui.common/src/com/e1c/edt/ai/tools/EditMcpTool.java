@@ -34,6 +34,8 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.ui.DiffPreview;
+import com.e1c.edt.ai.ui.IDiffPreviewStore;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
@@ -67,13 +69,14 @@ public class EditMcpTool
     private final IContentReplacer contentReplacer;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final IDiffPreviewStore diffPreviewStore;
 
     @Inject
     public EditMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
         IProjectTools projectTools, IDispatcher dispatcher, IContentReplacer contentReplacer, IMarkdownUtils markdownUtils,
-        IEditingSupport editingSupport)
+        IEditingSupport editingSupport, IDiffPreviewStore diffPreviewStore)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -85,6 +88,7 @@ public class EditMcpTool
         Preconditions.checkNotNull(contentReplacer);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(diffPreviewStore);
 
         this.json = json;
         this.messageFactory = messageFactory;
@@ -96,6 +100,7 @@ public class EditMcpTool
         this.contentReplacer = contentReplacer;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.diffPreviewStore = diffPreviewStore;
 
         spec = createSpecification();
     }
@@ -162,8 +167,15 @@ public class EditMcpTool
             }
 
             var requestMarkdown = new StringBuilder();
+            // "Edit" is a link that opens the file at the edited fragment.
+            requestMarkdown.append(buildEditLabelLink(path, previewResult));
+            requestMarkdown.append(' ');
+
+            // The file breadcrumb is a link that opens a dedicated read-only Eclipse compare view,
+            // alongside the inline markdown diff (falls back to a plain file link when no preview).
             requestMarkdown.append(
-                MessageFormat.format(Messages.EditTitleTemplate, buildFileLink(path, previewResult)));
+                buildDiffLink(call, path, oldContent, newContent, replaceAll, previewContent, previewResult));
+
             requestMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
 
             details.requestMarkdown = requestMarkdown.toString();
@@ -216,7 +228,8 @@ public class EditMcpTool
                     response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
                     var responseMarkdown = new StringBuilder();
-                    responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
+                    responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate,
+                        buildDiffLink(call, path, oldContent, newContent, replaceAll, content, replaceResult),
                         createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
                     responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
                     details.responseMarkdown = responseMarkdown.toString();
@@ -332,7 +345,8 @@ public class EditMcpTool
             response.append("File updated: \"").append(displayPath).append("\".");
 
             var responseMarkdown = new StringBuilder();
-            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
+            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate,
+                buildDiffLink(call, path, oldContent, newContent, replaceAll, currentContent, replaceResult),
                 createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
             responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
             details.responseMarkdown = responseMarkdown.toString();
@@ -400,6 +414,50 @@ public class EditMcpTool
                 result.getMatchEndLine(), result.getMatchEndColumn());
         }
         return markdownUtils.formatFilePath(path);
+    }
+
+    /**
+     * Builds the "Edit" action link, labelled with {@link Messages#EditActionLabel}. When position
+     * info is available, the link points at (and selects) the matched fragment in the file.
+     */
+    private String buildEditLabelLink(String path, ReplaceResult result)
+    {
+        if (result != null && result.isSuccess() && result.getMatchStartLine() > 0)
+        {
+            return markdownUtils.formatFileLink(path, result.getMatchStartLine(), result.getMatchStartColumn(),
+                result.getMatchEndLine(), result.getMatchEndColumn(), Messages.EditActionLabel);
+        }
+        return markdownUtils.formatFileLink(path, -1, -1, -1, -1, Messages.EditActionLabel);
+    }
+
+    /**
+     * Computes a stable diff-preview token for a tool call (the tool-call id, or a content hash when
+     * no id is available). RENDER and CALL of the same call share the id, hence the same token.
+     */
+    private static String diffToken(McpToolCall call, String path, String oldContent, String newContent,
+        boolean replaceAll)
+    {
+        return call.id != null && !call.id.isBlank() ? call.id
+            : Integer.toHexString(java.util.Objects.hash(path, oldContent, newContent, replaceAll));
+    }
+
+    /**
+     * Registers a diff snapshot (original vs proposed full content) and returns a breadcrumb link
+     * that opens it in a read-only Eclipse compare view. Falls back to a plain file-navigation link
+     * when the snapshot cannot be built, so the link is never dead.
+     */
+    private String buildDiffLink(McpToolCall call, String path, String oldContent, String newContent,
+        boolean replaceAll, String originalContent, ReplaceResult replaceResult)
+    {
+        if (originalContent != null && replaceResult != null && replaceResult.isSuccess())
+        {
+            var token = diffToken(call, path, oldContent, newContent, replaceAll);
+            var displayName = markdownUtils.getDisplayedFileName(path);
+            diffPreviewStore.put(token,
+                new DiffPreview(path, displayName, originalContent, replaceResult.getUpdatedContent()));
+            return markdownUtils.formatDiffLink(token, displayName);
+        }
+        return buildFileLink(path, replaceResult);
     }
 
     /**

@@ -135,6 +135,29 @@ public class EdtLinkHandler implements IEdtLinkHandler
 		return href.startsWith(linkProvider.getFileProtocol());
 	}
 
+	@Override
+	public boolean isDiffHref(String href)
+	{
+		if (href == null || href.isBlank())
+		{
+			return false;
+		}
+
+		return href.startsWith(linkProvider.getDiffProtocol());
+	}
+
+	@SuppressWarnings("nls")
+	@Override
+	public String extractDiffToken(String href)
+	{
+		if (!isDiffHref(href))
+		{
+			return "";
+		}
+
+		return href.substring(linkProvider.getDiffProtocol().length());
+	}
+
 	@SuppressWarnings("nls")
 	@Override
 	public Optional<CursorPositionInfo> extractCursorPosition(String href)

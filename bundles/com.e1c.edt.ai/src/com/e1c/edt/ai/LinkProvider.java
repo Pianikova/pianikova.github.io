@@ -12,6 +12,19 @@ public class LinkProvider
         return EDT_FILE_PROTOCOL;
     }
 
+    @Override
+    public String getDiffProtocol()
+    {
+        return EDT_DIFF_PROTOCOL;
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public String diff(String token)
+    {
+        return String.format("%s%s", EDT_DIFF_PROTOCOL, token == null ? "" : token);
+    }
+
     @SuppressWarnings("nls")
     @Override
     public String file(String fullPath)

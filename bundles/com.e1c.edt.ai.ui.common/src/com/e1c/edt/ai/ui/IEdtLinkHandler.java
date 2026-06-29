@@ -48,6 +48,22 @@ public interface IEdtLinkHandler
 	boolean isRecognizedHref(String href);
 
 	/**
+	 * Checks if the given href is a diff-preview link (edt-diff:// protocol)
+	 *
+	 * @param href the href to check
+	 * @return true if the href is a recognized diff-preview link, false otherwise
+	 */
+	boolean isDiffHref(String href);
+
+	/**
+	 * Extracts the diff-preview token from a diff-preview link
+	 *
+	 * @param href the diff-preview link (e.g., "edt-diff://&lt;token&gt;")
+	 * @return the extracted token, or empty string if not a valid diff-preview link
+	 */
+	String extractDiffToken(String href);
+
+	/**
 	 * Extracts cursor position information from an EDT link
 	 *
 	 * @param href the EDT link
