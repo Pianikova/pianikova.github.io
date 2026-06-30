@@ -176,16 +176,12 @@ public class EditMcpTool
             }
 
             var requestMarkdown = new StringBuilder();
-            // "Edit" is a link that opens the file at the edited fragment.
-            requestMarkdown.append(buildEditLabelLink(path, previewResult));
-            requestMarkdown.append(' ');
-
-            // The file breadcrumb is a link that opens a dedicated read-only Eclipse compare view,
-            // alongside the inline markdown diff (falls back to a plain file link when no preview).
             requestMarkdown.append(
-                buildDiffLink(call, path, oldContent, newContent, replaceAll, previewContent, previewResult));
-
+                MessageFormat.format(Messages.EditTitleTemplate, buildFileLink(path, previewResult)));
             requestMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+            // A link to open the change in a dedicated read-only Eclipse compare view, after the diff.
+            requestMarkdown.append(
+                buildDiffViewLink(call, path, oldContent, newContent, replaceAll, previewContent, previewResult));
 
             // Auto-open the compare view (without focus) for a still-applicable edit, when enabled in
             // settings. A snapshot exists only when previewResult != null; after the edit is applied a
@@ -256,10 +252,11 @@ public class EditMcpTool
                     response.append("⚠️ WARNING: File not part of project. Changes to non-project files may have irreversible consequences.\n");
 
                     var responseMarkdown = new StringBuilder();
-                    responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate,
-                        buildDiffLink(call, path, oldContent, newContent, replaceAll, content, replaceResult),
+                    responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
                         createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
                     responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+                    responseMarkdown.append(
+                        buildDiffViewLink(call, path, oldContent, newContent, replaceAll, content, replaceResult));
                     details.responseMarkdown = responseMarkdown.toString();
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
@@ -373,10 +370,11 @@ public class EditMcpTool
             response.append("File updated: \"").append(displayPath).append("\".");
 
             var responseMarkdown = new StringBuilder();
-            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate,
-                buildDiffLink(call, path, oldContent, newContent, replaceAll, currentContent, replaceResult),
+            responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
                 createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
             responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+            responseMarkdown.append(
+                buildDiffViewLink(call, path, oldContent, newContent, replaceAll, currentContent, replaceResult));
             details.responseMarkdown = responseMarkdown.toString();
 
             return messageFactory.createMessage(this, call, response.toString(), details);
@@ -445,20 +443,6 @@ public class EditMcpTool
     }
 
     /**
-     * Builds the "Edit" action link, labelled with {@link Messages#EditActionLabel}. When position
-     * info is available, the link points at (and selects) the matched fragment in the file.
-     */
-    private String buildEditLabelLink(String path, ReplaceResult result)
-    {
-        if (result != null && result.isSuccess() && result.getMatchStartLine() > 0)
-        {
-            return markdownUtils.formatFileLink(path, result.getMatchStartLine(), result.getMatchStartColumn(),
-                result.getMatchEndLine(), result.getMatchEndColumn(), Messages.EditActionLabel);
-        }
-        return markdownUtils.formatFileLink(path, -1, -1, -1, -1, Messages.EditActionLabel);
-    }
-
-    /**
      * Computes a stable diff-preview token for a tool call (the tool-call id, or a content hash when
      * no id is available). RENDER and CALL of the same call share the id, hence the same token.
      */
@@ -470,22 +454,23 @@ public class EditMcpTool
     }
 
     /**
-     * Registers a diff snapshot (original vs proposed full content) and returns a breadcrumb link
-     * that opens it in a read-only Eclipse compare view. Falls back to a plain file-navigation link
-     * when the snapshot cannot be built, so the link is never dead.
+     * Registers a diff snapshot (original vs proposed full content) and returns a markdown block with
+     * a link, placed after the inline diff, that opens the change in a read-only Eclipse compare view.
+     * Returns an empty string when no snapshot can be built, so the link is never dead.
      */
-    private String buildDiffLink(McpToolCall call, String path, String oldContent, String newContent,
+    @SuppressWarnings("nls")
+    private String buildDiffViewLink(McpToolCall call, String path, String oldContent, String newContent,
         boolean replaceAll, String originalContent, ReplaceResult replaceResult)
     {
-        if (originalContent != null && replaceResult != null && replaceResult.isSuccess())
+        if (originalContent == null || replaceResult == null || !replaceResult.isSuccess())
         {
-            var token = diffToken(call, path, oldContent, newContent, replaceAll);
-            var displayName = markdownUtils.getDisplayedFileName(path);
-            diffPreviewStore.put(token,
-                new DiffPreview(path, displayName, originalContent, replaceResult.getUpdatedContent()));
-            return markdownUtils.formatDiffLink(token, displayName);
+            return "";
         }
-        return buildFileLink(path, replaceResult);
+        var token = diffToken(call, path, oldContent, newContent, replaceAll);
+        var displayName = markdownUtils.getDisplayedFileName(path);
+        diffPreviewStore.put(token,
+            new DiffPreview(path, displayName, originalContent, replaceResult.getUpdatedContent()));
+        return "\n\n" + markdownUtils.formatDiffLink(token, Messages.EditOpenDiffLink);
     }
 
     /**
