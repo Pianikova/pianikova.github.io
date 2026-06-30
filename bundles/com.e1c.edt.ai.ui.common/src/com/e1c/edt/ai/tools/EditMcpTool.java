@@ -35,6 +35,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.e1c.edt.ai.ui.DiffPreview;
+import com.e1c.edt.ai.ui.IDiffPreviewOpener;
 import com.e1c.edt.ai.ui.IDiffPreviewStore;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.e1c.edt.ai.ui.IFileSystem;
@@ -70,13 +71,14 @@ public class EditMcpTool
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
     private final IDiffPreviewStore diffPreviewStore;
+    private final IDiffPreviewOpener diffPreviewOpener;
 
     @Inject
     public EditMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
         IProjectTools projectTools, IDispatcher dispatcher, IContentReplacer contentReplacer, IMarkdownUtils markdownUtils,
-        IEditingSupport editingSupport, IDiffPreviewStore diffPreviewStore)
+        IEditingSupport editingSupport, IDiffPreviewStore diffPreviewStore, IDiffPreviewOpener diffPreviewOpener)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -89,6 +91,7 @@ public class EditMcpTool
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
         Preconditions.checkNotNull(diffPreviewStore);
+        Preconditions.checkNotNull(diffPreviewOpener);
 
         this.json = json;
         this.messageFactory = messageFactory;
@@ -101,6 +104,7 @@ public class EditMcpTool
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
         this.diffPreviewStore = diffPreviewStore;
+        this.diffPreviewOpener = diffPreviewOpener;
 
         spec = createSpecification();
     }
@@ -178,6 +182,15 @@ public class EditMcpTool
 
             requestMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
 
+            // Auto-open the compare view (without focus) for a still-applicable edit. A snapshot
+            // exists only when previewResult != null; after the edit is applied a re-RENDER finds no
+            // match (previewResult == null), so historical/applied edits are not re-opened.
+            if (previewResult != null)
+            {
+                var token = diffToken(call, path, oldContent, newContent, replaceAll);
+                dispatcher.dispatchAsync(() -> diffPreviewOpener.autoOpenDiff(token));
+            }
+
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
@@ -189,6 +202,11 @@ public class EditMcpTool
             {
                 throw new ToolException("Operation was cancelled before execution.");
             }
+
+            // The user has chosen to apply the edit — close the auto-opened preview tab if it is
+            // still open (the dedicated compare view is no longer needed once editing proceeds).
+            var closeToken = diffToken(call, path, oldContent, newContent, replaceAll);
+            dispatcher.dispatchAsync(() -> diffPreviewOpener.closeDiff(closeToken));
 
             // Determine project name from absolute path
             String detectedProjectName = projectTools.determineProjectName(path);

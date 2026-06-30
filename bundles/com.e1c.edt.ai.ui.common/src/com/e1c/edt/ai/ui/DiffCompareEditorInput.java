@@ -18,17 +18,29 @@ public class DiffCompareEditorInput
 {
     private final ITypedElement left;
     private final ITypedElement right;
+    private final String token;
 
     /**
      * @param left the left (current) side, never {@code null}
      * @param right the right (proposed) side, never {@code null}
      * @param configuration the compare configuration (labels, editability), never {@code null}
+     * @param token the diff-preview token, used to locate this editor for reuse/close, never {@code null}
      */
-    public DiffCompareEditorInput(ITypedElement left, ITypedElement right, CompareConfiguration configuration)
+    public DiffCompareEditorInput(ITypedElement left, ITypedElement right, CompareConfiguration configuration,
+        String token)
     {
         super(configuration);
         this.left = left;
         this.right = right;
+        this.token = token;
+    }
+
+    /**
+     * @return the diff-preview token this compare editor was opened for
+     */
+    public String getToken()
+    {
+        return token;
     }
 
     @Override
