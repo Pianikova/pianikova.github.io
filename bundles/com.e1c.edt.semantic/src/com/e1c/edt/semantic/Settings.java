@@ -30,6 +30,12 @@ class Settings
     }
 
     @Override
+    public boolean isAutoOpenDiffPreview()
+    {
+        return true;
+    }
+
+    @Override
     public boolean hasClientToken()
     {
         return true;

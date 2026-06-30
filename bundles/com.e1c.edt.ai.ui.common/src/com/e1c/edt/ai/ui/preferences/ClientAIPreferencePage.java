@@ -166,6 +166,10 @@ public class ClientAIPreferencePage
         var showStatusBarField = new BooleanFieldEditor(ISettingsStore.SHOW_STATUS_BAR,
             Messages.ClientAIPreferencePage_ShowStatusBar, parent);
         addField(showStatusBarField);
+
+        var autoOpenDiffPreviewField = new BooleanFieldEditor(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW,
+            Messages.ClientAIPreferencePage_AutoOpenDiffPreview, parent);
+        addField(autoOpenDiffPreviewField);
     }
 
     private void setLabelTooltip(org.eclipse.jface.preference.FieldEditor editor, String tooltip)

@@ -21,6 +21,8 @@ public interface ISettings
 
     boolean isStatusBarVisible();
 
+    boolean isAutoOpenDiffPreview();
+
     boolean hasClientToken();
 
     String getClientToken();

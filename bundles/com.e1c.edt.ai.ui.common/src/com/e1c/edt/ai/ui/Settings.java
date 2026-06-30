@@ -88,6 +88,12 @@ public class Settings
         settingsStore.setBoolean(ISettingsStore.SHOW_STATUS_BAR, visible);
     }
 
+    @Override
+    public boolean isAutoOpenDiffPreview()
+    {
+        return settingsStore.getBoolean(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW).orElse(Boolean.TRUE);
+    }
+
     public boolean hasClientToken()
     {
         return clientTokenValidator.isValid(getClientToken());

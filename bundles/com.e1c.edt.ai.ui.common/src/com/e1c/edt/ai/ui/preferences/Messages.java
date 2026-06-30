@@ -26,6 +26,7 @@ public class Messages
 
     public static String ClientAIPreferencePage_CodeCompletionPolicy;
     public static String ClientAIPreferencePage_ShowStatusBar;
+    public static String ClientAIPreferencePage_AutoOpenDiffPreview;
 
     public static String ClientAIPreferencePage_Diagnostic;
     public static String ClientAIPreferencePage_Diagnostic_Title;
