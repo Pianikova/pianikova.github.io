@@ -42,6 +42,7 @@ public class IdeApiHandler
     private final IMcpTools mcpTools;
     private final IEdtLinkHandler linkHandler;
     private final IEditorPositionManager editorPositionManager;
+    private final IDiffPreviewOpener diffPreviewOpener;
     private final IMarkdownUtils markdownUtils;
     private final IWeb web;
     private final IEditRollback editRollback;
@@ -52,7 +53,8 @@ public class IdeApiHandler
     public IdeApiHandler(ILog log, IUI ui, IDispatcher dispatcher, ITextPreprocessor textPreprocessor,
         Provider<IChat> chatProvider, IJson json,
         IMcpTools mcpTools, IEdtLinkHandler linkHandler, IEditorPositionManager editorPositionManager,
-        IMarkdownUtils markdownUtils, IWeb web, IEditRollback editRollback, IWorkmateLocations locations)
+        IDiffPreviewOpener diffPreviewOpener, IMarkdownUtils markdownUtils, IWeb web, IEditRollback editRollback,
+        IWorkmateLocations locations)
     {
         Preconditions.checkNotNull(locations);
         Preconditions.checkNotNull(log);
@@ -64,6 +66,7 @@ public class IdeApiHandler
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(linkHandler);
         Preconditions.checkNotNull(editorPositionManager);
+        Preconditions.checkNotNull(diffPreviewOpener);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(web);
         Preconditions.checkNotNull(editRollback);
@@ -76,6 +79,7 @@ public class IdeApiHandler
         this.mcpTools = mcpTools;
         this.linkHandler = linkHandler;
         this.editorPositionManager = editorPositionManager;
+        this.diffPreviewOpener = diffPreviewOpener;
         this.markdownUtils = markdownUtils;
         this.web = web;
         this.editRollback = editRollback;
@@ -208,6 +212,15 @@ public class IdeApiHandler
 
         // Decode URL-encoded characters (e.g., %3A -> :, %D0 -> Cyrillic letters)
         var decodedHref = markdownUtils.decodeUrl(safeHref);
+
+        // Diff-preview links (edt-diff://<token>) open a dedicated read-only compare view. Handled
+        // before the drive-letter colon re-escaping below, which is specific to edt-file:// paths.
+        if (linkHandler.isDiffHref(decodedHref))
+        {
+            var token = linkHandler.extractDiffToken(decodedHref);
+            dispatcher.dispatchAsync(() -> diffPreviewOpener.openDiff(token));
+            return true;
+        }
 
         // After decoding, colons in Windows paths (D:\, C:\, etc.) need to be re-escaped
         // because extractFilePath expects %3A (COLON_ESCAPE) and will replace it with :

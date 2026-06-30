@@ -390,6 +390,70 @@ public class MarkdownUtils implements IMarkdownUtils
         return "<a href=\"" + escapedLink + "\" title=\"" + escapedPath + "\">" + escapedFileName + "</a>";
     }
 
+    @Override
+    @SuppressWarnings("nls")
+    public String formatFileLink(String path, int line, int column, int finishLine, int finishColumn, String label)
+    {
+        if (path == null || path.isBlank())
+        {
+            return "";
+        }
+
+        String link;
+        if (finishLine >= 0 && finishColumn >= 0)
+        {
+            int startColumn = column > 0 ? column : 0;
+            int endColumn = finishColumn > 0 ? finishColumn : 0;
+            link = linkProvider.file(path, line, startColumn, finishLine, endColumn);
+        }
+        else if (line >= 0 && column >= 0)
+        {
+            link = linkProvider.file(path, line, column);
+        }
+        else if (line >= 0)
+        {
+            link = linkProvider.file(path, line, 0);
+        }
+        else
+        {
+            link = linkProvider.file(path);
+        }
+
+        var safeLabel = label == null ? "" : label;
+        var escapedPath = escapeHtml(path);
+        var escapedLink = escapeHtml(link);
+        var escapedLabel = escapeHtml(safeLabel);
+
+        return "<a href=\"" + escapedLink + "\" title=\"" + escapedPath + "\">" + escapedLabel + "</a>";
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String getDisplayedFileName(String path)
+    {
+        if (path == null || path.isBlank())
+        {
+            return "";
+        }
+        return files.getDisplayedFileName(new java.io.File(path));
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String formatDiffLink(String token, String label)
+    {
+        if (token == null || token.isBlank())
+        {
+            return "";
+        }
+
+        var safeLabel = label == null ? "" : label;
+        var escapedLink = escapeHtml(linkProvider.diff(token));
+        var escapedLabel = escapeHtml(safeLabel);
+
+        return "<a href=\"" + escapedLink + "\" title=\"" + escapedLabel + "\">" + escapedLabel + "</a>";
+    }
+
     @SuppressWarnings("nls")
     private void appendDiffLines(StringBuilder diff, String prefix, String content, TextColor color, String background)
     {

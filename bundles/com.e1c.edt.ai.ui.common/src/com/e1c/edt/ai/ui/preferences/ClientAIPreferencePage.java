@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui.preferences;
 
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -10,12 +11,16 @@ import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
+import org.eclipse.jface.preference.FieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -63,6 +68,11 @@ public class ClientAIPreferencePage
     implements IWorkbenchPreferencePage
 {
     private final Image SPLASH = createImage("icons/obj16/splash.png"); //$NON-NLS-1$
+
+    // Column count of the page grid. Equals the largest field control count (the token editor:
+    // label + text + validate button). Section groups reuse the same count so the base
+    // FieldEditorPreferencePage#adjustGridLayout stays consistent for grouped editors.
+    private static final int PAGE_COLUMNS = 3;
 
     @SuppressWarnings("nls")
     private static final String[][] LANGUAGES = {
@@ -115,7 +125,7 @@ public class ClientAIPreferencePage
     {
         var parent = getFieldEditorParent();
 
-        // Create token field with validation
+        // --- Top-level settings: access key, language, status bar ---
         tokenFieldEditor = new TokenFieldEditor(ISettingsStore.CLIENT_TOKEN,
             Messages.ClientAIPreferencePage_Client_Token, parent, new IValidator<String>()
             {
@@ -138,40 +148,84 @@ public class ClientAIPreferencePage
                 }
             });
         BaseActivator.injectMembers(tokenFieldEditor);
-        setLabelTooltip(tokenFieldEditor, Messages.ClientAIPreferencePage_Client_Token_Tooltip);
-        var tokenText = tokenFieldEditor.getTextControl(getFieldEditorParent());
+        setLabelTooltip(tokenFieldEditor, parent, Messages.ClientAIPreferencePage_Client_Token_Tooltip);
+        var tokenText = tokenFieldEditor.getTextControl(parent);
         tokenText.setEchoChar('*');
         addField(tokenFieldEditor);
 
-        var policyCombo = new PolicyComboFieldEditor(parent);
-        setLabelTooltip(policyCombo, Messages.ClientAIPreferencePage_CodeCompletionPolicy_Tooltip);
-        addField(policyCombo);
-
-        var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
-            Messages.ClientAIPreferencePage_CodeCompletionLinesCount, parent);
-        codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
-        setLabelTooltip(codeCompletionLinesCount, Messages.ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip);
-        addField(codeCompletionLinesCount);
-
         var comboField =
             new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, LANGUAGES, parent);
-        setLabelTooltip(comboField, Messages.ClientAIPreferencePage_Language_Tooltip);
+        setLabelTooltip(comboField, parent, Messages.ClientAIPreferencePage_Language_Tooltip);
         addField(comboField);
 
         var validatorField = new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
             Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator);
-        setLabelTooltip(validatorField, Messages.ClientAIPreferencePage_Parameters_Tooltip);
+        setLabelTooltip(validatorField, parent, Messages.ClientAIPreferencePage_Parameters_Tooltip);
         addField(validatorField);
 
         var showStatusBarField = new BooleanFieldEditor(ISettingsStore.SHOW_STATUS_BAR,
             Messages.ClientAIPreferencePage_ShowStatusBar, parent);
         addField(showStatusBarField);
+
+        // --- Group: Code completion ---
+        var codeCompletionGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_CodeCompletionGroup);
+
+        var policyCombo = new PolicyComboFieldEditor(codeCompletionGroup);
+        setLabelTooltip(policyCombo, codeCompletionGroup, Messages.ClientAIPreferencePage_CodeCompletionPolicy_Tooltip);
+        addField(policyCombo);
+
+        var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
+            Messages.ClientAIPreferencePage_CodeCompletionLinesCount, codeCompletionGroup);
+        codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
+        setLabelTooltip(codeCompletionLinesCount, codeCompletionGroup,
+            Messages.ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip);
+        addField(codeCompletionLinesCount);
+
+        finalizeSectionGroup(codeCompletionGroup);
+
+        // --- Group: Chat ---
+        var chatGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_ChatGroup);
+
+        var autoOpenDiffPreviewField = new BooleanFieldEditor(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW,
+            Messages.ClientAIPreferencePage_AutoOpenDiffPreview, chatGroup);
+        addField(autoOpenDiffPreviewField);
+
+        finalizeSectionGroup(chatGroup);
     }
 
-    private void setLabelTooltip(org.eclipse.jface.preference.FieldEditor editor, String tooltip)
+    private void setLabelTooltip(FieldEditor editor, Composite parent, String tooltip)
     {
-        var label = editor.getLabelControl(getFieldEditorParent());
+        var label = editor.getLabelControl(parent);
         label.setToolTipText(tooltip);
+    }
+
+    /**
+     * Creates a titled section group spanning the full page width, into which field editors are
+     * placed by passing it as their parent.
+     */
+    private Group createSectionGroup(Composite parent, String text)
+    {
+        var group = new Group(parent, SWT.NONE);
+        group.setText(text);
+        var gd = new GridData(SWT.FILL, SWT.TOP, true, false);
+        gd.horizontalSpan = PAGE_COLUMNS;
+        group.setLayoutData(gd);
+        group.setLayout(new GridLayout(PAGE_COLUMNS, false));
+        return group;
+    }
+
+    /**
+     * Restores the group's column count after its field editors were added. {@link FieldEditor}
+     * resets the parent layout to its own control count on creation, so the page-wide column count
+     * must be re-applied (and margins added) once all editors in the group exist.
+     */
+    private void finalizeSectionGroup(Group group)
+    {
+        var layout = (GridLayout)group.getLayout();
+        layout.numColumns = PAGE_COLUMNS;
+        layout.marginWidth = 10;
+        layout.marginHeight = 8;
+        layout.horizontalSpacing = 10;
     }
 
     @Override
@@ -193,9 +247,25 @@ public class ClientAIPreferencePage
     {
         var control = super.createContents(parent);
 
-        createDiagnosticSection(parent);
+        // Host the diagnostic/branding sections inside the field-editor area (not as siblings of it).
+        // The field-editor composite grabs excess vertical space; placing these as siblings would push
+        // them to the bottom and leave a large empty gap above. Inside the grid they pack right after
+        // the last group, and the slack falls below the version line instead.
+        var extras = new Composite(getFieldEditorParent(), SWT.NONE);
+        var extrasGd = new GridData(SWT.FILL, SWT.TOP, true, false);
+        extrasGd.horizontalSpan = PAGE_COLUMNS;
+        extras.setLayoutData(extrasGd);
+        var extrasLayout = new GridLayout(1, false);
+        extrasLayout.marginWidth = 0;
+        extrasLayout.marginHeight = 0;
+        extras.setLayout(extrasLayout);
 
-        var pluginLink = new Link(parent, SWT.NONE);
+        createDiagnosticSection(extras);
+
+        var iconLabel = new Label(extras, SWT.NONE);
+        iconLabel.setImage(SPLASH);
+
+        var pluginLink = new Link(extras, SWT.NONE);
         pluginLink
             .setText("<a href=\"" + defaultSettings.getHomePage() + "\">" + defaultSettings.getHomePage() + "</a>");
         pluginLink.addSelectionListener(new SelectionAdapter()
@@ -215,10 +285,43 @@ public class ClientAIPreferencePage
             }
         });
 
-        var iconLabel = new Label(parent, SWT.NONE);
-        iconLabel.setImage(SPLASH);
+        var versionComposite = new Composite(extras, SWT.NONE);
+        var versionLayout = new GridLayout(2, false);
+        versionLayout.marginWidth = 0;
+        versionLayout.marginHeight = 0;
+        versionComposite.setLayout(versionLayout);
+
+        var versionLabel = new Label(versionComposite, SWT.NONE);
+        versionLabel.setText(MessageFormat.format(Messages.ClientAIPreferencePage_PluginVersion, getPluginVersion()));
+        versionLabel.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+
+        var copyVersionButton = new Button(versionComposite, SWT.PUSH);
+        copyVersionButton.setText(Messages.ClientAIPreferencePage_CopyVersion);
+        copyVersionButton.setLayoutData(new GridData(SWT.LEFT, SWT.CENTER, false, false));
+        copyVersionButton.addSelectionListener(new SelectionAdapter()
+        {
+            @Override
+            public void widgetSelected(SelectionEvent e)
+            {
+                var clipboard = new Clipboard(getShell().getDisplay());
+                try
+                {
+                    clipboard.setContents(new Object[] { getPluginVersion() },
+                        new Transfer[] { TextTransfer.getInstance() });
+                }
+                finally
+                {
+                    clipboard.dispose();
+                }
+            }
+        });
 
         return control;
+    }
+
+    private static String getPluginVersion()
+    {
+        return BaseActivator.getDefault().getBundle().getVersion().toString();
     }
 
     @Override

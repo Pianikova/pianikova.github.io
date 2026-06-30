@@ -29,6 +29,7 @@ public class Messages
     public static String Deleted;
     public static String EditTitleTemplate;
     public static String EditedTemplate;
+    public static String EditOpenDiffLink;
 
     // Search operations
     public static String SearchTitleTemplate;

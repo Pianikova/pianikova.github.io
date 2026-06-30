@@ -28,5 +28,6 @@ public class BaseClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.PARAMETERS, ""); //$NON-NLS-1$
         store.setDefault(ISettingsStore.CODE_COMPLETION_LINES_COUNT, ISettingsStore.DEFAULT_CODE_COMPLETION_LINES_COUNT);
         store.setDefault(ISettingsStore.SHOW_STATUS_BAR, true);
+        store.setDefault(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW, true);
     }
 }

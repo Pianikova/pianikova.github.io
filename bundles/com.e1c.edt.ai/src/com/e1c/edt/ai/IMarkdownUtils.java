@@ -91,4 +91,38 @@ public interface IMarkdownUtils
      * @return A markdown-formatted string with styled file name and link with range
      */
     String formatFilePath(String path, int line, int column, int finishLine, int finishColumn);
+
+    /**
+     * Formats a file link (edt-file:// protocol) with a custom visible label and an optional
+     * line range. Unlike {@link #formatFilePath(String, int, int, int, int)}, the link text is the
+     * given label rather than the displayed file name.
+     *
+     * @param path The file path to link to
+     * @param line The start line number (1-relative, or 0/less if unknown)
+     * @param column The start column number (1-relative, or 0/less if unknown)
+     * @param finishLine The finish line number (1-relative, or 0/less if unknown)
+     * @param finishColumn The finish column number (1-relative, or 0/less if unknown)
+     * @param label The visible link text
+     * @return An HTML anchor with the file link and the given label
+     */
+    String formatFileLink(String path, int line, int column, int finishLine, int finishColumn, String label);
+
+    /**
+     * Returns the displayed (human-friendly) name of a file path, e.g. the EDT metadata breadcrumb
+     * for 1C objects, or the bare file name otherwise.
+     *
+     * @param path The file path
+     * @return The displayed file name, or empty string for a blank path
+     */
+    String getDisplayedFileName(String path);
+
+    /**
+     * Formats a diff-preview link (edt-diff:// protocol) for markdown display. Clicking the link on
+     * the IDE side opens a dedicated compare view for the stored diff payload identified by the token.
+     *
+     * @param token the diff-preview token (e.g. the tool-call id)
+     * @param label the visible link text
+     * @return an HTML anchor with the diff-preview link
+     */
+    String formatDiffLink(String token, String label);
 }

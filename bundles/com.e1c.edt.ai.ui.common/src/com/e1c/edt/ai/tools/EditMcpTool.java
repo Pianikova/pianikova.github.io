@@ -23,6 +23,7 @@ import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.IProjectTools;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -34,6 +35,9 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.ui.DiffPreview;
+import com.e1c.edt.ai.ui.IDiffPreviewOpener;
+import com.e1c.edt.ai.ui.IDiffPreviewStore;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
@@ -67,13 +71,17 @@ public class EditMcpTool
     private final IContentReplacer contentReplacer;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final IDiffPreviewStore diffPreviewStore;
+    private final IDiffPreviewOpener diffPreviewOpener;
+    private final ISettings settings;
 
     @Inject
     public EditMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
         IProjectTools projectTools, IDispatcher dispatcher, IContentReplacer contentReplacer, IMarkdownUtils markdownUtils,
-        IEditingSupport editingSupport)
+        IEditingSupport editingSupport, IDiffPreviewStore diffPreviewStore, IDiffPreviewOpener diffPreviewOpener,
+        ISettings settings)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -85,6 +93,9 @@ public class EditMcpTool
         Preconditions.checkNotNull(contentReplacer);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(diffPreviewStore);
+        Preconditions.checkNotNull(diffPreviewOpener);
+        Preconditions.checkNotNull(settings);
 
         this.json = json;
         this.messageFactory = messageFactory;
@@ -96,6 +107,9 @@ public class EditMcpTool
         this.contentReplacer = contentReplacer;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.diffPreviewStore = diffPreviewStore;
+        this.diffPreviewOpener = diffPreviewOpener;
+        this.settings = settings;
 
         spec = createSpecification();
     }
@@ -165,6 +179,19 @@ public class EditMcpTool
             requestMarkdown.append(
                 MessageFormat.format(Messages.EditTitleTemplate, buildFileLink(path, previewResult)));
             requestMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+            // A link to open the change in a dedicated read-only Eclipse compare view, after the diff.
+            requestMarkdown.append(
+                buildDiffViewLink(call, path, oldContent, newContent, replaceAll, previewContent, previewResult));
+
+            // Auto-open the compare view (without focus) for a still-applicable edit, when enabled in
+            // settings. A snapshot exists only when previewResult != null; after the edit is applied a
+            // re-RENDER finds no match (previewResult == null), so historical/applied edits are not
+            // re-opened.
+            if (previewResult != null && settings.isAutoOpenDiffPreview())
+            {
+                var token = diffToken(call, path, oldContent, newContent, replaceAll);
+                dispatcher.dispatchAsync(() -> diffPreviewOpener.autoOpenDiff(token));
+            }
 
             details.requestMarkdown = requestMarkdown.toString();
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
@@ -176,6 +203,15 @@ public class EditMcpTool
             if (cancellationToken.isCanceled())
             {
                 throw new ToolException("Operation was cancelled before execution.");
+            }
+
+            // The user has chosen to apply the edit — close the auto-opened preview tab if it is
+            // still open (the dedicated compare view is no longer needed once editing proceeds).
+            // Only when the auto-preview feature is enabled, so manually opened tabs are left alone.
+            if (settings.isAutoOpenDiffPreview())
+            {
+                var closeToken = diffToken(call, path, oldContent, newContent, replaceAll);
+                dispatcher.dispatchAsync(() -> diffPreviewOpener.closeDiff(closeToken));
             }
 
             // Determine project name from absolute path
@@ -219,6 +255,8 @@ public class EditMcpTool
                     responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
                         createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
                     responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+                    responseMarkdown.append(
+                        buildDiffViewLink(call, path, oldContent, newContent, replaceAll, content, replaceResult));
                     details.responseMarkdown = responseMarkdown.toString();
 
                     return messageFactory.createMessage(this, call, response.toString(), details);
@@ -335,6 +373,8 @@ public class EditMcpTool
             responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
                 createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
             responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+            responseMarkdown.append(
+                buildDiffViewLink(call, path, oldContent, newContent, replaceAll, currentContent, replaceResult));
             details.responseMarkdown = responseMarkdown.toString();
 
             return messageFactory.createMessage(this, call, response.toString(), details);
@@ -400,6 +440,37 @@ public class EditMcpTool
                 result.getMatchEndLine(), result.getMatchEndColumn());
         }
         return markdownUtils.formatFilePath(path);
+    }
+
+    /**
+     * Computes a stable diff-preview token for a tool call (the tool-call id, or a content hash when
+     * no id is available). RENDER and CALL of the same call share the id, hence the same token.
+     */
+    private static String diffToken(McpToolCall call, String path, String oldContent, String newContent,
+        boolean replaceAll)
+    {
+        return call.id != null && !call.id.isBlank() ? call.id
+            : Integer.toHexString(java.util.Objects.hash(path, oldContent, newContent, replaceAll));
+    }
+
+    /**
+     * Registers a diff snapshot (original vs proposed full content) and returns a markdown block with
+     * a link, placed after the inline diff, that opens the change in a read-only Eclipse compare view.
+     * Returns an empty string when no snapshot can be built, so the link is never dead.
+     */
+    @SuppressWarnings("nls")
+    private String buildDiffViewLink(McpToolCall call, String path, String oldContent, String newContent,
+        boolean replaceAll, String originalContent, ReplaceResult replaceResult)
+    {
+        if (originalContent == null || replaceResult == null || !replaceResult.isSuccess())
+        {
+            return "";
+        }
+        var token = diffToken(call, path, oldContent, newContent, replaceAll);
+        var displayName = markdownUtils.getDisplayedFileName(path);
+        diffPreviewStore.put(token,
+            new DiffPreview(path, displayName, originalContent, replaceResult.getUpdatedContent()));
+        return "\n\n" + markdownUtils.formatDiffLink(token, Messages.EditOpenDiffLink);
     }
 
     /**
