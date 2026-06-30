@@ -91,7 +91,6 @@ public class Messages
     public static String CommandCategoriesLoadedTemplate;
     public static String CommandsTitle;
     public static String CommandsLoadedTemplate;
-    public static String ExecuteCommandTitle;
 
     // JShell operations
     public static String JShellExecutingTemplate;
