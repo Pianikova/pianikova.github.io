@@ -155,31 +155,52 @@ public class MarkdownUtils implements IMarkdownUtils
             // Use RangeDifferencer to find differences
             RangeDifference[] differences = RangeDifferencer.findDifferences(leftComparator, rightComparator);
 
-            if (differences == null || differences.length == 0)
+            if (differences != null && differences.length > 0)
             {
-                // No differences found - show empty diff
-            }
-            else
-            {
+                // Render as a unified diff with a few lines of unchanged context around each changed
+                // hunk, and a "…" marker where unchanged lines are omitted. Without context/markers,
+                // non-adjacent changes print back-to-back and the unchanged block between them
+                // disappears from the diff.
+                final int contextLines = 3;
+                int shownOrigin = 0;
                 for (RangeDifference diffInfo : differences)
                 {
-                    // Show removed lines (from left)
-                    for (int i = diffInfo.leftStart(); i < diffInfo.leftEnd(); i++)
+                    int contextStart = java.lang.Math.max(shownOrigin, diffInfo.leftStart() - contextLines);
+                    if (contextStart > shownOrigin)
                     {
-                        if (i < originLines.length)
-                        {
-                            appendStyledLine(diff, "-" + escapeHtml(originLines[i]), TextColor.RED, null);
-                        }
+                        appendStyledLine(diff, "…", TextColor.GRAY, null);
                     }
 
-                    // Show added lines (from right)
-                    for (int i = diffInfo.rightStart(); i < diffInfo.rightEnd(); i++)
+                    // Unchanged context before the change
+                    for (int i = contextStart; i < diffInfo.leftStart() && i < originLines.length; i++)
                     {
-                        if (i < newLines.length)
-                        {
-                            appendStyledLine(diff, "+" + escapeHtml(newLines[i]), TextColor.GREEN, null);
-                        }
+                        appendStyledLine(diff, " " + escapeHtml(originLines[i]), TextColor.GRAY, null);
                     }
+
+                    // Removed lines (from origin)
+                    for (int i = diffInfo.leftStart(); i < diffInfo.leftEnd() && i < originLines.length; i++)
+                    {
+                        appendStyledLine(diff, "-" + escapeHtml(originLines[i]), TextColor.RED, null);
+                    }
+
+                    // Added lines (from new)
+                    for (int i = diffInfo.rightStart(); i < diffInfo.rightEnd() && i < newLines.length; i++)
+                    {
+                        appendStyledLine(diff, "+" + escapeHtml(newLines[i]), TextColor.GREEN, null);
+                    }
+
+                    // Unchanged context after the change
+                    int contextEnd = java.lang.Math.min(originLines.length, diffInfo.leftEnd() + contextLines);
+                    for (int i = diffInfo.leftEnd(); i < contextEnd; i++)
+                    {
+                        appendStyledLine(diff, " " + escapeHtml(originLines[i]), TextColor.GRAY, null);
+                    }
+                    shownOrigin = contextEnd;
+                }
+
+                if (shownOrigin < originLines.length)
+                {
+                    appendStyledLine(diff, "…", TextColor.GRAY, null);
                 }
             }
         }
@@ -202,48 +223,36 @@ public class MarkdownUtils implements IMarkdownUtils
         diff.append("color: var(--text-color); white-space: pre; overflow: auto;\">");
         diff.append("<code>");
 
-        var omittedContext = false;
-        var omittedVisible = false;
         var lines = diffText.split("\\r?\\n", -1);
         for (var line : lines)
         {
+            // Show hunk headers (they mark where unchanged lines were skipped between changes).
+            if (line.startsWith("@@"))
+            {
+                appendStyledLine(diff, escapeHtml(line), TextColor.CYAN, null);
+                continue;
+            }
+
+            // Skip file-level headers (diff --git / index / --- / +++ / "\ No newline ...").
             if (isDiffHeader(line))
             {
-                if (omittedContext && omittedVisible)
-                {
-                    omittedContext = false;
-                    omittedVisible = false;
-                }
                 continue;
             }
 
             if (isAddedLine(line))
             {
-                if (omittedContext && omittedVisible)
-                {
-                    omittedContext = false;
-                    omittedVisible = false;
-                }
                 appendStyledLine(diff, escapeHtml(line), TextColor.GREEN, null);
                 continue;
             }
 
             if (isRemovedLine(line))
             {
-                if (omittedContext && omittedVisible)
-                {
-                    omittedContext = false;
-                    omittedVisible = false;
-                }
                 appendStyledLine(diff, escapeHtml(line), TextColor.RED, null);
                 continue;
             }
 
-            omittedContext = true;
-            if (containsVisibleChars(line))
-            {
-                omittedVisible = true;
-            }
+            // Unchanged context line — keep it so gaps between changes remain visible.
+            appendStyledLine(diff, escapeHtml(line), TextColor.GRAY, null);
         }
 
         diff.append("</code></pre>");
@@ -514,22 +523,6 @@ public class MarkdownUtils implements IMarkdownUtils
     private static boolean isRemovedLine(String line)
     {
         return line.startsWith("-") && !line.startsWith("---");
-    }
-
-    private static boolean containsVisibleChars(String line)
-    {
-        if (line == null || line.isEmpty())
-        {
-            return false;
-        }
-        for (int i = 0; i < line.length(); i++)
-        {
-            if (!Character.isWhitespace(line.charAt(i)))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
     @SuppressWarnings("nls")
