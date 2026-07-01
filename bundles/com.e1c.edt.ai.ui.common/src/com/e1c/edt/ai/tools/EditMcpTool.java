@@ -436,10 +436,19 @@ public class EditMcpTool
     {
         if (result != null && result.isSuccess() && result.getMatchStartLine() > 0)
         {
-            return markdownUtils.formatFilePath(path, result.getMatchStartLine(), result.getMatchStartColumn(),
-                result.getMatchEndLine(), result.getMatchEndColumn());
+            var startLine = result.getMatchStartLine();
+            var endLine = result.getMatchEndLine();
+            // Append the affected line range to the link label, e.g. "Модуль 34-45".
+            var label = markdownUtils.getDisplayedFileName(path) + " " + formatLineRange(startLine, endLine); //$NON-NLS-1$
+            return markdownUtils.formatFileLink(path, startLine, result.getMatchStartColumn(), endLine,
+                result.getMatchEndColumn(), label);
         }
         return markdownUtils.formatFilePath(path);
+    }
+
+    private static String formatLineRange(int startLine, int endLine)
+    {
+        return startLine == endLine ? String.valueOf(startLine) : startLine + "-" + endLine; //$NON-NLS-1$
     }
 
     /**

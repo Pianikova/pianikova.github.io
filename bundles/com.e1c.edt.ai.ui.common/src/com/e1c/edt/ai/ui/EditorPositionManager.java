@@ -267,18 +267,16 @@ public class EditorPositionManager
 			log.logError("Setting cursor position: line=" + (line + 1) + ", column=" + (column + 1) + ", offset="
 				+ offset + ", documentLength=" + document.getLength());
 
-			var textSelection = new TextSelection(offset, 0);
-
-			// Set selection on the appropriate target
+			// Set the caret and scroll it into view (selectAndReveal / revealRange).
 			if (editor instanceof ITextEditor)
 			{
-				var textEditor = (ITextEditor)editor;
-				textEditor.getSelectionProvider().setSelection(textSelection);
+				((ITextEditor)editor).selectAndReveal(offset, 0);
 			}
 			else if (sourceViewer instanceof org.eclipse.jface.text.source.SourceViewer)
 			{
 				var viewer = (org.eclipse.jface.text.source.SourceViewer)sourceViewer;
-				viewer.getSelectionProvider().setSelection(textSelection);
+				viewer.setSelectedRange(offset, 0);
+				viewer.revealRange(offset, 0);
 			}
 		}
 		catch (org.eclipse.jface.text.BadLocationException e)
@@ -401,10 +399,11 @@ public class EditorPositionManager
                 log.logError("Error getting line length for column bounds check: " + e.getMessage());
             }
 
-			final var startOffset =
-				Math.max(0, Math.min(document.getLineOffset(startLine) + startColumn, document.getLength()));
-			final var endOffset =
-				Math.max(0, Math.min(document.getLineOffset(endLine) + endColumn, document.getLength()));
+			// Select whole lines (columns are ignored): from the start of startLine to the end of the
+			// text on endLine (excluding the trailing line delimiter).
+			var endLineInfo = document.getLineInformation(endLine);
+			final var startOffset = document.getLineOffset(startLine);
+			final var endOffset = Math.min(endLineInfo.getOffset() + endLineInfo.getLength(), document.getLength());
 
 			var length = endOffset - startOffset;
 
@@ -415,20 +414,18 @@ public class EditorPositionManager
 			log.logError("Setting selection: startOffset=" + finalStartOffset + ", length=" + finalLength
 				+ ", documentLength=" + document.getLength());
 
-			// Set selection on the appropriate target
+			// Set selection and scroll it into view (selectAndReveal / revealRange).
 			if (finalLength >= 0)
 			{
-				var textSelection = new TextSelection(finalStartOffset, finalLength);
-
 				if (editor instanceof ITextEditor)
 				{
-					var textEditor = (ITextEditor)editor;
-					textEditor.getSelectionProvider().setSelection(textSelection);
+					((ITextEditor)editor).selectAndReveal(finalStartOffset, finalLength);
 				}
 				else if (sourceViewer instanceof org.eclipse.jface.text.source.SourceViewer)
 				{
 					var viewer = (org.eclipse.jface.text.source.SourceViewer)sourceViewer;
-					viewer.getSelectionProvider().setSelection(textSelection);
+					viewer.setSelectedRange(finalStartOffset, finalLength);
+					viewer.revealRange(finalStartOffset, finalLength);
 				}
 			}
 		}
