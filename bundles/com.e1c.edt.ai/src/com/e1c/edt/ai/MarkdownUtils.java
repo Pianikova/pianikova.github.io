@@ -548,11 +548,12 @@ public class MarkdownUtils implements IMarkdownUtils
         String prefix, String content, TextColor color, boolean preferNewLineNumbers, int lineNumberWidth)
     {
         var line = preferNewLineNumbers ? firstPositive(newLine, oldLine) : firstPositive(oldLine, newLine);
+        // The line-number column and unchanged (context) lines are rendered plain — no color span —
+        // so the clickable line number sits directly next to the code. Only real changes are colored.
         var lineColumn = formatLineNumberColumn(filePath, line, lineNumberWidth);
-        diff.append(createStyledText(lineColumn, TextColor.GRAY, null, false))
-            .append(" ")
-            .append(createStyledText(prefix + escapeHtml(content), color, null, false))
-            .append("\n");
+        var body = prefix + escapeHtml(content);
+        var styledBody = color == null || color == TextColor.GRAY ? body : createStyledText(body, color, null, false);
+        diff.append(lineColumn).append(" ").append(styledBody).append("\n");
     }
 
     private static Integer firstPositive(Integer preferred, Integer fallback)
@@ -633,7 +634,10 @@ public class MarkdownUtils implements IMarkdownUtils
             return padding + label;
         }
 
-        return padding + formatFileLink(filePath, line, 1, -1, -1, label);
+        // Bare anchor (no title attribute, padding kept outside the link) so the clickable number
+        // renders as a compact "<a href=...>N</a>" with no stray spaces inside the link.
+        var link = linkProvider.file(filePath, line, 1);
+        return padding + "<a href=\"" + escapeHtml(link) + "\">" + label + "</a>";
     }
 
     @SuppressWarnings("nls")
