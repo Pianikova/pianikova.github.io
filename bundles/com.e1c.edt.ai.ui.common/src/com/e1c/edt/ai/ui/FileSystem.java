@@ -45,6 +45,13 @@ public class FileSystem implements IFileSystem
 
     private static boolean isPrintable(char c)
     {
+        // Whitespace control characters (tab, line feed, carriage return, form feed) are part of
+        // normal text — otherwise tab-indented source files would be misdetected as binary.
+        if (c == '\t' || c == '\n' || c == '\r' || c == '\f')
+        {
+            return true;
+        }
+
         var block = Character.UnicodeBlock.of(c);
         return (!Character.isISOControl(c)) && block != null && block != Character.UnicodeBlock.SPECIALS;
     }
