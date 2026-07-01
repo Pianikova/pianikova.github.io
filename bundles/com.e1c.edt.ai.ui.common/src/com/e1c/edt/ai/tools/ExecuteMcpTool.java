@@ -87,7 +87,8 @@ public class ExecuteMcpTool
         description.append("Executes a system process.");
         description.append("\n\nUse for OS-level commands, not IDE actions.");
         description.append("\n\nRelated tools:");
-        description.append("\n- IDE commands: `" + ExecuteCommandMcpTool.TOOL_NAME + "`.");
+        description.append("\n- IDE commands: use `" + JShellMcpTool.TOOL_NAME
+            + "` (scope `eclipse`, manual `execute_command`).");
         return description.toString();
     }
 

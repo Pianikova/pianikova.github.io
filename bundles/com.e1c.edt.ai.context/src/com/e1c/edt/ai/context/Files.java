@@ -52,11 +52,16 @@ public class Files
     @Override
     public Optional<IFile> getCodeFile(EObject eObject)
     {
-        if (!(eObject instanceof CommonModule))
+        Module module = null;
+        if (eObject instanceof CommonModule)
         {
-            return Optional.empty();
+            module = ((CommonModule)eObject).getModule();
         }
-        Module module = ((CommonModule)eObject).getModule();
+        else if (eObject instanceof Module)
+        {
+            module = (Module)eObject;
+        }
+
         if (module != null)
         {
             var file = resourceLookup.getPlatformResource(module);

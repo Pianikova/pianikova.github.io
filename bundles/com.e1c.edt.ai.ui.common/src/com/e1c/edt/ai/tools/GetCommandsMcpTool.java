@@ -326,7 +326,8 @@ public class GetCommandsMcpTool
         description.append("\n- Add a description of what will be done when calling a command.");
         description.append("\n\nRelated tools:");
         description.append("\n- List categories: `" + GetCommandCategoriesMcpTool.TOOL_NAME + "`.");
-        description.append("\n- Execute command: `" + ExecuteCommandMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Execute command: use `" + JShellMcpTool.TOOL_NAME
+            + "` (scope `eclipse`, manual `execute_command`).");
         description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);
