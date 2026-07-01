@@ -3,24 +3,14 @@
  */
 package com.e1c.edt.ai.ui.handlers;
 
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Stack;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
-import org.eclipse.core.resources.IContainer;
-import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.e4.core.commands.ExpressionContext;
-import org.eclipse.emf.ecore.EObject;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.handlers.HandlerUtil;
 
-import com.e1c.edt.ai.IContentSourceProvider;
-import com.e1c.edt.ai.IFileDocument;
-import com.e1c.edt.ai.IFiles;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
@@ -41,9 +31,7 @@ public class BaseAddFilesToChatHandler
     @Inject
     ISettings settings;
     @Inject
-    IContentSourceProvider contentSourceProvider;
-    @Inject
-    IFiles files;
+    IChatFileSelectionResolver selectionResolver;
     @Inject
     ILog log;
 
@@ -70,7 +58,7 @@ public class BaseAddFilesToChatHandler
                 var elements = expressionContext.getDefaultVariable();
                 if (elements instanceof List)
                 {
-                    setBaseEnabled(!getContents((List)elements).isEmpty());
+                    setBaseEnabled(!selectionResolver.resolve((List)elements).isEmpty());
                     return;
                 }
             }
@@ -100,7 +88,7 @@ public class BaseAddFilesToChatHandler
             }
 
             var structuredSelection = (IStructuredSelection)HandlerUtil.getCurrentSelection(event);
-            var contents = getContents(structuredSelection.toList());
+            var contents = selectionResolver.resolve(structuredSelection.toList());
             if (!contents.isEmpty())
             {
                 chat.addFiles(contents);
@@ -115,77 +103,5 @@ public class BaseAddFilesToChatHandler
         }
 
         return null;
-    }
-
-    private List<IFileDocument> getContents(List<Object> targets)
-    {
-        var contents = new Stack<IFileDocument>();
-        if (targets == null || targets.isEmpty())
-        {
-            return contents;
-        }
-
-        var elements = new LinkedList<>();
-        elements.addAll(targets);
-        while (elements.size() > 0)
-        {
-            var element = elements.removeFirst();
-            if (element instanceof EObject)
-            {
-                var file = files.getCodeFile((EObject)element);
-                if (file.isPresent())
-                {
-                    var optionalContent = contentSourceProvider.getFileDocument(file.get());
-                    if (optionalContent.isPresent())
-                    {
-                        contents.add(optionalContent.get());
-                    }
-
-                    continue;
-                }
-            }
-
-            if (element instanceof IFile)
-            {
-                var file = ((IFile)element);
-                if (file.isHidden() || file.isVirtual() || !file.exists())
-                {
-                    continue;
-                }
-
-                var optionalContent = contentSourceProvider.getFileDocument(file);
-                if (optionalContent.isPresent())
-                {
-                    contents.add(optionalContent.get());
-                }
-
-                continue;
-            }
-
-            if (element instanceof IContainer)
-            {
-                var container = ((IContainer)element);
-                if (container.isHidden() || container.isVirtual() || container instanceof IProject)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    for (var member : container.members())
-                    {
-                        elements.add(member);
-                    }
-                }
-                catch (CoreException e)
-                {
-                    //
-                }
-
-                continue;
-            }
-        }
-
-        return contents;
     }
 }

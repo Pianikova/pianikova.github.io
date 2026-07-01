@@ -21,8 +21,10 @@ import com.e1c.edt.ai.tools.EditRollback;
 import com.e1c.edt.ai.tools.JShellReflectionWarmUp;
 import com.e1c.edt.ai.tools.JShellSessionManager;
 import com.e1c.edt.ai.tools.MCPToolsModule;
+import com.e1c.edt.ai.ui.handlers.ChatFileSelectionResolver;
 import com.e1c.edt.ai.ui.handlers.CodeTools;
 import com.e1c.edt.ai.ui.handlers.FixDialog;
+import com.e1c.edt.ai.ui.handlers.IChatFileSelectionResolver;
 import com.e1c.edt.ai.ui.handlers.ICodeTools;
 import com.e1c.edt.ai.ui.handlers.IFixDialog;
 import com.e1c.edt.ai.ui.handlers.ISkillFileOpener;
@@ -84,6 +86,7 @@ public class AIUICommonModule
         bind(Chat.class).in(Singleton.class);
         bind(IChat.class).to(Chat.class);
         bind(IChatDialog.class).to(Chat.class);
+        bind(IChatFileSelectionResolver.class).to(ChatFileSelectionResolver.class).in(Singleton.class);
         bind(IAIContextProvider.class).to(AIContextProvider.class).in(Singleton.class);
         bind(Settings.class).in(Singleton.class);
         bind(ISettings.class).to(Settings.class);

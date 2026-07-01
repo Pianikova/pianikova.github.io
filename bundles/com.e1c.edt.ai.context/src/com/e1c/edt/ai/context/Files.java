@@ -6,6 +6,7 @@ package com.e1c.edt.ai.context;
 import java.io.File;
 import java.util.Optional;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -63,6 +64,34 @@ public class Files
             {
                 return Optional.of(file);
             }
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
+    public Optional<IContainer> getObjectFolder(EObject eObject)
+    {
+        if (eObject == null)
+        {
+            return Optional.empty();
+        }
+
+        // getPlatformResource returns the file the object is persisted in: for a top-level MdObject
+        // it is its own <Object>.mdo (located inside the object's own folder), for a form/template
+        // it is the file inside that form/template folder. The parent folder therefore holds all of
+        // the object's files (modules, forms, templates, commands, ...).
+        var resource = resourceLookup.getPlatformResource(eObject);
+        if (resource == null)
+        {
+            return Optional.empty();
+        }
+
+        var parent = resource.getParent();
+        if (parent != null && !parent.isHidden() && !parent.isVirtual() && parent.exists()
+            && !(parent instanceof IProject))
+        {
+            return Optional.of(parent);
         }
 
         return Optional.empty();

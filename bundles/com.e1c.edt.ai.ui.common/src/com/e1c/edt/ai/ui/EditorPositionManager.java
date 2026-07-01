@@ -246,7 +246,7 @@ public class EditorPositionManager
 		try
 		{
 			var numberOfLines = document.getNumberOfLines();
-			log.logError("Document has " + numberOfLines + " lines");
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Document has " + numberOfLines + " lines");
 
 			// Convert line/column to offset
 			var line = Math.max(0, cursorPosition.getLine() - 1);
@@ -255,7 +255,9 @@ public class EditorPositionManager
 			// Check if line is within document bounds
 			if (line >= numberOfLines)
 			{
-				log.logError("Cursor line out of bounds: line=" + line + ", numberOfLines=" + numberOfLines);
+				final var outOfBoundsLine = line;
+				log.warning(AI_CHAT,
+					() -> "Cursor line out of bounds: line=" + outOfBoundsLine + ", numberOfLines=" + numberOfLines);
 
 				// Clamp to last line
 				line = numberOfLines - 1;
@@ -264,21 +266,22 @@ public class EditorPositionManager
 
 			final var offset = Math.max(0, Math.min(document.getLineOffset(line) + column, document.getLength()));
 
-			log.logError("Setting cursor position: line=" + (line + 1) + ", column=" + (column + 1) + ", offset="
-				+ offset + ", documentLength=" + document.getLength());
+			final var finalLine = line;
+			final var finalColumn = column;
+			final var documentLength = document.getLength();
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Setting cursor position: line=" + (finalLine + 1)
+				+ ", column=" + (finalColumn + 1) + ", offset=" + offset + ", documentLength=" + documentLength);
 
-			var textSelection = new TextSelection(offset, 0);
-
-			// Set selection on the appropriate target
+			// Set the caret and scroll it into view (selectAndReveal / revealRange).
 			if (editor instanceof ITextEditor)
 			{
-				var textEditor = (ITextEditor)editor;
-				textEditor.getSelectionProvider().setSelection(textSelection);
+				((ITextEditor)editor).selectAndReveal(offset, 0);
 			}
 			else if (sourceViewer instanceof org.eclipse.jface.text.source.SourceViewer)
 			{
 				var viewer = (org.eclipse.jface.text.source.SourceViewer)sourceViewer;
-				viewer.getSelectionProvider().setSelection(textSelection);
+				viewer.setSelectedRange(offset, 0);
+				viewer.revealRange(offset, 0);
 			}
 		}
 		catch (org.eclipse.jface.text.BadLocationException e)
@@ -348,7 +351,7 @@ public class EditorPositionManager
 		try
 		{
 			var numberOfLines = document.getNumberOfLines();
-			log.logError("Document has " + numberOfLines + " lines");
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Document has " + numberOfLines + " lines");
 
 			// Convert line/column to offset
             var startLine = Math.max(0, selection.getStartLine() - 1);
@@ -363,8 +366,10 @@ public class EditorPositionManager
 			// Check if lines are within document bounds
 			if (startLine >= numberOfLines || endLine >= numberOfLines)
 			{
-				log.logError("Selection lines out of bounds: startLine=" + startLine + ", endLine=" + endLine
-					+ ", numberOfLines=" + numberOfLines);
+				final var outOfBoundsStartLine = startLine;
+				final var outOfBoundsEndLine = endLine;
+				log.warning(AI_CHAT, () -> "Selection lines out of bounds: startLine=" + outOfBoundsStartLine
+					+ ", endLine=" + outOfBoundsEndLine + ", numberOfLines=" + numberOfLines);
 
 				// Try to clamp to document bounds
 				startLine = Math.min(startLine, numberOfLines - 1);
@@ -380,7 +385,7 @@ public class EditorPositionManager
                     }
                     catch (Exception e)
                     {
-                        log.logError("Error getting line length: " + e.getMessage());
+                        log.warning(AI_CHAT, () -> "Error getting line length: " + e.getMessage());
                         endColumn = 0;
                     }
                 }
@@ -398,13 +403,14 @@ public class EditorPositionManager
             }
             catch (Exception e)
             {
-                log.logError("Error getting line length for column bounds check: " + e.getMessage());
+                log.warning(AI_CHAT, () -> "Error getting line length for column bounds check: " + e.getMessage());
             }
 
-			final var startOffset =
-				Math.max(0, Math.min(document.getLineOffset(startLine) + startColumn, document.getLength()));
-			final var endOffset =
-				Math.max(0, Math.min(document.getLineOffset(endLine) + endColumn, document.getLength()));
+			// Select whole lines (columns are ignored): from the start of startLine to the end of the
+			// text on endLine (excluding the trailing line delimiter).
+			var endLineInfo = document.getLineInformation(endLine);
+			final var startOffset = document.getLineOffset(startLine);
+			final var endOffset = Math.min(endLineInfo.getOffset() + endLineInfo.getLength(), document.getLength());
 
 			var length = endOffset - startOffset;
 
@@ -412,23 +418,22 @@ public class EditorPositionManager
 			final var finalStartOffset = length >= 0 ? startOffset : endOffset;
 			final var finalLength = Math.abs(length);
 
-			log.logError("Setting selection: startOffset=" + finalStartOffset + ", length=" + finalLength
-				+ ", documentLength=" + document.getLength());
+			final var documentLength = document.getLength();
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Setting selection: startOffset=" + finalStartOffset
+				+ ", length=" + finalLength + ", documentLength=" + documentLength);
 
-			// Set selection on the appropriate target
+			// Set selection and scroll it into view (selectAndReveal / revealRange).
 			if (finalLength >= 0)
 			{
-				var textSelection = new TextSelection(finalStartOffset, finalLength);
-
 				if (editor instanceof ITextEditor)
 				{
-					var textEditor = (ITextEditor)editor;
-					textEditor.getSelectionProvider().setSelection(textSelection);
+					((ITextEditor)editor).selectAndReveal(finalStartOffset, finalLength);
 				}
 				else if (sourceViewer instanceof org.eclipse.jface.text.source.SourceViewer)
 				{
 					var viewer = (org.eclipse.jface.text.source.SourceViewer)sourceViewer;
-					viewer.getSelectionProvider().setSelection(textSelection);
+					viewer.setSelectedRange(finalStartOffset, finalLength);
+					viewer.revealRange(finalStartOffset, finalLength);
 				}
 			}
 		}

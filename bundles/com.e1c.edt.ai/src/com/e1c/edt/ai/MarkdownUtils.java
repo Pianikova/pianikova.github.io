@@ -3,6 +3,10 @@
 */
 package com.e1c.edt.ai;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
 import org.eclipse.compare.rangedifferencer.IRangeComparator;
 import org.eclipse.compare.rangedifferencer.RangeDifference;
 import org.eclipse.compare.rangedifferencer.RangeDifferencer;
@@ -16,6 +20,11 @@ import com.google.inject.Singleton;
 @Singleton
 public class MarkdownUtils implements IMarkdownUtils
 {
+    private static final int DIFF_CONTEXT_LINES = 3;
+    private static final int MIN_LINE_NUMBER_WIDTH = 2;
+    private static final Pattern HUNK_HEADER_PATTERN =
+        Pattern.compile("@@ -(\\d+)(?:,(\\d+))? \\+(\\d+)(?:,(\\d+))? @@.*"); //$NON-NLS-1$
+
     private final ILinkProvider linkProvider;
     private final IFiles files;
 
@@ -127,20 +136,39 @@ public class MarkdownUtils implements IMarkdownUtils
     @SuppressWarnings("nls")
     public String buildGitDiff(String filePath, String originContent, String newContent)
     {
+        return buildGitDiff(filePath, originContent, newContent, 1, 1, true);
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String buildGitDiff(String filePath, String originContent, String newContent, int originStartLine,
+        int newStartLine)
+    {
+        return buildGitDiff(filePath, originContent, newContent, originStartLine, newStartLine, true);
+    }
+
+    @Override
+    @SuppressWarnings("nls")
+    public String buildGitDiff(String filePath, String originContent, String newContent, int originStartLine,
+        int newStartLine, boolean preferNewLineNumbers)
+    {
         var diff = new StringBuilder();
         diff.append("<pre style=\"background: var(--code-bg); padding: 6px 8px; border-radius: 2px; ");
         diff.append("color: var(--text-color); white-space: pre; overflow: auto;\">");
         diff.append("<code>");
+        var lineNumberWidth = calculateLineNumberWidth(originContent, newContent, originStartLine, newStartLine);
 
         // If originContent is null, show all lines as added (new file)
         if (originContent == null)
         {
-            appendDiffLines(diff, "+", newContent, TextColor.GREEN, null);
+            appendDiffLines(diff, filePath, false, newStartLine, "+", newContent, TextColor.GREEN, null,
+                preferNewLineNumbers, lineNumberWidth);
         }
         // If newContent is null, show all lines as removed (file deletion)
         else if (newContent == null)
         {
-            appendDiffLines(diff, "-", originContent, TextColor.RED, null);
+            appendDiffLines(diff, filePath, true, originStartLine, "-", originContent, TextColor.RED, null,
+                preferNewLineNumbers, lineNumberWidth);
         }
         // Otherwise, use Eclipse Compare API to compare and show only changed lines
         else
@@ -155,31 +183,43 @@ public class MarkdownUtils implements IMarkdownUtils
             // Use RangeDifferencer to find differences
             RangeDifference[] differences = RangeDifferencer.findDifferences(leftComparator, rightComparator);
 
-            if (differences == null || differences.length == 0)
+            if (differences != null && differences.length > 0)
             {
-                // No differences found - show empty diff
-            }
-            else
-            {
-                for (RangeDifference diffInfo : differences)
+                var hunks = mergeCloseDifferences(differences, DIFF_CONTEXT_LINES);
+                int shownOrigin = 0;
+                for (DiffHunk hunk : hunks)
                 {
-                    // Show removed lines (from left)
-                    for (int i = diffInfo.leftStart(); i < diffInfo.leftEnd(); i++)
+                    int contextStart = java.lang.Math.max(shownOrigin, hunk.leftStart - DIFF_CONTEXT_LINES);
+                    if (contextStart > shownOrigin)
                     {
-                        if (i < originLines.length)
-                        {
-                            appendStyledLine(diff, "-" + escapeHtml(originLines[i]), TextColor.RED, null);
-                        }
+                        appendDiffMarker(diff, lineNumberWidth);
                     }
 
-                    // Show added lines (from right)
-                    for (int i = diffInfo.rightStart(); i < diffInfo.rightEnd(); i++)
+                    // Unchanged context before the change
+                    for (int i = contextStart; i < hunk.leftStart && i < originLines.length; i++)
                     {
-                        if (i < newLines.length)
-                        {
-                            appendStyledLine(diff, "+" + escapeHtml(newLines[i]), TextColor.GREEN, null);
-                        }
+                        appendNumberedDiffLine(diff, filePath, originStartLine + i,
+                            newStartLine + correspondingNewIndex(hunk, i), " ", originLines[i], TextColor.GRAY,
+                            preferNewLineNumbers, lineNumberWidth);
                     }
+
+                    appendHunkChanges(diff, filePath, originLines, newLines, hunk, differences, originStartLine,
+                        newStartLine, preferNewLineNumbers, lineNumberWidth);
+
+                    // Unchanged context after the change
+                    int contextEnd = java.lang.Math.min(originLines.length, hunk.leftEnd + DIFF_CONTEXT_LINES);
+                    for (int i = hunk.leftEnd; i < contextEnd; i++)
+                    {
+                        appendNumberedDiffLine(diff, filePath, originStartLine + i,
+                            newStartLine + correspondingNewIndexAfterHunk(hunk, i), " ", originLines[i],
+                            TextColor.GRAY, preferNewLineNumbers, lineNumberWidth);
+                    }
+                    shownOrigin = contextEnd;
+                }
+
+                if (shownOrigin < originLines.length)
+                {
+                    appendDiffMarker(diff, lineNumberWidth);
                 }
             }
         }
@@ -192,6 +232,12 @@ public class MarkdownUtils implements IMarkdownUtils
     @SuppressWarnings("nls")
     public String buildUnifiedDiff(String diffText)
     {
+        return buildUnifiedDiff(diffText, null);
+    }
+
+    @SuppressWarnings("nls")
+    private String buildUnifiedDiff(String diffText, String filePath)
+    {
         if (diffText == null || diffText.isBlank())
         {
             return "";
@@ -202,48 +248,42 @@ public class MarkdownUtils implements IMarkdownUtils
         diff.append("color: var(--text-color); white-space: pre; overflow: auto;\">");
         diff.append("<code>");
 
-        var omittedContext = false;
-        var omittedVisible = false;
         var lines = diffText.split("\\r?\\n", -1);
+        var lineNumberWidth = calculateUnifiedDiffLineNumberWidth(lines);
+        var lineState = new UnifiedDiffLineState();
         for (var line : lines)
         {
+            // Show hunk headers (they mark where unchanged lines were skipped between changes).
+            if (line.startsWith("@@"))
+            {
+                lineState = parseHunkHeader(line);
+                appendStyledLine(diff, escapeHtml(line), TextColor.CYAN, null);
+                continue;
+            }
+
+            // Skip file-level headers (diff --git / index / --- / +++ / "\ No newline ...").
             if (isDiffHeader(line))
             {
-                if (omittedContext && omittedVisible)
-                {
-                    omittedContext = false;
-                    omittedVisible = false;
-                }
                 continue;
             }
 
             if (isAddedLine(line))
             {
-                if (omittedContext && omittedVisible)
-                {
-                    omittedContext = false;
-                    omittedVisible = false;
-                }
-                appendStyledLine(diff, escapeHtml(line), TextColor.GREEN, null);
+                appendNumberedDiffLine(diff, filePath, null, lineState.nextNewLine(), "+", line.substring(1),
+                    TextColor.GREEN, true, lineNumberWidth);
                 continue;
             }
 
             if (isRemovedLine(line))
             {
-                if (omittedContext && omittedVisible)
-                {
-                    omittedContext = false;
-                    omittedVisible = false;
-                }
-                appendStyledLine(diff, escapeHtml(line), TextColor.RED, null);
+                appendNumberedDiffLine(diff, filePath, lineState.nextOldLine(), null, "-", line.substring(1),
+                    TextColor.RED, true, lineNumberWidth);
                 continue;
             }
 
-            omittedContext = true;
-            if (containsVisibleChars(line))
-            {
-                omittedVisible = true;
-            }
+            // Unchanged context line — keep it so gaps between changes remain visible.
+            appendNumberedDiffLine(diff, filePath, lineState.nextOldLine(), lineState.nextNewLine(), " ",
+                line.startsWith(" ") ? line.substring(1) : line, TextColor.GRAY, true, lineNumberWidth);
         }
 
         diff.append("</code></pre>");
@@ -262,6 +302,7 @@ public class MarkdownUtils implements IMarkdownUtils
         var result = new StringBuilder();
         var current = new StringBuilder();
         String currentFileName = null;
+        String currentFilePath = null;
 
         var lines = diffText.split("\\r?\\n", -1);
         for (var line : lines)
@@ -270,17 +311,18 @@ public class MarkdownUtils implements IMarkdownUtils
             {
                 if (current.length() > 0)
                 {
-                    appendDiffSection(result, currentFileName, current.toString());
+                    appendDiffSection(result, currentFileName, currentFilePath, current.toString());
                     current.setLength(0);
                 }
                 currentFileName = extractFileName(line);
+                currentFilePath = extractFilePath(line);
             }
             current.append(line).append("\n");
         }
 
         if (current.length() > 0)
         {
-            appendDiffSection(result, currentFileName, current.toString());
+            appendDiffSection(result, currentFileName, currentFilePath, current.toString());
         }
 
         return result.toString();
@@ -455,7 +497,8 @@ public class MarkdownUtils implements IMarkdownUtils
     }
 
     @SuppressWarnings("nls")
-    private void appendDiffLines(StringBuilder diff, String prefix, String content, TextColor color, String background)
+    private void appendDiffLines(StringBuilder diff, String filePath, boolean oldSide, int startLine, String prefix,
+        String content, TextColor color, String background, boolean preferNewLineNumbers, int lineNumberWidth)
     {
         if (content == null)
         {
@@ -463,9 +506,12 @@ public class MarkdownUtils implements IMarkdownUtils
         }
 
         var lines = content.split("\\r?\\n", -1);
-        for (var line : lines)
+        for (int i = 0; i < lines.length; i++)
         {
-            appendStyledLine(diff, prefix + escapeHtml(line), color, background);
+            Integer oldLine = oldSide ? startLine + i : null;
+            Integer newLine = oldSide ? null : startLine + i;
+            appendNumberedDiffLine(diff, filePath, oldLine, newLine, prefix, lines[i], color, preferNewLineNumbers,
+                lineNumberWidth);
         }
     }
 
@@ -498,6 +544,109 @@ public class MarkdownUtils implements IMarkdownUtils
     }
 
     @SuppressWarnings("nls")
+    private void appendNumberedDiffLine(StringBuilder diff, String filePath, Integer oldLine, Integer newLine,
+        String prefix, String content, TextColor color, boolean preferNewLineNumbers, int lineNumberWidth)
+    {
+        var line = preferNewLineNumbers ? firstPositive(newLine, oldLine) : firstPositive(oldLine, newLine);
+        // The line-number column and unchanged (context) lines are rendered plain — no color span —
+        // so the clickable line number sits directly next to the code. Only real changes are colored.
+        var lineColumn = formatLineNumberColumn(filePath, line, lineNumberWidth);
+        var body = prefix + escapeHtml(content);
+        var styledBody = color == null || color == TextColor.GRAY ? body : createStyledText(body, color, null, false);
+        diff.append(lineColumn).append(" ").append(styledBody).append("\n");
+    }
+
+    private static Integer firstPositive(Integer preferred, Integer fallback)
+    {
+        if (preferred != null && preferred > 0)
+        {
+            return preferred;
+        }
+        return fallback;
+    }
+
+    private static int calculateLineNumberWidth(String originContent, String newContent, int originStartLine,
+        int newStartLine)
+    {
+        var maxLine = 0;
+        if (originContent != null)
+        {
+            maxLine = java.lang.Math.max(maxLine, originStartLine + countLines(originContent) - 1);
+        }
+        if (newContent != null)
+        {
+            maxLine = java.lang.Math.max(maxLine, newStartLine + countLines(newContent) - 1);
+        }
+        return calculateLineNumberWidth(maxLine);
+    }
+
+    private static int calculateUnifiedDiffLineNumberWidth(String[] lines)
+    {
+        var maxLine = 0;
+        for (var line : lines)
+        {
+            if (!line.startsWith("@@"))
+            {
+                continue;
+            }
+
+            var matcher = HUNK_HEADER_PATTERN.matcher(line);
+            if (!matcher.matches())
+            {
+                continue;
+            }
+
+            maxLine = java.lang.Math.max(maxLine, hunkEndLine(matcher.group(1), matcher.group(2)));
+            maxLine = java.lang.Math.max(maxLine, hunkEndLine(matcher.group(3), matcher.group(4)));
+        }
+        return calculateLineNumberWidth(maxLine);
+    }
+
+    private static int hunkEndLine(String startGroup, String countGroup)
+    {
+        var start = Integer.parseInt(startGroup);
+        var count = countGroup == null ? 1 : Integer.parseInt(countGroup);
+        return start + java.lang.Math.max(0, count - 1);
+    }
+
+    private static int calculateLineNumberWidth(int maxLine)
+    {
+        return java.lang.Math.max(MIN_LINE_NUMBER_WIDTH, String.valueOf(java.lang.Math.max(0, maxLine)).length());
+    }
+
+    private static int countLines(String content)
+    {
+        return content.split("\\r?\\n", -1).length; //$NON-NLS-1$
+    }
+
+    @SuppressWarnings("nls")
+    private String formatLineNumberColumn(String filePath, Integer line, int lineNumberWidth)
+    {
+        if (line == null || line <= 0)
+        {
+            return spaces(lineNumberWidth);
+        }
+
+        var label = String.valueOf(line);
+        var padding = spaces(lineNumberWidth - label.length());
+        if (filePath == null || filePath.isBlank())
+        {
+            return padding + label;
+        }
+
+        // Bare anchor (no title attribute, padding kept outside the link) so the clickable number
+        // renders as a compact "<a href=...>N</a>" with no stray spaces inside the link.
+        var link = linkProvider.file(filePath, line, 1);
+        return padding + "<a href=\"" + escapeHtml(link) + "\">" + label + "</a>";
+    }
+
+    @SuppressWarnings("nls")
+    private void appendDiffMarker(StringBuilder diff, int lineNumberWidth)
+    {
+        appendStyledLine(diff, spaces(lineNumberWidth) + " ...", TextColor.GRAY, null);
+    }
+
+    @SuppressWarnings("nls")
     private static boolean isDiffHeader(String line)
     {
         return line.startsWith("diff --git") || line.startsWith("index ") || line.startsWith("--- ")
@@ -516,32 +665,30 @@ public class MarkdownUtils implements IMarkdownUtils
         return line.startsWith("-") && !line.startsWith("---");
     }
 
-    private static boolean containsVisibleChars(String line)
-    {
-        if (line == null || line.isEmpty())
-        {
-            return false;
-        }
-        for (int i = 0; i < line.length(); i++)
-        {
-            if (!Character.isWhitespace(line.charAt(i)))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @SuppressWarnings("nls")
-    private void appendDiffSection(StringBuilder result, String fileName, String diffText)
+    private void appendDiffSection(StringBuilder result, String fileName, String filePath, String diffText)
     {
         var title = fileName != null && !fileName.isBlank() ? fileName : "file";
         result.append("**").append(escapeHtml(title)).append("**\n\n");
-        result.append(buildUnifiedDiff(diffText));
+        result.append(buildUnifiedDiff(diffText, filePath));
     }
 
     @SuppressWarnings("nls")
     private static String extractFileName(String line)
+    {
+        var path = extractFilePath(line);
+        if (path == null)
+        {
+            return null;
+        }
+
+        var normalized = path.replace('\\', '/');
+        var lastSlash = normalized.lastIndexOf('/');
+        return lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+    }
+
+    @SuppressWarnings("nls")
+    private static String extractFilePath(String line)
     {
         var parts = line.split("\\s+");
         if (parts.length < 4)
@@ -554,9 +701,140 @@ public class MarkdownUtils implements IMarkdownUtils
         {
             path = path.substring(2);
         }
-        var normalized = path.replace('\\', '/');
-        var lastSlash = normalized.lastIndexOf('/');
-        return lastSlash >= 0 ? normalized.substring(lastSlash + 1) : normalized;
+        return path;
+    }
+
+    private static List<DiffHunk> mergeCloseDifferences(RangeDifference[] differences, int contextLines)
+    {
+        var hunks = new ArrayList<DiffHunk>();
+        for (RangeDifference difference : differences)
+        {
+            var next = new DiffHunk(difference.leftStart(), difference.leftEnd(), difference.rightStart(),
+                difference.rightEnd());
+            if (hunks.isEmpty())
+            {
+                hunks.add(next);
+                continue;
+            }
+
+            var current = hunks.get(hunks.size() - 1);
+            if (next.leftStart - current.leftEnd <= contextLines * 2)
+            {
+                current.leftEnd = next.leftEnd;
+                current.rightEnd = next.rightEnd;
+            }
+            else
+            {
+                hunks.add(next);
+            }
+        }
+        return hunks;
+    }
+
+    private void appendHunkChanges(StringBuilder diff, String filePath, String[] originLines, String[] newLines,
+        DiffHunk hunk, RangeDifference[] differences, int originStartLine, int newStartLine,
+        boolean preferNewLineNumbers, int lineNumberWidth)
+    {
+        int leftPosition = hunk.leftStart;
+        int rightPosition = hunk.rightStart;
+        for (RangeDifference difference : differences)
+        {
+            if (difference.leftStart() < hunk.leftStart || difference.leftStart() > hunk.leftEnd)
+            {
+                continue;
+            }
+
+            while (leftPosition < difference.leftStart() && leftPosition < originLines.length)
+            {
+                appendNumberedDiffLine(diff, filePath, originStartLine + leftPosition, newStartLine + rightPosition,
+                    " ", originLines[leftPosition], TextColor.GRAY, preferNewLineNumbers, lineNumberWidth);
+                leftPosition++;
+                rightPosition++;
+            }
+
+            for (int i = difference.leftStart(); i < difference.leftEnd() && i < originLines.length; i++)
+            {
+                appendNumberedDiffLine(diff, filePath, originStartLine + i, null, "-", originLines[i], TextColor.RED,
+                    preferNewLineNumbers, lineNumberWidth);
+            }
+
+            for (int i = difference.rightStart(); i < difference.rightEnd() && i < newLines.length; i++)
+            {
+                appendNumberedDiffLine(diff, filePath, null, newStartLine + i, "+", newLines[i], TextColor.GREEN,
+                    preferNewLineNumbers, lineNumberWidth);
+            }
+
+            leftPosition = difference.leftEnd();
+            rightPosition = difference.rightEnd();
+        }
+    }
+
+    private static int correspondingNewIndex(DiffHunk hunk, int originIndex)
+    {
+        return hunk.rightStart + (originIndex - hunk.leftStart);
+    }
+
+    private static int correspondingNewIndexAfterHunk(DiffHunk hunk, int originIndex)
+    {
+        return hunk.rightEnd + (originIndex - hunk.leftEnd);
+    }
+
+    private static UnifiedDiffLineState parseHunkHeader(String line)
+    {
+        var matcher = HUNK_HEADER_PATTERN.matcher(line);
+        if (!matcher.matches())
+        {
+            return new UnifiedDiffLineState();
+        }
+        return new UnifiedDiffLineState(Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(3)));
+    }
+
+    private static String spaces(int count)
+    {
+        return " ".repeat(java.lang.Math.max(0, count));
+    }
+
+    private static class DiffHunk
+    {
+        private final int leftStart;
+        private int leftEnd;
+        private final int rightStart;
+        private int rightEnd;
+
+        private DiffHunk(int leftStart, int leftEnd, int rightStart, int rightEnd)
+        {
+            this.leftStart = leftStart;
+            this.leftEnd = leftEnd;
+            this.rightStart = rightStart;
+            this.rightEnd = rightEnd;
+        }
+    }
+
+    private static class UnifiedDiffLineState
+    {
+        private int oldLine;
+        private int newLine;
+
+        private UnifiedDiffLineState()
+        {
+            this(0, 0);
+        }
+
+        private UnifiedDiffLineState(int oldLine, int newLine)
+        {
+            this.oldLine = oldLine;
+            this.newLine = newLine;
+        }
+
+        private int nextOldLine()
+        {
+            return oldLine++;
+        }
+
+        private int nextNewLine()
+        {
+            return newLine++;
+        }
     }
 
     /**

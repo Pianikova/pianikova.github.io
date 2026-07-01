@@ -81,8 +81,6 @@ public class DiffPreviewOpener
     {
         if (token == null || token.isBlank() || closedTokens.contains(token) || !autoOpenedTokens.add(token))
         {
-            log.trace(TracingSources.CHAT, AI_CHAT, () -> "autoOpenDiff skipped, token: " + token //$NON-NLS-1$
-                + ", closed: " + closedTokens.contains(token)); //$NON-NLS-1$
             return;
         }
 
@@ -90,7 +88,6 @@ public class DiffPreviewOpener
         if (input != null)
         {
             // Open without taking focus, so the user stays in the chat.
-            log.trace(TracingSources.CHAT, AI_CHAT, () -> "autoOpenDiff opening, token: " + token); //$NON-NLS-1$
             CompareUI.openCompareEditor(input, false);
 
             // openCompareEditor spins a progress event loop, during which a racing closeDiff (auto-
@@ -98,8 +95,6 @@ public class DiffPreviewOpener
             // Re-check and close now that the editor exists, so the preview never lingers.
             if (closedTokens.contains(token))
             {
-                log.trace(TracingSources.CHAT, AI_CHAT,
-                    () -> "autoOpenDiff: token closed during open, closing now: " + token); //$NON-NLS-1$
                 closeDiff(token);
             }
         }
@@ -118,8 +113,6 @@ public class DiffPreviewOpener
         closedTokens.add(token);
 
         var ref = findOpenEditorRef(token);
-        log.trace(TracingSources.CHAT, AI_CHAT,
-            () -> "closeDiff token: " + token + ", editor found: " + (ref != null)); //$NON-NLS-1$ //$NON-NLS-2$
         if (ref != null)
         {
             ref.getPage().closeEditors(new IEditorReference[] { ref }, false);
@@ -140,17 +133,19 @@ public class DiffPreviewOpener
 
         var preview = optionalPreview.get();
 
-        // The element name is the human-friendly breadcrumb; the type (for syntax coloring) is
-        // derived from the real file name's extension.
+        // Proposed on the LEFT, current on the RIGHT. The BSL/compare merge viewer colors changes by
+        // position (left block green, right block red) and ignores programmatic color overrides, so
+        // this orientation yields the git convention: additions (proposed, left) green, deletions
+        // (current, right) red. Element type is the file extension, keeping BSL syntax highlighting.
         var realFileName = new java.io.File(preview.getFilePath()).getName();
-        var left = new StringTypedElement(preview.getDisplayName(), realFileName, preview.getOriginalContent());
-        var right = new StringTypedElement(preview.getDisplayName(), realFileName, preview.getProposedContent());
+        var left = new StringTypedElement(preview.getDisplayName(), realFileName, preview.getProposedContent());
+        var right = new StringTypedElement(preview.getDisplayName(), realFileName, preview.getOriginalContent());
 
         var configuration = new CompareConfiguration();
         configuration.setLeftEditable(false);
         configuration.setRightEditable(false);
-        configuration.setLeftLabel(MessageFormat.format(Messages.DiffCompareCurrentLabel, preview.getFilePath()));
-        configuration.setRightLabel(Messages.DiffCompareProposedLabel);
+        configuration.setLeftLabel(Messages.DiffCompareProposedLabel);
+        configuration.setRightLabel(MessageFormat.format(Messages.DiffCompareCurrentLabel, preview.getFilePath()));
 
         var input = new DiffCompareEditorInput(left, right, configuration, token);
         input.setTitle(preview.getDisplayName());
@@ -181,7 +176,6 @@ public class DiffPreviewOpener
             {
                 for (IEditorReference ref : page.getEditorReferences())
                 {
-                    log.trace(TracingSources.CHAT, AI_CHAT, () -> "findOpenEditorRef scan ref id: " + ref.getId()); //$NON-NLS-1$
                     if (!COMPARE_EDITOR_ID.equals(ref.getId()))
                     {
                         continue;
@@ -189,8 +183,6 @@ public class DiffPreviewOpener
                     try
                     {
                         var editorInput = ref.getEditorInput();
-                        log.trace(TracingSources.CHAT, AI_CHAT, () -> "findOpenEditorRef compare input: " //$NON-NLS-1$
-                            + editorInput.getClass().getName());
                         if (editorInput instanceof DiffCompareEditorInput
                             && token.equals(((DiffCompareEditorInput)editorInput).getToken()))
                         {

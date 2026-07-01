@@ -178,7 +178,7 @@ public class EditMcpTool
             var requestMarkdown = new StringBuilder();
             requestMarkdown.append(
                 MessageFormat.format(Messages.EditTitleTemplate, buildFileLink(path, previewResult)));
-            requestMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+            requestMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent, previewResult, false));
             // A link to open the change in a dedicated read-only Eclipse compare view, after the diff.
             requestMarkdown.append(
                 buildDiffViewLink(call, path, oldContent, newContent, replaceAll, previewContent, previewResult));
@@ -254,7 +254,7 @@ public class EditMcpTool
                     var responseMarkdown = new StringBuilder();
                     responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
                         createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
-                    responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+                    responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent, replaceResult, true));
                     responseMarkdown.append(
                         buildDiffViewLink(call, path, oldContent, newContent, replaceAll, content, replaceResult));
                     details.responseMarkdown = responseMarkdown.toString();
@@ -372,7 +372,7 @@ public class EditMcpTool
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
                 createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
-            responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent));
+            responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent, replaceResult, true));
             responseMarkdown.append(
                 buildDiffViewLink(call, path, oldContent, newContent, replaceAll, currentContent, replaceResult));
             details.responseMarkdown = responseMarkdown.toString();
@@ -436,10 +436,19 @@ public class EditMcpTool
     {
         if (result != null && result.isSuccess() && result.getMatchStartLine() > 0)
         {
-            return markdownUtils.formatFilePath(path, result.getMatchStartLine(), result.getMatchStartColumn(),
-                result.getMatchEndLine(), result.getMatchEndColumn());
+            var startLine = result.getMatchStartLine();
+            var endLine = result.getMatchEndLine();
+            // Append the affected line range to the link label, e.g. "Модуль 34-45".
+            var label = markdownUtils.getDisplayedFileName(path) + " " + formatLineRange(startLine, endLine); //$NON-NLS-1$
+            return markdownUtils.formatFileLink(path, startLine, result.getMatchStartColumn(), endLine,
+                result.getMatchEndColumn(), label);
         }
         return markdownUtils.formatFilePath(path);
+    }
+
+    private static String formatLineRange(int startLine, int endLine)
+    {
+        return startLine == endLine ? String.valueOf(startLine) : startLine + "-" + endLine; //$NON-NLS-1$
     }
 
     /**
@@ -477,11 +486,20 @@ public class EditMcpTool
      * Builds the diff block appended after the header line.
      */
     @SuppressWarnings("nls")
-    private String buildEditDetailsBlock(String path, String oldContent, String newContent)
+    private String buildEditDetailsBlock(String path, String oldContent, String newContent, ReplaceResult replaceResult,
+        boolean preferNewLineNumbers)
     {
         var sb = new StringBuilder();
         sb.append("\n\n");
-        sb.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
+        if (replaceResult != null && replaceResult.isSuccess() && replaceResult.getMatchStartLine() > 0)
+        {
+            sb.append(markdownUtils.buildGitDiff(path, oldContent, newContent, replaceResult.getMatchStartLine(),
+                replaceResult.getMatchStartLine(), preferNewLineNumbers));
+        }
+        else
+        {
+            sb.append(markdownUtils.buildGitDiff(path, oldContent, newContent));
+        }
         return sb.toString();
     }
 

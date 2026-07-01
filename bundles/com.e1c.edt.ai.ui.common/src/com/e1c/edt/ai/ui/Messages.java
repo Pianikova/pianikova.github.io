@@ -67,6 +67,7 @@ public class Messages
     public static String FileNotTextFormat;
     public static String DiffCompareCurrentLabel;
     public static String DiffCompareProposedLabel;
+    public static String DropNavigatorObjectsHint;
 
     static
     {
