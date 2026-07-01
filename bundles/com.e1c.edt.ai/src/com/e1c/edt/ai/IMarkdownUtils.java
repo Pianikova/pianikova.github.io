@@ -51,6 +51,30 @@ public interface IMarkdownUtils
 	 */
 	String buildGitDiff(String filePath, String originContent, String newContent);
 
+    /**
+     * Builds a markdown-friendly diff view between original and new content with source-file line offsets.
+     * @param filePath The file path to display in diff headers
+     * @param originContent The original content
+     * @param newContent The new content
+     * @param originStartLine 1-based line number of {@code originContent} in the source file
+     * @param newStartLine 1-based line number of {@code newContent} in the source file
+     * @return A markdown-safe diff view
+     */
+    String buildGitDiff(String filePath, String originContent, String newContent, int originStartLine, int newStartLine);
+
+    /**
+     * Builds a markdown-friendly diff view between original and new content with source-file line offsets.
+     * @param filePath The file path to display in diff headers
+     * @param originContent The original content
+     * @param newContent The new content
+     * @param originStartLine 1-based line number of {@code originContent} in the source file
+     * @param newStartLine 1-based line number of {@code newContent} in the source file
+     * @param preferNewLineNumbers {@code true} to show line numbers after editing, {@code false} before editing
+     * @return A markdown-safe diff view
+     */
+    String buildGitDiff(String filePath, String originContent, String newContent, int originStartLine, int newStartLine,
+        boolean preferNewLineNumbers);
+
 	/**
 	 * Builds a markdown-friendly diff view from unified diff text.
 	 * @param diffText Unified diff text
