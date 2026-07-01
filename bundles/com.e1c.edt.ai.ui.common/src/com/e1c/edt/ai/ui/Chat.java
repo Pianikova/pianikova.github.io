@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -10,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
@@ -485,6 +487,33 @@ public class Chat
         return documents;
     }
 
+    private void addDirectoryFiles(File directory, StringBuilder errorReadingFile)
+    {
+        var children = directory.listFiles();
+        if (children == null)
+        {
+            return;
+        }
+
+        Arrays.sort(children, Comparator.comparing(File::getName));
+        for (var child : children)
+        {
+            if (child.isHidden())
+            {
+                continue;
+            }
+
+            if (child.isDirectory())
+            {
+                addDirectoryFiles(child, errorReadingFile);
+            }
+            else if (child.isFile())
+            {
+                readFileContent(child.toPath(), child.getName(), errorReadingFile);
+            }
+        }
+    }
+
     private void readFileContent(Path filePath, String fileName, StringBuilder errorReadingFile)
     {
         var pathString = filePath.toString();
@@ -789,7 +818,14 @@ public class Chat
                 var errorReadingFile = new StringBuilder();
                 for (var file : dragboard.getFiles())
                 {
-                    readFileContent(file.toPath(), file.getName(), errorReadingFile);
+                    if (file.isDirectory())
+                    {
+                        addDirectoryFiles(file, errorReadingFile);
+                    }
+                    else
+                    {
+                        readFileContent(file.toPath(), file.getName(), errorReadingFile);
+                    }
                 }
                 showErrorIfAny(errorReadingFile);
                 event.setDropCompleted(true);

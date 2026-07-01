@@ -246,7 +246,7 @@ public class EditorPositionManager
 		try
 		{
 			var numberOfLines = document.getNumberOfLines();
-			log.logError("Document has " + numberOfLines + " lines");
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Document has " + numberOfLines + " lines");
 
 			// Convert line/column to offset
 			var line = Math.max(0, cursorPosition.getLine() - 1);
@@ -255,7 +255,9 @@ public class EditorPositionManager
 			// Check if line is within document bounds
 			if (line >= numberOfLines)
 			{
-				log.logError("Cursor line out of bounds: line=" + line + ", numberOfLines=" + numberOfLines);
+				final var outOfBoundsLine = line;
+				log.warning(AI_CHAT,
+					() -> "Cursor line out of bounds: line=" + outOfBoundsLine + ", numberOfLines=" + numberOfLines);
 
 				// Clamp to last line
 				line = numberOfLines - 1;
@@ -264,8 +266,11 @@ public class EditorPositionManager
 
 			final var offset = Math.max(0, Math.min(document.getLineOffset(line) + column, document.getLength()));
 
-			log.logError("Setting cursor position: line=" + (line + 1) + ", column=" + (column + 1) + ", offset="
-				+ offset + ", documentLength=" + document.getLength());
+			final var finalLine = line;
+			final var finalColumn = column;
+			final var documentLength = document.getLength();
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Setting cursor position: line=" + (finalLine + 1)
+				+ ", column=" + (finalColumn + 1) + ", offset=" + offset + ", documentLength=" + documentLength);
 
 			// Set the caret and scroll it into view (selectAndReveal / revealRange).
 			if (editor instanceof ITextEditor)
@@ -346,7 +351,7 @@ public class EditorPositionManager
 		try
 		{
 			var numberOfLines = document.getNumberOfLines();
-			log.logError("Document has " + numberOfLines + " lines");
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Document has " + numberOfLines + " lines");
 
 			// Convert line/column to offset
             var startLine = Math.max(0, selection.getStartLine() - 1);
@@ -361,8 +366,10 @@ public class EditorPositionManager
 			// Check if lines are within document bounds
 			if (startLine >= numberOfLines || endLine >= numberOfLines)
 			{
-				log.logError("Selection lines out of bounds: startLine=" + startLine + ", endLine=" + endLine
-					+ ", numberOfLines=" + numberOfLines);
+				final var outOfBoundsStartLine = startLine;
+				final var outOfBoundsEndLine = endLine;
+				log.warning(AI_CHAT, () -> "Selection lines out of bounds: startLine=" + outOfBoundsStartLine
+					+ ", endLine=" + outOfBoundsEndLine + ", numberOfLines=" + numberOfLines);
 
 				// Try to clamp to document bounds
 				startLine = Math.min(startLine, numberOfLines - 1);
@@ -378,7 +385,7 @@ public class EditorPositionManager
                     }
                     catch (Exception e)
                     {
-                        log.logError("Error getting line length: " + e.getMessage());
+                        log.warning(AI_CHAT, () -> "Error getting line length: " + e.getMessage());
                         endColumn = 0;
                     }
                 }
@@ -396,7 +403,7 @@ public class EditorPositionManager
             }
             catch (Exception e)
             {
-                log.logError("Error getting line length for column bounds check: " + e.getMessage());
+                log.warning(AI_CHAT, () -> "Error getting line length for column bounds check: " + e.getMessage());
             }
 
 			// Select whole lines (columns are ignored): from the start of startLine to the end of the
@@ -411,8 +418,9 @@ public class EditorPositionManager
 			final var finalStartOffset = length >= 0 ? startOffset : endOffset;
 			final var finalLength = Math.abs(length);
 
-			log.logError("Setting selection: startOffset=" + finalStartOffset + ", length=" + finalLength
-				+ ", documentLength=" + document.getLength());
+			final var documentLength = document.getLength();
+			log.trace(TracingSources.CHAT, AI_CHAT, () -> "Setting selection: startOffset=" + finalStartOffset
+				+ ", length=" + finalLength + ", documentLength=" + documentLength);
 
 			// Set selection and scroll it into view (selectAndReveal / revealRange).
 			if (finalLength >= 0)
