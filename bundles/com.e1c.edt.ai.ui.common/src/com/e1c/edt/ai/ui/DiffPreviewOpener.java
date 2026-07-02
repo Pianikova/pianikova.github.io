@@ -146,6 +146,9 @@ public class DiffPreviewOpener
         configuration.setRightEditable(false);
         configuration.setLeftLabel(Messages.DiffCompareProposedLabel);
         configuration.setRightLabel(MessageFormat.format(Messages.DiffCompareCurrentLabel, preview.getFilePath()));
+        // Swap the panes by default, as if the compare view's "Swap Left and Right" button were
+        // pressed: the current file is shown on the left and the proposed changes on the right.
+        configuration.setProperty(CompareConfiguration.MIRRORED, Boolean.TRUE);
 
         var input = new DiffCompareEditorInput(left, right, configuration, token);
         input.setTitle(preview.getDisplayName());

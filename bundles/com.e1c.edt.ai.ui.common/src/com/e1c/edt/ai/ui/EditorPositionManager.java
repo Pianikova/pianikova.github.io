@@ -7,6 +7,8 @@ import java.io.File;
 
 import org.eclipse.core.filesystem.EFS;
 import org.eclipse.core.filesystem.IFileStore;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.e4.ui.model.application.ui.basic.MPart;
@@ -14,9 +16,11 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.ITextOperationTarget;
 import org.eclipse.jface.text.TextSelection;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IEditorReference;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.ide.IDE;
+import org.eclipse.ui.ide.ResourceUtil;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import com.e1c.edt.ai.ILog;
@@ -56,67 +60,34 @@ public class EditorPositionManager
 		try
 		{
 			var page = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getActivePage();
-
-			// First try to find file in workspace (relative path)
 			var root = ResourcesPlugin.getWorkspace().getRoot();
-            try
-            {
-                var file = root.getFile(new Path(filePath));
-                if (file != null && file.exists())
-                {
-                    editor = specializedEditorOpener.openInSpecializedEditor(page, file);
-                    if (editor == null)
-                    {
-                        editor = IDE.openEditor(page, file, true);
-                    }
-                }
-			}
-            catch (Exception e)
-            {
-                log.logError("workspace-relative branch threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            }
 
-            if (editor == null)
-            {
-                // Try to map an absolute filesystem path back to a workspace IFile so that
-                // EDT's content-type-bound editors (BSL Xtext, form, MD) are used.
-                try
-                {
-                    var osPath = Path.fromOSString(filePath);
-                    var fileForLocation = root.getFileForLocation(osPath);
+			// Resolve the link target to a workspace file (relative path, then absolute location).
+			var file = resolveWorkspaceFile(root, filePath);
 
-                    if (fileForLocation == null)
-                    {
-                        // Fallback: try findFilesForLocationURI for linked / nested resources
-                        var found = root.findFilesForLocationURI(new File(filePath).toURI());
-                        for (var f : found)
-                        {
-                            if (fileForLocation == null && f.exists())
-                            {
-                                fileForLocation = f;
-                            }
-                        }
-                    }
-
-                    if (fileForLocation != null && fileForLocation.exists())
-                    {
-                        editor = specializedEditorOpener.openInSpecializedEditor(page, fileForLocation);
-                        if (editor == null)
-                        {
-                            editor = IDE.openEditor(page, fileForLocation, true);
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    log.logError(
-                        "workspace-absolute branch threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
-                }
-            }
-
-            if (editor == null)
+			if (file != null && file.exists())
 			{
-				// If not found in workspace, try as absolute path
+				// Reuse an already-open editor for this file instead of opening a second one. The
+				// platform's own reuse can miss domain/metadata editors (e.g. a Document editor) that
+				// use a model-based input, so match by the file the editor input resolves to.
+				editor = findOpenEditorForFile(file);
+				if (editor != null)
+				{
+					editor.getSite().getPage().activate(editor);
+				}
+				else
+				{
+					editor = specializedEditorOpener.openInSpecializedEditor(page, file);
+					if (editor == null)
+					{
+						editor = IDE.openEditor(page, file, true);
+					}
+				}
+			}
+
+			if (editor == null)
+			{
+				// Not in the workspace — open as an external file.
 				var externalFile = new File(filePath);
 				if (externalFile.exists() && externalFile.isFile())
 				{
@@ -125,7 +96,6 @@ public class EditorPositionManager
 				}
 				else
 				{
-					// File not found
 					log.logError("File not found: " + filePath);
 					return;
 				}
@@ -168,6 +138,89 @@ public class EditorPositionManager
 	}
 
 	/**
+	 * Resolves a link target path to a workspace {@link IFile}: first as a workspace-relative path,
+	 * then by mapping an absolute filesystem location (including linked/nested resources). Returns
+	 * {@code null} if it does not correspond to a workspace file.
+	 */
+	@SuppressWarnings("nls")
+	private IFile resolveWorkspaceFile(IWorkspaceRoot root, String filePath)
+	{
+		try
+		{
+			var relative = root.getFile(new Path(filePath));
+			if (relative != null && relative.exists())
+			{
+				return relative;
+			}
+		}
+		catch (Exception e)
+		{
+			log.logError("workspace-relative resolve threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+		}
+
+		try
+		{
+			var fileForLocation = root.getFileForLocation(Path.fromOSString(filePath));
+			if (fileForLocation != null && fileForLocation.exists())
+			{
+				return fileForLocation;
+			}
+
+			for (var f : root.findFilesForLocationURI(new File(filePath).toURI()))
+			{
+				if (f.exists())
+				{
+					return f;
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			log.logError("workspace-absolute resolve threw: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+		}
+
+		return null;
+	}
+
+	/**
+	 * Finds an already-open editor that edits the given file, searching all workbench windows/pages.
+	 * Matches by the {@link IFile} the editor input resolves to (via {@link ResourceUtil}), so it also
+	 * catches domain/metadata editors whose input is not a plain {@code IFileEditorInput}. Returns
+	 * {@code null} if the file is not open in any editor.
+	 */
+	private IEditorPart findOpenEditorForFile(IFile file)
+	{
+		var workbench = PlatformUI.getWorkbench();
+		if (workbench == null)
+		{
+			return null;
+		}
+
+		for (var window : workbench.getWorkbenchWindows())
+		{
+			for (var page : window.getPages())
+			{
+				for (IEditorReference ref : page.getEditorReferences())
+				{
+					try
+					{
+						if (file.equals(ResourceUtil.getFile(ref.getEditorInput())))
+						{
+							return ref.getEditor(true);
+						}
+					}
+					catch (PartInitException e)
+					{
+						// Input could not be restored — skip this editor.
+					}
+				}
+			}
+		}
+
+		return null;
+	}
+
+	/**
 	 * Replaces the editor tab label with {@code tabTitle}, moving the original tab label (the file name)
 	 * to the tooltip. Does nothing when {@code tabTitle} is null/blank, so the default Eclipse tab name is
 	 * kept. Uses the E4 {@link MPart} of the editor, so it works uniformly for workspace, specialized EDT
@@ -176,9 +229,12 @@ public class EditorPositionManager
 	 * @param editor the opened editor part
 	 * @param tabTitle the descriptive tab title, or {@code null}/blank to keep the default
 	 */
+	@SuppressWarnings("nls")
 	private void applyTabTitle(IEditorPart editor, String tabTitle)
 	{
-		if (tabTitle == null || tabTitle.isBlank())
+		// Keep the default tab name for blank titles and for line-number/line-range links (their
+		// visible text is just a number like "23" or "34-45"); renaming a tab to a bare number is wrong.
+		if (tabTitle == null || tabTitle.isBlank() || tabTitle.trim().matches("\\d+(-\\d+)?"))
 		{
 			return;
 		}
@@ -194,7 +250,10 @@ public class EditorPositionManager
 				{
 					previousLabel = editor.getEditorInput().getName();
 				}
-				part.setLabel(tabTitle);
+				// Drop a trailing line-range suffix (e.g. "Модуль 34-45" → "Модуль") so the tab shows
+				// the object name, not the edited line range.
+				var label = tabTitle.trim().replaceFirst("\\s+\\d+(-\\d+)?$", "");
+				part.setLabel(label.isBlank() ? tabTitle.trim() : label);
 				part.setTooltip(previousLabel);
 			}
 		}

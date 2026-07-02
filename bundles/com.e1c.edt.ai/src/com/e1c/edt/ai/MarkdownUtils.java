@@ -230,6 +230,37 @@ public class MarkdownUtils implements IMarkdownUtils
 
     @Override
     @SuppressWarnings("nls")
+    public int[] countChangedLines(String originContent, String newContent)
+    {
+        if (originContent == null)
+        {
+            return new int[] { newContent == null ? 0 : countLines(newContent), 0 };
+        }
+        if (newContent == null)
+        {
+            return new int[] { 0, countLines(originContent) };
+        }
+
+        var originLines = originContent.split("\\r?\\n", -1);
+        var newLines = newContent.split("\\r?\\n", -1);
+        var differences =
+            RangeDifferencer.findDifferences(new LineComparator(originLines), new LineComparator(newLines));
+
+        var added = 0;
+        var removed = 0;
+        if (differences != null)
+        {
+            for (RangeDifference difference : differences)
+            {
+                removed += difference.leftEnd() - difference.leftStart();
+                added += difference.rightEnd() - difference.rightStart();
+            }
+        }
+        return new int[] { added, removed };
+    }
+
+    @Override
+    @SuppressWarnings("nls")
     public String buildUnifiedDiff(String diffText)
     {
         return buildUnifiedDiff(diffText, null);
