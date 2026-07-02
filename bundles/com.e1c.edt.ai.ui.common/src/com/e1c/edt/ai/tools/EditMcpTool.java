@@ -253,7 +253,7 @@ public class EditMcpTool
 
                     var responseMarkdown = new StringBuilder();
                     responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
-                        createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
+                        buildChangesString(oldContent, newContent)));
                     responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent, replaceResult, true));
                     responseMarkdown.append(
                         buildDiffViewLink(call, path, oldContent, newContent, replaceAll, content, replaceResult));
@@ -371,7 +371,7 @@ public class EditMcpTool
 
             var responseMarkdown = new StringBuilder();
             responseMarkdown.append(MessageFormat.format(Messages.EditedTemplate, buildFileLink(path, replaceResult),
-                createChangesString(replaceResult.getAddedLines(), replaceResult.getRemovedLines())));
+                buildChangesString(oldContent, newContent)));
             responseMarkdown.append(buildEditDetailsBlock(path, oldContent, newContent, replaceResult, true));
             responseMarkdown.append(
                 buildDiffViewLink(call, path, oldContent, newContent, replaceAll, currentContent, replaceResult));
@@ -537,6 +537,16 @@ public class EditMcpTool
      * @param removedLines number of removed lines
      * @return the formatted changes string
      */
+    /**
+     * Builds the "+added -removed" summary from the actual line diff (same algorithm as the rendered
+     * diff), so the stats match the diff and unchanged interior lines are not counted.
+     */
+    private String buildChangesString(String oldContent, String newContent)
+    {
+        var counts = markdownUtils.countChangedLines(oldContent, newContent);
+        return createChangesString(counts[0], counts[1]);
+    }
+
     @SuppressWarnings("nls")
     private String createChangesString(int addedLines, int removedLines)
     {

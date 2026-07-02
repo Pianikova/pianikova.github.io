@@ -76,6 +76,16 @@ public interface IMarkdownUtils
         boolean preferNewLineNumbers);
 
 	/**
+	 * Counts changed lines between two contents using the same line-diff algorithm as the rendered
+	 * diff, so the "+added / -removed" statistics match what the diff shows (unchanged interior lines
+	 * are not counted).
+	 * @param originContent The original content (may be {@code null} for a new file)
+	 * @param newContent The new content (may be {@code null} for a deletion)
+	 * @return a two-element array {@code {addedLines, removedLines}}
+	 */
+	int[] countChangedLines(String originContent, String newContent);
+
+	/**
 	 * Builds a markdown-friendly diff view from unified diff text.
 	 * @param diffText Unified diff text
 	 * @return A markdown-safe diff view
