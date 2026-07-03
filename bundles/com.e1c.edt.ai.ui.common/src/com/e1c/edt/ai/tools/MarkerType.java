@@ -107,7 +107,8 @@ public enum MarkerType
     {
         if (typeId != null)
         {
-            if (typeId.startsWith(AI_MARKER_BASE))
+            // AIError/AIWarning/AIInfo do not share the AIMarker prefix, so match them explicitly
+            if (typeId.startsWith(AI_MARKER_BASE) || isAiMarkerTypeId(typeId))
             {
                 return MarkerType.AI_MARKER;
             }
@@ -156,5 +157,17 @@ public enum MarkerType
     public static String[] getAiMarkerTypeIds()
     {
         return new String[] { AI_MARKER_ERROR, AI_MARKER_WARNING, AI_MARKER_INFO };
+    }
+
+    private static boolean isAiMarkerTypeId(String typeId)
+    {
+        for (var aiTypeId : getAiMarkerTypeIds())
+        {
+            if (aiTypeId.equals(typeId))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -8,8 +8,10 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.IMarkerResolution;
 import org.eclipse.ui.IMarkerResolutionGenerator;
 
-import com.e1c.edt.ai.assistent.model.McpToolCall;
+import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.tools.SetMarkersMcpTool;
+import com.e1c.edt.ai.ui.BaseActivator;
+import com.google.inject.Inject;
 
 /**
  * Marker resolution generator for AI markers that provides quick fix actions.
@@ -17,19 +19,30 @@ import com.e1c.edt.ai.tools.SetMarkersMcpTool;
 public class AIMarkerResolutionGenerator
     implements IMarkerResolutionGenerator
 {
+    @Inject
+    IJson json;
+
+    public AIMarkerResolutionGenerator()
+    {
+        BaseActivator.injectMembers(this);
+    }
+
     @Override
     public IMarkerResolution[] getResolutions(IMarker marker)
     {
         try
         {
-            var call = marker.getAttribute(SetMarkersMcpTool.ACTION_CALL_ATTRIBUTE);
+            var chatId = marker.getAttribute(SetMarkersMcpTool.ACTION_CHAT_ID_ATTRIBUTE);
             var details = marker.getAttribute(SetMarkersMcpTool.ACTION_DETAILS_ATTRIBUTE);
-            if (call != null && call instanceof McpToolCall && details != null
-                && details instanceof SetMarkersMcpTool.MarkerRequest)
+            if (chatId instanceof String && details instanceof String)
             {
-                var resolutions = new IMarkerResolution[1];
-                resolutions[0] = new AIMarkerResolution((McpToolCall)call, (SetMarkersMcpTool.MarkerRequest)details);
-                return resolutions;
+                var optionalDetails = json.deserialize((String)details, SetMarkersMcpTool.MarkerRequest.class);
+                if (optionalDetails.isPresent())
+                {
+                    var resolutions = new IMarkerResolution[1];
+                    resolutions[0] = new AIMarkerResolution((String)chatId, optionalDetails.get());
+                    return resolutions;
+                }
             }
         }
         catch (CoreException e)

@@ -8,7 +8,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.ui.IMarkerResolution2;
 
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.tools.SetMarkersMcpTool;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
@@ -19,7 +18,7 @@ import com.google.inject.Inject;
 public class AIMarkerResolution
     implements IMarkerResolution2
 {
-    private final McpToolCall call;
+    private final String sourceChatId;
     private final SetMarkersMcpTool.MarkerRequest markerRequest;
 
     @Inject
@@ -27,11 +26,11 @@ public class AIMarkerResolution
     @Inject
     IJson json;
 
-    public AIMarkerResolution(McpToolCall call, SetMarkersMcpTool.MarkerRequest markerRequest)
+    public AIMarkerResolution(String sourceChatId, SetMarkersMcpTool.MarkerRequest markerRequest)
     {
-        Preconditions.checkNotNull(call);
+        Preconditions.checkNotNull(sourceChatId);
         Preconditions.checkNotNull(markerRequest);
-        this.call = call;
+        this.sourceChatId = sourceChatId;
         this.markerRequest = markerRequest;
         BaseActivator.injectMembers(this);
     }
@@ -53,7 +52,7 @@ public class AIMarkerResolution
         prompt.append("\n```\nDo ONLY what is asked.");
         prompt.append(
             "\nDelete markers with a specific ID if they have been fixed, for example `" + markerRequest.id + "`.");
-        chat.continueChat(call.sourceChatId, prompt.toString());
+        chat.continueChat(sourceChatId, prompt.toString());
     }
 
     @Override

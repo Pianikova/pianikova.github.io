@@ -116,6 +116,7 @@ public class Messages
     public static String MarkersRemovedMessage;
     public static String CreateMarkersTitleTemplate;
     public static String RemoveMarkersTitleTemplate;
+    public static String DefaultQuickFixTitle;
 
     // Execute tool details
     public static String ExecutionDetails;
