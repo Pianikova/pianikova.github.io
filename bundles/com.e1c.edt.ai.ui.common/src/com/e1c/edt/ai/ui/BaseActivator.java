@@ -20,6 +20,7 @@ import org.eclipse.osgi.service.debug.DebugOptionsListener;
 import org.eclipse.osgi.service.debug.DebugTrace;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -74,6 +75,17 @@ public abstract class BaseActivator
     public static void injectMembers(Object instance)
     {
         getDefault().getInjector().injectMembers(instance);
+    }
+
+    /**
+     * Проверка, что EDT запущена без workbench (CLI/headless-режим).
+     * В этом режиме плагин не инициализируется: UI, JavaFX и инжектор недоступны.
+     *
+     * @return <code>true</code>, если workbench не запущен
+     */
+    public static boolean isHeadless()
+    {
+        return !PlatformUI.isWorkbenchRunning();
     }
 
     /**
@@ -280,6 +292,12 @@ public abstract class BaseActivator
         props.put(DebugOptions.LISTENER_SYMBOLICNAME, TRACE_SOURCE_PREFIX);
         bundleContext.registerService(DebugOptionsListener.class, this, props);
         plugin = this;
+        if (isHeadless())
+        {
+            // CLI (headless) запуск EDT: workbench не создаётся, JavaFX, SWT Display и
+            // UI-биндинги инжектора неработоспособны — плагин остаётся пассивным.
+            return;
+        }
         javafx.application.Platform.setImplicitExit(false);
         settings = getInjector().getInstance(ISettings.class);
         // Dev-autopilot: feedback-loop test harness, started only in experimental mode.
@@ -309,21 +327,26 @@ public abstract class BaseActivator
     @Override
     public void stop(BundleContext bundleContext) throws Exception
     {
-        var globalContextTracker = getInjector().getInstance(IGlobalContextTracker.class);
-        if (globalContextTracker instanceof AutoCloseable)
+        // Инжектор мог не создаваться (headless-запуск) — не форсируем его создание при остановке.
+        var injector = injectorRef.get();
+        if (injector != null)
         {
-            ((AutoCloseable)globalContextTracker).close();
-        }
-
-        if (settings != null && settings.isExperimental())
-        {
-            try
+            var globalContextTracker = injector.getInstance(IGlobalContextTracker.class);
+            if (globalContextTracker instanceof AutoCloseable)
             {
-                getInjector().getInstance(IDevAutopilot.class).stop();
+                ((AutoCloseable)globalContextTracker).close();
             }
-            catch (Exception e)
+
+            if (settings != null && settings.isExperimental())
             {
-                logError(e);
+                try
+                {
+                    injector.getInstance(IDevAutopilot.class).stop();
+                }
+                catch (Exception e)
+                {
+                    logError(e);
+                }
             }
         }
 

@@ -21,13 +21,23 @@ public class BuildTrackingParticipant
 
     public BuildTrackingParticipant()
     {
-        Activator.injectMembers(this);
+        // В CLI (headless) билдер тоже инстанцирует участника, но инжектор там недоступен —
+        // участник остаётся пассивным.
+        if (!BaseActivator.isHeadless())
+        {
+            Activator.injectMembers(this);
+        }
     }
 
     @SuppressWarnings("nls")
     @Override
     public void build(IBuildContext context, IProgressMonitor monitor) throws CoreException
     {
+        if (globalContextTracker == null)
+        {
+            return;
+        }
+
         var project = context.getBuiltProject();
         if (project == null)
         {
