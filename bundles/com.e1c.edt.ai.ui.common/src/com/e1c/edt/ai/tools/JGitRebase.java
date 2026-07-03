@@ -22,7 +22,6 @@ import org.eclipse.jgit.lib.RebaseTodoLine;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.lib.RepositoryState;
 
-import com.e1c.edt.ai.tools.EditMcpTool;
 
 /**
  * Git rebase command implementation.
@@ -92,7 +91,6 @@ public class JGitRebase implements IJGitCommand
         return handleNewRebase(rebaseCmd, git, args);
     }
 
-    @SuppressWarnings("nls")
     private GitCommandResult handleContinue(RebaseCommand rebaseCmd) throws GitAPIException
     {
         rebaseCmd.setOperation(RebaseCommand.Operation.CONTINUE);

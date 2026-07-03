@@ -134,7 +134,7 @@ public class JGitRevParse implements IJGitCommand
 
     private static String resolveSymbolic(Repository repository, String rev) throws java.io.IOException
     {
-        if ("HEAD".equals(rev))
+        if ("HEAD".equals(rev)) //$NON-NLS-1$
         {
             var head = repository.getFullBranch();
             if (head == null)

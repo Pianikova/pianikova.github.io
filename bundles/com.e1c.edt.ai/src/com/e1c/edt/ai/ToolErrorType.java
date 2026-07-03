@@ -38,7 +38,7 @@ public enum ToolErrorType
      * <li>Retry the tool call WITHOUT informing the user</li>
      * </ul>
      */
-    RETRYABLE("retryable", "Retryable error - LLM should silently correct and retry"),
+    RETRYABLE("retryable", "Retryable error - LLM should silently correct and retry"), //$NON-NLS-1$ //$NON-NLS-2$
 
     /**
      * User-visible errors indicating objective limitations that prevent operation execution.
@@ -69,7 +69,7 @@ public enum ToolErrorType
      * <li>Adjust the plan based on the limitation</li>
      * </ul>
      */
-    USER_VISIBLE("user_visible", "User-visible error - LLM should inform user and adjust approach");
+    USER_VISIBLE("user_visible", "User-visible error - LLM should inform user and adjust approach"); //$NON-NLS-1$ //$NON-NLS-2$
 
     private final String code;
     private final String description;

@@ -88,6 +88,11 @@ public class JGitRevert implements IJGitCommand
         {
             return new GitCommandResult(1, "", "fatal: you must specify a commit to revert");
         }
+        if (mainline != null)
+        {
+            return new GitCommandResult(1, "",
+                "fatal: revert with -m/--mainline is not supported by JGit API. Use native git.\n");
+        }
 
         var sb = new StringBuilder();
         for (var commitHash : commits)

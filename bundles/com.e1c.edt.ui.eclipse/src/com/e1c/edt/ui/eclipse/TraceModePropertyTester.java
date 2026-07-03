@@ -4,8 +4,6 @@
 package com.e1c.edt.ui.eclipse;
 
 import org.eclipse.core.expressions.PropertyTester;
-import org.eclipse.core.runtime.Platform;
-
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.e1c.edt.ai.ui.BaseActivator;

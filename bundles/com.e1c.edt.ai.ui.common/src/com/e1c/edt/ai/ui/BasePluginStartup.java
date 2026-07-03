@@ -38,7 +38,7 @@ public class BasePluginStartup
             BaseActivator.injectMembers(this);
         }
 
-        Preconditions.checkNotNull(initializables, "initializables should be injected");
+        Preconditions.checkNotNull(initializables, "initializables should be injected"); //$NON-NLS-1$
 
         var activator = BaseActivator.getDefault();
         var pluginVersion = activator.getPluginVersion();

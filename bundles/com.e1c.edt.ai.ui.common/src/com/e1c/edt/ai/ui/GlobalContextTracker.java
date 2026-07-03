@@ -30,7 +30,6 @@ class GlobalContextTracker
     private static final int MaxInlineTransitions = 50;
     private final ISettings settings;
     private final IDispatcher dispatcher;
-    private final IStateService stateService;
     private final Provider<IProjectTrackingWorkflow> projectTrackingWorkflowProvider;
     private final ConcurrentHashMap<String, IProjectTrackingWorkflow> projectWorkflows = new ConcurrentHashMap<>();
 
@@ -44,7 +43,6 @@ class GlobalContextTracker
         Preconditions.checkNotNull(projectTrackingWorkflowProvider);
         this.settings = settings;
         this.dispatcher = dispatcher;
-        this.stateService = stateService;
         this.projectTrackingWorkflowProvider = projectTrackingWorkflowProvider;
 
         stateService.addListener(this);

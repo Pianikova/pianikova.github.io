@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
@@ -60,22 +59,19 @@ public class JShellManualMcpTool
     private final IJson json;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final Set<IJShellManualProvider> manualProviders;
-    private final IMarkdownUtils markdownUtils;
     private final McpToolCallSpecification specification;
 
     @Inject
     public JShellManualMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        Set<IJShellManualProvider> manualProviders, IMarkdownUtils markdownUtils)
+        Set<IJShellManualProvider> manualProviders)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(manualProviders);
-        Preconditions.checkNotNull(markdownUtils);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.manualProviders = manualProviders;
-        this.markdownUtils = markdownUtils;
         this.specification = createSpecification();
     }
 

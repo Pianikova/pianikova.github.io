@@ -61,7 +61,7 @@ public class JGitRm implements IJGitCommand
 
         try
         {
-            var result = rmCmd.call();
+            rmCmd.call();
 
             return new GitCommandResult(0, "", "");
         }

@@ -56,7 +56,6 @@ public class Notificator
         scheduleUpdate(TimeUnit.SECONDS.toMillis(15));
     }
 
-    @SuppressWarnings("incomplete-switch")
     @Override
     public void onServiceStateChange(ServiceState serviceState)
     {

@@ -79,7 +79,6 @@ public class JGitAdd implements IJGitCommand
      * Uses status-based enumeration so untracked files, directories and deletions
      * are all handled consistently across JGit versions.
      */
-    @SuppressWarnings("nls")
     private static GitCommandResult stageAll(Git git) throws GitAPIException
     {
         var status = git.status().call();
@@ -260,7 +259,6 @@ public class JGitAdd implements IJGitCommand
     }
 
     /** Stages deletions by removing files from the index (--cached). */
-    @SuppressWarnings("nls")
     private static void stageRemovals(Git git, Set<String> missing) throws GitAPIException
     {
         if (missing.isEmpty())
@@ -309,7 +307,6 @@ public class JGitAdd implements IJGitCommand
     }
 
     /** Normalizes a path to forward slashes (JGit convention). */
-    @SuppressWarnings("nls")
     private static String normalizePath(String p)
     {
         return p.replace('\\', '/');
@@ -358,7 +355,7 @@ public class JGitAdd implements IJGitCommand
 
     private static boolean matchesPathspec(String file, String pathspec)
     {
-        if (pathspec.equals("."))
+        if (pathspec.equals(".")) //$NON-NLS-1$
         {
             return true;
         }
@@ -366,7 +363,7 @@ public class JGitAdd implements IJGitCommand
         {
             return true;
         }
-        var prefix = pathspec.endsWith("/") ? pathspec : pathspec + "/";
+        var prefix = pathspec.endsWith("/") ? pathspec : pathspec + "/"; //$NON-NLS-1$ //$NON-NLS-2$
         return file.startsWith(prefix);
     }
 }

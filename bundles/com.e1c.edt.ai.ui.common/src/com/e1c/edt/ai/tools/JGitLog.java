@@ -284,7 +284,7 @@ public class JGitLog implements IJGitCommand
         var trimmed = value.trim();
         try
         {
-            return LocalDateTime.parse(trimmed, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            return LocalDateTime.parse(trimmed, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) //$NON-NLS-1$
                 .atZone(ZoneId.systemDefault()).toEpochSecond();
         }
         catch (Exception ignore)

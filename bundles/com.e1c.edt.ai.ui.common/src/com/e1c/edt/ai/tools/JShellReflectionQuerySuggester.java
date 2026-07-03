@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import com.google.inject.Singleton;
 
 @Singleton
-@SuppressWarnings("nls")
 public class JShellReflectionQuerySuggester
     implements IJShellReflectionQuerySuggester
 {

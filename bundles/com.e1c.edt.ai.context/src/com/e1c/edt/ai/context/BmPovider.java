@@ -114,7 +114,7 @@ public class BmPovider implements IBmPovider
 
         if (bmObject == null)
         {
-            for (IBmExternalUriResolver provider : engine.getExternalUriResolvers())
+            for (IBmExternalUriResolver provider : getExternalUriResolvers(engine))
             {
                 if (cancellationToken.isCanceled())
                 {
@@ -143,5 +143,11 @@ public class BmPovider implements IBmPovider
     {
         Preconditions.checkNotNull(filePath);
         return URI.createPlatformResourceURI(filePath, true).appendFragment("/0"); //$NON-NLS-1$
+    }
+
+    @SuppressWarnings("deprecation")
+    private Iterable<IBmExternalUriResolver> getExternalUriResolvers(com._1c.g5.v8.bm.core.IBmEngine engine)
+    {
+        return engine.getExternalUriResolvers();
     }
 }

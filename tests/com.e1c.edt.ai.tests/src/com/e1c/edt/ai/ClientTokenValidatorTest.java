@@ -22,7 +22,6 @@ public class ClientTokenValidatorTest
     @Parameter(1)
     public boolean expectedResult;
 
-    @SuppressWarnings("nls")
     @Test
     @Parameters()
     public void shouldValidate()

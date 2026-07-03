@@ -18,7 +18,6 @@ import org.eclipse.ui.navigator.ICommonActionExtensionSite;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.skills.ISkillResourceResolver;
 import com.e1c.edt.ai.skills.SkillRepository;
-import com.e1c.edt.ai.skills.SkillSource;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IWorkmateLocations;
 import com.e1c.edt.ai.ui.handlers.ISkillFileOpener;

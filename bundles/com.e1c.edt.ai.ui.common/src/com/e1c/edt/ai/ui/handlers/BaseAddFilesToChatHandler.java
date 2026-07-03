@@ -40,7 +40,7 @@ public class BaseAddFilesToChatHandler
         BaseActivator.injectMembers(this);
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings("rawtypes")
     @Override
     public void setEnabled(Object evaluationContext)
     {
@@ -75,7 +75,6 @@ public class BaseAddFilesToChatHandler
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public Object execute(ExecutionEvent event)
     {

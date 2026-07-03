@@ -49,7 +49,7 @@ public class BmObjectProvider implements IBmObjectProvider
         }
 
         var uri = URI.createPlatformResourceURI(file.getFullPath().toString(), true).appendFragment("/0"); //$NON-NLS-1$
-        for (IBmExternalUriResolver provider : engine.getExternalUriResolvers())
+        for (IBmExternalUriResolver provider : getExternalUriResolvers(engine))
         {
             try
             {
@@ -66,5 +66,11 @@ public class BmObjectProvider implements IBmObjectProvider
         }
 
         return Optional.empty();
+    }
+
+    @SuppressWarnings("deprecation")
+    private Iterable<IBmExternalUriResolver> getExternalUriResolvers(com._1c.g5.v8.bm.core.IBmEngine engine)
+    {
+        return engine.getExternalUriResolvers();
     }
 }

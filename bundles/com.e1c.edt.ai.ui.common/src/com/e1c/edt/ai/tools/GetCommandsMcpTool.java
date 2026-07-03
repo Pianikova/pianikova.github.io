@@ -227,8 +227,8 @@ public class GetCommandsMcpTool
                 {
                     try
                     {
-                        var catogory = src.getCategory();
-                        if (!categoryId.equalsIgnoreCase(catogory.getId()))
+                        var category = src.getCategory();
+                        if (!categoryId.equalsIgnoreCase(category.getId()))
                         {
                             continue;
                         }
@@ -358,7 +358,7 @@ public class GetCommandsMcpTool
 
         var categoryIdProp = new McpToolCallProperty();
         categoryIdProp.type = "string";
-        categoryIdProp.description = "Command caterogy id.";
+        categoryIdProp.description = "Command category id.";
         properties.put("category_id", categoryIdProp);
 
         parameters.properties = properties;

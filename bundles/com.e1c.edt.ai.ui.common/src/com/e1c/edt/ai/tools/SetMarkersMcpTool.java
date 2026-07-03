@@ -41,7 +41,7 @@ public class SetMarkersMcpTool
     implements IMcpTool
 {
     public static final String TOOL_NAME = "SetMarkers"; //$NON-NLS-1$
-    public static final String ACTION_CALL_ATTRIBUTE = "action_call"; //$NON-NLS-1$
+    public static final String ACTION_CHAT_ID_ATTRIBUTE = "action_chat_id"; //$NON-NLS-1$
     public static final String ACTION_DETAILS_ATTRIBUTE = "action_details"; //$NON-NLS-1$
 
     // @formatter:off
@@ -293,6 +293,13 @@ public class SetMarkersMcpTool
                 throw new IllegalArgumentException(
                     "action_prompt, action_title, and action_description must be provided together for ai_marker");
             }
+            if (!hasAnyAction)
+            {
+                // Guarantee a quick fix action even when the model omitted the action_* fields
+                markerReq.actionPrompt = "Fix the following issue: " + markerReq.message;
+                markerReq.actionTitle = Messages.DefaultQuickFixTitle;
+                markerReq.actionDescription = markerReq.message;
+            }
         }
 
         // Get file from absolute path using IFileSystem
@@ -394,11 +401,14 @@ public class SetMarkersMcpTool
             marker.setAttribute(IMarker.LOCATION, location.toString());
         }
 
-        // Action attributes - only for AI markers
-        if (markerType == MarkerType.AI_MARKER && markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank())
+        // Action attributes - only for AI markers. Stored as String values: marker attributes
+        // may only be String/Integer/Boolean (newer core.resources throws on other types).
+        // Only sourceChatId is kept from the call - it is transient and would not survive JSON.
+        if (markerType == MarkerType.AI_MARKER && markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank()
+            && call.sourceChatId != null)
         {
-            marker.setAttribute(ACTION_CALL_ATTRIBUTE, call);
-            marker.setAttribute(ACTION_DETAILS_ATTRIBUTE, markerReq);
+            marker.setAttribute(ACTION_CHAT_ID_ATTRIBUTE, call.sourceChatId);
+            marker.setAttribute(ACTION_DETAILS_ATTRIBUTE, json.serialize(markerReq));
         }
 
         // Type-specific attributes
@@ -546,9 +556,9 @@ public class SetMarkersMcpTool
                 + ReadMcpTool.TOOL_NAME + "` tool. Alias: start_line");
         description.append(
             "\n- marker_highlighted_text: Code fragment associated with the marker (required). ALWAYS minimize to the smallest possible size that maintains context. ALWAYS exclude extra suffix and prefix.");
-        description.append("\n- action_prompt: AI prompt to execute when marker is activated (optional for ai_marker type)");
-        description.append("\n- action_title: Short title for the quick fix action (optional for ai_marker type)");
-        description.append("\n- action_description: Detailed description of the quick fix action (optional for ai_marker type)");
+        description.append("\n- action_prompt: AI prompt to execute when the quick fix is activated (ai_marker only; ALWAYS provide)");
+        description.append("\n- action_title: Short title for the quick fix action (ai_marker only; ALWAYS provide)");
+        description.append("\n- action_description: Detailed description of the quick fix action (ai_marker only; ALWAYS provide)");
 
         description.append("\n\nType-specific properties:");
         description.append("\n- bookmark: done");
@@ -557,10 +567,12 @@ public class SetMarkersMcpTool
         description.append("\n- ai_marker: severity, priority");
 
         description.append("\n\nQuick fix actions:");
-        description
-            .append("\n- For `ai_marker` with action fields: adds quick fix action prompt");
+        description.append(
+            "\n- For `ai_marker` ALWAYS provide action_prompt, action_title and action_description - they become the marker's quick fix action");
         description.append(
             "\n- IMPORTANT: if you provide any action_* fields, you must provide all three action fields");
+        description.append(
+            "\n- If all three are omitted, a generic quick fix is synthesized from `message`; prefer specific action_* texts");
         description.append("\n- If type is not `ai_marker`, omit action_* fields.");
 
         spec.function.description = description.toString();
@@ -581,7 +593,7 @@ public class SetMarkersMcpTool
         markersProp.description =
             "List of marker objects. Each marker must include: type, path, marker_line, "
                 + "marker_highlighted_text, message. "
-                + "If you provide any action_* fields for ai_marker, all three are required.";
+                + "For ai_marker ALWAYS provide action_prompt, action_title and action_description (all three).";
         properties.put("markers", markersProp);
 
         parameters.properties = properties;
@@ -600,7 +612,7 @@ public class SetMarkersMcpTool
         public List<MarkerRequest> markers;
     }
 
-    public class MarkerRequest
+    public static class MarkerRequest
     {
         @SerializedName("type")
         public String type;
@@ -638,7 +650,9 @@ public class SetMarkersMcpTool
         @SerializedName("action_description")
         public String actionDescription;
 
-        public transient long id;
+        // Not transient: must survive the JSON round-trip through the marker's
+        // action_details attribute so the quick fix prompt can reference the marker id
+        public long id;
         public transient Integer lineOffset;
         public transient Integer charStart;
         public transient Integer charEnd;

@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE projectDescription [
+	<!ELEMENT projectDescription (name, comment, projects, buildSpec, natures)>
+	<!ELEMENT name (#PCDATA)>
+	<!ELEMENT comment (#PCDATA)>
+	<!ELEMENT projects (project*)>
+	<!ELEMENT project (#PCDATA)>
+	<!ELEMENT buildSpec (buildCommand*)>
+	<!ELEMENT buildCommand (name, arguments)>
+	<!ELEMENT arguments ANY>
+	<!ELEMENT natures (nature*)>
+	<!ELEMENT nature (#PCDATA)>
+]>
 <projectDescription>
 	<name>test</name>
 	<comment></comment>
@@ -13,6 +25,5 @@
 	</buildSpec>
 	<natures>
 		<nature>org.eclipse.xtext.ui.shared.xtextNature</nature>
-		<nature>com._1c.g5.v8.dt.core.V8ConfigurationNature</nature>
 	</natures>
 </projectDescription>

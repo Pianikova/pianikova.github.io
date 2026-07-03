@@ -118,7 +118,7 @@ public class ProjectTools
         String relativePath;
         if (absolutePathString.equals(projectLocationString))
         {
-            relativePath = ""; // Project root itself
+            relativePath = ""; // Project root itself //$NON-NLS-1$
         }
         else
         {

@@ -29,7 +29,7 @@ public class ConfigurationParametersProvider
     /**
      *
      */
-    private static final String DT_INF_PROJECT_PMF = "DT-INF/PROJECT.PMF";
+    private static final String DT_INF_PROJECT_PMF = "DT-INF/PROJECT.PMF"; //$NON-NLS-1$
     private static final String RUNTIME_VERSION = "Runtime-Version:"; //$NON-NLS-1$
     private final IV8ProjectManager v8ProjectManager;
 
