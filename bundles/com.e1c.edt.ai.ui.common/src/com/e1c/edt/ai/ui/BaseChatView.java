@@ -64,7 +64,7 @@ public class BaseChatView
             BaseActivator.injectMembers(this);
         }
 
-        Preconditions.checkNotNull(chatDialog, "chatDialog should be injected");
+        Preconditions.checkNotNull(chatDialog, "chatDialog should be injected"); //$NON-NLS-1$
 
         parent.setLayout(new GridLayout());
         GridLayoutFactory.fillDefaults().spacing(0, 0).applyTo(parent);

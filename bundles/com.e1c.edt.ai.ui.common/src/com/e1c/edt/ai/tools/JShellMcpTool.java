@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IJson;
-import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.ToolCallMessage;
@@ -47,7 +46,6 @@ public class JShellMcpTool
 	private final IMcpToolsCallMessageFactory messageFactory;
 	private final IJShellSessionManager sessions;
 	private final Set<IJShellBindingProvider> bindingProviders;
-    private final IMarkdownUtils markdownUtils;
 	private final IRestrictedTypesProvider restrictedTypesProvider;
     private final IJShellReflectionQuerySuggester reflectionQuerySuggester;
     private final IDispatcher dispatcher;
@@ -56,7 +54,7 @@ public class JShellMcpTool
 
 	@Inject
 	public JShellMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-		IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders, IMarkdownUtils markdownUtils,
+		IJShellSessionManager sessions, Set<IJShellBindingProvider> bindingProviders,
         IRestrictedTypesProvider restrictedTypesProvider, IJShellReflectionQuerySuggester reflectionQuerySuggester,
         IDispatcher dispatcher, Set<IJShellManualProvider> manualProviders)
 	{
@@ -64,7 +62,6 @@ public class JShellMcpTool
 		Preconditions.checkNotNull(messageFactory);
 		Preconditions.checkNotNull(sessions);
 		Preconditions.checkNotNull(bindingProviders);
-		Preconditions.checkNotNull(markdownUtils);
 		Preconditions.checkNotNull(restrictedTypesProvider);
         Preconditions.checkNotNull(reflectionQuerySuggester);
         Preconditions.checkNotNull(dispatcher);
@@ -74,7 +71,6 @@ public class JShellMcpTool
 		this.messageFactory = messageFactory;
 		this.sessions = sessions;
 		this.bindingProviders = bindingProviders;
-		this.markdownUtils = markdownUtils;
 		this.restrictedTypesProvider = restrictedTypesProvider;
         this.reflectionQuerySuggester = reflectionQuerySuggester;
         this.dispatcher = dispatcher;
@@ -315,7 +311,7 @@ public class JShellMcpTool
             .filter(provider -> context.scope.equals(normalizeScope(provider.getScope())))
             .map(provider -> provider.getRequiredNextStep(context))
             .filter(nextStep -> nextStep != null && !nextStep.isBlank())
-            .collect(Collectors.joining("\n\n"));
+            .collect(Collectors.joining("\n\n")); //$NON-NLS-1$
         return requiredNextStep.isBlank() ? null : requiredNextStep;
     }
 

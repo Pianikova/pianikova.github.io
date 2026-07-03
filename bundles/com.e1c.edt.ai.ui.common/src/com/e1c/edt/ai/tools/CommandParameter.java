@@ -23,5 +23,5 @@ public class CommandParameter
     public String value;
 
     @SerializedName("values")
-    public Map<Object, Object> values;
+    public Map<?, ?> values;
 }

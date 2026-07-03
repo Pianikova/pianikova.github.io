@@ -117,7 +117,7 @@ public class JGitRemote implements IJGitCommand
     private static void removeRemoteFromConfig(Git git, String name) throws IOException
     {
         StoredConfig config = git.getRepository().getConfig();
-        config.unsetSection("remote", name);
+        config.unsetSection("remote", name); //$NON-NLS-1$
         config.save();
     }
 }

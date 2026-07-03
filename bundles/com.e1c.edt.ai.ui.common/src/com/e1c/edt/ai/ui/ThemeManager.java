@@ -30,9 +30,9 @@ public class ThemeManager
 	{
 		try
 		{
-			var prefs = InstanceScope.INSTANCE.getNode("org.eclipse.e4.ui.css.swt.theme");
-			var themeId = prefs.get("themeid", "");
-			return themeId.toLowerCase().contains("dark");
+			var prefs = InstanceScope.INSTANCE.getNode("org.eclipse.e4.ui.css.swt.theme"); //$NON-NLS-1$
+			var themeId = prefs.get("themeid", ""); //$NON-NLS-1$ //$NON-NLS-2$
+			return themeId.toLowerCase().contains("dark"); //$NON-NLS-1$
 		}
 		catch (Exception e)
 		{

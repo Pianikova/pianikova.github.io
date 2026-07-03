@@ -290,6 +290,8 @@ public class McpTools
             var toolError = (ToolException)error;
             switch (toolError.getErrorType())
             {
+            case RETRYABLE:
+                break;
             case USER_VISIBLE:
                 // User-visible errors should be shown to user
                 var markdown = new StringBuilder();

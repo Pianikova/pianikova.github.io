@@ -4,7 +4,6 @@
 package com.e1c.edt.ai.tools;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import org.eclipse.jgit.api.Git;
@@ -160,7 +159,7 @@ public class JGitConfig implements IJGitCommand
                 return sys;
             case LOCAL:
             default:
-                var local = new FileBasedConfig(new File(git.getRepository().getDirectory(), "config"), FS.DETECTED);
+                var local = new FileBasedConfig(new File(git.getRepository().getDirectory(), "config"), FS.DETECTED); //$NON-NLS-1$
                 local.load();
                 return local;
         }

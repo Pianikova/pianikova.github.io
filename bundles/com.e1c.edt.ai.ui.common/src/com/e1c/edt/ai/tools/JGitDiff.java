@@ -24,21 +24,11 @@ import org.eclipse.jgit.treewalk.EmptyTreeIterator;
 import org.eclipse.jgit.treewalk.FileTreeIterator;
 import org.eclipse.jgit.treewalk.filter.PathFilterGroup;
 
-import com.google.inject.Inject;
-
 /**
  * Git diff command implementation
  */
 public class JGitDiff implements IJGitCommand
 {
-    private final IJGitCommonHelper commonHelper;
-
-    @Inject
-    public JGitDiff(IJGitCommonHelper commonHelper)
-    {
-        this.commonHelper = commonHelper;
-    }
-
     @Override
     public String getName()
     {
@@ -226,7 +216,7 @@ public class JGitDiff implements IJGitCommand
         {
             sb.append(renderPatch(git, false, revisions, List.of(pathFor(diff)), contextLines).stdOut);
         }
-        return new GitCommandResult(0, sb.toString(), "");
+        return new GitCommandResult(0, sb.toString(), ""); //$NON-NLS-1$
     }
 
     private static GitCommandResult renderPatch(Git git, boolean cached, List<String> revisions, List<String> paths,
@@ -280,7 +270,7 @@ public class JGitDiff implements IJGitCommand
             diffCommand.call();
         }
 
-        return new GitCommandResult(0, outputStream.toString(StandardCharsets.UTF_8), "");
+        return new GitCommandResult(0, outputStream.toString(StandardCharsets.UTF_8), ""); //$NON-NLS-1$
     }
 
     private static List<DiffEntry> filterUntracked(Git git, List<DiffEntry> diffs) throws GitAPIException
@@ -307,7 +297,7 @@ public class JGitDiff implements IJGitCommand
     {
         for (var folder : folders)
         {
-            var prefix = folder.endsWith("/") ? folder : folder + "/";
+            var prefix = folder.endsWith("/") ? folder : folder + "/"; //$NON-NLS-1$ //$NON-NLS-2$
             if (path.startsWith(prefix))
             {
                 return true;

@@ -133,14 +133,12 @@ public class MarkdownUtils implements IMarkdownUtils
     }
 
     @Override
-    @SuppressWarnings("nls")
     public String buildGitDiff(String filePath, String originContent, String newContent)
     {
         return buildGitDiff(filePath, originContent, newContent, 1, 1, true);
     }
 
     @Override
-    @SuppressWarnings("nls")
     public String buildGitDiff(String filePath, String originContent, String newContent, int originStartLine,
         int newStartLine)
     {
@@ -260,7 +258,6 @@ public class MarkdownUtils implements IMarkdownUtils
     }
 
     @Override
-    @SuppressWarnings("nls")
     public String buildUnifiedDiff(String diffText)
     {
         return buildUnifiedDiff(diffText, null);
@@ -616,7 +613,7 @@ public class MarkdownUtils implements IMarkdownUtils
         var maxLine = 0;
         for (var line : lines)
         {
-            if (!line.startsWith("@@"))
+            if (!line.startsWith("@@")) //$NON-NLS-1$
             {
                 continue;
             }
@@ -704,7 +701,6 @@ public class MarkdownUtils implements IMarkdownUtils
         result.append(buildUnifiedDiff(diffText, filePath));
     }
 
-    @SuppressWarnings("nls")
     private static String extractFileName(String line)
     {
         var path = extractFilePath(line);
@@ -778,20 +774,20 @@ public class MarkdownUtils implements IMarkdownUtils
             while (leftPosition < difference.leftStart() && leftPosition < originLines.length)
             {
                 appendNumberedDiffLine(diff, filePath, originStartLine + leftPosition, newStartLine + rightPosition,
-                    " ", originLines[leftPosition], TextColor.GRAY, preferNewLineNumbers, lineNumberWidth);
+                    " ", originLines[leftPosition], TextColor.GRAY, preferNewLineNumbers, lineNumberWidth); //$NON-NLS-1$
                 leftPosition++;
                 rightPosition++;
             }
 
             for (int i = difference.leftStart(); i < difference.leftEnd() && i < originLines.length; i++)
             {
-                appendNumberedDiffLine(diff, filePath, originStartLine + i, null, "-", originLines[i], TextColor.RED,
+                appendNumberedDiffLine(diff, filePath, originStartLine + i, null, "-", originLines[i], TextColor.RED, //$NON-NLS-1$
                     preferNewLineNumbers, lineNumberWidth);
             }
 
             for (int i = difference.rightStart(); i < difference.rightEnd() && i < newLines.length; i++)
             {
-                appendNumberedDiffLine(diff, filePath, null, newStartLine + i, "+", newLines[i], TextColor.GREEN,
+                appendNumberedDiffLine(diff, filePath, null, newStartLine + i, "+", newLines[i], TextColor.GREEN, //$NON-NLS-1$
                     preferNewLineNumbers, lineNumberWidth);
             }
 
@@ -822,7 +818,7 @@ public class MarkdownUtils implements IMarkdownUtils
 
     private static String spaces(int count)
     {
-        return " ".repeat(java.lang.Math.max(0, count));
+        return " ".repeat(java.lang.Math.max(0, count)); //$NON-NLS-1$
     }
 
     private static class DiffHunk

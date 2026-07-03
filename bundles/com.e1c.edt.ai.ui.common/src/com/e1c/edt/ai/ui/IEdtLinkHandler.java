@@ -5,8 +5,6 @@ package com.e1c.edt.ai.ui;
 
 import java.util.Optional;
 
-import org.eclipse.jface.text.IDocument;
-
 import com.e1c.edt.ai.AIContext;
 
 /**

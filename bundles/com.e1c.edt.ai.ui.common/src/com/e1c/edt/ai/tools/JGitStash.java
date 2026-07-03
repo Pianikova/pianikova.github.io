@@ -308,13 +308,13 @@ public class JGitStash implements IJGitCommand
 
     private static void deleteStashRef(Git git) throws Exception
     {
-        var update = git.getRepository().updateRef("refs/stash");
+        var update = git.getRepository().updateRef("refs/stash"); //$NON-NLS-1$
         update.setForceUpdate(true);
         var result = update.delete();
         if (result != RefUpdate.Result.FORCED && result != RefUpdate.Result.NO_CHANGE
             && result != RefUpdate.Result.NEW && result != RefUpdate.Result.FAST_FORWARD)
         {
-            throw new IllegalStateException("cannot delete refs/stash: " + result);
+            throw new IllegalStateException("cannot delete refs/stash: " + result); //$NON-NLS-1$
         }
     }
 

@@ -484,6 +484,7 @@ public class SearchTextMcpTool
         public Integer maxCount = DEFAULT_MAX_ELEMENTS;
     }
 
+    @SuppressWarnings("unused")
     private static class Element
     {
         @SerializedName("project_name")

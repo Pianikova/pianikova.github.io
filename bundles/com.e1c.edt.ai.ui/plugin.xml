@@ -2,29 +2,17 @@
 <?eclipse version="3.4"?>
 <plugin>
     
-    <extension point="org.eclipse.core.resources.markers" id="com.e1c.edt.ai.AIError">
+    <extension point="org.eclipse.core.resources.markers" id="com.e1c.edt.ai.AIError" name="AI Error">
         <super type="org.eclipse.core.resources.problemmarker"/>
-        <marker
-            type="com.e1c.edt.ai.AIError"
-            name="AI Error"
-            persistent="false">
-        </marker>
+        <persistent value="false"/>
     </extension>
-    <extension point="org.eclipse.core.resources.markers" id="com.e1c.edt.ai.AIWarning">
+    <extension point="org.eclipse.core.resources.markers" id="com.e1c.edt.ai.AIWarning" name="AI Warning">
         <super type="org.eclipse.core.resources.problemmarker"/>
-        <marker
-            type="com.e1c.edt.ai.AIWarning"
-            name="AI Warning"
-            persistent="false">
-        </marker>
+        <persistent value="false"/>
     </extension>
-    <extension point="org.eclipse.core.resources.markers" id="com.e1c.edt.ai.AIInfo">
+    <extension point="org.eclipse.core.resources.markers" id="com.e1c.edt.ai.AIInfo" name="AI Info">
         <super type="org.eclipse.core.resources.problemmarker"/>
-        <marker
-            type="com.e1c.edt.ai.AIInfo"
-            name="AI Info"
-            persistent="false">
-        </marker>
+        <persistent value="false"/>
     </extension>
     
     <extension point="org.eclipse.ui.editors.annotationTypes">
@@ -49,29 +37,14 @@
         <specification
               annotationType="com.e1c.edt.ai.marker.error"
               label="AI Error">
-            <visibility
-                verticalRuler="true"
-                overviewRuler="true"
-                text="true">
-            </visibility>
         </specification>
         <specification
               annotationType="com.e1c.edt.ai.marker.warning"
               label="AI Warning">
-            <visibility
-                verticalRuler="true"
-                overviewRuler="true"
-                text="true">
-            </visibility>
         </specification>
         <specification
               annotationType="com.e1c.edt.ai.marker.info"
               label="AI Info">
-            <visibility
-                verticalRuler="true"
-                overviewRuler="true"
-                text="true">
-            </visibility>
         </specification>
     </extension>
 
@@ -567,15 +540,6 @@
                 class="com.e1c.edt.ai.ui.preferences.ClientAIPreferencePageInitializer">
         </initializer>
     </extension>
-    
-    <extension
-         point="org.eclipse.e4.ui.css.swt.theme">
-      <stylesheet
-            uri="css/dark/edt-dark_preferencestyle.css">
-         <themeid
-               refid="org.eclipse.e4.ui.css.theme.e4_dark"></themeid>
-      </stylesheet>
-   </extension>
     <extension
           point="org.eclipse.xtext.builder.participant">
        <participant

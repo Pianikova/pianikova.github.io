@@ -45,6 +45,7 @@ import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
+@SuppressWarnings("restriction")
 public class FindMcpTool
     implements IMcpTool
 {
@@ -249,7 +250,6 @@ public class FindMcpTool
             final Object lock = new Object();
             ISearchResultListener listener = new ISearchResultListener()
             {
-                @SuppressWarnings("restriction")
                 @Override
                 public void searchResultChanged(SearchResultEvent e)
                 {
@@ -546,6 +546,7 @@ public class FindMcpTool
         public Integer maxCount = DEFAULT_MAX_ELEMENTS;
     }
 
+    @SuppressWarnings("unused")
     private static class Element
     {
         /**
@@ -592,7 +593,7 @@ public class FindMcpTool
             return false;
         }
         // Check for patterns that indicate file name search: *, *?, ?**
-        return pattern.contains("*") || pattern.contains("?");
+        return pattern.contains("*") || pattern.contains("?"); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     /**

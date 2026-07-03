@@ -42,7 +42,7 @@ class TestRestrictedTypesProvider
 		// Check for package prefixes (e.g., "java.io.*")
 		for (String restricted : restrictedTypes)
 		{
-			if (restricted.endsWith(".*"))
+			if (restricted.endsWith(".*")) //$NON-NLS-1$
 			{
 				String packagePrefix = restricted.substring(0, restricted.length() - 1);
 				if (typeName.startsWith(packagePrefix))

@@ -12,7 +12,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.BranchConfig.BranchRebaseMode;
 import org.eclipse.jgit.lib.RepositoryState;
 
-import com.e1c.edt.ai.tools.EditMcpTool;
 
 /**
  * Git pull command implementation

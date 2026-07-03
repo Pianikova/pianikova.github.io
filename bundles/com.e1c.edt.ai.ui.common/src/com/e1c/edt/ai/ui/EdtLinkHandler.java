@@ -34,7 +34,6 @@ public class EdtLinkHandler implements IEdtLinkHandler
 		this.linkProvider = linkProvider;
 	}
 
-    @SuppressWarnings("nls")
     @Override
 	public String formatInsertCodePath(AIContext ctx, String path)
 	{
