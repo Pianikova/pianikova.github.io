@@ -94,6 +94,7 @@ public class MCPToolsModule
         jshellBindingProviderBinder.addBinding().to(EclipsePlatformBindingProvider.class);
         var jshellManualProviderBinder = Multibinder.newSetBinder(binder(), IJShellManualProvider.class);
         jshellManualProviderBinder.addBinding().to(EclipsePlatformBindingProvider.class);
+        jshellManualProviderBinder.addBinding().to(EclipseManualCatalog.class);
 
         // JGit command implementations
         var jgitCommandBinder = Multibinder.newSetBinder(binder(), IJGitCommand.class);

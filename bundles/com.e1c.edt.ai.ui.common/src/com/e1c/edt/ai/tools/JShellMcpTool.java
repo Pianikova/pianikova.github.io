@@ -387,6 +387,18 @@ public class JShellMcpTool
 		description.append("\n\n**When to use:**");
 		description.append("\n- Use when other IDE tools (" + GitMcpTool.TOOL_NAME + " , " + ReadMcpTool.TOOL_NAME + ", etc.) cannot accomplish the task");
 
+        description.append("\n\n**IDE commands (PREFERRED path):**");
+        description.append("\n- IDE commands are executed by JAVA CODE via this tool (bindings `commandService`/`handlerService`),");
+        description.append(" discovered via " + GetCommandCategoriesMcpTool.TOOL_NAME + " and " + GetCommandsMcpTool.TOOL_NAME + ".");
+        description.append("\n- Before executing a command, call ").append(JShellManualMcpTool.TOOL_NAME)
+            .append(" and prefer the matching command scenario instead of improvising code:");
+        description.append("\n  - workflow of discovering and calling any command -> `eclipse_command_workflow`; invocation patterns -> `execute_command`");
+        description.append("\n  - save/close/refresh/build -> `eclipse_commands_files_build`");
+        description.append("\n  - undo/copy/paste/rename/find/views -> `eclipse_commands_edit_navigate`");
+        description.append("\n  - run last/debug/terminate -> `eclipse_commands_run_debug`");
+        description.append("\n  - in 1C:EDT (scope `edt`): launch 1C client -> `edt_commands_launch`; infobase update/dump/restore/Designer -> `edt_commands_infobase`;");
+        description.append(" XML/external export-import -> `edt_commands_export_import`; validation -> `edt_commands_validate`");
+
 		description.append("\n\n**Key requirements:**");
 		description.append("\n- Use ONLY complete statements with `;` (e.g., `int x = 10;`)");
 		description.append("\n- NO expressions like `x`, `2+2` - use `System.out.println()` instead");

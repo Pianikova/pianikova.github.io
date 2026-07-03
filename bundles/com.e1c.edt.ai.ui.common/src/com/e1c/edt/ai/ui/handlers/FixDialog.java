@@ -31,11 +31,22 @@ public class FixDialog
     @Inject
     public FixDialog(IPreferenceStore preferenceStore, IJson json)
     {
-        super(Display.getCurrent().getActiveShell());
+        super(currentActiveShell());
         Preconditions.checkNotNull(preferenceStore);
         Preconditions.checkNotNull(json);
         this.preferenceStore = preferenceStore;
         this.json = json;
+    }
+
+    /**
+     * Null-safe active shell lookup: the dialog may be instantiated by DI on a non-UI thread
+     * (e.g. lazy command-handler creation), where {@code Display.getCurrent()} is {@code null}.
+     * A {@code null} parent is fine — the shell is only needed when the dialog is shown.
+     */
+    private static Shell currentActiveShell()
+    {
+        var display = Display.getCurrent();
+        return display != null ? display.getActiveShell() : null;
     }
 
     @Override

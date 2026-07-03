@@ -194,6 +194,9 @@ public class GetCommandCategoriesMcpTool
         description.append("\n- List commands: `" + GetCommandsMcpTool.TOOL_NAME + "`.");
         description.append("\n- Execute command: use `" + JShellMcpTool.TOOL_NAME
             + "` (scope `eclipse`, manual `execute_command`).");
+        description.append("\n- Before executing, call `" + JShellManualMcpTool.TOOL_NAME
+            + "`: `eclipse_command_workflow` describes the full discover-and-execute workflow;"
+            + " themed command references exist (`eclipse_commands_*`, in 1C:EDT `edt_commands_*`).");
         description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);

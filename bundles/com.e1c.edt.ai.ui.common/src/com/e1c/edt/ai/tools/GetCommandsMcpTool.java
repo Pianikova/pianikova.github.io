@@ -34,6 +34,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.ui.IDispatcher;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -132,16 +133,20 @@ public class GetCommandsMcpTool
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IMarkdownUtils markdownUtils;
+    private final IDispatcher dispatcher;
 
     @Inject
-    public GetCommandsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils)
+    public GetCommandsMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils,
+        IDispatcher dispatcher)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(dispatcher);
         this.json = json;
         this.messageFactory = messageFactory;
         this.markdownUtils = markdownUtils;
+        this.dispatcher = dispatcher;
         spec = createSpecification();
     }
 
@@ -181,6 +186,25 @@ public class GetCommandsMcpTool
                 throw new ToolException("Operation was cancelled before execution.", null, ToolErrorType.RETRYABLE);
             }
 
+            // Enumerate on the UI thread: Command.isEnabled() may lazily instantiate handlers
+            // and evaluate enablement expressions that require the UI thread.
+            var commands = dispatcher.dispatch(() -> collectCommands(categoryId))
+                .orElseThrow(() -> new ToolException("Cannot list commands.", null, ToolErrorType.RETRYABLE));
+
+            var content = json.serialize(commands.stream().sorted(COMPARATOR).collect(Collectors.toList()));
+            // Add response markdown
+
+            int commandCount = commands.size();
+            String styledCommandCount = markdownUtils.createStyledText(String.valueOf(commandCount),
+                TextColor.GREEN, FontWeight.BOLD, false);
+            details.responseMarkdown = MessageFormat.format(Messages.CommandsLoadedTemplate, styledCommandCount);
+
+            return messageFactory.createMessage(this, call, content, details);
+        });
+    }
+
+    private ArrayList<CommandDescription> collectCommands(String categoryId)
+    {
             var commandService = PlatformUI.getWorkbench().getService(ICommandService.class);
             var bindingService = PlatformUI.getWorkbench().getService(IBindingService.class);
             var commands = new ArrayList<CommandDescription>();
@@ -296,16 +320,7 @@ public class GetCommandsMcpTool
                 commands.add(dst);
             }
 
-            var content = json.serialize(commands.stream().sorted(COMPARATOR).collect(Collectors.toList()));
-            // Add response markdown
-
-            int commandCount = commands.size();
-            String styledCommandCount = markdownUtils.createStyledText(String.valueOf(commandCount),
-                TextColor.GREEN, FontWeight.BOLD, false);
-            details.responseMarkdown = MessageFormat.format(Messages.CommandsLoadedTemplate, styledCommandCount);
-
-            return messageFactory.createMessage(this, call, content, details);
-        });
+            return commands;
     }
 
     @SuppressWarnings("nls")
@@ -328,6 +343,9 @@ public class GetCommandsMcpTool
         description.append("\n- List categories: `" + GetCommandCategoriesMcpTool.TOOL_NAME + "`.");
         description.append("\n- Execute command: use `" + JShellMcpTool.TOOL_NAME
             + "` (scope `eclipse`, manual `execute_command`).");
+        description.append("\n- Before executing, call `" + JShellManualMcpTool.TOOL_NAME
+            + "`: `eclipse_command_workflow` describes the full discover-and-execute workflow;"
+            + " themed command references exist (`eclipse_commands_*`, in 1C:EDT `edt_commands_*`).");
         description.append("\n\nExample:");
         description.append("\n  Q: "); description.append(QuestionExample);
         description.append("\n  A: "); description.append(AnswerExample);

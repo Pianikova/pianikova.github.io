@@ -1,5 +1,55 @@
 [
   {
+    "id": "edt_commands_launch",
+    "scope": "edt",
+    "category": "misc",
+    "title": "EDT Commands: Launch / Debug 1C Client",
+    "summary": "Run or debug the 1C client for a project via EDT launch-shortcut commands, executed by Java code in JShell.",
+    "guide": "workflows/dev/edt_commands_launch.md",
+    "bindings": ["commandService", "handlerService", "workspaceRoot"],
+    "keywords": ["launch", "run", "debug", "client", "thin client", "запустить", "запуск", "отладка", "отладить", "клиент", "тонкий клиент", "толстый клиент", "веб-клиент", "запустить конфигурацию", "запустить приложение"]
+  },
+  {
+    "id": "edt_commands_infobase",
+    "scope": "edt",
+    "category": "misc",
+    "title": "EDT Commands: Infobase Operations",
+    "summary": "Update the infobase from the project, open Designer, dump/restore .dt, export .cf — via EDT commands executed in JShell.",
+    "guide": "workflows/dev/edt_commands_infobase.md",
+    "bindings": ["commandService", "handlerService", "workspaceRoot"],
+    "keywords": ["infobase", "update infobase", "designer", "dump", "restore", "информационная база", "информационную базу", "иб", "обнови", "обновить", "обновление", "обнови иб", "обнови базу", "обнови информационную базу", "обновить иб", "обновить базу", "обновить информационную базу", "конфигуратор", "выгрузить dt", "загрузить dt", "выгрузить cf", "база данных"]
+  },
+  {
+    "id": "edt_commands_export_import",
+    "scope": "edt",
+    "category": "misc",
+    "title": "EDT Commands: Export / Import XML and External Objects",
+    "summary": "Export/import Designer-format XML and external reports/processors via EDT commands (wizard caution).",
+    "guide": "workflows/dev/edt_commands_export_import.md",
+    "bindings": ["commandService", "handlerService", "workspaceRoot"],
+    "keywords": ["export", "import", "xml", "external", "выгрузить", "выгрузка", "загрузить", "загрузка", "импорт", "экспорт", "файлы конфигурации", "внешняя обработка", "внешний отчет", "конфигуратор"]
+  },
+  {
+    "id": "edt_commands_bsl_edit",
+    "scope": "edt",
+    "category": "misc",
+    "title": "EDT Commands: BSL Editing, Refactoring, Navigation",
+    "summary": "Rename/extract/wrap BSL code, generate comments, call hierarchy, open objects, find references — via EDT commands (mostly dialog-based).",
+    "guide": "workflows/dev/edt_commands_bsl_edit.md",
+    "bindings": ["commandService", "handlerService", "workspaceRoot"],
+    "keywords": ["bsl", "рефакторинг", "переименовать", "переименовать метод", "переименовать элемент", "извлечь метод", "извлечь переменную", "обернуть в область", "комментарий метода", "иерархия вызовов", "открыть объект", "найти ссылки", "перейти к строке", "обновить исходники", "rename", "extract method", "call hierarchy", "find references", "navigate", "refactor"]
+  },
+  {
+    "id": "edt_commands_validate",
+    "scope": "edt",
+    "category": "misc",
+    "title": "EDT Commands: Validate Configuration",
+    "summary": "Trigger validation/checks via EDT commands and read results with the GetMarkers tool.",
+    "guide": "workflows/dev/edt_commands_validate.md",
+    "bindings": ["commandService", "handlerService", "workspaceRoot"],
+    "keywords": ["validate", "validation", "check", "checks", "markers", "errors", "проверь", "проверить", "проверка", "проверьте", "валидация", "валидировать", "ошибки", "маркеры", "конфигурация", "проверь конфигурацию", "проверить конфигурацию", "запусти проверку", "запустить проверки"]
+  },
+  {
     "id": "add_document_registers",
     "scope": "edt",
     "category": "composite",

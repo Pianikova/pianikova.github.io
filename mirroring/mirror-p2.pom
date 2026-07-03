@@ -12,7 +12,7 @@
   <properties>
       <tycho-version>2.7.5</tycho-version>
       <destination>${project.build.directory}/repo</destination>
-      <eclipse.p2.url>http://npya:Catcat01@artifactory.boreas.dept07/artifactory/p2-release-public/g5/release/codeai/1.0.4/</eclipse.p2.url>
+      <eclipse.p2.url>http://npya:Catcat01@artifactory.boreas.dept07/artifactory/p2-release-public/g5/release/codeai/1.0.5/</eclipse.p2.url>
       <p2.name>1C:Warkmate repository</p2.name>
   </properties>
 

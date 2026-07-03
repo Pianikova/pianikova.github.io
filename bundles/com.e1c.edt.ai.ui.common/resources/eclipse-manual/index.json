@@ -1,0 +1,42 @@
+[
+  {
+    "id": "eclipse_command_workflow",
+    "scope": "eclipse",
+    "category": "reference",
+    "title": "Discover and Execute IDE Commands (Workflow)",
+    "summary": "End-to-end workflow: find a command with GetCommandCategories/GetCommands, then execute it via Java code in JShell.",
+    "guide": "workflows/eclipse_command_workflow.md",
+    "bindings": ["commandService", "handlerService", "workbench"],
+    "keywords": ["command", "commands", "workflow", "execute", "run command", "ide action", "команда", "команды", "выполнить команду", "вызвать команду", "как выполнить"]
+  },
+  {
+    "id": "eclipse_commands_files_build",
+    "scope": "eclipse",
+    "category": "reference",
+    "title": "File, Editor and Build Commands",
+    "summary": "Which Eclipse command to use for saving, closing, refreshing, and building — and how to call it from JShell.",
+    "guide": "workflows/eclipse_commands_files_build.md",
+    "bindings": ["commandService", "handlerService", "workbench", "workspaceRoot"],
+    "keywords": ["save", "save all", "close", "refresh", "build", "clean", "сохранить", "сохранить все", "закрыть", "обновить", "собрать", "сборка", "построить", "очистить", "пересобрать"]
+  },
+  {
+    "id": "eclipse_commands_edit_navigate",
+    "scope": "eclipse",
+    "category": "reference",
+    "title": "Edit, Navigation and View Commands",
+    "summary": "Which Eclipse command to use for undo/redo, clipboard, rename, find/replace, opening views — and how to call it from JShell.",
+    "guide": "workflows/eclipse_commands_edit_navigate.md",
+    "bindings": ["commandService", "handlerService", "workbench"],
+    "keywords": ["undo", "redo", "copy", "paste", "delete", "rename", "find", "replace", "view", "show view", "отменить", "повторить", "копировать", "вставить", "удалить", "переименовать", "найти", "заменить", "открыть представление", "панель"]
+  },
+  {
+    "id": "eclipse_commands_run_debug",
+    "scope": "eclipse",
+    "category": "reference",
+    "title": "Run / Debug / Terminate Commands",
+    "summary": "Which Eclipse command to use to repeat the last launch, debug, or terminate processes — and how to call it from JShell.",
+    "guide": "workflows/eclipse_commands_run_debug.md",
+    "bindings": ["commandService", "handlerService"],
+    "keywords": ["run", "debug", "run last", "terminate", "stop", "kill", "запустить", "запуск", "отладка", "отладить", "останови", "остановить", "завершить", "прервать", "стоп", "процесс"]
+  }
+]
