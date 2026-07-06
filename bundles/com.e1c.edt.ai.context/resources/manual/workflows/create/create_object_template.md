@@ -8,6 +8,26 @@ body. The `Template` child metadata is stored inside the owner `.mdo`; there is 
 (data sets, cells) afterwards, use `fill_template_content`.
 After the default body exists, targeted changes may be made with `Edit` on the existing generated
 template/body files. Do not use `Write` to create owner `.mdo`, `.dcs`, `.mxl`, or `.mxlx` files.
+First consult `template_type_matrix` when the prompt names a specific kind of макет. The safe body
+creation rules differ by type.
+
+### First decision by body kind
+
+- If the requested template is `SPREADSHEET_DOCUMENT` or `DATA_COMPOSITION_SCHEMA`, create the child
+  metadata and blank body through the EDT model API in one BM transaction.
+- If the requested template is `TEXT_DOCUMENT`, `HTML_DOCUMENT`, `BINARY_DATA`,
+  `GEOGRAPHICAL_SCHEMA`, `GRAPHICAL_SCHEMA`, `DATA_COMPOSITION_APPEARANCE_TEMPLATE`, or `ADD_IN`
+  and the prompt does not provide real body content/source file, do not call JShell and do not
+  create metadata. Ask the user for the source file/content.
+- Russian prompt terms that trigger this source-backed stop rule: `двоичные данные`,
+  `текстовый документ`, `HTML документ`, `НТМЛ документ`, `географическая схема`,
+  `графическая схема`, `макет оформления компоновки данных`, `внешняя компонента`.
+- A metadata-only source-backed template with `GetMarkers=0` is still incomplete and must not be
+  reported as successful.
+- Never create a metadata-only source-backed template unless the user explicitly says that a stub
+  without `Template.<ext>` is acceptable.
+- Never use `Write` to create an empty or fake `Template.txt`, `Template.htmldoc`, `Template.bin`,
+  `Template.geos`, `Template.scheme`, `Template.dcsat`, or `Template.addin`.
 
 **Creation vs refinement policy:** create and register templates through EDT API in a BM
 transaction. Let EDT create the owner child, default body, external-property FQN, and disk files.
@@ -42,9 +62,18 @@ text-level fixes. `Write` is not a template creation mechanism.
   (`Unsupported embedded object type ... EObjectImpl`); for `DATA_COMPOSITION_SCHEMA` →
   `dcsFactory.createDataCompositionSchema()`): `template.setTemplate(content)` then
   `transaction.attachTopObject((IBmObject)content, fqnGenerator.generateExternalPropertyFqn(template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE))`.
-  Creating only the `Template` metadata leaves the макет **without a body file on disk** — that is
-  incomplete. (For non-EMF types like `TEXT_DOCUMENT`/`HTML_DOCUMENT`/`BINARY_DATA`, create just the
-  metadata and write the body with the file tools, or leave it empty.)
+  Creating only the `Template` metadata leaves these макеты **without a body file on disk** — that is
+  incomplete.
+- ✅ **For source-backed template types** (`TEXT_DOCUMENT`, `HTML_DOCUMENT`, `BINARY_DATA`,
+  `GEOGRAPHICAL_SCHEMA`, `GRAPHICAL_SCHEMA`, `DATA_COMPOSITION_APPEARANCE_TEMPLATE`, `ADD_IN`), set
+  the matching `TemplateType` only when a real body source is available or the user explicitly
+  accepts a metadata-only stub. Without that source/acceptance, stop before JShell and ask. Do not
+  invent placeholder bodies. Expected body names from ERP2:
+  `Template.txt`, `Template.htmldoc`, `Template.bin`, `Template.geos`, `Template.scheme`,
+  `Template.dcsat`, `Template.addin`.
+- Do not adapt the spreadsheet/DCS executable example by merely changing
+  `template.setTemplateType(...)` to a source-backed type. That creates an incomplete
+  metadata-only template.
 - ✅ **Check existence first** via `owner.getTemplates()`; do not recreate an existing template.
 - ✅ **Set a UUID** (`template.setUuid(UUID.randomUUID())`) — missing UUID causes SU45.
 - ✅ **Set a `TemplateType`** that matches the intended content. Most common:
@@ -68,6 +97,9 @@ text-level fixes. `Write` is not a template creation mechanism.
 `SPREADSHEET_DOCUMENT`, `BINARY_DATA`, `ACTIVE_DOCUMENT`, `HTML_DOCUMENT`, `TEXT_DOCUMENT`,
 `GEOGRAPHICAL_SCHEMA`, `DATA_COMPOSITION_SCHEMA`, `DATA_COMPOSITION_APPEARANCE_TEMPLATE`,
 `GRAPHICAL_SCHEMA`, `ADD_IN`.
+
+Use Java enum constants in JShell (`TemplateType.TEXT_DOCUMENT`), not the XML values stored in
+`.mdo` (`TextDocument`). See `template_type_matrix` for the full mapping.
 
 ### Worked example — spreadsheet template on Catalog.Products
 
@@ -133,6 +165,8 @@ file. The only required external validation is `GetMarkers` on the owner `.mdo`.
 
 For a `DATA_COMPOSITION_SCHEMA` template, use `dcsFactory.createDataCompositionSchema()` as the body
 (writes `Template.dcs`). To add real content (data sets, cells) afterwards, run `fill_template_content`.
+For text/html/binary/geo/graphical/DCS appearance/add-in templates, do not use this spreadsheet/DCS
+body snippet; ask for or reuse a real source body.
 
 ### Required post-check
 

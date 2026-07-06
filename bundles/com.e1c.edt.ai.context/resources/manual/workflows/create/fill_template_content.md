@@ -1,7 +1,8 @@
-## Safe Workflow: Fill Template content (СКД / табличный документ)
+## Safe Workflow: Fill Template content (СКД / табличный документ / source-backed bodies)
 
 Attaches a content object to an existing `Template`/`CommonTemplate` whose `TemplateType` matches.
 Run after `create_object_template` (or `create_common_template`).
+Consult `template_type_matrix` before choosing the content path.
 
 ### Hard rules — never violate
 
@@ -68,9 +69,21 @@ produced file on disk.
 > `Unsupported embedded object type ... EObjectImpl`. Use `SheetFactory.createSpreadsheetDocument()`
 > (package `com._1c.g5.v8.dt.moxel.sheet`, pre-imported in the `edt` scope), which initialises them.
 
-Other types (`TEXT_DOCUMENT`, `HTML_DOCUMENT`, `BINARY_DATA`, …) are stored as plain
-text/binary resources — for those, create the `Template` metadata with the right `TemplateType`
-and write the body file with the file tools, rather than via these EMF factories.
+Other types are source-backed resources:
+
+| TemplateType | Body file | Rule |
+|--------------|-----------|------|
+| `TEXT_DOCUMENT` | `Template.txt` | Requires explicit text content/source. |
+| `HTML_DOCUMENT` | `Template.htmldoc` | Requires explicit HTML content/source. |
+| `BINARY_DATA` | `Template.bin` | Requires a real binary source. |
+| `GEOGRAPHICAL_SCHEMA` | `Template.geos` | Requires a real geographical schema source/tool output. |
+| `GRAPHICAL_SCHEMA` | `Template.scheme` | Requires a real graphical schema source/tool output. |
+| `DATA_COMPOSITION_APPEARANCE_TEMPLATE` | `Template.dcsat` | Requires a real DCS appearance template source. |
+| `ADD_IN` | `Template.addin` | Requires a real external component file. |
+
+For those types, do not use DCS/Moxel factories and do not invent placeholder body files. If the
+user did not provide body content/source, stop and ask for it or report that only metadata can be
+created now.
 
 ### Example — DataCompositionSchema content
 
@@ -175,4 +188,5 @@ restricted. Do not call `Glob` for template verification.
 If the file is missing or markers appear, the template metadata still exists — report that and
 rerun this scenario only after fixing the concrete JShell/API error that prevented
 `attachTopObject(...)` from committing. Do not tell the user to fill the body manually for
-`DATA_COMPOSITION_SCHEMA` or `SPREADSHEET_DOCUMENT`; those content types are covered here.
+`DATA_COMPOSITION_SCHEMA` or `SPREADSHEET_DOCUMENT`; those content types are covered here. For
+source-backed types, be explicit that a real source file/content is required.
