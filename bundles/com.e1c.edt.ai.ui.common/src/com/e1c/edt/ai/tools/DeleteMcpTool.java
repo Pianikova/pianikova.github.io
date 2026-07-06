@@ -17,6 +17,7 @@ import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
+import com.e1c.edt.ai.IReadOnlyProjectGuard;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
@@ -62,11 +63,13 @@ public class DeleteMcpTool
     private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final IReadOnlyProjectGuard readOnlyProjectGuard;
 
     @Inject
     public DeleteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport,
+        IReadOnlyProjectGuard readOnlyProjectGuard)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -75,6 +78,7 @@ public class DeleteMcpTool
         Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(readOnlyProjectGuard);
 
         this.json = json;
         this.messageFactory = messageFactory;
@@ -83,6 +87,7 @@ public class DeleteMcpTool
         this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.readOnlyProjectGuard = readOnlyProjectGuard;
 
         spec = createSpecification();
     }
@@ -188,6 +193,8 @@ public class DeleteMcpTool
                         ToolErrorType.RETRYABLE);
             }
             }
+
+            readOnlyProjectGuard.checkWritable(project);
 
             var projectFile = projectTools.getProjectFile(project, path);
             if (!projectFile.isPresent())

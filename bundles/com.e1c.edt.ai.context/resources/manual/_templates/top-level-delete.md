@@ -19,6 +19,7 @@ manual BM task that removes from `Configuration.${collection}` and calls
 
 ### Rules
 
+- ⛔ Before deleting, confirm the target project is writable: `GetProjects` must show `read_only: false`. If `read_only: true` (full vendor support, `object_belonging: Adopted`), do NOT run this workflow — including via JShell — see `readonly_configuration`.
 - Do not use `EcoreUtil.delete()` for top-level metadata objects.
 - Do not use `configuration.${collection}.remove(object)` +
   `transaction.detachTopObject((IBmObject)object)` for JShell CRUD deletes.

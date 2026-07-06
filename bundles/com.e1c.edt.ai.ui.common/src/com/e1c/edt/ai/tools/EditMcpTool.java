@@ -18,6 +18,7 @@ import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IContentSourceProvider;
 import com.e1c.edt.ai.IEditingSupport;
+import com.e1c.edt.ai.IReadOnlyProjectGuard;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
@@ -71,6 +72,7 @@ public class EditMcpTool
     private final IContentReplacer contentReplacer;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final IReadOnlyProjectGuard readOnlyProjectGuard;
     private final IDiffPreviewStore diffPreviewStore;
     private final IDiffPreviewOpener diffPreviewOpener;
     private final ISettings settings;
@@ -80,8 +82,8 @@ public class EditMcpTool
         IContentSourceProvider contentSourceProvider,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
         IProjectTools projectTools, IDispatcher dispatcher, IContentReplacer contentReplacer, IMarkdownUtils markdownUtils,
-        IEditingSupport editingSupport, IDiffPreviewStore diffPreviewStore, IDiffPreviewOpener diffPreviewOpener,
-        ISettings settings)
+        IEditingSupport editingSupport, IReadOnlyProjectGuard readOnlyProjectGuard, IDiffPreviewStore diffPreviewStore,
+        IDiffPreviewOpener diffPreviewOpener, ISettings settings)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -93,6 +95,7 @@ public class EditMcpTool
         Preconditions.checkNotNull(contentReplacer);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(readOnlyProjectGuard);
         Preconditions.checkNotNull(diffPreviewStore);
         Preconditions.checkNotNull(diffPreviewOpener);
         Preconditions.checkNotNull(settings);
@@ -107,6 +110,7 @@ public class EditMcpTool
         this.contentReplacer = contentReplacer;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.readOnlyProjectGuard = readOnlyProjectGuard;
         this.diffPreviewStore = diffPreviewStore;
         this.diffPreviewOpener = diffPreviewOpener;
         this.settings = settings;
@@ -288,6 +292,8 @@ public class EditMcpTool
                     throw new ToolException("Cannot open the project \"" + finalProjectName + "\"", error, ToolErrorType.RETRYABLE);
                 }
             }
+
+            readOnlyProjectGuard.checkWritable(project);
 
             var projectFile = projectTools.getProjectFile(project, path);
             if (!projectFile.isPresent())

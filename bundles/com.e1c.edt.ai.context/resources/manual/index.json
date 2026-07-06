@@ -2217,6 +2217,40 @@
     ]
   },
   {
+    "id": "readonly_configuration",
+    "scope": "edt",
+    "category": "reference",
+    "title": "Read-Only Configuration (Full Vendor Support)",
+    "summary": "Detect configurations on full vendor support (objectBelonging=Adopted) and refuse all mutations; extensions stay editable.",
+    "guide": "workflows/reference/readonly_configuration.md",
+    "bindings": [
+      "workspaceRoot",
+      "projectManager"
+    ],
+    "keywords": [
+      "read-only",
+      "readonly",
+      "read only",
+      "full support",
+      "vendor support",
+      "adopted",
+      "objectBelonging",
+      "support mode",
+      "enable editing",
+      "поддержка",
+      "полная поддержка",
+      "на поддержке",
+      "поддержка поставщика",
+      "защита поставщика",
+      "конфигурация поставщика",
+      "снять с поддержки",
+      "снять с полной поддержки",
+      "включить возможность изменения",
+      "редактирование запрещено",
+      "нельзя изменять"
+    ]
+  },
+  {
     "id": "enhanced_catalog_creation",
     "scope": "edt",
     "category": "enhanced",

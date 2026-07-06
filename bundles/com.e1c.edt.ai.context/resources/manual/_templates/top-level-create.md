@@ -43,6 +43,7 @@ ${setupBlock}        String fqn = fqnGenerator.generateStandaloneObjectFqn(${var
 ```
 
 ### Rules
+- ⛔ Before mutating, confirm the target project is writable: `GetProjects` must show `read_only: false`. If `read_only: true` (full vendor support, `object_belonging: Adopted`), do NOT run this workflow — including via JShell — see `readonly_configuration`.
 - ⛔ **Use ONLY `bmModel.getGlobalContext().execute(new AbstractBmTask<...>(){...})` for create/edit.**
   It auto-saves changed/attached objects to disk on commit. **NEVER** use
   `modelManager.executeReadWriteTask(project, new IBmSingleNamespaceTask<...>(){...})` (or any other

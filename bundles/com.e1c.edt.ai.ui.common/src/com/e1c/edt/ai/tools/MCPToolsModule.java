@@ -9,6 +9,7 @@ import com.e1c.edt.ai.IMarkersProvider;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpTools;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IReadOnlyProjectGuard;
 import com.e1c.edt.ai.McpTools;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -21,6 +22,7 @@ public class MCPToolsModule
     protected void configure()
     {
         bind(IMcpTools.class).to(McpTools.class).in(Singleton.class);
+        bind(IReadOnlyProjectGuard.class).to(ReadOnlyProjectGuard.class).in(Singleton.class);
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
         toolBinder.addBinding().to(ExecuteMcpTool.class);
         toolBinder.addBinding().to(GitMcpTool.class);

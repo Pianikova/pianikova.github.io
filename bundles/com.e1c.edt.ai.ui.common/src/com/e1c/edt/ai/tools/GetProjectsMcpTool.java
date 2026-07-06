@@ -17,6 +17,7 @@ import org.eclipse.core.runtime.CoreException;
 
 import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMarkdownUtils;
@@ -52,6 +53,7 @@ public class GetProjectsMcpTool
         + "    \"is_open\": true,\n"
         + "    \"exists\": true,\n"
         + "    \"is_current\": true,\n"
+        + "    \"read_only\": false,\n"
         + "    \"session_id\": \"A:dd933ffc-a55d-4fef-b6bf-37d66e184209\",\n"
         + "    \"comment\": \"Sample project\",\n"
         + "    \"build_commands\": [\n"
@@ -65,6 +67,7 @@ public class GetProjectsMcpTool
         + "      \"1C project details\": {\n"
         + "        \"name\": \"Warehouse\",\n"
         + "        \"type\": \"Configuration\",\n"
+        + "        \"object_belonging\": \"Native\",\n"
         + "        \"script_language\": \"English\",\n"
         + "        \"version\": \"1.1.3\",\n"
         + "        \"platform_version\": \"8.3.24\",\n"
@@ -87,11 +90,12 @@ public class GetProjectsMcpTool
     private final ISessionService sessionService;
     private final Set<IProjectDetailsProvider> projectDetailsProviders;
     private final IMarkdownUtils markdownUtils;
+    private final IEditingSupport editingSupport;
 
     @Inject
     public GetProjectsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
         ISessionService sessionService, Set<IProjectDetailsProvider> projectDetailsProviders,
-        IMarkdownUtils markdownUtils)
+        IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
@@ -99,6 +103,7 @@ public class GetProjectsMcpTool
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(projectDetailsProviders);
         Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(editingSupport);
 
         this.log = log;
         this.json = json;
@@ -106,6 +111,7 @@ public class GetProjectsMcpTool
         this.sessionService = sessionService;
         this.projectDetailsProviders = projectDetailsProviders;
         this.markdownUtils = markdownUtils;
+        this.editingSupport = editingSupport;
 
         spec = createSpecification();
     }
@@ -163,6 +169,7 @@ public class GetProjectsMcpTool
                 projectInfo.details = new HashMap<>();
                 if (project.isOpen() && project.exists())
                 {
+                    projectInfo.readOnly = editingSupport.isReadOnly(project);
                     try
                     {
                         var description = project.getDescription();
@@ -277,6 +284,9 @@ public class GetProjectsMcpTool
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use this tool to choose a target project or infer scope from open files.");
         description.append("\n- `is_current` indicates a project with open files (likely in focus).");
+        description.append("\n- `read_only` = true means the 1C configuration is on full vendor support"
+            + " (objectBelonging = Adopted): the project must NOT be modified (no Write/Edit/Delete, no JShell"
+            + " mutations) until the user enables editing (switches the configuration back to Native).");
         description.append("\n\nResponse includes:");
         description.append("\n- Project name and absolute path");
         description.append("\n- Description from .project <comment>");
@@ -325,6 +335,10 @@ public class GetProjectsMcpTool
         /* Current project. */
         @SerializedName("is_current")
         public Boolean isCurrent;
+
+        /* Project is read-only (1C configuration on full vendor support, objectBelonging = Adopted). */
+        @SerializedName("read_only")
+        public Boolean readOnly;
 
         /* Session id. */
         @SerializedName("session_id")

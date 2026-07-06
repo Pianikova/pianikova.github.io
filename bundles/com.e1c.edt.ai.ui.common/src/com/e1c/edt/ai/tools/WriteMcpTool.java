@@ -25,6 +25,7 @@ import com.e1c.edt.ai.FontWeight;
 import com.e1c.edt.ai.ICancellationProgressMonitor;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
+import com.e1c.edt.ai.IReadOnlyProjectGuard;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IMarkdownUtils;
@@ -75,12 +76,14 @@ public class WriteMcpTool
     private final IProjectTools projectTools;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final IReadOnlyProjectGuard readOnlyProjectGuard;
     private final ILog log;
 
     @Inject
     public WriteMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
         Provider<ICancellationProgressMonitor> cancellationProgressMonitor, IFileSystem fileSystem,
-        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport, ILog log)
+        IProjectTools projectTools, IMarkdownUtils markdownUtils, IEditingSupport editingSupport,
+        IReadOnlyProjectGuard readOnlyProjectGuard, ILog log)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
@@ -89,6 +92,7 @@ public class WriteMcpTool
         Preconditions.checkNotNull(projectTools);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(readOnlyProjectGuard);
         Preconditions.checkNotNull(log);
 
         this.json = json;
@@ -98,6 +102,7 @@ public class WriteMcpTool
         this.projectTools = projectTools;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.readOnlyProjectGuard = readOnlyProjectGuard;
         this.log = log;
 
         spec = createSpecification();
@@ -206,6 +211,8 @@ public class WriteMcpTool
                             ToolErrorType.RETRYABLE);
                     }
                 }
+
+                readOnlyProjectGuard.checkWritable(project);
 
                 var optionalProjectFile = projectTools.getProjectFile(project, path);
                 if (optionalProjectFile.isPresent())
