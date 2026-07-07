@@ -6,6 +6,16 @@ metadata object, for example "доработать справочник Клие
 
 ### Hard rule
 
+If the request mentions a `макет`, `template`, `Template`, `TemplateType`, `печатная форма`,
+`табличный документ`, `схема компоновки данных`, `СКД`, `текстовый документ`, `HTML документ`,
+`двоичные данные`, `географическая схема`, `графическая схема`,
+`макет оформления компоновки данных`, or `внешняя компонента`, do not use this workflow. Stop and
+switch to `create_object_template` for object-owned templates or `create_common_template` /
+`create_source_backed_template` for common/source-backed templates. Never add a
+`mdFactory.createTemplate()` child from this generic edit workflow: source-backed templates need a
+real body file first, and spreadsheet/DCS templates need `setTemplate(...)` plus
+`attachTopObject(...)` in the template workflow.
+
 Do not answer "внесите изменения самостоятельно" for supported metadata
 children such as `CatalogAttribute`, `DocumentAttribute`,
 `TabularSectionAttribute`, `InformationRegisterAttribute`,

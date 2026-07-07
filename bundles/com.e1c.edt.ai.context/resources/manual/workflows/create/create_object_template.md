@@ -13,6 +13,12 @@ creation rules differ by type.
 
 ### First decision by body kind
 
+- STOP before any JShell when the requested type is source-backed and the user did not provide a
+  real source file/content. This applies even for object-owned templates such as
+  "для авторов создай макет текстового документа". The only correct result is a question asking for
+  `Template.txt`, `Template.htmldoc`, `Template.bin`, `Template.geos`, `Template.scheme`,
+  `Template.dcsat`, or `Template.addin`. Do not create the `<templates>` entry, do not create an
+  empty body file, and do not report a metadata-only result as success.
 - If the requested template is `SPREADSHEET_DOCUMENT` or `DATA_COMPOSITION_SCHEMA`, create the child
   metadata and blank body through the EDT model API in one BM transaction.
 - If the requested template is `TEXT_DOCUMENT`, `HTML_DOCUMENT`, `BINARY_DATA`,
@@ -164,7 +170,12 @@ When this JShell call prints `Body exists: true`, do not run `Glob` or `Read` to
 file. The only required external validation is `GetMarkers` on the owner `.mdo`.
 
 For a `DATA_COMPOSITION_SCHEMA` template, use `dcsFactory.createDataCompositionSchema()` as the body
-(writes `Template.dcs`). To add real content (data sets, cells) afterwards, run `fill_template_content`.
+(writes `Template.dcs`). This creates a valid empty DCS. For a meaningful DCS with data sets,
+queries, settings, or resources, ALWAYS load the `fill_template_content` manual first — it contains
+the canonical `Template.dcs` skeleton and the "Minimum requirements for a MEANINGFUL DCS" checklist
+(declared dataSource referenced by name, settingsVariant with selection, no bogus parameters). Do
+not guess DCS EMF classes in JShell: either copy a known-good `.dcs` source, use the canonical
+skeleton, or verify the exact DCS API with JShellReflection before coding it.
 For text/html/binary/geo/graphical/DCS appearance/add-in templates, do not use this spreadsheet/DCS
 body snippet; ask for or reuse a real source body.
 

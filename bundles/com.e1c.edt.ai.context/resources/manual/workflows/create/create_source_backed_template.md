@@ -39,7 +39,20 @@ or the user explicitly requested a metadata-only stub using those words. Use `cr
 `CommonTemplate`, or `create_object_template` for an owner template. Then attach/copy the real body
 according to the source format and validate the `.mdo` plus body file.
 
-See `template_type_matrix` for exact `TemplateType`, `.mdo` value, and `Template.<ext>` mapping.
+The body file name on disk is FIXED by convention: always `Template.<ext>` from
+`template_type_matrix` (`Template.txt`, `Template.htmldoc`, `Template.bin`, `Template.geos`,
+`Template.scheme`, `Template.dcsat`, `Template.addin`). NEVER name the body after the template
+(e.g. `МойМакет.addin` is wrong) — EDT resolves the body only at `Template.<ext>`, any other file
+name leaves the макет without a body. The source file the user provides may have any name; the
+COPY TARGET must be `Template.<ext>`:
+
+- object-owned: `src/<OwnerFolder>/<OwnerName>/Templates/<TemplateName>/Template.<ext>`
+- common: `src/CommonTemplates/<TemplateName>/Template.<ext>`
+
+See `template_type_matrix` for exact `TemplateType`, `.mdo` value, and `Template.<ext>` mapping,
+and its "Body file formats" section for what each body actually contains (root XML element or
+binary) and which bodies can never be composed by the agent (`bin`, `addin`, `geos`, `scheme`,
+`dcsat` — copy-only).
 
 ### CommonTemplate with source file: exact JShell path
 

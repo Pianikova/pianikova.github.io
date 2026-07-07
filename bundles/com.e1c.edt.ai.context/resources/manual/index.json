@@ -669,7 +669,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create Common Template",
-    "summary": "Create CommonTemplate with a generated blank body only for spreadsheet/DCS; for AddIn, binary, geo, graphical, HTML, or text templates ask for the real source body first.",
+    "summary": "Create a top-level CommonTemplate only when the prompt says common/shared/общий макет; object-owned макеты must use create_object_template. Generate a blank body only for spreadsheet/DCS; for AddIn, binary, geo, graphical, HTML, or text templates ask for the real source body first.",
     "guide": "workflows/create/create_common_template.md",
     "bindings": [
       "workspaceRoot",
@@ -688,22 +688,18 @@
       "html template",
       "binary template",
       "add-in template",
-      "template",
       "common макет",
       "общий макет",
       "create common template",
       "создай общий макет",
-      "печатный макет",
-      "табличный документ",
-      "текстовый документ",
-      "HTML документ",
-      "НТМЛ документ",
-      "двоичные данные",
-      "географическая схема",
-      "графическая схема",
-      "макет оформления компоновки данных",
-      "внешняя компонента",
-      "макет"
+      "общий табличный документ",
+      "общий текстовый документ",
+      "общий HTML документ",
+      "общие двоичные данные",
+      "общая географическая схема",
+      "общая графическая схема",
+      "общий макет оформления компоновки данных",
+      "общая внешняя компонента"
     ]
   },
   {
@@ -811,7 +807,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create Object Template",
-    "summary": "Create a Template (макет) owned by a metadata object with a chosen TemplateType.",
+    "summary": "Create a Template (макет) owned by a metadata object. Use this for prompts like 'для справочника/документа/отчета создай макет'. Spreadsheet/DCS get a generated body. STOP before JShell for text/html/binary/geo/graphical/DCS appearance/add-in unless the prompt provides a real source file/content; never create metadata-only stubs for those types.",
     "guide": "workflows/create/create_object_template.md",
     "bindings": [
       "workspaceRoot",
@@ -858,7 +854,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Fill Template Content",
-    "summary": "Attach DataCompositionSchema or SpreadsheetDocument content to an existing template via setTemplate(...).",
+    "summary": "Attach or replace content for an existing template. Use only when the template already exists or the user explicitly asks to fill/replace content; do not use for simple 'создай макет ...' prompts.",
     "guide": "workflows/create/fill_template_content.md",
     "bindings": [
       "workspaceRoot",
@@ -869,28 +865,17 @@
     ],
     "keywords": [
       "template content",
-      "DataCompositionSchema",
-      "SpreadsheetDocument",
-      "TextDocument",
-      "HTMLDocument",
-      "BinaryData",
+      "DataCompositionSchema content",
+      "SpreadsheetDocument content",
       "fill template",
       "содержимое макета",
       "заполнить макет",
       "заполни макет",
       "добавить схему компоновки данных",
       "добавь схему компоновки данных",
-      "макет СКД",
-      "табличный документ",
-      "текстовый документ",
-      "HTML документ",
-      "двоичные данные",
-      "географическая схема",
-      "графическая схема",
-      "макет оформления компоновки данных",
-      "внешняя компонента",
-      "СКД",
-      "схема компоновки данных"
+      "заменить Template.dcs",
+      "заменить содержимое макета",
+      "replace Template.dcs"
     ]
   },
   {
@@ -1720,7 +1705,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create Source-backed Template",
-    "summary": "For text, HTML, binary, geographical, graphical, DCS appearance, and external component templates: require a real source body/file before JShell or metadata creation.",
+    "summary": "STOP scenario for object-owned or common text/HTML/binary/geographical/graphical/DCS appearance/external component templates. If the prompt lacks a real source file/content, ask for it and do not call JShell, do not create metadata, do not create empty Template files.",
     "guide": "workflows/create/create_source_backed_template.md",
     "bindings": [
       "workspaceRoot",
@@ -1752,13 +1737,20 @@
       "Template.dcsat",
       "Template.addin",
       "текстовый документ",
+      "создай макет текстового документа",
       "HTML документ",
+      "создай макет HTML документа",
       "НТМЛ документ",
       "двоичные данные",
+      "создай макет двоичных данных",
       "географическая схема",
+      "создай макет географической схемы",
       "графическая схема",
+      "создай макет графической схемы",
       "макет оформления компоновки данных",
-      "внешняя компонента"
+      "создай макет оформления компоновки данных",
+      "внешняя компонента",
+      "создай макет внешней компоненты"
     ]
   },
   {
@@ -2147,7 +2139,7 @@
     "scope": "edt",
     "category": "edit",
     "title": "Edit Existing Metadata",
-    "summary": "Generic workflow for editing any existing metadata object correctly.",
+    "summary": "Generic workflow for editing any existing metadata object correctly, but never create макеты/templates here. Any request mentioning макет/template/TemplateType must use create_object_template, create_common_template, or create_source_backed_template so body resources are handled correctly.",
     "guide": "workflows/edit/edit_existing_metadata.md",
     "bindings": [
       "workspaceRoot",
@@ -2219,7 +2211,7 @@
     "scope": "edt",
     "category": "edit",
     "title": "Edit Existing Object",
-    "summary": "Modify an existing metadata object without reattaching it as a new top object.",
+    "summary": "Modify existing metadata attributes/children, but never create макеты/templates here. Any request mentioning макет/template/TemplateType must use create_object_template or create_common_template so body resources are handled correctly.",
     "guide": "workflows/edit/edit_existing_object.md",
     "bindings": [
       "workspaceRoot",

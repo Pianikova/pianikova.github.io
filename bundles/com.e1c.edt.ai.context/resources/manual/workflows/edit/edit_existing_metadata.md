@@ -2,6 +2,18 @@
 
 Generic workflow for editing any existing metadata object safely.
 
+### Hard rule: no templates from this workflow
+
+If the request mentions a `макет`, `template`, `Template`, `TemplateType`, `печатная форма`,
+`табличный документ`, `схема компоновки данных`, `СКД`, `текстовый документ`, `HTML документ`,
+`двоичные данные`, `географическая схема`, `графическая схема`,
+`макет оформления компоновки данных`, or `внешняя компонента`, do not use this workflow. Stop and
+switch to `create_object_template` for object-owned templates or `create_common_template` /
+`create_source_backed_template` for common/source-backed templates. Never add a
+`mdFactory.createTemplate()` child from this generic edit workflow: source-backed templates need a
+real body file first, and spreadsheet/DCS templates need `setTemplate(...)` plus
+`attachTopObject(...)` in the template workflow.
+
 If the user asks to add requisites/attributes to an existing catalog, use
 `edit_catalog` first. If the user asks to add requisites/attributes to an
 existing document, use `edit_document` first. These cards contain concrete
