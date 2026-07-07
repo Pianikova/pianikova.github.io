@@ -1,0 +1,7 @@
+{
+    "name": "deletemarkers",
+    "arguments": {
+        "project_name": "${project_name}",
+        "marker_type": "ai_marker"
+    }
+}

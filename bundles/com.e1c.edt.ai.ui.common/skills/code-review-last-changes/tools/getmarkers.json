@@ -1,0 +1,8 @@
+{
+    "name": "getmarkers",
+    "arguments": {
+        "project_name": "${project_name}",
+        "path": "${file_path}",
+        "marker_type": "ai_marker"
+    }
+}
