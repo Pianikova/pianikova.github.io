@@ -16,6 +16,7 @@ import org.eclipse.egit.ui.internal.staging.StagingView;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
@@ -37,10 +38,12 @@ import com.e1c.edt.ai.IConversationFacade;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
+import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
@@ -60,6 +63,7 @@ public class StagingViewEnhancer
     private final IProjectIdProvider projectIdProvider;
     private final ISettings settings;
     private final IStateService stateService;
+    private final IPreferenceStore preferenceStore;
     private final ILog log;
     private final ISkillExecutor skillExecutor;
     private final IChat chat;
@@ -70,7 +74,7 @@ public class StagingViewEnhancer
     @Inject
     public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions,
         IConversationFacade conversationFacade, IProjectIdProvider projectIdProvider, ILog log, ISettings settings,
-        IStateService stateService, ISkillExecutor skillExecutor, IChat chat)
+        IStateService stateService, ISkillExecutor skillExecutor, IChat chat, IPreferenceStore preferenceStore)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(reflection);
@@ -83,6 +87,7 @@ public class StagingViewEnhancer
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(skillExecutor);
         Preconditions.checkNotNull(chat);
+        Preconditions.checkNotNull(preferenceStore);
         this.chat = chat;
         this.skillExecutor = skillExecutor;
         this.log = log;
@@ -94,6 +99,7 @@ public class StagingViewEnhancer
         this.projectIdProvider = projectIdProvider;
         this.settings = settings;
         this.stateService = stateService;
+        this.preferenceStore = preferenceStore;
     }
 
     @Override
@@ -184,19 +190,26 @@ public class StagingViewEnhancer
                                 commitMessageComponent, commitMessages, createMessageButton);
                         }
                     });
-
-                    addStageListener(stagingView,
-                        isEnabled -> dispatcher.dispatchAsync(() -> {
-                            if (createMessageButton.isDisposed())
-                            {
-                                return;
-                            }
-                            if (commitMessageGenerating && isEnabled)
-                            {
-                                return;
-                            }
-                            createMessageButton.setEnabled(isEnabled);
-                        }));
+                    Consumer<Boolean> enabledHandler = isEnabled -> dispatcher.dispatchAsync(() -> {
+                        if (createMessageButton.isDisposed())
+                        {
+                            return;
+                        }
+                        if (commitMessageGenerating && isEnabled)
+                        {
+                            return;
+                        }
+                        createMessageButton.setEnabled(isEnabled);
+                    });
+                    addStageListener(stagingView, enabledHandler);
+                    preferenceStore.addPropertyChangeListener(event -> {
+                        if (!ISettingsStore.CODE_COMPLETION_POLICY.equals(event.getProperty()))
+                        {
+                            return;
+                        }
+                        CodeCompletionPolicy policy = CodeCompletionPolicy.parse((String)event.getNewValue());
+                        enabledHandler.accept(policy.getIndex() != 0);
+                    });
 
                     reflection.getField(StagingView.class, stagingView, "commitButton", Button.class)
                         .ifPresent(button -> {
