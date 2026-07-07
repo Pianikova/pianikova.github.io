@@ -16,9 +16,9 @@ import org.eclipse.egit.ui.internal.staging.StagingView;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.action.ToolBarManager;
+import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.util.IPropertyChangeListener;
-import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -26,6 +26,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.ToolBar;
 import org.eclipse.swt.widgets.ToolItem;
+import org.eclipse.swt.widgets.Widget;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.forms.widgets.Section;
 
@@ -37,6 +38,7 @@ import com.e1c.edt.ai.IConversationFacade;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
@@ -60,6 +62,7 @@ public class StagingViewEnhancer
     private final IProjectIdProvider projectIdProvider;
     private final ISettings settings;
     private final IStateService stateService;
+    private final IPreferenceStore preferenceStore;
     private final ILog log;
     private final ISkillExecutor skillExecutor;
     private final IChat chat;
@@ -70,7 +73,7 @@ public class StagingViewEnhancer
     @Inject
     public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions,
         IConversationFacade conversationFacade, IProjectIdProvider projectIdProvider, ILog log, ISettings settings,
-        IStateService stateService, ISkillExecutor skillExecutor, IChat chat)
+        IStateService stateService, ISkillExecutor skillExecutor, IChat chat, IPreferenceStore preferenceStore)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(reflection);
@@ -83,6 +86,7 @@ public class StagingViewEnhancer
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(skillExecutor);
         Preconditions.checkNotNull(chat);
+        Preconditions.checkNotNull(preferenceStore);
         this.chat = chat;
         this.skillExecutor = skillExecutor;
         this.log = log;
@@ -94,6 +98,7 @@ public class StagingViewEnhancer
         this.projectIdProvider = projectIdProvider;
         this.settings = settings;
         this.stateService = stateService;
+        this.preferenceStore = preferenceStore;
     }
 
     @Override
@@ -141,7 +146,7 @@ public class StagingViewEnhancer
             selfReviewAction.setEnabled(false);
             stagedToolBarManager.add(selfReviewAction);
             stagedToolBarManager.update(true);
-            addStageListener(stagingView,
+            addStageListener(stagingView, stagedViewer.getControl(),
                 isEnabled -> dispatcher.dispatchAsync(() -> selfReviewAction.setEnabled(isEnabled)));
         }
 
@@ -168,6 +173,19 @@ public class StagingViewEnhancer
                     var createMessageButton = new ToolItem(commitMessageToolBar, SWT.BUTTON1);
                     createMessageButton.setImage(BaseActivator.getImage(Images.GIT_MESSAGE));
                     createMessageButton.setToolTipText(Messages.CommitMessage);
+                    Consumer<Boolean> enabledHandler = isEnabled -> dispatcher.dispatchAsync(() -> {
+                        if (createMessageButton.isDisposed())
+                        {
+                            return;
+                        }
+                        if (commitMessageGenerating && isEnabled)
+                        {
+                            return;
+                        }
+                        createMessageButton.setEnabled(isEnabled);
+                    });
+                    var refreshCreateMessageEnabled = addStageListener(stagingView, createMessageButton,
+                        enabledHandler);
                     createMessageButton.addSelectionListener(new SelectionAdapter()
                     {
                         @Override
@@ -181,22 +199,9 @@ public class StagingViewEnhancer
                             commitMessageGenerating = true;
                             createMessageButton.setEnabled(false);
                             createCommitMessageUsingSkills(baseMessage, newCancellationToken,
-                                commitMessageComponent, commitMessages, createMessageButton);
+                                commitMessageComponent, commitMessages, refreshCreateMessageEnabled);
                         }
                     });
-
-                    addStageListener(stagingView,
-                        isEnabled -> dispatcher.dispatchAsync(() -> {
-                            if (createMessageButton.isDisposed())
-                            {
-                                return;
-                            }
-                            if (commitMessageGenerating && isEnabled)
-                            {
-                                return;
-                            }
-                            createMessageButton.setEnabled(isEnabled);
-                        }));
 
                     reflection.getField(StagingView.class, stagingView, "commitButton", Button.class)
                         .ifPresent(button -> {
@@ -264,14 +269,11 @@ public class StagingViewEnhancer
     @SuppressWarnings("nls")
     private void createCommitMessageUsingSkills(String baseMessage, ICancellationToken cancellationToken,
         CommitMessageComponent commitMessageComponent, ArrayList<CommitMessageInfo> commitMessages,
-        ToolItem createMessageButton)
+        Runnable refreshCreateMessageEnabled)
     {
         Runnable finishGeneration = () -> dispatcher.dispatch(() -> {
             commitMessageGenerating = false;
-            if (!createMessageButton.isDisposed())
-            {
-                createMessageButton.setEnabled(true);
-            }
+            refreshCreateMessageEnabled.run();
         });
 
         var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
@@ -354,48 +356,59 @@ public class StagingViewEnhancer
     }
 
     @SuppressWarnings("nls")
-    private void addStageListener(StagingView stagingView, Consumer<Boolean> enabledHandler)
+    private Runnable addStageListener(StagingView stagingView, Widget disposeTarget, Consumer<Boolean> enabledHandler)
     {
-        reflection.getField(StagingView.class, stagingView, "unstageAllAction", IAction.class)
-            .ifPresent(unstageAllAction -> {
-                stateService.addListener(new IStateListener()
-                {
-                    @Override
-                    public void onServiceStateChange(ServiceState serviceState)
-                    {
-                        enabledHandler.accept(settings.isEnabled() && unstageAllAction.isEnabled());
-                    }
+        var unstageAllAction =
+            reflection.getField(StagingView.class, stagingView, "unstageAllAction", IAction.class).orElse(null);
 
-                    @Override
-                    public void onActionStateChange(ActionState actionState)
-                    {
-                        enabledHandler.accept(settings.isEnabled() && unstageAllAction.isEnabled());
-                    }
-                });
+        if (unstageAllAction == null)
+        {
+            return () -> enabledHandler.accept(settings.isEnabled());
+        }
 
-                enabledHandler.accept(unstageAllAction.isEnabled());
-                unstageAllAction.addPropertyChangeListener(new IPropertyChangeListener()
-                {
-                    @Override
-                    public void propertyChange(PropertyChangeEvent event)
-                    {
-                        if (!settings.isEnabled())
-                        {
-                            enabledHandler.accept(false);
-                            return;
-                        }
+        Runnable refresh = () -> enabledHandler.accept(settings.isEnabled() && unstageAllAction.isEnabled());
 
-                        if (event.getProperty().equals("enabled"))
-                        {
-                            var newVal = event.getNewValue();
-                            if (newVal instanceof Boolean)
-                            {
-                                enabledHandler.accept((Boolean)newVal);
-                            }
-                        }
-                    }
-                });
-            });
+        var stateListener = new IStateListener()
+        {
+            @Override
+            public void onServiceStateChange(ServiceState serviceState)
+            {
+                refresh.run();
+            }
+
+            @Override
+            public void onActionStateChange(ActionState actionState)
+            {
+                refresh.run();
+            }
+        };
+        stateService.addListener(stateListener);
+
+        IPropertyChangeListener settingsListener = event -> {
+            if (ISettingsStore.CODE_COMPLETION_POLICY.equals(event.getProperty())
+                || ISettingsStore.CLIENT_TOKEN.equals(event.getProperty()))
+            {
+                refresh.run();
+            }
+        };
+        preferenceStore.addPropertyChangeListener(settingsListener);
+
+        IPropertyChangeListener actionListener = event -> {
+            if (event.getProperty().equals("enabled"))
+            {
+                refresh.run();
+            }
+        };
+        unstageAllAction.addPropertyChangeListener(actionListener);
+
+        disposeTarget.addDisposeListener(e -> {
+            stateService.removeListener(stateListener);
+            preferenceStore.removePropertyChangeListener(settingsListener);
+            unstageAllAction.removePropertyChangeListener(actionListener);
+        });
+
+        refresh.run();
+        return refresh;
     }
 
     private void commit(ArrayList<CommitMessageInfo> commitMessages, String finalText)
