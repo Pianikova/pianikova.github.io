@@ -879,6 +879,25 @@
     ]
   },
   {
+    "id": "ask_user",
+    "scope": "edt",
+    "category": "reference",
+    "title": "AskUser Tool — Interactive User Choice",
+    "summary": "How to ask the user a question with predefined options via the server-side AskUser tool (e.g. platform version choice), with a plain-text fallback.",
+    "guide": "workflows/reference/ask_user.md",
+    "bindings": [],
+    "keywords": [
+      "ask user",
+      "AskUser",
+      "user choice",
+      "question",
+      "options",
+      "выбор пользователя",
+      "вопрос пользователю",
+      "уточнение"
+    ]
+  },
+  {
     "id": "create_configuration_project",
     "scope": "edt",
     "category": "configuration",

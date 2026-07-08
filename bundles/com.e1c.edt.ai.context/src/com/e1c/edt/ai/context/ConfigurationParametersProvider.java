@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IProject;
 
@@ -15,6 +16,8 @@ import com._1c.g5.v8.dt.core.platform.IConfigurationProject;
 import com._1c.g5.v8.dt.core.platform.IDtProject;
 import com._1c.g5.v8.dt.core.platform.IExtensionProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.platform.version.IRuntimeVersionSupport;
+import com._1c.g5.v8.dt.platform.version.Version;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IProjectDetailsProvider;
@@ -32,12 +35,16 @@ public class ConfigurationParametersProvider
     private static final String DT_INF_PROJECT_PMF = "DT-INF/PROJECT.PMF"; //$NON-NLS-1$
     private static final String RUNTIME_VERSION = "Runtime-Version:"; //$NON-NLS-1$
     private final IV8ProjectManager v8ProjectManager;
+    private final IRuntimeVersionSupport runtimeVersionSupport;
 
     @Inject
-    public ConfigurationParametersProvider(IV8ProjectManager v8ProjectManager)
+    public ConfigurationParametersProvider(IV8ProjectManager v8ProjectManager,
+        IRuntimeVersionSupport runtimeVersionSupport)
     {
         Preconditions.checkNotNull(v8ProjectManager);
+        Preconditions.checkNotNull(runtimeVersionSupport);
         this.v8ProjectManager = v8ProjectManager;
+        this.runtimeVersionSupport = runtimeVersionSupport;
     }
 
     @Override
@@ -66,6 +73,10 @@ public class ConfigurationParametersProvider
         {
             var parameters = new ConfigurationParameters();
             getRuntimeVersion(project).ifPresent(runtimeVersion -> parameters.platformVersion = runtimeVersion);
+            parameters.availablePlatformVersions = runtimeVersionSupport.getSupportedVersions()
+                .stream()
+                .map(Version::toString)
+                .collect(Collectors.toList());
             var scriptVariant = v8Project.getScriptVariant();
             if (scriptVariant != null)
             {

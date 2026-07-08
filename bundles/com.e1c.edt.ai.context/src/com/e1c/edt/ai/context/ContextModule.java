@@ -24,6 +24,7 @@ import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
 import com._1c.g5.v8.dt.form.generator.IFormGenerator;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
+import com._1c.g5.v8.dt.platform.version.IRuntimeVersionSupport;
 import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
 import com._1c.g5.v8.dt.validation.marker.v2.IMarkerManagerV2;
 import com._1c.g5.wiring.AbstractServiceAwareModule;
@@ -124,6 +125,7 @@ class ContextModule
         bind(IResourceLookup.class).toService();
         bind(IDataSourceInfoAssociationService.class).toService();
         bind(IV8ProjectManager.class).toService();
+        bind(IRuntimeVersionSupport.class).toService();
         bind(IProjectFileSystemSupportProvider.class).toService();
         bind(IQualifiedNameFilePathConverter.class).toService();
         bind(IDtHostResourceManager.class).toService();

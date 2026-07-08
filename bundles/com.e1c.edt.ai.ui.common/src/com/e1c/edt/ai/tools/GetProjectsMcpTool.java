@@ -70,6 +70,7 @@ public class GetProjectsMcpTool
         + "        \"script_language\": \"English\",\n"
         + "        \"version\": \"1.1.3\",\n"
         + "        \"platform_version\": \"8.3.24\",\n"
+        + "        \"available_platform_versions\": [\"8.3.22\", \"8.3.23\", \"8.3.24\"],\n"
         + "        \"vendor\": \"Abc Inc\",\n"
         + "        \"compatibility\": \"8.3.24\",\n"
         + "        \"comment\": \"Sample configuration\",\n"
@@ -283,9 +284,13 @@ public class GetProjectsMcpTool
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use this tool to choose a target project or infer scope from open files.");
         description.append("\n- `is_current` indicates a project with open files (likely in focus).");
-        description.append("\n- `read_only` = true means the 1C configuration is on full vendor support:"
-            + " the project must NOT be modified (no Write/Edit/Delete, no JShell mutations) until the user"
-            + " enables editing in the configuration support settings.");
+        description.append("\n- `read_only` = true means the 1C configuration is on full vendor support"
+            + " (objectBelonging = Adopted): the project must NOT be modified (no Write/Edit/Delete, no JShell"
+            + " mutations) until the user enables editing (switches the configuration back to Native).");
+        description.append("\n- `available_platform_versions` lists 1C platform versions supported by this EDT"
+            + " installation, sorted ascending (the last one is the newest). When creating a new configuration"
+            + " project, use the latest version by default; if the user did not specify a version and alternatives"
+            + " exist, offer the choice to the user first.");
         description.append("\n\nResponse includes:");
         description.append("\n- Project name and absolute path");
         description.append("\n- Description from .project <comment>");

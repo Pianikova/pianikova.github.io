@@ -2,6 +2,16 @@
 
 This workflow creates a minimal EDT 1C:Enterprise configuration project in the Eclipse workspace.
 
+### Step 0 — Choose the 1C platform version (before any JShell code)
+
+The platform version is written into `DT-INF/PROJECT.PMF` as `Runtime-Version` and cannot be silently hardcoded. Determine it first:
+
+1. If the user explicitly named a platform version in the request (e.g. "на платформе 8.3.22") — use that version, do not ask anything.
+2. Otherwise call `GetProjects` and read `available_platform_versions` from `1C project details` (versions supported by this EDT installation, sorted ascending; the last one is the newest). If `GetProjects` returns no such list (e.g. empty workspace), use the newest version you can see in existing projects, or ask the user.
+3. If the version is not specified and the list contains more than one version, check your tool list for a tool named `AskUser`. If it is present, you **MUST** call `AskUser` and wait for the answer BEFORE creating any project files — do not skip the question in favor of a default (see `JShellManual(ask_user)`): one single-select question, options = the newest version first marked as recommended plus 2–3 previous ones, `allowOther: true` so the user can type another version. Use the selected version.
+4. Only if `AskUser` is NOT in your tool list (headless/agent runs do not have it), do not try to call it and do not stall: use the **latest** version from `available_platform_versions` and, in your final answer, state which version was used and that other versions were available.
+5. Use the resolved version as `runtimeVersion` in the snippet below.
+
 Critical rule: create required project files first, then enable V8 nature and Xtext builder. If V8 nature is enabled before `DT-INF/PROJECT.PMF`, `src/Configuration/Configuration.mdo`, and `.settings` exist, EDT lifecycle can start on a half-created project. The result may be visible in workspace but not resolvable through `projectManager`.
 
 Hard stop: a plain Eclipse project is not a 1C configuration project. Do not create only `.project` and then try to make a `Configuration` object through BM. Until `.settings`, `DT-INF/PROJECT.PMF`, `src/Configuration/Configuration.mdo`, the V8 nature, and the Xtext builder exist, `projectManager.getProject(IProject)` can return `null`, and that is a failed configuration creation.
@@ -36,6 +46,9 @@ Use `com._1c.g5.v8.dt.core.platform.IV8Project`. Do not import `com._1c.g5.v8.dt
 
 ```java
 String projectName = "MyNewConfiguration";
+// Platform version chosen in Step 0 (explicit user request, or the latest from
+// GetProjects available_platform_versions, or the user's AskUser answer).
+String runtimeVersion = "8.3.24";
 IProject projectHandle = workspaceRoot.getProject(projectName);
 NullProgressMonitor monitor = new NullProgressMonitor();
 
@@ -75,7 +88,7 @@ try {
 
     // Step 3: Create PROJECT.PMF. It is an OSGi-like manifest, not XML.
     IFile pmfFile = dtinfFolder.getFile("PROJECT.PMF");
-    String pmfContent = "Manifest-Version: 1.0\nRuntime-Version: 8.3.24\n";
+    String pmfContent = "Manifest-Version: 1.0\nRuntime-Version: " + runtimeVersion + "\n";
     if (!pmfFile.exists()) {
         pmfFile.create(new ByteArrayInputStream(pmfContent.getBytes("UTF-8")), true, monitor);
     }
@@ -89,6 +102,7 @@ try {
         "    <key>ru</key>\n" +
         "    <value>\u041a\u043e\u043d\u0444\u0438\u0433\u0443\u0440\u0430\u0446\u0438\u044f</value>\n" +
         "  </synonym>\n" +
+        "  <configurationExtensionCompatibilityMode>" + runtimeVersion + "</configurationExtensionCompatibilityMode>\n" +
         "  <defaultRunMode>ManagedApplication</defaultRunMode>\n" +
         "  <usePurposes>PersonalComputer</usePurposes>\n" +
         "  <usedMobileApplicationFunctionalities>\n" +
@@ -96,6 +110,7 @@ try {
         "      <use>true</use>\n" +
         "    </functionality>\n" +
         "  </usedMobileApplicationFunctionalities>\n" +
+        "  <compatibilityMode>" + runtimeVersion + "</compatibilityMode>\n" +
         "</mdclass:Configuration>";
     if (!configFile.exists()) {
         configFile.create(new ByteArrayInputStream(configContent.getBytes("UTF-8")), true, monitor);
@@ -175,6 +190,7 @@ try {
 
 ### Rules
 
+- Resolve the platform version via Step 0 before running any JShell code: explicit user version > user's `AskUser` choice (when the tool is available) > latest from `available_platform_versions`. Never silently fall back to a hardcoded version when alternatives are known.
 - Treat the requested project name as an exact literal. Do not correct, lemmatize, translate, or substitute it. `Булочная` must stay `Булочная` everywhere.
 - Create a plain Eclipse project first.
 - Do not stop after `projectHandle.create(...)` / `projectHandle.open(...)`. That creates only an Eclipse container, not an EDT configuration project.
@@ -182,6 +198,7 @@ try {
 - Create `.settings`, `DT-INF/PROJECT.PMF`, `src`, and `src/Configuration/Configuration.mdo` before enabling V8 nature.
 - `PROJECT.PMF` must be manifest format, not XML.
 - `Configuration.mdo` must use `http://g5.1c.ru/v8/dt/metadata/mdclass`.
+- `Configuration.mdo` must contain `<compatibilityMode>` and `<configurationExtensionCompatibilityMode>` equal to the chosen `runtimeVersion` (plain version string, e.g. `8.3.21`). If omitted, EDT falls back to its default compatibility mode (the newest supported version), which will not match an older `Runtime-Version`.
 - Enable both natures after required files exist: `org.eclipse.xtext.ui.shared.xtextNature`, `com._1c.g5.v8.dt.core.V8ConfigurationNature`.
 - Add Xtext builder after required files exist: `org.eclipse.xtext.ui.shared.xtextBuilder`.
 - During verification, use `projectManager.getProject(projectHandle)`, not `projectManager.getProject(projectName)`.

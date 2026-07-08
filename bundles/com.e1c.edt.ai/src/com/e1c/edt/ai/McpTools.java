@@ -172,6 +172,7 @@ public class McpTools
             var tool = tools.get(toolName);
             if (tool == null)
             {
+                devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null, "unknown_tool"); //$NON-NLS-1$
                 unknownCalls.add(call);
                 continue;
             }

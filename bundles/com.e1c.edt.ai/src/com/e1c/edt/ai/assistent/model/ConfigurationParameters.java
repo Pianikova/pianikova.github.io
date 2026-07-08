@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
@@ -38,6 +39,12 @@ public class ConfigurationParameters
      */
     @SerializedName("platform_version")
     public String platformVersion;
+
+    /**
+     * Версии платформы, поддерживаемые данной установкой EDT, по возрастанию (последняя — самая новая).
+     */
+    @SerializedName("available_platform_versions")
+    public List<String> availablePlatformVersions;
 
     /**
      * Поставщик конфигурации.
