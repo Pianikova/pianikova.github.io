@@ -7,7 +7,7 @@ import org.eclipse.core.resources.IProject;
 
 /**
  * Refuses file mutations in projects whose 1C configuration is read-only
- * (on full vendor support, {@code objectBelonging = Adopted}).
+ * (on full vendor support, editing not allowed).
  */
 public interface IReadOnlyProjectGuard
 {

@@ -33,10 +33,10 @@ public class ReadOnlyProjectGuard
         {
             throw new ToolException("The project \"" + project.getName()
                 + "\" is read-only: this 1C configuration is on full vendor support "
-                + "(Configuration objectBelonging = Adopted). Creating, editing, or deleting its files is not allowed. "
+                + "and editing is not allowed. Creating, editing, or deleting its files is not allowed. "
                 + "Do not retry and do not try to bypass this via JShell, EDT commands, or git. "
                 + "Inform the user that changes require enabling editing for the configuration first "
-                + "(switching the support mode so objectBelonging becomes Native), "
+                + "(changing the support mode in the configuration support settings), "
                 + "or that the change should be implemented in an extension project.",
                 ToolErrorType.USER_VISIBLE);
         }

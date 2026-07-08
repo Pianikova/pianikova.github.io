@@ -35,7 +35,7 @@ issue is specific to project-produced reference types like `"CatalogRef.Products
 #### Transaction Management
 
 **✅ REQUIRED:**
-- Before any metadata create/edit/delete, confirm the project is not read-only: `GetProjects` must show `read_only: false`. Configurations on full vendor support (`object_belonging: Adopted`) must not be modified — see `readonly_configuration`.
+- Before any metadata create/edit/delete, confirm the project is not read-only: `GetProjects` must show `read_only: false`. Configurations on full vendor support must not be modified — see `readonly_configuration`.
 - Use `globalContext.execute(new AbstractBmTask<...>("Task name") { ... })` for ALL read/write operations
 - Access `IBmTransaction` parameter in `execute()` method for metadata operations
 - Use `getTopObjectByFqn()` to READ existing objects

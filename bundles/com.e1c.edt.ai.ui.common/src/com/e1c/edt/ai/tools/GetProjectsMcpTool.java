@@ -67,7 +67,6 @@ public class GetProjectsMcpTool
         + "      \"1C project details\": {\n"
         + "        \"name\": \"Warehouse\",\n"
         + "        \"type\": \"Configuration\",\n"
-        + "        \"object_belonging\": \"Native\",\n"
         + "        \"script_language\": \"English\",\n"
         + "        \"version\": \"1.1.3\",\n"
         + "        \"platform_version\": \"8.3.24\",\n"
@@ -284,9 +283,9 @@ public class GetProjectsMcpTool
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use this tool to choose a target project or infer scope from open files.");
         description.append("\n- `is_current` indicates a project with open files (likely in focus).");
-        description.append("\n- `read_only` = true means the 1C configuration is on full vendor support"
-            + " (objectBelonging = Adopted): the project must NOT be modified (no Write/Edit/Delete, no JShell"
-            + " mutations) until the user enables editing (switches the configuration back to Native).");
+        description.append("\n- `read_only` = true means the 1C configuration is on full vendor support:"
+            + " the project must NOT be modified (no Write/Edit/Delete, no JShell mutations) until the user"
+            + " enables editing in the configuration support settings.");
         description.append("\n\nResponse includes:");
         description.append("\n- Project name and absolute path");
         description.append("\n- Description from .project <comment>");
@@ -336,7 +335,7 @@ public class GetProjectsMcpTool
         @SerializedName("is_current")
         public Boolean isCurrent;
 
-        /* Project is read-only (1C configuration on full vendor support, objectBelonging = Adopted). */
+        /* Project is read-only (1C configuration on full vendor support, editing not allowed). */
         @SerializedName("read_only")
         public Boolean readOnly;
 

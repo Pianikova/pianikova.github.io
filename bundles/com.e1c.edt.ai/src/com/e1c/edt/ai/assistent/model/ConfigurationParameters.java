@@ -22,13 +22,6 @@ public class ConfigurationParameters
     public String type;
 
     /**
-     * Принадлежность конфигурации: 'Native' или 'Adopted' (на полной поддержке поставщика,
-     * изменение запрещено). Заполняется только для обычных конфигураций, не для расширений.
-     */
-    @SerializedName("object_belonging")
-    public String objectBelonging;
-
-    /**
      * Вариант языка 'English' или 'Russian'.
      */
     @SerializedName("script_language")

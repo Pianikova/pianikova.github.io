@@ -20,7 +20,7 @@ ${editBlock}        return ${variableName};
 ```
 
 ### Rules
-- ⛔ Before mutating, confirm the target project is writable: `GetProjects` must show `read_only: false`. If `read_only: true` (full vendor support, `object_belonging: Adopted`), do NOT run this workflow — including via JShell — see `readonly_configuration`.
+- ⛔ Before mutating, confirm the target project is writable: `GetProjects` must show `read_only: false`. If `read_only: true` (full vendor support), do NOT run this workflow — including via JShell — see `readonly_configuration`.
 - Load existing top-level metadata with `transaction.getTopObjectByFqn(...)`
 - Modify the loaded object directly
 - Do not call `attachTopObject()` while editing an existing object

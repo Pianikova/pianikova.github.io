@@ -77,13 +77,7 @@ public class ConfigurationParametersProvider
                 var configurationProject = (IConfigurationProject)v8Project;
                 parameters.type = "Configuration"; //$NON-NLS-1$
                 fillProjectData(parameters, configurationProject.getDtProject());
-                var configuration = configurationProject.getConfiguration();
-                fillConfigData(parameters, configuration);
-                // Only for regular configurations: extensions always have ADOPTED and stay editable
-                if (configuration != null && configuration.getObjectBelonging() != null)
-                {
-                    parameters.objectBelonging = configuration.getObjectBelonging().getName();
-                }
+                fillConfigData(parameters, configurationProject.getConfiguration());
             }
             else
             {

@@ -2290,7 +2290,7 @@
     "scope": "edt",
     "category": "reference",
     "title": "Read-Only Configuration (Full Vendor Support)",
-    "summary": "Detect configurations on full vendor support (objectBelonging=Adopted) and refuse all mutations; extensions stay editable.",
+    "summary": "Detect configurations on full vendor support (read_only in GetProjects) and refuse all mutations; extensions stay editable.",
     "guide": "workflows/reference/readonly_configuration.md",
     "bindings": [
       "workspaceRoot",
@@ -2302,8 +2302,6 @@
       "read only",
       "full support",
       "vendor support",
-      "adopted",
-      "objectBelonging",
       "support mode",
       "enable editing",
       "поддержка",

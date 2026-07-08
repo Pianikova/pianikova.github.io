@@ -14,7 +14,6 @@ import com._1c.g5.v8.dt.core.model.EditingMode;
 import com._1c.g5.v8.dt.core.model.IModelEditingSupport;
 import com._1c.g5.v8.dt.core.platform.IConfigurationProject;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
-import com._1c.g5.v8.dt.metadata.mdclass.ObjectBelonging;
 import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.ILog;
 import com.google.common.base.Preconditions;
@@ -80,7 +79,9 @@ public class EditingSupport
             if (v8Project instanceof IConfigurationProject)
             {
                 var configuration = ((IConfigurationProject)v8Project).getConfiguration();
-                return configuration != null && configuration.getObjectBelonging() == ObjectBelonging.ADOPTED;
+                // Same path the EDT editors use: the distribution provider forbids editing
+                // when the configuration is on full vendor support (ParentConfigurations.bin).
+                return configuration != null && !modelEditingSupport.canEdit(configuration, EditingMode.DIRECT);
             }
         }
         catch (RuntimeException error)
