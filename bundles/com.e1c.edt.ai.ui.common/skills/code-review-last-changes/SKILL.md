@@ -92,6 +92,39 @@ Tracked — анализируй только изменённые строки 
  
 ### Шаг 6 — Обновить маркеры
 
+Используйте SetMarkers для создания маркеров в файлах. Для ai_marker (ошибки/проблемы) укажите:
+
+**Обязательные параметры:**
+- `type`: "ai_marker" (или опустить, если есть severity)
+- `path`: **АБСОЛЮТНЫЙ** путь к файлу (например: "C:/Projects/MyProject/src/Module.bsl")
+- `message`: описание проблемы
+- `marker_line`: номер строки (1-based)
+- `marker_highlighted_text`: **минимальный** фрагмент кода (без лишнего контекста)
+
+**Обязательные для ai_marker:**
+- `action_prompt`: промпт для исправления
+- `action_title`: короткое название действия  
+- `action_description`: детальное описание действия
+
+**Рекомендуемые для ai_marker:**
+- `severity`: "error" | "warning" | "info"
+- `priority`: "high" | "normal" | "low"
+
+**Пример:**
+```json
+{
+  "type": "ai_marker",
+  "path": "C:/Projects/MyProject/src/CommonModules/Module.bsl",
+  "message": "Использование устаревшего метода",
+  "marker_line": 42,
+  "marker_highlighted_text": "УстаревшийМетод()",
+  "action_prompt": "Заменить УстаревшийМетод() на НовыйМетод()",
+  "action_title": "Заменить метод",
+  "action_description": "Использовать НовыйМетод() вместо устаревшего",
+  "severity": "warning",
+  "priority": "normal"
+}
+
 **ВАЖНО:** Поля `marker_line` и `marker_highlighted_text` в маркерах должны **точно соответствовать** содержимому, полученному из `read` в Шаге 5. Любое несоответствие приведет к ошибке "Target content not found in line X" или "marker_line must be a positive integer".
 
 Вызывай тулы только если есть что менять.
