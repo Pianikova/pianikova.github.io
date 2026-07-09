@@ -89,6 +89,18 @@ public class Settings
     }
 
     @Override
+    public boolean isActivationInfoVisible()
+    {
+        return settingsStore.getBoolean(ISettingsStore.SHOW_ACTIVATION_INFO).orElse(Boolean.TRUE);
+    }
+
+    @Override
+    public void setActivationInfoVisible(boolean visible)
+    {
+        settingsStore.setBoolean(ISettingsStore.SHOW_ACTIVATION_INFO, visible);
+    }
+
+    @Override
     public boolean isAutoOpenDiffPreview()
     {
         return settingsStore.getBoolean(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW).orElse(Boolean.TRUE);

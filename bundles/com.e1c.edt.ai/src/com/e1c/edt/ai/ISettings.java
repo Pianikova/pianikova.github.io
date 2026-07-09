@@ -21,6 +21,8 @@ public interface ISettings
 
     boolean isStatusBarVisible();
 
+    boolean isActivationInfoVisible();
+
     boolean isAutoOpenDiffPreview();
 
     boolean hasClientToken();

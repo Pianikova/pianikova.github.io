@@ -41,6 +41,7 @@ public class UINotification
     private final UINotificationType type;
     private Runnable action;
     private UINotificationActionType actionType;
+    private Runnable dontShowAgainAction;
 
     public UINotification(Shell parentShell, String message, UINotificationType type, String linkText,
         String url)
@@ -51,6 +52,13 @@ public class UINotification
         this.type = type;
         this.linkText = linkText;
         this.url = url;
+    }
+
+    public UINotification(Shell parentShell, String message, UINotificationType type, String linkText,
+        String url, Runnable dontShowAgainAction)
+    {
+        this(parentShell, message, type, linkText, url);
+        this.dontShowAgainAction = dontShowAgainAction;
     }
 
     public UINotification(Shell parentShell, String message, UINotificationType type, String linkText,
@@ -122,7 +130,7 @@ public class UINotification
         }
 
         Composite buttonContainer = new Composite(textContainer, SWT.NONE);
-        GridLayout buttonLayout = new GridLayout(2, false);
+        GridLayout buttonLayout = new GridLayout(3, false);
         buttonLayout.marginWidth = 0;
         buttonContainer.setLayout(buttonLayout);
         GridData buttonContainerData = new GridData(SWT.RIGHT, SWT.TOP, true, false);
@@ -130,6 +138,24 @@ public class UINotification
         buttonContainer.setLayoutData(buttonContainerData);
         buttonContainer.setBackground(bg);
         buttonContainer.setForeground(fg);
+
+        if (dontShowAgainAction != null)
+        {
+            Link dontShowAgainLink = new Link(buttonContainer, SWT.NONE);
+            dontShowAgainLink.setText("<a>" + Messages.DontShowAgain + "</a>"); //$NON-NLS-1$ //$NON-NLS-2$
+            dontShowAgainLink.setBackground(bg);
+            dontShowAgainLink.setForeground(fg);
+            dontShowAgainLink.setLayoutData(new GridData(SWT.RIGHT, SWT.CENTER, false, false));
+            dontShowAgainLink.addSelectionListener(new SelectionAdapter()
+            {
+                @Override
+                public void widgetSelected(SelectionEvent e)
+                {
+                    dispatcher.dispatchAsync(dontShowAgainAction);
+                    close();
+                }
+            });
+        }
 
         if (action != null)
         {

@@ -167,6 +167,10 @@ public class ClientAIPreferencePage
             Messages.ClientAIPreferencePage_ShowStatusBar, parent);
         addField(showStatusBarField);
 
+        var showActivationInfoField = new BooleanFieldEditor(ISettingsStore.SHOW_ACTIVATION_INFO,
+            Messages.ClientAIPreferencePage_ShowActivationInfo, parent);
+        addField(showActivationInfoField);
+
         // --- Group: Code completion ---
         var codeCompletionGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_CodeCompletionGroup);
 

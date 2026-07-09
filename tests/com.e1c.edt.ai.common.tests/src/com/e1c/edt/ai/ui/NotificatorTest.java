@@ -19,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.e1c.edt.ai.IClock;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 
@@ -31,6 +32,7 @@ public class NotificatorTest
     private INotifications notifications;
     private IDispatcher dispatcher;
     private IClock clock;
+    private ISettings settings;
     private Notificator notificator;
 
     @Before
@@ -40,12 +42,14 @@ public class NotificatorTest
         notifications = mock(INotifications.class);
         dispatcher = mock(IDispatcher.class);
         clock = mock(IClock.class);
+        settings = mock(ISettings.class);
+        when(settings.isActivationInfoVisible()).thenReturn(true);
 
         // Mock dispatcher.createJob() to return a Job
         Job mockJob = mock(Job.class);
         when(dispatcher.createJob(anyString(), any(), anyBoolean(), any())).thenReturn(mockJob);
 
-        notificator = new Notificator(stateService, notifications, dispatcher, clock);
+        notificator = new Notificator(stateService, notifications, dispatcher, clock, settings);
     }
 
     @Test
@@ -92,6 +96,22 @@ public class NotificatorTest
         // Second time should not show
         boolean secondShow = notificator.shouldShowNotification(ServiceState.MISSING_TOKEN);
         assertFalse("Second missing token should not show", secondShow);
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void missingTokenShouldNotShowWhenActivationInfoDisabled()
+    {
+        when(settings.isActivationInfoVisible()).thenReturn(false);
+
+        notificator.onServiceStateChange(ServiceState.MISSING_TOKEN);
+
+        boolean show = notificator.shouldShowNotification(ServiceState.MISSING_TOKEN);
+        assertFalse("Missing token should not show when activation info is disabled", show);
+
+        // Other states are not affected by the setting
+        boolean showTokenError = notificator.shouldShowNotification(ServiceState.TOKEN_ERROR);
+        assertTrue("Token error should show regardless of activation info setting", showTokenError);
     }
 
     @SuppressWarnings("nls")

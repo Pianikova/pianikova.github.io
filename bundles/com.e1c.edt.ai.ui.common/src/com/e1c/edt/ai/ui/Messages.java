@@ -38,6 +38,7 @@ public class Messages
     public static String HintHotKey_AcceptBack;
     public static String HintHotKey_AcceptStop;
     public static String NotActivated;
+    public static String DontShowAgain;
     public static String Support;
     public static String UpdateButton;
     public static String RestartButton;

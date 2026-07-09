@@ -18,7 +18,14 @@ public class UINotificationService
     public void createNotification(Shell parentShell, String message, String linkText, String url,
         UINotificationType type)
     {
-        UINotification popup = new UINotification(parentShell, message, type, linkText, url);
+        createNotification(parentShell, message, linkText, url, type, null);
+    }
+
+    @Override
+    public void createNotification(Shell parentShell, String message, String linkText, String url,
+        UINotificationType type, Runnable dontShowAgainAction)
+    {
+        UINotification popup = new UINotification(parentShell, message, type, linkText, url, dontShowAgainAction);
         popup.setBlockOnOpen(false);
         closeNotificationIfOpen();
         lastNotification = popup;

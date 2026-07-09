@@ -30,6 +30,12 @@ class Settings
     }
 
     @Override
+    public boolean isActivationInfoVisible()
+    {
+        return false;
+    }
+
+    @Override
     public boolean isAutoOpenDiffPreview()
     {
         return true;

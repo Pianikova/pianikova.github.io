@@ -14,4 +14,6 @@ public interface ISettingsSetter
     void setCodeCompletionPolicy(CodeCompletionPolicy codeCompletionPolicy);
 
     void setStatusBarVisible(boolean visible);
+
+    void setActivationInfoVisible(boolean visible);
 }

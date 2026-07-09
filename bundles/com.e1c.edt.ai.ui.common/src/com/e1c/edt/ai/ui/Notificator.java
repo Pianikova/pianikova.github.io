@@ -11,6 +11,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IClock;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
@@ -26,23 +27,27 @@ public class Notificator
     private final INotifications notifications;
     private final IDispatcher dispatcher;
     private final IClock clock;
+    private final ISettings settings;
     private final Object lock = new Object();
     private ServiceState lastServiceState;
     public ServiceState lastShownServiceState;
     public LocalDateTime lastShownTime;
 
     @Inject
-    public Notificator(IStateService stateService, INotifications notifications, IDispatcher dispatcher, IClock clock)
+    public Notificator(IStateService stateService, INotifications notifications, IDispatcher dispatcher, IClock clock,
+        ISettings settings)
     {
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(notifications);
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(clock);
+        Preconditions.checkNotNull(settings);
 
         this.stateService = stateService;
         this.notifications = notifications;
         this.dispatcher = dispatcher;
         this.clock = clock;
+        this.settings = settings;
 
         stateService.addListener(this);
     }
@@ -117,10 +122,10 @@ public class Notificator
                 return false;
             }
 
-            // MISSING_TOKEN never shows repeatedly
+            // MISSING_TOKEN never shows repeatedly and can be turned off by the user
             if (serviceState == ServiceState.MISSING_TOKEN)
             {
-                return lastShownServiceState != serviceState;
+                return settings.isActivationInfoVisible() && lastShownServiceState != serviceState;
             }
 
             // For other states, check if repeat interval has passed
