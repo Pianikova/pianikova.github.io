@@ -129,9 +129,6 @@ IProject project = workspaceRoot.getProject(targetProjectName);
 if (!project.exists()) {
     throw new IllegalStateException("Target project does not exist: " + targetProjectName);
 }
-if ("Склад".equals(project.getName())) {
-    throw new IllegalStateException("Refusing to mutate existing working project: " + project.getName());
-}
 IV8Project v8project = projectManager.getProject(project);
 IBmModel bmModel = modelManager.getModel(project);
 if (v8project == null || bmModel == null) {

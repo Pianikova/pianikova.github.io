@@ -13,12 +13,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
+import com.e1c.edt.ai.IStateService;
+import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.ToolErrorType;
 import com.e1c.edt.ai.ToolException;
+import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.e1c.edt.ai.ui.IInitializable;
 import com.google.common.base.Preconditions;
@@ -34,7 +40,7 @@ import jdk.jshell.JShell;
  */
 @Singleton
 public class JShellSessionManager
-    implements IJShellSessionManager, IInitializable
+    implements IJShellSessionManager, IInitializable, IStateListener
 {
     private static final int MAX_SESSIONS = 16;
     private static final int SESSION_EXPIRY_HOURS = 12;
@@ -46,25 +52,32 @@ public class JShellSessionManager
     private final IRestrictedTypesValidator restrictedTypesValidator;
     private final IJShellClassPathProvider classPathProvider;
     private final IDispatcher dispatcher;
+    private final ISettings settings;
+    private final IStateService stateService;
     private final AtomicReference<JShellSession> preWarmedSession = new AtomicReference<>();
+    private final AtomicBoolean preWarmInFlight = new AtomicBoolean();
     private final Object sessionLock = new Object();
 
 	@Inject
 	public JShellSessionManager(ILog log, Set<IJShellBindingProvider> bindingProviders,
         IRestrictedTypesValidator restrictedTypesValidator, IJShellClassPathProvider classPathProvider,
-        IDispatcher dispatcher)
+        IDispatcher dispatcher, ISettings settings, IStateService stateService)
 	{
 		Preconditions.checkNotNull(log);
 		Preconditions.checkNotNull(bindingProviders);
         Preconditions.checkNotNull(restrictedTypesValidator);
         Preconditions.checkNotNull(classPathProvider);
         Preconditions.checkNotNull(dispatcher);
+        Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(stateService);
 
 		this.log = log;
 		this.bindingProviders = bindingProviders;
         this.restrictedTypesValidator = restrictedTypesValidator;
         this.classPathProvider = classPathProvider;
         this.dispatcher = dispatcher;
+        this.settings = settings;
+        this.stateService = stateService;
 
 		this.cache = CacheBuilder.newBuilder()
 			.maximumSize(MAX_SESSIONS)
@@ -82,7 +95,20 @@ public class JShellSessionManager
     @Override
     public void initialize()
     {
+        stateService.addListener(this);
         preWarmSessionAsync();
+    }
+
+    @Override
+    public void onServiceStateChange(ServiceState serviceState)
+    {
+        preWarmSessionAsync();
+    }
+
+    @Override
+    public void onActionStateChange(ActionState actionState)
+    {
+        // Do nothing
     }
 
     @SuppressWarnings("nls")
@@ -347,8 +373,20 @@ public class JShellSessionManager
 
     private void preWarmSessionAsync()
     {
+        if (!settings.isEnabled() || preWarmedSession.get() != null || !preWarmInFlight.compareAndSet(false, true))
+        {
+            return;
+        }
+
         dispatcher.createJob(Messages.JShellSessionPreWarming, context -> {
-            preWarmSession();
+            try
+            {
+                preWarmSession();
+            }
+            finally
+            {
+                preWarmInFlight.set(false);
+            }
         }, true, CancellationTokens.NONE).schedule();
     }
 

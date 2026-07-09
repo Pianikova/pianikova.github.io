@@ -4,6 +4,21 @@
 > Skipping PRE-FLIGHT is the most common reason this scenario fails on
 > reference attributes.
 
+Before any JShell code, copy these BM package facts exactly:
+
+```java
+import com._1c.g5.v8.bm.integration.IBmModel;
+import com._1c.g5.v8.bm.integration.IBmGlobalEditingContext;
+import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.bm.core.IBmTransaction;
+import com._1c.g5.v8.bm.core.IBmObject;
+```
+
+Do not swap these packages: `IBmTransaction`/`IBmObject` are in `bm.core`;
+`IBmModel`/`IBmGlobalEditingContext`/`AbstractBmTask` are in `bm.integration`.
+Imports must be top-level JShell snippets before any wrapping `{ ... }` block.
+Never put `import ...;` lines inside `{ ... }`; Java reports `illegal start of expression`.
+
 ### ⚠️ Critical API note — how to resolve `CatalogRef.X` / `EnumRef.X` inside JShell
 
 **Do NOT use `typeProvider.getProxy("CatalogRef.X")` for metadata reference
@@ -70,14 +85,27 @@ Before you generate the catalog-creation code, do this **in order**:
 
 ### Hard rules — never violate
 
+- ⛔ **Before any mutation, confirm the project is writable.** Call `GetProjects` (or use an
+  already supplied project list) and verify the target project has `read_only: false`. If the
+  prompt does not name a project, ask for a writable target or choose the active writable project
+  only after verifying it. If the selected project is read-only, stop and use
+  `readonly_configuration` instead of bypassing file-tool protections via JShell BM transactions.
 - ✅ **Use exact packages from this workflow; do not guess imports.** Observed bad imports:
   `com._1c.g5.v8.dt.core.project.IV8Project`,
   `com._1c.g5.v8.dt.metadata.mcore.*`, and
   `com._1c.g5.v8.dt.metadata.mdclass.CodeType`,
-  `com._1c.g5.v8.dt.mcore.util.McorePackage`, and
-  `com._1c.g5.v8.bm.core.IBmModel` do not work in JShell. Use
-  `com._1c.g5.v8.dt.core.platform.IV8Project`, `com._1c.g5.v8.dt.mcore.*`, and avoid setting code
-  type unless required. `IBmModel` is `com._1c.g5.v8.bm.integration.IBmModel`. If code type is
+  `com._1c.g5.v8.dt.mcore.util.McorePackage`,
+  `com._1c.g5.v8.dt.mcore.IEObjectProvider`,
+  `com._1c.g5.v8.dt.mcore.IEObjectTypeNames`, and
+  `com._1c.g5.v8.bm.core.IBmModel`,
+  `com._1c.g5.v8.bm.core.IBmGlobalEditingContext`, and
+  `com._1c.g5.v8.bm.integration.IBmTransaction` do not work in JShell. Use
+  `com._1c.g5.v8.dt.core.platform.IV8Project`, `com._1c.g5.v8.dt.mcore.McorePackage`,
+  `com._1c.g5.v8.dt.platform.IEObjectProvider`,
+  `com._1c.g5.v8.dt.platform.IEObjectTypeNames`, and avoid setting code
+  type unless required. `IBmModel` and `IBmGlobalEditingContext` are
+  `com._1c.g5.v8.bm.integration.*`; `IBmTransaction` is
+  `com._1c.g5.v8.bm.core.IBmTransaction`. If code type is
   required, verify the exact enum with `JShellReflection` instead of inventing `CodeType` or
   `CatalogCodeType.String`.
 - ✅ **If the prompt asks for a catalog and a form, this is a two-step workflow.**
@@ -93,19 +121,29 @@ Before you generate the catalog-creation code, do this **in order**:
   `Object.Description` as `Наименование`, `Object.Code` as `Код`, and when exact XML movement is
   safe, group them in a compact `UsualGroup` with `HorizontalIfPossible`, matching common SSL
   catalog item forms.
+- ⛔ **Simple catalog prompts are not design tasks.** If the user only says "создай справочник X"
+  or "в <проекте> создай справочник X", execute this workflow directly. Do **not** call
+  `task/design` to expand the request, because it may invent fields or forms. Do **not** call
+  `JShellManual` for `create_object_form`, do **not** create `Form.form`, and do **not** add
+  custom attributes, tabular sections, commands, registers, templates, or other supporting objects
+  unless the user explicitly requested them in the prompt.
 - ✅ **Do not invent attributes.** If the user only says "создай справочник товаров" or
   "создай справочник товаров и форму", create the catalog with standard code/description only.
   Add custom attributes (`Артикул`, `Цена`, `Количество`, ...) only when the user explicitly asks
   for them. Extra guessed attributes increase marker risk and are not part of the request.
+  This applies to any domain-looking catalog name: do not infer classifier codes, full-name fields,
+  weights, flags, tabular sections, forms, or other business fields from the name. A simple
+  "Создай справочник <любое имя>" means create only the top-level catalog named by the user,
+  with its synonym plus standard code and standard description.
 - ⛔ **Run inside `bmModel.getGlobalContext().execute(new AbstractBmTask<...>(){...})` — never
   `modelManager.executeReadWriteTask(...)` / `IBmSingleNamespaceTask`.** Only the global editing
   context auto-saves to disk; the other entries commit in-memory only (compiles, prints "created",
   but no `.mdo` is written and it vanishes on restart).
 - ✅ **Use the exact project name from `GetProjects` / the user request. Never translate it.**
-  If the project is named `Склад`, executable JShell must call
-  `workspaceRoot.getProject("Склад")`, not `"Warehouse"`. If a translated or wrong project name
-  caused `project == null` / `NullPointerException`, start a fresh `jshellsession` and retry with
-  the exact project name before doing any metadata work.
+  If the project has a Russian name, executable JShell must call
+  `workspaceRoot.getProject("<exact project name>")`, not an English translation. If a translated
+  or wrong project name caused `project == null` / `NullPointerException`, start a fresh
+  `jshellsession` and retry with the exact project name before doing any metadata work.
 - ✅ **Before creating a catalog, check `transaction.getTopObjectByFqn("Catalog.<Name>")`.**
   If it is non-null, do not call `transaction.attachTopObject(...)` with the
   same FQN. Treat the object as already created and continue with the requested

@@ -365,7 +365,7 @@
     "scope": "edt",
     "category": "create",
     "title": "Create Catalog",
-    "summary": "Create a top-level Catalog safely inside a BM transaction.",
+    "summary": "Create a top-level Catalog safely inside a BM transaction. BM imports: IBmModel/IBmGlobalEditingContext/AbstractBmTask from com._1c.g5.v8.bm.integration, IBmTransaction/IBmObject from com._1c.g5.v8.bm.core. Before mutation check the target project is writable/read_only=false. For any simple prompt like 'создай справочник <name>', do not call task/design, do not create forms, and create only standard code/description; do not infer domain attributes from the catalog name unless explicitly requested.",
     "guide": "workflows/create/create_catalog.md",
     "bindings": [
       "workspaceRoot",
@@ -384,6 +384,8 @@
       "справочник",
       "создай справочник",
       "создать справочник",
+      "simple catalog without design",
+      "catalog without task design",
       "создай справочник и форму",
       "создай справочник товаров и форму",
       "создай справочник товаров и форму для него",

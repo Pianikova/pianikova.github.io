@@ -4,13 +4,15 @@
 Catalog result = globalContext.execute(new AbstractBmTask<Catalog>("Delete attribute") {
     @Override
     public Catalog execute(IBmTransaction transaction, IProgressMonitor monitor) {
-        Catalog catalog = (Catalog)transaction.getTopObjectByFqn("Catalog.Товары");
+        String catalogFqn = "Catalog.<CatalogName>"; // replace from the user request
+        String attributeName = "<AttributeName>";    // replace from the user request
+        Catalog catalog = (Catalog)transaction.getTopObjectByFqn(catalogFqn);
 
         if (catalog != null) {
             // Find attribute by name
             CatalogAttribute attrToRemove = null;
             for (CatalogAttribute attr : catalog.getAttributes()) {
-                if ("ПолноеНаименование".equals(attr.getName())) {
+                if (attributeName.equals(attr.getName())) {
                     attrToRemove = attr;
                     break;
                 }
