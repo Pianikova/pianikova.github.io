@@ -18,6 +18,8 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.wiring.BundleWiring;
 
+import com.e1c.edt.ai.CancellationTokens;
+import com.e1c.edt.ai.ICancellationToken;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -41,8 +43,9 @@ public class JShellTypeIndex
     }
 
     @Override
-    public void warmUp(Collection<Class<?>> significantClasses)
+    public void warmUp(Collection<Class<?>> significantClasses, ICancellationToken cancellationToken)
     {
+        Preconditions.checkNotNull(cancellationToken);
         if (significantClasses != null)
         {
             var significantTypeNames = significantClasses.stream()
@@ -55,7 +58,7 @@ public class JShellTypeIndex
             cachedSignificantSimpleNameIndex.set(buildSimpleNameIndex(significantTypeNames));
         }
 
-        getSimpleNameIndex();
+        getSimpleNameIndex(cancellationToken);
     }
 
     @Override
@@ -124,7 +127,7 @@ public class JShellTypeIndex
             addImportCandidate(names, importStatement, query);
         }
         names.addAll(cachedSignificantSimpleNameIndex.get().getOrDefault(query, List.of()));
-        names.addAll(getSimpleNameIndex().getOrDefault(query, List.of()));
+        names.addAll(getSimpleNameIndex(CancellationTokens.NONE).getOrDefault(query, List.of()));
         return names;
     }
 
@@ -202,6 +205,11 @@ public class JShellTypeIndex
 
     private List<String> getTypeNames()
     {
+        return getTypeNames(CancellationTokens.NONE);
+    }
+
+    private List<String> getTypeNames(ICancellationToken cancellationToken)
+    {
         var cached = cachedTypeNames.get();
         if (cached != null)
         {
@@ -222,6 +230,10 @@ public class JShellTypeIndex
             {
                 for (var bundle : anchor.getBundleContext().getBundles())
                 {
+                    if (cancellationToken.isCanceled())
+                    {
+                        return List.of();
+                    }
                     addBundleTypes(names, bundle);
                 }
             }
@@ -235,7 +247,7 @@ public class JShellTypeIndex
         }
     }
 
-    private Map<String, List<String>> getSimpleNameIndex()
+    private Map<String, List<String>> getSimpleNameIndex(ICancellationToken cancellationToken)
     {
         var cached = cachedSimpleNameIndex.get();
         if (cached != null)
@@ -251,12 +263,12 @@ public class JShellTypeIndex
                 return cached;
             }
 
-            var index = new HashMap<String, List<String>>();
-            for (var name : getTypeNames())
+            var typeNames = getTypeNames(cancellationToken);
+            if (cancellationToken.isCanceled())
             {
-                index.computeIfAbsent(simpleName(name), key -> new ArrayList<>()).add(name);
+                return Map.of();
             }
-            cachedSimpleNameIndex.set(buildImmutableSimpleNameIndex(index));
+            cachedSimpleNameIndex.set(buildSimpleNameIndex(typeNames));
             return cachedSimpleNameIndex.get();
         }
     }
@@ -283,7 +295,9 @@ public class JShellTypeIndex
 
     private void addBundleTypes(List<String> names, Bundle bundle)
     {
-        if (bundle == null || (bundle.getState() != Bundle.ACTIVE && bundle.getState() != Bundle.RESOLVED))
+        // Lazy-activation bundles stay in STARTING until first class load, so a state whitelist
+        // would drop their types; any bundle with a wiring is scannable.
+        if (bundle == null || bundle.getState() == Bundle.UNINSTALLED)
         {
             return;
         }
@@ -292,7 +306,8 @@ public class JShellTypeIndex
         {
             return;
         }
-        var resources = wiring.listResources("/", "*.class", BundleWiring.LISTRESOURCES_RECURSE); //$NON-NLS-1$ //$NON-NLS-2$
+        var resources = wiring.listResources("/", "*.class", //$NON-NLS-1$ //$NON-NLS-2$
+            BundleWiring.LISTRESOURCES_RECURSE | BundleWiring.LISTRESOURCES_LOCAL);
         if (resources == null)
         {
             return;

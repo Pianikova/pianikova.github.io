@@ -6,9 +6,11 @@ package com.e1c.edt.ai.tools;
 import java.util.Collection;
 import java.util.List;
 
+import com.e1c.edt.ai.ICancellationToken;
+
 public interface IJShellTypeIndex
 {
-    void warmUp(Collection<Class<?>> significantClasses);
+    void warmUp(Collection<Class<?>> significantClasses, ICancellationToken cancellationToken);
 
     List<JShellResolvedType> findTypes(IJShellSession session, String query, int limit);
 

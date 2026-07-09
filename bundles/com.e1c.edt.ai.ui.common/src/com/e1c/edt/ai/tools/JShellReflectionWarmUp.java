@@ -53,7 +53,7 @@ public class JShellReflectionWarmUp
                         significantClasses.addAll(classes);
                     }
                 }
-                typeIndex.warmUp(significantClasses);
+                typeIndex.warmUp(significantClasses, context.CancellationTokenSource);
             }
             catch (Exception e)
             {
