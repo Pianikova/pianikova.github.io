@@ -60,7 +60,7 @@ import com.google.inject.Inject;
  */
 public class Conversations implements IConversations
 {
-    private static final int MAX_TOOL_ROUNDS = 10;
+    private static final int MAX_TOOL_ROUNDS = 20;
 
     private final IHttpLog log;
     private final ISettings settings;

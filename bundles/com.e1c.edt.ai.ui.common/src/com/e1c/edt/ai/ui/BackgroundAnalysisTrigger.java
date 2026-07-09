@@ -22,10 +22,12 @@ public class BackgroundAnalysisTrigger
     implements IResourceChangeListener
 {
     private final BackgroundAnalysisManager analysisManager;
+    private final IUI ui;
 
     @Inject
-    public BackgroundAnalysisTrigger(BackgroundAnalysisManager analysisManager)
+    public BackgroundAnalysisTrigger(BackgroundAnalysisManager analysisManager, IUI ui)
     {
+        this.ui = ui;
         this.analysisManager = analysisManager;
     }
 
@@ -57,7 +59,8 @@ public class BackgroundAnalysisTrigger
                 {
                     return true;
                 }
-                analysisManager.onFileSaved((IFile)resource);
+                ui.getLastSourceViewer().ifPresent(viewer -> analysisManager.onFileSaved((IFile)resource));
+
                 return true;
             });
         }

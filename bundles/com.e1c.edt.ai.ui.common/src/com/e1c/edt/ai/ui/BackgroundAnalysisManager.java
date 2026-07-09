@@ -3,6 +3,7 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jgit.lib.Repository;
 
@@ -189,6 +191,15 @@ public class BackgroundAnalysisManager
         });
     }
 
+    private String getWorkingDirectory()
+    {
+        return Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
+            .filter(project -> project.isOpen())
+            .map(project -> project.getLocation().toOSString())
+            .findFirst()
+            .orElse(null);
+    }
+
     /**
      * Запускает self-review незакоммиченных изменений файла (git diff против HEAD).
      * Диапазон определяет сам скилл через git
@@ -207,11 +218,19 @@ public class BackgroundAnalysisManager
 
         dispatcher.createJob("Background AI Code Analysis", context -> {
             var token = cancellationToken;
+
+//            var absolutePath = ;
+//            var project = projectProvider.getProject(absolutePath)
+//                .orElseThrow(() -> new RuntimeException("Project not found"));
+
             // @formatter:off
             SkillExecutionRequest skillRequest = new SkillExecutionRequest("code-review-last-changes",
                 Map.of("project_name", request.getProjectId().toString(),
-                       "file_path", request.getFile().getLocation().toOSString()));
+                       "relative_file_path", request.getFile().getProjectRelativePath().toOSString(),
+                       "absolute_file_path", request.getFile().getLocation().toOSString(),
+                       "working_dir", getWorkingDirectory()));
             // @formatter:on
+
             skillExecutor.executeAsync(skillRequest, token).handle((response, exception) -> {
                 if (exception != null)
                 {
@@ -255,6 +274,7 @@ public class BackgroundAnalysisManager
                     {
                         log.warning("No generated message", () -> ""); //$NON-NLS-1$
                     }
+
                     result.complete(null);
                 });
             }).exceptionally(error -> {
