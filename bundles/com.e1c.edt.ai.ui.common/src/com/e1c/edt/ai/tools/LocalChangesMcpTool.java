@@ -101,6 +101,13 @@ public class LocalChangesMcpTool
 		+ "}";
 
 	@SuppressWarnings("nls")
+	private static String QuestionExampleUnrecordedChanges =
+		"{\n"
+		+ "  \"project_name\": \"MyProject\",\n"
+		+ "  \"file_path\": \"src/com/example/MyClass.java\"\n"
+		+ "}";
+
+	@SuppressWarnings("nls")
 	private static String AnswerExample =
 		"{\n"
 		+ "  \"project_name\": \"MyProject\",\n"
@@ -111,7 +118,8 @@ public class LocalChangesMcpTool
 		+ "  \"to_history_location\": \"C:/workspace/MyProject/src/com/example/MyClass.java\",\n"
 		+ "  \"diff_text\": \"diff --git a/src/example.java b/src/example.java\\n--- a/src/example.java\\n+++ b/src/example.java\\n@@ -1,3 +1,3 @@\\n public class Example {\\n-    private int oldField;\\n+    private int newField;\\n }\",\n"
 		+ "  \"context_lines\": 3,\n"
-		+ "  \"has_changes\": true\n"
+		+ "  \"has_changes\": true,\n"
+		+ "  \"current_is_dirty\": false\n"
 		+ "}";
 	// @formatter:on
 
@@ -195,12 +203,7 @@ public class LocalChangesMcpTool
 		var hasFromSelectors = hasAny(request.fromRevisionId, request.fromHistoryLocation, request.fromIndex);
 		var hasToSelectors = hasAny(request.toRevisionId, request.toHistoryLocation, request.toIndex);
 		var hasLegacySelectors = hasAny(request.revisionId, request.historyLocation);
-
-		if (!hasFromSelectors && !hasToSelectors && !hasLegacySelectors)
-		{
-			throw new ToolException(
-				"`revision_id` or `history_location` is required, or provide `from_*`/`to_*` selectors.");
-		}
+		var isDefaultDiff = !hasFromSelectors && !hasToSelectors && !hasLegacySelectors;
 
 		if (call.callKind == ToolCallKind.RENDER)
         {
@@ -270,10 +273,16 @@ public class LocalChangesMcpTool
 						toSelector.revisionId = CURRENT_REVISION;
 					}
 				}
-				else
+				else if (hasLegacySelectors)
 				{
 					fromSelector.revisionId = request.revisionId;
 					fromSelector.historyLocation = request.historyLocation;
+					toSelector.revisionId = CURRENT_REVISION;
+				}
+				else
+				{
+					// Like `git diff` with no arguments: changes not yet recorded in local history.
+					fromSelector.revisionId = LATEST_REVISION;
 					toSelector.revisionId = CURRENT_REVISION;
 				}
 
@@ -292,13 +301,21 @@ public class LocalChangesMcpTool
 					}
 				}
 
+				String note = null;
+				if (isDefaultDiff && !hasHistoryEntries(historyEntries))
+				{
+					fromSelector.revisionId = CURRENT_REVISION;
+					note = "The file has no local history yet, so there is nothing to compare the current content with.";
+				}
+
 				var historyStates =
 					needsHistoryStates(fromSelector) || needsHistoryStates(toSelector)
 						? getHistoryStates(actualFile, maxEntries)
 						: null;
 
-				var fromRevision = resolveRevision(actualFile, fromSelector, historyEntries, historyStates);
-				var toRevision = resolveRevision(actualFile, toSelector, historyEntries, historyStates);
+				var currentContent = getCurrentContentSafely(actualFile);
+				var fromRevision = resolveRevision(actualFile, fromSelector, historyEntries, historyStates, currentContent);
+				var toRevision = resolveRevision(actualFile, toSelector, historyEntries, historyStates, currentContent);
 
 				var oldContent = fromRevision.getContent();
 				var newContent = toRevision.getContent();
@@ -315,12 +332,15 @@ public class LocalChangesMcpTool
 				response.diffText = diffText;
 				response.contextLines = contextLines;
 				response.hasChanges = hasChanges;
+				response.currentIsDirty = fromRevision.isDirty || toRevision.isDirty;
+				response.note = note;
 
 				var content = json.serialize(response);
 
 				var responseMarkdown = new StringBuilder();
-				var revisionLabel = markdownUtils.createStyledText(
-                    response.fromRevisionId + " -> " + response.toRevisionId, TextColor.BLUE, FontWeight.NORMAL, false);
+				var revisionText = response.fromRevisionId + " -> " + response.toRevisionId
+					+ (response.currentIsDirty ? " " + Messages.UnsavedChanges : "");
+				var revisionLabel = markdownUtils.createStyledText(revisionText, TextColor.BLUE, FontWeight.NORMAL, false);
 
 				if (hasChanges)
 				{
@@ -383,6 +403,35 @@ public class LocalChangesMcpTool
 	private static boolean hasAny(String value, String otherValue)
 	{
 		return (value != null && !value.isBlank()) || (otherValue != null && !otherValue.isBlank());
+	}
+
+	private static boolean hasHistoryEntries(Iterable<LocalHistoryEntry> historyEntries)
+	{
+		if (historyEntries == null)
+		{
+			return false;
+		}
+		for (var entry : historyEntries)
+		{
+			if (!entry.isCurrent)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private CurrentFileContent getCurrentContentSafely(org.eclipse.core.resources.IFile file)
+	{
+		try
+		{
+			return localHistoryUtils.getCurrentContent(file);
+		}
+		catch (Exception e)
+		{
+			// Fall back to reading the file from disk lazily, exactly as before.
+			return null;
+		}
 	}
 
 	private static boolean hasAny(String value, String otherValue, Integer index)
@@ -449,7 +498,7 @@ public class LocalChangesMcpTool
 
     @SuppressWarnings("nls")
     private static ResolvedRevision resolveRevision(org.eclipse.core.resources.IFile file, RevisionSelector selector,
-		Iterable<LocalHistoryEntry> historyEntries, List<HistoryState> historyStates)
+		Iterable<LocalHistoryEntry> historyEntries, List<HistoryState> historyStates, CurrentFileContent currentContent)
 	{
 		if (selector == null)
 		{
@@ -480,7 +529,7 @@ public class LocalChangesMcpTool
 			var entry = getEntryByIndex(historyEntries, selector.index);
 			if (entry.isCurrent)
 			{
-				return resolveCurrent(file);
+				return resolveCurrent(file, currentContent);
 			}
 			return resolveHistoryState(entry.revisionId, historyStates);
 		}
@@ -489,7 +538,7 @@ public class LocalChangesMcpTool
 		{
 			if (isCurrentRevision(selector.revisionId))
 			{
-				return resolveCurrent(file);
+				return resolveCurrent(file, currentContent);
 			}
 			if (isLatestRevision(selector.revisionId))
 			{
@@ -504,11 +553,21 @@ public class LocalChangesMcpTool
 			return resolveHistoryState(selector.revisionId, historyStates);
 		}
 
-		return resolveCurrent(file);
+		return resolveCurrent(file, currentContent);
 	}
 
-	private static ResolvedRevision resolveCurrent(org.eclipse.core.resources.IFile file)
+	private static ResolvedRevision resolveCurrent(org.eclipse.core.resources.IFile file,
+		CurrentFileContent currentContent)
 	{
+		if (currentContent != null)
+		{
+			var location = file.getLocation();
+			var historyLocation =
+				location != null ? location.toFile().getAbsolutePath() : file.getFullPath().toString();
+			return ResolvedRevision.forCurrent(currentContent.content, CURRENT_REVISION, historyLocation,
+				currentContent.isDirty);
+		}
+
 		var path = Paths.get(file.getLocation().toFile().getAbsolutePath());
 		return ResolvedRevision.forPath(path, CURRENT_REVISION, path.toString());
 	}
@@ -675,16 +734,25 @@ public class LocalChangesMcpTool
 		spec.function.name = TOOL_NAME;
 
 		var description = new StringBuilder();
-		description.append("Diffs local history revisions and returns a Git-style diff.");
+		description.append("Diffs local history revisions and returns a Git-style diff. "
+			+ "Think of it as `git diff` for the IDE local history: it works even without a Git repository.");
 		description.append("\n\nUsage:");
 		description.append("\n- Arguments must be a single JSON object.");
+		description.append("\n- Called without revision selectors it behaves like plain `git diff`: shows changes"
+			+ " not yet recorded in local history (from `latest` history revision to `current`).");
 		description.append("\n- Provide `from_*` and `to_*` selectors to diff two revisions.");
 		description.append("\n- If only one side is provided, the other side defaults to `current`.");
 		description.append("\n- `revision_id` supports special values: `current`, `latest`, `oldest`, `previous`.");
+		description.append("\n- `current` is the live state of the file, including unsaved editor changes"
+			+ " (like the working tree in Git); `latest` is the newest history revision (like HEAD)."
+			+ " The response flag `current_is_dirty` tells whether unsaved editor changes were included.");
 		description.append("\n- Use `from_index`/`to_index` with `LocalHistory` indexes to get first changes.");
 		description.append("\n- Returns diff in standard Git diff format.");
 		description.append("\n\nRelated tools:");
-		description.append("\n- List revisions: `" + LocalHistoryMcpTool.TOOL_NAME + "`.");
+		description.append("\n- List revisions: `" + LocalHistoryMcpTool.TOOL_NAME + "` (like `git log`).");
+		description.append("\n\nChanges not yet recorded in history (like `git diff`) example:");
+		description.append("\n  Q: "); description.append(QuestionExampleUnrecordedChanges);
+		description.append("\n  A: "); description.append(AnswerExample);
 		description.append("\n\nLocal history revision diff example:");
 		description.append("\n  Q: "); description.append(QuestionExample);
 		description.append("\n  A: "); description.append(AnswerExample);
@@ -716,7 +784,8 @@ public class LocalChangesMcpTool
 
 		var revisionIdProp = new McpToolCallProperty();
 		revisionIdProp.type = "string";
-		revisionIdProp.description = "Revision id from LocalHistory response. Required if history_location is not provided.";
+		revisionIdProp.description = "Revision id from LocalHistory response. Optional: without any revision selectors"
+			+ " the tool diffs `latest` against `current` (changes not yet recorded in history).";
 		properties.put("revision_id", revisionIdProp);
 
 		var historyLocationProp = new McpToolCallProperty();
@@ -837,6 +906,12 @@ public class LocalChangesMcpTool
 		@SerializedName("has_changes")
 		public boolean hasChanges;
 
+		@SerializedName("current_is_dirty")
+		public boolean currentIsDirty;
+
+		@SerializedName("note")
+		public String note;
+
 		// Large field last so it is dropped first if the response is truncated.
 		@SerializedName("diff_text")
 		public String diffText;
@@ -853,25 +928,33 @@ public class LocalChangesMcpTool
 	{
 		public final String revisionId;
 		public final String historyLocation;
+		public final boolean isDirty;
 		private final Path path;
 		private final byte[] content;
 
-		private ResolvedRevision(Path path, byte[] content, String revisionId, String historyLocation)
+		private ResolvedRevision(Path path, byte[] content, String revisionId, String historyLocation, boolean isDirty)
 		{
 			this.path = path;
 			this.content = content;
 			this.revisionId = revisionId;
 			this.historyLocation = historyLocation;
+			this.isDirty = isDirty;
 		}
 
 		public static ResolvedRevision forPath(Path path, String revisionId, String historyLocation)
 		{
-			return new ResolvedRevision(path, null, revisionId, historyLocation);
+			return new ResolvedRevision(path, null, revisionId, historyLocation, false);
 		}
 
 		public static ResolvedRevision forContent(byte[] content, String revisionId, String historyLocation)
 		{
-			return new ResolvedRevision(null, content, revisionId, historyLocation);
+			return new ResolvedRevision(null, content, revisionId, historyLocation, false);
+		}
+
+		public static ResolvedRevision forCurrent(byte[] content, String revisionId, String historyLocation,
+			boolean isDirty)
+		{
+			return new ResolvedRevision(null, content, revisionId, historyLocation, isDirty);
 		}
 
         @SuppressWarnings("nls")

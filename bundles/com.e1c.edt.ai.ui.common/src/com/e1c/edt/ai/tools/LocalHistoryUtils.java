@@ -5,7 +5,6 @@ package com.e1c.edt.ai.tools;
 
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -14,30 +13,51 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFileState;
 import org.eclipse.core.runtime.CoreException;
 
+import com.e1c.edt.ai.IContentSourceProvider;
+import com.e1c.edt.ai.IFileDocument;
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
+
 class LocalHistoryUtils
 	implements ILocalHistoryUtils
 {
+	private final IContentSourceProvider contentSourceProvider;
+
+	@Inject
+	LocalHistoryUtils(IContentSourceProvider contentSourceProvider)
+	{
+		Preconditions.checkNotNull(contentSourceProvider);
+
+		this.contentSourceProvider = contentSourceProvider;
+	}
+
 	@Override
 	public List<LocalHistoryEntry> getLocalHistory(IFile file, int maxEntries) throws Exception
 	{
 		var entries = new ArrayList<LocalHistoryEntry>();
 
-		var absolutePath = file.getLocation().toFile().getAbsolutePath();
-		var filePath = Paths.get(absolutePath);
+		var location = file.getLocation();
+		var current = getCurrentContent(file);
 
 		var currentEntry = new LocalHistoryEntry();
-		var currentAttrs = Files.readAttributes(filePath, BasicFileAttributes.class);
 		currentEntry.revisionId = "current"; //$NON-NLS-1$
-		currentEntry.timestamp = currentAttrs.lastModifiedTime().toMillis();
+		currentEntry.timestamp = file.getLocalTimeStamp();
+		if (location != null && location.toFile().exists())
+		{
+			var currentAttrs = Files.readAttributes(location.toFile().toPath(), BasicFileAttributes.class);
+			currentEntry.timestamp = currentAttrs.lastModifiedTime().toMillis();
+		}
 		currentEntry.formattedTime = formatTimestamp(currentEntry.timestamp);
-		currentEntry.fileSize = currentAttrs.size();
-		currentEntry.location = absolutePath;
+		currentEntry.fileSize = current.content.length;
+		currentEntry.location = location != null ? location.toFile().getAbsolutePath() : file.getFullPath().toString();
 		currentEntry.isCurrent = true;
+		currentEntry.isDirty = current.isDirty;
 		entries.add(currentEntry);
 
 		if (maxEntries <= 1)
@@ -75,6 +95,66 @@ class LocalHistoryUtils
 		}
 
 		return entries;
+	}
+
+	@Override
+	public CurrentFileContent getCurrentContent(IFile file) throws Exception
+	{
+		var fileDocument = contentSourceProvider.getFileDocument(file);
+		if (fileDocument.isPresent() && fileDocument.get().isDirty())
+		{
+			return new CurrentFileContent(encode(fileDocument.get()), true);
+		}
+
+		// Prefer the exact on-disk bytes for a clean file: re-encoding the document may not
+		// round-trip byte-for-byte (BOM, line endings normalized by the decoder).
+		var location = file.getLocation();
+		if (location != null && location.toFile().exists())
+		{
+			return new CurrentFileContent(Files.readAllBytes(location.toFile().toPath()), false);
+		}
+
+		if (fileDocument.isPresent())
+		{
+			return new CurrentFileContent(encode(fileDocument.get()), false);
+		}
+
+		throw new IllegalStateException("The file \"" + file.getFullPath() + "\" is not accessible."); //$NON-NLS-1$ //$NON-NLS-2$
+	}
+
+	@Override
+	public Optional<Boolean> currentDiffersFromLatest(IFile file)
+	{
+		try
+		{
+			var historyStates = getHistoryStates(file);
+			historyStates.sort(Comparator.comparingLong(IFileState::getModificationTime).reversed());
+
+			for (var state : historyStates)
+			{
+				if (!state.exists())
+				{
+					continue;
+				}
+
+				var current = getCurrentContent(file);
+				try (InputStream stream = state.getContents())
+				{
+					return Optional.of(!Arrays.equals(current.content, stream.readAllBytes()));
+				}
+			}
+
+			return Optional.empty();
+		}
+		catch (Exception e)
+		{
+			return Optional.empty();
+		}
+	}
+
+	private static byte[] encode(IFileDocument fileDocument)
+	{
+		return fileDocument.getDocument().get().getBytes(fileDocument.getCharset());
 	}
 
 	private static List<IFileState> getHistoryStates(IFile file) throws CoreException

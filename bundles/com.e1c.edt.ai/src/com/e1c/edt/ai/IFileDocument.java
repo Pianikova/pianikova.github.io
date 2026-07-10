@@ -25,6 +25,16 @@ public interface IFileDocument
 
     ITextEditor getTextEditor();
 
+    /**
+     * Tells whether the document carries changes that are not yet saved to disk.
+     *
+     * @return {@code true} when the underlying editor buffer is dirty, {@code false} otherwise
+     */
+    default boolean isDirty()
+    {
+        return false;
+    }
+
     void setContent(String content);
 
     /**

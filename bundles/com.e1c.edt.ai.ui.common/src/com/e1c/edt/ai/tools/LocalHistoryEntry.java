@@ -28,6 +28,9 @@ class LocalHistoryEntry
 	@SerializedName("is_current")
 	public boolean isCurrent;
 
+	@SerializedName("is_dirty")
+	public boolean isDirty;
+
 	@SerializedName("is_oldest")
 	public boolean isOldest;
 }
