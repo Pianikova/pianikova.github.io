@@ -60,16 +60,6 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(UpdateService.class);
         initializableBinder.addBinding().to(Notificator.class);
         initializableBinder.addBinding().to(JShellSessionManager.class);
-        // NOTE: ActiveProjectTracker and ResourceListener drive global-context tracking
-        // (scan + hash of every workspace file). They are intentionally NOT registered here
-        // because this module is shared by both the EDT and the plain-Eclipse plugins, and
-        // global context must be synchronized ONLY by the EDT plugin. They are registered in
-        // the EDT-specific com.e1c.edt.ai.ui.AIUIModule instead.
-        // NOTE: IVisualContextProvider is intentionally NOT bound here either: the EDT injector
-        // is Modules.override(ContextModule).with(this, ...), so a binding in this shared module
-        // would silently override the EDT LWT-capable provider from ContextModule. Each variant
-        // binds it itself: EDT -> com.e1c.edt.ai.context.VisualContextProvider,
-        // Eclipse -> com.e1c.edt.ai.ui.SwtVisualContextProvider.
         initializableBinder.addBinding().to(JShellReflectionWarmUp.class);
 
         bind(UI.class).in(Singleton.class);

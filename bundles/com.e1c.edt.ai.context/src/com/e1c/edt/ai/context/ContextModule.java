@@ -39,7 +39,6 @@ import com.e1c.edt.ai.IMarkersProvider;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IProjectBuilder;
 import com.e1c.edt.ai.IProjectDetailsProvider;
-import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.MarkdownUtils;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
 import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
@@ -102,7 +101,6 @@ class ContextModule
             }
         });
         bind(IModuleProvider.class).annotatedWith(Names.named("BaseModuleProvider")).to(ModuleProvider.class).in(Singleton.class); //$NON-NLS-1$
-        bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
 
         // MCP tools
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
