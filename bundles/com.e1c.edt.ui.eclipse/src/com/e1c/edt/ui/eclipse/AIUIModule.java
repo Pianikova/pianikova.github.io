@@ -78,7 +78,7 @@ public class AIUIModule
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
-        bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
+        bind(IVisualContextProvider.class).to(com.e1c.edt.ai.ui.SwtVisualContextProvider.class).in(Singleton.class);
         bind(IFiles.class).to(Files.class).in(Singleton.class);
         bind(ISpecializedEditorOpener.class).to(NoOpSpecializedEditorOpener.class).in(Singleton.class);
         @SuppressWarnings("unused")

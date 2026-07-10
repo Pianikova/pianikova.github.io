@@ -27,6 +27,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(ExecuteMcpTool.class);
         toolBinder.addBinding().to(GitMcpTool.class);
         toolBinder.addBinding().to(GetProjectsMcpTool.class);
+        toolBinder.addBinding().to(GetVisualContextMcpTool.class);
         toolBinder.addBinding().to(GetCommandCategoriesMcpTool.class);
         toolBinder.addBinding().to(GetCommandsMcpTool.class);
         toolBinder.addBinding().to(ReadMcpTool.class);

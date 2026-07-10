@@ -1,0 +1,7 @@
+{
+  "name": "GetVisualContext",
+  "arguments": {
+    "scope": "all",
+    "max_field_length": 2000
+  }
+}

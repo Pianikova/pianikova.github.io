@@ -19,6 +19,9 @@ public class Messages
     public static String ProjectsLoadedTemplate;
     public static String ProjectsDetailsTitle;
 
+    // Visual context
+    public static String VisualContextTitle;
+
     // File operations
     public static String ReadTitleTemplate;
     public static String ReadTemplate;

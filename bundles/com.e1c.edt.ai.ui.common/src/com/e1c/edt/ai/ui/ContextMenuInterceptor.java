@@ -3,6 +3,9 @@
  */
 package com.e1c.edt.ai.ui;
 
+import java.util.List;
+import java.util.Map;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.FocusEvent;
@@ -21,9 +24,18 @@ import org.eclipse.swt.widgets.Text;
 
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
-import com.e1c.edt.ai.IObserver;
+import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IConversationFacade;
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVisualContextProvider;
+import com.e1c.edt.ai.assistent.SendMessageResult;
+import com.e1c.edt.ai.assistent.SendUserMessageRequest;
+import com.e1c.edt.ai.assistent.model.ProjectId;
+import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
+import com.e1c.edt.ai.assistent.model.VisualContext;
+import com.e1c.edt.ai.assistent.model.VisualField;
+import com.e1c.edt.ai.skills.ISkillExecutor;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -32,22 +44,29 @@ public class ContextMenuInterceptor
 {
     private final IDispatcher dispatcher;
     private final IVisualContextProvider visualContextProviewr;
-    private final ITextActions textActions;
+    private final ISkillExecutor skillExecutor;
+    private final IConversationFacade conversationFacade;
+    private final ILog log;
     private final IUI ui;
     private final ISettings settings;
+    private CancellationTokenSource currentCancellationTokenSource;
 
     @Inject
     public ContextMenuInterceptor(IDispatcher dispatcher, IVisualContextProvider visualContextProviewr,
-        ITextActions textActions, IUI ui, ISettings settings)
+        ISkillExecutor skillExecutor, IConversationFacade conversationFacade, ILog log, IUI ui, ISettings settings)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(visualContextProviewr);
-        Preconditions.checkNotNull(textActions);
+        Preconditions.checkNotNull(skillExecutor);
+        Preconditions.checkNotNull(conversationFacade);
+        Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(settings);
         this.dispatcher = dispatcher;
         this.visualContextProviewr = visualContextProviewr;
-        this.textActions = textActions;
+        this.skillExecutor = skillExecutor;
+        this.conversationFacade = conversationFacade;
+        this.log = log;
         this.ui = ui;
         this.settings = settings;
     }
@@ -83,6 +102,12 @@ public class ContextMenuInterceptor
                     public String getContent()
                     {
                         return text.getText();
+                    }
+
+                    @Override
+                    public String getSelectedText()
+                    {
+                        return text.getSelectionText();
                     }
 
                     @Override
@@ -131,6 +156,12 @@ public class ContextMenuInterceptor
                     public String getContent()
                     {
                         return text.getText();
+                    }
+
+                    @Override
+                    public String getSelectedText()
+                    {
+                        return text.getSelectionText();
                     }
 
                     @Override
@@ -282,6 +313,7 @@ public class ContextMenuInterceptor
         }
     }
 
+    @SuppressWarnings("nls")
     private void executeAction(IText text, TextAction textAction, TextListener textListener)
     {
         if (!settings.isEnabled())
@@ -290,39 +322,132 @@ public class ContextMenuInterceptor
         }
 
         var cancellationTokenSource = new CancellationTokenSource();
-        textListener.cancellationTokenSource = cancellationTokenSource;
-        var context = visualContextProviewr.create(text.getControl(), cancellationTokenSource);
-        var improvementsSource = textActions.ceateTextImprovementsSource(context, textAction, cancellationTokenSource);
-        improvementsSource.subscribe(new IObserver<TextImprovements>()
+        // Only one text action runs at a time, a new one cancels the previous
+        synchronized (this)
         {
-            @Override
-            public void onNext(TextImprovements textImprovements)
+            if (currentCancellationTokenSource != null)
             {
-                dispatcher.dispatch(() -> {
-                    textListener.isSuppresed = true;
-                    try
-                    {
-                        text.setContent(textImprovements.getText());
-                    }
-                    finally
-                    {
-                        textListener.isSuppresed = false;
-                    }
+                currentCancellationTokenSource.cancel();
+            }
+
+            currentCancellationTokenSource = cancellationTokenSource;
+        }
+
+        textListener.cancellationTokenSource = cancellationTokenSource;
+
+        // Skill parameters are captured on the UI thread, before the background job starts
+        var context = visualContextProviewr.create(text.getControl(), cancellationTokenSource);
+        var isMultiline = (text.getControl().getStyle() & SWT.MULTI) != 0;
+        // @formatter:off
+        var parameters = Map.of(
+            "field_name", sanitize(findFocusedFieldName(context)),
+            "field_value", sanitize(text.getContent()),
+            "selected_text", sanitize(text.getSelectedText()),
+            "is_multiline", String.valueOf(isMultiline),
+            "language", settings.getLanguage());
+        // @formatter:on
+
+        var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
+            var request = new SkillExecutionRequest(textAction.skillId, parameters);
+            skillExecutor.executeAsync(request, cancellationTokenSource)
+                .thenCompose(result -> conversationFacade.sendAsync(
+                    new SendUserMessageRequest(ProjectId.Default, result.getPrompt(), null, true),
+                    cancellationTokenSource))
+                .thenAccept(resultMessage -> applyResult(text, textListener, cancellationTokenSource, resultMessage))
+                .exceptionally(error -> {
+                    log.logError(error);
+                    return null;
                 });
+        }, false, cancellationTokenSource);
+        job.schedule();
+    }
+
+    private void applyResult(IText text, TextListener textListener, ICancellationToken cancellationToken,
+        SendMessageResult resultMessage)
+    {
+        if (resultMessage == null || cancellationToken.isCanceled())
+        {
+            return;
+        }
+
+        var newText = resultMessage.getText();
+        if (newText == null || newText.isBlank())
+        {
+            return;
+        }
+
+        dispatcher.dispatch(() -> {
+            if (cancellationToken.isCanceled() || text.getControl().isDisposed())
+            {
+                return;
             }
 
-            @Override
-            public void onError(Throwable error)
+            textListener.isSuppresed = true;
+            try
             {
-                //
+                text.setContent(newText.trim());
+            }
+            finally
+            {
+                textListener.isSuppresed = false;
             }
 
-            @Override
-            public void onCompleted()
-            {
-                dispatcher.dispatch(() -> text.selectAll());
-            }
+            text.selectAll();
         });
+    }
+
+    private String findFocusedFieldName(VisualContext context)
+    {
+        var name = findFocusedFieldName(context.fields);
+        if (name != null)
+        {
+            return name;
+        }
+
+        if (context.groups != null)
+        {
+            for (var group : context.groups)
+            {
+                name = findFocusedFieldName(group.fields);
+                if (name != null)
+                {
+                    return name;
+                }
+            }
+        }
+
+        return ""; //$NON-NLS-1$
+    }
+
+    private String findFocusedFieldName(List<VisualField> fields)
+    {
+        if (fields == null)
+        {
+            return null;
+        }
+
+        for (var field : fields)
+        {
+            if (Boolean.TRUE.equals(field.isFocused) && field.name != null)
+            {
+                return field.name;
+            }
+        }
+
+        return null;
+    }
+
+    @SuppressWarnings("nls")
+    private String sanitize(String value)
+    {
+        if (value == null)
+        {
+            return "";
+        }
+
+        // A literal tool directive in a field value would be executed by the skill template
+        // renderer after placeholder substitution - break it apart
+        return value.replace("!tool(", "!tool (");
     }
 
     private interface IText
@@ -330,6 +455,8 @@ public class ContextMenuInterceptor
         Control getControl();
 
         String getContent();
+
+        String getSelectedText();
 
         void setContent(String content);
 

@@ -65,6 +65,11 @@ public class AIUICommonModule
         // because this module is shared by both the EDT and the plain-Eclipse plugins, and
         // global context must be synchronized ONLY by the EDT plugin. They are registered in
         // the EDT-specific com.e1c.edt.ai.ui.AIUIModule instead.
+        // NOTE: IVisualContextProvider is intentionally NOT bound here either: the EDT injector
+        // is Modules.override(ContextModule).with(this, ...), so a binding in this shared module
+        // would silently override the EDT LWT-capable provider from ContextModule. Each variant
+        // binds it itself: EDT -> com.e1c.edt.ai.context.VisualContextProvider,
+        // Eclipse -> com.e1c.edt.ai.ui.SwtVisualContextProvider.
         initializableBinder.addBinding().to(JShellReflectionWarmUp.class);
 
         bind(UI.class).in(Singleton.class);
@@ -130,7 +135,6 @@ public class AIUICommonModule
         bind(ISkillFileOpener.class).to(SkillFileOpener.class).in(Singleton.class);
         bind(IFileSystem.class).to(FileSystem.class).in(Singleton.class);
         bind(IProjectTrackingDeltaVisitor.class).to(ProjectTrackingDeltaVisitor.class).in(Singleton.class);
-        bind(ITextActions.class).to(TextActions.class).in(Singleton.class);
         bind(IStateService.class).to(StateService.class).in(Singleton.class);
         bind(IContentSourceProvider.class).to(ContentSourceProvider.class).in(Singleton.class);
         bind(IEditRollback.class).to(EditRollback.class).in(Singleton.class);

@@ -19,7 +19,6 @@
         <includes>
           <include>plugin.properties</include>
           <include>restricted-types.properties</include>
-          <include>prompts/**</include>
         </includes>
       </resource>
     </resources>
