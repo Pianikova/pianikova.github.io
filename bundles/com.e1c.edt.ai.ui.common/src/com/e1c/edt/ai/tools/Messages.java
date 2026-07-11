@@ -86,6 +86,7 @@ public class Messages
     public static String NoNavigationHistoryFound;
     public static String Location;
     public static String Current;
+    public static String UnsavedChanges;
 
     // Command operations
     public static String ExecuteTitleTemplate;

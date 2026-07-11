@@ -14,8 +14,10 @@ import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.context.IModuleProvider;
 import com.e1c.edt.ai.context.ModuleProvider;
+import com.e1c.edt.ai.context.VisualContextProvider;
 import com.e1c.edt.ai.tools.EditRollback;
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
@@ -56,6 +58,7 @@ public class AIUIModule
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(ISpecializedEditorOpener.class).to(EdtSpecializedEditorOpener.class).in(Singleton.class);
         bind(IEditRollback.class).to(EditRollback.class).in(Singleton.class);
+        bind(IVisualContextProvider.class).to(VisualContextProvider.class).in(Singleton.class);
 
         // Global-context tracking is EDT-only: scans + hashes every workspace file and syncs it
         // to the server. The plain-Eclipse plugin must NOT do this, so these initializables live

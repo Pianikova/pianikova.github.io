@@ -2,6 +2,7 @@ package com.e1c.edt.ai.ui;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -73,6 +74,34 @@ public class FileDocument
     public ITextEditor getTextEditor()
     {
         return textEditor;
+    }
+
+    @Override
+    public boolean isDirty()
+    {
+        if (!isOpened)
+        {
+            return false;
+        }
+
+        if (textEditor != null)
+        {
+            return textEditor.isDirty();
+        }
+
+        // Opened without an ITextEditor adapter: fall back to comparing the buffer with the on-disk content.
+        try
+        {
+            var documentBytes = document.get().getBytes(getCharset());
+            try (var stream = file.getContents(true))
+            {
+                return !Arrays.equals(documentBytes, stream.readAllBytes());
+            }
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
     }
 
     @Override

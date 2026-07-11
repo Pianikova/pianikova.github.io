@@ -54,6 +54,9 @@ public class LocalHistoryMcpTool
 	@SuppressWarnings("nls")
 	private static String AnswerExample =
 		"{\n"
+		+ "  \"has_more\": true,\n"
+		+ "  \"current_is_dirty\": true,\n"
+		+ "  \"differs_from_latest\": true,\n"
 		+ "  \"entries\": [\n"
 		+ "    {\n"
 		+ "      \"index\": 0,\n"
@@ -63,10 +66,10 @@ public class LocalHistoryMcpTool
 		+ "      \"file_size\": 1024,\n"
 		+ "      \"location\": \"/path/to/file\",\n"
 		+ "      \"is_current\": true,\n"
+		+ "      \"is_dirty\": true,\n"
 		+ "      \"is_oldest\": false\n"
 		+ "    }\n"
-		+ "  ],\n"
-		+ "  \"total_entries\": 15\n"
+		+ "  ]\n"
 		+ "}";
 
 	// @formatter:on
@@ -233,6 +236,8 @@ public class LocalHistoryMcpTool
 			var response = new LocalHistoryResponse();
 			response.entries = historyEntries;
                 response.hasMore = hasMore;
+                response.currentIsDirty = !historyEntries.isEmpty() && historyEntries.get(0).isDirty;
+                response.differsFromLatest = localHistoryUtils.currentDiffersFromLatest(actualFile).orElse(null);
 
 			var content = json.serialize(response);
 
@@ -255,6 +260,7 @@ public class LocalHistoryMcpTool
                                 false))
 						.append("**")
 						.append(entry.isCurrent ? " " + Messages.Current : "")
+						.append(entry.isDirty ? " " + Messages.UnsavedChanges : "")
 						.append(" - ")
 						.append(entry.formattedTime)
 						.append("\n\n");
@@ -298,18 +304,26 @@ public class LocalHistoryMcpTool
 		spec.function.name = TOOL_NAME;
 
 		var description = new StringBuilder();
-		description.append("Lists local history revisions for a file.");
+		description.append("Lists local history revisions for a file. "
+			+ "Think of it as `git log` for the IDE local history: it works even without a Git repository.");
 		description.append("\n\nUsage:");
 		description.append("\n- Arguments must be a single JSON object.");
 		description.append("\n- Returns recent entries first (index 0 is current).");
+		description.append("\n- `current` (index 0) is the live state of the file, including unsaved editor changes"
+			+ " (`is_dirty` is true when the editor has unsaved changes); it is like the working tree in Git,"
+			+ " while `latest` history entry is like HEAD.");
 		description.append("\n- Includes timestamp, size, and history location.");
 		description.append("\n- Each entry includes `index` and `is_oldest` to help select versions.");
 		description.append("\n- `location` is a virtual id (`local_history:<revision_id>`) for history entries.");
 		description.append("\n- Set `max_entries` to 0 to return all available history.");
 		description.append("\n- Works with Eclipse local history when available.");
 		description.append("\n- Response includes has_more flag indicating if more history entries are available.");
+		description.append("\n- Response includes `current_is_dirty` (unsaved editor changes exist) and"
+			+ " `differs_from_latest` (current content differs from the newest history revision; null when there is no history).");
 		description.append("\n\nRelated tools:");
-		description.append("\n- Diff revisions: `" + LocalChangesMcpTool.TOOL_NAME + "`.");
+		description.append("\n- Diff revisions: `" + LocalChangesMcpTool.TOOL_NAME
+			+ "` (like `git diff`). To see changes not yet recorded in history, call it without revision selectors"
+			+ " or with from_revision_id=\"latest\", to_revision_id=\"current\".");
 		description.append("\n\nExample:");
 		description.append("\n  Q: "); description.append(QuestionExample);
 		description.append("\n  A: "); description.append(AnswerExample);
@@ -359,6 +373,12 @@ public class LocalHistoryMcpTool
 	{
 		@SerializedName("has_more")
 		public boolean hasMore;
+
+		@SerializedName("current_is_dirty")
+		public boolean currentIsDirty;
+
+		@SerializedName("differs_from_latest")
+		public Boolean differsFromLatest;
 
 		// Large field last so it is dropped first if the response is truncated.
 		@SerializedName("entries")
