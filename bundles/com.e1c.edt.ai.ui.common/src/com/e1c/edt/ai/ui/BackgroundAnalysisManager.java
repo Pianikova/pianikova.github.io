@@ -17,12 +17,14 @@ import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IConversationFacade;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ConversationSession;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
+import com.e1c.edt.ai.tools.ILocalHistoryUtils;
 import com.google.inject.Inject;
 
 /**
@@ -32,29 +34,40 @@ import com.google.inject.Inject;
  */
 public class BackgroundAnalysisManager
 {
+    private static final String LATEST_REVISION = "latest"; //$NON-NLS-1$
+
     private static final class FileAnalysisState
     {
         final AtomicReference<Job> currentJob = new AtomicReference<>();
         final AtomicLong generation = new AtomicLong();
         // отдельный диалог на файл
         final AtomicReference<ConversationSession> conversationSession = new AtomicReference<>();
+        // База диффа для следующего ревью. null — ревью не "в долгу", брать «latest».
+        // Непустое значение — id ревизии локальной истории, зафиксированный на старте
+        // ревью, которое было вытеснено/упало: следующее ревью "диффует" от него,
+        // чтобы дельты отменённых ревью не терялись.
+        final AtomicReference<String> pendingBaseRevisionId = new AtomicReference<>();
     }
 
     private final IConversationFacade conversationFacade;
     private final IDispatcher dispatcher;
     private final ISkillExecutor skillExecutor;
     private final ILog log;
+    private final ILocalHistoryUtils localHistoryUtils;
+    private final ISettings settings;
 
     private final ConcurrentMap<IFile, FileAnalysisState> states = new ConcurrentHashMap<>();
 
     @Inject
     public BackgroundAnalysisManager(IConversationFacade conversationFacade, IDispatcher dispatcher,
-        ISkillExecutor skillExecutor, ILog log)
+        ISkillExecutor skillExecutor, ILog log, ILocalHistoryUtils localHistoryUtils, ISettings settings)
     {
         this.conversationFacade = conversationFacade;
         this.dispatcher = dispatcher;
         this.skillExecutor = skillExecutor;
         this.log = log;
+        this.localHistoryUtils = localHistoryUtils;
+        this.settings = settings;
     }
 
     /**
@@ -65,7 +78,7 @@ public class BackgroundAnalysisManager
     @SuppressWarnings("nls")
     public void onFileSaved(IFile file)
     {
-        if (!shouldAnalyze(file))
+        if (!settings.isEnabled() || !shouldAnalyze(file))
         {
             return;
         }
@@ -87,7 +100,7 @@ public class BackgroundAnalysisManager
             {
                 return; // вытеснены до старта
             }
-            analyzeChanges(request, state, token).exceptionally(error -> {
+            analyzeChanges(request, state, myGeneration, token).exceptionally(error -> {
                 log.logError(error);
                 return null;
             });
@@ -131,7 +144,7 @@ public class BackgroundAnalysisManager
      */
     @SuppressWarnings("nls")
     private CompletableFuture<Void> analyzeChanges(AutoAnalysisRequest request, FileAnalysisState state,
-        ICancellationToken cancellationToken)
+        long generation, ICancellationToken cancellationToken)
     {
         if (request == null)
         {
@@ -144,15 +157,21 @@ public class BackgroundAnalysisManager
         dispatcher.createJob("Background AI Code Analysis", context -> {
             var token = cancellationToken;
 
-//            var absolutePath = ;
-//            var project = projectProvider.getProject(absolutePath)
-//                .orElseThrow(() -> new RuntimeException("Project not found"));
+            // Фиксируем базу диффа на старте: если предыдущее ревью не завершилось,
+            // база остаётся от него — его дельта попадёт в это ревью.
+            String baseRevisionId = state.pendingBaseRevisionId.get();
+            if (baseRevisionId == null)
+            {
+                baseRevisionId = localHistoryUtils.getLatestRevisionId(request.getFile()).orElse(LATEST_REVISION);
+                state.pendingBaseRevisionId.set(baseRevisionId);
+            }
 
             // @formatter:off
             SkillExecutionRequest skillRequest = new SkillExecutionRequest("code-review-last-changes",
                 Map.of("project_name", request.getProjectId().toString(),
                        "relative_file_path", request.getFile().getProjectRelativePath().toString(),
-                       "absolute_file_path", request.getFile().getLocation().toOSString()));
+                       "absolute_file_path", request.getFile().getLocation().toOSString(),
+                       "from_revision_id", baseRevisionId));
             // @formatter:on
 
             skillExecutor.executeAsync(skillRequest, token).handle((response, exception) -> {
@@ -197,6 +216,13 @@ public class BackgroundAnalysisManager
                     if (generatedMessage == null || generatedMessage.isBlank())
                     {
                         log.warning("No generated message", () -> ""); //$NON-NLS-1$
+                    }
+
+                    // Ревью завершилось — долгов нет, следующее ревью диффует от «latest».
+                    // Если нас уже вытеснило новое поколение, база остаётся закреплённой за ним.
+                    if (state.generation.get() == generation)
+                    {
+                        state.pendingBaseRevisionId.set(null);
                     }
 
                     result.complete(null);

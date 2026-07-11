@@ -152,6 +152,28 @@ class LocalHistoryUtils
 		}
 	}
 
+	@Override
+	public Optional<String> getLatestRevisionId(IFile file)
+	{
+		try
+		{
+			var historyStates = getHistoryStates(file);
+			historyStates.sort(Comparator.comparingLong(IFileState::getModificationTime).reversed());
+			for (var state : historyStates)
+			{
+				if (state.exists())
+				{
+					return Optional.of(buildRevisionId(state));
+				}
+			}
+			return Optional.empty();
+		}
+		catch (Exception e)
+		{
+			return Optional.empty();
+		}
+	}
+
 	private static byte[] encode(IFileDocument fileDocument)
 	{
 		return fileDocument.getDocument().get().getBytes(fileDocument.getCharset());

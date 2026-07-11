@@ -123,20 +123,23 @@ public class SetMarkersMcpTool
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
     private final IProjectTools projectTools;
+    private final IContentReplacer contentReplacer;
 
     @Inject
     public SetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IProjectTools projectTools)
+        IContentSourceProvider contentSourceProvider, IProjectTools projectTools, IContentReplacer contentReplacer)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(projectTools);
+        Preconditions.checkNotNull(contentReplacer);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
         this.projectTools = projectTools;
+        this.contentReplacer = contentReplacer;
         this.spec = createSpecification();
     }
 
@@ -379,87 +382,62 @@ public class SetMarkersMcpTool
                 + file.getFullPath() + " (" + documentText.getNumberOfLines() + " lines)");
         }
 
-        // Normalize markedText to use \n line endings consistently
-        var normalizedMarkedText = markedText.replace("\r\n", "\n");
-
-        // Search in the actual document text with context
-        var contextCharsBefore = 200;
-        var contextCharsAfter = 500;
         var documentLength = documentText.getLength();
-
-        // Calculate search range centered around the start line
         IRegion lineRegion = documentText.getLineInformation(startLine - 1);
-        var searchStart = Math.max(0, lineRegion.getOffset() - contextCharsBefore);
-        var searchEnd = Math.min(documentLength, lineRegion.getOffset() + lineRegion.getLength() + contextCharsAfter);
+        var lineStart = lineRegion.getOffset();
+        var lineEnd = lineRegion.getOffset() + lineRegion.getLength();
 
-        // Get the search area from the document
-        var searchArea = documentText.get(searchStart, searchEnd - searchStart);
+        // Progressive search windows anchored to marker_line: the line itself, then a small
+        // context window, then the whole document. The first window with a single unambiguous
+        // match wins, so duplicated fragments are still resolved by proximity to the line.
+        // @formatter:off
+        int[][] windows = {
+            { lineStart, lineEnd },
+            { Math.max(0, lineStart - 200), Math.min(documentLength, lineEnd + 500) },
+            { 0, documentLength } };
+        // @formatter:on
 
-        // Normalize the search area the same way as markedText, keeping a map back to original offsets
-        var lineStartInArea = lineRegion.getOffset() - searchStart;
-        var normalizedArea = new StringBuilder(searchArea.length());
-        var offsetMap = new int[searchArea.length() + 1];
-        var normalizedLineStart = -1;
-        for (int i = 0; i < searchArea.length(); i++)
+        ReplaceResult match = null;
+        var windowStart = -1;
+        var ambiguous = false;
+        for (var window : windows)
         {
-            if (i == lineStartInArea)
-            {
-                normalizedLineStart = normalizedArea.length();
-            }
-            var ch = searchArea.charAt(i);
-            if (ch == '\r' && i + 1 < searchArea.length() && searchArea.charAt(i + 1) == '\n')
+            if (window[1] <= window[0])
             {
                 continue;
             }
-            offsetMap[normalizedArea.length()] = i;
-            normalizedArea.append(ch);
-        }
-        offsetMap[normalizedArea.length()] = searchArea.length();
-        if (normalizedLineStart < 0)
-        {
-            normalizedLineStart = normalizedArea.length();
-        }
-
-        // Search forward from the requested line first, then widen; exact match first, then trimmed
-        var strippedMarkedText = normalizedMarkedText.strip();
-        var searchIndex = -1;
-        var matchedText = normalizedMarkedText;
-        for (var candidate : new String[] { normalizedMarkedText, strippedMarkedText })
-        {
-            if (candidate.isEmpty())
+            var searchArea = documentText.get(window[0], window[1] - window[0]);
+            // No-op replacement: the replacer is used only to locate the fragment,
+            // reusing its normalization (BOM, line delimiters) and matching strategies.
+            var result = contentReplacer.replace(searchArea, markedText, markedText, "\n", false);
+            if (result.isSuccess() && result.isRegionReplaceable())
             {
-                continue;
-            }
-            searchIndex = normalizedArea.indexOf(candidate, normalizedLineStart);
-            if (searchIndex < 0)
-            {
-                searchIndex = normalizedArea.indexOf(candidate);
-            }
-            if (searchIndex >= 0)
-            {
-                matchedText = candidate;
+                match = result;
+                windowStart = window[0];
                 break;
             }
+            ambiguous = ambiguous || result.hasMultipleOccurrences();
         }
 
-        if (searchIndex < 0)
+        if (match == null)
         {
             // Provide context in error message
-            var contextStart = Math.max(0, normalizedLineStart - 40);
-            var contextEnd = Math.min(normalizedArea.length(), normalizedLineStart + 200);
-            var context = normalizedArea.substring(contextStart, contextEnd);
-            if (contextEnd < normalizedArea.length())
+            var contextStart = Math.max(0, lineStart - 40);
+            var contextEnd = Math.min(documentLength, lineEnd + 200);
+            var context = documentText.get(contextStart, contextEnd - contextStart);
+            if (contextEnd < documentLength)
             {
                 context = context + "...";
             }
+            var reason = ambiguous ? "is ambiguous (several occurrences)" : "not found";
             throw new IllegalArgumentException(
-                "Target content not found in line " + startLine + ".\n" + "Search text: \"" + normalizedMarkedText
-                    + "\"\n" + "Context around line: " + context.replace("\n", "\\n").replace("\r", "\\r"));
+                "Target content " + reason + " in line " + startLine + ".\n" + "Search text: \"" + markedText + "\"\n"
+                    + "Context around line: " + context.replace("\n", "\\n").replace("\r", "\\r"));
         }
 
         // Calculate absolute character positions in the document
-        var absoluteCharStart = searchStart + offsetMap[searchIndex];
-        var absoluteCharEnd = searchStart + offsetMap[searchIndex + matchedText.length()];
+        var absoluteCharStart = windowStart + match.getReplaceOffset();
+        var absoluteCharEnd = absoluteCharStart + match.getReplaceLength();
 
         // Find which line the text is actually on and get line offset
         var lineOfStart = documentText.getLineOfOffset(absoluteCharStart);

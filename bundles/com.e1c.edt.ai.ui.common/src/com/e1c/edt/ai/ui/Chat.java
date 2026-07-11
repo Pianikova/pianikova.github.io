@@ -265,6 +265,10 @@ public class Chat
     @Override
     public void continueChat(String chatId, String text)
     {
+        // Open the chat view first so its FXCanvas bootstraps the JavaFX toolkit before any
+        // WebView is created. When continueChat is reached from a marker quick fix and the chat
+        // was never opened this session, a bare new WebView() fails WebEngine static init.
+        ui.showView(BaseChatView.ID);
         var ctx = getContext(chatId);
         chatInJob(ctx, () -> {
             try (var busyToken = stateService.busy())
