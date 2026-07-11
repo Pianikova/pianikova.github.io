@@ -33,7 +33,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -123,23 +122,20 @@ public class SetMarkersMcpTool
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
-    private final IFileSystem fileSystem;
     private final IProjectTools projectTools;
 
     @Inject
     public SetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IFileSystem fileSystem, IProjectTools projectTools)
+        IContentSourceProvider contentSourceProvider, IProjectTools projectTools)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
-        Preconditions.checkNotNull(fileSystem);
         Preconditions.checkNotNull(projectTools);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
-        this.fileSystem = fileSystem;
         this.projectTools = projectTools;
         this.spec = createSpecification();
     }

@@ -3,7 +3,6 @@
  */
 package com.e1c.edt.ai.ui;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,10 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.jobs.Job;
-import org.eclipse.jgit.lib.Repository;
 
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ICancellationToken;
@@ -27,7 +23,6 @@ import com.e1c.edt.ai.assistent.SendUserMessageRequest;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
-import com.e1c.edt.ai.tools.IJGitCommonHelper;
 import com.google.inject.Inject;
 
 /**
@@ -49,25 +44,23 @@ public class BackgroundAnalysisManager
     private final IDispatcher dispatcher;
     private final ISkillExecutor skillExecutor;
     private final ILog log;
-    private final IJGitCommonHelper jGitCommonHelper;
 
     private final ConcurrentMap<IFile, FileAnalysisState> states = new ConcurrentHashMap<>();
 
     @Inject
     public BackgroundAnalysisManager(IConversationFacade conversationFacade, IDispatcher dispatcher,
-        ISkillExecutor skillExecutor, ILog log, IJGitCommonHelper jGitCommonHelper)
+        ISkillExecutor skillExecutor, ILog log)
     {
         this.conversationFacade = conversationFacade;
         this.dispatcher = dispatcher;
         this.skillExecutor = skillExecutor;
         this.log = log;
-        this.jGitCommonHelper = jGitCommonHelper;
     }
 
     /**
      * Файл сохранён. Отменяем предыдущий анализ этого же файла, берём новое
-     * поколение и запускаем self-review незакоммиченного diff против HEAD.
-     * Single-flight внутри файла, параллельно между файлами.
+     * поколение и запускаем self-review последних изменений по локальной истории IDE
+     * (git не требуется). Single-flight внутри файла, параллельно между файлами.
      */
     @SuppressWarnings("nls")
     public void onFileSaved(IFile file)
@@ -88,20 +81,13 @@ public class BackgroundAnalysisManager
         ProjectId projectId = new ProjectId(file.getProject());
         AutoAnalysisRequest request = new AutoAnalysisRequest(file, projectId);
 
-        // тело job в onFileSaved: precheck git
         Job job = dispatcher.createJob("Background Analysis", context -> {
             ICancellationToken token = context.CancellationTokenSource;
             if (token.isCanceled() || state.generation.get() != myGeneration)
             {
                 return; // вытеснены до старта
             }
-            isUnderGit(file, token).thenCompose(underGit -> {
-                if (!underGit || token.isCanceled() || state.generation.get() != myGeneration)
-                {
-                    return CompletableFuture.<Void> completedFuture(null); // не под git — падаем
-                }
-                return analyzeChanges(request, state, token);
-            }).exceptionally(error -> {
+            analyzeChanges(request, state, token).exceptionally(error -> {
                 log.logError(error);
                 return null;
             });
@@ -139,70 +125,9 @@ public class BackgroundAnalysisManager
     }
 
     /**
-     * Гейт запуска: находится ли файл под контролем git. true — репозиторий есть и
-     * файл существует под git; false — репозитория нет либо файл не под git.
-     * Наружу исключений не пускает, при любой ошибке возвращает false (анализ не запускаем).
-     */
-    @SuppressWarnings("nls")
-    private CompletableFuture<Boolean> isUnderGit(IFile file, ICancellationToken token)
-    {
-        return CompletableFuture.supplyAsync(() -> {
-            @SuppressWarnings("resource")
-            Repository repository = null;
-            try
-            {
-                IProject project = file.getProject();
-                if (project == null || !project.isAccessible())
-                {
-                    return false;
-                }
-
-                // Проверяем наличие git репозитория через JGit API
-                String workingDir = project.getLocation().toOSString();
-                repository = jGitCommonHelper.openRepository(workingDir);
-
-                if (repository == null || repository.isBare())
-                {
-                    return false;
-                }
-
-                // Репозиторий найден и доступен
-                return true;
-            }
-            catch (Exception e)
-            {
-                log.trace(TracingSources.TOOLS, "git precheck failed, skip analysis: " + e.getMessage(), () -> "");
-                return false;
-            }
-            finally
-            {
-                if (repository != null)
-                {
-                    try
-                    {
-                        repository.close();
-                    }
-                    catch (Exception ignored)
-                    {
-                        //
-                    }
-                }
-            }
-        });
-    }
-
-    private String getWorkingDirectory()
-    {
-        return Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
-            .filter(project -> project.isOpen())
-            .map(project -> project.getLocation().toOSString())
-            .findFirst()
-            .orElse(null);
-    }
-
-    /**
-     * Запускает self-review незакоммиченных изменений файла (git diff против HEAD).
-     * Диапазон определяет сам скилл через git
+     * Запускает self-review последних изменений файла (diff последней ревизии
+     * локальной истории против текущего состояния). Диапазон определяет сам скилл
+     * через тулы localhistory/localchanges.
      */
     @SuppressWarnings("nls")
     private CompletableFuture<Void> analyzeChanges(AutoAnalysisRequest request, FileAnalysisState state,
@@ -226,9 +151,8 @@ public class BackgroundAnalysisManager
             // @formatter:off
             SkillExecutionRequest skillRequest = new SkillExecutionRequest("code-review-last-changes",
                 Map.of("project_name", request.getProjectId().toString(),
-                       "relative_file_path", request.getFile().getProjectRelativePath().toOSString(),
-                       "absolute_file_path", request.getFile().getLocation().toOSString(),
-                       "working_dir", getWorkingDirectory()));
+                       "relative_file_path", request.getFile().getProjectRelativePath().toString(),
+                       "absolute_file_path", request.getFile().getLocation().toOSString()));
             // @formatter:on
 
             skillExecutor.executeAsync(skillRequest, token).handle((response, exception) -> {
