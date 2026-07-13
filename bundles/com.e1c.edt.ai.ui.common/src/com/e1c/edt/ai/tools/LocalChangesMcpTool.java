@@ -374,8 +374,11 @@ public class LocalChangesMcpTool
     private static String createDiffText(String filePath, byte[] oldContent, byte[] newContent, int contextLines)
 		throws Exception
 	{
-		var oldText = new RawText(oldContent);
-		var newText = new RawText(newContent);
+		// Normalize line endings to LF on both sides. The history revision and the current content
+		// can differ only in CRLF vs LF (e.g. history saved as CRLF, editor buffer/disk as LF); without
+		// this every line would be reported as changed, flagging fragments the user never edited.
+		var oldText = new RawText(normalizeLineEndings(oldContent));
+		var newText = new RawText(normalizeLineEndings(newContent));
 		var diffAlgorithm = DiffAlgorithm.getAlgorithm(DiffAlgorithm.SupportedAlgorithm.HISTOGRAM);
 		var edits = diffAlgorithm.diff(RawTextComparator.DEFAULT, oldText, newText);
 
@@ -398,6 +401,32 @@ public class LocalChangesMcpTool
 		}
 
 		return output.toString(StandardCharsets.UTF_8);
+	}
+
+	/**
+	 * Collapses CRLF and lone CR to LF so line-ending differences between the compared revisions do
+	 * not surface as spurious content changes. Byte-level: {@code \r} (0x0D) and {@code \n} (0x0A) are
+	 * single bytes and never part of a multibyte sequence in UTF-8 or windows-1251, so this is charset-safe.
+	 */
+	private static byte[] normalizeLineEndings(byte[] content)
+	{
+		var out = new ByteArrayOutputStream(content.length);
+		for (int i = 0; i < content.length; i++)
+		{
+			if (content[i] == '\r')
+			{
+				out.write('\n');
+				if (i + 1 < content.length && content[i + 1] == '\n')
+				{
+					i++;
+				}
+			}
+			else
+			{
+				out.write(content[i]);
+			}
+		}
+		return out.toByteArray();
 	}
 
 	private static boolean hasAny(String value, String otherValue)

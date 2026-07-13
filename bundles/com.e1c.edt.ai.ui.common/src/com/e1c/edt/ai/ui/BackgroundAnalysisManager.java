@@ -279,6 +279,7 @@ public class BackgroundAnalysisManager
                     {
                         state.pendingBaseRevisionId.set(null);
                     }
+
                     var replyLen = generatedMessage == null ? 0 : generatedMessage.length();
                     log.trace(TracingSources.TOOLS, "[bg-analysis] done gen=" + generation + " stillCurrent="
                         + stillCurrent + " replyChars=" + replyLen + " file=" + request.getFile().getName(), () -> "");
