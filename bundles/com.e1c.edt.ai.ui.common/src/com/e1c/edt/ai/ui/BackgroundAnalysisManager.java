@@ -36,6 +36,10 @@ import com.google.inject.Inject;
 public class BackgroundAnalysisManager
 {
     private static final String LATEST_REVISION = "latest"; //$NON-NLS-1$
+    // Run the review conversation under the "custom" skill (with is_chat) like the dev-autopilot,
+    // instead of the bare "raw" mode. "raw" gives the model no agentic framing / per-skill tool
+    // profile, which made it ignore the skill steps (whole-file review, TodoWrite planning).
+    private static final String CONVERSATION_SKILL = "custom"; //$NON-NLS-1$
     // Local history for the just-saved change is written as part of the save but can lag behind the
     // POST_CHANGE notification that triggers analysis. Retry briefly so the first save of a file with
     // no prior history still resolves a diff base instead of falling back to an empty "latest".
@@ -271,7 +275,7 @@ public class BackgroundAnalysisManager
                 ConversationSession session = state.conversationSession.get();
                 boolean forceNew = session == null;
                 var newReq = new SendUserMessageRequest(request.getProjectId(), skillResponse.getPrompt(),
-                    session, forceNew);
+                    session, forceNew, CONVERSATION_SKILL, Boolean.TRUE, null);
 
                 return conversationFacade.sendAsync(newReq, token).thenAccept(resultMessage -> {
                     if (resultMessage == null)
