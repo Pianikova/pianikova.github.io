@@ -62,7 +62,11 @@ public class BackgroundAnalysisManager
     private final ILocalHistoryUtils localHistoryUtils;
     private final ISettings settings;
 
-    private final ConcurrentMap<IFile, FileAnalysisState> states = new ConcurrentHashMap<>();
+    // Keyed by the file's on-disk location, not by IFile: the same physical file can belong to
+    // several overlapping/nested projects in the workspace, so a single save fires onFileSaved with
+    // several distinct IFile handles. Keying by location collapses them into one single-flight state,
+    // so only one review runs instead of one per project (which produced duplicate markers).
+    private final ConcurrentMap<String, FileAnalysisState> states = new ConcurrentHashMap<>();
 
     @Inject
     public BackgroundAnalysisManager(IConversationFacade conversationFacade, IDispatcher dispatcher,
@@ -92,7 +96,7 @@ public class BackgroundAnalysisManager
                 () -> "");
             return;
         }
-        FileAnalysisState state = states.computeIfAbsent(file, f -> new FileAnalysisState());
+        FileAnalysisState state = states.computeIfAbsent(fileKey(file), k -> new FileAnalysisState());
         long myGeneration = state.generation.incrementAndGet();
         log.trace(TracingSources.TOOLS,
             "[bg-analysis] scheduling gen=" + myGeneration + " file=" + file.getFullPath(), () -> "");
@@ -128,7 +132,7 @@ public class BackgroundAnalysisManager
      */
     public void onFileClosed(IFile file)
     {
-        FileAnalysisState state = states.remove(file);
+        FileAnalysisState state = states.remove(fileKey(file));
         if (state != null)
         {
             Job job = state.currentJob.get();
@@ -137,6 +141,17 @@ public class BackgroundAnalysisManager
                 job.cancel();
             }
         }
+    }
+
+    /**
+     * Stable single-flight key for a file: its on-disk location, shared by all IFile handles that
+     * point to the same physical file across overlapping/nested projects. Falls back to the
+     * workspace path for resources without a filesystem location (e.g. linked/virtual).
+     */
+    private static String fileKey(IFile file)
+    {
+        var location = file.getLocation();
+        return location != null ? location.toOSString() : file.getFullPath().toString();
     }
 
     private boolean shouldAnalyze(IFile file)
