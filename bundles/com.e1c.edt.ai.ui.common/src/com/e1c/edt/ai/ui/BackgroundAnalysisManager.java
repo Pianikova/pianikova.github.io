@@ -221,7 +221,7 @@ public class BackgroundAnalysisManager
                 () -> "");
 
             // @formatter:off
-            SkillExecutionRequest skillRequest = new SkillExecutionRequest("code-review-last-changes",
+            SkillExecutionRequest skillRequest = new SkillExecutionRequest("background-code-analysis",
                 Map.of("project_name", request.getProjectId().toString(),
                        "relative_file_path", request.getFile().getProjectRelativePath().toString(),
                        "absolute_file_path", request.getFile().getLocation().toOSString(),
