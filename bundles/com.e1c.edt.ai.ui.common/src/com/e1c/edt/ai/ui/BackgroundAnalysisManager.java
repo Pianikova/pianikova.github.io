@@ -78,7 +78,7 @@ public class BackgroundAnalysisManager
     @SuppressWarnings("nls")
     public void onFileSaved(IFile file)
     {
-        if (!settings.isEnabled() || !shouldAnalyze(file))
+        if (!settings.isEnabled() || !settings.isBackgroundAnalysisEnabled() || !shouldAnalyze(file))
         {
             return;
         }

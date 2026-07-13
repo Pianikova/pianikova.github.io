@@ -27,7 +27,11 @@ public class Messages
     public static String ClientAIPreferencePage_CodeCompletionPolicy;
     public static String ClientAIPreferencePage_ShowStatusBar;
     public static String ClientAIPreferencePage_ShowActivationInfo;
+    public static String ClientAIPreferencePage_BackgroundAnalysis;
+    public static String ClientAIPreferencePage_BackgroundAnalysis_Tooltip;
     public static String ClientAIPreferencePage_AutoOpenDiffPreview;
+    public static String ClientAIPreferencePage_UserInterfaceGroup;
+    public static String ClientAIPreferencePage_AdvancedGroup;
     public static String ClientAIPreferencePage_CodeCompletionGroup;
     public static String ClientAIPreferencePage_ChatGroup;
     public static String ClientAIPreferencePage_PluginVersion;

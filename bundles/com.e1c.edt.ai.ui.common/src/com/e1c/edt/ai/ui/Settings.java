@@ -106,6 +106,12 @@ public class Settings
         return settingsStore.getBoolean(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW).orElse(Boolean.TRUE);
     }
 
+    @Override
+    public boolean isBackgroundAnalysisEnabled()
+    {
+        return settingsStore.getBoolean(ISettingsStore.BACKGROUND_ANALYSIS).orElse(Boolean.TRUE);
+    }
+
     public boolean hasClientToken()
     {
         return clientTokenValidator.isValid(getClientToken());
