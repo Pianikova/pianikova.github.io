@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -35,6 +36,11 @@ import com.google.inject.Inject;
 public class BackgroundAnalysisManager
 {
     private static final String LATEST_REVISION = "latest"; //$NON-NLS-1$
+    // Local history for the just-saved change is written as part of the save but can lag behind the
+    // POST_CHANGE notification that triggers analysis. Retry briefly so the first save of a file with
+    // no prior history still resolves a diff base instead of falling back to an empty "latest".
+    private static final int BASE_RESOLVE_RETRIES = 5;
+    private static final long BASE_RESOLVE_RETRY_DELAY_MS = 100;
 
     private static final class FileAnalysisState
     {
@@ -80,10 +86,16 @@ public class BackgroundAnalysisManager
     {
         if (!settings.isEnabled() || !settings.isBackgroundAnalysisEnabled() || !shouldAnalyze(file))
         {
+            log.trace(TracingSources.TOOLS,
+                "[bg-analysis] skip: enabled=" + settings.isEnabled() + " bgEnabled="
+                    + settings.isBackgroundAnalysisEnabled() + " shouldAnalyze=" + shouldAnalyze(file) + " file=" + file,
+                () -> "");
             return;
         }
         FileAnalysisState state = states.computeIfAbsent(file, f -> new FileAnalysisState());
         long myGeneration = state.generation.incrementAndGet();
+        log.trace(TracingSources.TOOLS,
+            "[bg-analysis] scheduling gen=" + myGeneration + " file=" + file.getFullPath(), () -> "");
 
         Job previousJob = state.currentJob.get();
         if (previousJob != null)
@@ -138,6 +150,32 @@ public class BackgroundAnalysisManager
     }
 
     /**
+     * Resolves the newest local-history revision id, retrying briefly while the history is still
+     * empty. On the first save of a file with no prior history the entry for the just-saved change
+     * can be written slightly after the POST_CHANGE notification; without the retry the diff base
+     * would fall back to an unresolved "latest" and no markers would be produced on that first save.
+     * Runs on a background worker thread, so a short blocking wait is acceptable; honours cancellation.
+     */
+    private Optional<String> resolveLatestWithRetry(IFile file, ICancellationToken token)
+    {
+        var latest = localHistoryUtils.getLatestRevisionId(file);
+        for (int attempt = 0; latest.isEmpty() && attempt < BASE_RESOLVE_RETRIES && !token.isCanceled(); attempt++)
+        {
+            try
+            {
+                Thread.sleep(BASE_RESOLVE_RETRY_DELAY_MS);
+            }
+            catch (InterruptedException e)
+            {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            latest = localHistoryUtils.getLatestRevisionId(file);
+        }
+        return latest;
+    }
+
+    /**
      * Запускает self-review последних изменений файла (diff последней ревизии
      * локальной истории против текущего состояния). Диапазон определяет сам скилл
      * через тулы localhistory/localchanges.
@@ -159,12 +197,28 @@ public class BackgroundAnalysisManager
 
             // Фиксируем базу диффа на старте: если предыдущее ревью не завершилось,
             // база остаётся от него — его дельта попадёт в это ревью.
-            String baseRevisionId = state.pendingBaseRevisionId.get();
-            if (baseRevisionId == null)
+            String pinned = state.pendingBaseRevisionId.get();
+            boolean freshPin = pinned == null;
+            String baseRevisionId;
+            boolean latestPresent;
+            if (freshPin)
             {
-                baseRevisionId = localHistoryUtils.getLatestRevisionId(request.getFile()).orElse(LATEST_REVISION);
+                var latestOpt = resolveLatestWithRetry(request.getFile(), token);
+                latestPresent = latestOpt.isPresent();
+                baseRevisionId = latestOpt.orElse(LATEST_REVISION);
                 state.pendingBaseRevisionId.set(baseRevisionId);
             }
+            else
+            {
+                baseRevisionId = pinned;
+                latestPresent = true;
+            }
+            var traceBase = baseRevisionId;
+            var traceLatest = latestPresent;
+            log.trace(TracingSources.TOOLS,
+                "[bg-analysis] run gen=" + generation + " freshPin=" + freshPin + " latestPresent=" + traceLatest
+                    + " base=" + traceBase + " file=" + request.getFile().getName(),
+                () -> "");
 
             // @formatter:off
             SkillExecutionRequest skillRequest = new SkillExecutionRequest("code-review-last-changes",
@@ -196,7 +250,7 @@ public class BackgroundAnalysisManager
                 if (token.isCanceled())
                 {
                     result.completeExceptionally(new RuntimeException("Analysis was cancelled before chat"));
-                    return null;
+                    return CompletableFuture.<Void> completedFuture(null);
                 }
 
                 ConversationSession session = state.conversationSession.get();
@@ -220,10 +274,14 @@ public class BackgroundAnalysisManager
 
                     // Ревью завершилось — долгов нет, следующее ревью диффует от «latest».
                     // Если нас уже вытеснило новое поколение, база остаётся закреплённой за ним.
-                    if (state.generation.get() == generation)
+                    boolean stillCurrent = state.generation.get() == generation;
+                    if (stillCurrent)
                     {
                         state.pendingBaseRevisionId.set(null);
                     }
+                    var replyLen = generatedMessage == null ? 0 : generatedMessage.length();
+                    log.trace(TracingSources.TOOLS, "[bg-analysis] done gen=" + generation + " stillCurrent="
+                        + stillCurrent + " replyChars=" + replyLen + " file=" + request.getFile().getName(), () -> "");
 
                     result.complete(null);
                 });
