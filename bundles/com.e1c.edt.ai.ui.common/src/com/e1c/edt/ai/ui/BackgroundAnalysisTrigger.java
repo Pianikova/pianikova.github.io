@@ -43,6 +43,15 @@ public class BackgroundAnalysisTrigger
         {
             return;
         }
+        // Analyze only the file currently open in the active editor. Batch workspace changes
+        // (git rebase/merge, "Save All", refactorings) touch many files at once; without this gate
+        // each would spawn its own background review, flooding the assistant. If no editor is active,
+        // there is nothing the user is looking at — skip.
+        var activeFile = ui.getActiveFile();
+        if (activeFile.isEmpty())
+        {
+            return;
+        }
         try
             {
             delta.accept(d -> {
@@ -59,7 +68,10 @@ public class BackgroundAnalysisTrigger
                 {
                     return true;
                 }
-                ui.getLastSourceViewer().ifPresent(viewer -> analysisManager.onFileSaved((IFile)resource));
+                if (isSameFile(activeFile.get(), (IFile)resource))
+                {
+                    analysisManager.onFileSaved((IFile)resource);
+                }
 
                 return true;
             });
@@ -68,5 +80,20 @@ public class BackgroundAnalysisTrigger
         {
             // игнорируем ошибки обхода дерева изменений
         }
+    }
+
+    /**
+     * Compares by on-disk location so the same physical file matches regardless of which
+     * (possibly overlapping/nested) project handle the delta reports it under.
+     */
+    private static boolean isSameFile(IFile a, IFile b)
+    {
+        var locationA = a.getLocation();
+        var locationB = b.getLocation();
+        if (locationA != null && locationB != null)
+        {
+            return locationA.equals(locationB);
+        }
+        return a.getFullPath().equals(b.getFullPath());
     }
 }

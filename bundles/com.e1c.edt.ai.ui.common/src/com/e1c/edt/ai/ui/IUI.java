@@ -23,5 +23,11 @@ public interface IUI
 
     Optional<IFile> getFile(SourceViewer sourceViewer);
 
+    /**
+     * Returns the file of the currently active editor, or the last focused editor's file when called
+     * off the UI thread. Empty when no editor is/was active.
+     */
+    Optional<IFile> getActiveFile();
+
     Optional<IViewPart> showView(String viewId);
 }

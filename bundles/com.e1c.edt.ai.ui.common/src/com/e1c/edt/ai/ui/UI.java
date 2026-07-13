@@ -34,6 +34,7 @@ class UI
     private final ITextWidgetInfoUpdater textWidgetInfoUpdater;
     private StyledText textWidget;
     private SourceViewer lastSourceViewer;
+    private IFile lastFile;
     private AutoCloseable queryToken = Closeables.Empty;
 
     @Inject
@@ -93,7 +94,9 @@ class UI
                 }
 
                 textWidget = newTextWidget;
-                lastSourceViewer = getSourceViewer(newTextWidget).orElse(null);
+                var sourceViewer = getSourceViewer(newTextWidget);
+                lastSourceViewer = sourceViewer.orElse(null);
+                lastFile = sourceViewer.flatMap(this::getFile).orElse(null);
                 textWidgetInfoUpdater.reset();
                 queryToken = Closeables.Empty;
                 dispatcher.dispatchAsync(() -> {
@@ -134,6 +137,19 @@ class UI
         }
 
         return Optional.ofNullable(lastSourceViewer);
+    }
+
+    @Override
+    public synchronized Optional<IFile> getActiveFile()
+    {
+        // Prefer the active editor resolved at call time; fall back to the focus-tracked file when
+        // off the UI thread (getActivePage() returns empty there), mirroring getLastSourceViewer().
+        var active = getActiveSourceViewer().flatMap(this::getFile);
+        if (active.isPresent())
+        {
+            return active;
+        }
+        return Optional.ofNullable(lastFile);
     }
 
     private Optional<SourceViewer> getActiveSourceViewer()
