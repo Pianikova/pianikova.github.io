@@ -25,6 +25,8 @@ public interface ISettings
 
     boolean isAutoOpenDiffPreview();
 
+    boolean isBackgroundAnalysisEnabled();
+
     boolean hasClientToken();
 
     String getClientToken();

@@ -101,6 +101,12 @@ public class ProposalsProvider
             return Optional.empty();
         }
 
+        var path = aiCtx.getPath();
+        if (path != null && !path.toLowerCase().endsWith(".bsl")) //$NON-NLS-1$
+        {
+            return Optional.empty();
+        }
+
         if (sourceViewer.getDocument().getLength() > Consts.NORMAL_CODE_SIZE)
         {
             return Optional.empty();

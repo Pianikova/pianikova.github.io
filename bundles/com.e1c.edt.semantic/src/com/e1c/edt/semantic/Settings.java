@@ -42,6 +42,13 @@ class Settings
     }
 
     @Override
+    public boolean isBackgroundAnalysisEnabled()
+    {
+        // Headless/semantic runtime has no editors or save events to drive background analysis.
+        return false;
+    }
+
+    @Override
     public boolean hasClientToken()
     {
         return true;

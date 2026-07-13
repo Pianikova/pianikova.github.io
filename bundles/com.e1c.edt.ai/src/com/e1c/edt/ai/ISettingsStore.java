@@ -15,6 +15,7 @@ public interface ISettingsStore
     public final static String SHOW_STATUS_BAR = "booleanPreferenceShowStatusBar"; //$NON-NLS-1$
     public final static String SHOW_ACTIVATION_INFO = "booleanPreferenceShowActivationInfo"; //$NON-NLS-1$
     public final static String AUTO_OPEN_DIFF_PREVIEW = "booleanPreferenceAutoOpenDiffPreview"; //$NON-NLS-1$
+    public final static String BACKGROUND_ANALYSIS = "booleanPreferenceBackgroundAnalysis"; //$NON-NLS-1$
 
     public final static int MIN_ASSISTANT_TEXT_SIZE = 16;
     public final static int DEFAULT_CODE_COMPLETION_LINES_COUNT = 5;

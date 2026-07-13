@@ -16,6 +16,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IRegion;
 
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IContentSourceProvider;
@@ -32,7 +33,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
-import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -122,24 +122,24 @@ public class SetMarkersMcpTool
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IContentSourceProvider contentSourceProvider;
-    private final IFileSystem fileSystem;
     private final IProjectTools projectTools;
+    private final IContentReplacer contentReplacer;
 
     @Inject
     public SetMarkersMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory,
-        IContentSourceProvider contentSourceProvider, IFileSystem fileSystem, IProjectTools projectTools)
+        IContentSourceProvider contentSourceProvider, IProjectTools projectTools, IContentReplacer contentReplacer)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(contentSourceProvider);
-        Preconditions.checkNotNull(fileSystem);
         Preconditions.checkNotNull(projectTools);
+        Preconditions.checkNotNull(contentReplacer);
 
         this.json = json;
         this.messageFactory = messageFactory;
         this.contentSourceProvider = contentSourceProvider;
-        this.fileSystem = fileSystem;
         this.projectTools = projectTools;
+        this.contentReplacer = contentReplacer;
         this.spec = createSpecification();
     }
 
@@ -189,38 +189,40 @@ public class SetMarkersMcpTool
             var root = ResourcesPlugin.getWorkspace().getRoot();
 
             // Determine project name - either from request or auto-determine from file path
-            var deteminedProjectName = projectName;
+            var determinedProjectName = projectName;
             if (projectName == null || projectName.isBlank())
             {
                 // Auto-determine project from first marker's file path
                 var firstMarker = request.markers.get(0);
-                deteminedProjectName = projectTools.determineProjectName(firstMarker.absoluteFilePath);
-                if (deteminedProjectName == null)
+                determinedProjectName = projectTools.determineProjectName(firstMarker.absoluteFilePath);
+                if (determinedProjectName == null)
                 {
                     throw new ToolException("Cannot determine project from file path: " + firstMarker.absoluteFilePath
                         + ". Please specify project_name explicitly.");
                 }
             }
 
-            var project = root.getProject(deteminedProjectName);
+            var project = root.getProject(determinedProjectName);
             if (!project.exists())
             {
-                throw new ToolException("Project not found: " + deteminedProjectName);
+                throw new ToolException("Project not found: " + determinedProjectName);
             }
 
             if (!project.isOpen())
             {
-                throw new ToolException("Project is closed: " + deteminedProjectName);
+                throw new ToolException("Project is closed: " + determinedProjectName);
             }
 
             var markersSet = 0;
             var createdMarkers = new ArrayList<IMarker>();
             var errors = new StringBuilder();
+            var cancelled = false;
             for (int i = 0; i < request.markers.size(); i++)
             {
                 if (cancellationToken.isCanceled())
                 {
-                    throw new ToolException("Operation cancelled after setting " + markersSet + " markers");
+                    cancelled = true;
+                    break;
                 }
                 var markerReq = request.markers.get(i);
                 markerReq.projectName = project.getName();
@@ -234,7 +236,7 @@ public class SetMarkersMcpTool
                     errors.append("Marker [").append(i).append("] error: ").append(error.getMessage()).append("; ");
                 }
             }
-            if (errors.length() > 0)
+            if (cancelled || errors.length() > 0)
             {
                 for (var marker : createdMarkers)
                 {
@@ -246,6 +248,10 @@ public class SetMarkersMcpTool
                     {
                         errors.append("Rollback error: ").append(deleteError.getMessage()).append("; ");
                     }
+                }
+                if (cancelled)
+                {
+                    throw new ToolException("Operation cancelled after setting " + markersSet + " markers");
                 }
                 throw new ToolException("Completed with errors: " + errors + ". Markers set: " + markersSet);
             }
@@ -269,10 +275,31 @@ public class SetMarkersMcpTool
         {
             throw new IllegalArgumentException("message is required");
         }
+
+        // Auto-determine marker type if not specified
         if (markerReq.type == null || markerReq.type.isBlank())
         {
-            throw new IllegalArgumentException("type is required");
+            // If action fields are provided, default to ai_marker
+            var hasActionPrompt = markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank();
+            var hasActionTitle = markerReq.actionTitle != null && !markerReq.actionTitle.isBlank();
+            var hasActionDescription = markerReq.actionDescription != null && !markerReq.actionDescription.isBlank();
+            var hasAnyAction = hasActionPrompt || hasActionTitle || hasActionDescription;
+
+            if (hasAnyAction)
+            {
+                markerReq.type = MarkerType.AI_MARKER.getDisplayName();
+            }
+            else if (markerReq.severity != null && !markerReq.severity.isBlank())
+            {
+                // If severity is provided but no action fields, still use ai_marker
+                markerReq.type = MarkerType.AI_MARKER.getDisplayName();
+            }
+            else
+            {
+                throw new IllegalArgumentException("type is required");
+            }
         }
+
         if (markerReq.startLine == null || markerReq.startLine < 1)
         {
             throw new IllegalArgumentException("marker_line must be a positive integer");
@@ -316,6 +343,7 @@ public class SetMarkersMcpTool
         markerReq.lineOffset = positions[0];
         markerReq.charStart = positions[1];
         markerReq.charEnd = positions[2];
+        markerReq.startLine = positions[3];
 
         // Convert request type to MarkerType enum
         var markerType = MarkerType.fromDisplayName(markerReq.type);
@@ -346,27 +374,80 @@ public class SetMarkersMcpTool
         }
 
         var document = optionalDocument.get();
-        var content = new StringBuilder();
-        var maxLinesCount = markedText.lines().count() + 1;
-        var charStart = -1;
-        for (var line : fileSystem.getLines(document, startLine - 1, (int)maxLinesCount))
+        var documentText = document.getDocument();
+
+        if (startLine - 1 >= documentText.getNumberOfLines())
         {
-            content.append(line);
-            charStart = content.indexOf(markedText);
-            if (charStart >= 0)
+            throw new IllegalArgumentException("marker_line " + startLine + " is beyond the end of file: "
+                + file.getFullPath() + " (" + documentText.getNumberOfLines() + " lines)");
+        }
+
+        var documentLength = documentText.getLength();
+        IRegion lineRegion = documentText.getLineInformation(startLine - 1);
+        var lineStart = lineRegion.getOffset();
+        var lineEnd = lineRegion.getOffset() + lineRegion.getLength();
+
+        // Progressive search windows anchored to marker_line: the line itself, then a small
+        // context window, then the whole document. The first window with a single unambiguous
+        // match wins, so duplicated fragments are still resolved by proximity to the line.
+        // @formatter:off
+        int[][] windows = {
+            { lineStart, lineEnd },
+            { Math.max(0, lineStart - 200), Math.min(documentLength, lineEnd + 500) },
+            { 0, documentLength } };
+        // @formatter:on
+
+        ReplaceResult match = null;
+        var windowStart = -1;
+        var ambiguous = false;
+        for (var window : windows)
+        {
+            if (window[1] <= window[0])
             {
+                continue;
+            }
+            var searchArea = documentText.get(window[0], window[1] - window[0]);
+            // No-op replacement: the replacer is used only to locate the fragment,
+            // reusing its normalization (BOM, line delimiters) and matching strategies.
+            var result = contentReplacer.replace(searchArea, markedText, markedText, "\n", false);
+            if (result.isSuccess() && result.isRegionReplaceable())
+            {
+                match = result;
+                windowStart = window[0];
                 break;
             }
+            ambiguous = ambiguous || result.hasMultipleOccurrences();
         }
 
-        if (charStart == -1)
+        if (match == null)
         {
+            // Provide context in error message
+            var contextStart = Math.max(0, lineStart - 40);
+            var contextEnd = Math.min(documentLength, lineEnd + 200);
+            var context = documentText.get(contextStart, contextEnd - contextStart);
+            if (contextEnd < documentLength)
+            {
+                context = context + "...";
+            }
+            var reason = ambiguous ? "is ambiguous (several occurrences)" : "not found";
             throw new IllegalArgumentException(
-                "Target content not found in line " + startLine);
+                "Target content " + reason + " in line " + startLine + ".\n" + "Search text: \"" + markedText + "\"\n"
+                    + "Context around line: " + context.replace("\n", "\\n").replace("\r", "\\r"));
         }
 
-        var charEnd = charStart + markedText.length();
-        return new int[] { document.getDocument().getLineOffset(startLine - 1), charStart, charEnd };
+        // Calculate absolute character positions in the document
+        var absoluteCharStart = windowStart + match.getReplaceOffset();
+        var absoluteCharEnd = absoluteCharStart + match.getReplaceLength();
+
+        // Find which line the text is actually on and get line offset
+        var lineOfStart = documentText.getLineOfOffset(absoluteCharStart);
+        var lineOffset = documentText.getLineOffset(lineOfStart);
+
+        // Calculate char positions relative to the line start
+        var relativeCharStart = absoluteCharStart - lineOffset;
+        var relativeCharEnd = absoluteCharEnd - lineOffset;
+
+        return new int[] { lineOffset, relativeCharStart, relativeCharEnd, lineOfStart + 1 };
     }
 
     @SuppressWarnings("nls")
@@ -404,10 +485,12 @@ public class SetMarkersMcpTool
         // Action attributes - only for AI markers. Stored as String values: marker attributes
         // may only be String/Integer/Boolean (newer core.resources throws on other types).
         // Only sourceChatId is kept from the call - it is transient and would not survive JSON.
-        if (markerType == MarkerType.AI_MARKER && markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank()
-            && call.sourceChatId != null)
+        if (markerType == MarkerType.AI_MARKER && markerReq.actionPrompt != null && !markerReq.actionPrompt.isBlank())
         {
-            marker.setAttribute(ACTION_CHAT_ID_ATTRIBUTE, call.sourceChatId);
+            if (call.sourceChatId != null)
+            {
+                marker.setAttribute(ACTION_CHAT_ID_ATTRIBUTE, call.sourceChatId);
+            }
             marker.setAttribute(ACTION_DETAILS_ATTRIBUTE, json.serialize(markerReq));
         }
 
@@ -549,7 +632,7 @@ public class SetMarkersMcpTool
 
         description.append("\n\nCommon properties for all markers:");
         description.append("\n- type: Marker type (required)");
-        description.append("\n- path: File path relative to project root (required)");
+        description.append("\n- path: File path (absolute) (required)");
         description.append("\n- message: Marker description (required)");
         description.append(
             "\n- marker_line: Line number (required). An integer value indicating the line number for a marker. It is 1-relative. Take the line number from the line prefix using the `"
@@ -626,10 +709,10 @@ public class SetMarkersMcpTool
         @SerializedName("message")
         public String message;
 
-        @SerializedName("marker_line")
+        @SerializedName(value = "marker_line", alternate = { "start_line" })
         public Integer startLine;
 
-        @SerializedName("marker_highlighted_text")
+        @SerializedName(value = "marker_highlighted_text", alternate = { "action_highlighted_text" })
         public String markerHighlightedText;
 
         @SerializedName("severity")

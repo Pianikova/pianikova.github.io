@@ -563,6 +563,16 @@
       </markerResolutionGenerator>
    </extension>
 
+   <!-- Adds a quick-fix button to the BSL annotation-hover toolbar (marker icon on the ruler).
+        The SPI exists only in newer 1C:EDT; the factory returns a reflective proxy so this stays
+        buildable on the older target platform and is a no-op when the extension point is absent. -->
+   <extension
+         point="com._1c.g5.v8.dt.bsl.ui.bslHoverContributor">
+      <bslHoverContributor
+            class="com.e1c.edt.ai.ui.hover.AIMarkerHoverContributorFactory">
+      </bslHoverContributor>
+   </extension>
+
    <extension
          point="org.eclipse.ui.editors">
       <editor

@@ -60,7 +60,7 @@ import com.google.inject.Inject;
  */
 public class Conversations implements IConversations
 {
-    private static final int MAX_TOOL_ROUNDS = 10;
+    private static final int MAX_TOOL_ROUNDS = 20;
 
     private final IHttpLog log;
     private final ISettings settings;
@@ -281,8 +281,12 @@ public class Conversations implements IConversations
             {
                 ToolMessageContent item = new ToolMessageContent();
                 item.toolCallId = call != null ? call.id : null;
+                // Reply to a tool the client cannot execute (e.g. server-side TodoWrite/Task) with a
+                // normal "ok" result instead of "error": an error status on an unrecognized tool_call_id
+                // makes the server reject the whole message with HTTP 422, aborting the turn. An "ok"
+                // result with a "not available" note lets the model continue without that tool.
                 item.content = buildUnknownToolMessage(call);
-                item.status = "error"; //$NON-NLS-1$
+                item.status = "ok"; //$NON-NLS-1$
                 items.add(item);
             }
         }
@@ -301,10 +305,10 @@ public class Conversations implements IConversations
 
         if (toolName == null || toolName.isBlank())
         {
-            return "Unknown tool call"; //$NON-NLS-1$
+            return "Tool not available in this context."; //$NON-NLS-1$
         }
 
-        return "Unknown tool call: " + toolName; //$NON-NLS-1$
+        return "Tool \"" + toolName + "\" is not available in this context."; //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private JsonElement jsonToElement(Object value)

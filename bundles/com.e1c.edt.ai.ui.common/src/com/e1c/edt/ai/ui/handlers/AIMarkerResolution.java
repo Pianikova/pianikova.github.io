@@ -47,11 +47,17 @@ public class AIMarkerResolution
     {
         var prompt = new StringBuilder();
         prompt.append(markerRequest.actionPrompt);
-        prompt.append("\n\nDetails:\n```\\n");
+        prompt.append("\n\nDetails:\n```\n");
         prompt.append(json.serialize(markerRequest));
-        prompt.append("\n```\nDo ONLY what is asked.");
-        prompt.append(
-            "\nDelete markers with a specific ID if they have been fixed, for example `" + markerRequest.id + "`.");
+        prompt.append("\n```\n");
+        prompt.append("Apply the fix above, then re-review the target file \"")
+            .append(markerRequest.absoluteFilePath)
+            .append("\" — the fix may have introduced new problems. Re-read the file's current content, "
+                + "re-check its ai-markers, and update them: delete markers whose problems are now resolved "
+                + "(including id `")
+            .append(markerRequest.id)
+            .append("`) and add ai-markers for any new problems your change introduced. "
+                + "Do not modify unrelated code.");
         chat.continueChat(sourceChatId, prompt.toString());
     }
 

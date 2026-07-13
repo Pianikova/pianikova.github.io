@@ -16,6 +16,12 @@ public class ToolRequestSpecification
     private String name;
     private JsonObject arguments;
 
+    public ToolRequestSpecification(String name, JsonObject arguments)
+    {
+        this.name = name;
+        this.arguments = arguments;
+    }
+
     public String getName()
     {
         return name;

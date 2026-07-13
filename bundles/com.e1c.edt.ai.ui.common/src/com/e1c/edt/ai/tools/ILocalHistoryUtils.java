@@ -8,7 +8,7 @@ import java.util.Optional;
 
 import org.eclipse.core.resources.IFile;
 
-interface ILocalHistoryUtils
+public interface ILocalHistoryUtils
 {
 	List<LocalHistoryEntry> getLocalHistory(IFile file, int maxEntries) throws Exception;
 
@@ -24,4 +24,11 @@ interface ILocalHistoryUtils
 	 * @return empty when the file has no local history or the comparison failed
 	 */
 	Optional<Boolean> currentDiffersFromLatest(IFile file);
+
+	/**
+	 * Returns the revision id of the newest local history revision of the file.
+	 *
+	 * @return empty when the file has no local history or it could not be read
+	 */
+	Optional<String> getLatestRevisionId(IFile file);
 }

@@ -30,5 +30,6 @@ public class BaseClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.SHOW_STATUS_BAR, true);
         store.setDefault(ISettingsStore.SHOW_ACTIVATION_INFO, true);
         store.setDefault(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW, true);
+        store.setDefault(ISettingsStore.BACKGROUND_ANALYSIS, true);
     }
 }

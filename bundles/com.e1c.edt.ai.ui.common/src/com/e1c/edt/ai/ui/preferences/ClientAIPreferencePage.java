@@ -125,7 +125,7 @@ public class ClientAIPreferencePage
     {
         var parent = getFieldEditorParent();
 
-        // --- Top-level settings: access key, language, status bar ---
+        // --- Top-level settings: access key ---
         tokenFieldEditor = new TokenFieldEditor(ISettingsStore.CLIENT_TOKEN,
             Messages.ClientAIPreferencePage_Client_Token, parent, new IValidator<String>()
             {
@@ -153,23 +153,23 @@ public class ClientAIPreferencePage
         tokenText.setEchoChar('*');
         addField(tokenFieldEditor);
 
-        var comboField =
-            new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language, LANGUAGES, parent);
-        setLabelTooltip(comboField, parent, Messages.ClientAIPreferencePage_Language_Tooltip);
+        // --- Group: User interface ---
+        var userInterfaceGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_UserInterfaceGroup);
+
+        var comboField = new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language,
+            LANGUAGES, userInterfaceGroup);
+        setLabelTooltip(comboField, userInterfaceGroup, Messages.ClientAIPreferencePage_Language_Tooltip);
         addField(comboField);
 
-        var validatorField = new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
-            Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator);
-        setLabelTooltip(validatorField, parent, Messages.ClientAIPreferencePage_Parameters_Tooltip);
-        addField(validatorField);
-
         var showStatusBarField = new BooleanFieldEditor(ISettingsStore.SHOW_STATUS_BAR,
-            Messages.ClientAIPreferencePage_ShowStatusBar, parent);
+            Messages.ClientAIPreferencePage_ShowStatusBar, userInterfaceGroup);
         addField(showStatusBarField);
 
         var showActivationInfoField = new BooleanFieldEditor(ISettingsStore.SHOW_ACTIVATION_INFO,
-            Messages.ClientAIPreferencePage_ShowActivationInfo, parent);
+            Messages.ClientAIPreferencePage_ShowActivationInfo, userInterfaceGroup);
         addField(showActivationInfoField);
+
+        finalizeSectionGroup(userInterfaceGroup);
 
         // --- Group: Code completion ---
         var codeCompletionGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_CodeCompletionGroup);
@@ -195,12 +195,46 @@ public class ClientAIPreferencePage
         addField(autoOpenDiffPreviewField);
 
         finalizeSectionGroup(chatGroup);
+
+        // --- Group: Additional features ---
+        var advancedGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_AdvancedGroup);
+
+        var backgroundAnalysisField = new BooleanFieldEditor(ISettingsStore.BACKGROUND_ANALYSIS,
+            Messages.ClientAIPreferencePage_BackgroundAnalysis, advancedGroup);
+        addField(backgroundAnalysisField);
+        // The tooltip goes on the checkbox itself. Using setLabelTooltip here would call
+        // getLabelControl on a default-style BooleanFieldEditor, which spawns a duplicate label.
+        setCheckboxTooltip(advancedGroup, Messages.ClientAIPreferencePage_BackgroundAnalysis_Tooltip);
+
+        finalizeSectionGroup(advancedGroup);
+
+        // Parameters sits last so it renders right before the diagnostic section (added in createContents).
+        var validatorField = new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
+            Messages.ClientAIPreferencePage_Parameters, parent, parametersValidator);
+        setLabelTooltip(validatorField, parent, Messages.ClientAIPreferencePage_Parameters_Tooltip);
+        addField(validatorField);
     }
 
     private void setLabelTooltip(FieldEditor editor, Composite parent, String tooltip)
     {
         var label = editor.getLabelControl(parent);
         label.setToolTipText(tooltip);
+    }
+
+    /**
+     * Sets a tooltip on the checkbox of a {@link BooleanFieldEditor}. The editor keeps its label as
+     * the checkbox text (no separate label control), so the tooltip is applied to the {@link Button}
+     * directly instead of via {@code getLabelControl}, which would create a duplicate label.
+     */
+    private void setCheckboxTooltip(Composite group, String tooltip)
+    {
+        for (var child : group.getChildren())
+        {
+            if (child instanceof Button)
+            {
+                child.setToolTipText(tooltip);
+            }
+        }
     }
 
     /**

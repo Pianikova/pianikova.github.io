@@ -61,6 +61,7 @@ public class AIUICommonModule
         initializableBinder.addBinding().to(Notificator.class);
         initializableBinder.addBinding().to(JShellSessionManager.class);
         initializableBinder.addBinding().to(JShellReflectionWarmUp.class);
+        initializableBinder.addBinding().to(BackgroundAnalysisInitializer.class);
 
         bind(UI.class).in(Singleton.class);
         bind(IUI.class).to(UI.class);
@@ -103,6 +104,10 @@ public class AIUICommonModule
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         bind(ISyntaxVaidator.class).to(SyntaxVaidator.class).in(Singleton.class);
         bind(IGlobalContextTracker.class).to(GlobalContextTracker.class).in(Singleton.class);
+
+        bind(BackgroundAnalysisManager.class).in(Singleton.class);
+        bind(BackgroundAnalysisTrigger.class).in(Singleton.class);
+        bind(BackgroundAnalysisRegistrar.class).in(Singleton.class);
         bind(IProjectTrackingWorkflow.class).to(ProjectTrackingWorkflow.class);
         bind(IGlobalContextSync.class).to(GlobalContextSync.class).in(Singleton.class);
         bind(IProposalsProvider.class).to(ProposalsProvider.class).in(Singleton.class);

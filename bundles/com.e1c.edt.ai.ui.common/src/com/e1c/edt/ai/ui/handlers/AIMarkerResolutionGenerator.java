@@ -6,7 +6,7 @@ package com.e1c.edt.ai.ui.handlers;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.ui.IMarkerResolution;
-import org.eclipse.ui.IMarkerResolutionGenerator;
+import org.eclipse.ui.IMarkerResolutionGenerator2;
 
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.tools.SetMarkersMcpTool;
@@ -17,7 +17,7 @@ import com.google.inject.Inject;
  * Marker resolution generator for AI markers that provides quick fix actions.
  */
 public class AIMarkerResolutionGenerator
-    implements IMarkerResolutionGenerator
+    implements IMarkerResolutionGenerator2
 {
     @Inject
     IJson json;
@@ -25,6 +25,16 @@ public class AIMarkerResolutionGenerator
     public AIMarkerResolutionGenerator()
     {
         BaseActivator.injectMembers(this);
+    }
+
+    /**
+     * Marker resolution generator for AI markers that provides quick fix actions.
+     */
+    @Override
+    public boolean hasResolutions(IMarker marker)
+    {
+        return marker.getAttribute(SetMarkersMcpTool.ACTION_CHAT_ID_ATTRIBUTE, null) != null
+            && marker.getAttribute(SetMarkersMcpTool.ACTION_DETAILS_ATTRIBUTE, null) != null;
     }
 
     @Override
