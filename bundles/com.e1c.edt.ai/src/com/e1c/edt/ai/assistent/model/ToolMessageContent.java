@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.assistent.model;
 
+import java.util.Optional;
+
 import com.google.gson.annotations.SerializedName;
 
 /**
@@ -11,8 +13,13 @@ import com.google.gson.annotations.SerializedName;
  */
 public class ToolMessageContent
 {
+    /**
+     * Результат инструмента. {@code Optional.empty()} сериализуется как явный {@code null} —
+     * это обязательно для серверных инструментов со статусом {@code accepted}: сервер требует
+     * присутствия поля {@code content} и пустого значения в нём.
+     */
     @SerializedName("content")
-    public String content;
+    public Optional<String> content;
 
     /**
      * Идентификатор вызова инструмента, который был в ответе на предыдущее сообщение
@@ -21,7 +28,9 @@ public class ToolMessageContent
     public String toolCallId;
 
     /**
-     * Статус выполнения инструмента (ok | accepted | rejected | error | timeout)
+     * Статус выполнения инструмента. Для клиентских инструментов: ok | rejected | ignored |
+     * error | timeout. Для серверных (тип system/mcp на сервере): accepted | rejected | ignored —
+     * при accepted сервер выполняет инструмент сам.
      */
     @SerializedName("status")
     public String status;
