@@ -47,6 +47,7 @@
       <import plugin="org.eclipse.osgi"/>
       <import plugin="org.eclipse.osgi.services"/>
       <import plugin="org.eclipse.e4.ui.css.swt.theme" version="0.13.0" match="greaterOrEqual"/>
+      <import plugin="org.eclipse.mylyn.wikitext.markdown.ui" version="3.0.42" match="greaterOrEqual"/>
    </requires>
 
    <plugin

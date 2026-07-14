@@ -603,7 +603,9 @@
             name="%editor.name.markdown"
             extensions="md"
             icon="icons/obj16/ai.png"
-            class="org.eclipse.ui.editors.text.TextEditor"
+            class="com.e1c.edt.ai.ui.EdtMarkdownEditor"
+            contributorClass="org.eclipse.mylyn.internal.wikitext.ui.editor.MarkupEditorActionBarContributor"
+            default="true"
             id="com.e1c.edt.ai.ui.editors.markdown">
       </editor>
    </extension>
