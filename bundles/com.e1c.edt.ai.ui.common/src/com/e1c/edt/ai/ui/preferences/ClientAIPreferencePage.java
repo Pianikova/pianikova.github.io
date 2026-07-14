@@ -4,17 +4,13 @@
 package com.e1c.edt.ai.ui.preferences;
 
 import java.text.MessageFormat;
-import java.util.Arrays;
 import java.util.Objects;
 
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.Path;
-import org.eclipse.jface.preference.BooleanFieldEditor;
-import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IPreferenceStore;
-import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
@@ -28,7 +24,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Group;
@@ -70,15 +65,8 @@ public class ClientAIPreferencePage
     private final Image SPLASH = createImage("icons/obj16/splash.png"); //$NON-NLS-1$
 
     // Column count of the page grid. Equals the largest field control count (the token editor:
-    // label + text + validate button). Section groups reuse the same count so the base
-    // FieldEditorPreferencePage#adjustGridLayout stays consistent for grouped editors.
+    // label + text + validate button).
     private static final int PAGE_COLUMNS = 3;
-
-    @SuppressWarnings("nls")
-    private static final String[][] LANGUAGES = {
-        { Messages.ClientAIPreferencePage_Language_Default, "" },
-        { Messages.ClientAIPreferencePage_Language_English, "english" },
-        { Messages.ClientAIPreferencePage_Language_Russian, "russian" } };
 
     @Inject
     ILog log;
@@ -153,60 +141,8 @@ public class ClientAIPreferencePage
         tokenText.setEchoChar('*');
         addField(tokenFieldEditor);
 
-        // --- Group: User interface ---
-        var userInterfaceGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_UserInterfaceGroup);
-
-        var comboField = new ComboFieldEditor(ISettingsStore.LANGUAGE, Messages.ClientAIPreferencePage_Language,
-            LANGUAGES, userInterfaceGroup);
-        setLabelTooltip(comboField, userInterfaceGroup, Messages.ClientAIPreferencePage_Language_Tooltip);
-        addField(comboField);
-
-        var showStatusBarField = new BooleanFieldEditor(ISettingsStore.SHOW_STATUS_BAR,
-            Messages.ClientAIPreferencePage_ShowStatusBar, userInterfaceGroup);
-        addField(showStatusBarField);
-
-        var showActivationInfoField = new BooleanFieldEditor(ISettingsStore.SHOW_ACTIVATION_INFO,
-            Messages.ClientAIPreferencePage_ShowActivationInfo, userInterfaceGroup);
-        addField(showActivationInfoField);
-
-        finalizeSectionGroup(userInterfaceGroup);
-
-        // --- Group: Code completion ---
-        var codeCompletionGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_CodeCompletionGroup);
-
-        var policyCombo = new PolicyComboFieldEditor(codeCompletionGroup);
-        setLabelTooltip(policyCombo, codeCompletionGroup, Messages.ClientAIPreferencePage_CodeCompletionPolicy_Tooltip);
-        addField(policyCombo);
-
-        var codeCompletionLinesCount = new IntegerFieldEditor(ISettingsStore.CODE_COMPLETION_LINES_COUNT,
-            Messages.ClientAIPreferencePage_CodeCompletionLinesCount, codeCompletionGroup);
-        codeCompletionLinesCount.setValidRange(1, ISettingsStore.MAX_CODE_COMPLETION_LINES_COUNT);
-        setLabelTooltip(codeCompletionLinesCount, codeCompletionGroup,
-            Messages.ClientAIPreferencePage_CodeCompletionLinesCount_Tooltip);
-        addField(codeCompletionLinesCount);
-
-        finalizeSectionGroup(codeCompletionGroup);
-
-        // --- Group: Chat ---
-        var chatGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_ChatGroup);
-
-        var autoOpenDiffPreviewField = new BooleanFieldEditor(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW,
-            Messages.ClientAIPreferencePage_AutoOpenDiffPreview, chatGroup);
-        addField(autoOpenDiffPreviewField);
-
-        finalizeSectionGroup(chatGroup);
-
-        // --- Group: Additional features ---
-        var advancedGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_AdvancedGroup);
-
-        var backgroundAnalysisField = new BooleanFieldEditor(ISettingsStore.BACKGROUND_ANALYSIS,
-            Messages.ClientAIPreferencePage_BackgroundAnalysis, advancedGroup);
-        addField(backgroundAnalysisField);
-        // The tooltip goes on the checkbox itself. Using setLabelTooltip here would call
-        // getLabelControl on a default-style BooleanFieldEditor, which spawns a duplicate label.
-        setCheckboxTooltip(advancedGroup, Messages.ClientAIPreferencePage_BackgroundAnalysis_Tooltip);
-
-        finalizeSectionGroup(advancedGroup);
+        // Functional settings live on child preference pages (Appearance, Code completion, Chat,
+        // Background code analysis) registered under this page's category in plugin.xml.
 
         // Parameters sits last so it renders right before the diagnostic section (added in createContents).
         var validatorField = new ValidatingStringFieldEditor(ISettingsStore.PARAMETERS,
@@ -219,51 +155,6 @@ public class ClientAIPreferencePage
     {
         var label = editor.getLabelControl(parent);
         label.setToolTipText(tooltip);
-    }
-
-    /**
-     * Sets a tooltip on the checkbox of a {@link BooleanFieldEditor}. The editor keeps its label as
-     * the checkbox text (no separate label control), so the tooltip is applied to the {@link Button}
-     * directly instead of via {@code getLabelControl}, which would create a duplicate label.
-     */
-    private void setCheckboxTooltip(Composite group, String tooltip)
-    {
-        for (var child : group.getChildren())
-        {
-            if (child instanceof Button)
-            {
-                child.setToolTipText(tooltip);
-            }
-        }
-    }
-
-    /**
-     * Creates a titled section group spanning the full page width, into which field editors are
-     * placed by passing it as their parent.
-     */
-    private Group createSectionGroup(Composite parent, String text)
-    {
-        var group = new Group(parent, SWT.NONE);
-        group.setText(text);
-        var gd = new GridData(SWT.FILL, SWT.TOP, true, false);
-        gd.horizontalSpan = PAGE_COLUMNS;
-        group.setLayoutData(gd);
-        group.setLayout(new GridLayout(PAGE_COLUMNS, false));
-        return group;
-    }
-
-    /**
-     * Restores the group's column count after its field editors were added. {@link FieldEditor}
-     * resets the parent layout to its own control count on creation, so the page-wide column count
-     * must be re-applied (and margins added) once all editors in the group exist.
-     */
-    private void finalizeSectionGroup(Group group)
-    {
-        var layout = (GridLayout)group.getLayout();
-        layout.numColumns = PAGE_COLUMNS;
-        layout.marginWidth = 10;
-        layout.marginHeight = 8;
-        layout.horizontalSpacing = 10;
     }
 
     @Override
@@ -437,75 +328,5 @@ public class ClientAIPreferencePage
         var descriptor = ImageDescriptor
             .createFromURL(FileLocator.find(BaseActivator.getDefault().getBundle(), new Path(path), null));
         return descriptor.createImage();
-    }
-
-    private static class PolicyComboFieldEditor
-        extends ComboFieldEditor
-    {
-        private static final String[][] CODE_COMPLETION_POLICIES = Arrays.stream(CodeCompletionPolicy.values())
-            .map(policy -> new String[] { policy.getLongName(), policy.getId() })
-            .toArray(String[][]::new);
-        private Combo combo;
-
-        public PolicyComboFieldEditor(Composite parent)
-        {
-            super(ISettingsStore.CODE_COMPLETION_POLICY, Messages.ClientAIPreferencePage_CodeCompletionPolicy,
-                CODE_COMPLETION_POLICIES, parent);
-        }
-
-        @Override
-        protected void doFillIntoGrid(Composite parent, int numColumns)
-        {
-            super.doFillIntoGrid(parent, numColumns);
-            var childernAfter = parent.getChildren();
-            if (childernAfter.length > 0)
-            {
-                var control = childernAfter[childernAfter.length - 1];
-                if (control instanceof Combo)
-                {
-                    combo = (Combo)control;
-                }
-            }
-        }
-
-        @Override
-        protected void doLoad()
-        {
-            super.doLoad();
-            updateToolTipText();
-        }
-
-        @Override
-        protected void doLoadDefault()
-        {
-            super.doLoadDefault();
-            updateToolTipText();
-        }
-
-        @Override
-        protected void valueChanged(String oldValue, String newValue)
-        {
-            super.valueChanged(oldValue, newValue);
-            updateToolTipText();
-        }
-
-        private void updateToolTipText()
-        {
-            if (combo == null)
-            {
-                return;
-            }
-
-            var index = combo.getSelectionIndex();
-            var policies = CodeCompletionPolicy.values();
-            if (policies != null && policies.length > 0 && index >= 0 && index < policies.length)
-            {
-                combo.setToolTipText(policies[index].getDescription());
-            }
-            else
-            {
-                combo.setToolTipText(""); //$NON-NLS-1$
-            }
-        }
     }
 }

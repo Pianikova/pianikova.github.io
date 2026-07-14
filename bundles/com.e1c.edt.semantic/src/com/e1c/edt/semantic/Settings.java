@@ -9,8 +9,10 @@ import java.util.Optional;
 
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ParametersParser;
+import com.e1c.edt.ai.assistent.model.AnalysisMode;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
+import com.e1c.edt.ai.assistent.model.ProblemLevel;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 
@@ -46,6 +48,18 @@ class Settings
     {
         // Headless/semantic runtime has no editors or save events to drive background analysis.
         return false;
+    }
+
+    @Override
+    public ProblemLevel getBackgroundAnalysisProblemLevel()
+    {
+        return ProblemLevel.WARNING;
+    }
+
+    @Override
+    public AnalysisMode getBackgroundAnalysisMode()
+    {
+        return AnalysisMode.STANDARD;
     }
 
     @Override
