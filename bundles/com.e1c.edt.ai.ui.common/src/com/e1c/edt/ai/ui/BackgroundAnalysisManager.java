@@ -22,6 +22,7 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ConversationSession;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
+import com.e1c.edt.ai.assistent.model.AnalysisMode;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
@@ -36,10 +37,10 @@ import com.google.inject.Inject;
 public class BackgroundAnalysisManager
 {
     private static final String LATEST_REVISION = "latest"; //$NON-NLS-1$
-    // Run the review conversation under the "custom" skill (with is_chat) like the dev-autopilot,
-    // instead of the bare "raw" mode. "raw" gives the model no agentic framing / per-skill tool
-    // profile, which made it ignore the skill steps (whole-file review, TodoWrite planning).
-    private static final String CONVERSATION_SKILL = "custom"; //$NON-NLS-1$
+    // The conversation skill (raw/custom) and is_chat flag come from the user-selected analysis mode
+    // (Settings#getBackgroundAnalysisMode): STANDARD -> raw + is_chat=false (lighter), ADVANCED ->
+    // custom + is_chat=true (agentic framing / per-skill tool profile, follows the skill steps more
+    // strictly). See AnalysisMode.
     // Local history for the just-saved change is written as part of the save but can lag behind the
     // POST_CHANGE notification that triggers analysis. Retry briefly so the first save of a file with
     // no prior history still resolves a diff base instead of falling back to an empty "latest".
@@ -251,12 +252,15 @@ public class BackgroundAnalysisManager
                     + " base=" + traceBase + " file=" + request.getFile().getName(),
                 () -> "");
 
+            var problemLevel = settings.getBackgroundAnalysisProblemLevel();
             // @formatter:off
             SkillExecutionRequest skillRequest = new SkillExecutionRequest("background-code-analysis",
                 Map.of("project_name", request.getProjectId().toString(),
                        "relative_file_path", request.getFile().getProjectRelativePath().toString(),
                        "absolute_file_path", request.getFile().getLocation().toOSString(),
-                       "from_revision_id", baseRevisionId));
+                       "from_revision_id", baseRevisionId,
+                       "problem_level", problemLevel.getId(),
+                       "allowed_severities", problemLevel.getAllowedSeverities()));
             // @formatter:on
 
             skillExecutor.executeAsync(skillRequest, token).handle((response, exception) -> {
@@ -290,8 +294,10 @@ public class BackgroundAnalysisManager
 
                 ConversationSession session = state.conversationSession.get();
                 boolean forceNew = session == null;
+                var mode = settings.getBackgroundAnalysisMode();
+                Boolean isChat = mode == AnalysisMode.ADVANCED ? Boolean.TRUE : Boolean.FALSE;
                 var newReq = new SendUserMessageRequest(request.getProjectId(), skillResponse.getPrompt(),
-                    session, forceNew, CONVERSATION_SKILL, Boolean.TRUE, null);
+                    session, forceNew, mode.getSkillName(), isChat, null);
 
                 return conversationFacade.sendAsync(newReq, token).thenAccept(resultMessage -> {
                     if (token.isCanceled())

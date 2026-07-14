@@ -49,7 +49,9 @@ import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.ValidationError;
 import com.e1c.edt.ai.ValidationResult;
 import com.e1c.edt.ai.WellknownError;
+import com.e1c.edt.ai.assistent.model.AnalysisMode;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
+import com.e1c.edt.ai.assistent.model.ProblemLevel;
 import com.e1c.edt.ai.ui.AIUICommonModule;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IWeb;
@@ -79,6 +81,17 @@ public class ClientAIPreferencePage
         { Messages.ClientAIPreferencePage_Language_Default, "" },
         { Messages.ClientAIPreferencePage_Language_English, "english" },
         { Messages.ClientAIPreferencePage_Language_Russian, "russian" } };
+
+    // Order matters: entries go from least to most severe threshold. Value = ProblemLevel id.
+    private static final String[][] PROBLEM_LEVELS = {
+        { Messages.ClientAIPreferencePage_ProblemLevel_Information, ProblemLevel.INFORMATION_ID },
+        { Messages.ClientAIPreferencePage_ProblemLevel_Warnings, ProblemLevel.WARNING_ID },
+        { Messages.ClientAIPreferencePage_ProblemLevel_Errors, ProblemLevel.ERROR_ID } };
+
+    // Value = AnalysisMode id (standard -> raw skill, advanced -> custom skill).
+    private static final String[][] ANALYSIS_MODES = {
+        { Messages.ClientAIPreferencePage_AnalysisMode_Standard, AnalysisMode.STANDARD_ID },
+        { Messages.ClientAIPreferencePage_AnalysisMode_Advanced, AnalysisMode.ADVANCED_ID } };
 
     @Inject
     ILog log;
@@ -196,7 +209,7 @@ public class ClientAIPreferencePage
 
         finalizeSectionGroup(chatGroup);
 
-        // --- Group: Additional features ---
+        // --- Group: Background code analysis ---
         var advancedGroup = createSectionGroup(parent, Messages.ClientAIPreferencePage_AdvancedGroup);
 
         var backgroundAnalysisField = new BooleanFieldEditor(ISettingsStore.BACKGROUND_ANALYSIS,
@@ -205,6 +218,16 @@ public class ClientAIPreferencePage
         // The tooltip goes on the checkbox itself. Using setLabelTooltip here would call
         // getLabelControl on a default-style BooleanFieldEditor, which spawns a duplicate label.
         setCheckboxTooltip(advancedGroup, Messages.ClientAIPreferencePage_BackgroundAnalysis_Tooltip);
+
+        var problemLevelField = new ComboFieldEditor(ISettingsStore.BACKGROUND_ANALYSIS_PROBLEM_LEVEL,
+            Messages.ClientAIPreferencePage_ProblemLevel, PROBLEM_LEVELS, advancedGroup);
+        setLabelTooltip(problemLevelField, advancedGroup, Messages.ClientAIPreferencePage_ProblemLevel_Tooltip);
+        addField(problemLevelField);
+
+        var analysisModeField = new ComboFieldEditor(ISettingsStore.BACKGROUND_ANALYSIS_MODE,
+            Messages.ClientAIPreferencePage_AnalysisMode, ANALYSIS_MODES, advancedGroup);
+        setLabelTooltip(analysisModeField, advancedGroup, Messages.ClientAIPreferencePage_AnalysisMode_Tooltip);
+        addField(analysisModeField);
 
         finalizeSectionGroup(advancedGroup);
 
