@@ -39,10 +39,6 @@ public class Messages
     public static String ClientAIPreferencePage_AnalysisMode_Standard;
     public static String ClientAIPreferencePage_AnalysisMode_Advanced;
     public static String ClientAIPreferencePage_AutoOpenDiffPreview;
-    public static String ClientAIPreferencePage_UserInterfaceGroup;
-    public static String ClientAIPreferencePage_AdvancedGroup;
-    public static String ClientAIPreferencePage_CodeCompletionGroup;
-    public static String ClientAIPreferencePage_ChatGroup;
     public static String ClientAIPreferencePage_PluginVersion;
     public static String ClientAIPreferencePage_CopyVersion;
 

@@ -478,6 +478,30 @@
                 id="com.e1c.edt.ai.ui.clientPrefs"
                 name="%page.name">
         </page>
+        <page
+                category="com.e1c.edt.ai.ui.clientPrefs"
+                class="com.e1c.edt.ai.ui.preferences.AppearancePreferencePage"
+                id="com.e1c.edt.ai.ui.appearancePrefs"
+                name="%page.appearance">
+        </page>
+        <page
+                category="com.e1c.edt.ai.ui.clientPrefs"
+                class="com.e1c.edt.ai.ui.preferences.CodeCompletionPreferencePage"
+                id="com.e1c.edt.ai.ui.codeCompletionPrefs"
+                name="%page.codeCompletion">
+        </page>
+        <page
+                category="com.e1c.edt.ai.ui.clientPrefs"
+                class="com.e1c.edt.ai.ui.preferences.ChatPreferencePage"
+                id="com.e1c.edt.ai.ui.chatPrefs"
+                name="%page.chat">
+        </page>
+        <page
+                category="com.e1c.edt.ai.ui.clientPrefs"
+                class="com.e1c.edt.ai.ui.preferences.BackgroundAnalysisPreferencePage"
+                id="com.e1c.edt.ai.ui.backgroundAnalysisPrefs"
+                name="%page.backgroundAnalysis">
+        </page>
     </extension>
 
     <extension
