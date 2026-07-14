@@ -12,8 +12,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.resources.IFile;
-import org.eclipse.core.runtime.jobs.Job;
 
+import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IConversationFacade;
@@ -48,7 +48,8 @@ public class BackgroundAnalysisManager
 
     private static final class FileAnalysisState
     {
-        final AtomicReference<Job> currentJob = new AtomicReference<>();
+        // Токен последнего запущенного для этого файла ревью — чтобы погасить его при закрытии файла.
+        final AtomicReference<CancellationTokenSource> currentToken = new AtomicReference<>();
         final AtomicLong generation = new AtomicLong();
         // отдельный диалог на файл
         final AtomicReference<ConversationSession> conversationSession = new AtomicReference<>();
@@ -72,6 +73,12 @@ public class BackgroundAnalysisManager
     // so only one review runs instead of one per project (which produced duplicate markers).
     private final ConcurrentMap<String, FileAnalysisState> states = new ConcurrentHashMap<>();
 
+    // Global single-flight: at most one background review runs at a time across all files. A new save
+    // (of any file) cancels whatever is currently in flight, so a slow/previous review can no longer
+    // land stale markers after a newer save — including markers from a review of a file the user has
+    // since navigated away from. Aligns with IDEAI-510 (only the active editor file is analyzed).
+    private final AtomicReference<CancellationTokenSource> activeRun = new AtomicReference<>();
+
     @Inject
     public BackgroundAnalysisManager(IConversationFacade conversationFacade, IDispatcher dispatcher,
         ISkillExecutor skillExecutor, ILog log, ILocalHistoryUtils localHistoryUtils, ISettings settings)
@@ -85,9 +92,11 @@ public class BackgroundAnalysisManager
     }
 
     /**
-     * Файл сохранён. Отменяем предыдущий анализ этого же файла, берём новое
-     * поколение и запускаем self-review последних изменений по локальной истории IDE
-     * (git не требуется). Single-flight внутри файла, параллельно между файлами.
+     * Файл сохранён. Гасим анализ, который сейчас в работе (этого или любого другого файла —
+     * глобальный single-flight), берём новое поколение и запускаем self-review последних
+     * изменений по локальной истории IDE (git не требуется). Отмена «честная»: собственный
+     * {@link CancellationTokenSource} прокидывается в скилл и в диалог, поэтому вытесненное
+     * ревью реально останавливается до следующего вызова setmarkers и не пишет устаревшие маркеры.
      */
     @SuppressWarnings("nls")
     public void onFileSaved(IFile file)
@@ -102,36 +111,33 @@ public class BackgroundAnalysisManager
         }
         FileAnalysisState state = states.computeIfAbsent(fileKey(file), k -> new FileAnalysisState());
         long myGeneration = state.generation.incrementAndGet();
-        log.trace(TracingSources.TOOLS,
-            "[bg-analysis] scheduling gen=" + myGeneration + " file=" + file.getFullPath(), () -> "");
 
-        Job previousJob = state.currentJob.get();
-        if (previousJob != null)
+        // Собственный токен этого прогона. Он же — «активный прогон» менеджера: ставим его до старта
+        // и гасим предыдущий активный прогон (любого файла), чтобы отменить его диалог по-настоящему.
+        CancellationTokenSource myToken = new CancellationTokenSource();
+        state.currentToken.set(myToken);
+        CancellationTokenSource previous = activeRun.getAndSet(myToken);
+        if (previous != null)
         {
-            previousJob.cancel();
+            previous.cancel();
         }
+
+        log.trace(TracingSources.TOOLS,
+            "[bg-analysis] scheduling gen=" + myGeneration + " file=" + file.getFullPath()
+                + " (cancelled previous run: " + (previous != null) + ")",
+            () -> "");
 
         ProjectId projectId = new ProjectId(file.getProject());
         AutoAnalysisRequest request = new AutoAnalysisRequest(file, projectId);
 
-        Job job = dispatcher.createJob("Background Analysis", context -> {
-            ICancellationToken token = context.CancellationTokenSource;
-            if (token.isCanceled() || state.generation.get() != myGeneration)
-            {
-                return; // вытеснены до старта
-            }
-            analyzeChanges(request, state, myGeneration, token).exceptionally(error -> {
-                log.logError(error);
-                return null;
-            });
-        }, false, CancellationTokens.NONE);
-
-        state.currentJob.set(job);
-        job.schedule();
+        analyzeChanges(request, state, myGeneration, myToken).exceptionally(error -> {
+            log.logError(error);
+            return null;
+        });
     }
 
     /**
-     * Файл закрыт — убираем состояние (в т.ч. историю чата по файлу) и гасим job.
+     * Файл закрыт — убираем состояние (в т.ч. историю чата по файлу) и гасим прогон.
      * Если события закрытия нет — можно не звать, мапа маленькая.
      */
     public void onFileClosed(IFile file)
@@ -139,10 +145,10 @@ public class BackgroundAnalysisManager
         FileAnalysisState state = states.remove(fileKey(file));
         if (state != null)
         {
-            Job job = state.currentJob.get();
-            if (job != null)
+            CancellationTokenSource token = state.currentToken.get();
+            if (token != null)
             {
-                job.cancel();
+                token.cancel();
             }
         }
     }
@@ -214,6 +220,12 @@ public class BackgroundAnalysisManager
         dispatcher.createJob("Background AI Code Analysis", context -> {
             var token = cancellationToken;
 
+            if (token.isCanceled())
+            {
+                result.complete(null); // вытеснены новым сохранением до старта — база остаётся закреплённой
+                return;
+            }
+
             // Фиксируем базу диффа на старте: если предыдущее ревью не завершилось,
             // база остаётся от него — его дельта попадёт в это ревью.
             String pinned = state.pendingBaseRevisionId.get();
@@ -248,27 +260,31 @@ public class BackgroundAnalysisManager
             // @formatter:on
 
             skillExecutor.executeAsync(skillRequest, token).handle((response, exception) -> {
-                if (exception != null)
-                {
-                    log.logError(exception);
-                    result.completeExceptionally(exception);
-                    return null;
-                }
+                // Отмена — штатное событие (нас вытеснило новое сохранение), не ошибка: тихо завершаем.
                 if (token.isCanceled())
                 {
-                    result.completeExceptionally(new RuntimeException("Analysis was cancelled"));
+                    result.complete(null);
+                    return null;
+                }
+                if (exception != null)
+                {
+                    result.completeExceptionally(exception);
                     return null;
                 }
                 return response;
             }).thenCompose(skillResponse -> {
-                if (skillResponse == null)
+                if (result.isDone())
                 {
-                    result.completeExceptionally(new RuntimeException("Skill execution returned null"));
-                    return CompletableFuture.completedFuture(null);
+                    return CompletableFuture.<Void> completedFuture(null); // уже завершено выше (отмена/ошибка)
                 }
                 if (token.isCanceled())
                 {
-                    result.completeExceptionally(new RuntimeException("Analysis was cancelled before chat"));
+                    result.complete(null);
+                    return CompletableFuture.<Void> completedFuture(null);
+                }
+                if (skillResponse == null)
+                {
+                    result.completeExceptionally(new RuntimeException("Skill execution returned null"));
                     return CompletableFuture.<Void> completedFuture(null);
                 }
 
@@ -278,6 +294,11 @@ public class BackgroundAnalysisManager
                     session, forceNew, CONVERSATION_SKILL, Boolean.TRUE, null);
 
                 return conversationFacade.sendAsync(newReq, token).thenAccept(resultMessage -> {
+                    if (token.isCanceled())
+                    {
+                        result.complete(null);
+                        return;
+                    }
                     if (resultMessage == null)
                     {
                         result.completeExceptionally(new RuntimeException("No message from conversation facade"));
@@ -292,12 +313,15 @@ public class BackgroundAnalysisManager
                     }
 
                     // Ревью завершилось — долгов нет, следующее ревью диффует от «latest».
-                    // Если нас уже вытеснило новое поколение, база остаётся закреплённой за ним.
+                    // Если нас уже вытеснило новое поколение (или другой файл занял активный
+                    // прогон), база остаётся закреплённой, а activeRun не трогаем.
                     boolean stillCurrent = state.generation.get() == generation;
                     if (stillCurrent)
                     {
                         state.pendingBaseRevisionId.set(null);
                     }
+                    activeRun.compareAndSet(cancellationToken instanceof CancellationTokenSource
+                        ? (CancellationTokenSource)cancellationToken : null, null);
 
                     var replyLen = generatedMessage == null ? 0 : generatedMessage.length();
                     log.trace(TracingSources.TOOLS, "[bg-analysis] done gen=" + generation + " stillCurrent="
@@ -306,8 +330,16 @@ public class BackgroundAnalysisManager
                     result.complete(null);
                 });
             }).exceptionally(error -> {
-                log.logError(error);
-                result.completeExceptionally(error);
+                // Отмена (вытеснение новым сохранением) — не ошибка: завершаем тихо, в лог не пишем.
+                // Настоящую ошибку прокидываем в result — её один раз залогирует вызывающий onFileSaved.
+                if (token.isCanceled())
+                {
+                    result.complete(null);
+                }
+                else
+                {
+                    result.completeExceptionally(error);
+                }
                 return null;
             });
         }, false, CancellationTokens.NONE).schedule();
