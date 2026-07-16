@@ -9,7 +9,6 @@ import java.util.Optional;
 
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ParametersParser;
-import com.e1c.edt.ai.assistent.model.AnalysisMode;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProblemLevel;
@@ -54,12 +53,6 @@ class Settings
     public ProblemLevel getBackgroundAnalysisProblemLevel()
     {
         return ProblemLevel.WARNING;
-    }
-
-    @Override
-    public AnalysisMode getBackgroundAnalysisMode()
-    {
-        return AnalysisMode.STANDARD;
     }
 
     @Override

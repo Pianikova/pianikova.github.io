@@ -26,7 +26,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.ParametersParser;
-import com.e1c.edt.ai.assistent.model.AnalysisMode;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProblemLevel;
@@ -118,12 +117,6 @@ public class Settings
     public ProblemLevel getBackgroundAnalysisProblemLevel()
     {
         return ProblemLevel.parse(settingsStore.getString(ISettingsStore.BACKGROUND_ANALYSIS_PROBLEM_LEVEL).orElse(null));
-    }
-
-    @Override
-    public AnalysisMode getBackgroundAnalysisMode()
-    {
-        return AnalysisMode.parse(settingsStore.getString(ISettingsStore.BACKGROUND_ANALYSIS_MODE).orElse(null));
     }
 
     public boolean hasClientToken()

@@ -22,7 +22,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ConversationSession;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
-import com.e1c.edt.ai.assistent.model.AnalysisMode;
 import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
@@ -37,15 +36,17 @@ import com.google.inject.Inject;
 public class BackgroundAnalysisManager
 {
     private static final String LATEST_REVISION = "latest"; //$NON-NLS-1$
-    // The conversation skill (raw/custom) and is_chat flag come from the user-selected analysis mode
-    // (Settings#getBackgroundAnalysisMode): STANDARD -> raw + is_chat=false (lighter), ADVANCED ->
-    // custom + is_chat=true (agentic framing / per-skill tool profile, follows the skill steps more
-    // strictly). See AnalysisMode.
+    // Background review always runs under the lightweight "raw" conversation skill without is_chat.
+    private static final String CONVERSATION_SKILL = "raw"; //$NON-NLS-1$
     // Local history for the just-saved change is written as part of the save but can lag behind the
     // POST_CHANGE notification that triggers analysis. Retry briefly so the first save of a file with
     // no prior history still resolves a diff base instead of falling back to an empty "latest".
     private static final int BASE_RESOLVE_RETRIES = 5;
     private static final long BASE_RESOLVE_RETRY_DELAY_MS = 100;
+    // Debounce before starting a review: a full review takes minutes (several slow LLM rounds),
+    // so starting it on every save just produces runs that the next save cancels. Wait for a
+    // quiet period instead — a burst of saves yields one review, started after the last save.
+    private static final long DEBOUNCE_DELAY_MS = 1_000;
 
     private static final class FileAnalysisState
     {
@@ -94,10 +95,12 @@ public class BackgroundAnalysisManager
 
     /**
      * Файл сохранён. Гасим анализ, который сейчас в работе (этого или любого другого файла —
-     * глобальный single-flight), берём новое поколение и запускаем self-review последних
-     * изменений по локальной истории IDE (git не требуется). Отмена «честная»: собственный
-     * {@link CancellationTokenSource} прокидывается в скилл и в диалог, поэтому вытесненное
-     * ревью реально останавливается до следующего вызова setmarkers и не пишет устаревшие маркеры.
+     * глобальный single-flight), берём новое поколение и планируем self-review последних
+     * изменений с debounce-задержкой: ревью стартует только после {@link #DEBOUNCE_DELAY_MS}
+     * «тишины», так что серия быстрых сохранений порождает один прогон, а не цепочку
+     * начатых-и-отменённых. Отмена «честная»: собственный {@link CancellationTokenSource}
+     * прокидывается в скилл и в диалог, поэтому вытесненное ревью реально останавливается
+     * до следующего вызова setmarkers и не пишет устаревшие маркеры.
      */
     @SuppressWarnings("nls")
     public void onFileSaved(IFile file)
@@ -113,8 +116,10 @@ public class BackgroundAnalysisManager
         FileAnalysisState state = states.computeIfAbsent(fileKey(file), k -> new FileAnalysisState());
         long myGeneration = state.generation.incrementAndGet();
 
-        // Собственный токен этого прогона. Он же — «активный прогон» менеджера: ставим его до старта
-        // и гасим предыдущий активный прогон (любого файла), чтобы отменить его диалог по-настоящему.
+        // Собственный токен этого прогона. Он же — «активный прогон» менеджера: ставим его сразу
+        // (ещё до debounce-паузы) и гасим предыдущий активный прогон (любого файла) — и уже
+        // работающий диалог, и чужой ещё-не-стартовавший debounce. Дельта отменённого ревью
+        // остаётся закреплённой в pendingBaseRevisionId и попадёт в следующий прогон.
         CancellationTokenSource myToken = new CancellationTokenSource();
         state.currentToken.set(myToken);
         CancellationTokenSource previous = activeRun.getAndSet(myToken);
@@ -124,17 +129,28 @@ public class BackgroundAnalysisManager
         }
 
         log.trace(TracingSources.TOOLS,
-            "[bg-analysis] scheduling gen=" + myGeneration + " file=" + file.getFullPath()
-                + " (cancelled previous run: " + (previous != null) + ")",
+            "[bg-analysis] scheduling gen=" + myGeneration + " debounceMs=" + DEBOUNCE_DELAY_MS + " file="
+                + file.getFullPath() + " (cancelled previous run: " + (previous != null) + ")",
             () -> "");
 
         ProjectId projectId = new ProjectId(file.getProject());
         AutoAnalysisRequest request = new AutoAnalysisRequest(file, projectId);
 
-        analyzeChanges(request, state, myGeneration, myToken).exceptionally(error -> {
-            log.logError(error);
-            return null;
-        });
+        dispatcher.createJob("Background Analysis", context -> {
+            // Пока шла debounce-пауза, могло прийти новое сохранение (нашего или другого файла) —
+            // тогда наш токен уже отменён и/или поколение устарело: тихо уступаем место.
+            if (myToken.isCanceled() || state.generation.get() != myGeneration)
+            {
+                log.trace(TracingSources.TOOLS,
+                    "[bg-analysis] debounced-out gen=" + myGeneration + " file=" + request.getFile().getName(),
+                    () -> "");
+                return;
+            }
+            analyzeChanges(request, state, myGeneration, myToken).exceptionally(error -> {
+                log.logError(error);
+                return null;
+            });
+        }, false, CancellationTokens.NONE).schedule(DEBOUNCE_DELAY_MS);
     }
 
     /**
@@ -259,7 +275,6 @@ public class BackgroundAnalysisManager
                        "relative_file_path", request.getFile().getProjectRelativePath().toString(),
                        "absolute_file_path", request.getFile().getLocation().toOSString(),
                        "from_revision_id", baseRevisionId,
-                       "problem_level", problemLevel.getId(),
                        "allowed_severities", problemLevel.getAllowedSeverities()));
             // @formatter:on
 
@@ -294,10 +309,8 @@ public class BackgroundAnalysisManager
 
                 ConversationSession session = state.conversationSession.get();
                 boolean forceNew = session == null;
-                var mode = settings.getBackgroundAnalysisMode();
-                Boolean isChat = mode == AnalysisMode.ADVANCED ? Boolean.TRUE : Boolean.FALSE;
                 var newReq = new SendUserMessageRequest(request.getProjectId(), skillResponse.getPrompt(),
-                    session, forceNew, mode.getSkillName(), isChat, null);
+                    session, forceNew, CONVERSATION_SKILL, Boolean.FALSE, null);
 
                 return conversationFacade.sendAsync(newReq, token).thenAccept(resultMessage -> {
                     if (token.isCanceled())
@@ -330,8 +343,12 @@ public class BackgroundAnalysisManager
                         ? (CancellationTokenSource)cancellationToken : null, null);
 
                     var replyLen = generatedMessage == null ? 0 : generatedMessage.length();
-                    log.trace(TracingSources.TOOLS, "[bg-analysis] done gen=" + generation + " stillCurrent="
-                        + stillCurrent + " replyChars=" + replyLen + " file=" + request.getFile().getName(), () -> "");
+                    // The reply text goes into the lazy details supplier: it is the key diagnostic
+                    // for silent early exits (the model finishing the review without setmarkers).
+                    log.trace(TracingSources.TOOLS,
+                        "[bg-analysis] done gen=" + generation + " stillCurrent=" + stillCurrent + " replyChars="
+                            + replyLen + " file=" + request.getFile().getName(),
+                        () -> generatedMessage == null ? "" : "reply: " + generatedMessage);
 
                     result.complete(null);
                 });

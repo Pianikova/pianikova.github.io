@@ -19,6 +19,7 @@ import com.e1c.edt.ai.context.IModuleProvider;
 import com.e1c.edt.ai.context.ModuleProvider;
 import com.e1c.edt.ai.context.VisualContextProvider;
 import com.e1c.edt.ai.tools.EditRollback;
+import com.e1c.edt.ai.ui.quickfix.BslQuickAssistInstaller;
 import com.google.common.base.Preconditions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
@@ -67,8 +68,10 @@ public class AIUIModule
         var initializableBinder = Multibinder.newSetBinder(binder(), IInitializable.class);
         initializableBinder.addBinding().to(ActiveProjectTracker.class);
         initializableBinder.addBinding().to(ResourceListener.class);
+        initializableBinder.addBinding().to(BslQuickAssistInstaller.class);
         bind(ActiveProjectTracker.class).in(Singleton.class);
         bind(ResourceListener.class).in(Singleton.class);
+        bind(BslQuickAssistInstaller.class).in(Singleton.class);
         // @formatter:on
     }
 }

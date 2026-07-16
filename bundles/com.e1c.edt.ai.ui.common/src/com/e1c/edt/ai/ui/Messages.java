@@ -32,6 +32,10 @@ public class Messages
     public static String ReplaceCode;
     public static String FixCodeRequestDetails;
     public static String FixCodeDefaultDetails;
+    public static String FixProblemMarkerLabel;
+    public static String FixProblemMarkerDescription;
+    public static String DismissAIMarker;
+    public static String DismissAIMarkerDescription;
     public static String HintHotKey_AcceptBlock;
     public static String HintHotKey_AcceptLine;
     public static String HintHotKey_AcceptAll;

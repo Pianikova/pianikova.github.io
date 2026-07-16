@@ -9,6 +9,7 @@ import org.eclipse.ui.IMarkerResolution;
 import org.eclipse.ui.IMarkerResolutionGenerator2;
 
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.tools.MarkerType;
 import com.e1c.edt.ai.tools.SetMarkersMcpTool;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.google.inject.Inject;
@@ -33,8 +34,14 @@ public class AIMarkerResolutionGenerator
     @Override
     public boolean hasResolutions(IMarker marker)
     {
-        return marker.getAttribute(SetMarkersMcpTool.ACTION_CHAT_ID_ATTRIBUTE, null) != null
-            && marker.getAttribute(SetMarkersMcpTool.ACTION_DETAILS_ATTRIBUTE, null) != null;
+        try
+        {
+            return MarkerType.fromTypeId(marker.getType()) == MarkerType.AI_MARKER;
+        }
+        catch (CoreException e)
+        {
+            return false;
+        }
     }
 
     @Override
@@ -44,16 +51,22 @@ public class AIMarkerResolutionGenerator
         {
             var chatId = marker.getAttribute(SetMarkersMcpTool.ACTION_CHAT_ID_ATTRIBUTE);
             var details = marker.getAttribute(SetMarkersMcpTool.ACTION_DETAILS_ATTRIBUTE);
+            if (!hasResolutions(marker))
+            {
+                return new IMarkerResolution[0];
+            }
             if (chatId instanceof String && details instanceof String)
             {
                 var optionalDetails = json.deserialize((String)details, SetMarkersMcpTool.MarkerRequest.class);
                 if (optionalDetails.isPresent())
                 {
-                    var resolutions = new IMarkerResolution[1];
+                    var resolutions = new IMarkerResolution[2];
                     resolutions[0] = new AIMarkerResolution((String)chatId, optionalDetails.get());
+                    resolutions[1] = new DismissAIMarkerResolution();
                     return resolutions;
                 }
             }
+            return new IMarkerResolution[] { new DismissAIMarkerResolution() };
         }
         catch (CoreException e)
         {

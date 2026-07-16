@@ -17,7 +17,6 @@ public interface ISettingsStore
     public final static String AUTO_OPEN_DIFF_PREVIEW = "booleanPreferenceAutoOpenDiffPreview"; //$NON-NLS-1$
     public final static String BACKGROUND_ANALYSIS = "booleanPreferenceBackgroundAnalysis"; //$NON-NLS-1$
     public final static String BACKGROUND_ANALYSIS_PROBLEM_LEVEL = "stringPreferenceBackgroundAnalysisProblemLevel"; //$NON-NLS-1$
-    public final static String BACKGROUND_ANALYSIS_MODE = "stringPreferenceBackgroundAnalysisMode"; //$NON-NLS-1$
 
     public final static int MIN_ASSISTANT_TEXT_SIZE = 16;
     public final static int DEFAULT_CODE_COMPLETION_LINES_COUNT = 5;

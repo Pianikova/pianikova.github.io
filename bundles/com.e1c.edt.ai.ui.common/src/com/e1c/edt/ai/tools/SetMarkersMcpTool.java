@@ -42,6 +42,17 @@ public class SetMarkersMcpTool
 {
     public static final String TOOL_NAME = "SetMarkers"; //$NON-NLS-1$
     public static final String ACTION_CHAT_ID_ATTRIBUTE = "action_chat_id"; //$NON-NLS-1$
+
+    /**
+     * Issue code stamped on every ai-marker (Xtext {@code Issue.CODE_KEY} attribute). The EDT
+     * BSL editor's quick assist resolves the marker to an Issue with this code and dispatches
+     * it to {@code AIExternalQuickfixProvider}'s {@code @Fix} methods.
+     */
+    public static final String AI_QUICKFIX_ISSUE_CODE = "com.e1c.edt.ai.quickfix"; //$NON-NLS-1$
+    // Literal values of org.eclipse.xtext.validation.Issue.CODE_KEY / URI_KEY, duplicated to
+    // avoid a dependency on the Xtext core bundle in this shared plugin.
+    private static final String XTEXT_ISSUE_CODE_ATTRIBUTE = "CODE_KEY"; //$NON-NLS-1$
+    private static final String XTEXT_ISSUE_URI_ATTRIBUTE = "URI_KEY"; //$NON-NLS-1$
     public static final String ACTION_DETAILS_ATTRIBUTE = "action_details"; //$NON-NLS-1$
 
     // @formatter:off
@@ -492,6 +503,21 @@ public class SetMarkersMcpTool
                 marker.setAttribute(ACTION_CHAT_ID_ATTRIBUTE, call.sourceChatId);
             }
             marker.setAttribute(ACTION_DETAILS_ATTRIBUTE, json.serialize(markerReq));
+        }
+
+        if (markerType == MarkerType.AI_MARKER)
+        {
+            // Xtext Issue attributes: they let the EDT BSL editor's quick assist (Ctrl+1 /
+            // light bulb) resolve this marker to an Issue with our code, which is served by
+            // AIExternalQuickfixProvider (EDT bundle). Harmless plain strings elsewhere.
+            marker.setAttribute(XTEXT_ISSUE_CODE_ATTRIBUTE, AI_QUICKFIX_ISSUE_CODE);
+            var resource = marker.getResource();
+            if (resource != null && resource.getFullPath() != null)
+            {
+                marker.setAttribute(XTEXT_ISSUE_URI_ATTRIBUTE,
+                    org.eclipse.emf.common.util.URI.createPlatformResourceURI(resource.getFullPath().toString(), true)
+                        .toString());
+            }
         }
 
         // Type-specific attributes

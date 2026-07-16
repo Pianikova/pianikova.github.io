@@ -7,7 +7,6 @@ import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
 import org.eclipse.jface.preference.IPreferenceStore;
 
 import com.e1c.edt.ai.ISettingsStore;
-import com.e1c.edt.ai.assistent.model.AnalysisMode;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.ProblemLevel;
 import com.e1c.edt.ai.ui.BaseActivator;
@@ -34,6 +33,5 @@ public class BaseClientAIPreferencePageInitializer
         store.setDefault(ISettingsStore.AUTO_OPEN_DIFF_PREVIEW, true);
         store.setDefault(ISettingsStore.BACKGROUND_ANALYSIS, true);
         store.setDefault(ISettingsStore.BACKGROUND_ANALYSIS_PROBLEM_LEVEL, ProblemLevel.WARNING.getId());
-        store.setDefault(ISettingsStore.BACKGROUND_ANALYSIS_MODE, AnalysisMode.STANDARD.getId());
     }
 }

@@ -34,10 +34,6 @@ public class Messages
     public static String ClientAIPreferencePage_ProblemLevel_Information;
     public static String ClientAIPreferencePage_ProblemLevel_Warnings;
     public static String ClientAIPreferencePage_ProblemLevel_Errors;
-    public static String ClientAIPreferencePage_AnalysisMode;
-    public static String ClientAIPreferencePage_AnalysisMode_Tooltip;
-    public static String ClientAIPreferencePage_AnalysisMode_Standard;
-    public static String ClientAIPreferencePage_AnalysisMode_Advanced;
     public static String ClientAIPreferencePage_AutoOpenDiffPreview;
     public static String ClientAIPreferencePage_PluginVersion;
     public static String ClientAIPreferencePage_CopyVersion;

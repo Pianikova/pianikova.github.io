@@ -585,6 +585,34 @@
             class="com.e1c.edt.ai.ui.handlers.AIMarkerResolutionGenerator"
             markerType="com.e1c.edt.ai.AIInfo">
       </markerResolutionGenerator>
+      <!-- AI fix for STANDARD BSL validation errors/warnings. BSL stamps either its own
+           subtype (com._1c.g5.v8.dt.bsl.ui.bsl.check.*) or the base Xtext type depending on
+           the runtime's MarkerTypeProvider, and markerResolution matches downward only —
+           so both levels are registered. -->
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.ExternalProblemMarkerResolutionGenerator"
+            markerType="org.eclipse.xtext.ui.check.fast">
+      </markerResolutionGenerator>
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.ExternalProblemMarkerResolutionGenerator"
+            markerType="org.eclipse.xtext.ui.check.normal">
+      </markerResolutionGenerator>
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.ExternalProblemMarkerResolutionGenerator"
+            markerType="org.eclipse.xtext.ui.check.expensive">
+      </markerResolutionGenerator>
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.ExternalProblemMarkerResolutionGenerator"
+            markerType="com._1c.g5.v8.dt.bsl.ui.bsl.check.fast">
+      </markerResolutionGenerator>
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.ExternalProblemMarkerResolutionGenerator"
+            markerType="com._1c.g5.v8.dt.bsl.ui.bsl.check.normal">
+      </markerResolutionGenerator>
+      <markerResolutionGenerator
+            class="com.e1c.edt.ai.ui.handlers.ExternalProblemMarkerResolutionGenerator"
+            markerType="com._1c.g5.v8.dt.bsl.ui.bsl.check.expensive">
+      </markerResolutionGenerator>
    </extension>
 
    <!-- Adds a quick-fix button to the BSL annotation-hover toolbar (marker icon on the ruler).
@@ -595,6 +623,16 @@
       <bslHoverContributor
             class="com.e1c.edt.ai.ui.hover.AIMarkerHoverContributorFactory">
       </bslHoverContributor>
+   </extension>
+
+   <!-- Native BSL-editor quick fixes (Ctrl+1 / light bulb) for AI markers: every ai-marker is
+        stamped with the Xtext issue code com.e1c.edt.ai.quickfix, dispatched here by the EDT
+        quick-assist machinery. -->
+   <extension
+         point="com._1c.g5.v8.dt.bsl.ui.externalQuickfixProvider">
+      <externalQuickfixProvider
+            class="com.e1c.edt.ai.ui.quickfix.AIExternalQuickfixProvider">
+      </externalQuickfixProvider>
    </extension>
 
    <extension

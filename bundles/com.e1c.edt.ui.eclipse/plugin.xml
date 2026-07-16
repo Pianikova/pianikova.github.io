@@ -535,6 +535,33 @@
                 class="com.e1c.edt.ai.ui.handlers.AIMarkerResolutionGenerator"
                 markerType="com.e1c.edt.ai.AIInfo">
         </markerResolutionGenerator>
+        <!-- AI fix for standard Java compiler problems. The markerType is matched by id,
+             no JDT bundle dependency is required for the registration. -->
+        <markerResolutionGenerator
+                class="com.e1c.edt.ai.ui.handlers.ExternalProblemMarkerResolutionGenerator"
+                markerType="org.eclipse.jdt.core.problem">
+        </markerResolutionGenerator>
+    </extension>
+
+    <!-- The Java editor's hover/Ctrl+1 consult only JDT quick-fix processors for Java problem
+         annotations (marker resolutions cover the Problems view only), so the in-editor
+         "Fix with 1C:Workmate" needs this dedicated processor. -->
+    <extension
+            point="org.eclipse.jdt.ui.quickFixProcessors">
+        <quickFixProcessor
+                id="com.e1c.edt.ui.eclipse.aiQuickFixProcessor"
+                class="com.e1c.edt.ui.eclipse.quickfix.AIJavaQuickFixProcessor">
+        </quickFixProcessor>
+    </extension>
+
+    <!-- AI and generic Eclipse problem markers are not JDT IProblemLocations. A quick-assist
+         processor makes their marker resolutions available from Ctrl+1 in the Java editor. -->
+    <extension
+            point="org.eclipse.jdt.ui.quickAssistProcessors">
+        <quickAssistProcessor
+                id="com.e1c.edt.ui.eclipse.aiMarkerQuickAssistProcessor"
+                class="com.e1c.edt.ui.eclipse.quickfix.AIMarkerJavaQuickAssistProcessor">
+        </quickAssistProcessor>
     </extension>
 
     <extension
