@@ -4,13 +4,11 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.egit.ui.internal.dialogs.CommitMessageComponent;
 import org.eclipse.egit.ui.internal.staging.StagingView;
 import org.eclipse.jface.action.Action;
@@ -20,6 +18,7 @@ import org.eclipse.jface.preference.IPreferenceStore;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -136,10 +135,16 @@ public class StagingViewEnhancer
                 @Override
                 public void run()
                 {
+                    var repository = stagingView.getCurrentRepository();
+                    if (repository == null || repository.isBare())
+                    {
+                        log.logError("Repository is null or bare");
+                        return;
+                    }
                     var newCancellationToken = new CancellationTokenSource();
                     reviewChangesCancellationToken.cancel();
                     reviewChangesCancellationToken = newCancellationToken;
-                    performSelfReview(newCancellationToken);
+                    performSelfReview(repository, newCancellationToken);
                 }
             };
 
@@ -192,13 +197,19 @@ public class StagingViewEnhancer
                         public void widgetSelected(SelectionEvent e)
                         {
                             commitMessages.clear();
+                            var repository = stagingView.getCurrentRepository();
+                            if (repository == null || repository.isBare())
+                            {
+                                log.logError("Repository is null or bare");
+                                return;
+                            }
                             var newCancellationToken = new CancellationTokenSource();
                             createCommitMessageCancellationToken.cancel();
                             createCommitMessageCancellationToken = newCancellationToken;
                             var baseMessage = commitMessageComponent.getCommitMessage().trim();
                             commitMessageGenerating = true;
                             createMessageButton.setEnabled(false);
-                            createCommitMessageUsingSkills(baseMessage, newCancellationToken,
+                            createCommitMessageUsingSkills(baseMessage, newCancellationToken, repository,
                                 commitMessageComponent, commitMessages, refreshCreateMessageEnabled);
                         }
                     });
@@ -232,16 +243,9 @@ public class StagingViewEnhancer
     }
 
     @SuppressWarnings("nls")
-    private void performSelfReview(CancellationTokenSource newCancellationToken)
+    private void performSelfReview(Repository repository, CancellationTokenSource newCancellationToken)
     {
-        var workingDirectory = getWorkingDirectory();
-
-        if (workingDirectory == null)
-        {
-            log.logError("Working directory not found");
-            return;
-        }
-
+        var workingDirectory = repository.getWorkTree().getAbsolutePath();
         final var projId =
             projectIdProvider.getProjectId(workingDirectory, newCancellationToken).orElse(ProjectId.Default);
 
@@ -268,7 +272,8 @@ public class StagingViewEnhancer
 
     @SuppressWarnings("nls")
     private void createCommitMessageUsingSkills(String baseMessage, ICancellationToken cancellationToken,
-        CommitMessageComponent commitMessageComponent, ArrayList<CommitMessageInfo> commitMessages,
+        Repository repository, CommitMessageComponent commitMessageComponent,
+        ArrayList<CommitMessageInfo> commitMessages,
         Runnable refreshCreateMessageEnabled)
     {
         Runnable finishGeneration = () -> dispatcher.dispatch(() -> {
@@ -277,14 +282,7 @@ public class StagingViewEnhancer
         });
 
         var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
-            var workingDirectory = getWorkingDirectory();
-
-            if (workingDirectory == null)
-            {
-                log.logError("Working directory not found");
-                finishGeneration.run();
-                return;
-            }
+            var workingDirectory = repository.getWorkTree().getAbsolutePath();
 
             final var projectId =
                 projectIdProvider.getProjectId(workingDirectory, cancellationToken).orElse(ProjectId.Default);
@@ -344,15 +342,6 @@ public class StagingViewEnhancer
             }).whenComplete((r, t) -> finishGeneration.run());
         }, false, cancellationToken);
         job.schedule();
-    }
-
-    private String getWorkingDirectory()
-    {
-        return Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
-            .filter(project -> project.isOpen())
-            .map(project -> project.getLocation().toOSString())
-            .findFirst()
-            .orElse(null);
     }
 
     @SuppressWarnings("nls")
