@@ -23,6 +23,7 @@ Require-Bundle: com.e1c.edt.ai;bundle-version="[1.0.6,2.0.0)",
  org.eclipse.ui.ide;bundle-version="[3.18.0,4.0.0)",
  org.eclipse.ui.workbench.texteditor;bundle-version="[3.14.0,4.0.0)",
  org.eclipse.mylyn.wikitext.ui;bundle-version="[3.0.42,5.0.0)";resolution:=optional
+Import-Package: com._1c.g5.v8.dt.validation.marker;version="[8.0.0,10.0.0)"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Automatic-Module-Name: com.e1c.edt.ai.ui
 
