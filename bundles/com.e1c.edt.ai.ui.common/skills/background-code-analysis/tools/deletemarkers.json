@@ -1,8 +1,8 @@
 {
-    "name": "deletemarkers",
-    "arguments": {
-        "project_name": "${project_name}",
-        "path": "${project_name}/${relative_file_path}",
-        "marker_type": "ai_marker"
-    }
+  "name": "DeleteMarkers",
+  "arguments": {
+    "project_name": "${project_name}",
+    "path": "${project_name}/${relative_file_path}",
+    "marker_type": "ai_marker"
+  }
 }

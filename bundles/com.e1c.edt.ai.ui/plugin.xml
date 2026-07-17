@@ -210,6 +210,11 @@
               id="com.e1c.edt.ai.ui.commands.openChatView.ai"
               name="%command.name.openChatView">
         </command>
+        <command
+              categoryId="com.e1c.edt.ai.ui.commands.category.ai"
+              id="com.e1c.edt.ai.ui.commands.fixConfigurationProblem.ai"
+              name="%command.name.fixConfigurationProblem">
+        </command>
     </extension>
 
     <extension point="org.eclipse.ui.bindings">
@@ -312,6 +317,31 @@
         <handler
                 class="com.e1c.edt.ai.ui.handlers.SSLErrorAIHandler"
                 commandId="com.e1c.edt.ai.ui.commands.sslerror.ai">
+        </handler>
+        <handler
+              class="com.e1c.edt.ai.ui.quickfix.ConfigurationProblemAIHandler"
+              commandId="com.e1c.edt.ai.ui.commands.fixConfigurationProblem.ai">
+           <activeWhen>
+              <with variable="activePartId">
+                 <equals value="com._1c.g5.v8.dt.ui.problemView"/>
+              </with>
+           </activeWhen>
+        </handler>
+        <handler
+              class="com.e1c.edt.ai.ui.quickfix.ConfigurationProblemQuickAssistHandler"
+              commandId="org.eclipse.ui.edit.text.quickAssist">
+           <activeWhen>
+              <with variable="activePartId">
+                 <equals value="com._1c.g5.v8.dt.ui.problemView"/>
+              </with>
+           </activeWhen>
+           <enabledWhen>
+              <with variable="selection">
+                 <iterate ifEmpty="false" operator="and">
+                    <adapt type="com._1c.g5.v8.dt.validation.marker.Marker"/>
+                 </iterate>
+              </with>
+           </enabledWhen>
         </handler>
 
     </extension>
@@ -489,6 +519,35 @@
                  commandId="com.e1c.edt.ai.ui.commands.addfilestochat.ai"
                  label="%command.label.addfilestochat"
                  style="push">
+           </command>
+        </menuContribution>
+        <menuContribution
+              allPopups="false"
+              locationURI="popup:com._1c.g5.v8.dt.ui.problemView?after=com._1c.g5.v8.dt.ui.command.quickFix">
+           <command
+                 commandId="com.e1c.edt.ai.ui.commands.fixConfigurationProblem.ai"
+                 icon="icons/obj16/ai.png"
+                 label="%command.name.fixConfigurationProblem"
+                 style="push"
+                 tooltip="%command.tooltip.fixConfigurationProblem">
+              <visibleWhen checkEnabled="false">
+                 <with variable="selection">
+                    <iterate ifEmpty="false" operator="and">
+                       <adapt type="com._1c.g5.v8.dt.validation.marker.Marker"/>
+                    </iterate>
+                 </with>
+              </visibleWhen>
+           </command>
+        </menuContribution>
+        <menuContribution
+              allPopups="false"
+              locationURI="toolbar:com._1c.g5.v8.dt.ui.problemView?after=com._1c.g5.v8.dt.ui.command.quickFix">
+           <command
+                 commandId="com.e1c.edt.ai.ui.commands.fixConfigurationProblem.ai"
+                 icon="icons/obj16/ai.png"
+                 label="%command.name.fixConfigurationProblem"
+                 style="push"
+                 tooltip="%command.tooltip.fixConfigurationProblem">
            </command>
         </menuContribution>
         <menuContribution

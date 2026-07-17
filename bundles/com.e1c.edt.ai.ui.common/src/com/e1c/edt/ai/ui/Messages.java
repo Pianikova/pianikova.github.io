@@ -36,6 +36,8 @@ public class Messages
     public static String FixProblemMarkerDescription;
     public static String DismissAIMarker;
     public static String DismissAIMarkerDescription;
+    public static String ConfigurationProblemQuickFixDialogTitle;
+    public static String ConfigurationProblemQuickFixDialogMessage;
     public static String HintHotKey_AcceptBlock;
     public static String HintHotKey_AcceptLine;
     public static String HintHotKey_AcceptAll;
