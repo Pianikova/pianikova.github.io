@@ -291,15 +291,29 @@ public class ContextMenuInterceptor
         createMenuItem(menu, text, TextAction.CORRECT_ERRORS, false);
         createMenuItem(menu, text, TextAction.IN_OTHER_WORDS, false);
         createMenuItem(menu, text, TextAction.IMPROVE_STYLE, false);
+        menu.addListener(SWT.Show, event -> refreshMenuItems(menu));
+    }
+
+    private void refreshMenuItems(Menu menu)
+    {
+        var projectAvailable = currentProjectResolver.resolve().isPresent();
+        for (var item : menu.getItems())
+        {
+            var data = item.getData();
+            if (data instanceof MenuData)
+            {
+                ((MenuData)data).textListener.setProjectAvailable(projectAvailable);
+            }
+        }
     }
 
     private MenuItem createMenuItem(Menu menu, IText text, TextAction textAction, boolean allowForEmptyText)
     {
         var menuItem = new MenuItem(menu, SWT.PUSH);
-        menuItem.setData(new MenuData(text));
         menuItem.setText(textAction.title);
         menuItem.setImage(BaseActivator.getImage(textAction.imageName));
         var textListener = new TextListener(text, menuItem, allowForEmptyText);
+        menuItem.setData(new MenuData(textListener));
         text.getControl().addFocusListener(textListener);
         text.addModifyListener(textListener);
         menuItem.addDisposeListener(e -> removeTextListener(text, textListener));
@@ -482,6 +496,7 @@ public class ContextMenuInterceptor
         private final IText text;
         private final MenuItem menuItem;
         private final boolean allowForEmptyText;
+        private boolean projectAvailable;
         public CancellationTokenSource cancellationTokenSource;
         public boolean isSuppresed;
 
@@ -516,8 +531,15 @@ public class ContextMenuInterceptor
         {
             if (menuItem != null && !menuItem.isDisposed() && !text.getControl().isDisposed())
             {
-                menuItem.setEnabled(settings.isEnabled() && (allowForEmptyText || !text.getContent().trim().isBlank()));
+                menuItem.setEnabled(projectAvailable && settings.isEnabled()
+                    && (allowForEmptyText || !text.getContent().trim().isBlank()));
             }
+        }
+
+        private void setProjectAvailable(boolean value)
+        {
+            projectAvailable = value;
+            setIsEnabled();
         }
 
         private void cancel()
@@ -532,9 +554,11 @@ public class ContextMenuInterceptor
 
     private class MenuData
     {
-        public MenuData(IText text)
+        private final TextListener textListener;
+
+        public MenuData(TextListener textListener)
         {
-            //
+            this.textListener = Preconditions.checkNotNull(textListener);
         }
     }
 }
