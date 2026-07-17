@@ -32,7 +32,6 @@ import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
@@ -156,7 +155,7 @@ public class GetProjectsMcpTool
                     return messageFactory.createError(this, call, "Operation was cancelled during execution.");
                 }
 
-                var sessionFeature = sessionService.getSessionAsync(new ProjectId(project));
+                var sessionFeature = sessionService.getSessionAsync(project);
                 var projectInfo = new Project();
                 response.add(projectInfo);
                 projectInfo.name = project.getName();

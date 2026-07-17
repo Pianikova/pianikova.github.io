@@ -39,7 +39,7 @@ import com.e1c.edt.ai.assistent.model.ConversationResponse;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunctionCall;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.assistent.model.ToolMessageContent;
 import com.google.common.base.Preconditions;
@@ -103,10 +103,10 @@ public class Conversations implements IConversations
      *         или {@link Optional#empty()}, если диалог не удалось создать
      */
     @Override
-    public CompletableFuture<Optional<ConversationResponse>> createConversationAsync(ProjectId projectId,
+    public CompletableFuture<Optional<ConversationResponse>> createConversationAsync(IProject project,
         ConversationRequest request, ICancellationToken cancellationToken)
     {
-        return sessionService.getSessionAsync(projectId).<Optional<ConversationResponse>> thenApplyAsync(session -> {
+        return sessionService.getSessionAsync(project).<Optional<ConversationResponse>> thenApplyAsync(session -> {
             if (session.isEmpty())
             {
                 return Optional.empty();
@@ -139,11 +139,11 @@ public class Conversations implements IConversations
      * @return {@link IObservable}, который публикует ответы ассистента {@link ConversationAskResponse}
      */
     @Override
-    public IObservable<ConversationAskResponse> createAskSource(ProjectId projectId, String conversationId,
+    public IObservable<ConversationAskResponse> createAskSource(IProject project, String conversationId,
         ConversationAskRequest request, ICancellationToken cancellationToken)
     {
         return Observables.create(observer -> {
-            sessionService.getSessionAsync(projectId).whenComplete((session, error) -> {
+            sessionService.getSessionAsync(project).whenComplete((session, error) -> {
                   if (error != null)
                   {
                       observer.onError(error);

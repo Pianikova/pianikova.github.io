@@ -11,7 +11,6 @@ import com.e1c.edt.ai.ICursorInfoProvider;
 import com.e1c.edt.ai.IDefaultSettings;
 import com.e1c.edt.ai.IEditRollback;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
@@ -52,7 +51,6 @@ public class AIUIModule
         bind(ICursorInfoProvider.class).to(CursorInfoProvider.class).in(Singleton.class);
         bind(IModuleProvider.class).annotatedWith(Names.named("BaseModuleProvider")).to(ModuleProvider.class).in(Singleton.class); //$NON-NLS-1$
         bind(IModuleProvider.class).to(CurrentEditorModuleProvider.class);
-        bind(IProjectIdProvider.class).to(ModuleProvider.class);
         bind(IProjectProvider.class).to(ModuleProvider.class);
         bind(IXtextBuilderParticipant.class).to(BuildTrackingParticipant.class).in(Singleton.class);
         bind(ICodeParser.class).to(CodeParser.class).in(Singleton.class);

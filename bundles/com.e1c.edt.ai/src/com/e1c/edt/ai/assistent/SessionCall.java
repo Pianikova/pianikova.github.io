@@ -11,12 +11,13 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.TracingSources;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
@@ -46,23 +47,24 @@ public class SessionCall
     }
 
     @Override
-    public <T> CompletableFuture<HttpResponse<T>> call(ProjectId projectId, ICancellationToken cancellationToken,
+    public <T> CompletableFuture<HttpResponse<T>> call(IProject project, ICancellationToken cancellationToken,
         Function<Optional<Session>, CompletableFuture<HttpResponse<T>>> taskSupplier)
     {
         Preconditions.checkNotNull(taskSupplier);
         var result = new CompletableFuture<HttpResponse<T>>();
-        callInternal(projectId, cancellationToken, taskSupplier, result);
+        Preconditions.checkNotNull(project);
+        callInternal(project, cancellationToken, taskSupplier, result);
         return result;
     }
 
-    private <T> void callInternal(ProjectId projectId, ICancellationToken cancellationToken,
+    private <T> void callInternal(IProject project, ICancellationToken cancellationToken,
         Function<Optional<Session>, CompletableFuture<HttpResponse<T>>> taskSupplier,
         CompletableFuture<HttpResponse<T>> result)
     {
         var attachToken = CancellationTokenSource.attach(cancellationToken, () -> result.cancel(true));
         var stopwatch = Stopwatch.createStarted();
         var busyToken = stateService.busy();
-        executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result, 0)
+        executeWithRetry(project, cancellationToken, taskSupplier, stopwatch, result, 0)
             .whenComplete((r, error) -> {
                 try
                 {
@@ -103,12 +105,12 @@ public class SessionCall
     }
 
     @SuppressWarnings("nls")
-    private <T> CompletableFuture<HttpResponse<T>> executeWithRetry(ProjectId projectId,
+    private <T> CompletableFuture<HttpResponse<T>> executeWithRetry(IProject project,
         ICancellationToken cancellationToken,
         Function<Optional<Session>, CompletableFuture<HttpResponse<T>>> taskSupplier, Stopwatch stopwatch,
         CompletableFuture<HttpResponse<T>> result, int attemptCount)
     {
-        return sessionService.getSessionAsync(projectId).thenCompose(session -> {
+        return sessionService.getSessionAsync(project).thenCompose(session -> {
             var sessionId = session.map(i -> i.sessionId).orElse(null);
             if (sessionId == null)
             {
@@ -122,7 +124,7 @@ public class SessionCall
                             + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
 
                     CompletableFuture.delayedExecutor(delaySeconds, TimeUnit.SECONDS).execute(() -> {
-                        executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result, nextAttempt);
+                        executeWithRetry(project, cancellationToken, taskSupplier, stopwatch, result, nextAttempt);
                     });
                     return result;
                 }
@@ -148,7 +150,7 @@ public class SessionCall
                                 + "/" + MAX_RETRY_ATTEMPTS + ", Delay: " + delaySeconds + "s");
 
                         CompletableFuture.delayedExecutor(delaySeconds, TimeUnit.SECONDS).execute(() -> {
-                            executeWithRetry(projectId, cancellationToken, taskSupplier, stopwatch, result,
+                            executeWithRetry(project, cancellationToken, taskSupplier, stopwatch, result,
                                 nextAttempt);
                         });
                     }

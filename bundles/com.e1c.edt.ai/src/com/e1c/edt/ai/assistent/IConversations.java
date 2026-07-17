@@ -12,14 +12,14 @@ import com.e1c.edt.ai.assistent.model.ConversationAskRequest;
 import com.e1c.edt.ai.assistent.model.ConversationAskResponse;
 import com.e1c.edt.ai.assistent.model.ConversationRequest;
 import com.e1c.edt.ai.assistent.model.ConversationResponse;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 
 public interface IConversations
 {
-    CompletableFuture<Optional<ConversationResponse>> createConversationAsync(ProjectId projectId,
+    CompletableFuture<Optional<ConversationResponse>> createConversationAsync(IProject project,
         ConversationRequest request,
         ICancellationToken cancellationToken);
 
-    IObservable<ConversationAskResponse> createAskSource(ProjectId projectId, String conversationId,
+    IObservable<ConversationAskResponse> createAskSource(IProject project, String conversationId,
         ConversationAskRequest request, ICancellationToken cancellationToken);
 }

@@ -21,15 +21,13 @@ import com._1c.g5.v8.dt.bsl.ui.editor.BslXtextDocument;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IResourceLookup;
 import com.e1c.edt.ai.ICancellationToken;
-import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.ISettings;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 public class ModuleProvider
-    implements IModuleProvider, IProjectIdProvider, IProjectProvider
+    implements IModuleProvider, IProjectProvider
 {
     private final IBmModelManager modelManager;
     private final ISettings settings;
@@ -44,23 +42,6 @@ public class ModuleProvider
         this.modelManager = modelManager;
         this.settings = settings;
         this.resourceLookup = resourceLookup;
-    }
-
-    @Override
-    public ProjectId getProjectId(IProject project)
-    {
-        return new ProjectId(project);
-    }
-
-    @Override
-    public Optional<ProjectId> getProjectId(String filePath, ICancellationToken cancellationToken)
-    {
-        if (filePath.isBlank())
-        {
-            return Optional.empty();
-        }
-
-        return getProject(filePath).map(project -> getProjectId(project));
     }
 
     @Override

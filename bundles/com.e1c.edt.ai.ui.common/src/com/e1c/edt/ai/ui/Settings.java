@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.e4.ui.css.swt.theme.IThemeEngine;
 import org.eclipse.ui.PlatformUI;
@@ -29,7 +30,6 @@ import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProblemLevel;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
@@ -196,16 +196,16 @@ public class Settings
     }
 
     @Override
-    public int getPrefixLength(ProjectId projectId)
+    public int getPrefixLength(IProject project)
     {
-        return getParameterValue(projectId, parameters -> parameters.prefixLength,
+        return getParameterValue(project, parameters -> parameters.prefixLength,
             () -> ParametersParser.DEFAULT_PREFIX_LEN);
     }
 
     @Override
-    public int getSuffixLength(ProjectId projectId)
+    public int getSuffixLength(IProject project)
     {
-        return getParameterValue(projectId, parameters -> parameters.suffixLength,
+        return getParameterValue(project, parameters -> parameters.suffixLength,
             () -> ParametersParser.DEFAULT_SUFFIX_LEN);
     }
 
@@ -216,9 +216,9 @@ public class Settings
     }
 
     @Override
-    public boolean sendGlobalContext(ProjectId projectId)
+    public boolean sendGlobalContext(IProject project)
     {
-        return getParameterValue(projectId, parameters -> parameters.globalContext, () -> false);
+        return getParameterValue(project, parameters -> parameters.globalContext, () -> false);
     }
 
     @SuppressWarnings("nls")
@@ -264,9 +264,9 @@ public class Settings
     }
 
     @Override
-    public int getGitDiffContextLines(ProjectId projectId)
+    public int getGitDiffContextLines(IProject project)
     {
-        return getParameterValue(projectId, parameters -> parameters.gitDiffContextLines,
+        return getParameterValue(project, parameters -> parameters.gitDiffContextLines,
             () -> ParametersParser.DEFAULT_GIT_CONTEXT_LINES);
     }
 
@@ -316,13 +316,19 @@ public class Settings
     }
 
     @Override
-    public synchronized void applySessionParameters(ProjectId projectId, Parameters sessionParameters)
+    public synchronized void applySessionParameters(IProject project, Parameters sessionParameters)
     {
-        parametersCache.put(projectId, Optional.ofNullable(sessionParameters));
+        parametersCache.put(project, Optional.ofNullable(sessionParameters));
         if (defaultSessionParameters.isEmpty())
         {
             defaultSessionParameters = Optional.ofNullable(sessionParameters);
         }
+    }
+
+    @Override
+    public synchronized void applyGlobalSessionParameters(Parameters sessionParameters)
+    {
+        defaultSessionParameters = Optional.ofNullable(sessionParameters);
     }
 
     @Override
@@ -351,14 +357,14 @@ public class Settings
         return Optional.empty();
     }
 
-    private synchronized Optional<Parameters> getOptionalSessionParameters(ProjectId projectId)
+    private synchronized Optional<Parameters> getOptionalSessionParameters(IProject project)
     {
-        if (projectId == null)
+        if (project == null)
         {
             return defaultSessionParameters;
         }
 
-        var projectParameters = parametersCache.getIfPresent(projectId);
+        var projectParameters = parametersCache.getIfPresent(project);
         if (projectParameters != null && projectParameters.isPresent())
         {
             return projectParameters;
@@ -367,13 +373,13 @@ public class Settings
         return defaultSessionParameters;
     }
 
-    private <T> T getParameterValue(ProjectId projectId, Function<Parameters, Optional<T>> valueSelector,
+    private <T> T getParameterValue(IProject project, Function<Parameters, Optional<T>> valueSelector,
         Supplier<T> defaultValueProvider)
     {
         return getOptionalUserParameters().flatMap(i -> Optional.ofNullable(valueSelector.apply(i)))
             .flatMap(i -> i)
             .orElseGet(
-                () -> getOptionalSessionParameters(projectId).flatMap(i -> Optional.ofNullable(valueSelector.apply(i)))
+                () -> getOptionalSessionParameters(project).flatMap(i -> Optional.ofNullable(valueSelector.apply(i)))
                     .flatMap(i -> i)
                     .orElseGet(() -> defaultValueProvider.get()));
     }

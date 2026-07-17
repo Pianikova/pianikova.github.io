@@ -5,10 +5,10 @@ package com.e1c.edt.ai;
 
 import java.util.Optional;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.assistent.model.ConfigurationParameters;
 
 public interface IConfigurationParametersProvider
 {
-    Optional<ConfigurationParameters> getParameters(ProjectId projectId);
+    Optional<ConfigurationParameters> getParameters(IProject project);
 }

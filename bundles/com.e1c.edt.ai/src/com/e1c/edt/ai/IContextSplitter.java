@@ -3,9 +3,9 @@
  */
 package com.e1c.edt.ai;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 
 public interface IContextSplitter
 {
-    ContextParts split(ProjectId projectId, String text, int offset, boolean limitSize);
+    ContextParts split(IProject project, String text, int offset, boolean limitSize);
 }

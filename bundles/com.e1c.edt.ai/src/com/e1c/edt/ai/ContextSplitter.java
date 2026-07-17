@@ -3,7 +3,7 @@
  */
 package com.e1c.edt.ai;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -20,7 +20,7 @@ public class ContextSplitter
     }
 
     @Override
-    public ContextParts split(ProjectId projectId, String text, int offset, boolean limitSize)
+    public ContextParts split(IProject project, String text, int offset, boolean limitSize)
     {
         Preconditions.checkNotNull(text);
         Preconditions.checkArgument(offset >= 0 && offset <= text.length());
@@ -29,13 +29,13 @@ public class ContextSplitter
             return new ContextParts(Range.EMPTY, Range.EMPTY);
         }
 
-        var maxPrefixLength = settings.getPrefixLength(projectId);
+        var maxPrefixLength = settings.getPrefixLength(project);
         if (maxPrefixLength < 0)
         {
             maxPrefixLength = 0;
         }
 
-        var maxSuffixLength = settings.getSuffixLength(projectId);
+        var maxSuffixLength = settings.getSuffixLength(project);
         if (maxSuffixLength < 0)
         {
             maxSuffixLength = 0;

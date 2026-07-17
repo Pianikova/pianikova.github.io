@@ -5,6 +5,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
@@ -15,7 +16,6 @@ import org.eclipse.jface.viewers.ISelectionProvider;
 import org.eclipse.ui.texteditor.ITextEditor;
 
 import com.e1c.edt.ai.IFileDocument;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 
 public class FileDocument
@@ -40,9 +40,9 @@ public class FileDocument
     }
 
     @Override
-    public ProjectId getProjectId()
+    public IProject getProject()
     {
-        return new ProjectId(file.getProject());
+        return file.getProject();
     }
 
     @Override

@@ -12,7 +12,6 @@ import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.handlers.HandlerUtil;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IChat;
@@ -24,8 +23,6 @@ public class BaseAddFilesToChatHandler
 {
     @Inject
     IChat chat;
-    @Inject
-    IProjectIdProvider projectIdProvider;
     @Inject
     IFileSystem fileSystem;
     @Inject

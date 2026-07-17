@@ -35,14 +35,13 @@ import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IConversationFacade;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IProjectIdProvider;
+import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsStore;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
 import com.google.common.base.Preconditions;
@@ -58,7 +57,7 @@ public class StagingViewEnhancer
     private final IWidgets widgets;
     private final IGitActions gitActions;
     private final IConversationFacade conversationFacade;
-    private final IProjectIdProvider projectIdProvider;
+    private final IProjectProvider projectProvider;
     private final ISettings settings;
     private final IStateService stateService;
     private final IPreferenceStore preferenceStore;
@@ -71,7 +70,7 @@ public class StagingViewEnhancer
 
     @Inject
     public StagingViewEnhancer(IDispatcher dispatcher, IReflection reflection, IWidgets widgets, IGitActions gitActions,
-        IConversationFacade conversationFacade, IProjectIdProvider projectIdProvider, ILog log, ISettings settings,
+        IConversationFacade conversationFacade, IProjectProvider projectProvider, ILog log, ISettings settings,
         IStateService stateService, ISkillExecutor skillExecutor, IChat chat, IPreferenceStore preferenceStore)
     {
         Preconditions.checkNotNull(dispatcher);
@@ -79,7 +78,7 @@ public class StagingViewEnhancer
         Preconditions.checkNotNull(widgets);
         Preconditions.checkNotNull(gitActions);
         Preconditions.checkNotNull(conversationFacade);
-        Preconditions.checkNotNull(projectIdProvider);
+        Preconditions.checkNotNull(projectProvider);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(log);
@@ -94,7 +93,7 @@ public class StagingViewEnhancer
         this.widgets = widgets;
         this.gitActions = gitActions;
         this.conversationFacade = conversationFacade;
-        this.projectIdProvider = projectIdProvider;
+        this.projectProvider = projectProvider;
         this.settings = settings;
         this.stateService = stateService;
         this.preferenceStore = preferenceStore;
@@ -246,8 +245,12 @@ public class StagingViewEnhancer
     private void performSelfReview(Repository repository, CancellationTokenSource newCancellationToken)
     {
         var workingDirectory = repository.getWorkTree().getAbsolutePath();
-        final var projId =
-            projectIdProvider.getProjectId(workingDirectory, newCancellationToken).orElse(ProjectId.Default);
+        final var project = projectProvider.getProject(workingDirectory);
+        if (project.isEmpty())
+        {
+            log.logError("Cannot determine project for Git repository " + workingDirectory); //$NON-NLS-1$
+            return;
+        }
 
         SkillExecutionRequest skillRequest =
             new SkillExecutionRequest("git-review", Map.of("working_directory", workingDirectory));
@@ -257,7 +260,7 @@ public class StagingViewEnhancer
             var prompt = result.getPrompt();
             if (prompt != null)
             {
-                var ctx = new AIContext(projId, "", (IDocument)null); //$NON-NLS-1$
+                var ctx = new AIContext(project.get(), "", (IDocument)null); //$NON-NLS-1$
                 dispatcher.dispatchAsync(() -> chat.reviewCodeWithDetails(ctx, null, prompt));
             }
             else
@@ -284,8 +287,13 @@ public class StagingViewEnhancer
         var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
             var workingDirectory = repository.getWorkTree().getAbsolutePath();
 
-            final var projectId =
-                projectIdProvider.getProjectId(workingDirectory, cancellationToken).orElse(ProjectId.Default);
+            final var project = projectProvider.getProject(workingDirectory);
+            if (project.isEmpty())
+            {
+                log.logError("Cannot determine project for Git repository " + workingDirectory); //$NON-NLS-1$
+                finishGeneration.run();
+                return;
+            }
 
 
             // @formatter:off
@@ -307,7 +315,7 @@ public class StagingViewEnhancer
                     return CompletableFuture.completedFuture(null);
                 }
 
-                var request = new SendUserMessageRequest(projectId, result.getPrompt(), null, true);
+                var request = new SendUserMessageRequest(project.get(), result.getPrompt(), null, true);
 
                 return conversationFacade.sendAsync(request, cancellationToken);
             }).thenAccept(resultMessage -> {
@@ -325,7 +333,7 @@ public class StagingViewEnhancer
                 }
 
                 var commitMessage =
-                    new CommitMessage(projectId, resultMessage.getSession().getReplyToMessageUuid(), generatedMessage);
+                    new CommitMessage(project.get(), resultMessage.getSession().getReplyToMessageUuid(), generatedMessage);
                 dispatcher.dispatch(() -> {
                     if (cancellationToken.isCanceled())
                     {

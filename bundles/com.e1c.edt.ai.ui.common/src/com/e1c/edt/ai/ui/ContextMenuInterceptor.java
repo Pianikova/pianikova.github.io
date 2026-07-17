@@ -31,7 +31,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.assistent.SendMessageResult;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.assistent.model.VisualContext;
 import com.e1c.edt.ai.assistent.model.VisualField;
@@ -49,11 +48,13 @@ public class ContextMenuInterceptor
     private final ILog log;
     private final IUI ui;
     private final ISettings settings;
+    private final ICurrentProjectResolver currentProjectResolver;
     private CancellationTokenSource currentCancellationTokenSource;
 
     @Inject
     public ContextMenuInterceptor(IDispatcher dispatcher, IVisualContextProvider visualContextProviewr,
-        ISkillExecutor skillExecutor, IConversationFacade conversationFacade, ILog log, IUI ui, ISettings settings)
+        ISkillExecutor skillExecutor, IConversationFacade conversationFacade, ILog log, IUI ui, ISettings settings,
+        ICurrentProjectResolver currentProjectResolver)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(visualContextProviewr);
@@ -62,6 +63,7 @@ public class ContextMenuInterceptor
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(currentProjectResolver);
         this.dispatcher = dispatcher;
         this.visualContextProviewr = visualContextProviewr;
         this.skillExecutor = skillExecutor;
@@ -69,6 +71,7 @@ public class ContextMenuInterceptor
         this.log = log;
         this.ui = ui;
         this.settings = settings;
+        this.currentProjectResolver = currentProjectResolver;
     }
 
     @Override
@@ -337,6 +340,12 @@ public class ContextMenuInterceptor
 
         // Skill parameters are captured on the UI thread, before the background job starts
         var context = visualContextProviewr.create(text.getControl(), cancellationTokenSource);
+        var project = currentProjectResolver.resolve();
+        if (project.isEmpty())
+        {
+            log.warning("AI Context Menu", () -> "Cannot determine project for text action"); //$NON-NLS-1$ //$NON-NLS-2$
+            return;
+        }
         var isMultiline = (text.getControl().getStyle() & SWT.MULTI) != 0;
         // @formatter:off
         var parameters = Map.of(
@@ -351,7 +360,7 @@ public class ContextMenuInterceptor
             var request = new SkillExecutionRequest(textAction.skillId, parameters);
             skillExecutor.executeAsync(request, cancellationTokenSource)
                 .thenCompose(result -> conversationFacade.sendAsync(
-                    new SendUserMessageRequest(ProjectId.Default, result.getPrompt(), null, true),
+                    new SendUserMessageRequest(project.get(), result.getPrompt(), null, true),
                     cancellationTokenSource))
                 .thenAccept(resultMessage -> applyResult(text, textListener, cancellationTokenSource, resultMessage))
                 .exceptionally(error -> {

@@ -43,10 +43,12 @@ public class CodeCompletionDiagnosticTest
             return DiagnosticResult.error(Messages.CodeCompletionDiagnosticTest_SessionIdEmpty, ServiceState.OFFLINE,
                 null, null);
         }
-        var dummyLocalContext =
-            context.getLocalContext().create(context.getAIContext(), context.getStatistics(), CancellationTokens.NONE);
         CompletionRequest request = new CompletionRequest();
-        request.localContext = dummyLocalContext;
+        if (context.getAIContext() != null)
+        {
+            request.localContext =
+                context.getLocalContext().create(context.getAIContext(), context.getStatistics(), CancellationTokens.NONE);
+        }
         var requestBody = context.getJson().serialize(request);
         var bodyPublisher = BodyPublishers.ofString(requestBody);
         var client = context.getHttpClientBuilder().get();

@@ -10,7 +10,7 @@ import java.util.Optional;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProblemLevel;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 
 public interface ISettings
@@ -54,13 +54,13 @@ public interface ISettings
 
     String getLineSeparator();
 
-    int getPrefixLength(ProjectId projectId);
+    int getPrefixLength(IProject project);
 
-    int getSuffixLength(ProjectId projectId);
+    int getSuffixLength(IProject project);
 
     boolean isExperimental();
 
-    boolean sendGlobalContext(ProjectId projectId);
+    boolean sendGlobalContext(IProject project);
 
     String getLanguage();
 
@@ -70,7 +70,7 @@ public interface ISettings
 
     Optional<String> getResources();
 
-    int getGitDiffContextLines(ProjectId projectId);
+    int getGitDiffContextLines(IProject project);
 
     URL getUrl();
 

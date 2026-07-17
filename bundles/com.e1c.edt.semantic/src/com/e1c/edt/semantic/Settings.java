@@ -12,7 +12,7 @@ import com.e1c.edt.ai.ParametersParser;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
 import com.e1c.edt.ai.assistent.model.ProblemLevel;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.assistent.model.Verbosity;
 
 class Settings
@@ -116,13 +116,13 @@ class Settings
     }
 
     @Override
-    public int getPrefixLength(ProjectId projectId)
+    public int getPrefixLength(IProject project)
     {
         return ParametersParser.DEFAULT_PREFIX_LEN;
     }
 
     @Override
-    public int getSuffixLength(ProjectId projectId)
+    public int getSuffixLength(IProject project)
     {
         return ParametersParser.DEFAULT_SUFFIX_LEN;
     }
@@ -134,7 +134,7 @@ class Settings
     }
 
     @Override
-    public boolean sendGlobalContext(ProjectId projectId)
+    public boolean sendGlobalContext(IProject project)
     {
         return false;
     }
@@ -165,7 +165,7 @@ class Settings
     }
 
     @Override
-    public int getGitDiffContextLines(ProjectId projectId)
+    public int getGitDiffContextLines(IProject project)
     {
         return ParametersParser.DEFAULT_GIT_CONTEXT_LINES;
     }

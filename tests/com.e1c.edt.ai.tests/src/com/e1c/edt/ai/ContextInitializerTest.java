@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.Supplier;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.jface.text.IDocument;
 import org.junit.Assert;
 import org.junit.Test;
@@ -18,7 +19,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
 
 @RunWith(Parameterized.class)
 public class ContextInitializerTest
@@ -49,16 +49,16 @@ public class ContextInitializerTest
     public void shouldCreateContext()
     {
         // Given
-        var projectId = ProjectId.Default;
+        var project = mock(IProject.class);
         var text = prefix + sufix;
         var parts = new ContextParts(new Range(0, prefix.length()), new Range(prefix.length(), sufix.length()));
-        when(splitter.split(projectId, text, expectedOffset, true)).thenReturn(parts);
+        when(splitter.split(project, text, expectedOffset, true)).thenReturn(parts);
         var factory = createInstance();
 
         // When
         var actualContext =
             factory.initialize(
-                new AIContext(projectId, textOffset + 3, "full_" + text,
+                new AIContext(project, textOffset + 3, "full_" + text,
                     textOffset + 3, "", text,
                     textOffset, document, isDisposed),
                 true);

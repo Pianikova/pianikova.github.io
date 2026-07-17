@@ -23,7 +23,7 @@ import com.e1c.edt.ai.Observables;
 import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.Completion;
 import com.e1c.edt.ai.assistent.model.CompletionRequest;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.inject.Inject;
@@ -72,19 +72,19 @@ class CodeAssistant
     }
 
     @Override
-    public IObservable<Completion> createSource(ProjectId projectId,
+    public IObservable<Completion> createSource(IProject project,
         ICompletionRequestProvider completionRequestProvider,
         ICancellationToken cancellationToken)
     {
         Preconditions.checkNotNull(completionRequestProvider);
         Preconditions.checkNotNull(cancellationToken);
         return Observables.create(observer -> {
-            generateText(projectId, completionRequestProvider, observer, cancellationToken);
+            generateText(project, completionRequestProvider, observer, cancellationToken);
             return Closeables.Empty;
         });
     }
 
-    private void generateText(ProjectId projectId, ICompletionRequestProvider completionRequestProvider,
+    private void generateText(IProject project, ICompletionRequestProvider completionRequestProvider,
         IObserver<Completion> observer,
         ICancellationToken cancellationToken)
     {
@@ -157,7 +157,7 @@ class CodeAssistant
 
         var client = clientBuilder.get();
         var currentRequestBuilder = requestBuilder;
-        var call = sessionCall.call(projectId, cancellationToken, session -> {
+        var call = sessionCall.call(project, cancellationToken, session -> {
         	var httpRequestBuilder = currentRequestBuilder;
             var sessionId = session.flatMap(s -> Optional.ofNullable(s.sessionId)).orElse(null);
         	if (sessionId != null)

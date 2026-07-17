@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.eclipse.core.resources.IProject;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -16,12 +17,11 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
 
 @RunWith(Parameterized.class)
 public class ContextSplitterTest
 {
-    private static final ProjectId projectId = ProjectId.Default;
+    private static final IProject project = mock(IProject.class);
     private final ISettings settings = mock(ISettings.class);
 
     @Parameter(0)
@@ -50,13 +50,13 @@ public class ContextSplitterTest
     public void shouldSplit()
     {
         // Given
-        when(settings.getPrefixLength(projectId)).thenReturn(prefixLength);
-        when(settings.getSuffixLength(projectId)).thenReturn(suffixLength);
+        when(settings.getPrefixLength(project)).thenReturn(prefixLength);
+        when(settings.getSuffixLength(project)).thenReturn(suffixLength);
 
         var splitter = new ContextSplitter(settings);
 
         // When
-        var parts = splitter.split(projectId, text, offset, limitSize);
+        var parts = splitter.split(project, text, offset, limitSize);
         var actualPrefix = parts.getPrefix().apply(text);
         var actualSufix = parts.getSufix().apply(text);
 

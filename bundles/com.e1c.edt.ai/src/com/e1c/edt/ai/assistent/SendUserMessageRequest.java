@@ -3,14 +3,16 @@
  */
 package com.e1c.edt.ai.assistent;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
+
+import com.google.common.base.Preconditions;
 
 /**
  * @author Bogdan Sushkov
  */
 public class SendUserMessageRequest
 {
-    private final ProjectId projectId;
+    private final IProject project;
     private final String message;
     private final ConversationSession conversationSession;
     private final boolean forceNewConversation;
@@ -18,10 +20,10 @@ public class SendUserMessageRequest
     private final Boolean chat;
     private final Integer maxToolRounds;
 
-    public SendUserMessageRequest(ProjectId projectId, String message, ConversationSession conversationSession,
+    public SendUserMessageRequest(IProject project, String message, ConversationSession conversationSession,
         boolean forceNewConversation)
     {
-        this(projectId, message, conversationSession, forceNewConversation, null, null, null);
+        this(project, message, conversationSession, forceNewConversation, null, null, null);
     }
 
     /**
@@ -29,10 +31,10 @@ public class SendUserMessageRequest
      * @param chat optional {@code is_chat} override; {@code null} keeps the default
      * @param maxToolRounds optional tool-round cap override; {@code null} keeps the default
      */
-    public SendUserMessageRequest(ProjectId projectId, String message, ConversationSession conversationSession,
+    public SendUserMessageRequest(IProject project, String message, ConversationSession conversationSession,
         boolean forceNewConversation, String skillName, Boolean chat, Integer maxToolRounds)
     {
-        this.projectId = projectId;
+        this.project = Preconditions.checkNotNull(project);
         this.message = message;
         this.conversationSession = conversationSession;
         this.forceNewConversation = forceNewConversation;
@@ -65,9 +67,9 @@ public class SendUserMessageRequest
         return maxToolRounds;
     }
 
-    public ProjectId getProjectId()
+    public IProject getProject()
     {
-        return projectId;
+        return project;
     }
 
     public String getMessage()

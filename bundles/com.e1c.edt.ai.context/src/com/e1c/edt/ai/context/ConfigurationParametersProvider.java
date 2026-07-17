@@ -22,7 +22,6 @@ import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IProjectDetailsProvider;
 import com.e1c.edt.ai.assistent.model.ConfigurationParameters;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -48,12 +47,6 @@ public class ConfigurationParametersProvider
     }
 
     @Override
-    public Optional<ConfigurationParameters> getParameters(ProjectId projectId)
-    {
-        return getParameters(projectId.project);
-    }
-
-    @Override
     public void fill(IProject project, Map<String, Object> details)
     {
         getParameters(project).ifPresent(params -> {
@@ -61,7 +54,8 @@ public class ConfigurationParametersProvider
         });
     }
 
-    private Optional<ConfigurationParameters> getParameters(IProject project)
+    @Override
+    public Optional<ConfigurationParameters> getParameters(IProject project)
     {
         if (project == null)
         {

@@ -11,11 +11,11 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 
 public interface IGlobalContextService
 {
-    CompletableFuture<Optional<GlobalContextUpdateResponse>> update(ProjectId projectId,
+    CompletableFuture<Optional<GlobalContextUpdateResponse>> update(IProject project,
         Collection<GlobalContextUpdate> updates,
         int partitionSize,
         IStatistics statistics, ICancellationToken cancellationToken);

@@ -36,7 +36,6 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 
-import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ServiceState;
@@ -45,7 +44,6 @@ import com.e1c.edt.ai.assistent.DiagnosticSeverity;
 import com.e1c.edt.ai.assistent.IDiagnosticContext;
 import com.e1c.edt.ai.assistent.IDiagnosticTest;
 import com.e1c.edt.ai.assistent.IDiagnosticsFactory;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.ui.BaseActivator;
 import com.e1c.edt.ai.ui.IDispatcher;
 import com.e1c.edt.ai.ui.IWeb;
@@ -243,10 +241,10 @@ public class DiagnosticDialog
         clearResultsUI();
 
         var job = dispatcher.createJob(Messages.DiagnosticDialog_Title, jobCtx -> {
-            var project = ProjectId.Default;
+            org.eclipse.core.resources.IProject project = null;
             var stopFuther = false;
             context.setProject(project);
-            context.setAIContext(new AIContext(project, "", null)); //$NON-NLS-1$
+            context.setAIContext(null);
             for (int i = 0; i < tests.size(); i++) {
                 if (jobCtx.Monitor.isCanceled())
                 {
