@@ -33,6 +33,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
 import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.ui.ICurrentProjectResolver;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -90,11 +91,13 @@ public class GetProjectsMcpTool
     private final Set<IProjectDetailsProvider> projectDetailsProviders;
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
+    private final ICurrentProjectResolver currentProjectResolver;
 
     @Inject
     public GetProjectsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
         ISessionService sessionService, Set<IProjectDetailsProvider> projectDetailsProviders,
-        IMarkdownUtils markdownUtils, IEditingSupport editingSupport)
+        IMarkdownUtils markdownUtils, IEditingSupport editingSupport,
+        ICurrentProjectResolver currentProjectResolver)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
@@ -103,6 +106,7 @@ public class GetProjectsMcpTool
         Preconditions.checkNotNull(projectDetailsProviders);
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
+        Preconditions.checkNotNull(currentProjectResolver);
 
         this.log = log;
         this.json = json;
@@ -111,6 +115,7 @@ public class GetProjectsMcpTool
         this.projectDetailsProviders = projectDetailsProviders;
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
+        this.currentProjectResolver = currentProjectResolver;
 
         spec = createSpecification();
     }
@@ -134,6 +139,8 @@ public class GetProjectsMcpTool
             return CompletableFuture.completedFuture(messageFactory.createMessage(this, call, null, details));
         }
 
+        var currentProject = currentProjectResolver.resolve();
+
         // Execute the operation asynchronously
         return CompletableFuture.supplyAsync(() -> {
             // Check cancellation status before starting
@@ -155,7 +162,6 @@ public class GetProjectsMcpTool
                     return messageFactory.createError(this, call, "Operation was cancelled during execution.");
                 }
 
-                var sessionFeature = sessionService.getSessionAsync(project);
                 var projectInfo = new Project();
                 response.add(projectInfo);
                 projectInfo.name = project.getName();
@@ -209,16 +215,23 @@ public class GetProjectsMcpTool
 
                 }
 
-                // Current project is not inferred from open files in this tool
-                projectInfo.isCurrent = false;
-                try
+                projectInfo.isCurrent = currentProject.map(project::equals).orElse(false);
+                if (projectInfo.isCurrent)
                 {
-                    var optionalSession = sessionFeature.get();
-                    optionalSession.ifPresent(session -> projectInfo.sessionId = session.sessionId);
-                }
-                catch (InterruptedException | ExecutionException error)
-                {
-                    log.logError(error);
+                    try
+                    {
+                        var optionalSession = sessionService.getSessionAsync(project).get();
+                        optionalSession.ifPresent(session -> projectInfo.sessionId = session.sessionId);
+                    }
+                    catch (InterruptedException error)
+                    {
+                        Thread.currentThread().interrupt();
+                        log.logError(error);
+                    }
+                    catch (ExecutionException error)
+                    {
+                        log.logError(error);
+                    }
                 }
 
                 projectCount++;
@@ -282,7 +295,9 @@ public class GetProjectsMcpTool
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Use this tool to choose a target project or infer scope from open files.");
-        description.append("\n- `is_current` indicates a project with open files (likely in focus).");
+        description.append("\n- `is_current` identifies the project resolved from the active editor or selection;");
+        description.append(" if the workspace has only one accessible project, that project is current.");
+        description.append("\n- `session_id` is requested and returned only for the current project.");
         description.append("\n- `read_only` = true means the 1C configuration is on full vendor support"
             + " (objectBelonging = Adopted): the project must NOT be modified (no Write/Edit/Delete, no JShell"
             + " mutations) until the user enables editing (switches the configuration back to Native).");

@@ -23,11 +23,13 @@ class CurrentProjectResolver
     implements ICurrentProjectResolver
 {
     private final IProjectProvider projectProvider;
+    private final IDispatcher dispatcher;
 
     @Inject
-    CurrentProjectResolver(IProjectProvider projectProvider)
+    CurrentProjectResolver(IProjectProvider projectProvider, IDispatcher dispatcher)
     {
         this.projectProvider = Preconditions.checkNotNull(projectProvider);
+        this.dispatcher = Preconditions.checkNotNull(dispatcher);
     }
 
     @Override
@@ -38,6 +40,11 @@ class CurrentProjectResolver
 
     @Override
     public Optional<IProject> resolve()
+    {
+        return dispatcher.dispatch(this::resolveOnUiThread).flatMap(project -> project);
+    }
+
+    private Optional<IProject> resolveOnUiThread()
     {
         var window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
         var page = window == null ? null : window.getActivePage();
