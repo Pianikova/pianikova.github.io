@@ -15,21 +15,27 @@ import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.PlatformUI;
 
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectProvider;
+import com.e1c.edt.ai.TracingSources;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
 class CurrentProjectResolver
     implements ICurrentProjectResolver
 {
+    private static final String TRACE_TOPIC = "Project resolver"; //$NON-NLS-1$
+
     private final IProjectProvider projectProvider;
     private final IDispatcher dispatcher;
+    private final ILog log;
 
     @Inject
-    CurrentProjectResolver(IProjectProvider projectProvider, IDispatcher dispatcher)
+    CurrentProjectResolver(IProjectProvider projectProvider, IDispatcher dispatcher, ILog log)
     {
         this.projectProvider = Preconditions.checkNotNull(projectProvider);
         this.dispatcher = Preconditions.checkNotNull(dispatcher);
+        this.log = Preconditions.checkNotNull(log);
     }
 
     @Override
@@ -41,7 +47,13 @@ class CurrentProjectResolver
     @Override
     public Optional<IProject> resolve()
     {
-        return dispatcher.dispatch(this::resolveOnUiThread).flatMap(project -> project);
+        var project = dispatcher.dispatch(this::resolveOnUiThread).flatMap(value -> value);
+        if (project.isEmpty())
+        {
+            log.trace(TracingSources.COMMON, TRACE_TOPIC,
+                () -> "Project resolution failed: source=current-context"); //$NON-NLS-1$
+        }
+        return project;
     }
 
     private Optional<IProject> resolveOnUiThread()
@@ -55,7 +67,11 @@ class CurrentProjectResolver
             var file = input == null ? null : input.getAdapter(IFile.class);
             if (file != null)
             {
-                return Optional.of(file.getProject()).filter(IProject::isAccessible);
+                var project = Optional.of(file.getProject()).filter(IProject::isAccessible);
+                if (project.isPresent())
+                {
+                    return traced(project, "editor"); //$NON-NLS-1$
+                }
             }
 
             var selection = page.getSelection();
@@ -64,7 +80,7 @@ class CurrentProjectResolver
                 var project = project(((IStructuredSelection)selection).getFirstElement());
                 if (project.isPresent())
                 {
-                    return project;
+                    return traced(project, "selection"); //$NON-NLS-1$
                 }
             }
         }
@@ -73,7 +89,15 @@ class CurrentProjectResolver
             .filter(IProject::isAccessible)
             .limit(2)
             .collect(Collectors.toList());
-        return projects.size() == 1 ? Optional.of(projects.get(0)) : Optional.empty();
+        return projects.size() == 1 ? traced(Optional.of(projects.get(0)), "single-project") //$NON-NLS-1$
+            : Optional.empty();
+    }
+
+    private Optional<IProject> traced(Optional<IProject> project, String source)
+    {
+        project.ifPresent(value -> log.trace(TracingSources.COMMON, TRACE_TOPIC,
+            () -> "Project resolved: source=" + source + ", project=" + value.getName())); //$NON-NLS-1$ //$NON-NLS-2$
+        return project;
     }
 
     private Optional<IProject> project(Object value)
