@@ -20,11 +20,13 @@ import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IProjectParametersProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.IVersionProvider;
+import com.e1c.edt.ai.IWorkspaceParametersProvider;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TraceScenarioType;
 import com.e1c.edt.ai.TracingSources;
@@ -51,6 +53,8 @@ class SessionService
     private final ISettingsSetter settingsSetter;
     private final IEnvironment environment;
     private final IConfigurationParametersProvider configurationParametersProvider;
+    private final IProjectParametersProvider projectParametersProvider;
+    private final IWorkspaceParametersProvider workspaceParametersProvider;
     private final IStateService stateService;
     private final ITraceScenario traceScenario;
     private final ILog traceLog;
@@ -61,7 +65,9 @@ class SessionService
     public SessionService(IHttpLog log, IRequestBuilder requestBuilder, IHttpClientBuilder clientBuilder, IJson json,
         ISettingsTracker settingsTracker, IResponseCache responseCache, IVersionProvider versionProvider,
         ISettings settings, ISettingsSetter settingsSetter, IEnvironment environment,
-        IConfigurationParametersProvider configurationParametersProvider, IStateService stateService,
+        IConfigurationParametersProvider configurationParametersProvider,
+        IProjectParametersProvider projectParametersProvider,
+        IWorkspaceParametersProvider workspaceParametersProvider, IStateService stateService,
         ITraceScenario traceScenario, ILog traceLog)
     {
         Preconditions.checkNotNull(log);
@@ -75,6 +81,8 @@ class SessionService
         Preconditions.checkNotNull(settingsSetter);
         Preconditions.checkNotNull(environment);
         Preconditions.checkNotNull(configurationParametersProvider);
+        Preconditions.checkNotNull(projectParametersProvider);
+        Preconditions.checkNotNull(workspaceParametersProvider);
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(traceScenario);
         Preconditions.checkNotNull(traceLog);
@@ -89,6 +97,8 @@ class SessionService
         this.settingsSetter = settingsSetter;
         this.environment = environment;
         this.configurationParametersProvider = configurationParametersProvider;
+        this.projectParametersProvider = projectParametersProvider;
+        this.workspaceParametersProvider = workspaceParametersProvider;
         this.stateService = stateService;
         this.traceScenario = traceScenario;
         this.traceLog = traceLog;
@@ -153,6 +163,18 @@ class SessionService
             : configurationParametersProvider.getParameters(project).orElse(null);
         userParameters.globalContext = userParams.globalContext;
         userParameters.experimental = userParams.experimental;
+
+        var projectParameters = project == null ? null
+            : projectParametersProvider.getProjectParameters(project).orElse(null);
+        sessionRequest.projectParameters = projectParameters;
+        var workspaceParameters = workspaceParametersProvider.get();
+        sessionRequest.workspaceParameters = workspaceParameters;
+        traceLog.trace(TracingSources.API_CALLS, "Session", //$NON-NLS-1$
+            () -> "Session params: project=" + (project == null ? "<global/null>" : project.getName()) //$NON-NLS-1$ //$NON-NLS-2$
+                + ", project_parameters=" //$NON-NLS-1$
+                + (projectParameters == null ? "<none>" : "uuid=" + projectParameters.uuid) //$NON-NLS-1$ //$NON-NLS-2$
+                + ", workspace_parameters.uuid=" //$NON-NLS-1$
+                + (workspaceParameters == null ? "<none>" : workspaceParameters.uuid)); //$NON-NLS-1$
 
         var systemInfo = new SystemInfo();
         sessionRequest.systemInfo = systemInfo;

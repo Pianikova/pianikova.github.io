@@ -25,6 +25,7 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.ILog;
+import com.e1c.edt.ai.IProjectParametersProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.TracingSources;
@@ -43,6 +44,8 @@ class ProjectTrackingWorkflow
     // Added/changed/removed files are now discovered live via resource deltas (ProjectTrackingDeltaVisitor),
     // so a full project re-scan is only a reconcile safety net for events that were missed and runs rarely.
     private final static int HashCyclesBetweenScans = 20;
+    // How many fast (LongDelay) polls to wait for V8 registration before backing off to ExtraLongDelay.
+    private final static int ReadinessFastRetries = 10;
     private final ILog log;
     private final Provider<IStatistics> statisticsProvider;
     private final IHashTools hashTools;
@@ -51,17 +54,20 @@ class ProjectTrackingWorkflow
     private final ISettings settings;
     private final IFileScaner fileScaner;
     private final ISessionService sessionService;
+    private final IProjectParametersProvider projectParametersProvider;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
     private IProject project;
     private volatile boolean resetRequested;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
     private int iterationCount = Integer.MAX_VALUE;
+    private int readinessWaitCycles = 0;
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
         IClock clock, IGlobalContextSync globalContextSync, ISettings settings,
-        IFileScaner fileScaner, ISessionService sessionService)
+        IFileScaner fileScaner, ISessionService sessionService,
+        IProjectParametersProvider projectParametersProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
@@ -71,6 +77,7 @@ class ProjectTrackingWorkflow
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(fileScaner);
         Preconditions.checkNotNull(sessionService);
+        Preconditions.checkNotNull(projectParametersProvider);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
@@ -79,6 +86,7 @@ class ProjectTrackingWorkflow
         this.settings = settings;
         this.fileScaner = fileScaner;
         this.sessionService = sessionService;
+        this.projectParametersProvider = projectParametersProvider;
     }
 
     @Override
@@ -87,6 +95,7 @@ class ProjectTrackingWorkflow
         Preconditions.checkNotNull(project);
         this.project = project;
         iterationCount = Integer.MAX_VALUE;
+        readinessWaitCycles = 0;
         return this;
     }
 
@@ -206,6 +215,28 @@ class ProjectTrackingWorkflow
         throws CoreException
     {
         progressMonitor.subTask(Messages.CodeCompletionBackgroundScanSubtaskName);
+
+        // Don't warm the session until the project is registered as a V8 project. At EDT startup the workflow
+        // runs before IV8ProjectManager has registered the (already accessible/open) project, so its parameters
+        // are not yet resolvable. Creating the session now would cache a session without project_parameters for
+        // the whole EDT run (ResponseCache keeps successful sessions), binding memory to the wrong/absent id.
+        // We wait by returning a delay: this runs on the tracking Job (never the UI thread) and the tracker loop
+        // re-checks cancellation before every nextState(), so the wait is non-blocking and cancellable.
+        if (projectParametersProvider.getProjectParameters(project).isEmpty())
+        {
+            readinessWaitCycles++;
+            var cycles = readinessWaitCycles;
+            log.trace(TracingSources.API_CALLS, "ProjectReadiness", //$NON-NLS-1$
+                () -> project.getName() + ": project not registered as a V8 project yet, deferring session warm-up" //$NON-NLS-1$
+                    + " (cycle " + cycles + ")"); //$NON-NLS-1$ //$NON-NLS-2$
+            // Poll quickly for the first few cycles (registration usually completes within seconds), then back
+            // off. Missing the warm-up is not fatal: the session is created lazily on first completion/chat,
+            // by which time the project is registered.
+            var delay = cycles > ReadinessFastRetries ? ExtraLongDelay : LongDelay;
+            return new Result(ProjectTrackingWorkflowState.SCAN, delay);
+        }
+        readinessWaitCycles = 0;
+
         if (!settings.sendGlobalContext(project))
         {
             // The server decides per project (via the session it returns) whether global context is synced,

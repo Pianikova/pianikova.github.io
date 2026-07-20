@@ -39,6 +39,7 @@ import com.e1c.edt.ai.IMarkersProvider;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IProjectBuilder;
 import com.e1c.edt.ai.IProjectDetailsProvider;
+import com.e1c.edt.ai.IProjectParametersProvider;
 import com.e1c.edt.ai.MarkdownUtils;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
 import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
@@ -83,6 +84,7 @@ class ContextModule
         bind(IBmObjectProvider.class).to(BmObjectProvider.class).in(Singleton.class);
         bind(IFiles.class).to(Files.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
+        bind(IProjectParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IEditingSupport.class).to(EditingSupport.class).in(Singleton.class);
         bind(IMarkdownUtils.class).to(MarkdownUtils.class).in(Singleton.class);
         bind(IMethodListProvider.class).to(MethodListProvider.class).in(Singleton.class);

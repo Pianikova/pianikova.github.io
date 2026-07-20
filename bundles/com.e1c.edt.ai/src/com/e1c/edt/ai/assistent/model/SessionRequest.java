@@ -28,5 +28,17 @@ public class SessionRequest
      */
     @SerializedName("system_info")
     public SystemInfo systemInfo;
+
+    /**
+     * Параметры проекта.
+     */
+    @SerializedName("project_parameters")
+    public ProjectParameters projectParameters;
+
+    /**
+     * Параметры рабочего окружения (workspace).
+     */
+    @SerializedName("workspace_parameters")
+    public WorkspaceParameters workspaceParameters;
 }
 // }

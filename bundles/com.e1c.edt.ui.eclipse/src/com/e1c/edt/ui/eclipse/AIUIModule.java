@@ -20,6 +20,7 @@ import com.e1c.edt.ai.IGlobalContextManager;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IProjectBuilder;
 import com.e1c.edt.ai.IProjectDetailsProvider;
+import com.e1c.edt.ai.IProjectParametersProvider;
 import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.IVisualContextProvider;
@@ -76,6 +77,7 @@ public class AIUIModule
         bind(IGlobalContextManager.class).to(GlobalContextManager.class).in(Singleton.class);
         bind(IModuleNameProvider.class).to(ModuleNameProvider.class).in(Singleton.class);
         bind(IConfigurationParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
+        bind(IProjectParametersProvider.class).to(ConfigurationParametersProvider.class).in(Singleton.class);
         bind(IVisualContextProvider.class).to(com.e1c.edt.ai.ui.SwtVisualContextProvider.class).in(Singleton.class);
         bind(IFiles.class).to(Files.class).in(Singleton.class);
         bind(ISpecializedEditorOpener.class).to(NoOpSpecializedEditorOpener.class).in(Singleton.class);

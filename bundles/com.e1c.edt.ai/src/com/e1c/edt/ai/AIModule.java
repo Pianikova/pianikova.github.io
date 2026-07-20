@@ -59,6 +59,7 @@ public class AIModule
         bind(RegexTemplateProcessor.class).in(Singleton.class);
         bind(IDevToolCallRecorder.class).to(DevToolCallRecorder.class).in(Singleton.class);
         bind(IDevAutopilot.class).to(DevAutopilot.class).in(Singleton.class);
+        bind(IWorkspaceParametersProvider.class).to(WorkspaceParametersProvider.class).in(Singleton.class);
         // @formatter:on
     }
 }
