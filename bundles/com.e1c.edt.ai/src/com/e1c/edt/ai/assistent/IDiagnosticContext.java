@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai.assistent;
 
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
@@ -12,7 +14,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.IVersionProvider;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 
 /**
  * @author Bogdan Sushkov
@@ -41,7 +42,7 @@ public interface IDiagnosticContext
 
     void setSessionId(String sessionId);
 
-    void setProject(ProjectId project);
+    void setProject(IProject project);
 
     void setAIContext(AIContext context);
 
@@ -49,7 +50,7 @@ public interface IDiagnosticContext
 
     String getSessionId();
 
-    ProjectId getProject();
+    IProject getProject();
 
     void releaseContext();
 

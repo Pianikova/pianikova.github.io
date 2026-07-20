@@ -18,6 +18,7 @@ import java.util.concurrent.CompletionException;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.eclipse.core.resources.IProject;
 
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
@@ -31,7 +32,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.McpCallToolsResult;
 import com.e1c.edt.ai.assistent.model.ConversationAskRequest;
 import com.e1c.edt.ai.assistent.model.ConversationAskResponse;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 
 /**
@@ -75,7 +75,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         String conversationId = "conv-123";
         ConversationAskRequest request = new ConversationAskRequest();
         ICancellationToken token = CancellationTokens.NONE;
@@ -101,7 +101,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         String conversationId = "conv-123";
         ConversationAskRequest request = new ConversationAskRequest();
 
@@ -135,7 +135,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         String conversationId = "conv-123";
         ConversationAskRequest request = new ConversationAskRequest();
         ICancellationToken token = CancellationTokens.NONE;
@@ -169,7 +169,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         com.e1c.edt.ai.assistent.model.ConversationRequest request =
             new com.e1c.edt.ai.assistent.model.ConversationRequest();
         ICancellationToken token = CancellationTokens.NONE;
@@ -195,7 +195,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         ConversationAskRequest request = new ConversationAskRequest();
         ICancellationToken token = CancellationTokens.NONE;
 
@@ -219,7 +219,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         String conversationId = "conv-123";
         ConversationAskRequest request = new ConversationAskRequest();
         ICancellationToken token = CancellationTokens.NONE;
@@ -259,7 +259,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         String conversationId = "conv-123";
         ConversationAskRequest request = new ConversationAskRequest();
         ICancellationToken token = CancellationTokens.NONE;
@@ -286,7 +286,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         String conversationId = "conv-123";
         ConversationAskRequest request = new ConversationAskRequest();
         ICancellationToken token = CancellationTokens.NONE;
@@ -315,7 +315,7 @@ public class ConversationsTest
         // Given
         Conversations conversations = new Conversations(httpLog, settings, requestBuilder, clientBuilder, json,
             sessionService, mcpTools, logDebug);
-        ProjectId projectId = ProjectId.Default;
+        IProject projectId = mock(IProject.class);
         String conversationId = "test-conversation-id-12345";
         ConversationAskRequest request = new ConversationAskRequest();
         ICancellationToken token = CancellationTokens.NONE;

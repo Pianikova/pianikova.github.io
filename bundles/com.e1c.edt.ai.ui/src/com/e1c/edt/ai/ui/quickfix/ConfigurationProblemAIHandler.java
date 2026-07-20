@@ -17,7 +17,6 @@ import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
@@ -37,8 +36,6 @@ public class ConfigurationProblemAIHandler
     ISettings settings;
     @Inject
     IEditingSupport editingSupport;
-    @Inject
-    IProjectIdProvider projectIdProvider;
     @Inject
     ISkillExecutor skillExecutor;
     @Inject
@@ -72,7 +69,7 @@ public class ConfigurationProblemAIHandler
             }
 
             ConfigurationProblemSelection problems = selected.get();
-            AIContext context = new AIContext(projectIdProvider.getProjectId(problems.getProject()), "", null); //$NON-NLS-1$
+            AIContext context = new AIContext(problems.getProject(), "", null); //$NON-NLS-1$
             SkillExecutionRequest request = new SkillExecutionRequest(SKILL_NAME,
                 Map.of("project_name", problems.getProject().getName(), //$NON-NLS-1$
                     "configuration_problems", ConfigurationProblemFormatter.format(problems.getMarkers()))); //$NON-NLS-1$

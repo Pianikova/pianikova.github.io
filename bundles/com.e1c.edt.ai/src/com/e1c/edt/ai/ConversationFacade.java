@@ -19,7 +19,7 @@ import com.e1c.edt.ai.assistent.model.ConversationAskRequest;
 import com.e1c.edt.ai.assistent.model.ConversationAskResponse;
 import com.e1c.edt.ai.assistent.model.ConversationRequest;
 import com.e1c.edt.ai.assistent.model.ConversationRequestContent;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.assistent.model.ToolDefinition;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonArray;
@@ -87,7 +87,7 @@ public class ConversationFacade
             {
                 askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
             }
-            return collectAssistantResult(request.getProjectId(), conversationId, askRequest, cancellationToken);
+            return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken);
         });
     }
 
@@ -118,7 +118,7 @@ public class ConversationFacade
         conversationRequest.isChat = request.getChat() != null ? request.getChat().booleanValue() : false;
         conversationRequest.scriptLanguage = settings.getLanguage();
 
-        return conversations.createConversationAsync(request.getProjectId(), conversationRequest, cancellationToken)
+        return conversations.createConversationAsync(request.getProject(), conversationRequest, cancellationToken)
             .thenCompose(optionalResponse -> {
                 if (optionalResponse.isEmpty() || optionalResponse.get().uuid == null
                     || optionalResponse.get().uuid.isBlank())
@@ -211,7 +211,7 @@ public class ConversationFacade
      * @param cancellationToken токен для отмены операции
      * @return {@link CompletableFuture} с результатом, содержащим текст ответа и сессию
      */
-    private CompletableFuture<SendMessageResult> collectAssistantResult(ProjectId projectId, String conversationUuid,
+    private CompletableFuture<SendMessageResult> collectAssistantResult(IProject project, String conversationUuid,
         ConversationAskRequest askRequest, ICancellationToken cancellationToken)
     {
         CompletableFuture<SendMessageResult> future = new CompletableFuture<>();
@@ -225,7 +225,7 @@ public class ConversationFacade
         ConcurrentHashMap<String, StringBuilder> textByMessageUuid = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, StringBuilder> reasoningByMessageUuid = new ConcurrentHashMap<>();
 
-        conversations.createAskSource(projectId, conversationUuid, askRequest, cancellationToken)
+        conversations.createAskSource(project, conversationUuid, askRequest, cancellationToken)
             .subscribe(new IObserver<ConversationAskResponse>()
             {
                 @Override

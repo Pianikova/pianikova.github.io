@@ -5,6 +5,8 @@ package com.e1c.edt.ai.assistent;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
@@ -14,7 +16,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.IVersionProvider;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -43,7 +44,7 @@ public class DiagnosticContext
     private final ITraceScenario scenario;
 
     private String sessionId;
-    private ProjectId project;
+    private IProject project;
     private AIContext aiContext;
     private AtomicReference<String> caReport = new AtomicReference<>();
 
@@ -89,13 +90,13 @@ public class DiagnosticContext
     }
 
     @Override
-    public void setProject(ProjectId project)
+    public void setProject(IProject project)
     {
         this.project = project;
     }
 
     @Override
-    public ProjectId getProject()
+    public IProject getProject()
     {
         return project;
     }

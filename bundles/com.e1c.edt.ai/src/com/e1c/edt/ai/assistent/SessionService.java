@@ -14,9 +14,12 @@ import java.util.function.Supplier;
 
 import javax.net.ssl.SSLException;
 
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.IConfigurationParametersProvider;
 import com.e1c.edt.ai.IEnvironment;
 import com.e1c.edt.ai.IJson;
+import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ISettingsSetter;
 import com.e1c.edt.ai.IStateService;
@@ -24,8 +27,8 @@ import com.e1c.edt.ai.ITraceScenario;
 import com.e1c.edt.ai.IVersionProvider;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TraceScenarioType;
+import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.assistent.model.SessionRequest;
 import com.e1c.edt.ai.assistent.model.SystemInfo;
@@ -50,6 +53,7 @@ class SessionService
     private final IConfigurationParametersProvider configurationParametersProvider;
     private final IStateService stateService;
     private final ITraceScenario traceScenario;
+    private final ILog traceLog;
     private final Object sessionChainLock = new Object();
     private CompletableFuture<?> sessionChainTail = CompletableFuture.completedFuture(null);
 
@@ -58,7 +62,7 @@ class SessionService
         ISettingsTracker settingsTracker, IResponseCache responseCache, IVersionProvider versionProvider,
         ISettings settings, ISettingsSetter settingsSetter, IEnvironment environment,
         IConfigurationParametersProvider configurationParametersProvider, IStateService stateService,
-        ITraceScenario traceScenario)
+        ITraceScenario traceScenario, ILog traceLog)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(requestBuilder);
@@ -73,6 +77,7 @@ class SessionService
         Preconditions.checkNotNull(configurationParametersProvider);
         Preconditions.checkNotNull(stateService);
         Preconditions.checkNotNull(traceScenario);
+        Preconditions.checkNotNull(traceLog);
         this.log = log;
         this.requestBuilder = requestBuilder;
         this.clientBuilder = clientBuilder;
@@ -86,16 +91,28 @@ class SessionService
         this.configurationParametersProvider = configurationParametersProvider;
         this.stateService = stateService;
         this.traceScenario = traceScenario;
+        this.traceLog = traceLog;
     }
 
     @Override
-    public CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId)
+    public CompletableFuture<Optional<Session>> getSessionAsync(IProject project)
     {
+        Preconditions.checkNotNull(project);
+        traceLog.trace(TracingSources.COMMON, "Session", //$NON-NLS-1$
+            () -> "Session requested: project=" + project.getName()); //$NON-NLS-1$
         var reset = settingsTracker.register(SessionService.class.getName(), settings.getUserParameters());
-        return responseCache.get(projectId, () -> getSession(projectId), reset);
+        return responseCache.get(project, () -> getSession(project), reset);
     }
 
-    private CompletableFuture<Optional<Session>> getSession(ProjectId projectId)
+    @Override
+    public CompletableFuture<Optional<Session>> getGlobalSessionAsync()
+    {
+        traceLog.trace(TracingSources.COMMON, "Session", () -> "Session requested: global"); //$NON-NLS-1$ //$NON-NLS-2$
+        var reset = settingsTracker.register(SessionService.class.getName(), settings.getUserParameters());
+        return responseCache.getGlobal(() -> getSession(null), reset);
+    }
+
+    private CompletableFuture<Optional<Session>> getSession(IProject project)
     {
         var builder = requestBuilder.create(settings.getUrl() + "api/v1/create_session"); //$NON-NLS-1$
         if (builder.isEmpty())
@@ -132,7 +149,8 @@ class SessionService
         userParameters.timeoutMs = settings.getTimeout().toMillis();
         userParameters.lineSeparator = settings.getLineSeparator();
         userParameters.language = settings.getLanguage();
-        userParameters.configurationParameters = configurationParametersProvider.getParameters(projectId).orElse(null);
+        userParameters.configurationParameters = project == null ? null
+            : configurationParametersProvider.getParameters(project).orElse(null);
         userParameters.globalContext = userParams.globalContext;
         userParameters.experimental = userParams.experimental;
 
@@ -155,7 +173,7 @@ class SessionService
 
         requestBuilder = requestBuilder.POST(BodyPublishers.ofString(requestBody));
         var request = requestBuilder.build();
-        return chainSessionRequest(() -> getSessionAsync(projectId, request, requestBody));
+        return chainSessionRequest(() -> getSessionAsync(project, request, requestBody));
     }
 
     /**
@@ -178,7 +196,7 @@ class SessionService
         }
     }
 
-    private CompletableFuture<Optional<Session>> getSessionAsync(ProjectId projectId, HttpRequest request, String body)
+    private CompletableFuture<Optional<Session>> getSessionAsync(IProject project, HttpRequest request, String body)
     {
         if (traceScenario.getActive() == TraceScenarioType.SSL_ERROR)
         {
@@ -198,7 +216,7 @@ class SessionService
             // threads and stalls every other in-flight request (the null sessionId + TimeoutException storm). The chat
             // path in Conversations already uses thenApplyAsync for the same reason.
             .thenApplyAsync(response -> log.response(response, null, stopwatch, true, true))
-            .thenApplyAsync(response -> createCession(projectId, response))
+            .thenApplyAsync(response -> createSession(project, response))
             .whenCompleteAsync((session, error) -> {
                 try
                 {
@@ -223,7 +241,7 @@ class SessionService
     }
 
     @SuppressWarnings("nls")
-    private Optional<Session> createCession(ProjectId projectId, HttpResponse<String> response)
+    private Optional<Session> createSession(IProject project, HttpResponse<String> response)
     {
         var content = response.body();
         var status = response.statusCode();
@@ -248,7 +266,14 @@ class SessionService
             return session;
         }
 
-        settingsSetter.applySessionParameters(projectId, session.get().userParameters);
+        if (project == null)
+        {
+            settingsSetter.applyGlobalSessionParameters(session.get().userParameters);
+        }
+        else
+        {
+            settingsSetter.applySessionParameters(project, session.get().userParameters);
+        }
         return session;
     }
 

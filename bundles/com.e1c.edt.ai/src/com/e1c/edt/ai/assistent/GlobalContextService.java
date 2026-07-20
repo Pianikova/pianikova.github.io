@@ -22,7 +22,7 @@ import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.StatisticsType;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdateResponse;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 
@@ -62,7 +62,7 @@ class GlobalContextService
     }
 
     @Override
-    public CompletableFuture<Optional<GlobalContextUpdateResponse>> update(ProjectId projectId,
+    public CompletableFuture<Optional<GlobalContextUpdateResponse>> update(IProject project,
         Collection<GlobalContextUpdate> updates,
         int partitionSize,
         IStatistics statistics, ICancellationToken cancellationToken)
@@ -78,7 +78,7 @@ class GlobalContextService
             }
 
             feature = feature.thenCompose(
-                results -> update(results, projectId, updatePart, statistics, cancellationToken));
+                results -> update(results, project, updatePart, statistics, cancellationToken));
         }
 
         return feature;
@@ -105,7 +105,7 @@ class GlobalContextService
     }
 
     private CompletableFuture<Optional<GlobalContextUpdateResponse>> update(
-        Optional<GlobalContextUpdateResponse> results, ProjectId projectId,
+        Optional<GlobalContextUpdateResponse> results, IProject project,
         Collection<GlobalContextUpdate> updates, IStatistics statistics, ICancellationToken cancellationToken)
     {
         var optionalRequest =
@@ -166,7 +166,7 @@ class GlobalContextService
 
         var client = clientBuilder.get();
         var currentRequestBuilder = requestBuilder;
-        var call = sessionCall.call(projectId, cancellationToken, session -> {
+        var call = sessionCall.call(project, cancellationToken, session -> {
         	var httpRequestBuilder = currentRequestBuilder;
             var sessionId = session.flatMap(s -> Optional.ofNullable(s.sessionId)).orElse(null);
         	if (sessionId != null)

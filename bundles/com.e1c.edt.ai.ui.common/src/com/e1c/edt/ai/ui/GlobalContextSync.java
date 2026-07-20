@@ -91,7 +91,7 @@ class GlobalContextSync implements IGlobalContextSync
                 return CompletableFuture.completedFuture(false);
             }
 
-            return globalContextService.update(aiContext.getProjectId(), updates, 200, statistics, cancellationToken)
+            return globalContextService.update(aiContext.getProject(), updates, 200, statistics, cancellationToken)
                 .thenCompose(optionalResult -> {
                     if (optionalResult.isEmpty())
                     {
@@ -189,7 +189,7 @@ class GlobalContextSync implements IGlobalContextSync
                 for (var fileUpdate : fileUpdates.values())
                 {
                     updates.addAll(globalContext.getUpdates(
-                        new AIContext(aiContext.getProjectId(), fileUpdate.filePath, aiContext.getDocument()),
+                        new AIContext(aiContext.getProject(), fileUpdate.filePath, aiContext.getDocument()),
                         fileUpdate.fileHash, fileUpdate.hashes, fileUpdate.fields, statistics,
                         cancellationToken));
                 }
@@ -208,7 +208,7 @@ class GlobalContextSync implements IGlobalContextSync
                 {
                     var timeout = settings.getTimeout();
                     optionalResult = globalContextService
-                        .update(aiContext.getProjectId(), updates, 10, statistics, cancellationToken)
+                        .update(aiContext.getProject(), updates, 10, statistics, cancellationToken)
                         .get(timeout.toNanos(), TimeUnit.NANOSECONDS);
                 }
                 catch (TimeoutException error)

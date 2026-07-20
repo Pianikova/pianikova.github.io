@@ -291,7 +291,7 @@ public class CodeTools
                 }
             }
 
-            var methodCtx = new AIContext(ctx.getProjectId(), sourceOffset, ctx.getSource(), sourceOffset,
+            var methodCtx = new AIContext(ctx.getProject(), sourceOffset, ctx.getSource(), sourceOffset,
                 ctx.getPath(),
                 commentingMethod.methodText, textOffset, prefix, suffix, start, finish,
                 sourceViewer.getDocument(), () -> sourceViewer.getTextWidget().isDisposed());

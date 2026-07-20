@@ -4,8 +4,8 @@
 package com.e1c.edt.ai.ui;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IProject;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
 
 /**
  * Запрос для автоматического фонового анализа кода.
@@ -15,12 +15,12 @@ import com.e1c.edt.ai.assistent.model.ProjectId;
 public class AutoAnalysisRequest
 {
     private final IFile file;
-    private final ProjectId projectId;
+    private final IProject project;
 
-    public AutoAnalysisRequest(IFile file, ProjectId projectId)
+    public AutoAnalysisRequest(IFile file, IProject project)
     {
         this.file = file;
-        this.projectId = projectId;
+        this.project = project;
     }
 
     public IFile getFile()
@@ -28,8 +28,8 @@ public class AutoAnalysisRequest
         return file;
     }
 
-    public ProjectId getProjectId()
+    public IProject getProject()
     {
-        return projectId;
+        return project;
     }
 }

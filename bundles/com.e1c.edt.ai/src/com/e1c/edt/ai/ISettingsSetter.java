@@ -5,11 +5,13 @@ package com.e1c.edt.ai;
 
 import com.e1c.edt.ai.assistent.model.CodeCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.Parameters;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 
 public interface ISettingsSetter
 {
-    void applySessionParameters(ProjectId projectId, Parameters sessionParameters);
+    void applySessionParameters(IProject project, Parameters sessionParameters);
+
+    void applyGlobalSessionParameters(Parameters sessionParameters);
 
     void setCodeCompletionPolicy(CodeCompletionPolicy codeCompletionPolicy);
 

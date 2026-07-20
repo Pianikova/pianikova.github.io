@@ -8,12 +8,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
 
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.ActionState;
 import com.e1c.edt.ai.ILog;
 import com.e1c.edt.ai.IStateService;
 import com.e1c.edt.ai.ServiceState;
 import com.e1c.edt.ai.TracingSources;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
@@ -24,7 +25,8 @@ class ResponseCache
     implements IResponseCache, IStateListener
 {
     private final ILog log;
-    private final Cache<ProjectId, CompletableFuture<Optional<Session>>> responseCache =
+    private static final Object GLOBAL_SESSION_KEY = new Object();
+    private final Cache<Object, CompletableFuture<Optional<Session>>> responseCache =
         CacheBuilder.newBuilder().maximumSize(256).build();
 
     @Inject
@@ -37,18 +39,31 @@ class ResponseCache
     }
 
     @Override
-    public CompletableFuture<Optional<Session>> get(ProjectId projectId,
+    public CompletableFuture<Optional<Session>> get(IProject project,
         Supplier<CompletableFuture<Optional<Session>>> taskSupplier, boolean reset)
     {
-        Preconditions.checkNotNull(projectId);
+        Preconditions.checkNotNull(project);
+        return get(project, taskSupplier);
+    }
+
+    @Override
+    public CompletableFuture<Optional<Session>> getGlobal(
+        Supplier<CompletableFuture<Optional<Session>>> taskSupplier, boolean reset)
+    {
+        return get(GLOBAL_SESSION_KEY, taskSupplier);
+    }
+
+    private CompletableFuture<Optional<Session>> get(Object key,
+        Supplier<CompletableFuture<Optional<Session>>> taskSupplier)
+    {
         Preconditions.checkNotNull(taskSupplier);
         try
         {
-            return responseCache.get(projectId, () -> {
+            return responseCache.get(key, () -> {
                 return taskSupplier.get().whenComplete((r, e) -> {
                     if (e != null || r.isEmpty())
                     {
-                        responseCache.invalidate(projectId);
+                        responseCache.invalidate(key);
                     }
                 });
             });

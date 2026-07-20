@@ -8,13 +8,13 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.core.resources.IProject;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 
 public class AIContext
 {
-    private final ProjectId projectId;
+    private final IProject project;
     private final int editorOffset;
     private final String source;
     private final int sourceOffset;
@@ -28,13 +28,13 @@ public class AIContext
     private final WeakReference<IDocument> document;
     private final Supplier<Boolean> isDisposed;
 
-    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset,
+    public AIContext(IProject project, int caretOffset, String source, int sourceOffset,
         String path, String text,
         int textOffset,
         String prefix,
         String sufix, int start, int finish, IDocument document, Supplier<Boolean> isDisposed)
     {
-        Preconditions.checkNotNull(projectId);
+        Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(source);
         Preconditions.checkArgument(sourceOffset >= 0);
         Preconditions.checkNotNull(path);
@@ -42,7 +42,7 @@ public class AIContext
         Preconditions.checkArgument(textOffset >= 0);
         Preconditions.checkNotNull(prefix);
         Preconditions.checkNotNull(sufix);
-        this.projectId = projectId;
+        this.project = project;
         this.editorOffset = caretOffset;
         this.source = source;
         this.sourceOffset = sourceOffset;
@@ -58,23 +58,23 @@ public class AIContext
     }
 
     @SuppressWarnings("nls")
-    public AIContext(ProjectId projectId, int caretOffset, String source, int sourceOffset,
+    public AIContext(IProject project, int caretOffset, String source, int sourceOffset,
         String path, String text,
         int textOffset, IDocument document, Supplier<Boolean> isDisposed)
     {
-        this(projectId, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document, isDisposed);
+        this(project, caretOffset, source, sourceOffset, path, text, textOffset, "", "", 0, 0, document, isDisposed);
     }
 
     // Global
     @SuppressWarnings("nls")
-    public AIContext(ProjectId projectId, String path, IDocument document)
+    public AIContext(IProject project, String path, IDocument document)
     {
-        this(projectId, 0, "", 0, path, "", 0, "", "", 0, 0, document, () -> false);
+        this(project, 0, "", 0, path, "", 0, "", "", 0, 0, document, () -> false);
     }
 
-    public ProjectId getProjectId()
+    public IProject getProject()
     {
-        return projectId;
+        return project;
     }
 
     public int getCaretOffset()
@@ -143,7 +143,7 @@ public class AIContext
         var str = new StringBuilder();
 
         str.append("project:"); //$NON-NLS-1$
-        str.append(projectId);
+        str.append(project.getName());
         str.append(System.lineSeparator());
 
         str.append("path:"); //$NON-NLS-1$

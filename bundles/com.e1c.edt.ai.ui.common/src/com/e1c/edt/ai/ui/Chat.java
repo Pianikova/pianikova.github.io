@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
@@ -57,7 +58,6 @@ import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.IStateListener;
 import com.e1c.edt.ai.assistent.model.ChatContext;
 import com.e1c.edt.ai.assistent.model.LocalContext;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -116,6 +116,7 @@ public class Chat
     private final IContentSourceProvider contentSourceProvider;
     private final IFileSystem fileSystem;
     private final IMicrophoneRecorder microphoneRecorder;
+    private final ICurrentProjectResolver currentProjectResolver;
     private final Cache<String, AIContext> contexts = CacheBuilder.newBuilder().maximumSize(256).weakKeys().build();
     private final List<ChangeListener<State>> initializationListeners = new ArrayList<>();
     private final Object chatStateLock = new Object();
@@ -134,7 +135,7 @@ public class Chat
         ISessionService sessionService, IModuleNameProvider moduleNameProvider, ILocalContext localContext,
         IProposalsProvider proposalsProvider, IJson json, IMcpTools mcpTools, IEdtLinkHandler linkHandler,
         IProjectTools projectTools, IContentSourceProvider contentSourceProvider, IFileSystem fileSystem,
-        IMicrophoneRecorder microphoneRecorder)
+        IMicrophoneRecorder microphoneRecorder, ICurrentProjectResolver currentProjectResolver)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(settings);
@@ -154,6 +155,7 @@ public class Chat
         Preconditions.checkNotNull(contentSourceProvider);
         Preconditions.checkNotNull(fileSystem);
         Preconditions.checkNotNull(microphoneRecorder);
+        Preconditions.checkNotNull(currentProjectResolver);
         this.log = log;
         this.settings = settings;
         this.ui = ui;
@@ -173,6 +175,7 @@ public class Chat
         this.contentSourceProvider = contentSourceProvider;
         this.fileSystem = fileSystem;
         this.microphoneRecorder = microphoneRecorder;
+        this.currentProjectResolver = currentProjectResolver;
 
         stateService.addListener(this);
     }
@@ -462,7 +465,7 @@ public class Chat
 
         for (var document : documents)
         {
-            var ctx = new AIContext(document.getProjectId(), document.getFile().getLocation().toPortableString(), null);
+            var ctx = new AIContext(document.getProject(), document.getFile().getLocation().toPortableString(), null);
             chat(TOPIC_INSERT_CODE, document.getDocument().get(), null, ctx);
         }
 
@@ -545,7 +548,7 @@ public class Chat
                         {
                             var document = optionalDocument.get();
                             content = document.getDocument().get();
-                            ctx = new AIContext(new ProjectId(project), pathString, document.getDocument());
+                            ctx = new AIContext(project, pathString, document.getDocument());
                         }
                         else
                         {
@@ -566,7 +569,12 @@ public class Chat
             {
                 var bytes = Files.readAllBytes(filePath);
                 content = new String(bytes, StandardCharsets.UTF_8);
-                ctx = new AIContext(ProjectId.Default, pathString, null);
+                var project = currentProjectResolver.resolve(pathString);
+                if (project.isEmpty())
+                {
+                    throw new IOException("Cannot determine project for external file"); //$NON-NLS-1$
+                }
+                ctx = new AIContext(project.get(), pathString, null);
             }
 
             if (!fileSystem.isPrintable(content, 90.0))
@@ -598,25 +606,34 @@ public class Chat
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
-        chatInJob(Optional.ofNullable(ctx), () -> {
+        var resolvedContext = Optional.ofNullable(ctx).or(() -> currentProjectResolver.resolve()
+            .map(project -> new AIContext(project, "", null))); //$NON-NLS-1$
+        if (resolvedContext.isEmpty())
+        {
+            log.warning(AI_CHAT, () -> "Cannot determine project for chat action"); //$NON-NLS-1$
+            return;
+        }
+
+        var chatContext = resolvedContext.get();
+        chatInJob(resolvedContext, () -> {
             try (var busyToken = stateService.busy())
             {
-                var sessionId = getSessionId(ctx);
+                var sessionId = getSessionId(chatContext.getProject());
                 if (sessionId.isEmpty())
                 {
                     log.warning(AI_CHAT, () -> "Cannot get session id");
                     return;
                 }
 
-                var contextInfo = buildContextInfo(ctx);
-                var script = buildChatScript(topic, subject, details, ctx, sessionId.get(), contextInfo);
+                var contextInfo = buildContextInfo(chatContext);
+                var script = buildChatScript(topic, subject, details, chatContext, sessionId.get(), contextInfo);
 
                 dispatcher.dispatchAsync(() -> {
                     var executeScriptResult = executeScriptWithLogging(script);
                     if (executeScriptResult instanceof String)
                     {
                         var chatId = (String)executeScriptResult;
-                        contexts.put(chatId, ctx);
+                        contexts.put(chatId, chatContext);
                     }
                 });
             }
@@ -627,12 +644,12 @@ public class Chat
         });
     }
 
-    private Optional<String> getSessionId(AIContext ctx)
+    private Optional<String> getSessionId(IProject project)
     {
-        var projectId = Optional.ofNullable(ctx).map(AIContext::getProjectId).orElse(ProjectId.Default);
+        Preconditions.checkNotNull(project);
         try
         {
-            return sessionService.getSessionAsync(projectId).get().map(i -> i.sessionId);
+            return sessionService.getSessionAsync(project).get().map(i -> i.sessionId);
         }
         catch (InterruptedException | ExecutionException e)
         {

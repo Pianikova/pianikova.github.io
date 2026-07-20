@@ -95,8 +95,8 @@ public class SessionDiagnosticTest
             userParameters.timeoutMs = settings.getTimeout().toMillis();
             userParameters.lineSeparator = settings.getLineSeparator();
             userParameters.language = settings.getLanguage();
-            userParameters.configurationParameters =
-                configurationParametersProvider.getParameters(project).orElse(null);
+            userParameters.configurationParameters = project == null ? null
+                : configurationParametersProvider.getParameters(project).orElse(null);
             userParameters.globalContext = userParams.globalContext;
             userParameters.experimental = userParams.experimental;
 

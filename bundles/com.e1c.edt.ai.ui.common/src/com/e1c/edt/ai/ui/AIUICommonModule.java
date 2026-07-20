@@ -84,6 +84,7 @@ public class AIUICommonModule
         bind(IChatDialog.class).to(Chat.class);
         bind(IChatFileSelectionResolver.class).to(ChatFileSelectionResolver.class).in(Singleton.class);
         bind(IAIContextProvider.class).to(AIContextProvider.class).in(Singleton.class);
+        bind(ICurrentProjectResolver.class).to(CurrentProjectResolver.class).in(Singleton.class);
         bind(Settings.class).in(Singleton.class);
         bind(ISettings.class).to(Settings.class);
         bind(ISettingsSetter.class).to(Settings.class);

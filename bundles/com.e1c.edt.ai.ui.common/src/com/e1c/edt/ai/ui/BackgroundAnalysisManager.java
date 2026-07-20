@@ -22,7 +22,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ConversationSession;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.skills.ISkillExecutor;
 import com.e1c.edt.ai.tools.ILocalHistoryUtils;
@@ -133,8 +132,7 @@ public class BackgroundAnalysisManager
                 + file.getFullPath() + " (cancelled previous run: " + (previous != null) + ")",
             () -> "");
 
-        ProjectId projectId = new ProjectId(file.getProject());
-        AutoAnalysisRequest request = new AutoAnalysisRequest(file, projectId);
+        AutoAnalysisRequest request = new AutoAnalysisRequest(file, file.getProject());
 
         dispatcher.createJob("Background Analysis", context -> {
             // Пока шла debounce-пауза, могло прийти новое сохранение (нашего или другого файла) —
@@ -271,7 +269,7 @@ public class BackgroundAnalysisManager
             var problemLevel = settings.getBackgroundAnalysisProblemLevel();
             // @formatter:off
             SkillExecutionRequest skillRequest = new SkillExecutionRequest("background-code-analysis",
-                Map.of("project_name", request.getProjectId().toString(),
+                Map.of("project_name", request.getProject().getName(),
                        "relative_file_path", request.getFile().getProjectRelativePath().toString(),
                        "absolute_file_path", request.getFile().getLocation().toOSString(),
                        "from_revision_id", baseRevisionId,
@@ -309,7 +307,7 @@ public class BackgroundAnalysisManager
 
                 ConversationSession session = state.conversationSession.get();
                 boolean forceNew = session == null;
-                var newReq = new SendUserMessageRequest(request.getProjectId(), skillResponse.getPrompt(),
+                var newReq = new SendUserMessageRequest(request.getProject(), skillResponse.getPrompt(),
                     session, forceNew, CONVERSATION_SKILL, Boolean.FALSE, null);
 
                 return conversationFacade.sendAsync(newReq, token).thenAccept(resultMessage -> {

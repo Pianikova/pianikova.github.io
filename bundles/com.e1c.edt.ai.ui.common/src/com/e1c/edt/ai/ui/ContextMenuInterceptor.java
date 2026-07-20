@@ -31,7 +31,6 @@ import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IVisualContextProvider;
 import com.e1c.edt.ai.assistent.SendMessageResult;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.SkillExecutionRequest;
 import com.e1c.edt.ai.assistent.model.VisualContext;
 import com.e1c.edt.ai.assistent.model.VisualField;
@@ -49,11 +48,13 @@ public class ContextMenuInterceptor
     private final ILog log;
     private final IUI ui;
     private final ISettings settings;
+    private final ICurrentProjectResolver currentProjectResolver;
     private CancellationTokenSource currentCancellationTokenSource;
 
     @Inject
     public ContextMenuInterceptor(IDispatcher dispatcher, IVisualContextProvider visualContextProviewr,
-        ISkillExecutor skillExecutor, IConversationFacade conversationFacade, ILog log, IUI ui, ISettings settings)
+        ISkillExecutor skillExecutor, IConversationFacade conversationFacade, ILog log, IUI ui, ISettings settings,
+        ICurrentProjectResolver currentProjectResolver)
     {
         Preconditions.checkNotNull(dispatcher);
         Preconditions.checkNotNull(visualContextProviewr);
@@ -62,6 +63,7 @@ public class ContextMenuInterceptor
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(ui);
         Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(currentProjectResolver);
         this.dispatcher = dispatcher;
         this.visualContextProviewr = visualContextProviewr;
         this.skillExecutor = skillExecutor;
@@ -69,6 +71,7 @@ public class ContextMenuInterceptor
         this.log = log;
         this.ui = ui;
         this.settings = settings;
+        this.currentProjectResolver = currentProjectResolver;
     }
 
     @Override
@@ -288,15 +291,29 @@ public class ContextMenuInterceptor
         createMenuItem(menu, text, TextAction.CORRECT_ERRORS, false);
         createMenuItem(menu, text, TextAction.IN_OTHER_WORDS, false);
         createMenuItem(menu, text, TextAction.IMPROVE_STYLE, false);
+        menu.addListener(SWT.Show, event -> refreshMenuItems(menu));
+    }
+
+    private void refreshMenuItems(Menu menu)
+    {
+        var projectAvailable = currentProjectResolver.resolve().isPresent();
+        for (var item : menu.getItems())
+        {
+            var data = item.getData();
+            if (data instanceof MenuData)
+            {
+                ((MenuData)data).textListener.setProjectAvailable(projectAvailable);
+            }
+        }
     }
 
     private MenuItem createMenuItem(Menu menu, IText text, TextAction textAction, boolean allowForEmptyText)
     {
         var menuItem = new MenuItem(menu, SWT.PUSH);
-        menuItem.setData(new MenuData(text));
         menuItem.setText(textAction.title);
         menuItem.setImage(BaseActivator.getImage(textAction.imageName));
         var textListener = new TextListener(text, menuItem, allowForEmptyText);
+        menuItem.setData(new MenuData(textListener));
         text.getControl().addFocusListener(textListener);
         text.addModifyListener(textListener);
         menuItem.addDisposeListener(e -> removeTextListener(text, textListener));
@@ -337,6 +354,12 @@ public class ContextMenuInterceptor
 
         // Skill parameters are captured on the UI thread, before the background job starts
         var context = visualContextProviewr.create(text.getControl(), cancellationTokenSource);
+        var project = currentProjectResolver.resolve();
+        if (project.isEmpty())
+        {
+            log.warning("AI Context Menu", () -> "Cannot determine project for text action"); //$NON-NLS-1$ //$NON-NLS-2$
+            return;
+        }
         var isMultiline = (text.getControl().getStyle() & SWT.MULTI) != 0;
         // @formatter:off
         var parameters = Map.of(
@@ -351,7 +374,7 @@ public class ContextMenuInterceptor
             var request = new SkillExecutionRequest(textAction.skillId, parameters);
             skillExecutor.executeAsync(request, cancellationTokenSource)
                 .thenCompose(result -> conversationFacade.sendAsync(
-                    new SendUserMessageRequest(ProjectId.Default, result.getPrompt(), null, true),
+                    new SendUserMessageRequest(project.get(), result.getPrompt(), null, true),
                     cancellationTokenSource))
                 .thenAccept(resultMessage -> applyResult(text, textListener, cancellationTokenSource, resultMessage))
                 .exceptionally(error -> {
@@ -473,6 +496,7 @@ public class ContextMenuInterceptor
         private final IText text;
         private final MenuItem menuItem;
         private final boolean allowForEmptyText;
+        private boolean projectAvailable;
         public CancellationTokenSource cancellationTokenSource;
         public boolean isSuppresed;
 
@@ -507,8 +531,15 @@ public class ContextMenuInterceptor
         {
             if (menuItem != null && !menuItem.isDisposed() && !text.getControl().isDisposed())
             {
-                menuItem.setEnabled(settings.isEnabled() && (allowForEmptyText || !text.getContent().trim().isBlank()));
+                menuItem.setEnabled(projectAvailable && settings.isEnabled()
+                    && (allowForEmptyText || !text.getContent().trim().isBlank()));
             }
+        }
+
+        private void setProjectAvailable(boolean value)
+        {
+            projectAvailable = value;
+            setIsEnabled();
         }
 
         private void cancel()
@@ -523,9 +554,11 @@ public class ContextMenuInterceptor
 
     private class MenuData
     {
-        public MenuData(IText text)
+        private final TextListener textListener;
+
+        public MenuData(TextListener textListener)
         {
-            //
+            this.textListener = Preconditions.checkNotNull(textListener);
         }
     }
 }

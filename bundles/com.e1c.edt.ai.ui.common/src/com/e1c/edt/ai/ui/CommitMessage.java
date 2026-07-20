@@ -3,28 +3,28 @@
  */
 package com.e1c.edt.ai.ui;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.google.common.base.Preconditions;
 
 public class CommitMessage
 {
-    private final ProjectId projectId;
+    private final IProject project;
     private final String uuid;
     private final String message;
 
-    public CommitMessage(ProjectId projectId, String uuid, String message)
+    public CommitMessage(IProject project, String uuid, String message)
     {
-        Preconditions.checkNotNull(projectId);
+        Preconditions.checkNotNull(project);
         Preconditions.checkNotNull(uuid);
         Preconditions.checkNotNull(message);
-        this.projectId = projectId;
+        this.project = project;
         this.uuid = uuid;
         this.message = message;
     }
 
-    public ProjectId getProjectId()
+    public IProject getProject()
     {
-        return projectId;
+        return project;
     }
 
     public String getUuid()

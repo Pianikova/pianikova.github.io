@@ -11,11 +11,11 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.ui.texteditor.ITextEditor;
 
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 
 public interface IFileDocument
 {
-    ProjectId getProjectId();
+    IProject getProject();
 
     Charset getCharset();
 

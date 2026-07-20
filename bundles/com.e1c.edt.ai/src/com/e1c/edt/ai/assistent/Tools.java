@@ -20,7 +20,7 @@ import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.IObserver;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.Observables;
-import com.e1c.edt.ai.assistent.model.ProjectId;
+import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackResponse;
 import com.e1c.edt.ai.assistent.model.ToolInvokeRequest;
@@ -60,17 +60,17 @@ public class Tools
     }
 
     @Override
-    public IObservable<ToolInvokeResponse> createInvokeSource(ProjectId projectId, ToolInvokeRequest toolInvokeRequest,
+    public IObservable<ToolInvokeResponse> createInvokeSource(IProject project, ToolInvokeRequest toolInvokeRequest,
         ICancellationToken cancellationToken)
     {
         return Observables.create(observer -> {
-            invoke(projectId, toolInvokeRequest, observer, cancellationToken);
+            invoke(project, toolInvokeRequest, observer, cancellationToken);
             return Closeables.Empty;
         });
     }
 
     @Override
-    public CompletableFuture<Optional<ToolFeedbackResponse>> feedbackAsync(ProjectId projectId,
+    public CompletableFuture<Optional<ToolFeedbackResponse>> feedbackAsync(IProject project,
         ToolFeedbackFinalTextRequest feedbackRequest, ICancellationToken cancellationToken)
     {
         var optionalRequestBuilder = requestBuilder.create(settings.getUrl() + "tools_api/v1/feedbacks/final_text"); //$NON-NLS-1$
@@ -96,7 +96,7 @@ public class Tools
 
         var client = clientBuilder.get();
         var currentRequestBuilder = requestBuilder.POST(bodyPublisher);
-        var call = sessionCall.call(projectId, cancellationToken, session -> {
+        var call = sessionCall.call(project, cancellationToken, session -> {
             var request =
                 currentRequestBuilder.header("Session-Id", session.get().sessionId).POST(bodyPublisher).build(); //$NON-NLS-1$
             log.request(request, cancellationToken.toString(), requestBody);
@@ -108,7 +108,7 @@ public class Tools
             .thenApply(this::createToolFeedbackResponse);
     }
 
-    private void invoke(ProjectId projectId, ToolInvokeRequest conversationRequest,
+    private void invoke(IProject project, ToolInvokeRequest conversationRequest,
         IObserver<ToolInvokeResponse> observer,
         ICancellationToken cancellationToken)
     {
@@ -148,7 +148,7 @@ public class Tools
 
         var client = clientBuilder.get();
         var currentRequestBuilder = requestBuilder;
-        var call = sessionCall.call(projectId, cancellationToken, session -> {
+        var call = sessionCall.call(project, cancellationToken, session -> {
             var request =
                 currentRequestBuilder.header("Session-Id", session.get().sessionId).POST(bodyPublisher).build(); //$NON-NLS-1$
             log.request(request, cancellationToken.toString(), requestBody);

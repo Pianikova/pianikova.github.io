@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jgit.lib.Repository;
@@ -19,10 +20,9 @@ import org.eclipse.jgit.lib.Repository;
 import com.e1c.edt.ai.AIContext;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IProjectIdProvider;
+import com.e1c.edt.ai.IProjectProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.assistent.ITools;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.ToolFeedbackFinalTextRequest;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
@@ -31,7 +31,7 @@ public class GitActions implements IGitActions
 {
     private final ILog log;
     private final IDispatcher dispatcher;
-    private final IProjectIdProvider projectIdProvider;
+    private final IProjectProvider projectProvider;
     private final ISettings settings;
     private final IGitTools gitTools;
     private final ITools tools;
@@ -39,19 +39,19 @@ public class GitActions implements IGitActions
     private Job currentJob;
 
     @Inject
-    public GitActions(ILog log, IDispatcher dispatcher, IProjectIdProvider projectIdProvider, ISettings settings,
+    public GitActions(ILog log, IDispatcher dispatcher, IProjectProvider projectProvider, ISettings settings,
         IGitTools gitTools, ITools tools, IChat chat)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(dispatcher);
-        Preconditions.checkNotNull(projectIdProvider);
+        Preconditions.checkNotNull(projectProvider);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(gitTools);
         Preconditions.checkNotNull(tools);
         Preconditions.checkNotNull(chat);
         this.log = log;
         this.dispatcher = dispatcher;
-        this.projectIdProvider = projectIdProvider;
+        this.projectProvider = projectProvider;
         this.settings = settings;
         this.gitTools = gitTools;
         this.tools = tools;
@@ -65,7 +65,7 @@ public class GitActions implements IGitActions
             try
             {
                 var diff = getDiff(diffs, cancellationToken);
-                ProjectId firstProjectId = null;
+                IProject firstProject = null;
                 var diffText = new StringBuilder();
                 for (var diffItem : diff.entrySet())
                 {
@@ -74,9 +74,9 @@ public class GitActions implements IGitActions
                         break;
                     }
 
-                    if (firstProjectId == null)
+                    if (firstProject == null)
                     {
-                        firstProjectId = diffItem.getKey();
+                        firstProject = diffItem.getKey();
                     }
                     else
                     {
@@ -86,10 +86,10 @@ public class GitActions implements IGitActions
                     diffText.append(diffItem.getValue());
                 }
 
-                if (firstProjectId != null)
+                if (firstProject != null)
                 {
-                    final var projectId = firstProjectId;
-                    var ctx = new AIContext(projectId, "", (IDocument)null); //$NON-NLS-1$
+                    final var project = firstProject;
+                    var ctx = new AIContext(project, "", (IDocument)null); //$NON-NLS-1$
                     var diffStr = diffText.toString();
                     dispatcher.dispatchAsync(() -> chat.reviewCode(ctx, diffStr));
 
@@ -110,14 +110,14 @@ public class GitActions implements IGitActions
         var request = new ToolFeedbackFinalTextRequest();
         request.uuid = commitMessage.getUuid();
         request.finalText = finalText;
-        return tools.feedbackAsync(commitMessage.getProjectId(), request, cancellationToken)
+        return tools.feedbackAsync(commitMessage.getProject(), request, cancellationToken)
             .thenApplyAsync(response -> response.map(i -> i.uuid));
     }
 
     @SuppressWarnings("nls")
-    private Map<ProjectId, String> getDiff(List<GitDiff> diffs, ICancellationToken cancellationToken)
+    private Map<IProject, String> getDiff(List<GitDiff> diffs, ICancellationToken cancellationToken)
     {
-        var result = new HashMap<ProjectId, String>();
+        var result = new HashMap<IProject, String>();
         var groupsByRepo = groupChangesByRepo(diffs);
         for (var groupByRepo : groupsByRepo.entrySet())
         {
@@ -126,8 +126,8 @@ public class GitActions implements IGitActions
                 break;
             }
 
-            var optionalProjectId = getProjectId(cancellationToken, groupByRepo);
-            if (optionalProjectId.isEmpty())
+            var optionalProject = getProject(groupByRepo);
+            if (optionalProject.isEmpty())
             {
                 log.warning("Git", () -> "No project id found for diffs");
                 continue;
@@ -136,10 +136,10 @@ public class GitActions implements IGitActions
             var repository = groupByRepo.getKey();
             try (var gitDiffStream = new ByteArrayOutputStream())
             {
-                var projectId = optionalProjectId.get();
-                gitTools.getDiff(repository, settings.getGitDiffContextLines(projectId), gitDiffStream);
+                var project = optionalProject.get();
+                gitTools.getDiff(repository, settings.getGitDiffContextLines(project), gitDiffStream);
                 var gitDiff = gitDiffStream.toString("UTF-8");
-                result.put(projectId, gitDiff);
+                result.put(project, gitDiff);
             }
             catch (Exception error)
             {
@@ -150,13 +150,12 @@ public class GitActions implements IGitActions
         return result;
     }
 
-    private Optional<ProjectId> getProjectId(ICancellationToken cancellationToken,
-        Entry<Repository, List<GitDiff>> groupByRepo)
+    private Optional<IProject> getProject(Entry<Repository, List<GitDiff>> groupByRepo)
     {
         return groupByRepo.getValue()
             .stream()
             .flatMap(diff -> diff.getPaths().stream())
-            .map(diff -> projectIdProvider.getProjectId(diff, cancellationToken))
+            .map(projectProvider::getProject)
             .filter(project -> project.isPresent())
             .map(project -> project.get())
             .findFirst();

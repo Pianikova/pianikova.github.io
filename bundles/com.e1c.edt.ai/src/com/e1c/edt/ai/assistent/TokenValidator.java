@@ -7,7 +7,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -33,7 +32,7 @@ public class TokenValidator
         return CompletableFuture.supplyAsync(() -> {
             try
             {
-                CompletableFuture<Optional<Session>> future = sessionService.getSessionAsync(ProjectId.Default);
+                CompletableFuture<Optional<Session>> future = sessionService.getGlobalSessionAsync();
                 Optional<Session> session = future.get();
 
                 // Token is considered valid if session exists and has a non-null sessionId

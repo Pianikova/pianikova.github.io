@@ -96,7 +96,7 @@ class GlobalContextTracker
     @Override
     public void track(AIContext aiCtx)
     {
-        track(aiCtx.getProjectId().project).ifPresent(workflow -> workflow.track(aiCtx));
+        track(aiCtx.getProject()).ifPresent(workflow -> workflow.track(aiCtx));
     }
 
     private void scheduleTracking(String workflowKey, IProjectTrackingWorkflow workflow, long delayMs)

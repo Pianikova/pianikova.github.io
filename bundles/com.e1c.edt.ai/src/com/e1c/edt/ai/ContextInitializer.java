@@ -28,7 +28,7 @@ public class ContextInitializer
         if (text.isEmpty())
         {
             return Optional
-                .of(new AIContext(ctx.getProjectId(), ctx.getCaretOffset(), ctx.getSource(),
+                .of(new AIContext(ctx.getProject(), ctx.getCaretOffset(), ctx.getSource(),
                     ctx.getSourceOffset(),
                     ctx.getPath(), text,
                     ctx.getTextOffset(), ctx.getDocument(), () -> ctx.isDisposed()));
@@ -47,11 +47,11 @@ public class ContextInitializer
             offset = text.length();
         }
 
-        var parts = contextSplitter.split(ctx.getProjectId(), text, offset, limitSize);
+        var parts = contextSplitter.split(ctx.getProject(), text, offset, limitSize);
         var prefix = parts.getPrefix().apply(text);
         var sufix = parts.getSufix().apply(text);
         return Optional
-            .of(new AIContext(ctx.getProjectId(), ctx.getCaretOffset(), source, sourceOffset,
+            .of(new AIContext(ctx.getProject(), ctx.getCaretOffset(), source, sourceOffset,
                 ctx.getPath(), text,
                 offset, prefix, sufix,
                 sourceOffset - parts.getPrefix().getLength(), sourceOffset + parts.getSufix().getLength(),

@@ -13,13 +13,14 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 
+import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 
 import com.e1c.edt.ai.assistent.ConversationSession;
 import com.e1c.edt.ai.assistent.SendMessageResult;
 import com.e1c.edt.ai.assistent.SendUserMessageRequest;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -240,7 +241,8 @@ public class DevAutopilot
 
     private void runTurn(Request request, Response response) throws Exception
     {
-        ProjectId projectId = resolveProjectId(request.project);
+        IProject project = resolveProject(request.project)
+            .orElseThrow(() -> new IllegalArgumentException("Project is required and must exist: " + request.project)); //$NON-NLS-1$
         var promptText = applyPreamble(request);
         // Multi-artifact metadata tasks (object + form/template + content) plus self-correction
         // need more than the default 10 tool rounds; default the harness to a higher cap.
@@ -262,7 +264,7 @@ public class DevAutopilot
             boolean forceNewConversation = true;
             for (int autoContinue = 0; autoContinue <= MAX_AUTO_CONTINUES; autoContinue++)
             {
-                var message = new SendUserMessageRequest(projectId, nextPrompt, session, forceNewConversation, skill,
+                var message = new SendUserMessageRequest(project, nextPrompt, session, forceNewConversation, skill,
                     isChat, maxToolRounds);
                 SendMessageResult result = conversationFacade.sendAsync(message, CancellationTokens.NONE)
                     .get(TURN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -423,18 +425,18 @@ public class DevAutopilot
             + "Нельзя изменять файлы других проектов.\n\n"; //$NON-NLS-1$
     }
 
-    private ProjectId resolveProjectId(String projectName)
+    private Optional<IProject> resolveProject(String projectName)
     {
         if (projectName == null || projectName.isBlank())
         {
-            return ProjectId.Default;
+            return Optional.empty();
         }
         var project = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
         if (project != null && project.exists())
         {
-            return new ProjectId(project);
+            return Optional.of(project);
         }
-        return ProjectId.Default;
+        return Optional.empty();
     }
 
     private void writeOutbox(Path outbox, String id, Response response)

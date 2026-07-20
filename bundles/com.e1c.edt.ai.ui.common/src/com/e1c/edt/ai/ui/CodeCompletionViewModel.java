@@ -514,7 +514,7 @@ class CodeCompletionViewModel
             getCurrentMethod(aiCtx.getTextOffset()).ifPresent(currentMethod -> session.setMethod(currentMethod));
 
             var completionSource =
-                codeAssistant.createSource(aiCtx.getProjectId(), localContextProvider, cancellationTokenSource);
+                codeAssistant.createSource(aiCtx.getProject(), localContextProvider, cancellationTokenSource);
             requestDuration = Duration.between(startTime, clock.now());
             var processingStatistics = new ProcessingStatistics();
             // @formatter:off

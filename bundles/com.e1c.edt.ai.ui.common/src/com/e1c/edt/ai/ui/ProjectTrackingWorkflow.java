@@ -25,13 +25,11 @@ import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IClock;
 import com.e1c.edt.ai.IHashTools;
 import com.e1c.edt.ai.ILog;
-import com.e1c.edt.ai.IProjectIdProvider;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.IStatistics;
 import com.e1c.edt.ai.TracingSources;
 import com.e1c.edt.ai.assistent.ISessionService;
 import com.e1c.edt.ai.assistent.model.GlobalContextUpdate;
-import com.e1c.edt.ai.assistent.model.ProjectId;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -49,7 +47,6 @@ class ProjectTrackingWorkflow
     private final Provider<IStatistics> statisticsProvider;
     private final IHashTools hashTools;
     private final IClock clock;
-    private final IProjectIdProvider projectIdProvider;
     private final IGlobalContextSync globalContextSync;
     private final ISettings settings;
     private final IFileScaner fileScaner;
@@ -57,21 +54,19 @@ class ProjectTrackingWorkflow
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
     private IProject project;
-    private ProjectId projectId;
     private volatile boolean resetRequested;
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
     private int iterationCount = Integer.MAX_VALUE;
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
-        IClock clock, IProjectIdProvider projectIdProvider, IGlobalContextSync globalContextSync, ISettings settings,
+        IClock clock, IGlobalContextSync globalContextSync, ISettings settings,
         IFileScaner fileScaner, ISessionService sessionService)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
         Preconditions.checkNotNull(hashTools);
         Preconditions.checkNotNull(clock);
-        Preconditions.checkNotNull(projectIdProvider);
         Preconditions.checkNotNull(globalContextSync);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(fileScaner);
@@ -80,7 +75,6 @@ class ProjectTrackingWorkflow
         this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
         this.clock = clock;
-        this.projectIdProvider = projectIdProvider;
         this.globalContextSync = globalContextSync;
         this.settings = settings;
         this.fileScaner = fileScaner;
@@ -92,7 +86,6 @@ class ProjectTrackingWorkflow
     {
         Preconditions.checkNotNull(project);
         this.project = project;
-        projectId = projectIdProvider.getProjectId(project);
         iterationCount = Integer.MAX_VALUE;
         return this;
     }
@@ -213,7 +206,7 @@ class ProjectTrackingWorkflow
         throws CoreException
     {
         progressMonitor.subTask(Messages.CodeCompletionBackgroundScanSubtaskName);
-        if (!settings.sendGlobalContext(projectId))
+        if (!settings.sendGlobalContext(project))
         {
             // The server decides per project (via the session it returns) whether global context is synced,
             // and exposes that through sendGlobalContext(). Establish the session asynchronously so those
@@ -221,7 +214,7 @@ class ProjectTrackingWorkflow
             // a cheap no-op once the session exists. Without it the workflow would never sync until some other
             // path (e.g. code completion) happened to create the session — global context sync is expected to
             // begin right at EDT startup.
-            sessionService.getSessionAsync(projectId);
+            sessionService.getSessionAsync(project);
             return new Result(ProjectTrackingWorkflowState.SCAN, LongDelay);
         }
 
@@ -239,7 +232,7 @@ class ProjectTrackingWorkflow
 
             var path = file.getFullPath().makeRelative().toPortableString();
             filesToHash.computeIfAbsent(path,
-                key -> new ProjectFile(new AIContext(projectId, key, (IDocument)null), key, file, now));
+                key -> new ProjectFile(new AIContext(project, key, (IDocument)null), key, file, now));
 
             if (cancellationToken.isCanceled())
             {
@@ -512,7 +505,7 @@ class ProjectTrackingWorkflow
         if (!filesUpdates.isEmpty())
         {
             features.add(
-                globalContextSync.syncUpdates(new AIContext(projectId, "", (IDocument)null), filesUpdates, 5, //$NON-NLS-1$
+                globalContextSync.syncUpdates(new AIContext(project, "", (IDocument)null), filesUpdates, 5, //$NON-NLS-1$
                     statisticsProvider.get(), cancellationToken));
         }
 
