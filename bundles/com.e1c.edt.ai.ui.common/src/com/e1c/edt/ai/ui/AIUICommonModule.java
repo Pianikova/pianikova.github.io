@@ -110,6 +110,7 @@ public class AIUICommonModule
         bind(BackgroundAnalysisTrigger.class).in(Singleton.class);
         bind(BackgroundAnalysisRegistrar.class).in(Singleton.class);
         bind(IProjectTrackingWorkflow.class).to(ProjectTrackingWorkflow.class);
+        bind(IGlobalContextStateStore.class).to(GlobalContextStateStore.class).in(Singleton.class);
         bind(IGlobalContextSync.class).to(GlobalContextSync.class).in(Singleton.class);
         bind(IProposalsProvider.class).to(ProposalsProvider.class).in(Singleton.class);
         bind(TextWidgetInfo.class).in(Singleton.class);
