@@ -87,7 +87,7 @@ public class Chat
 
     private static final String AI_CHAT = "AI Chat"; //$NON-NLS-1$
     private static final String CHAT_API_WINK_TEMPLATE =
-        "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\"}, \"%s\", \"%s\")"; //$NON-NLS-1$
+        "window.chatApi.wink({client_id: \"%s\", client_uid: \"%s\", session_id: %s}, \"%s\", \"%s\")"; //$NON-NLS-1$
     private static final String IDE_API = "ideApi"; //$NON-NLS-1$
     private static final String EMPTY_STRING = "``"; //$NON-NLS-1$
     private static final String NULL_VALUE = "null"; //$NON-NLS-1$
@@ -1155,10 +1155,11 @@ public class Chat
         }
         var toolsJson = json.serialize(tools);
 
+        var sessionId = currentProjectResolver.resolveOrDefault().flatMap(this::getSessionId).orElse(null);
         var webEngine = getEngine();
         while (true)
         {
-            executeWink(webEngine, toolsJson);
+            executeWink(webEngine, toolsJson, sessionId);
 
             if (handler.isReady() || attempts-- == 0)
             {
@@ -1179,7 +1180,7 @@ public class Chat
     }
 
     @SuppressWarnings("nls")
-    private void executeWink(WebEngine webEngine, String toolsJson)
+    private void executeWink(WebEngine webEngine, String toolsJson, String sessionId)
     {
         dispatcher.dispatch(() -> {
             try
@@ -1190,7 +1191,8 @@ public class Chat
                     window.setMember(IDE_API, handler);
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "set callback handler " + window.getMember(IDE_API));
                     var winkScript = String.format(CHAT_API_WINK_TEMPLATE, settings.getClientToken(),
-                        settings.getClientUniqueId(), settings.getLanguage(), settings.getTheme());
+                        settings.getClientUniqueId(), javaScript.escape(sessionId, NULL_VALUE), settings.getLanguage(),
+                        settings.getTheme());
                     log.trace(TracingSources.CHAT, AI_CHAT, () -> "wink script: " + winkScript);
                     var winkResult = webEngine.executeScript(winkScript);
                     log.trace(TracingSources.CHAT, AI_CHAT,
