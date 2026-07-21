@@ -125,22 +125,86 @@ public class ContentReplacerOrchestrationTest
     }
 
     @Test
-    public void testFallsThroughAmbiguousCandidateToLaterUniqueOne()
+    public void testAmbiguousCandidateStopsAndReportsMultipleMatches()
     {
-        // Documents the current contract: an ambiguous candidate (firstIndex != lastIndex)
-        // is skipped, and the orchestrator continues to later candidates / later strategies.
-        // A subsequent unique candidate IS accepted.
+        // New contract: an ambiguous candidate (found at more than one position) makes the level
+        // report "multiple matches". The orchestrator must NOT fall through to a looser strategy,
+        // which could uniquely match a different, wrong span and replace it.
         IReplacementStrategy s0 = strategy(0, Collections.singletonList("bbb"));
         IReplacementStrategy s1 = strategy(1, Collections.singletonList("aaa bbb ccc bbb"));
 
         ContentReplacer replacer = new ContentReplacer(setOf(s0, s1));
         ReplaceResult result = replacer.replace("aaa bbb ccc bbb", "ignored-find", "REPLACED", "\n", false);
 
-        assertTrue(result.isSuccess());
-        assertEquals("REPLACED", result.getUpdatedContent());
-        // hasMultipleOccurrences reflects occurrenceCount > 1 of the accepted candidate;
-        // here the accepted candidate occurs exactly once.
+        assertFalse(result.isSuccess());
+        assertTrue(result.hasMultipleOccurrences());
+        assertEquals("aaa bbb ccc bbb", result.getUpdatedContent());
+        verify(s1, never()).findCandidates(Mockito.anyString(), Mockito.anyString());
+    }
+
+    @Test
+    public void testMultipleDistinctUniqueCandidatesAreAmbiguous()
+    {
+        // A single strategy returns two different candidates, each unique on its own but at
+        // different positions. That is still ambiguous -> multiple matches, no acceptance of the
+        // first one and no fall-through.
+        IReplacementStrategy s0 = strategy(0, java.util.Arrays.asList("aaa", "ccc"));
+        IReplacementStrategy s1 = strategy(1, Collections.singletonList("bbb"));
+
+        ContentReplacer replacer = new ContentReplacer(setOf(s0, s1));
+        ReplaceResult result = replacer.replace("aaa bbb ccc", "ignored-find", "XXX", "\n", false);
+
+        assertFalse(result.isSuccess());
+        assertTrue(result.hasMultipleOccurrences());
+        assertEquals("aaa bbb ccc", result.getUpdatedContent());
+        verify(s1, never()).findCandidates(Mockito.anyString(), Mockito.anyString());
+    }
+
+    @Test
+    public void testReplaceAllWithFuzzyCandidateRequiresSingleMatch()
+    {
+        // replaceAll is only honored at the literal level (candidate.equals(find)). Here the
+        // candidate ("bbb") differs from the find ("ignored-find") and occurs twice -> the level is
+        // ambiguous and must report multiple matches instead of replacing every fuzzy occurrence.
+        IReplacementStrategy s0 = strategy(0, Collections.singletonList("bbb"));
+
+        ContentReplacer replacer = new ContentReplacer(setOf(s0));
+        ReplaceResult result = replacer.replace("aaa bbb ccc bbb", "ignored-find", "XXX", "\n", true);
+
+        assertFalse(result.isSuccess());
+        assertTrue(result.hasMultipleOccurrences());
+        assertEquals("aaa bbb ccc bbb", result.getUpdatedContent());
+    }
+
+    @Test
+    public void testDisproportionateFuzzyCandidateIsRejected()
+    {
+        // A fuzzy candidate whose length is many times the requested old content is a runaway anchor
+        // match; it must be rejected (treated as no match) rather than replacing a large block.
+        // Here find is "ab" (2 chars) and the only candidate spans the whole 15-char content.
+        IReplacementStrategy s0 = strategy(0, Collections.singletonList("aaa bbb ccc ddd"));
+
+        ContentReplacer replacer = new ContentReplacer(setOf(s0));
+        ReplaceResult result = replacer.replace("aaa bbb ccc ddd", "ab", "XXX", "\n", false);
+
+        assertFalse(result.isSuccess());
         assertFalse(result.hasMultipleOccurrences());
+        assertEquals("aaa bbb ccc ddd", result.getUpdatedContent());
+    }
+
+    @Test
+    public void testLiteralCandidateIsNeverRejectedByDisproportionGuard()
+    {
+        // The literal candidate (candidate.equals(find)) bypasses the disproportion guard: a large
+        // exact old content still replaces normally even though it dwarfs nothing to compare against.
+        String content = "aaa bbb ccc ddd";
+        IReplacementStrategy s0 = strategy(0, Collections.singletonList(content));
+
+        ContentReplacer replacer = new ContentReplacer(setOf(s0));
+        ReplaceResult result = replacer.replace(content, content, "XXX", "\n", false);
+
+        assertTrue(result.isSuccess());
+        assertEquals("XXX", result.getUpdatedContent());
     }
 
     @Test

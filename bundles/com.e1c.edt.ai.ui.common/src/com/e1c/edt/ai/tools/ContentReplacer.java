@@ -1,7 +1,9 @@
 package com.e1c.edt.ai.tools;
 
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -12,6 +14,14 @@ public class ContentReplacer implements IContentReplacer
 {
     private static final String NORMALIZED_LINE_DELIMITER = "\n"; //$NON-NLS-1$
     private static final String BOM = "\uFEFF"; // Byte Order Mark (UTF-8) //$NON-NLS-1$
+
+    /**
+     * A fuzzy (non-literal) candidate is rejected when it is more than this many times longer than the
+     * requested old content. Guards against an anchor strategy matching first+last line and swallowing
+     * the whole span in between, which would delete a large, unintended block.
+     */
+    private static final int MAX_FUZZY_MATCH_GROWTH_FACTOR = 3;
+
     private final List<IReplacementStrategy> replacementStrategies;
 
     @Inject
@@ -158,10 +168,13 @@ public class ContentReplacer implements IContentReplacer
 
     private ReplacementSearchResult findReplacement(String content, String find, boolean replaceAll)
     {
-        boolean foundAny = false;
-
         for (IReplacementStrategy strategy : replacementStrategies)
         {
+            // Distinct match regions this strategy resolves, keyed by offset+length so that two
+            // candidates covering the same span count once, while two candidates sharing a start
+            // offset but differing in length count as an ambiguity. Value is the candidate substring.
+            Map<Long, String> regions = new LinkedHashMap<>();
+
             for (String candidate : strategy.findCandidates(content, find))
             {
                 int firstIndex = content.indexOf(candidate);
@@ -170,29 +183,51 @@ public class ContentReplacer implements IContentReplacer
                     continue;
                 }
 
-                foundAny = true;
-                int occurrenceCount = countOccurrences(content, candidate);
-                if (replaceAll)
+                // "Replace all" is only safe at the strictest, literal level: the candidate must be
+                // exactly the requested old content. On fuzzy levels the candidate is a normalized /
+                // trimmed / re-anchored variant, so replacing every occurrence of it is unsafe -> a
+                // single unique match is required instead (regardless of the replaceAll flag).
+                if (replaceAll && candidate.equals(find))
                 {
-                    return ReplacementSearchResult.found(candidate, firstIndex, occurrenceCount);
+                    return ReplacementSearchResult.found(candidate, firstIndex, countOccurrences(content, candidate));
                 }
 
-                int lastIndex = content.lastIndexOf(candidate);
-                if (firstIndex != lastIndex)
+                // Reject a fuzzy candidate that ballooned far beyond the requested old content (e.g. an
+                // anchor strategy matching first+last line and swallowing the whole span in between):
+                // replacing it would delete a large, unintended block. The literal candidate
+                // (candidate.equals(find)) is never subject to this guard.
+                if (!candidate.equals(find) && !find.isEmpty()
+                    && candidate.length() > (long)find.length() * MAX_FUZZY_MATCH_GROWTH_FACTOR)
                 {
                     continue;
                 }
 
-                return ReplacementSearchResult.found(candidate, firstIndex, occurrenceCount);
+                // Record every occurrence of this candidate as a distinct region.
+                int step = Math.max(1, candidate.length());
+                for (int index = firstIndex; index != -1; index = content.indexOf(candidate, index + step))
+                {
+                    long key = ((long)index << 32) | (candidate.length() & 0xffffffffL);
+                    regions.putIfAbsent(key, candidate);
+                }
             }
+
+            if (regions.size() == 1)
+            {
+                Map.Entry<Long, String> only = regions.entrySet().iterator().next();
+                int offset = (int)(only.getKey() >> 32);
+                return ReplacementSearchResult.found(only.getValue(), offset, 1);
+            }
+            if (regions.size() > 1)
+            {
+                // This precision level found more than one place the old content could go. Do NOT fall
+                // through to a looser strategy (which might uniquely match a different, wrong span);
+                // report ambiguity so the caller can refine old_content.
+                return ReplacementSearchResult.multipleMatches();
+            }
+            // regions empty -> nothing at this level, try the next (looser) strategy.
         }
 
-        if (!foundAny)
-        {
-            return ReplacementSearchResult.notFound();
-        }
-
-        return ReplacementSearchResult.multipleMatches();
+        return ReplacementSearchResult.notFound();
     }
 
     private String stripBOM(String content)
