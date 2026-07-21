@@ -250,7 +250,7 @@ public class DevAutopilot
         // need more than the default 10 tool rounds; default the harness to a higher cap.
         Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(200);
         // The dev-autopilot must run on the "custom" skill regardless of the ConversationFacade
-        // default (which is "raw"). Honor an explicit per-request override (e.g. "raw" for routing
+        // default (which is "edt"). Honor an explicit per-request override (e.g. "edt" for routing
         // diagnostics); otherwise force "custom".
         String skill = request.skill != null ? request.skill : "custom"; //$NON-NLS-1$
         Boolean isChat = request.isChat != null ? request.isChat : Boolean.TRUE;

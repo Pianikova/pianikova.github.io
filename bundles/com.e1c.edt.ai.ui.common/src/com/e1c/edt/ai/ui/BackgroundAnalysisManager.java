@@ -35,8 +35,8 @@ import com.google.inject.Inject;
 public class BackgroundAnalysisManager
 {
     private static final String LATEST_REVISION = "latest"; //$NON-NLS-1$
-    // Background review always runs under the lightweight "raw" conversation skill without is_chat.
-    private static final String CONVERSATION_SKILL = "raw"; //$NON-NLS-1$
+    // Background review always runs under the lightweight "edt" conversation skill without is_chat.
+    private static final String CONVERSATION_SKILL = "edt"; //$NON-NLS-1$
     // Local history for the just-saved change is written as part of the save but can lag behind the
     // POST_CHANGE notification that triggers analysis. Retry briefly so the first save of a file with
     // no prior history still resolves a diff base instead of falling back to an empty "latest".

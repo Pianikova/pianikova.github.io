@@ -110,7 +110,7 @@ public class ConversationFacade
             return CompletableFuture.failedFuture(new CancellationException("Cancelled")); //$NON-NLS-1$
         }
         ConversationRequest conversationRequest = new ConversationRequest();
-        conversationRequest.skillName = request.getSkillName() != null ? request.getSkillName() : "raw"; //$NON-NLS-1$
+        conversationRequest.skillName = request.getSkillName() != null ? request.getSkillName() : "edt"; //$NON-NLS-1$
         conversationRequest.uiLanguage = settings.getLanguage();
         conversationRequest.programmingLanguage = "1c"; //$NON-NLS-1$
         // Default false so dev/helper conversations are not listed as chats; the dev-autopilot
