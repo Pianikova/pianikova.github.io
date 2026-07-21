@@ -296,7 +296,7 @@ public class ContextMenuInterceptor
 
     private void refreshMenuItems(Menu menu)
     {
-        var projectAvailable = currentProjectResolver.resolve().isPresent();
+        var projectAvailable = currentProjectResolver.resolveOrDefault().isPresent();
         for (var item : menu.getItems())
         {
             var data = item.getData();
@@ -354,7 +354,7 @@ public class ContextMenuInterceptor
 
         // Skill parameters are captured on the UI thread, before the background job starts
         var context = visualContextProviewr.create(text.getControl(), cancellationTokenSource);
-        var project = currentProjectResolver.resolve();
+        var project = currentProjectResolver.resolveOrDefault();
         if (project.isEmpty())
         {
             log.warning("AI Context Menu", () -> "Cannot determine project for text action"); //$NON-NLS-1$ //$NON-NLS-2$

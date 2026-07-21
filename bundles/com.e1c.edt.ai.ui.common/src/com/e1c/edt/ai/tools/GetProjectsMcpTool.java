@@ -24,6 +24,7 @@ import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
 import com.e1c.edt.ai.IProjectDetailsProvider;
+import com.e1c.edt.ai.IProjectParametersProvider;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
@@ -49,6 +50,7 @@ public class GetProjectsMcpTool
         "[\n"
         + "  {\n"
         + "    \"name\": \"Warehouse\",\n"
+        + "    \"uuid\": \"0a1845cd-0c6a-46e9-94aa-fa34021e74ff\",\n"
         + "    \"path\": \"D:\\\\Projects\\\\EDT_Plugin\\\\Warehouse\",\n"
         + "    \"is_open\": true,\n"
         + "    \"exists\": true,\n"
@@ -92,12 +94,13 @@ public class GetProjectsMcpTool
     private final IMarkdownUtils markdownUtils;
     private final IEditingSupport editingSupport;
     private final ICurrentProjectResolver currentProjectResolver;
+    private final IProjectParametersProvider projectParametersProvider;
 
     @Inject
     public GetProjectsMcpTool(ILog log, IJson json, IMcpToolsCallMessageFactory messageFactory,
         ISessionService sessionService, Set<IProjectDetailsProvider> projectDetailsProviders,
         IMarkdownUtils markdownUtils, IEditingSupport editingSupport,
-        ICurrentProjectResolver currentProjectResolver)
+        ICurrentProjectResolver currentProjectResolver, IProjectParametersProvider projectParametersProvider)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(json);
@@ -107,6 +110,7 @@ public class GetProjectsMcpTool
         Preconditions.checkNotNull(markdownUtils);
         Preconditions.checkNotNull(editingSupport);
         Preconditions.checkNotNull(currentProjectResolver);
+        Preconditions.checkNotNull(projectParametersProvider);
 
         this.log = log;
         this.json = json;
@@ -116,6 +120,7 @@ public class GetProjectsMcpTool
         this.markdownUtils = markdownUtils;
         this.editingSupport = editingSupport;
         this.currentProjectResolver = currentProjectResolver;
+        this.projectParametersProvider = projectParametersProvider;
 
         spec = createSpecification();
     }
@@ -175,6 +180,10 @@ public class GetProjectsMcpTool
                 if (project.isOpen() && project.exists())
                 {
                     projectInfo.readOnly = editingSupport.isReadOnly(project);
+                    // Same project uuid (root Configuration UUID) that is sent in create_session's
+                    // project_parameters. Empty until the V8 model is loaded, so uuid stays null in that case.
+                    projectParametersProvider.getProjectParameters(project)
+                        .ifPresent(params -> projectInfo.uuid = params.uuid);
                     try
                     {
                         var description = project.getDescription();
@@ -337,6 +346,9 @@ public class GetProjectsMcpTool
         /* Project name. */
         @SerializedName("name")
         public String name;
+
+        @SerializedName("uuid")
+        public String uuid;
 
         /* Absolute path to the project. */
         @SerializedName("path")
