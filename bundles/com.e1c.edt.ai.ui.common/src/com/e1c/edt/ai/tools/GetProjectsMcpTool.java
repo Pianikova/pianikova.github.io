@@ -322,7 +322,7 @@ public class GetProjectsMcpTool
         description.append("\n- Additional provider details (e.g., 1C project info)");
         description.append("\n\nRelated tools:");
         description.append("\n- Project issues/markers: `" + GetMarkersMcpTool.TOOL_NAME + "`.");
-        description.append("\n- Locate files: `" + FindMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Locate files: `" + GlobMcpTool.TOOL_NAME + "`.");
         description.append("\n- File history: `" + LocalHistoryMcpTool.TOOL_NAME + "`, `" + LocalChangesMcpTool.TOOL_NAME + "`.");
         description.append("\n- Navigation history: `" + NavigationHistoryMcpTool.TOOL_NAME + "`.");
         description.append("\n\nExample output:");

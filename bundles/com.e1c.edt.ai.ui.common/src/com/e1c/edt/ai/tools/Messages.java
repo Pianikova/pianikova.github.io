@@ -40,8 +40,6 @@ public class Messages
     public static String SearchResults;
     public static String Matches;
     public static String Line;
-    public static String FindFilesTitleTemplate;
-    public static String FilesFoundTemplate;
     public static String FileSize;
     public static String SearchQuery;
     public static String FileNamePatterns;

@@ -6,8 +6,10 @@ package com.e1c.edt.ai.ui;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -16,6 +18,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.Path;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentExtension4;
 
@@ -55,6 +58,7 @@ class ProjectTrackingWorkflow
     private final IFileScaner fileScaner;
     private final ISessionService sessionService;
     private final IProjectParametersProvider projectParametersProvider;
+    private final IGlobalContextStateStore stateStore;
     private final HashSet<ProjectFile> filesToSync = new HashSet<>();
     private final ConcurrentHashMap<String, ProjectFile> filesToHash = new ConcurrentHashMap<>();
     private IProject project;
@@ -62,12 +66,16 @@ class ProjectTrackingWorkflow
     private ProjectTrackingWorkflowState nextState = ProjectTrackingWorkflowState.INIT;
     private int iterationCount = Integer.MAX_VALUE;
     private int readinessWaitCycles = 0;
+    // Whether the persisted per-project state has been loaded into filesToHash yet (once per initialize()).
+    private boolean seeded;
+    // Set when filesToHash content changed in a way that must be persisted (rehash, prune, seed cleanup).
+    private volatile boolean stateDirty;
 
     @Inject
     public ProjectTrackingWorkflow(ILog log, Provider<IStatistics> statisticsProvider, IHashTools hashTools,
         IClock clock, IGlobalContextSync globalContextSync, ISettings settings,
         IFileScaner fileScaner, ISessionService sessionService,
-        IProjectParametersProvider projectParametersProvider)
+        IProjectParametersProvider projectParametersProvider, IGlobalContextStateStore stateStore)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(statisticsProvider);
@@ -78,6 +86,7 @@ class ProjectTrackingWorkflow
         Preconditions.checkNotNull(fileScaner);
         Preconditions.checkNotNull(sessionService);
         Preconditions.checkNotNull(projectParametersProvider);
+        Preconditions.checkNotNull(stateStore);
         this.log = log;
         this.statisticsProvider = statisticsProvider;
         this.hashTools = hashTools;
@@ -87,6 +96,7 @@ class ProjectTrackingWorkflow
         this.fileScaner = fileScaner;
         this.sessionService = sessionService;
         this.projectParametersProvider = projectParametersProvider;
+        this.stateStore = stateStore;
     }
 
     @Override
@@ -96,6 +106,8 @@ class ProjectTrackingWorkflow
         this.project = project;
         iterationCount = Integer.MAX_VALUE;
         readinessWaitCycles = 0;
+        seeded = false;
+        stateDirty = false;
         return this;
     }
 
@@ -174,6 +186,89 @@ class ProjectTrackingWorkflow
         }
     }
 
+    /**
+     * Loads the persisted per-project state and seeds {@link #filesToHash}. Seeded entries carry the previous
+     * session's local timestamp and MD5 hash, so hash() skips them while their file is unchanged. Files that no
+     * longer exist on disk are dropped (they fall out of the state on the next persist).
+     */
+    private void seedFromPersistedState()
+    {
+        Map<String, GlobalContextFileState> saved;
+        try
+        {
+            saved = stateStore.load(project);
+        }
+        catch (Exception error)
+        {
+            log.logError(error);
+            return;
+        }
+
+        for (var entry : saved.entrySet())
+        {
+            var portablePath = entry.getKey();
+            var state = entry.getValue();
+            if (state == null || state.hash == null)
+            {
+                continue;
+            }
+
+            var path = Path.fromPortableString(portablePath);
+            if (path.segmentCount() <= 1)
+            {
+                continue;
+            }
+
+            var file = project.getFile(path.removeFirstSegments(1));
+            if (file == null || !file.exists())
+            {
+                // Deleted while EDT was closed: don't seed. It won't be re-added, so it self-prunes from the state.
+                stateDirty = true;
+                continue;
+            }
+
+            filesToHash.computeIfAbsent(portablePath, key -> {
+                var seededFile = new ProjectFile(new AIContext(project, key, (IDocument)null), key, file, clock.now());
+                seededFile.update(clock.now(), state.hash, state.time);
+                return seededFile;
+            });
+        }
+    }
+
+    /**
+     * Persists a snapshot of the current sync state. Only quiescent, on-disk, already-hashed files are stored: open
+     * editors are skipped so an unsaved buffer's hash is never paired with the disk file's timestamp. Because the
+     * snapshot is rebuilt from the live map, deleted files drop out automatically.
+     */
+    private void persistState()
+    {
+        var snapshot = new HashMap<String, GlobalContextFileState>();
+        for (var file : filesToHash.values())
+        {
+            if (file.aiCtx.getDocument() != null)
+            {
+                continue;
+            }
+
+            var hash = file.getHash();
+            // Persist the stored stamp (not the live getLocalTimeStamp()): update() always sets hash + stamp
+            // together, so the stored pair is always self-consistent even if persist runs before hash() has
+            // re-validated a freshly seeded entry. For a document-less entry this stamp is a local timestamp.
+            var time = file.getModificationStamp();
+            if (hash == null || time <= 0)
+            {
+                continue;
+            }
+
+            var state = new GlobalContextFileState();
+            state.time = time;
+            state.hash = hash;
+            snapshot.put(file.path, state);
+        }
+
+        stateStore.save(project, snapshot);
+    }
+
     @Override
     public void track(AIContext aiCtx)
     {
@@ -198,6 +293,20 @@ class ProjectTrackingWorkflow
 
     private Result init(IProgressMonitor progressMonitor, ICancellationToken cancellationToken)
     {
+        // Flush the persisted state at a quiescent point (debounced by the dirty flag) so restarts stay incremental.
+        if (stateDirty)
+        {
+            stateDirty = false;
+            try
+            {
+                persistState();
+            }
+            catch (Exception error)
+            {
+                log.logError(error);
+            }
+        }
+
         if (iterationCount < HashCyclesBetweenScans)
         {
             iterationCount++;
@@ -249,6 +358,16 @@ class ProjectTrackingWorkflow
             return new Result(ProjectTrackingWorkflowState.SCAN, LongDelay);
         }
 
+        // Seed filesToHash from the persisted state before the fresh scan, so hash() can skip files whose local
+        // timestamp still matches (no MD5, no sync). Done once per initialize(), on the tracking Job (never the UI
+        // thread). computeIfAbsent below preserves these seeded entries (with their hash + timestamp) instead of
+        // overwriting them with fresh stamp=-1 ProjectFiles.
+        if (!seeded)
+        {
+            seeded = true;
+            seedFromPersistedState();
+        }
+
         List<IFile> files = fileScaner.scan(project);
         var now = clock.now();
         for (var file : files)
@@ -274,8 +393,11 @@ class ProjectTrackingWorkflow
         // Drop tracked entries for files that no longer exist (e.g. deleted) and are not backed by an open
         // document, so filesToHash does not retain stale ProjectFiles indefinitely. IResource.exists() is an
         // in-memory workspace check, not disk I/O.
-        filesToHash.values()
-            .removeIf(tracked -> tracked.aiCtx.getDocument() == null && !tracked.file.exists());
+        if (filesToHash.values()
+            .removeIf(tracked -> tracked.aiCtx.getDocument() == null && !tracked.file.exists()))
+        {
+            stateDirty = true;
+        }
 
         var newFilesToHashCount = 0;
         for (var file : filesToHash.values())
@@ -375,7 +497,11 @@ class ProjectTrackingWorkflow
                 {
                     document = null;
                     isAccessible = file.file.isAccessible();
-                    newModificationStamp = file.file.getModificationStamp();
+                    // Use the filesystem timestamp (not getModificationStamp()): it is comparable across EDT
+                    // restarts, which is what lets a seeded entry from a previous session match an unchanged file
+                    // and skip re-hashing. getModificationStamp() is an in-session workspace counter and is not
+                    // guaranteed to survive a restart.
+                    newModificationStamp = file.file.getLocalTimeStamp();
                     if (isAccessible && file.getModificationStamp() == newModificationStamp)
                     {
                         file.update(now, prevHash, newModificationStamp);
@@ -388,6 +514,8 @@ class ProjectTrackingWorkflow
                     : null;
                 file.update(now, newHash, newModificationStamp);
                 hashed++;
+                // Content (or its timestamp) changed for this file: the persisted state needs a refresh.
+                stateDirty = true;
                 if (newHash != null && newHash.equals(prevHash))
                 {
                     continue;

@@ -338,7 +338,7 @@ public class ReadMcpTool
         description.append("\n- Preserve exact whitespace and line endings (\\r, \\n, \\t).");
         description.append("\n- If you plan to edit, read a larger chunk to make `origin_content` unique.");
         description.append("\n\nRelated tools:");
-        description.append("\n- Locate files: `" + FindMcpTool.TOOL_NAME + "`.");
+        description.append("\n- Locate files: `" + GlobMcpTool.TOOL_NAME + "`.");
         description.append("\n- Modify files: `" + EditMcpTool.TOOL_NAME + "`, `" + WriteMcpTool.TOOL_NAME + "`.");
         description.append("\n- MUST use `" + DeleteMarkersMcpTool.TOOL_NAME + "` and `" + SetMarkersMcpTool.TOOL_NAME
             + "` to update issues, plans, schedules, proposals, tasks, TODO, bookmarks, etc.");

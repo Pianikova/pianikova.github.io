@@ -27,19 +27,22 @@ public class ActiveProjectTracker
     private final IGlobalContextTracker globalContextTracker;
     private final ISettings settings;
     private final IStateService stateService;
+    private final IGlobalContextStateStore stateStore;
 
     @Inject
     public ActiveProjectTracker(ILog log, IGlobalContextTracker globalContextTracker, ISettings settings,
-        IStateService stateService)
+        IStateService stateService, IGlobalContextStateStore stateStore)
     {
         Preconditions.checkNotNull(log);
         Preconditions.checkNotNull(globalContextTracker);
         Preconditions.checkNotNull(settings);
         Preconditions.checkNotNull(stateService);
+        Preconditions.checkNotNull(stateStore);
         this.log = log;
         this.globalContextTracker = globalContextTracker;
         this.settings = settings;
         this.stateService = stateService;
+        this.stateStore = stateStore;
     }
 
     @Override
@@ -95,6 +98,10 @@ public class ActiveProjectTracker
                 {
                     trackProject(delta);
                 }
+                else if (isProjectRemoved(delta))
+                {
+                    deleteProjectState(delta);
+                }
                 return true;
             });
         }
@@ -108,6 +115,24 @@ public class ActiveProjectTracker
     {
         var kind = delta.getKind();
         return (kind & IResourceDelta.ADDED) != 0;
+    }
+
+    private boolean isProjectRemoved(IResourceDelta delta)
+    {
+        // REMOVED is a deletion from the workspace. A project close is a CHANGED+OPEN delta, so this does not fire
+        // on close (we keep the state for a reopen).
+        return (delta.getKind() & IResourceDelta.REMOVED) != 0;
+    }
+
+    private void deleteProjectState(IResourceDelta delta)
+    {
+        var resource = delta.getResource();
+        if (resource == null || resource.getType() != IResource.PROJECT)
+        {
+            return;
+        }
+
+        stateStore.delete((IProject)resource);
     }
 
     private void trackProject(IResourceDelta delta)
