@@ -31,9 +31,7 @@ public class MCPToolsModule
         toolBinder.addBinding().to(GetCommandCategoriesMcpTool.class);
         toolBinder.addBinding().to(GetCommandsMcpTool.class);
         toolBinder.addBinding().to(ReadMcpTool.class);
-        toolBinder.addBinding().to(FindMcpTool.class);
         toolBinder.addBinding().to(SearchTextMcpTool.class);
-        toolBinder.addBinding().to(SearchFilesMcpTool.class);
         toolBinder.addBinding().to(GlobMcpTool.class);
         toolBinder.addBinding().to(ListMcpTool.class);
         // toolBinder.addBinding().to(GitMcpTool.class);
