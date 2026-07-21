@@ -606,7 +606,7 @@ public class Chat
     private void chat(String topic, String subject, String details, AIContext ctx)
     {
         ui.showView(BaseChatView.ID);
-        var resolvedContext = Optional.ofNullable(ctx).or(() -> currentProjectResolver.resolve()
+        var resolvedContext = Optional.ofNullable(ctx).or(() -> currentProjectResolver.resolveOrDefault()
             .map(project -> new AIContext(project, "", null))); //$NON-NLS-1$
         if (resolvedContext.isEmpty())
         {

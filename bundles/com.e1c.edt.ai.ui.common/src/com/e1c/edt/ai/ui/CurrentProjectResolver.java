@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.ui;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -54,6 +55,23 @@ class CurrentProjectResolver
                 () -> "Project resolution failed: source=current-context"); //$NON-NLS-1$
         }
         return project;
+    }
+
+    @Override
+    public Optional<IProject> resolveOrDefault()
+    {
+        return resolve().or(this::firstAccessibleProject);
+    }
+
+    private Optional<IProject> firstAccessibleProject()
+    {
+        // Stable order: sort by name so the choice is deterministic across sessions
+        // (IWorkspaceRoot.getProjects() order is not guaranteed stable).
+        var project = Arrays.stream(ResourcesPlugin.getWorkspace().getRoot().getProjects())
+            .filter(IProject::isAccessible)
+            .sorted(Comparator.comparing(IProject::getName))
+            .findFirst();
+        return traced(project, "first-project"); //$NON-NLS-1$
     }
 
     private Optional<IProject> resolveOnUiThread()
