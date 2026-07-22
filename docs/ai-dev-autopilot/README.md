@@ -125,7 +125,7 @@ filename order.
   single empty message.
 - `auto_continue_count` — number of automatic "continue with tools" nudges the harness sent inside
   the same request when the model read manuals or wrote "создам/начну" but stopped before JShell.
-- `stalled` — `true` when no `jshell` ran (the model gathered context and stopped).
+- `stalled` — `true` when neither `jshell` nor `1c_editmetadata` ran (the model gathered context and stopped).
 - `tool_error_count`, `jshell_error_count`, `has_tool_failures` — aggregate failure flags. Treat
   `has_tool_failures:true` as a failed/dirty run even if the final assistant text says success.
 - `tools_count` / `tools_definition_chars` — size of the fixed tool-definition prelude sent every

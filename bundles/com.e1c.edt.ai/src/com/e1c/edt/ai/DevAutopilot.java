@@ -52,7 +52,9 @@ public class DevAutopilot
      * empty string to send the bare prompt).
      */
     private static final String DEFAULT_PREAMBLE =
-        "Не отвечай одним планом и не останавливайся.\n\nЗадача: "; //$NON-NLS-1$
+        "Не отвечай одним планом и не останавливайся. Инструмента TodoWrite нет: не вызывай его. " //$NON-NLS-1$
+            + "Никогда не создавай и не исправляй метаданные прямым редактированием .mdo/.form/XML. " //$NON-NLS-1$
+            + "Используй 1C_EditMetadata; ошибочный дочерний элемент удали и создай заново его операциями.\n\nЗадача: "; //$NON-NLS-1$
 
     private final IConversationFacade conversationFacade;
     private final IDevToolCallRecorder recorder;
@@ -291,7 +293,7 @@ public class DevAutopilot
             response.toolCalls = recorder.endRun();
             response.toolCallCount = response.toolCalls != null ? response.toolCalls.size() : 0;
             response.stalled = response.toolCalls == null
-                || response.toolCalls.stream().noneMatch(c -> "jshell".equalsIgnoreCase(c.tool)); //$NON-NLS-1$
+                || response.toolCalls.stream().noneMatch(c -> isMutationTool(c.tool));
             captureToolFailureMetrics(response);
         }
     }
@@ -311,6 +313,11 @@ public class DevAutopilot
                 || hasNonEmptyJsonArray(c.result, "runtime_errors")) //$NON-NLS-1$
             .count();
         response.hasToolFailures = response.toolErrorCount > 0 || response.jshellErrorCount > 0;
+    }
+
+    public static boolean isMutationTool(String tool)
+    {
+        return "jshell".equalsIgnoreCase(tool) || "1c_editmetadata".equalsIgnoreCase(tool); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private boolean hasNonEmptyJsonArray(String text, String field)
@@ -376,8 +383,8 @@ public class DevAutopilot
     {
         return targetProjectInstruction(request)
             + "Продолжай немедленно инструментами в этой же задаче. Не отвечай планом и не пиши \"создам\". " //$NON-NLS-1$
-            + "Следующее действие должно быть tool call: JShellManual, JShellSession, JShell или GetMarkers. " //$NON-NLS-1$
-            + "Если нужные manual уже прочитаны, сразу выполняй JShell-код и затем проверяй маркеры."; //$NON-NLS-1$
+            + "Следующее действие должно быть tool call: 1C_EditMetadata, JShellManual, JShellSession, JShell или GetMarkers. " //$NON-NLS-1$
+            + "Для поддерживаемого CRUD метаданных предпочитай 1C_EditMetadata; иначе выполняй JShell-код. Затем проверяй маркеры."; //$NON-NLS-1$
     }
 
     private void captureToolsMetrics(Response response)
@@ -536,7 +543,7 @@ public class DevAutopilot
         @SerializedName("has_tool_failures")
         public boolean hasToolFailures;
 
-        /** True when the turn ran no `jshell` (the model gathered context and stopped). */
+        /** True when the turn ran neither `jshell` nor `1c_editmetadata`. */
         @SerializedName("stalled")
         public boolean stalled;
 
