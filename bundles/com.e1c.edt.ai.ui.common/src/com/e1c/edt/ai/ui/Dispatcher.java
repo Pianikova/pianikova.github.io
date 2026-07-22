@@ -9,8 +9,11 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -37,10 +40,24 @@ class Dispatcher
     implements IDispatcher
 {
     private static final StackTraceElement[] EmptyStackTrace = new StackTraceElement[0];
+
+    /**
+     * Lower bound for the UI watchdog timeout. A hung UI-thread call (e.g. {@code Job.join()} from a JShell
+     * snippet) never completes, so the watchdog only needs to be generous enough not to interrupt legitimate
+     * long-running metadata work — holding the UI thread longer than this is already a severe freeze.
+     */
+    private static final Duration UiWatchdogFloor = Duration.ofSeconds(120);
+
     private final ILog log;
     private final ISettings settings;
     private final IClock clock;
     private final ArrayList<Job> currentJobs = new ArrayList<>();
+    private final ScheduledExecutorService uiWatchdogScheduler =
+        Executors.newSingleThreadScheduledExecutor(runnable -> {
+            var thread = new Thread(runnable, "ai-ui-watchdog"); //$NON-NLS-1$
+            thread.setDaemon(true);
+            return thread;
+        });
 
     @Inject
     public Dispatcher(ILog log, ISettings settings, IClock clock)
@@ -136,6 +153,98 @@ class Dispatcher
         }
 
         return Optional.ofNullable(vals.get(0));
+    }
+
+    @SuppressWarnings("nls")
+    @Override
+    public <T> Optional<T> dispatchWithUiWatchdog(Supplier<? extends T> supplier)
+    {
+        Preconditions.checkNotNull(supplier);
+        var display = Display.getDefault();
+
+        // Already on the UI thread: a watchdog cannot interrupt the thread it runs on, so fall back to a
+        // plain inline invocation. In practice unsafe callers (JShell) always dispatch from a worker thread.
+        if (Thread.currentThread() == display.getThread())
+        {
+            return dispatch(supplier);
+        }
+
+        var startTime = clock.now();
+        var vals = new ArrayList<T>();
+        var uiThread = display.getThread();
+        // Claimed either by the watchdog (when it fires) or by normal completion, whichever happens first.
+        var settled = new AtomicBoolean(false);
+        var watchdogFired = new AtomicBoolean(false);
+        var timeout = computeUiWatchdogTimeout();
+
+        ScheduledFuture<?> watchdog = uiWatchdogScheduler.schedule(() -> {
+            if (settled.compareAndSet(false, true))
+            {
+                watchdogFired.set(true);
+                // Capture the hung UI-thread stack before interrupting — this is what surfaces the offending
+                // snippet in .metadata/.log.
+                var uiStack = uiThread.getStackTrace();
+                log.warning("UI watchdog", () -> {
+                    var sb = new StringBuilder();
+                    sb.append("A UI-thread operation exceeded ").append(timeout.toMillis()).append(" ms and was");
+                    sb.append(" interrupted to keep the IDE responsive (likely a blocking wait such as Job.join()).");
+                    sb.append(System.lineSeparator()).append("UI thread stack:");
+                    for (StackTraceElement ste : uiStack)
+                    {
+                        sb.append(System.lineSeparator()).append('\t').append(ste);
+                    }
+                    return sb.toString();
+                });
+                // Breaks blocking waits (Job.join/Object.wait/sleep/park) running on the UI thread.
+                uiThread.interrupt();
+            }
+        }, timeout.toMillis(), TimeUnit.MILLISECONDS);
+
+        try
+        {
+            display.syncExec(() -> {
+                try
+                {
+                    vals.add(supplier.get());
+                }
+                catch (Exception ex)
+                {
+                    log.logError(ex);
+                }
+            });
+        }
+        finally
+        {
+            // Normal completion wins the race → cancel the pending watchdog. If the watchdog already fired,
+            // the CAS fails and we leave watchdogFired set.
+            if (settled.compareAndSet(false, true))
+            {
+                watchdog.cancel(false);
+            }
+            checkMicrofreeze("UI watchdog call", startTime, () -> Thread.currentThread().getStackTrace());
+        }
+
+        if (watchdogFired.get())
+        {
+            return Optional.empty();
+        }
+
+        if (vals.isEmpty())
+        {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(vals.get(0));
+    }
+
+    private Duration computeUiWatchdogTimeout()
+    {
+        var configured = settings.getTimeout();
+        if (configured == null || configured.compareTo(UiWatchdogFloor) < 0)
+        {
+            return UiWatchdogFloor;
+        }
+        return configured;
     }
 
     private StackTraceElement[] getStack()

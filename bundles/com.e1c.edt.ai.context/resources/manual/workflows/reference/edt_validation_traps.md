@@ -2,6 +2,34 @@
 
 Check this file before writing JShell code that mutates metadata. These traps are based on observed logs and EDT model patterns.
 
+## ⛔ Never block the UI thread → IDE freeze / deadlock
+
+JShell snippets run **on the Eclipse UI thread**. Any blocking wait freezes the whole IDE and often
+deadlocks: the thing you wait for (a background `Job`, the Derived Data pipeline, a BM async task)
+usually needs the UI thread to finish, so it can never complete while you hold it.
+
+Do **NOT** call, from a snippet:
+
+- `Job.join()` / `IJobManager.join(...)`
+- `Future.get()` / `CompletableFuture.get()`
+- `CountDownLatch.await()`, `Semaphore.acquire()`, `Object.wait()`
+- `Thread.sleep(...)`, `Thread.join()`, or any custom "wait until done" loop
+
+Observed: a snippet called `Job.join()` to wait for a background job; the UI thread parked on
+`Semaphore.acquire` inside `JobManager.join(...)` and the IDE hung indefinitely.
+
+Instead:
+
+- Schedule background work and **return immediately** — `job.schedule();` (do not join it). Report the
+  next verification step to the user rather than waiting inline.
+- Do work **synchronously without joining** — the BM global context (`getGlobalContext().execute(...)`)
+  and metadata reads already run on the UI thread and return directly; no join needed.
+- To wait for Derived Data / markers, do **not** block — finish the mutation, then use the `GetMarkers`
+  tool (it waits for the DD pipeline safely off the UI thread).
+
+Snippets that block the UI thread too long are interrupted by a UI watchdog and fail with a retryable
+error. Fix the snippet by removing the blocking wait — do not just retry.
+
 ## ⛔ Wrong transaction entry → object not saved to disk
 
 Create/edit metadata ONLY through the global editing context:

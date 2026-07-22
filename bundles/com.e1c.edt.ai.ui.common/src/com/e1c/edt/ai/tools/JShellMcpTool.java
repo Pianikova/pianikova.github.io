@@ -130,10 +130,15 @@ public class JShellMcpTool
             var sessionLock = sessionLocks.computeIfAbsent(session.getSessionId(), id -> new Object());
             synchronized (sessionLock)
             {
-                var optionalResult = dispatcher.dispatch(() -> session.execute(request.code));
+                var optionalResult = dispatcher.dispatchWithUiWatchdog(() -> session.execute(request.code));
                 if (optionalResult.isEmpty())
                 {
-                    throw new ToolException("Can't execute code.", null, ToolErrorType.RETRYABLE);
+                    throw new ToolException(
+                        "Can't execute code. Execution was aborted — this usually means the snippet blocked the UI"
+                            + " thread (e.g. Job.join(), Future.get(), CountDownLatch.await(), Thread.sleep()) and was"
+                            + " interrupted by the UI watchdog. Remove blocking waits: schedule background work and"
+                            + " return immediately instead of joining on it.",
+                        null, ToolErrorType.RETRYABLE);
                 }
 
                 var result = optionalResult.get();
@@ -379,6 +384,12 @@ public class JShellMcpTool
             .append("when a missing type is truly needed, add an explicit import or use a fully-qualified class name");
         description.append("\n- You MUST call ").append(JShellSessionMcpTool.TOOL_NAME).append(" tool first to create or get a valid session ID");
         description.append("\n- This tool will fail with error if you provide an invalid or non-existent session ID");
+        description.append("\n- NEVER block the calling thread inside a snippet. This code runs on the Eclipse UI thread, so ")
+            .append("Job.join(), Future.get(), CountDownLatch.await(), Thread.sleep(), Object.wait(), or any other blocking ")
+            .append("wait will FREEZE the IDE and can DEADLOCK — the awaited job often needs the UI thread to finish. To run ")
+            .append("background work, schedule it (e.g. Job.schedule()) and return immediately without joining; do the work ")
+            .append("inline only if it does not wait on another thread. Snippets that block too long are interrupted by a UI ")
+            .append("watchdog and fail with a retryable error");
 
 		description.append("\n\n**When to use:**");
 		description.append("\n- Use when other IDE tools (" + GitMcpTool.TOOL_NAME + " , " + ReadMcpTool.TOOL_NAME + ", etc.) cannot accomplish the task");
