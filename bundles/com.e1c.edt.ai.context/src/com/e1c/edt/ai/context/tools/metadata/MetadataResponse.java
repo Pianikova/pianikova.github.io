@@ -5,6 +5,7 @@ package com.e1c.edt.ai.context.tools.metadata;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -20,6 +21,14 @@ final class MetadataResponse
 
     @SerializedName("resource_path")
     String resourcePath;
+
+    @SerializedName("marker_path")
+    String markerPath;
+
+    @SerializedName("artifact_path")
+    String artifactPath;
+
+    Map<String, Object> details;
 
     boolean changed;
 

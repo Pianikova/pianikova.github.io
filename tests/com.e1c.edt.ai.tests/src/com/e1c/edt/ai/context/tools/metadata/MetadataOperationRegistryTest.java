@@ -50,7 +50,40 @@ public class MetadataOperationRegistryTest
     public void shouldExposeExactOperationNames()
     {
         Assert.assertTrue(registry.names().contains("addTabularSectionAttribute")); //$NON-NLS-1$
+        Assert.assertTrue(registry.names().contains("inspectObject")); //$NON-NLS-1$
+        Assert.assertTrue(registry.names().contains("setChildType")); //$NON-NLS-1$
+        Assert.assertTrue(registry.names().contains("addDocumentRegister")); //$NON-NLS-1$
+        Assert.assertTrue(registry.names().contains("createObjectForm")); //$NON-NLS-1$
+        Assert.assertTrue(registry.names().contains("createObjectTemplate")); //$NON-NLS-1$
         Assert.assertFalse(registry.names().contains("createAttribute")); //$NON-NLS-1$
         Assert.assertFalse(registry.names().contains("setObjectComment")); //$NON-NLS-1$
+    }
+
+    @Test
+    public void shouldAcceptInspectAndChildMutationContracts()
+    {
+        var inspect = JsonParser.parseString("{\"operation\":\"inspectObject\"," //$NON-NLS-1$
+            + "\"project_name\":\"Demo\",\"object_name\":\"Document.Order\"}").getAsJsonObject(); //$NON-NLS-1$
+        var child = JsonParser.parseString("{\"operation\":\"setChildType\"," //$NON-NLS-1$
+            + "\"project_name\":\"Demo\",\"object_name\":\"Document.Order.Lines\"," //$NON-NLS-1$
+            + "\"child_kind\":\"tabular_section_attribute\",\"name\":\"Quantity\"," //$NON-NLS-1$
+            + "\"type\":\"Number\",\"length\":12,\"precision\":3}").getAsJsonObject(); //$NON-NLS-1$
+
+        Assert.assertTrue(registry.validate(inspect).toString(), registry.validate(inspect).isEmpty());
+        Assert.assertTrue(registry.validate(child).toString(), registry.validate(child).isEmpty());
+    }
+
+    @Test
+    public void shouldRequireGeneratedArtifactKinds()
+    {
+        var form = JsonParser.parseString("{\"operation\":\"createObjectForm\"," //$NON-NLS-1$
+            + "\"project_name\":\"Demo\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\"}") //$NON-NLS-1$
+                .getAsJsonObject();
+        var template = JsonParser.parseString("{\"operation\":\"createObjectTemplate\"," //$NON-NLS-1$
+            + "\"project_name\":\"Demo\",\"object_name\":\"Report.Sales\",\"name\":\"Main\"}") //$NON-NLS-1$
+                .getAsJsonObject();
+
+        Assert.assertTrue(registry.validate(form).stream().anyMatch(error -> error.contains("form_type"))); //$NON-NLS-1$
+        Assert.assertTrue(registry.validate(template).stream().anyMatch(error -> error.contains("template_type"))); //$NON-NLS-1$
     }
 }

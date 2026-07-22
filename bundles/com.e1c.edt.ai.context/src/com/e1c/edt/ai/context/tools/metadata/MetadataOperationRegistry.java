@@ -27,6 +27,9 @@ public final class MetadataOperationRegistry
     {
         add("help", "Lists operations or returns exact help for one operation.", set(), set("topic"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "{\"operation\":\"help\",\"topic\":\"createObject\"}"); //$NON-NLS-1$
+        add("inspectObject", "Reads an object, its scalar properties, children, types, forms, templates, and register links.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name"), set(), //$NON-NLS-1$ //$NON-NLS-2$
+            "{\"operation\":\"inspectObject\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order\"}"); //$NON-NLS-1$
         add("createObject", "Creates a top-level 1C metadata object.", set("project_name", "object_name"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"createObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"title\":\"Products\"}"); //$NON-NLS-1$
@@ -61,6 +64,36 @@ public final class MetadataOperationRegistry
         add("removeRegisterField", "Removes a dimension, resource, or attribute from a register.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "name", "field_kind"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"removeRegisterField\",\"project_name\":\"MyProject\",\"object_name\":\"InformationRegister.Prices\",\"name\":\"Price\",\"field_kind\":\"resource\"}"); //$NON-NLS-1$
+
+        add("setChildProperty", "Changes a scalar property, synonym, or comment of an existing child.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "child_kind", "name", "property_name", "property_value"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+            set("dry_run"), //$NON-NLS-1$
+            "{\"operation\":\"setChildProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order.Lines\",\"child_kind\":\"tabular_section_attribute\",\"name\":\"Quantity\",\"property_name\":\"comment\",\"property_value\":\"Ordered quantity\"}"); //$NON-NLS-1$
+        add("setChildType", "Changes the type of an existing attribute or register field.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "child_kind", "name", "type"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            union(TYPE_PARAMETERS, set("dry_run")), //$NON-NLS-1$
+            "{\"operation\":\"setChildType\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order.Lines\",\"child_kind\":\"tabular_section_attribute\",\"name\":\"Quantity\",\"type\":\"Number\",\"length\":15,\"precision\":3}"); //$NON-NLS-1$
+        add("renameChild", "Renames an existing child metadata element.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "child_kind", "name", "new_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+            "{\"operation\":\"renameChild\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order\",\"child_kind\":\"tabular_section\",\"name\":\"Lines\",\"new_name\":\"Goods\"}"); //$NON-NLS-1$
+        add("addDocumentRegister", "Adds an accumulation, accounting, or calculation register to a document's register records.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "related_object_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "{\"operation\":\"addDocumentRegister\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Receipt\",\"related_object_name\":\"AccumulationRegister.Stock\"}"); //$NON-NLS-1$
+        add("removeDocumentRegister", "Removes a register from a document's register records.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "related_object_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "{\"operation\":\"removeDocumentRegister\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Receipt\",\"related_object_name\":\"AccumulationRegister.Stock\"}"); //$NON-NLS-1$
+        add("createObjectForm", "Creates a generated object, list, record, report, or constants form with a persisted Form.form body.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "name", "form_type"), set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+            "{\"operation\":\"createObjectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\",\"form_type\":\"OBJECT\"}"); //$NON-NLS-1$
+        add("removeObjectForm", "Removes an object form and its external Form.form body.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "{\"operation\":\"removeObjectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\"}"); //$NON-NLS-1$
+        add("createObjectTemplate", "Creates a persisted empty spreadsheet or data-composition template.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "name", "template_type"), set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+            "{\"operation\":\"createObjectTemplate\",\"project_name\":\"MyProject\",\"object_name\":\"Report.Sales\",\"name\":\"MainDcs\",\"template_type\":\"DATA_COMPOSITION_SCHEMA\"}"); //$NON-NLS-1$
+        add("removeObjectTemplate", "Removes an object template and its external body.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "{\"operation\":\"removeObjectTemplate\",\"project_name\":\"MyProject\",\"object_name\":\"Report.Sales\",\"name\":\"MainDcs\"}"); //$NON-NLS-1$
     }
 
     Collection<MetadataOperationDescriptor> all()

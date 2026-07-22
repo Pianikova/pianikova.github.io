@@ -6,7 +6,10 @@ package com.e1c.edt.ai.context.tools.metadata;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 import org.eclipse.core.resources.IProject;
@@ -15,6 +18,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EDataType;
+import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 
@@ -23,10 +27,19 @@ import com._1c.g5.v8.bm.core.IBmTransaction;
 import com._1c.g5.v8.bm.integration.AbstractBmTask;
 import com._1c.g5.v8.dt.core.naming.ITopObjectFqnGenerator;
 import com._1c.g5.v8.dt.core.platform.IDerivedDataManagerProvider;
+import com._1c.g5.v8.dt.core.platform.IEditingLanguageManager;
 import com._1c.g5.v8.dt.core.platform.IBmModelManager;
+import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
+import com._1c.g5.v8.dt.dcs.model.schema.DcsFactory;
+import com._1c.g5.v8.dt.form.generator.FormType;
+import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
+import com._1c.g5.v8.dt.form.generator.IFormGenerator;
+import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
+import com._1c.g5.v8.dt.metadata.mdclass.BasicRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.CalculationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.Catalog;
 import com._1c.g5.v8.dt.metadata.mdclass.Configuration;
@@ -35,7 +48,11 @@ import com._1c.g5.v8.dt.metadata.mdclass.Document;
 import com._1c.g5.v8.dt.metadata.mdclass.InformationRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.MdClassFactory;
 import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
+import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
 import com._1c.g5.v8.dt.metadata.mdclass.Report;
+import com._1c.g5.v8.dt.metadata.mdclass.Template;
+import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;
+import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
 import com.e1c.edt.ai.IProjectBuilder;
@@ -59,11 +76,17 @@ final class MetadataMutationService
     private final IProjectBuilder projectBuilder;
     private final IDerivedDataManagerProvider derivedDataManagerProvider;
     private final ISettings settings;
+    private final IV8ProjectManager v8ProjectManager;
+    private final IFormGenerator formGenerator;
+    private final IFormFieldGenerator formFieldGenerator;
+    private final IEditingLanguageManager editingLanguageManager;
 
     @Inject
     MetadataMutationService(IBmModelManager modelManager, ITopObjectFqnGenerator fqnGenerator,
         IEditingSupport editingSupport, IMdRefactoringService refactoringService, MetadataTypeService typeService,
-        IProjectBuilder projectBuilder, IDerivedDataManagerProvider derivedDataManagerProvider, ISettings settings)
+        IProjectBuilder projectBuilder, IDerivedDataManagerProvider derivedDataManagerProvider, ISettings settings,
+        IV8ProjectManager v8ProjectManager, IFormGenerator formGenerator, IFormFieldGenerator formFieldGenerator,
+        IEditingLanguageManager editingLanguageManager)
     {
         Preconditions.checkNotNull(modelManager);
         Preconditions.checkNotNull(fqnGenerator);
@@ -73,6 +96,10 @@ final class MetadataMutationService
         Preconditions.checkNotNull(projectBuilder);
         Preconditions.checkNotNull(derivedDataManagerProvider);
         Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(v8ProjectManager);
+        Preconditions.checkNotNull(formGenerator);
+        Preconditions.checkNotNull(formFieldGenerator);
+        Preconditions.checkNotNull(editingLanguageManager);
         this.modelManager = modelManager;
         this.fqnGenerator = fqnGenerator;
         this.editingSupport = editingSupport;
@@ -81,12 +108,20 @@ final class MetadataMutationService
         this.projectBuilder = projectBuilder;
         this.derivedDataManagerProvider = derivedDataManagerProvider;
         this.settings = settings;
+        this.v8ProjectManager = v8ProjectManager;
+        this.formGenerator = formGenerator;
+        this.formFieldGenerator = formFieldGenerator;
+        this.editingLanguageManager = editingLanguageManager;
     }
 
     synchronized MetadataResponse execute(MetadataRequest request, ICancellationToken cancellationToken)
     {
         checkCanceled(cancellationToken);
         var project = project(request.projectName);
+        if ("inspectObject".equals(request.operation)) //$NON-NLS-1$
+        {
+            return inspectObject(project, request);
+        }
         if (editingSupport.isReadOnly(project))
         {
             throw new ToolException("Project is read-only according to EDT editing rules: " + project.getName()); //$NON-NLS-1$
@@ -137,16 +172,47 @@ final class MetadataMutationService
         case "removeRegisterField": //$NON-NLS-1$
             response = removeRegisterField(project, request);
             break;
+        case "setChildProperty": //$NON-NLS-1$
+            response = setChildProperty(project, request);
+            break;
+        case "setChildType": //$NON-NLS-1$
+            response = setChildType(project, request);
+            break;
+        case "renameChild": //$NON-NLS-1$
+            response = renameChild(project, request);
+            break;
+        case "addDocumentRegister": //$NON-NLS-1$
+            response = changeDocumentRegister(project, request, true);
+            break;
+        case "removeDocumentRegister": //$NON-NLS-1$
+            response = changeDocumentRegister(project, request, false);
+            break;
+        case "createObjectForm": //$NON-NLS-1$
+            response = createObjectForm(project, request);
+            break;
+        case "removeObjectForm": //$NON-NLS-1$
+            response = removeObjectArtifact(project, request, "forms"); //$NON-NLS-1$
+            break;
+        case "createObjectTemplate": //$NON-NLS-1$
+            response = createObjectTemplate(project, request);
+            break;
+        case "removeObjectTemplate": //$NON-NLS-1$
+            response = removeObjectArtifact(project, request, "templates"); //$NON-NLS-1$
+            break;
         default:
             throw new ToolException("Operation is not executable: " + request.operation); //$NON-NLS-1$
         }
         response.resourcePath = metadataResourcePath(project, response.target);
+        response.markerPath = response.resourcePath;
+        response.artifactPath = artifactPath(project, request);
 
         checkCanceled(cancellationToken);
         if (response.changed && !request.dryRun)
         {
             waitForPersistence(project, cancellationToken);
-            awaitResourceState(request, response, cancellationToken, 5_000L);
+            long persistenceTimeoutMillis = persistenceTimeoutMillis();
+            awaitResourceState(request, response, cancellationToken, persistenceTimeoutMillis);
+            awaitArtifactState(request, response, cancellationToken, persistenceTimeoutMillis);
             refresh(project);
             boolean validationComplete = false;
             try
@@ -165,8 +231,16 @@ final class MetadataMutationService
         if (!request.dryRun)
         {
             verifyResourceState(request, response);
+            verifyArtifactState(request, response);
         }
         return response;
+    }
+
+    private long persistenceTimeoutMillis()
+    {
+        var timeout = settings.getTimeout();
+        long configured = timeout != null ? timeout.toMillis() : 0L;
+        return Math.max(configured, 120_000L);
     }
 
     private void waitForPersistence(IProject project, ICancellationToken cancellationToken)
@@ -219,6 +293,44 @@ final class MetadataMutationService
         }
     }
 
+    private static void awaitArtifactState(MetadataRequest request, MetadataResponse response,
+        ICancellationToken cancellationToken, long timeoutMillis)
+    {
+        if (response.artifactPath == null)
+        {
+            return;
+        }
+        boolean expectedExists = request.operation.startsWith("create"); //$NON-NLS-1$
+        long deadline = System.currentTimeMillis() + timeoutMillis;
+        while (Files.exists(Paths.get(response.artifactPath)) != expectedExists
+            && System.currentTimeMillis() < deadline && !cancellationToken.isCanceled())
+        {
+            try
+            {
+                Thread.sleep(50L);
+            }
+            catch (InterruptedException e)
+            {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    private static void verifyArtifactState(MetadataRequest request, MetadataResponse response)
+    {
+        if (response.artifactPath == null || !response.changed)
+        {
+            return;
+        }
+        boolean expectedExists = request.operation.startsWith("create"); //$NON-NLS-1$
+        if (Files.exists(Paths.get(response.artifactPath)) != expectedExists)
+        {
+            throw new ToolException("EDT did not persist the expected artifact state: " + response.artifactPath, //$NON-NLS-1$
+                ToolErrorType.USER_VISIBLE);
+        }
+    }
+
     private static void verifyResourceState(MetadataRequest request, MetadataResponse response)
     {
         var resourceExists = Files.exists(Paths.get(response.resourcePath));
@@ -232,6 +344,436 @@ final class MetadataMutationService
             throw new ToolException("EDT changed BM, but the expected metadata resource was not persisted: " //$NON-NLS-1$
                 + response.resourcePath, ToolErrorType.USER_VISIBLE);
         }
+    }
+
+    private MetadataResponse inspectObject(IProject project, MetadataRequest request)
+    {
+        var response = MetadataResponse.success(request, request.objectName, false);
+        response.resourcePath = metadataResourcePath(project, request.objectName);
+        response.markerPath = response.resourcePath;
+        response.details = model(project).getGlobalContext().execute(new AbstractBmTask<Map<String, Object>>(
+            "Inspect 1C metadata object") //$NON-NLS-1$
+        {
+            @Override
+            public Map<String, Object> execute(IBmTransaction transaction,
+                org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                return describeObject(requireObject(transaction, request.objectName));
+            }
+        });
+        return response;
+    }
+
+    private static Map<String, Object> describeObject(MdObject object)
+    {
+        var result = new LinkedHashMap<String, Object>();
+        result.put("class", object.eClass().getName()); //$NON-NLS-1$
+        result.put("name", object.getName()); //$NON-NLS-1$
+        result.put("synonym", object.getSynonym().get("ru")); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("properties", scalarProperties(object)); //$NON-NLS-1$
+        var children = new LinkedHashMap<String, Object>();
+        for (var featureName : List.of("attributes", "tabularSections", "enumValues", "dimensions", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "resources", "forms", "templates")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            var feature = object.eClass().getEStructuralFeature(featureName);
+            if (feature != null && feature.isMany())
+            {
+                @SuppressWarnings("unchecked")
+                var values = (List<Object>)object.eGet(feature);
+                var descriptions = new java.util.ArrayList<Map<String, Object>>();
+                for (var value : values)
+                {
+                    if (value instanceof MdObject)
+                    {
+                        descriptions.add(describeChild((MdObject)value));
+                    }
+                }
+                children.put(featureName, descriptions);
+            }
+        }
+        result.put("children", children); //$NON-NLS-1$
+        if (object instanceof Document)
+        {
+            var registers = new java.util.ArrayList<String>();
+            for (var register : ((Document)object).getRegisterRecords())
+            {
+                registers.add(register.eClass().getName() + "." + register.getName()); //$NON-NLS-1$
+            }
+            result.put("register_records", registers); //$NON-NLS-1$
+        }
+        return result;
+    }
+
+    private static Map<String, Object> describeChild(MdObject child)
+    {
+        var result = new LinkedHashMap<String, Object>();
+        result.put("class", child.eClass().getName()); //$NON-NLS-1$
+        result.put("name", child.getName()); //$NON-NLS-1$
+        result.put("synonym", child.getSynonym().get("ru")); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("properties", scalarProperties(child)); //$NON-NLS-1$
+        if (child instanceof BasicFeature)
+        {
+            var type = ((BasicFeature)child).getTypeDescription();
+            var names = new java.util.ArrayList<String>();
+            if (type != null)
+            {
+                for (var item : type.getTypes())
+                {
+                    names.add(item.getName());
+                }
+                var qualifiers = new LinkedHashMap<String, Object>();
+                for (var qualifierName : List.of("stringQualifiers", "numberQualifiers", "dateQualifiers")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                {
+                    var qualifier = type.eClass().getEStructuralFeature(qualifierName);
+                    if (qualifier != null && type.eGet(qualifier) instanceof EObject)
+                    {
+                        qualifiers.put(qualifierName, scalarProperties((EObject)type.eGet(qualifier)));
+                    }
+                }
+                result.put("type_qualifiers", qualifiers); //$NON-NLS-1$
+            }
+            result.put("types", names); //$NON-NLS-1$
+        }
+        var attributes = child.eClass().getEStructuralFeature("attributes"); //$NON-NLS-1$
+        if (attributes != null && attributes.isMany())
+        {
+            @SuppressWarnings("unchecked")
+            var values = (List<Object>)child.eGet(attributes);
+            var descriptions = new java.util.ArrayList<Map<String, Object>>();
+            for (var value : values)
+            {
+                if (value instanceof MdObject)
+                {
+                    descriptions.add(describeChild((MdObject)value));
+                }
+            }
+            result.put("attributes", descriptions); //$NON-NLS-1$
+        }
+        return result;
+    }
+
+    private static Map<String, Object> scalarProperties(EObject object)
+    {
+        var result = new LinkedHashMap<String, Object>();
+        for (var feature : object.eClass().getEAllStructuralFeatures())
+        {
+            if (!feature.isMany() && feature.getEType() instanceof EDataType && object.eIsSet(feature))
+            {
+                var value = object.eGet(feature);
+                if (value != null)
+                {
+                    result.put(feature.getName(), String.valueOf(value));
+                }
+            }
+        }
+        return result;
+    }
+
+    private MetadataResponse setChildProperty(IProject project, MetadataRequest request)
+    {
+        if ("name".equalsIgnoreCase(request.propertyName)) //$NON-NLS-1$
+        {
+            throw new ToolException("Use `renameChild` to change a child name."); //$NON-NLS-1$
+        }
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Set 1C metadata child property") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var child = requireChild(transaction, request);
+                if ("synonym".equalsIgnoreCase(request.propertyName)) //$NON-NLS-1$
+                {
+                    var old = child.getSynonym().get("ru"); //$NON-NLS-1$
+                    changed[0] = !java.util.Objects.equals(old, request.propertyValue);
+                    if (changed[0] && !request.dryRun)
+                    {
+                        child.getSynonym().put("ru", request.propertyValue); //$NON-NLS-1$
+                    }
+                    return null;
+                }
+                changed[0] = setScalarProperty(child, request.propertyName, request.propertyValue, request.dryRun);
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, childTarget(request), changed[0]);
+    }
+
+    private MetadataResponse setChildType(IProject project, MetadataRequest request)
+    {
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Set 1C metadata child type") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var child = requireChild(transaction, request);
+                if (!(child instanceof BasicFeature))
+                {
+                    throw new ToolException("Child does not have a configurable type: " + childTarget(request)); //$NON-NLS-1$
+                }
+                var newType = typeService.create(project, transaction, request);
+                changed[0] = !EcoreUtil.equals(((BasicFeature)child).getTypeDescription(), newType);
+                if (changed[0] && !request.dryRun)
+                {
+                    ((BasicFeature)child).setType(newType);
+                }
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, childTarget(request), changed[0]);
+    }
+
+    private MetadataResponse renameChild(IProject project, MetadataRequest request)
+    {
+        validateIdentifier(request.newName, "new_name"); //$NON-NLS-1$
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Rename 1C metadata child") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var location = childLocation(transaction, request);
+                var child = findNamed(location.children, request.name);
+                if (child == null)
+                {
+                    throw new ToolException("Child metadata object not found: " + childTarget(request)); //$NON-NLS-1$
+                }
+                if (findNamed(location.children, request.newName) != null)
+                {
+                    throw new ToolException("A child with the new name already exists: " + request.newName); //$NON-NLS-1$
+                }
+                changed[0] = !request.newName.equals(child.getName());
+                if (changed[0] && !request.dryRun)
+                {
+                    child.setName(request.newName);
+                }
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, request.objectName + "." + request.newName, changed[0]); //$NON-NLS-1$
+    }
+
+    private MetadataResponse changeDocumentRegister(IProject project, MetadataRequest request, boolean add)
+    {
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Change document register records") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var owner = requireObject(transaction, request.objectName);
+                var related = requireObject(transaction, request.relatedObjectName);
+                if (!(owner instanceof Document))
+                {
+                    throw new ToolException("`object_name` must identify a Document."); //$NON-NLS-1$
+                }
+                if (!(related instanceof BasicRegister) || related instanceof InformationRegister)
+                {
+                    throw new ToolException("Only accumulation, accounting, or calculation registers can be document records."); //$NON-NLS-1$
+                }
+                var records = ((Document)owner).getRegisterRecords();
+                boolean contains = records.contains(related);
+                changed[0] = add ? !contains : contains;
+                if (changed[0] && !request.dryRun)
+                {
+                    if (add)
+                    {
+                        records.add((BasicRegister)related);
+                    }
+                    else
+                    {
+                        records.remove(related);
+                    }
+                }
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, request.objectName, changed[0]);
+    }
+
+    private MetadataResponse createObjectForm(IProject project, MetadataRequest request)
+    {
+        validateIdentifier(request.name, "name"); //$NON-NLS-1$
+        final FormType formType;
+        try
+        {
+            formType = FormType.valueOf(request.formType.toUpperCase(Locale.ROOT));
+        }
+        catch (RuntimeException e)
+        {
+            throw new ToolException("Invalid `form_type`. Valid values: OBJECT, LIST, RECORD, REPORT, CONSTANTS."); //$NON-NLS-1$
+        }
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Create generated 1C object form") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var owner = requireObject(transaction, request.objectName);
+                var forms = featureList(owner, "forms"); //$NON-NLS-1$
+                if (findNamed(forms, request.name) != null)
+                {
+                    return null;
+                }
+                var formClass = MdClassPackage.eINSTANCE.getEClassifier(owner.eClass().getName() + "Form"); //$NON-NLS-1$
+                if (!(formClass instanceof EClass))
+                {
+                    throw new ToolException("Object type does not support generated forms: " + owner.eClass().getName()); //$NON-NLS-1$
+                }
+                var created = MdClassFactory.eINSTANCE.create((EClass)formClass);
+                if (!(created instanceof BasicForm))
+                {
+                    throw new ToolException("EDT form metadata class is not a BasicForm: " + formClass.getName()); //$NON-NLS-1$
+                }
+                var formMetadata = (BasicForm)created;
+                formMetadata.setName(request.name);
+                formMetadata.setUuid(UUID.randomUUID());
+                if (request.title != null && !request.title.isBlank())
+                {
+                    formMetadata.getSynonym().put("ru", request.title); //$NON-NLS-1$
+                }
+                changed[0] = true;
+                if (request.dryRun)
+                {
+                    return null;
+                }
+                forms.add(formMetadata);
+                var v8Project = v8ProjectManager.getProject(project);
+                if (v8Project == null)
+                {
+                    throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
+                }
+                var scriptVariant = v8Project.getScriptVariant();
+                var version = v8Project.getVersion();
+                var languageCode = editingLanguageManager.getEditingLanguageCode(project);
+                var rootField = formFieldGenerator.getFormGeneratorFields(owner, formType, scriptVariant, version);
+                Form form = formGenerator.generateForm(owner, formMetadata, formType, scriptVariant,
+                    languageCode, version, rootField, Integer.valueOf(1));
+                formMetadata.setForm(form);
+                form.setMdForm(formMetadata);
+                var formReference = (org.eclipse.emf.ecore.EReference)formMetadata.eClass()
+                    .getEStructuralFeature("form"); //$NON-NLS-1$
+                var formFqn = fqnGenerator.generateExternalPropertyFqn(formMetadata, formReference);
+                transaction.attachTopObject((IBmObject)form, formFqn);
+                setDefaultForm(owner, formMetadata, formType);
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+    }
+
+    private static void setDefaultForm(MdObject owner, BasicForm form, FormType formType)
+    {
+        String featureName;
+        switch (formType)
+        {
+        case OBJECT: featureName = "defaultObjectForm"; break; //$NON-NLS-1$
+        case LIST: featureName = "defaultListForm"; break; //$NON-NLS-1$
+        case RECORD: featureName = "defaultRecordForm"; break; //$NON-NLS-1$
+        case REPORT: featureName = "defaultForm"; break; //$NON-NLS-1$
+        case CONSTANTS: featureName = "defaultForm"; break; //$NON-NLS-1$
+        default: return;
+        }
+        var feature = owner.eClass().getEStructuralFeature(featureName);
+        if (feature != null && owner.eGet(feature) == null)
+        {
+            owner.eSet(feature, form);
+        }
+    }
+
+    private MetadataResponse createObjectTemplate(IProject project, MetadataRequest request)
+    {
+        validateIdentifier(request.name, "name"); //$NON-NLS-1$
+        final TemplateType templateType;
+        try
+        {
+            templateType = TemplateType.valueOf(request.templateType.toUpperCase(Locale.ROOT));
+        }
+        catch (RuntimeException e)
+        {
+            throw new ToolException("Invalid `template_type`. Valid values: SPREADSHEET_DOCUMENT, DATA_COMPOSITION_SCHEMA."); //$NON-NLS-1$
+        }
+        if (templateType != TemplateType.SPREADSHEET_DOCUMENT
+            && templateType != TemplateType.DATA_COMPOSITION_SCHEMA)
+        {
+            throw new ToolException("Only SPREADSHEET_DOCUMENT and DATA_COMPOSITION_SCHEMA are supported without source content."); //$NON-NLS-1$
+        }
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Create 1C object template") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var owner = requireObject(transaction, request.objectName);
+                var templates = featureList(owner, "templates"); //$NON-NLS-1$
+                if (findNamed(templates, request.name) != null)
+                {
+                    return null;
+                }
+                var template = MdClassFactory.eINSTANCE.createTemplate();
+                template.setName(request.name);
+                template.setUuid(UUID.randomUUID());
+                template.setTemplateType(templateType);
+                if (request.title != null && !request.title.isBlank())
+                {
+                    template.getSynonym().put("ru", request.title); //$NON-NLS-1$
+                }
+                changed[0] = true;
+                if (request.dryRun)
+                {
+                    return null;
+                }
+                templates.add(template);
+                EObject body = templateType == TemplateType.SPREADSHEET_DOCUMENT
+                    ? SheetFactory.createSpreadsheetDocument() : DcsFactory.eINSTANCE.createDataCompositionSchema();
+                template.setTemplate(body);
+                var contentFqn = fqnGenerator.generateExternalPropertyFqn(template,
+                    MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);
+                transaction.attachTopObject((IBmObject)body, contentFqn);
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+    }
+
+    private MetadataResponse removeObjectArtifact(IProject project, MetadataRequest request, String collection)
+    {
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Remove 1C object artifact") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var owner = requireObject(transaction, request.objectName);
+                var child = findNamed(featureList(owner, collection), request.name);
+                if (child == null)
+                {
+                    return null;
+                }
+                changed[0] = true;
+                if (request.dryRun)
+                {
+                    return null;
+                }
+                EObject body = null;
+                if (child instanceof BasicForm)
+                {
+                    body = ((BasicForm)child).getForm();
+                }
+                else if (child instanceof Template)
+                {
+                    body = ((Template)child).getTemplate();
+                }
+                if (body instanceof IBmObject)
+                {
+                    transaction.detachTopObject((IBmObject)body);
+                }
+                EcoreUtil.delete(child, true);
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
     }
 
     private MetadataResponse createObject(IProject project, MetadataRequest request)
@@ -623,6 +1165,112 @@ final class MetadataMutationService
         }
     }
 
+    private static boolean setScalarProperty(EObject object, String propertyName, String propertyValue,
+        boolean dryRun)
+    {
+        var feature = object.eClass().getEStructuralFeature(propertyName);
+        if (feature == null || feature.isMany() || !(feature.getEType() instanceof EDataType))
+        {
+            throw new ToolException("Unsupported scalar property `" + propertyName + "` for " //$NON-NLS-1$ //$NON-NLS-2$
+                + object.eClass().getName() + "."); //$NON-NLS-1$
+        }
+        var value = EcoreUtil.createFromString((EDataType)feature.getEType(), propertyValue);
+        boolean changed = !java.util.Objects.equals(object.eGet(feature), value);
+        if (changed && !dryRun)
+        {
+            object.eSet(feature, value);
+        }
+        return changed;
+    }
+
+    private static MdObject requireChild(IBmTransaction transaction, MetadataRequest request)
+    {
+        var child = findNamed(childLocation(transaction, request).children, request.name);
+        if (child == null)
+        {
+            throw new ToolException("Child metadata object not found: " + childTarget(request)); //$NON-NLS-1$
+        }
+        return child;
+    }
+
+    private static ChildLocation childLocation(IBmTransaction transaction, MetadataRequest request)
+    {
+        if (request.childKind == null)
+        {
+            throw new ToolException("Parameter `child_kind` is required."); //$NON-NLS-1$
+        }
+        String ownerFqn = request.objectName;
+        String collection;
+        String section = null;
+        switch (request.childKind.toLowerCase(Locale.ROOT))
+        {
+        case "object_attribute": collection = "attributes"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        case "tabular_section": collection = "tabularSections"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        case "tabular_section_attribute": //$NON-NLS-1$
+            var parts = tabularSectionParts(request.objectName);
+            ownerFqn = parts[0];
+            section = parts[1];
+            collection = "attributes"; //$NON-NLS-1$
+            break;
+        case "enum_value": collection = "enumValues"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        case "dimension": collection = "dimensions"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        case "resource": collection = "resources"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        case "register_attribute": collection = "attributes"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        case "form": collection = "forms"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        case "template": collection = "templates"; break; //$NON-NLS-1$ //$NON-NLS-2$
+        default:
+            throw new ToolException("Invalid `child_kind`. Valid values: object_attribute, tabular_section, " //$NON-NLS-1$
+                + "tabular_section_attribute, enum_value, dimension, resource, register_attribute, form, template."); //$NON-NLS-1$
+        }
+        MdObject owner = requireObject(transaction, ownerFqn);
+        if (section != null)
+        {
+            owner = requireNamedChild(owner, "tabularSections", section); //$NON-NLS-1$
+        }
+        return new ChildLocation(featureList(owner, collection));
+    }
+
+    private static String childTarget(MetadataRequest request)
+    {
+        return request.objectName + "." + request.name; //$NON-NLS-1$
+    }
+
+    private static String artifactPath(IProject project, MetadataRequest request)
+    {
+        if (request.dryRun || request.name == null)
+        {
+            return null;
+        }
+        String base = project.getLocation().append(metadataOwnerFolder(request.objectName)).toOSString();
+        if ("createObjectForm".equals(request.operation) || "removeObjectForm".equals(request.operation)) //$NON-NLS-1$ //$NON-NLS-2$
+        {
+            return "removeObjectForm".equals(request.operation) //$NON-NLS-1$
+                ? Paths.get(base, "Forms", request.name).toString() //$NON-NLS-1$
+                : Paths.get(base, "Forms", request.name, "Form.form").toString(); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("createObjectTemplate".equals(request.operation)) //$NON-NLS-1$
+        {
+            String file = "DATA_COMPOSITION_SCHEMA".equalsIgnoreCase(request.templateType) //$NON-NLS-1$
+                ? "Template.dcs" : "Template.mxlx"; //$NON-NLS-1$ //$NON-NLS-2$
+            return Paths.get(base, "Templates", request.name, file).toString(); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("removeObjectTemplate".equals(request.operation)) //$NON-NLS-1$
+        {
+            return Paths.get(base, "Templates", request.name).toString(); //$NON-NLS-1$
+        }
+        return null;
+    }
+
+    private static String metadataOwnerFolder(String target)
+    {
+        var parts = target.split("\\.", -1); //$NON-NLS-1$
+        if (parts.length < 2)
+        {
+            throw new ToolException("Object FQN must contain type and name: " + target); //$NON-NLS-1$
+        }
+        return "src/" + topFolder(parts[0]) + "/" + parts[1]; //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
     @SuppressWarnings("unchecked")
     private static EList<MdObject> featureList(MdObject owner, String name)
     {
@@ -758,5 +1406,15 @@ final class MetadataMutationService
         TABULAR_SECTION_ATTRIBUTE,
         ENUM_VALUE,
         REGISTER_FIELD
+    }
+
+    private static final class ChildLocation
+    {
+        final EList<MdObject> children;
+
+        ChildLocation(EList<MdObject> children)
+        {
+            this.children = children;
+        }
     }
 }

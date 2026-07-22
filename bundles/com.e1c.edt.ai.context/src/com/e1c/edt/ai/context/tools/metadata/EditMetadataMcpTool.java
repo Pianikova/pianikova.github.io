@@ -161,7 +161,9 @@ public final class EditMetadataMcpTool
             + " For an attribute inside a tabular section use addTabularSectionAttribute with"
             + " object_name=Type.Object.TabularSection; addObjectAttribute is only for a top-level object."
             + " Call with operation=help to list operations, then operation=help and topic=<operation>"
-            + " for its exact parameters. Mutation results include resource_path for GetMarkers."
+            + " for its exact parameters. Pass marker_path verbatim to GetMarkers; never shorten it to a directory."
+            + " Successful object/form/template create and remove operations already verify physical persistence;"
+            + " do not call Glob or Read to re-check their files."
             + " Unknown operations and parameters are rejected.";
 
         var parameters = new McpToolCallParameters();
@@ -181,6 +183,10 @@ public final class EditMetadataMcpTool
         property(parameters, "precision", "integer", "Number digits after the decimal point. For Number(N.S), pass length=N and precision=S.");
         property(parameters, "date_fractions", "string", "Date, Time, or DateTime.");
         property(parameters, "field_kind", "string", "Register field kind: dimension, resource, or attribute.");
+        property(parameters, "child_kind", "string", "Child kind: object_attribute, tabular_section, tabular_section_attribute, enum_value, dimension, resource, register_attribute, form, or template.");
+        property(parameters, "related_object_name", "string", "FQN of a related object, for example AccumulationRegister.Stock.");
+        property(parameters, "form_type", "string", "Generated form type: OBJECT, LIST, RECORD, REPORT, or CONSTANTS.");
+        property(parameters, "template_type", "string", "Template body type: SPREADSHEET_DOCUMENT or DATA_COMPOSITION_SCHEMA.");
         property(parameters, "dry_run", "boolean", "Validate and describe the mutation without applying it.");
         parameters.required = Arrays.asList("operation");
         spec.function.parameters = parameters;

@@ -39,6 +39,18 @@ final class MetadataRequest
     @SerializedName("field_kind")
     String fieldKind;
 
+    @SerializedName("child_kind")
+    String childKind;
+
+    @SerializedName("related_object_name")
+    String relatedObjectName;
+
+    @SerializedName("form_type")
+    String formType;
+
+    @SerializedName("template_type")
+    String templateType;
+
     @SerializedName("dry_run")
     boolean dryRun;
 }
