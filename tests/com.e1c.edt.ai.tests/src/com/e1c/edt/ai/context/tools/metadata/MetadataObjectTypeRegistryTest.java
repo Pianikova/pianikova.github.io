@@ -24,13 +24,15 @@ public class MetadataObjectTypeRegistryTest
             "FunctionalOption", "FunctionalOptionsParameter", "DefinedType", "FilterCriterion", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "SessionParameter", "EventSubscription", "ScheduledJob", "DocumentJournal", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "DocumentNumerator", "Sequence", "Style", "StyleItem", "Language", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "SettingsStorage", "CommonPicture", "CommonTemplate", "CommandGroup", "Interface", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "ExternalDataSource", "IntegrationService", "Bot", "WebSocketClient", "PaletteColor", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "ExternalDataProcessor", "ExternalReport")); //$NON-NLS-1$ //$NON-NLS-2$
 
         var actual = MetadataObjectTypeRegistry.all().stream()
             .map(type -> type.name)
             .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        Assert.assertEquals(41, actual.size());
+        Assert.assertEquals(51, actual.size());
         Assert.assertEquals(expected, actual);
     }
 

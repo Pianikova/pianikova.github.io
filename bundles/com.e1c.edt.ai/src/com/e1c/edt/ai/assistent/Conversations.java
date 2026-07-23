@@ -9,11 +9,14 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import com.e1c.edt.ai.CancellationTokenSource;
@@ -47,6 +50,7 @@ import com.google.common.base.Stopwatch;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.google.inject.Inject;
 
 /**
@@ -309,27 +313,122 @@ public class Conversations implements IConversations
     private ArrayList<McpToolCall> extractToolCalls(ConversationAskResponse response, String conversationId)
     {
         ArrayList<McpToolCall> result = new ArrayList<>();
-        if (response == null || response.content == null || response.content.toolCalls == null)
+        if (response == null || response.content == null)
         {
             return result;
         }
 
-        for (McpToolCall call : response.content.toolCalls)
+        if (response.content.toolCalls != null)
         {
-            if (call == null)
+            for (McpToolCall call : response.content.toolCalls)
             {
-                continue;
-            }
+                if (call == null)
+                {
+                    continue;
+                }
 
-            McpToolCall newCall = new McpToolCall();
-            newCall.id = call.id;
-            newCall.function = call.function;
-            newCall.sourceChatId = conversationId;
-            newCall.sourceMessageId = response.uuid;
-            result.add(newCall);
+                McpToolCall newCall = new McpToolCall();
+                newCall.id = call.id;
+                newCall.function = call.function;
+                newCall.sourceChatId = conversationId;
+                newCall.sourceMessageId = response.uuid;
+                result.add(newCall);
+            }
+        }
+
+        // Fallback for models that do not return structured tool_calls (e.g. MiniMax): they emit the
+        // call inside the assistant text using Anthropic-style
+        // <invoke name="Tool"><parameter name="p">value</parameter></invoke> blocks. Parse those out of
+        // the content so the tools still execute instead of leaking as plain text.
+        if (result.isEmpty() && response.content.content != null)
+        {
+            for (McpToolCall call : parseTextToolCalls(response.content.content))
+            {
+                call.sourceChatId = conversationId;
+                call.sourceMessageId = response.uuid;
+                result.add(call);
+            }
         }
 
         return result;
+    }
+
+    private static final Pattern INVOKE_PATTERN =
+        Pattern.compile("<invoke\\s+name=\"([^\"]+)\"\\s*>(.*?)</invoke>", Pattern.DOTALL); //$NON-NLS-1$
+    private static final Pattern PARAMETER_PATTERN =
+        Pattern.compile("<parameter\\s+name=\"([^\"]+)\"\\s*>(.*?)</parameter>", Pattern.DOTALL); //$NON-NLS-1$
+    private static final Pattern INTEGER_PATTERN = Pattern.compile("-?\\d+"); //$NON-NLS-1$
+    private static final Pattern DECIMAL_PATTERN = Pattern.compile("-?\\d+\\.\\d+"); //$NON-NLS-1$
+
+    private ArrayList<McpToolCall> parseTextToolCalls(String text)
+    {
+        ArrayList<McpToolCall> calls = new ArrayList<>();
+        if (text == null || !text.contains("<invoke")) //$NON-NLS-1$
+        {
+            return calls;
+        }
+        Matcher invoke = INVOKE_PATTERN.matcher(text);
+        while (invoke.find())
+        {
+            String name = invoke.group(1).trim();
+            if (name.isEmpty())
+            {
+                continue;
+            }
+            JsonObject arguments = new JsonObject();
+            Matcher parameter = PARAMETER_PATTERN.matcher(invoke.group(2));
+            while (parameter.find())
+            {
+                String key = parameter.group(1).trim();
+                String value = stripModelTokens(parameter.group(2)).trim();
+                arguments.add(key, toJsonValue(value));
+            }
+            McpToolCall call = new McpToolCall();
+            call.id = "call_" + UUID.randomUUID().toString().replace("-", ""); //$NON-NLS-1$ //$NON-NLS-2$
+            call.type = "function"; //$NON-NLS-1$
+            call.function = new McpToolCallFunctionCall();
+            call.function.name = name;
+            call.function.arguments = arguments.toString();
+            calls.add(call);
+        }
+        return calls;
+    }
+
+    private static String stripModelTokens(String value)
+    {
+        // MiniMax interleaves an internal segment-delimiter token in its streamed output.
+        return value.replace("]<]minimax[>[", ""); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private static JsonElement toJsonValue(String value)
+    {
+        if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) //$NON-NLS-1$ //$NON-NLS-2$
+        {
+            return new JsonPrimitive(Boolean.valueOf(Boolean.parseBoolean(value)));
+        }
+        if (INTEGER_PATTERN.matcher(value).matches())
+        {
+            try
+            {
+                return new JsonPrimitive(Long.valueOf(value));
+            }
+            catch (NumberFormatException e)
+            {
+                // fall through to string
+            }
+        }
+        if (DECIMAL_PATTERN.matcher(value).matches())
+        {
+            try
+            {
+                return new JsonPrimitive(Double.valueOf(value));
+            }
+            catch (NumberFormatException e)
+            {
+                // fall through to string
+            }
+        }
+        return new JsonPrimitive(value);
     }
 
 
