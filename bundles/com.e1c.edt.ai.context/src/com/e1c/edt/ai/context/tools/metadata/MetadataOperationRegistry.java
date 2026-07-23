@@ -102,6 +102,14 @@ public final class MetadataOperationRegistry
         add("removeSubordinateObject", "Removes a nested subordinate object from its owner.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "subordinate_kind", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"removeSubordinateObject\",\"project_name\":\"MyProject\",\"object_name\":\"CalculationRegister.Payroll\",\"subordinate_kind\":\"recalculation\",\"name\":\"Main\"}"); //$NON-NLS-1$
+        add("createConfiguration", //$NON-NLS-1$
+            "Creates a new EDT 1C configuration project (workspace project with the configuration nature and an empty Configuration root). project_name is the new project name.", //$NON-NLS-1$
+            set("project_name"), set("platform_version", "title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "{\"operation\":\"createConfiguration\",\"project_name\":\"MyConfig\",\"platform_version\":\"8.3.24\"}"); //$NON-NLS-1$
+        add("removeConfiguration", //$NON-NLS-1$
+            "Removes a configuration project from the workspace (source files are kept on disk).", //$NON-NLS-1$
+            set("project_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
+            "{\"operation\":\"removeConfiguration\",\"project_name\":\"MyConfig\"}"); //$NON-NLS-1$
     }
 
     Collection<MetadataOperationDescriptor> all()

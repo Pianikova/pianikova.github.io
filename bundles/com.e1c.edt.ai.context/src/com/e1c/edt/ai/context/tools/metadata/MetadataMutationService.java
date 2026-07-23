@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.emf.common.util.EList;
@@ -120,6 +121,16 @@ final class MetadataMutationService
     synchronized MetadataResponse execute(MetadataRequest request, ICancellationToken cancellationToken)
     {
         checkCanceled(cancellationToken);
+        // Configuration-level lifecycle operates on the workspace project itself (create/delete), so it
+        // runs before the "project must already exist" resolution used by object-level operations.
+        if ("createConfiguration".equals(request.operation)) //$NON-NLS-1$
+        {
+            return createConfiguration(request, cancellationToken);
+        }
+        if ("removeConfiguration".equals(request.operation)) //$NON-NLS-1$
+        {
+            return removeConfiguration(request);
+        }
         var project = project(request.projectName);
         if ("inspectObject".equals(request.operation)) //$NON-NLS-1$
         {
@@ -896,6 +907,169 @@ final class MetadataMutationService
         return MetadataResponse.success(request, request.objectName, changed[0]);
     }
 
+    private static final String DEFAULT_PLATFORM_VERSION = "8.3.24"; //$NON-NLS-1$
+    private static final String XTEXT_NATURE = "org.eclipse.xtext.ui.shared.xtextNature"; //$NON-NLS-1$
+    private static final String CONFIGURATION_NATURE = "com._1c.g5.v8.dt.core.V8ConfigurationNature"; //$NON-NLS-1$
+
+    // Minimal valid empty configuration, matching what EDT's ConfigurationInitializer produces. The
+    // seven containedObjects carry fixed system class ids; only their object ids and the root uuid are
+    // per-configuration. Placeholders: 1=root uuid, 2=name, 3..9=contained object ids, 10=compatibility.
+    private static final String CONFIGURATION_MDO_TEMPLATE = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" //$NON-NLS-1$
+        + "<mdclass:Configuration xmlns:mdclass=\"http://g5.1c.ru/v8/dt/metadata/mdclass\" uuid=\"%1$s\">\n" //$NON-NLS-1$
+        + "  <name>%2$s</name>\n" //$NON-NLS-1$
+        + "  <containedObjects classId=\"9cd510cd-abfc-11d4-9434-004095e12fc7\" objectId=\"%3$s\"/>\n" //$NON-NLS-1$
+        + "  <containedObjects classId=\"9fcd25a0-4822-11d4-9414-008048da11f9\" objectId=\"%4$s\"/>\n" //$NON-NLS-1$
+        + "  <containedObjects classId=\"e3687481-0a87-462c-a166-9f34594f9bba\" objectId=\"%5$s\"/>\n" //$NON-NLS-1$
+        + "  <containedObjects classId=\"9de14907-ec23-4a07-96f0-85521cb6b53b\" objectId=\"%6$s\"/>\n" //$NON-NLS-1$
+        + "  <containedObjects classId=\"51f2d5d8-ea4d-4064-8892-82951750031e\" objectId=\"%7$s\"/>\n" //$NON-NLS-1$
+        + "  <containedObjects classId=\"e68182ea-4237-4383-967f-90c1e3370bc7\" objectId=\"%8$s\"/>\n" //$NON-NLS-1$
+        + "  <containedObjects classId=\"fb282519-d103-4dd3-bc12-cb271d631dfc\" objectId=\"%9$s\"/>\n" //$NON-NLS-1$
+        + "  <defaultRunMode>ManagedApplication</defaultRunMode>\n" //$NON-NLS-1$
+        + "  <usePurposes>PersonalComputer</usePurposes>\n" //$NON-NLS-1$
+        + "  <dataLockControlMode>Managed</dataLockControlMode>\n" //$NON-NLS-1$
+        + "  <objectAutonumerationMode>NotAutoFree</objectAutonumerationMode>\n" //$NON-NLS-1$
+        + "  <modalityUseMode>DontUse</modalityUseMode>\n" //$NON-NLS-1$
+        + "  <synchronousPlatformExtensionAndAddInCallUseMode>DontUse</synchronousPlatformExtensionAndAddInCallUseMode>\n" //$NON-NLS-1$
+        + "  <compatibilityMode>%10$s</compatibilityMode>\n" //$NON-NLS-1$
+        + "</mdclass:Configuration>\n"; //$NON-NLS-1$
+
+    private MetadataResponse createConfiguration(MetadataRequest request, ICancellationToken cancellationToken)
+    {
+        var name = request.projectName;
+        if (name == null || name.isBlank())
+        {
+            throw new ToolException("`project_name` is required for createConfiguration."); //$NON-NLS-1$
+        }
+        validateIdentifier(name, "project_name"); //$NON-NLS-1$
+        var workspace = ResourcesPlugin.getWorkspace();
+        var project = workspace.getRoot().getProject(name);
+        if (project.exists())
+        {
+            throw new ToolException("A project with this name already exists: " + name); //$NON-NLS-1$
+        }
+        var version = request.platformVersion != null && !request.platformVersion.isBlank()
+            ? request.platformVersion : DEFAULT_PLATFORM_VERSION;
+        var configurationMdo = configurationMdo(name, version);
+        try
+        {
+            var description = workspace.newProjectDescription(name);
+            workspace.run(monitor -> {
+                project.create(description, monitor);
+                project.open(monitor);
+                project.setDefaultCharset(java.nio.charset.StandardCharsets.UTF_8.name(), monitor);
+                writeProjectManifest(project, version, monitor);
+                // Write a valid Configuration.mdo BEFORE enabling the configuration nature: an empty
+                // configuration folder makes the EDT project context fail RESOURCE_LOADING, and seeding
+                // the root through the BM afterwards is racy. Enabling the nature last starts the context
+                // with the configuration already present.
+                writeConfigurationMdo(project, configurationMdo, monitor);
+                description.setNatureIds(new String[] { CONFIGURATION_NATURE, XTEXT_NATURE });
+                project.setDescription(description, IResource.FORCE, monitor);
+            }, workspace.getRoot(), IWorkspace.AVOID_UPDATE, null);
+        }
+        catch (org.eclipse.core.runtime.CoreException e)
+        {
+            throw new ToolException("Failed to create configuration project " + name + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+
+        var response = MetadataResponse.success(request, "Configuration", true); //$NON-NLS-1$
+        response.resourcePath = configurationResourcePath(project);
+        response.markerPath = response.resourcePath;
+        refresh(project);
+        try
+        {
+            projectBuilder.build(project, cancellationToken);
+        }
+        catch (org.eclipse.core.runtime.CoreException e)
+        {
+            response.warnings.add("EDT validation failed to start: " + e.getMessage()); //$NON-NLS-1$
+        }
+        return response;
+    }
+
+    private static String configurationMdo(String name, String version)
+    {
+        return String.format(CONFIGURATION_MDO_TEMPLATE, UUID.randomUUID(), name, UUID.randomUUID(),
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+            UUID.randomUUID(), version);
+    }
+
+    private void writeConfigurationMdo(IProject project, String content,
+        org.eclipse.core.runtime.IProgressMonitor monitor) throws org.eclipse.core.runtime.CoreException
+    {
+        var src = project.getFolder("src"); //$NON-NLS-1$
+        if (!src.exists())
+        {
+            src.create(true, true, monitor);
+        }
+        var configurationFolder = src.getFolder("Configuration"); //$NON-NLS-1$
+        if (!configurationFolder.exists())
+        {
+            configurationFolder.create(true, true, monitor);
+        }
+        var file = configurationFolder.getFile("Configuration.mdo"); //$NON-NLS-1$
+        file.create(new java.io.ByteArrayInputStream(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)), true,
+            monitor);
+    }
+
+    private MetadataResponse removeConfiguration(MetadataRequest request)
+    {
+        var name = request.projectName;
+        if (name == null || name.isBlank())
+        {
+            throw new ToolException("`project_name` is required for removeConfiguration."); //$NON-NLS-1$
+        }
+        var project = ResourcesPlugin.getWorkspace().getRoot().getProject(name);
+        boolean existed = project.exists();
+        if (existed && !request.dryRun)
+        {
+            try
+            {
+                // Remove the project from the workspace but keep files on disk (non-destructive).
+                project.delete(false, true, new NullProgressMonitor());
+            }
+            catch (org.eclipse.core.runtime.CoreException e)
+            {
+                throw new ToolException("Failed to remove configuration project " + name + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
+            }
+        }
+        var response = MetadataResponse.success(request, name, existed);
+        if (existed)
+        {
+            response.warnings.add("Project removed from workspace; source files remain on disk."); //$NON-NLS-1$
+        }
+        return response;
+    }
+
+    private void writeProjectManifest(IProject project, String version,
+        org.eclipse.core.runtime.IProgressMonitor monitor) throws org.eclipse.core.runtime.CoreException
+    {
+        var headers = new java.util.HashMap<String, String>();
+        headers.put(com._1c.g5.v8.dt.core.platform.ProjectManifest.MANIFEST_VERSION, "1.0"); //$NON-NLS-1$
+        headers.put(com._1c.g5.v8.dt.core.platform.ProjectManifest.RUNTIME_VERSION, version);
+        try (var out = new java.io.ByteArrayOutputStream())
+        {
+            var dtInf = project.getFolder(com._1c.g5.v8.dt.core.platform.ProjectManifest.DT_INF_FOLDER);
+            if (!dtInf.exists())
+            {
+                dtInf.create(true, true, monitor);
+            }
+            com._1c.g5.v8.dt.core.platform.ProjectManifest.writeProjectManifest(out, headers);
+            var manifestFile = project.getFile(com._1c.g5.v8.dt.core.platform.ProjectManifest.DT_PROJECT_MANIFEST);
+            manifestFile.create(new java.io.ByteArrayInputStream(out.toByteArray()), true, monitor);
+        }
+        catch (java.io.IOException e)
+        {
+            throw new ToolException("Failed to write project manifest: " + e.getMessage()); //$NON-NLS-1$
+        }
+    }
+
+    private static String configurationResourcePath(IProject project)
+    {
+        var location = project.getFile("src/Configuration/Configuration.mdo").getLocation(); //$NON-NLS-1$
+        return location != null ? location.toOSString() : "src/Configuration/Configuration.mdo"; //$NON-NLS-1$
+    }
+
     private void requireInlineObject(IProject project, String fqn)
     {
         var parts = objectParts(fqn);
@@ -1427,6 +1601,11 @@ final class MetadataMutationService
 
     static String metadataRelativePath(String target)
     {
+        if ("Configuration".equals(target)) //$NON-NLS-1$
+        {
+            // The configuration root object itself (addressable via inspectObject/setObjectProperty).
+            return "src/Configuration/Configuration.mdo"; //$NON-NLS-1$
+        }
         var parts = target != null ? target.split("\\.", -1) : new String[0]; //$NON-NLS-1$
         if (parts.length < 2 || parts[0].isBlank() || parts[1].isBlank())
         {

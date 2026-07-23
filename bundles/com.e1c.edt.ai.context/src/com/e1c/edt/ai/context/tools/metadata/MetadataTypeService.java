@@ -60,9 +60,9 @@ final class MetadataTypeService
         {
             builder.addType(primitive(provider, IEObjectTypeNames.STRING, normalized));
             int length = request.length != null ? request.length : 100;
-            if (length < 0 || length > 100)
+            if (length < 0)
             {
-                throw new ToolException("String length must be between 0 and 100."); //$NON-NLS-1$
+                throw new ToolException("String length must be 0 (unlimited) or a positive number."); //$NON-NLS-1$
             }
             return builder.setStringQualifiers(length, false).build();
         }
