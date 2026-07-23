@@ -35,6 +35,8 @@ import com._1c.g5.v8.dt.form.generator.FormType;
 import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
 import com._1c.g5.v8.dt.form.generator.IFormGenerator;
 import com._1c.g5.v8.dt.form.model.Form;
+import com._1c.g5.v8.dt.form.model.FormFactory;
+import com._1c.g5.v8.dt.md.model.IMdObjectInitializer;
 import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicFeature;
@@ -67,6 +69,7 @@ import com.google.inject.Singleton;
 final class MetadataMutationService
 {
     private static final String IDENTIFIER_PATTERN = "[\\p{L}_][\\p{L}\\p{N}_]*"; //$NON-NLS-1$
+    private static final String EXTERNAL_OBJECTS_NATURE = "com._1c.g5.v8.dt.core.V8ExternalObjectsNature"; //$NON-NLS-1$
 
     private final IBmModelManager modelManager;
     private final ITopObjectFqnGenerator fqnGenerator;
@@ -592,6 +595,44 @@ final class MetadataMutationService
         return MetadataResponse.success(request, request.objectName, changed[0]);
     }
 
+    private void registerExternalObject(IProject project, MdObject object)
+    {
+        var v8Project = v8ProjectManager.getProject(project);
+        if (v8Project == null)
+        {
+            throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
+        }
+        for (var method : v8Project.getClass().getMethods())
+        {
+            if ("addExternalObject".equals(method.getName()) && method.getParameterCount() == 1) //$NON-NLS-1$
+            {
+                try
+                {
+                    method.setAccessible(true);
+                    method.invoke(v8Project, object);
+                    return;
+                }
+                catch (ReflectiveOperationException e)
+                {
+                    throw new ToolException("Cannot register external object in EDT project: " + e.getMessage()); //$NON-NLS-1$
+                }
+            }
+        }
+        throw new ToolException("EDT project does not expose external object registration."); //$NON-NLS-1$
+    }
+
+    private static boolean hasNature(IProject project, String nature)
+    {
+        try
+        {
+            return project.hasNature(nature);
+        }
+        catch (org.eclipse.core.runtime.CoreException e)
+        {
+            throw new ToolException("Cannot inspect EDT project nature: " + e.getMessage()); //$NON-NLS-1$
+        }
+    }
+
     private MetadataResponse createObjectForm(IProject project, MetadataRequest request)
     {
         validateIdentifier(request.name, "name"); //$NON-NLS-1$
@@ -791,7 +832,15 @@ final class MetadataMutationService
                 {
                     return null;
                 }
-                var object = createTopObject(request.objectName);
+                var descriptor = MetadataObjectTypeRegistry.get(objectParts(request.objectName)[0]);
+                boolean externalProject = hasNature(project, EXTERNAL_OBJECTS_NATURE);
+                if (descriptor.external != externalProject)
+                {
+                    throw new ToolException(descriptor.external
+                        ? "ExternalDataProcessor and ExternalReport require an EDT external-objects project." //$NON-NLS-1$
+                        : "Configuration metadata objects cannot be created in an EDT external-objects project."); //$NON-NLS-1$
+                }
+                var object = createTopObject(project, request.objectName);
                 object.setName(name);
                 object.setUuid(UUID.randomUUID());
                 if (request.title != null && !request.title.isBlank())
@@ -803,23 +852,72 @@ final class MetadataMutationService
                     changed[0] = true;
                     return null;
                 }
-                var configuration = (Configuration)transaction.getTopObjectByFqn("Configuration"); //$NON-NLS-1$
-                if (configuration == null)
+                if (descriptor.external)
                 {
-                    throw new ToolException("Configuration top object is not available."); //$NON-NLS-1$
+                    transaction.attachTopObject((IBmObject)object, request.objectName);
+                    registerExternalObject(project, object);
                 }
-                var fqn = fqnGenerator.generateStandaloneObjectFqn(object.eClass(), object.getName()).toString();
-                transaction.attachTopObject((IBmObject)object, fqn);
-                addToFeature(configuration, topCollection(request.objectName), object);
+                else
+                {
+                    var configuration = (Configuration)transaction.getTopObjectByFqn("Configuration"); //$NON-NLS-1$
+                    if (configuration == null)
+                    {
+                        throw new ToolException("Configuration top object is not available."); //$NON-NLS-1$
+                    }
+                    var fqn = fqnGenerator.generateStandaloneObjectFqn(object.eClass(), object.getName()).toString();
+                    transaction.attachTopObject((IBmObject)object, fqn);
+                    addToFeature(configuration, descriptor.collection, object);
+                    if ("CommonForm".equals(descriptor.name)) //$NON-NLS-1$
+                    {
+                        attachEmptyFormBody(transaction, (BasicForm)object);
+                    }
+                }
                 changed[0] = true;
                 return null;
             }
         });
         if (changed[0] && !request.dryRun)
         {
-            readObject(project, request.objectName);
+            if (MetadataObjectTypeRegistry.get(objectParts(request.objectName)[0]).inlineInConfiguration)
+            {
+                requireInlineObject(project, request.objectName);
+            }
+            else
+            {
+                readObject(project, request.objectName);
+            }
         }
         return MetadataResponse.success(request, request.objectName, changed[0]);
+    }
+
+    private void requireInlineObject(IProject project, String fqn)
+    {
+        var parts = objectParts(fqn);
+        var descriptor = MetadataObjectTypeRegistry.get(parts[0]);
+        var found = model(project).getGlobalContext().execute(new AbstractBmTask<Boolean>("Read inline 1C object") //$NON-NLS-1$
+        {
+            @Override
+            public Boolean execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var configuration = transaction.getTopObjectByFqn("Configuration"); //$NON-NLS-1$
+                return Boolean.valueOf(configuration instanceof MdObject
+                    && findNamed(featureList((MdObject)configuration, descriptor.collection), parts[1]) != null);
+            }
+        });
+        if (!Boolean.TRUE.equals(found))
+        {
+            throw new ToolException("Metadata object not found: " + fqn); //$NON-NLS-1$
+        }
+    }
+
+    private void attachEmptyFormBody(IBmTransaction transaction, BasicForm formMetadata)
+    {
+        Form form = FormFactory.eINSTANCE.createForm();
+        formMetadata.setForm(form);
+        form.setMdForm(formMetadata);
+        var formReference = (org.eclipse.emf.ecore.EReference)formMetadata.eClass().getEStructuralFeature("form"); //$NON-NLS-1$
+        var formFqn = fqnGenerator.generateExternalPropertyFqn(formMetadata, formReference);
+        transaction.attachTopObject((IBmObject)form, formFqn);
     }
 
     private MetadataResponse setObjectProperty(IProject project, MetadataRequest request)
@@ -894,6 +992,10 @@ final class MetadataMutationService
 
     private MetadataResponse removeObject(IProject project, MetadataRequest request)
     {
+        if (MetadataObjectTypeRegistry.get(objectParts(request.objectName)[0]).inlineInConfiguration)
+        {
+            return removeInlineObject(project, request);
+        }
         var object = readObjectOrNull(project, request.objectName);
         if (object == null)
         {
@@ -909,6 +1011,37 @@ final class MetadataMutationService
             }
         }
         return MetadataResponse.success(request, request.objectName, true);
+    }
+
+    private MetadataResponse removeInlineObject(IProject project, MetadataRequest request)
+    {
+        var parts = objectParts(request.objectName);
+        var descriptor = MetadataObjectTypeRegistry.get(parts[0]);
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Remove inline 1C object") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var configuration = transaction.getTopObjectByFqn("Configuration"); //$NON-NLS-1$
+                if (!(configuration instanceof MdObject))
+                {
+                    return null;
+                }
+                var child = findNamed(featureList((MdObject)configuration, descriptor.collection), parts[1]);
+                if (child == null)
+                {
+                    return null;
+                }
+                changed[0] = true;
+                if (!request.dryRun)
+                {
+                    EcoreUtil.delete((EObject)child, true);
+                }
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, request.objectName, changed[0]);
     }
 
     private MetadataResponse addFeature(IProject project, MetadataRequest request, String featureName, FeatureKind kind)
@@ -943,7 +1076,7 @@ final class MetadataMutationService
                 {
                     return null;
                 }
-                var child = createChild(owner, kind, featureName);
+                var child = createChild(project, owner, kind, featureName);
                 child.setName(request.name);
                 child.setUuid(UUID.randomUUID());
                 if (request.title != null && !request.title.isBlank())
@@ -1015,42 +1148,32 @@ final class MetadataMutationService
         return removeFeature(project, request, "attributes", parts[1], parts[0]); //$NON-NLS-1$
     }
 
-    private MdObject createTopObject(String fqn)
+    private MdObject createTopObject(IProject project, String fqn)
     {
-        switch (objectParts(fqn)[0])
+        var descriptor = MetadataObjectTypeRegistry.get(objectParts(fqn)[0]);
+        var v8Project = v8ProjectManager.getProject(project);
+        if (v8Project == null)
         {
-        case "Catalog": return MdClassFactory.eINSTANCE.createCatalog(); //$NON-NLS-1$
-        case "Document": return MdClassFactory.eINSTANCE.createDocument(); //$NON-NLS-1$
-        case "Enum": return MdClassFactory.eINSTANCE.createEnum(); //$NON-NLS-1$
-        case "InformationRegister": return MdClassFactory.eINSTANCE.createInformationRegister(); //$NON-NLS-1$
-        case "AccumulationRegister": return MdClassFactory.eINSTANCE.createAccumulationRegister(); //$NON-NLS-1$
-        case "Report": return MdClassFactory.eINSTANCE.createReport(); //$NON-NLS-1$
-        case "DataProcessor": return MdClassFactory.eINSTANCE.createDataProcessor(); //$NON-NLS-1$
-        case "CommonModule": return MdClassFactory.eINSTANCE.createCommonModule(); //$NON-NLS-1$
-        case "Subsystem": return MdClassFactory.eINSTANCE.createSubsystem(); //$NON-NLS-1$
-        case "Constant": return MdClassFactory.eINSTANCE.createConstant(); //$NON-NLS-1$
-        default:
-            throw new ToolException("Unsupported object type `" + objectParts(fqn)[0] //$NON-NLS-1$
-                + "`. Supported: Catalog, Document, Enum, InformationRegister, AccumulationRegister, Report, DataProcessor, CommonModule, Subsystem, Constant."); //$NON-NLS-1$
+            throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
         }
-    }
-
-    private static String topCollection(String fqn)
-    {
-        switch (objectParts(fqn)[0])
+        if (descriptor.initializer != null)
         {
-        case "Catalog": return "catalogs"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Document": return "documents"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Enum": return "enums"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "InformationRegister": return "informationRegisters"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "AccumulationRegister": return "accumulationRegisters"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Report": return "reports"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "DataProcessor": return "dataProcessors"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "CommonModule": return "commonModules"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Subsystem": return "subsystems"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Constant": return "constants"; //$NON-NLS-1$ //$NON-NLS-2$
-        default: throw new ToolException("Unsupported object type: " + objectParts(fqn)[0]); //$NON-NLS-1$
+            var initialized = tryCreateViaInitializer(descriptor.initializer, v8Project);
+            if (initialized != null)
+            {
+                return initialized;
+            }
+            // The official initializer threw (some of them, e.g. AccountingRegisterInitializer and
+            // ChartOfCharacteristicTypesInitializer, dereference optional collaborators during
+            // create() and raise NullPointerException). Fall back to a plain MdClassFactory object,
+            // matching the reference EDT tool behavior; the object still persists as a valid top object.
         }
+        var classifier = MdClassPackage.eINSTANCE.getEClassifier(descriptor.name);
+        if (!(classifier instanceof EClass))
+        {
+            throw new ToolException("EDT metadata class is not available: " + descriptor.name); //$NON-NLS-1$
+        }
+        return (MdObject)MdClassFactory.eINSTANCE.create((EClass)classifier);
     }
 
     private static String metadataResourcePath(IProject project, String target)
@@ -1067,30 +1190,49 @@ final class MetadataMutationService
         {
             throw new ToolException("Cannot derive metadata resource path from target: " + target); //$NON-NLS-1$
         }
-        var folder = topFolder(parts[0]);
-        return "src/" + folder + "/" + parts[1] + "/" + parts[1] + ".mdo"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        var descriptor = MetadataObjectTypeRegistry.get(parts[0]);
+        if (descriptor.inlineInConfiguration)
+        {
+            // Inline types (e.g. Language) live inside Configuration.mdo, not their own resource.
+            return "src/Configuration/Configuration.mdo"; //$NON-NLS-1$
+        }
+        return "src/" + descriptor.folder + "/" + parts[1] + "/" + parts[1] + ".mdo"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     }
 
     private static String topFolder(String type)
     {
-        switch (type)
-        {
-        case "Catalog": return "Catalogs"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Document": return "Documents"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Enum": return "Enums"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "InformationRegister": return "InformationRegisters"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "AccumulationRegister": return "AccumulationRegisters"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Report": return "Reports"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "DataProcessor": return "DataProcessors"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "CommonModule": return "CommonModules"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Subsystem": return "Subsystems"; //$NON-NLS-1$ //$NON-NLS-2$
-        case "Constant": return "Constants"; //$NON-NLS-1$ //$NON-NLS-2$
-        default: throw new ToolException("Unsupported metadata resource type: " + type); //$NON-NLS-1$
-        }
+        return MetadataObjectTypeRegistry.get(type).folder;
     }
 
-    private MdObject createChild(MdObject owner, FeatureKind kind, String featureName)
+    private MdObject createChild(IProject project, MdObject owner, FeatureKind kind, String featureName)
     {
+        var feature = owner.eClass().getEStructuralFeature(featureName);
+        if (feature != null && feature.getEType() instanceof EClass)
+        {
+            var initializerName = childInitializerName(owner);
+            if (initializerName != null)
+            {
+                var v8Project = v8ProjectManager.getProject(project);
+                if (v8Project == null)
+                {
+                    throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
+                }
+                try
+                {
+                    var initialized = createInitializer(initializerName).createChildObject((EClass)feature.getEType(),
+                        owner, v8Project.getVersion());
+                    if (initialized instanceof MdObject)
+                    {
+                        return (MdObject)initialized;
+                    }
+                }
+                catch (RuntimeException | Error e)
+                {
+                    // Best effort: fall through to the explicit MdClassFactory fallbacks below when the
+                    // official child initializer fails (mirrors the top-object create fallback).
+                }
+            }
+        }
         if (kind == FeatureKind.ENUM_VALUE && owner instanceof com._1c.g5.v8.dt.metadata.mdclass.Enum)
         {
             return MdClassFactory.eINSTANCE.createEnumValue();
@@ -1122,6 +1264,54 @@ final class MetadataMutationService
             return createRegisterChild(owner, featureName);
         }
         throw new ToolException("Operation is not supported for object type: " + owner.eClass().getName()); //$NON-NLS-1$
+    }
+
+    private static String childInitializerName(MdObject owner)
+    {
+        var className = owner.eClass().getName();
+        if (className.endsWith("TabularSection")) //$NON-NLS-1$
+        {
+            return "com._1c.g5.v8.dt.md.model." + className + "Initializer"; //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        try
+        {
+            return MetadataObjectTypeRegistry.get(className).initializer;
+        }
+        catch (ToolException e)
+        {
+            return null;
+        }
+    }
+
+    private MdObject tryCreateViaInitializer(String className, com._1c.g5.v8.dt.core.platform.IV8Project v8Project)
+    {
+        try
+        {
+            return createInitializer(className).create(v8Project, v8Project.getVersion());
+        }
+        catch (RuntimeException | Error e)
+        {
+            // Best effort: an official initializer may fail (observed NPE for AccountingRegister and
+            // ChartOfCharacteristicTypes). Signal the caller to fall back to MdClassFactory defaults.
+            return null;
+        }
+    }
+
+    private static IMdObjectInitializer<?> createInitializer(String className)
+    {
+        try
+        {
+            var instance = Class.forName(className).getDeclaredConstructor().newInstance();
+            if (instance instanceof IMdObjectInitializer<?>)
+            {
+                return (IMdObjectInitializer<?>)instance;
+            }
+            throw new ToolException("EDT initializer has an unexpected type: " + className); //$NON-NLS-1$
+        }
+        catch (ReflectiveOperationException e)
+        {
+            throw new ToolException("Cannot load EDT metadata initializer " + className + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
+        }
     }
 
     private MdObject createRegisterChild(MdObject owner, String feature)

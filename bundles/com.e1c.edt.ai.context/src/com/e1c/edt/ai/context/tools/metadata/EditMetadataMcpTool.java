@@ -129,12 +129,32 @@ public final class EditMetadataMcpTool
             return result;
         }
 
+        if ("objectTypes".equals(topic)) //$NON-NLS-1$
+        {
+            var result = new LinkedHashMap<String, Object>();
+            var types = new ArrayList<Object>();
+            for (var type : MetadataObjectTypeRegistry.all())
+            {
+                var item = new LinkedHashMap<String, Object>();
+                item.put("name", type.name); //$NON-NLS-1$
+                item.put("resource_folder", type.folder); //$NON-NLS-1$
+                item.put("external_project", type.external); //$NON-NLS-1$
+                types.add(item);
+            }
+            result.put("topic", topic); //$NON-NLS-1$
+            result.put("count", types.size()); //$NON-NLS-1$
+            result.put("object_types", types); //$NON-NLS-1$
+            return result;
+        }
+
         var descriptor = registry.get(topic);
         if (descriptor == null)
         {
             var result = new LinkedHashMap<String, Object>();
             result.put("error", "Unknown help topic `" + topic + "`."); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-            result.put("valid_topics", registry.names()); //$NON-NLS-1$
+            var validTopics = new ArrayList<String>(registry.names());
+            validTopics.add("objectTypes"); //$NON-NLS-1$
+            result.put("valid_topics", validTopics); //$NON-NLS-1$
             result.put("next", "Choose one exact value from valid_topics and call help again."); //$NON-NLS-1$ //$NON-NLS-2$
             return result;
         }
@@ -158,6 +178,7 @@ public final class EditMetadataMcpTool
             + " It never executes model-generated Java code and never edits .mdo/.form files directly."
             + " Never use file editing tools to create or repair metadata; remove and recreate a wrong child instead."
             + " Operations: " + String.join(", ", new MetadataOperationRegistry().names()) + "."
+            + " createObject supports all 41 object types returned by help topic=objectTypes."
             + " For an attribute inside a tabular section use addTabularSectionAttribute with"
             + " object_name=Type.Object.TabularSection; addObjectAttribute is only for a top-level object."
             + " Call with operation=help to list operations, then operation=help and topic=<operation>"

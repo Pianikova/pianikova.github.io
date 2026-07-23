@@ -30,7 +30,8 @@ public final class MetadataOperationRegistry
         add("inspectObject", "Reads an object, its scalar properties, children, types, forms, templates, and register links.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name"), set(), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"inspectObject\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order\"}"); //$NON-NLS-1$
-        add("createObject", "Creates a top-level 1C metadata object.", set("project_name", "object_name"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        add("createObject", "Creates any top-level object type listed by help topic=objectTypes.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name"), //$NON-NLS-1$ //$NON-NLS-2$
             set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"createObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"title\":\"Products\"}"); //$NON-NLS-1$
         add("setObjectProperty", "Changes one scalar property of an existing top-level object.", //$NON-NLS-1$ //$NON-NLS-2$

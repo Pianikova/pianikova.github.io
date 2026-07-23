@@ -43,6 +43,27 @@ public class MetadataMutationServiceTest
     }
 
     @Test
+    public void shouldBuildResourcePathsForIrregularRsvTypes()
+        throws ReflectiveOperationException
+    {
+        var service = Class.forName("com.e1c.edt.ai.context.tools.metadata.MetadataMutationService"); //$NON-NLS-1$
+        var method = service.getDeclaredMethod("metadataRelativePath", String.class); //$NON-NLS-1$
+        method.setAccessible(true);
+
+        Assert.assertEquals("src/ChartsOfAccounts/Main/Main.mdo", //$NON-NLS-1$
+            method.invoke(null, "ChartOfAccounts.Main")); //$NON-NLS-1$
+        Assert.assertEquals("src/HTTPServices/Api/Api.mdo", //$NON-NLS-1$
+            method.invoke(null, "HTTPService.Api")); //$NON-NLS-1$
+        Assert.assertEquals("src/XDTOPackages/Types/Types.mdo", //$NON-NLS-1$
+            method.invoke(null, "XDTOPackage.Types")); //$NON-NLS-1$
+        Assert.assertEquals("src/ExternalReports/Sales/Sales.mdo", //$NON-NLS-1$
+            method.invoke(null, "ExternalReport.Sales")); //$NON-NLS-1$
+        // Language is stored inline in Configuration.mdo, not as its own resource.
+        Assert.assertEquals("src/Configuration/Configuration.mdo", //$NON-NLS-1$
+            method.invoke(null, "Language.English")); //$NON-NLS-1$
+    }
+
+    @Test
     public void shouldRejectCanceledOperationBeforeMutation()
         throws ReflectiveOperationException
     {
