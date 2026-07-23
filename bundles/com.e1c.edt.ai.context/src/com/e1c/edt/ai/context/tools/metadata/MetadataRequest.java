@@ -42,6 +42,9 @@ final class MetadataRequest
     @SerializedName("child_kind")
     String childKind;
 
+    @SerializedName("subordinate_kind")
+    String subordinateKind;
+
     @SerializedName("related_object_name")
     String relatedObjectName;
 

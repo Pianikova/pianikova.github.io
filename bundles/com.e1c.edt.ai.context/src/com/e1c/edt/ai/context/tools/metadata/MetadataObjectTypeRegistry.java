@@ -122,20 +122,21 @@ public final class MetadataObjectTypeRegistry
         // Language is the only configuration type persisted inline in Configuration.mdo rather than
         // as its own <folder>/<name>/<name>.mdo resource, so it is not a standalone BM top object.
         addInline(result, "Language", "languages", "Languages", "LanguageInitializer"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-        // Remaining top-level Configuration collections from MdClass.xcore. Types without a dedicated
-        // EDT initializer (CommonPicture, CommonTemplate, Interface) fall back to MdClassFactory.
+        // Remaining top-level Configuration collections from MdClass.xcore. CommonPicture and
+        // CommonTemplate have no dedicated EDT initializer and fall back to MdClassFactory.
+        // Deliberately excluded: Interface (obsolete pre-8.2 command interface; EDT keeps the EClass
+        // for reading legacy configs but never serializes a new one, leaving a phantom in-memory
+        // object), and PaletteColor / WebSocketClient (their MdClass EClass is absent in this
+        // platform version). Re-add the latter two when targeting a platform that defines them.
         add(result, "SettingsStorage", "settingsStorages", "SettingsStorages", "SettingsStorageInitializer"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
         add(result, "CommonPicture", "commonPictures", "CommonPictures", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         add(result, "CommonTemplate", "commonTemplates", "CommonTemplates", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         add(result, "CommandGroup", "commandGroups", "CommandGroups", "CommandGroupInitializer"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-        add(result, "Interface", "interfaces", "Interfaces", null); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         add(result, "ExternalDataSource", "externalDataSources", "ExternalDataSources", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "ExternalDataSourceInitializer"); //$NON-NLS-1$
         add(result, "IntegrationService", "integrationServices", "IntegrationServices", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "IntegrationServiceInitializer"); //$NON-NLS-1$
         add(result, "Bot", "bots", "Bots", "BotInitializer"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-        add(result, "WebSocketClient", "webSocketClients", "WebSocketClients", "WebSocketClientInitializer"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-        add(result, "PaletteColor", "paletteColors", "PaletteColors", "PaletteColorInitializer"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
         addExternal(result, "ExternalDataProcessor", "ExternalDataProcessors", //$NON-NLS-1$ //$NON-NLS-2$
             "ExternalDataProcessorInitializer"); //$NON-NLS-1$
         addExternal(result, "ExternalReport", "ExternalReports", "ExternalReportInitializer"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$

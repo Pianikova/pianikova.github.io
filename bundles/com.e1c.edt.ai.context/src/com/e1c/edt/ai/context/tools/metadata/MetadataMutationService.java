@@ -202,6 +202,12 @@ final class MetadataMutationService
         case "removeObjectTemplate": //$NON-NLS-1$
             response = removeObjectArtifact(project, request, "templates"); //$NON-NLS-1$
             break;
+        case "addSubordinateObject": //$NON-NLS-1$
+            response = addSubordinateObject(project, request);
+            break;
+        case "removeSubordinateObject": //$NON-NLS-1$
+            response = removeSubordinateObject(project, request);
+            break;
         default:
             throw new ToolException("Operation is not executable: " + request.operation); //$NON-NLS-1$
         }
@@ -910,6 +916,162 @@ final class MetadataMutationService
         }
     }
 
+    /**
+     * Subordinate (nested) object descriptor: a metadata object contained in another object's
+     * collection, e.g. a Recalculation inside a CalculationRegister.
+     */
+    private static final class Subordinate
+    {
+        final String kind;
+        final String parentType;
+        final String subType;
+        final String feature;
+
+        Subordinate(String kind, String parentType, String subType, String feature)
+        {
+            this.kind = kind;
+            this.parentType = parentType;
+            this.subType = subType;
+            this.feature = feature;
+        }
+
+        String initializer()
+        {
+            return "com._1c.g5.v8.dt.md.model." + subType + "Initializer"; //$NON-NLS-1$ //$NON-NLS-2$
+        }
+    }
+
+    private static final Map<String, Subordinate> SUBORDINATES = createSubordinates();
+
+    private static Map<String, Subordinate> createSubordinates()
+    {
+        Map<String, Subordinate> result = new LinkedHashMap<>();
+        result.put("recalculation", //$NON-NLS-1$
+            new Subordinate("recalculation", "CalculationRegister", "Recalculation", "recalculations")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+        result.put("integration_service_channel", //$NON-NLS-1$
+            new Subordinate("integration_service_channel", "IntegrationService", "IntegrationServiceChannel", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                "integrationServiceChannels")); //$NON-NLS-1$
+        return result;
+    }
+
+    private static Subordinate subordinate(String kind)
+    {
+        var result = SUBORDINATES.get(kind);
+        if (result == null)
+        {
+            throw new ToolException("Unsupported subordinate_kind `" + kind + "`. Valid values: " //$NON-NLS-1$ //$NON-NLS-2$
+                + String.join(", ", SUBORDINATES.keySet()) + "."); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        return result;
+    }
+
+    private MetadataResponse addSubordinateObject(IProject project, MetadataRequest request)
+    {
+        validateIdentifier(request.name, "name"); //$NON-NLS-1$
+        var sub = subordinate(request.subordinateKind);
+        var parentParts = objectParts(request.objectName);
+        if (!sub.parentType.equals(parentParts[0]))
+        {
+            throw new ToolException("subordinate_kind `" + sub.kind + "` requires object_name of type " //$NON-NLS-1$ //$NON-NLS-2$
+                + sub.parentType + ", got " + parentParts[0] + "."); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        var classifier = MdClassPackage.eINSTANCE.getEClassifier(sub.subType);
+        if (!(classifier instanceof EClass))
+        {
+            throw new ToolException("EDT metadata class is not available: " + sub.subType); //$NON-NLS-1$
+        }
+        var model = model(project);
+        boolean[] changed = { false };
+        String target = request.objectName + "." + sub.subType + "." + request.name; //$NON-NLS-1$ //$NON-NLS-2$
+        model.getGlobalContext().execute(new AbstractBmTask<Void>("Add 1C subordinate object") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                MdObject owner = requireObject(transaction, request.objectName);
+                var list = featureList(owner, sub.feature);
+                if (findNamed(list, request.name) != null)
+                {
+                    return null;
+                }
+                var v8Project = v8ProjectManager.getProject(project);
+                if (v8Project == null)
+                {
+                    throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
+                }
+                MdObject child = createViaInitializer(sub.initializer(), v8Project);
+                if (child == null)
+                {
+                    child = (MdObject)MdClassFactory.eINSTANCE.create((EClass)classifier);
+                }
+                child.setName(request.name);
+                child.setUuid(UUID.randomUUID());
+                if (request.title != null && !request.title.isBlank())
+                {
+                    child.getSynonym().put("ru", request.title); //$NON-NLS-1$
+                }
+                changed[0] = true;
+                if (!request.dryRun)
+                {
+                    list.add(child);
+                }
+                return null;
+            }
+        });
+        if (changed[0] && !request.dryRun)
+        {
+            requireSubordinate(project, request.objectName, sub, request.name);
+        }
+        return MetadataResponse.success(request, target, changed[0]);
+    }
+
+    private MetadataResponse removeSubordinateObject(IProject project, MetadataRequest request)
+    {
+        var sub = subordinate(request.subordinateKind);
+        var model = model(project);
+        boolean[] changed = { false };
+        String target = request.objectName + "." + sub.subType + "." + request.name; //$NON-NLS-1$ //$NON-NLS-2$
+        model.getGlobalContext().execute(new AbstractBmTask<Void>("Remove 1C subordinate object") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                MdObject owner = requireObject(transaction, request.objectName);
+                var child = findNamed(featureList(owner, sub.feature), request.name);
+                if (child == null)
+                {
+                    return null;
+                }
+                changed[0] = true;
+                if (!request.dryRun)
+                {
+                    EcoreUtil.delete((EObject)child, true);
+                }
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, target, changed[0]);
+    }
+
+    private void requireSubordinate(IProject project, String parentFqn, Subordinate sub, String name)
+    {
+        var found = model(project).getGlobalContext().execute(new AbstractBmTask<Boolean>("Read 1C subordinate") //$NON-NLS-1$
+        {
+            @Override
+            public Boolean execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var owner = transaction.getTopObjectByFqn(parentFqn);
+                return Boolean.valueOf(owner instanceof MdObject
+                    && findNamed(featureList((MdObject)owner, sub.feature), name) != null);
+            }
+        });
+        if (!Boolean.TRUE.equals(found))
+        {
+            throw new ToolException("Subordinate object was not created: " + parentFqn + "." + sub.subType //$NON-NLS-1$ //$NON-NLS-2$
+                + "." + name); //$NON-NLS-1$
+        }
+    }
+
     private void attachEmptyFormBody(IBmTransaction transaction, BasicForm formMetadata)
     {
         Form form = FormFactory.eINSTANCE.createForm();
@@ -1156,24 +1318,104 @@ final class MetadataMutationService
         {
             throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
         }
-        if (descriptor.initializer != null)
-        {
-            var initialized = tryCreateViaInitializer(descriptor.initializer, v8Project);
-            if (initialized != null)
-            {
-                return initialized;
-            }
-            // The official initializer threw (some of them, e.g. AccountingRegisterInitializer and
-            // ChartOfCharacteristicTypesInitializer, dereference optional collaborators during
-            // create() and raise NullPointerException). Fall back to a plain MdClassFactory object,
-            // matching the reference EDT tool behavior; the object still persists as a valid top object.
-        }
         var classifier = MdClassPackage.eINSTANCE.getEClassifier(descriptor.name);
         if (!(classifier instanceof EClass))
         {
             throw new ToolException("EDT metadata class is not available: " + descriptor.name); //$NON-NLS-1$
         }
+        if (descriptor.initializer != null)
+        {
+            var initialized = createViaInitializer(descriptor.initializer, v8Project);
+            if (initialized != null)
+            {
+                return initialized;
+            }
+        }
+        // No initializer, or it failed: a plain object is still a valid top object for such types.
         return (MdObject)MdClassFactory.eINSTANCE.create((EClass)classifier);
+    }
+
+    /**
+     * Runs an official EDT {@link IMdObjectInitializer} to build a complete object (produced types,
+     * default type descriptions, ...). The initializer is normally Guice-managed; here it is created
+     * directly, so its {@code mdTypeUtil} collaborator (dereferenced in {@code create()} by e.g.
+     * ChartOfCharacteristicTypes and AccountingRegister) is supplied reflectively. Returns {@code null}
+     * on any failure so the caller can fall back to a bare {@link MdClassFactory} object.
+     */
+    private MdObject createViaInitializer(String className, com._1c.g5.v8.dt.core.platform.IV8Project v8Project)
+    {
+        try
+        {
+            var initializer = newInitializer(className);
+            var created = initializer.create(v8Project, v8Project.getVersion());
+            return created instanceof MdObject ? (MdObject)created : null;
+        }
+        catch (RuntimeException | Error | ReflectiveOperationException e)
+        {
+            return null;
+        }
+    }
+
+    private static IMdObjectInitializer<?> newInitializer(String className) throws ReflectiveOperationException
+    {
+        var instance = Class.forName(className).getDeclaredConstructor().newInstance();
+        if (!(instance instanceof IMdObjectInitializer<?>))
+        {
+            throw new ToolException("EDT initializer has an unexpected type: " + className); //$NON-NLS-1$
+        }
+        injectInitializerCollaborators(instance);
+        return (IMdObjectInitializer<?>)instance;
+    }
+
+    /**
+     * Best-effort: sets the initializer's inherited {@code mdTypeUtil} field to a fresh
+     * {@code com._1c.g5.v8.dt.md.resource.MdTypeUtil}. That class has a usable no-argument constructor,
+     * and the type-description helpers used during create() do not need its injected scope provider.
+     */
+    private static void injectInitializerCollaborators(Object initializer) throws ReflectiveOperationException
+    {
+        var field = findField(initializer.getClass(), "mdTypeUtil"); //$NON-NLS-1$
+        if (field == null)
+        {
+            return;
+        }
+        var mdTypeUtil = Class.forName("com._1c.g5.v8.dt.md.resource.MdTypeUtil") //$NON-NLS-1$
+            .getDeclaredConstructor().newInstance();
+        field.setAccessible(true);
+        field.set(initializer, mdTypeUtil);
+    }
+
+    private static java.lang.reflect.Field findField(Class<?> type, String name)
+    {
+        for (var current = type; current != null; current = current.getSuperclass())
+        {
+            try
+            {
+                return current.getDeclaredField(name);
+            }
+            catch (NoSuchFieldException e)
+            {
+                // try superclass
+            }
+        }
+        return null;
+    }
+
+    private static String childInitializerName(MdObject owner)
+    {
+        var className = owner.eClass().getName();
+        if (className.endsWith("TabularSection")) //$NON-NLS-1$
+        {
+            return "com._1c.g5.v8.dt.md.model." + className + "Initializer"; //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        try
+        {
+            return MetadataObjectTypeRegistry.get(className).initializer;
+        }
+        catch (ToolException e)
+        {
+            return null;
+        }
     }
 
     private static String metadataResourcePath(IProject project, String target)
@@ -1219,17 +1461,16 @@ final class MetadataMutationService
                 }
                 try
                 {
-                    var initialized = createInitializer(initializerName).createChildObject((EClass)feature.getEType(),
-                        owner, v8Project.getVersion());
+                    var initialized = newInitializer(initializerName)
+                        .createChildObject((EClass)feature.getEType(), owner, v8Project.getVersion());
                     if (initialized instanceof MdObject)
                     {
                         return (MdObject)initialized;
                     }
                 }
-                catch (RuntimeException | Error e)
+                catch (RuntimeException | Error | ReflectiveOperationException e)
                 {
-                    // Best effort: fall through to the explicit MdClassFactory fallbacks below when the
-                    // official child initializer fails (mirrors the top-object create fallback).
+                    // Best effort: fall through to the explicit MdClassFactory fallbacks below.
                 }
             }
         }
@@ -1264,54 +1505,6 @@ final class MetadataMutationService
             return createRegisterChild(owner, featureName);
         }
         throw new ToolException("Operation is not supported for object type: " + owner.eClass().getName()); //$NON-NLS-1$
-    }
-
-    private static String childInitializerName(MdObject owner)
-    {
-        var className = owner.eClass().getName();
-        if (className.endsWith("TabularSection")) //$NON-NLS-1$
-        {
-            return "com._1c.g5.v8.dt.md.model." + className + "Initializer"; //$NON-NLS-1$ //$NON-NLS-2$
-        }
-        try
-        {
-            return MetadataObjectTypeRegistry.get(className).initializer;
-        }
-        catch (ToolException e)
-        {
-            return null;
-        }
-    }
-
-    private MdObject tryCreateViaInitializer(String className, com._1c.g5.v8.dt.core.platform.IV8Project v8Project)
-    {
-        try
-        {
-            return createInitializer(className).create(v8Project, v8Project.getVersion());
-        }
-        catch (RuntimeException | Error e)
-        {
-            // Best effort: an official initializer may fail (observed NPE for AccountingRegister and
-            // ChartOfCharacteristicTypes). Signal the caller to fall back to MdClassFactory defaults.
-            return null;
-        }
-    }
-
-    private static IMdObjectInitializer<?> createInitializer(String className)
-    {
-        try
-        {
-            var instance = Class.forName(className).getDeclaredConstructor().newInstance();
-            if (instance instanceof IMdObjectInitializer<?>)
-            {
-                return (IMdObjectInitializer<?>)instance;
-            }
-            throw new ToolException("EDT initializer has an unexpected type: " + className); //$NON-NLS-1$
-        }
-        catch (ReflectiveOperationException e)
-        {
-            throw new ToolException("Cannot load EDT metadata initializer " + className + ": " + e.getMessage()); //$NON-NLS-1$ //$NON-NLS-2$
-        }
     }
 
     private MdObject createRegisterChild(MdObject owner, String feature)

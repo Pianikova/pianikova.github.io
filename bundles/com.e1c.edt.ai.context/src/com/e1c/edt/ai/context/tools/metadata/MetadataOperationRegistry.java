@@ -95,6 +95,13 @@ public final class MetadataOperationRegistry
         add("removeObjectTemplate", "Removes an object template and its external body.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "{\"operation\":\"removeObjectTemplate\",\"project_name\":\"MyProject\",\"object_name\":\"Report.Sales\",\"name\":\"MainDcs\"}"); //$NON-NLS-1$
+        add("addSubordinateObject", //$NON-NLS-1$
+            "Adds a nested subordinate object to an owner. subordinate_kind: recalculation (owner CalculationRegister) or integration_service_channel (owner IntegrationService).", //$NON-NLS-1$
+            set("project_name", "object_name", "subordinate_kind", "name"), set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
+            "{\"operation\":\"addSubordinateObject\",\"project_name\":\"MyProject\",\"object_name\":\"CalculationRegister.Payroll\",\"subordinate_kind\":\"recalculation\",\"name\":\"Main\"}"); //$NON-NLS-1$
+        add("removeSubordinateObject", "Removes a nested subordinate object from its owner.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "subordinate_kind", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "{\"operation\":\"removeSubordinateObject\",\"project_name\":\"MyProject\",\"object_name\":\"CalculationRegister.Payroll\",\"subordinate_kind\":\"recalculation\",\"name\":\"Main\"}"); //$NON-NLS-1$
     }
 
     Collection<MetadataOperationDescriptor> all()
