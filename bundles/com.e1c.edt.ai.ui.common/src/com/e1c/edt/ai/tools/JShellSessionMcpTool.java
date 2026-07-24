@@ -112,6 +112,9 @@ public class JShellSessionMcpTool
 		description.append("\n- JShell provides access to APIs exposed by installed binding providers");
 		description.append("\n- Use when you need to perform operations not available via other tools");
 		description.append("\n- Session preserves state between JShell calls");
+		description.append("\n- NOT for 1C metadata: creating/editing/deleting 1C entities or configurations"
+			+ " must use the " + McpToolConstants.EDIT_METADATA_TOOL_NAME
+			+ " tool, not JShell. JShell is a general-purpose fallback only");
 
 		description.append("\n\n**When to use:**");
         description.append("\n- **AFTER** calling ").append(JShellManualMcpTool.TOOL_NAME)

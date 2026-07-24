@@ -383,8 +383,9 @@ public class DevAutopilot
     {
         return targetProjectInstruction(request)
             + "Продолжай немедленно инструментами в этой же задаче. Не отвечай планом и не пиши \"создам\". " //$NON-NLS-1$
-            + "Следующее действие должно быть tool call: 1C_EditMetadata, JShellManual, JShellSession, JShell или GetMarkers. " //$NON-NLS-1$
-            + "Для поддерживаемого CRUD метаданных предпочитай 1C_EditMetadata; иначе выполняй JShell-код. Затем проверяй маркеры."; //$NON-NLS-1$
+            + "Метаданные 1С (объекты, реквизиты, формы, макеты, конфигурация) создавай/меняй/удаляй ТОЛЬКО через 1C_EditMetadata; " //$NON-NLS-1$
+            + "не редактируй метаданные через JShell и не правь .mdo/.form напрямую. " //$NON-NLS-1$
+            + "Следующее действие должно быть tool call: 1C_EditMetadata или GetMarkers. Затем проверяй маркеры."; //$NON-NLS-1$
     }
 
     private void captureToolsMetrics(Response response)

@@ -47,10 +47,10 @@ public class MCPToolsModule
         toolBinder.addBinding().to(GetMarkersMcpTool.class);
         toolBinder.addBinding().to(SetMarkersMcpTool.class);
         toolBinder.addBinding().to(DeleteMarkersMcpTool.class);
-        //toolBinder.addBinding().to(JShellSessionMcpTool.class);
-        //toolBinder.addBinding().to(JShellManualMcpTool.class);
-        //toolBinder.addBinding().to(JShellReflectionMcpTool.class);
-        //toolBinder.addBinding().to(JShellMcpTool.class);
+        toolBinder.addBinding().to(JShellSessionMcpTool.class);
+        toolBinder.addBinding().to(JShellManualMcpTool.class);
+        toolBinder.addBinding().to(JShellReflectionMcpTool.class);
+        toolBinder.addBinding().to(JShellMcpTool.class);
         bind(IProcessRunner.class).to(ProcessRunner.class).in(Singleton.class);
         bind(ICancellationProgressMonitor.class).to(CancellationProgressMonitor.class);
         bind(IBuildWaiter.class).to(BuildWaiter.class).in(Singleton.class);

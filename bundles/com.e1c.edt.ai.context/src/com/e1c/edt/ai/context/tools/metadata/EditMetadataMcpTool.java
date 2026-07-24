@@ -23,6 +23,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.tools.McpToolConstants;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -35,7 +36,7 @@ import com.google.inject.Inject;
 public final class EditMetadataMcpTool
     implements IMcpTool
 {
-    public static final String TOOL_NAME = "1C_EditMetadata"; //$NON-NLS-1$
+    public static final String TOOL_NAME = McpToolConstants.EDIT_METADATA_TOOL_NAME;
 
     private final IJson json;
     private final IMcpToolsCallMessageFactory messageFactory;

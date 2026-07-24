@@ -47,12 +47,8 @@ import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
 import com.e1c.edt.ai.context.tools.metadata.EditMetadataMcpTool;
 import com.e1c.edt.ai.context.tools.IMethodListProvider;
 import com.e1c.edt.ai.context.tools.MarkersProvider;
-import com.e1c.edt.ai.context.tools.MetadataBindingProvider;
-import com.e1c.edt.ai.context.tools.MetadataManualCatalog;
 import com.e1c.edt.ai.context.tools.MethodListProvider;
 import com.e1c.edt.ai.context.tools.ProjectBuilder;
-import com.e1c.edt.ai.tools.IJShellBindingProvider;
-import com.e1c.edt.ai.tools.IJShellManualProvider;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -116,11 +112,9 @@ class ContextModule
         var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
         markersProviderBinder.addBinding().to(MarkersProvider.class);
 
-        // JShell binding providers
-        var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
-        jshellBindingProviderBinder.addBinding().to(MetadataBindingProvider.class);
-        var jshellManualProviderBinder = Multibinder.newSetBinder(binder(), IJShellManualProvider.class);
-        jshellManualProviderBinder.addBinding().to(MetadataManualCatalog.class);
+        // 1C metadata is edited exclusively through 1C_EditMetadata. The JShell metadata binding/manual
+        // providers (mdFactory bindings, per-scenario guides) have been removed so JShell is no longer a
+        // path for editing 1C entities; JShell remains available only as a general-purpose fallback.
 
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();
