@@ -45,8 +45,27 @@ final class MetadataRequest
     @SerializedName("subordinate_kind")
     String subordinateKind;
 
+    @SerializedName("module_kind")
+    String moduleKind;
+
     @SerializedName("platform_version")
     String platformVersion;
+
+    @SerializedName("compatibility_mode")
+    String compatibilityMode;
+
+    @SerializedName("script_variant")
+    String scriptVariant;
+
+    @SerializedName("default_language_code")
+    String defaultLanguageCode;
+
+    @SerializedName("default_language_name")
+    String defaultLanguageName;
+
+    String version;
+
+    String vendor;
 
     @SerializedName("related_object_name")
     String relatedObjectName;

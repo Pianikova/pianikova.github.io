@@ -34,7 +34,10 @@ public final class MetadataOperationRegistry
             set("project_name", "object_name"), //$NON-NLS-1$ //$NON-NLS-2$
             set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"createObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"title\":\"Products\"}"); //$NON-NLS-1$
-        add("setObjectProperty", "Changes one scalar property of an existing top-level object.", //$NON-NLS-1$ //$NON-NLS-2$
+        add("setObjectProperty", //$NON-NLS-1$
+            "Changes one scalar property of an existing top-level object. Use object_name=Configuration to edit" //$NON-NLS-1$
+                + " configuration properties such as version, compatibilityMode, scriptVariant, vendor," //$NON-NLS-1$
+                + " defaultRunMode, or namePrefix.", //$NON-NLS-1$
             set("project_name", "object_name", "property_name", "property_value"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"setObjectProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"property_name\":\"comment\",\"property_value\":\"Managed by AI\"}"); //$NON-NLS-1$
         add("renameObject", "Renames a top-level object using the EDT refactoring service.", //$NON-NLS-1$ //$NON-NLS-2$
@@ -103,13 +106,32 @@ public final class MetadataOperationRegistry
             set("project_name", "object_name", "subordinate_kind", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"removeSubordinateObject\",\"project_name\":\"MyProject\",\"object_name\":\"CalculationRegister.Payroll\",\"subordinate_kind\":\"recalculation\",\"name\":\"Main\"}"); //$NON-NLS-1$
         add("createConfiguration", //$NON-NLS-1$
-            "Creates a new EDT 1C configuration project (workspace project with the configuration nature and an empty Configuration root). project_name is the new project name.", //$NON-NLS-1$
-            set("project_name"), set("platform_version", "title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            "{\"operation\":\"createConfiguration\",\"project_name\":\"MyConfig\",\"platform_version\":\"8.3.24\"}"); //$NON-NLS-1$
+            "Creates a new EDT 1C configuration project. project_name is the new project name. Optional parameters set" //$NON-NLS-1$
+                + " configuration properties: platform_version (runtime version), compatibility_mode (e.g. 8.3.24)," //$NON-NLS-1$
+                + " script_variant (English or Russian), default_language_code (e.g. ru) and default_language_name" //$NON-NLS-1$
+                + " (creates the language and marks it default), version, vendor, and title (synonym). If the user did" //$NON-NLS-1$
+                + " not state these, ask them with the AskUser tool before creating; do not silently guess.", //$NON-NLS-1$
+            set("project_name"), //$NON-NLS-1$
+            set("platform_version", "compatibility_mode", "script_variant", "default_language_code", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+                "default_language_name", "version", "vendor", "title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "{\"operation\":\"createConfiguration\",\"project_name\":\"MyConfig\",\"platform_version\":\"8.3.24\"," //$NON-NLS-1$
+                + "\"compatibility_mode\":\"8.3.24\",\"script_variant\":\"Russian\",\"default_language_code\":\"ru\"}"); //$NON-NLS-1$
         add("removeConfiguration", //$NON-NLS-1$
             "Removes a configuration project from the workspace (source files are kept on disk).", //$NON-NLS-1$
             set("project_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"removeConfiguration\",\"project_name\":\"MyConfig\"}"); //$NON-NLS-1$
+        add("listModules", //$NON-NLS-1$
+            "Lists the BSL code modules an object supports, with each module_kind, its .bsl file path, and whether it exists. Use object_name=Configuration for application-level modules.", //$NON-NLS-1$
+            set("project_name", "object_name"), set(), //$NON-NLS-1$ //$NON-NLS-2$
+            "{\"operation\":\"listModules\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\"}"); //$NON-NLS-1$
+        add("createModule", //$NON-NLS-1$
+            "Creates an empty BSL code module (.bsl file) for the given module_kind, then edit its text with the Edit tool. module_kind values: object_module, manager_module, record_set_module, value_manager_module, command_module, module (CommonModule/HTTPService/WebService/IntegrationService/Bot/CommonForm), managed_application_module, ordinary_application_module, external_connection_module, session_module. Use listModules to see the kinds an object supports.", //$NON-NLS-1$
+            set("project_name", "object_name", "module_kind"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "{\"operation\":\"createModule\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"module_kind\":\"object_module\"}"); //$NON-NLS-1$
+        add("removeModule", //$NON-NLS-1$
+            "Deletes a BSL code module (.bsl file) of the given module_kind. The object's other modules are left intact.", //$NON-NLS-1$
+            set("project_name", "object_name", "module_kind"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            "{\"operation\":\"removeModule\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"module_kind\":\"object_module\"}"); //$NON-NLS-1$
     }
 
     Collection<MetadataOperationDescriptor> all()

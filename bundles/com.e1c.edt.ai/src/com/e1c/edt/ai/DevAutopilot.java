@@ -42,8 +42,11 @@ public class DevAutopilot
     public static final String CHANNEL_DIR_PROPERTY = "ai.dev.channel.dir"; //$NON-NLS-1$
 
     private static final long POLL_INTERVAL_MS = 1000L;
-    private static final long TURN_TIMEOUT_SECONDS = 300L;
-    private static final int MAX_AUTO_CONTINUES = 5;
+    // Limits are intentionally very high so a long turnkey build (a whole configuration with entities,
+    // forms, templates, and code modules) is never truncated mid-run. They remain finite only as a
+    // runaway backstop.
+    private static final long TURN_TIMEOUT_SECONDS = 3600L;
+    private static final int MAX_AUTO_CONTINUES = 100;
 
     /**
      * Default agent preamble prepended to the user prompt. The dev/helper conversation (skill
@@ -248,7 +251,7 @@ public class DevAutopilot
         var promptText = applyPreamble(request);
         // Multi-artifact metadata tasks (object + form/template + content) plus self-correction
         // need more than the default 10 tool rounds; default the harness to a higher cap.
-        Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(200);
+        Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(1500);
         // The dev-autopilot must run on the "custom" skill regardless of the ConversationFacade
         // default (which is "edt"). Honor an explicit per-request override (e.g. "edt" for routing
         // diagnostics); otherwise force "custom".

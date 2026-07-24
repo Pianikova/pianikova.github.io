@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspace;
@@ -21,11 +22,14 @@ import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EDataType;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 
 import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.bm.core.IBmTransaction;
 import com._1c.g5.v8.bm.integration.AbstractBmTask;
+import com._1c.g5.v8.dt.bsl.model.BslPackage;
+import com._1c.g5.v8.dt.core.filesystem.IProjectFileSystemSupportProvider;
 import com._1c.g5.v8.dt.core.naming.ITopObjectFqnGenerator;
 import com._1c.g5.v8.dt.core.platform.IDerivedDataManagerProvider;
 import com._1c.g5.v8.dt.core.platform.IEditingLanguageManager;
@@ -84,13 +88,14 @@ final class MetadataMutationService
     private final IFormGenerator formGenerator;
     private final IFormFieldGenerator formFieldGenerator;
     private final IEditingLanguageManager editingLanguageManager;
+    private final IProjectFileSystemSupportProvider fileSystemSupportProvider;
 
     @Inject
     MetadataMutationService(IBmModelManager modelManager, ITopObjectFqnGenerator fqnGenerator,
         IEditingSupport editingSupport, IMdRefactoringService refactoringService, MetadataTypeService typeService,
         IProjectBuilder projectBuilder, IDerivedDataManagerProvider derivedDataManagerProvider, ISettings settings,
         IV8ProjectManager v8ProjectManager, IFormGenerator formGenerator, IFormFieldGenerator formFieldGenerator,
-        IEditingLanguageManager editingLanguageManager)
+        IEditingLanguageManager editingLanguageManager, IProjectFileSystemSupportProvider fileSystemSupportProvider)
     {
         Preconditions.checkNotNull(modelManager);
         Preconditions.checkNotNull(fqnGenerator);
@@ -104,6 +109,7 @@ final class MetadataMutationService
         Preconditions.checkNotNull(formGenerator);
         Preconditions.checkNotNull(formFieldGenerator);
         Preconditions.checkNotNull(editingLanguageManager);
+        Preconditions.checkNotNull(fileSystemSupportProvider);
         this.modelManager = modelManager;
         this.fqnGenerator = fqnGenerator;
         this.editingSupport = editingSupport;
@@ -116,6 +122,7 @@ final class MetadataMutationService
         this.formGenerator = formGenerator;
         this.formFieldGenerator = formFieldGenerator;
         this.editingLanguageManager = editingLanguageManager;
+        this.fileSystemSupportProvider = fileSystemSupportProvider;
     }
 
     synchronized MetadataResponse execute(MetadataRequest request, ICancellationToken cancellationToken)
@@ -136,9 +143,24 @@ final class MetadataMutationService
         {
             return inspectObject(project, request);
         }
+        if ("listModules".equals(request.operation)) //$NON-NLS-1$
+        {
+            return listModules(project, request);
+        }
         if (editingSupport.isReadOnly(project))
         {
             throw new ToolException("Project is read-only according to EDT editing rules: " + project.getName()); //$NON-NLS-1$
+        }
+        // Code modules are transient in the metadata model: the .bsl file on disk is the source of
+        // truth. These operations manage that file directly (never the BSL text, which is edited with
+        // the Edit tool), so they return before the object-oriented resource/artifact verification tail.
+        if ("createModule".equals(request.operation)) //$NON-NLS-1$
+        {
+            return changeModuleFile(project, request, cancellationToken, true);
+        }
+        if ("removeModule".equals(request.operation)) //$NON-NLS-1$
+        {
+            return changeModuleFile(project, request, cancellationToken, false);
         }
 
         MetadataResponse response;
@@ -911,27 +933,13 @@ final class MetadataMutationService
     private static final String XTEXT_NATURE = "org.eclipse.xtext.ui.shared.xtextNature"; //$NON-NLS-1$
     private static final String CONFIGURATION_NATURE = "com._1c.g5.v8.dt.core.V8ConfigurationNature"; //$NON-NLS-1$
 
-    // Minimal valid empty configuration, matching what EDT's ConfigurationInitializer produces. The
-    // seven containedObjects carry fixed system class ids; only their object ids and the root uuid are
-    // per-configuration. Placeholders: 1=root uuid, 2=name, 3..9=contained object ids, 10=compatibility.
-    private static final String CONFIGURATION_MDO_TEMPLATE = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" //$NON-NLS-1$
-        + "<mdclass:Configuration xmlns:mdclass=\"http://g5.1c.ru/v8/dt/metadata/mdclass\" uuid=\"%1$s\">\n" //$NON-NLS-1$
-        + "  <name>%2$s</name>\n" //$NON-NLS-1$
-        + "  <containedObjects classId=\"9cd510cd-abfc-11d4-9434-004095e12fc7\" objectId=\"%3$s\"/>\n" //$NON-NLS-1$
-        + "  <containedObjects classId=\"9fcd25a0-4822-11d4-9414-008048da11f9\" objectId=\"%4$s\"/>\n" //$NON-NLS-1$
-        + "  <containedObjects classId=\"e3687481-0a87-462c-a166-9f34594f9bba\" objectId=\"%5$s\"/>\n" //$NON-NLS-1$
-        + "  <containedObjects classId=\"9de14907-ec23-4a07-96f0-85521cb6b53b\" objectId=\"%6$s\"/>\n" //$NON-NLS-1$
-        + "  <containedObjects classId=\"51f2d5d8-ea4d-4064-8892-82951750031e\" objectId=\"%7$s\"/>\n" //$NON-NLS-1$
-        + "  <containedObjects classId=\"e68182ea-4237-4383-967f-90c1e3370bc7\" objectId=\"%8$s\"/>\n" //$NON-NLS-1$
-        + "  <containedObjects classId=\"fb282519-d103-4dd3-bc12-cb271d631dfc\" objectId=\"%9$s\"/>\n" //$NON-NLS-1$
-        + "  <defaultRunMode>ManagedApplication</defaultRunMode>\n" //$NON-NLS-1$
-        + "  <usePurposes>PersonalComputer</usePurposes>\n" //$NON-NLS-1$
-        + "  <dataLockControlMode>Managed</dataLockControlMode>\n" //$NON-NLS-1$
-        + "  <objectAutonumerationMode>NotAutoFree</objectAutonumerationMode>\n" //$NON-NLS-1$
-        + "  <modalityUseMode>DontUse</modalityUseMode>\n" //$NON-NLS-1$
-        + "  <synchronousPlatformExtensionAndAddInCallUseMode>DontUse</synchronousPlatformExtensionAndAddInCallUseMode>\n" //$NON-NLS-1$
-        + "  <compatibilityMode>%10$s</compatibilityMode>\n" //$NON-NLS-1$
-        + "</mdclass:Configuration>\n"; //$NON-NLS-1$
+    // Fixed system class ids for the seven mandatory containedObjects of an empty configuration,
+    // matching what EDT's ConfigurationInitializer produces; only their object ids are per-configuration.
+    private static final String[] CONFIGURATION_SYSTEM_CLASS_IDS = {
+        "9cd510cd-abfc-11d4-9434-004095e12fc7", "9fcd25a0-4822-11d4-9414-008048da11f9", //$NON-NLS-1$ //$NON-NLS-2$
+        "e3687481-0a87-462c-a166-9f34594f9bba", "9de14907-ec23-4a07-96f0-85521cb6b53b", //$NON-NLS-1$ //$NON-NLS-2$
+        "51f2d5d8-ea4d-4064-8892-82951750031e", "e68182ea-4237-4383-967f-90c1e3370bc7", //$NON-NLS-1$ //$NON-NLS-2$
+        "fb282519-d103-4dd3-bc12-cb271d631dfc" }; //$NON-NLS-1$
 
     private MetadataResponse createConfiguration(MetadataRequest request, ICancellationToken cancellationToken)
     {
@@ -947,9 +955,10 @@ final class MetadataMutationService
         {
             throw new ToolException("A project with this name already exists: " + name); //$NON-NLS-1$
         }
-        var version = request.platformVersion != null && !request.platformVersion.isBlank()
+        validateConfigurationParameters(request);
+        var platformVersion = request.platformVersion != null && !request.platformVersion.isBlank()
             ? request.platformVersion : DEFAULT_PLATFORM_VERSION;
-        var configurationMdo = configurationMdo(name, version);
+        var configurationMdo = configurationMdo(name, request, platformVersion);
         try
         {
             var description = workspace.newProjectDescription(name);
@@ -957,7 +966,7 @@ final class MetadataMutationService
                 project.create(description, monitor);
                 project.open(monitor);
                 project.setDefaultCharset(java.nio.charset.StandardCharsets.UTF_8.name(), monitor);
-                writeProjectManifest(project, version, monitor);
+                writeProjectManifest(project, platformVersion, monitor);
                 // Write a valid Configuration.mdo BEFORE enabling the configuration nature: an empty
                 // configuration folder makes the EDT project context fail RESOURCE_LOADING, and seeding
                 // the root through the BM afterwards is racy. Enabling the nature last starts the context
@@ -987,11 +996,136 @@ final class MetadataMutationService
         return response;
     }
 
-    private static String configurationMdo(String name, String version)
+    @SuppressWarnings("nls")
+    private static String configurationMdo(String name, MetadataRequest request, String platformVersion)
     {
-        return String.format(CONFIGURATION_MDO_TEMPLATE, UUID.randomUUID(), name, UUID.randomUUID(),
-            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-            UUID.randomUUID(), version);
+        var compatibility = request.compatibilityMode != null && !request.compatibilityMode.isBlank()
+            ? request.compatibilityMode : platformVersion;
+        var languageName = resolveLanguageName(request);
+        var languageCode = request.defaultLanguageCode;
+        var sb = new StringBuilder();
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        sb.append("<mdclass:Configuration xmlns:mdclass=\"http://g5.1c.ru/v8/dt/metadata/mdclass\" uuid=\"")
+            .append(UUID.randomUUID()).append("\">\n");
+        sb.append("  <name>").append(name).append("</name>\n");
+        if (request.title != null && !request.title.isBlank())
+        {
+            var key = languageCode != null && !languageCode.isBlank() ? languageCode : "ru";
+            sb.append("  <synonym>\n    <key>").append(xml(key)).append("</key>\n    <value>")
+                .append(xml(request.title)).append("</value>\n  </synonym>\n");
+        }
+        for (var classId : CONFIGURATION_SYSTEM_CLASS_IDS)
+        {
+            sb.append("  <containedObjects classId=\"").append(classId).append("\" objectId=\"")
+                .append(UUID.randomUUID()).append("\"/>\n");
+        }
+        sb.append("  <defaultRunMode>ManagedApplication</defaultRunMode>\n");
+        sb.append("  <usePurposes>PersonalComputer</usePurposes>\n");
+        if (request.scriptVariant != null && !request.scriptVariant.isBlank())
+        {
+            sb.append("  <scriptVariant>").append(request.scriptVariant).append("</scriptVariant>\n");
+        }
+        if (request.vendor != null && !request.vendor.isBlank())
+        {
+            sb.append("  <vendor>").append(xml(request.vendor)).append("</vendor>\n");
+        }
+        if (request.version != null && !request.version.isBlank())
+        {
+            sb.append("  <version>").append(xml(request.version)).append("</version>\n");
+        }
+        if (languageName != null)
+        {
+            sb.append("  <defaultLanguage>Language.").append(languageName).append("</defaultLanguage>\n");
+        }
+        sb.append("  <dataLockControlMode>Managed</dataLockControlMode>\n");
+        sb.append("  <objectAutonumerationMode>NotAutoFree</objectAutonumerationMode>\n");
+        sb.append("  <modalityUseMode>DontUse</modalityUseMode>\n");
+        sb.append("  <synchronousPlatformExtensionAndAddInCallUseMode>DontUse")
+            .append("</synchronousPlatformExtensionAndAddInCallUseMode>\n");
+        sb.append("  <compatibilityMode>").append(compatibility).append("</compatibilityMode>\n");
+        if (languageName != null)
+        {
+            sb.append("  <languages uuid=\"").append(UUID.randomUUID()).append("\">\n");
+            sb.append("    <name>").append(languageName).append("</name>\n");
+            sb.append("    <synonym>\n      <key>").append(xml(languageCode)).append("</key>\n      <value>")
+                .append(xml(languageName)).append("</value>\n    </synonym>\n");
+            sb.append("    <languageCode>").append(xml(languageCode)).append("</languageCode>\n");
+            sb.append("  </languages>\n");
+        }
+        sb.append("</mdclass:Configuration>\n");
+        return sb.toString();
+    }
+
+    /** Resolves the default language object name, or {@code null} when no language was requested. */
+    private static String resolveLanguageName(MetadataRequest request)
+    {
+        var code = request.defaultLanguageCode;
+        if (code == null || code.isBlank())
+        {
+            return null;
+        }
+        if (request.defaultLanguageName != null && !request.defaultLanguageName.isBlank())
+        {
+            return request.defaultLanguageName;
+        }
+        switch (code.toLowerCase(Locale.ROOT))
+        {
+        case "ru": return "Русский"; //$NON-NLS-1$ //$NON-NLS-2$
+        case "en": return "English"; //$NON-NLS-1$ //$NON-NLS-2$
+        default: return code;
+        }
+    }
+
+    private static void validateConfigurationParameters(MetadataRequest request)
+    {
+        if (request.compatibilityMode != null && !request.compatibilityMode.isBlank())
+        {
+            validateEnum(MdClassPackage.eINSTANCE.getCompatibilityMode(), request.compatibilityMode,
+                "compatibility_mode"); //$NON-NLS-1$
+        }
+        if (request.scriptVariant != null && !request.scriptVariant.isBlank())
+        {
+            validateEnum(MdClassPackage.eINSTANCE.getScriptVariant(), request.scriptVariant, "script_variant"); //$NON-NLS-1$
+        }
+        var languageName = resolveLanguageName(request);
+        if (languageName != null)
+        {
+            validateIdentifier(languageName, "default_language_name"); //$NON-NLS-1$
+            if (!request.defaultLanguageCode.matches("[A-Za-z]{1,10}")) //$NON-NLS-1$
+            {
+                throw new ToolException(
+                    "`default_language_code` must be a short language code such as `ru` or `en`."); //$NON-NLS-1$
+            }
+        }
+        else if (request.defaultLanguageName != null && !request.defaultLanguageName.isBlank())
+        {
+            throw new ToolException("`default_language_name` requires `default_language_code`."); //$NON-NLS-1$
+        }
+    }
+
+    private static void validateEnum(org.eclipse.emf.ecore.EEnum eenum, String value, String parameter)
+    {
+        if (eenum.getEEnumLiteralByLiteral(value) != null || eenum.getEEnumLiteral(value) != null)
+        {
+            return;
+        }
+        var valid = new java.util.ArrayList<String>();
+        for (var literal : eenum.getELiterals())
+        {
+            valid.add(literal.getLiteral());
+        }
+        throw new ToolException("Invalid `" + parameter + "` value `" + value + "`. Valid values: " //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            + String.join(", ", valid) + "."); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private static String xml(String value)
+    {
+        if (value == null)
+        {
+            return ""; //$NON-NLS-1$
+        }
+        return value.replace("&", "&amp;").replace("<", "&lt;") //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+            .replace(">", "&gt;").replace("\"", "&quot;"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     }
 
     private void writeConfigurationMdo(IProject project, String content,
@@ -1041,6 +1175,7 @@ final class MetadataMutationService
         return response;
     }
 
+    @SuppressWarnings("deprecation")
     private void writeProjectManifest(IProject project, String version,
         org.eclipse.core.runtime.IProgressMonitor monitor) throws org.eclipse.core.runtime.CoreException
     {
@@ -1068,6 +1203,231 @@ final class MetadataMutationService
     {
         var location = project.getFile("src/Configuration/Configuration.mdo").getLocation(); //$NON-NLS-1$
         return location != null ? location.toOSString() : "src/Configuration/Configuration.mdo"; //$NON-NLS-1$
+    }
+
+    // ===== Code module (.bsl) operations =====
+    // Modules are transient references in the metadata model; the .bsl file on disk is the source of
+    // truth and its path is derived from (owner object, module reference) by EDT's file-system support.
+    // These operations create or delete that file. The BSL text itself is edited with the Edit tool.
+
+    /** Public module_kind -> transient mdclass module EReference feature name. */
+    private static final Map<String, String> MODULE_KINDS = createModuleKinds();
+
+    private static Map<String, String> createModuleKinds()
+    {
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put("object_module", "objectModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("manager_module", "managerModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("record_set_module", "recordSetModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("value_manager_module", "valueManagerModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("command_module", "commandModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("module", "module"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("managed_application_module", "managedApplicationModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("ordinary_application_module", "ordinaryApplicationModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("external_connection_module", "externalConnectionModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        result.put("session_module", "sessionModule"); //$NON-NLS-1$ //$NON-NLS-2$
+        return result;
+    }
+
+    private static String moduleFeatureName(String kind)
+    {
+        if (kind == null || kind.isBlank())
+        {
+            throw new ToolException("Parameter `module_kind` is required. Valid values: " //$NON-NLS-1$
+                + String.join(", ", MODULE_KINDS.keySet()) + "."); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        var feature = MODULE_KINDS.get(kind.toLowerCase(Locale.ROOT));
+        if (feature == null)
+        {
+            throw new ToolException("Unsupported module_kind `" + kind + "`. Valid values: " //$NON-NLS-1$ //$NON-NLS-2$
+                + String.join(", ", MODULE_KINDS.keySet()) + "."); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        return feature;
+    }
+
+    private static String moduleKindForFeature(String featureName)
+    {
+        for (var entry : MODULE_KINDS.entrySet())
+        {
+            if (entry.getValue().equals(featureName))
+            {
+                return entry.getKey();
+            }
+        }
+        return featureName;
+    }
+
+    private static boolean isModuleReference(org.eclipse.emf.ecore.EStructuralFeature feature)
+    {
+        return feature instanceof EReference && !feature.isMany()
+            && feature.getEType() == BslPackage.eINSTANCE.getModule();
+    }
+
+    /**
+     * Returns the object that actually declares the module references. For a form metadata object the
+     * module lives on the form body (AbstractForm.module), reached through BasicForm.form, not on the
+     * form object itself.
+     */
+    private static EObject moduleHolder(MdObject owner)
+    {
+        if (owner instanceof BasicForm)
+        {
+            var body = ((BasicForm)owner).getForm();
+            if (body != null)
+            {
+                return body;
+            }
+        }
+        return owner;
+    }
+
+    private static String supportedModuleKinds(EObject holder)
+    {
+        var kinds = new java.util.ArrayList<String>();
+        for (var feature : holder.eClass().getEAllStructuralFeatures())
+        {
+            if (isModuleReference(feature))
+            {
+                kinds.add(moduleKindForFeature(feature.getName()));
+            }
+        }
+        return kinds.isEmpty() ? "(none)" : String.join(", ", kinds); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private MetadataResponse listModules(IProject project, MetadataRequest request)
+    {
+        var modules = model(project).getGlobalContext().execute(
+            new AbstractBmTask<List<Map<String, Object>>>("List 1C code modules") //$NON-NLS-1$
+            {
+                @Override
+                public List<Map<String, Object>> execute(IBmTransaction transaction,
+                    org.eclipse.core.runtime.IProgressMonitor monitor)
+                {
+                    var owner = requireObject(transaction, request.objectName);
+                    var holder = moduleHolder(owner);
+                    var support = fileSystemSupportProvider.getProjectFileSystemSupport(project);
+                    var result = new java.util.ArrayList<Map<String, Object>>();
+                    for (var feature : holder.eClass().getEAllStructuralFeatures())
+                    {
+                        if (!isModuleReference(feature))
+                        {
+                            continue;
+                        }
+                        var file = support.getFile(holder, (EReference)feature);
+                        var item = new LinkedHashMap<String, Object>();
+                        item.put("module_kind", moduleKindForFeature(feature.getName())); //$NON-NLS-1$
+                        item.put("relative_path", file.getProjectRelativePath().toString()); //$NON-NLS-1$
+                        var location = file.getLocation();
+                        item.put("path", location != null ? location.toOSString() : file.getFullPath().toString()); //$NON-NLS-1$
+                        item.put("exists", Boolean.valueOf(file.exists())); //$NON-NLS-1$
+                        result.add(item);
+                    }
+                    return result;
+                }
+            });
+        var response = MetadataResponse.success(request, request.objectName, false);
+        response.resourcePath = metadataResourcePath(project, request.objectName);
+        response.markerPath = response.resourcePath;
+        var details = new LinkedHashMap<String, Object>();
+        details.put("object", request.objectName); //$NON-NLS-1$
+        details.put("modules", modules); //$NON-NLS-1$
+        details.put("edit_hint", "Edit module text with the Edit tool using the module `path`."); //$NON-NLS-1$ //$NON-NLS-2$
+        response.details = details;
+        return response;
+    }
+
+    private IFile resolveModuleFile(IProject project, MetadataRequest request, String featureName)
+    {
+        return model(project).getGlobalContext().execute(new AbstractBmTask<IFile>("Resolve 1C module file") //$NON-NLS-1$
+        {
+            @Override
+            public IFile execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var owner = requireObject(transaction, request.objectName);
+                var holder = moduleHolder(owner);
+                var feature = holder.eClass().getEStructuralFeature(featureName);
+                if (!isModuleReference(feature))
+                {
+                    throw new ToolException("Object `" + request.objectName + "` (" + owner.eClass().getName() //$NON-NLS-1$ //$NON-NLS-2$
+                        + ") has no `" + moduleKindForFeature(featureName) + "` module. Supported module kinds: " //$NON-NLS-1$ //$NON-NLS-2$
+                        + supportedModuleKinds(holder) + "."); //$NON-NLS-1$
+                }
+                return fileSystemSupportProvider.getProjectFileSystemSupport(project)
+                    .getFile(holder, (EReference)feature);
+            }
+        });
+    }
+
+    private MetadataResponse changeModuleFile(IProject project, MetadataRequest request,
+        ICancellationToken cancellationToken, boolean create)
+    {
+        var featureName = moduleFeatureName(request.moduleKind);
+        var file = resolveModuleFile(project, request, featureName);
+        boolean existed = file.exists();
+        boolean changed = create ? !existed : existed;
+        var target = request.objectName + "." + moduleKindForFeature(featureName); //$NON-NLS-1$
+        var response = MetadataResponse.success(request, target, changed);
+        var location = file.getLocation();
+        response.resourcePath = location != null ? location.toOSString() : file.getFullPath().toString();
+        response.markerPath = response.resourcePath;
+
+        if (changed && !request.dryRun)
+        {
+            try
+            {
+                if (create)
+                {
+                    createParentFolders(file.getParent());
+                    file.create(new java.io.ByteArrayInputStream(new byte[0]), true, new NullProgressMonitor());
+                }
+                else
+                {
+                    file.delete(true, new NullProgressMonitor());
+                }
+            }
+            catch (org.eclipse.core.runtime.CoreException e)
+            {
+                throw new ToolException((create ? "Failed to create module file: " //$NON-NLS-1$
+                    : "Failed to delete module file: ") + e.getMessage()); //$NON-NLS-1$
+            }
+            refresh(project);
+            checkCanceled(cancellationToken);
+            try
+            {
+                projectBuilder.build(project, cancellationToken);
+            }
+            catch (org.eclipse.core.runtime.CoreException e)
+            {
+                response.warnings.add("EDT validation failed to start: " + e.getMessage()); //$NON-NLS-1$
+            }
+            boolean nowExists = Files.exists(Paths.get(response.resourcePath));
+            if (create != nowExists)
+            {
+                throw new ToolException("EDT did not persist the expected module file state: " //$NON-NLS-1$
+                    + response.resourcePath, ToolErrorType.USER_VISIBLE);
+            }
+        }
+
+        var details = new LinkedHashMap<String, Object>();
+        details.put("module_kind", moduleKindForFeature(featureName)); //$NON-NLS-1$
+        details.put("relative_path", file.getProjectRelativePath().toString()); //$NON-NLS-1$
+        if (create)
+        {
+            details.put("edit_hint", //$NON-NLS-1$
+                "The module is empty. Add BSL code with the Edit tool at `resource_path`."); //$NON-NLS-1$
+        }
+        response.details = details;
+        return response;
+    }
+
+    private static void createParentFolders(org.eclipse.core.resources.IContainer container)
+        throws org.eclipse.core.runtime.CoreException
+    {
+        if (container instanceof org.eclipse.core.resources.IFolder && !container.exists())
+        {
+            createParentFolders(container.getParent());
+            ((org.eclipse.core.resources.IFolder)container).create(true, true, new NullProgressMonitor());
+        }
     }
 
     private void requireInlineObject(IProject project, String fqn)
@@ -1814,7 +2174,7 @@ final class MetadataMutationService
         {
             String file = "DATA_COMPOSITION_SCHEMA".equalsIgnoreCase(request.templateType) //$NON-NLS-1$
                 ? "Template.dcs" : "Template.mxlx"; //$NON-NLS-1$ //$NON-NLS-2$
-            return Paths.get(base, "Templates", request.name, file).toString(); //$NON-NLS-1$ //$NON-NLS-2$
+            return Paths.get(base, "Templates", request.name, file).toString(); //$NON-NLS-1$
         }
         if ("removeObjectTemplate".equals(request.operation)) //$NON-NLS-1$
         {

@@ -19,6 +19,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import org.eclipse.core.resources.IProject;
+
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.Closeables;
 import com.e1c.edt.ai.ICancellationToken;
@@ -42,7 +44,6 @@ import com.e1c.edt.ai.assistent.model.ConversationResponse;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunctionCall;
 import com.e1c.edt.ai.assistent.model.McpToolCalls;
-import org.eclipse.core.resources.IProject;
 import com.e1c.edt.ai.assistent.model.Session;
 import com.e1c.edt.ai.assistent.model.ToolMessageContent;
 import com.google.common.base.Preconditions;
@@ -64,7 +65,7 @@ import com.google.inject.Inject;
  */
 public class Conversations implements IConversations
 {
-    private static final int MAX_TOOL_ROUNDS = 20;
+    private static final int MAX_TOOL_ROUNDS = 1000;
 
     private final IHttpLog log;
     private final ISettings settings;
@@ -384,7 +385,7 @@ public class Conversations implements IConversations
                 arguments.add(key, toJsonValue(value));
             }
             McpToolCall call = new McpToolCall();
-            call.id = "call_" + UUID.randomUUID().toString().replace("-", ""); //$NON-NLS-1$ //$NON-NLS-2$
+            call.id = "call_" + UUID.randomUUID().toString().replace("-", ""); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             call.type = "function"; //$NON-NLS-1$
             call.function = new McpToolCallFunctionCall();
             call.function.name = name;

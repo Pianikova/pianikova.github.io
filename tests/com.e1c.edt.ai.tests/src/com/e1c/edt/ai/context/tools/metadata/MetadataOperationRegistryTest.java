@@ -15,9 +15,9 @@ public class MetadataOperationRegistryTest
     @Test
     public void shouldAcceptExactOperationContract()
     {
-        var arguments = JsonParser.parseString("{\"operation\":\"addObjectAttribute\","
-            + "\"project_name\":\"Demo\",\"object_name\":\"Catalog.Products\","
-            + "\"name\":\"Article\",\"type\":\"String\",\"length\":20}").getAsJsonObject();
+        var arguments = JsonParser.parseString("{\"operation\":\"addObjectAttribute\"," //$NON-NLS-1$
+            + "\"project_name\":\"Demo\",\"object_name\":\"Catalog.Products\"," //$NON-NLS-1$
+            + "\"name\":\"Article\",\"type\":\"String\",\"length\":20}").getAsJsonObject(); //$NON-NLS-1$
 
         Assert.assertTrue(registry.validate(arguments).toString(), registry.validate(arguments).isEmpty());
     }
@@ -25,7 +25,7 @@ public class MetadataOperationRegistryTest
     @Test
     public void shouldRejectUnknownOperation()
     {
-        var arguments = JsonParser.parseString("{\"operation\":\"executeJava\"}").getAsJsonObject();
+        var arguments = JsonParser.parseString("{\"operation\":\"executeJava\"}").getAsJsonObject(); //$NON-NLS-1$
 
         var errors = registry.validate(arguments);
 
@@ -36,8 +36,8 @@ public class MetadataOperationRegistryTest
     @Test
     public void shouldRejectMissingAndInventedParameters()
     {
-        var arguments = JsonParser.parseString("{\"operation\":\"createObject\","
-            + "\"project_name\":\"Demo\",\"java_code\":\"anything\"}").getAsJsonObject();
+        var arguments = JsonParser.parseString("{\"operation\":\"createObject\"," //$NON-NLS-1$
+            + "\"project_name\":\"Demo\",\"java_code\":\"anything\"}").getAsJsonObject(); //$NON-NLS-1$
 
         var errors = registry.validate(arguments);
 

@@ -186,6 +186,12 @@ public final class EditMetadataMcpTool
             + " for its exact parameters. Pass marker_path verbatim to GetMarkers; never shorten it to a directory."
             + " Successful object/form/template create and remove operations already verify physical persistence;"
             + " do not call Glob or Read to re-check their files."
+            + " For BSL code modules use listModules to discover an object's module kinds and .bsl paths,"
+            + " createModule to add an empty module, and removeModule to delete one; edit the BSL text itself"
+            + " with the Edit tool at the returned resource_path, never through this tool."
+            + " When creating or editing a configuration and the user did not state its parameters"
+            + " (platform_version, compatibility_mode, script_variant, language, version, vendor), ask for them"
+            + " with the AskUser tool before proceeding instead of guessing."
             + " Unknown operations and parameters are rejected.";
 
         var parameters = new McpToolCallParameters();
@@ -209,6 +215,14 @@ public final class EditMetadataMcpTool
         property(parameters, "related_object_name", "string", "FQN of a related object, for example AccumulationRegister.Stock.");
         property(parameters, "form_type", "string", "Generated form type: OBJECT, LIST, RECORD, REPORT, or CONSTANTS.");
         property(parameters, "template_type", "string", "Template body type: SPREADSHEET_DOCUMENT or DATA_COMPOSITION_SCHEMA.");
+        property(parameters, "module_kind", "string", "BSL code module kind: object_module, manager_module, record_set_module, value_manager_module, command_module, module, managed_application_module, ordinary_application_module, external_connection_module, or session_module. Use object_name=Configuration for application-level modules.");
+        property(parameters, "platform_version", "string", "Runtime 1C platform version of a new configuration, for example 8.3.24.");
+        property(parameters, "compatibility_mode", "string", "Configuration compatibility mode, for example 8.3.24. Defaults to platform_version.");
+        property(parameters, "script_variant", "string", "Built-in language variant of a new configuration: English or Russian.");
+        property(parameters, "default_language_code", "string", "Interface language code of a new configuration, for example ru or en. Creates the language and marks it default.");
+        property(parameters, "default_language_name", "string", "Name of the default language object. Optional; defaults from default_language_code (ru -> Русский, en -> English).");
+        property(parameters, "version", "string", "Configuration version string, for example 1.0.0.1.");
+        property(parameters, "vendor", "string", "Configuration vendor name.");
         property(parameters, "dry_run", "boolean", "Validate and describe the mutation without applying it.");
         parameters.required = Arrays.asList("operation");
         spec.function.parameters = parameters;
