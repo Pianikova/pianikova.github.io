@@ -333,7 +333,11 @@ final class MetadataMutationService
     private static void awaitResourceState(MetadataRequest request, MetadataResponse response,
         ICancellationToken cancellationToken, long timeoutMillis)
     {
-        if (!"createObject".equals(request.operation) && !"removeObject".equals(request.operation)) //$NON-NLS-1$ //$NON-NLS-2$
+        // renameObject belongs here too: EDT writes the renamed resource asynchronously, so without a
+        // wait the check below fired on a rename that had in fact succeeded. That false failure also made
+        // the model abandon the rest of the user's request.
+        if (!"createObject".equals(request.operation) && !"removeObject".equals(request.operation) //$NON-NLS-1$ //$NON-NLS-2$
+            && !"renameObject".equals(request.operation)) //$NON-NLS-1$
         {
             return;
         }

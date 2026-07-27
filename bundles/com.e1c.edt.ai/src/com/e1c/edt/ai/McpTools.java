@@ -33,6 +33,13 @@ public class McpTools
     private final ILog log;
     private final ISettings settings;
     private final Map<String, IMcpTool> tools = new HashMap<>();
+
+    /**
+     * Tools executed by the gateway rather than by this client, in lower case. A call to one of these is
+     * not a failure: it is replied to with status "accepted" and the server runs it.
+     */
+    private static final java.util.Set<String> SERVER_TOOLS =
+        java.util.Set.of("todowrite", "task", "websearch", "webfetch"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IJson json;
@@ -173,7 +180,12 @@ public class McpTools
             var tool = tools.get(toolName);
             if (tool == null)
             {
-                devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null, "unknown_tool"); //$NON-NLS-1$
+                // Not a client tool. Server tools are legitimate: they are forwarded to the gateway,
+                // which executes them and continues the generation, so recording them as failures made
+                // error metrics report phantom problems (13 such "errors" in one measurement session).
+                // Only a name unknown to the server as well is a real error.
+                devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null,
+                    SERVER_TOOLS.contains(toolName) ? null : "unknown_tool"); //$NON-NLS-1$
                 unknownCalls.add(call);
                 continue;
             }
