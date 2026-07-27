@@ -103,13 +103,29 @@ public final class EditMetadataMcpTool
         var request = json.deserialize(call.function.arguments, MetadataRequest.class)
             .orElseThrow(() -> new ToolException("Cannot deserialize metadata operation arguments.")); //$NON-NLS-1$
 
+        // Run on a single-threaded FIFO executor, never the common pool. The model routinely emits a
+        // batch of dependent operations in one message (add a tabular section, then its attributes);
+        // McpTools dispatches that batch in order, so a FIFO queue makes execution follow the model's
+        // intended order. On the common pool the order is arbitrary and dependent operations failed with
+        // "Child metadata object not found" even though the batch itself was correct.
         return CompletableFuture.supplyAsync(() -> {
             Object result = "help".equals(request.operation) ? help(request.topic) //$NON-NLS-1$
                 : mutationService.execute(request, cancellationToken);
             details.responseMarkdown = "1C metadata operation completed"; //$NON-NLS-1$
             return messageFactory.createMessage(this, call, json.serialize(result), details);
-        });
+        }, SEQUENTIAL_EXECUTOR);
     }
+
+    /**
+     * Serializes all 1C metadata operations in submission order. Static so that a single queue is used
+     * regardless of how many tool instances Guice creates.
+     */
+    private static final java.util.concurrent.ExecutorService SEQUENTIAL_EXECUTOR =
+        java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> {
+            var thread = new Thread(runnable, "1c-edit-metadata"); //$NON-NLS-1$
+            thread.setDaemon(true);
+            return thread;
+        });
 
     private Object help(String topic)
     {
@@ -198,6 +214,8 @@ public final class EditMetadataMcpTool
             + " When creating or editing a configuration and the user did not state its parameters"
             + " (platform_version, compatibility_mode, script_variant, language, version, vendor), ask for them"
             + " with the AskUser tool before proceeding instead of guessing."
+            + " Several operations may be requested in one message: they are applied one at a time, in the order"
+            + " given, so a dependent sequence (create a tabular section, then add its attributes) is safe."
             + " Unknown operations and parameters are rejected.";
 
         var parameters = new McpToolCallParameters();

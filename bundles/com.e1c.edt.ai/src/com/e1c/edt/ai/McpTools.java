@@ -215,7 +215,20 @@ public class McpTools
             {
                 log.trace(TracingSources.TOOLS, "McpTools",
                     () -> "Tool exception (sync): " + toolName + ", error: " + ex.toString());
-                var message = createErrorMessage(tool, call, toolName, ex);
+                // Record synchronous failures too. Argument validation throws here, before the tool's
+                // future is created, so without this such rejections are missing from the transcript
+                // entirely and error metrics under-report what the model actually saw.
+                var cause = unwrapCompletion(ex);
+                devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null,
+                    errorDescription(cause));
+                log.warning("AI Tool failed", () -> {
+                    var message = new StringBuilder();
+                    message.append(cause.toString());
+                    message.append("\n\nCall:\n\n");
+                    message.append(json.serialize(call));
+                    return message.toString();
+                });
+                var message = createErrorMessage(tool, call, toolName, cause);
                 futures.add(CompletableFuture.completedFuture(message));
             }
         }
