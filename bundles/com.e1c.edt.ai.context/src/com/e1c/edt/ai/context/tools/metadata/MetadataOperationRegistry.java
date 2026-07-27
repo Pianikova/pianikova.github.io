@@ -96,7 +96,12 @@ public final class MetadataOperationRegistry
         add("removeObjectForm", "Removes an object form and its external Form.form body.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "{\"operation\":\"removeObjectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\"}"); //$NON-NLS-1$
-        add("createObjectTemplate", "Creates a persisted empty spreadsheet or data-composition template.", //$NON-NLS-1$ //$NON-NLS-2$
+        add("createObjectTemplate", //$NON-NLS-1$
+            "Creates a persisted empty template and returns the exact body file in details.body_path." //$NON-NLS-1$
+                + " template_type values: SPREADSHEET_DOCUMENT, DATA_COMPOSITION_SCHEMA," //$NON-NLS-1$
+                + " DATA_COMPOSITION_APPEARANCE_TEMPLATE, HTML_DOCUMENT. An HTML body can then be filled with the" //$NON-NLS-1$
+                + " Edit tool. Types wrapping external content (TEXT_DOCUMENT, BINARY_DATA, ADD_IN, ACTIVE_DOCUMENT," //$NON-NLS-1$
+                + " GRAPHICAL_SCHEMA, GEOGRAPHICAL_SCHEMA) cannot be created empty.", //$NON-NLS-1$
             set("project_name", "object_name", "name", "template_type"), set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
             "{\"operation\":\"createObjectTemplate\",\"project_name\":\"MyProject\",\"object_name\":\"Report.Sales\",\"name\":\"MainDcs\",\"template_type\":\"DATA_COMPOSITION_SCHEMA\"}"); //$NON-NLS-1$
         add("removeObjectTemplate", "Removes an object template and its external body.", //$NON-NLS-1$ //$NON-NLS-2$

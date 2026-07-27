@@ -820,21 +820,28 @@ final class MetadataMutationService
     private MetadataResponse createObjectTemplate(IProject project, MetadataRequest request)
     {
         validateIdentifier(request.name, "name"); //$NON-NLS-1$
-        final TemplateType templateType;
-        try
+        var templateType = templateTypeOf(request.templateType);
+        if (TEMPLATE_TYPES_NEEDING_CONTENT.contains(templateType))
         {
-            templateType = TemplateType.valueOf(request.templateType.toUpperCase(Locale.ROOT));
+            // Verified empirically: these bodies wrap external content (text file, binary blob, add-in
+            // archive, embedded document), and EDT writes no file for an empty one. Creating the
+            // metadata anyway leaves a template registered in the .mdo with no body, so refuse up front
+            // instead of producing broken metadata.
+            throw new ToolException("`template_type` " + templateType.name() //$NON-NLS-1$
+                + " cannot be created empty: its body wraps external content that this operation cannot" //$NON-NLS-1$
+                + " invent. Import such a template through the EDT UI, or use one of: " //$NON-NLS-1$
+                + supportedTemplateTypeNames() + "."); //$NON-NLS-1$
         }
-        catch (RuntimeException e)
+        if (!TEMPLATE_BODY_FACTORIES.containsKey(templateType))
         {
-            throw new ToolException("Invalid `template_type`. Valid values: SPREADSHEET_DOCUMENT, DATA_COMPOSITION_SCHEMA."); //$NON-NLS-1$
-        }
-        if (templateType != TemplateType.SPREADSHEET_DOCUMENT
-            && templateType != TemplateType.DATA_COMPOSITION_SCHEMA)
-        {
-            throw new ToolException("Only SPREADSHEET_DOCUMENT and DATA_COMPOSITION_SCHEMA are supported without source content."); //$NON-NLS-1$
+            throw new ToolException("`template_type` " + templateType.name() //$NON-NLS-1$
+                + " cannot be created empty: this platform has no model for its body. Supported: " //$NON-NLS-1$
+                + supportedTemplateTypeNames() + "."); //$NON-NLS-1$
         }
         boolean[] changed = { false };
+        // The body file extension is derived by EDT from the body object type, so the authoritative
+        // path is captured here instead of being guessed from the template type.
+        String[] bodyPath = { null };
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Create 1C object template") //$NON-NLS-1$
         {
             @Override
@@ -860,17 +867,120 @@ final class MetadataMutationService
                     return null;
                 }
                 templates.add(template);
-                EObject body = templateType == TemplateType.SPREADSHEET_DOCUMENT
-                    ? SheetFactory.createSpreadsheetDocument() : DcsFactory.eINSTANCE.createDataCompositionSchema();
+                final EObject body;
+                try
+                {
+                    body = TEMPLATE_BODY_FACTORIES.get(templateType).get();
+                }
+                catch (LinkageError e)
+                {
+                    // The body model bundles are optional dependencies: if one is absent from this EDT
+                    // installation, fail this template type only instead of breaking the whole plugin.
+                    throw new ToolException("This EDT installation has no model bundle for template_type " //$NON-NLS-1$
+                        + templateType.name() + ", so it cannot be created. Supported here: " //$NON-NLS-1$
+                        + supportedTemplateTypeNames() + "."); //$NON-NLS-1$
+                }
                 template.setTemplate(body);
                 var contentFqn = fqnGenerator.generateExternalPropertyFqn(template,
                     MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);
                 transaction.attachTopObject((IBmObject)body, contentFqn);
+                var file = fileSystemSupportProvider.getProjectFileSystemSupport(project)
+                    .getFile(template, MdClassPackage.Literals.BASIC_TEMPLATE__TEMPLATE);
+                if (file != null)
+                {
+                    var location = file.getLocation();
+                    bodyPath[0] = location != null ? location.toOSString() : file.getFullPath().toString();
+                }
                 return null;
             }
         });
-        return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+        var response = MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+        if (bodyPath[0] != null)
+        {
+            var details = new LinkedHashMap<String, Object>();
+            details.put("template_type", templateType.name()); //$NON-NLS-1$
+            details.put("body_path", bodyPath[0]); //$NON-NLS-1$
+            response.details = details;
+        }
+        return response;
     }
+
+    /**
+     * Resolves {@code template_type}. {@link TemplateType} is an EMF enum, so its Java constant
+     * ({@code SPREADSHEET_DOCUMENT}) differs from the name serialized in {@code .mdo}
+     * ({@code SpreadsheetDocument}); both spellings are accepted because the model legitimately sees
+     * the latter when reading metadata files.
+     */
+    private static TemplateType templateTypeOf(String value)
+    {
+        if (value != null && !value.isBlank())
+        {
+            var normalized = value.trim();
+            for (var candidate : TemplateType.values())
+            {
+                if (candidate.name().equalsIgnoreCase(normalized)
+                    || candidate.getName().equalsIgnoreCase(normalized)
+                    || candidate.getLiteral().equalsIgnoreCase(normalized))
+                {
+                    return candidate;
+                }
+            }
+        }
+        throw new ToolException("Invalid `template_type` `" + value + "`. Valid values: " //$NON-NLS-1$ //$NON-NLS-2$
+            + templateTypeNames() + "."); //$NON-NLS-1$
+    }
+
+    /** Comma-separated list of every template type EDT declares, as accepted by {@code template_type}. */
+    static String templateTypeNames()
+    {
+        var names = new java.util.ArrayList<String>();
+        for (var value : TemplateType.values())
+        {
+            names.add(value.name());
+        }
+        return String.join(", ", names); //$NON-NLS-1$
+    }
+
+    static String supportedTemplateTypeNames()
+    {
+        var names = new java.util.ArrayList<String>();
+        for (var type : TEMPLATE_BODY_FACTORIES.keySet())
+        {
+            names.add(type.name());
+        }
+        return String.join(", ", names); //$NON-NLS-1$
+    }
+
+    /**
+     * Body factories per template type. The body is an {@code EObject} attached as its own BM top
+     * object; EDT derives the body file name (Template.mxlx, Template.txt, ...) from the body's type,
+     * so no extension is hardcoded here. GRAPHICAL_SCHEMA and GEOGRAPHICAL_SCHEMA are absent on
+     * purpose: this platform ships no model for them, so an empty one cannot be constructed.
+     */
+    private static final Map<TemplateType, java.util.function.Supplier<EObject>> TEMPLATE_BODY_FACTORIES =
+        createTemplateBodyFactories();
+
+    private static Map<TemplateType, java.util.function.Supplier<EObject>> createTemplateBodyFactories()
+    {
+        Map<TemplateType, java.util.function.Supplier<EObject>> result = new LinkedHashMap<>();
+        result.put(TemplateType.SPREADSHEET_DOCUMENT, SheetFactory::createSpreadsheetDocument);
+        result.put(TemplateType.DATA_COMPOSITION_SCHEMA, () -> DcsFactory.eINSTANCE.createDataCompositionSchema());
+        result.put(TemplateType.DATA_COMPOSITION_APPEARANCE_TEMPLATE,
+            () -> com._1c.g5.v8.dt.dcs.model.appearancetemplate.DcsFactory.eINSTANCE
+                .createDataCompositionAppearanceTemplate());
+        result.put(TemplateType.HTML_DOCUMENT,
+            () -> com._1c.g5.v8.dt.htmldocument.model.HtmlDocumentFactory.eINSTANCE.createHtmlDocument());
+        return result;
+    }
+
+    /**
+     * Types whose body is a wrapper around external content. Their EMF model exists, but EDT persists
+     * no file for an empty instance (verified on a real project: the template ended up registered in the
+     * .mdo without any body file), so they are refused rather than created broken.
+     */
+    private static final java.util.Set<TemplateType> TEMPLATE_TYPES_NEEDING_CONTENT =
+        java.util.Set.of(TemplateType.TEXT_DOCUMENT, TemplateType.BINARY_DATA, TemplateType.ADD_IN,
+            TemplateType.ACTIVE_DOCUMENT);
 
     private MetadataResponse removeObjectArtifact(IProject project, MetadataRequest request, String collection)
     {
@@ -2491,9 +2601,10 @@ final class MetadataMutationService
         }
         if ("createObjectTemplate".equals(request.operation)) //$NON-NLS-1$
         {
-            String file = "DATA_COMPOSITION_SCHEMA".equalsIgnoreCase(request.templateType) //$NON-NLS-1$
-                ? "Template.dcs" : "Template.mxlx"; //$NON-NLS-1$ //$NON-NLS-2$
-            return Paths.get(base, "Templates", request.name, file).toString(); //$NON-NLS-1$
+            // The body file name depends on the template type (Template.mxlx, Template.txt,
+            // Template.htmldoc, ...), so it is not guessed here: the folder is verified instead, and
+            // createObjectTemplate reports the exact body path from EDT in details.body_path.
+            return Paths.get(base, "Templates", request.name).toString(); //$NON-NLS-1$
         }
         if ("removeObjectTemplate".equals(request.operation)) //$NON-NLS-1$
         {

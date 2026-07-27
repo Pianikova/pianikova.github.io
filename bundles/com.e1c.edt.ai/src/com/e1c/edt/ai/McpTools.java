@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -191,18 +192,22 @@ public class McpTools
                             return response;
                         })
                         .exceptionally(error -> {
+                            // A failure inside the tool arrives wrapped in CompletionException, whose
+                            // message is "<cause class>: <text>". Unwrap it so the model, the log and
+                            // the recorder all see the tool's own message and its ToolErrorType.
+                            var cause = unwrapCompletion(error);
                             log.trace(TracingSources.TOOLS, "McpTools",
-                                () -> "Tool exception: " + toolName + ", error: " + error.toString());
+                                () -> "Tool exception: " + toolName + ", error: " + cause.toString());
                             devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null,
-                                error.toString());
+                                errorDescription(cause));
                             log.warning("AI Tool failed", () -> {
                                 var message = new StringBuilder();
-                                message.append(error.toString());
+                                message.append(cause.toString());
                                 message.append("\n\nCall:\n\n");
                                 message.append(json.serialize(call));
                                 return message.toString();
                             });
-                            return createErrorMessage(tool, call, toolName, error);
+                            return createErrorMessage(tool, call, toolName, cause);
                         });
                 futures.add(callFuture);
             }
@@ -253,8 +258,33 @@ public class McpTools
         return futureResult;
     }
 
-    private ToolCallMessage createErrorMessage(IMcpTool tool, McpToolCall call, String toolName, Throwable error)
+    /**
+     * Unwraps the {@link CompletionException}/{@link java.util.concurrent.ExecutionException} shells
+     * added by the asynchronous plumbing, returning the exception the tool actually threw. Without this
+     * the wrapper's message ("com.e1c.edt.ai.ToolException: ...") leaks to the model and
+     * {@code instanceof ToolException} never matches, so {@link ToolErrorType} is silently ignored.
+     */
+    private static Throwable unwrapCompletion(Throwable error)
     {
+        var current = error;
+        while ((current instanceof CompletionException || current instanceof java.util.concurrent.ExecutionException)
+            && current.getCause() != null && current.getCause() != current)
+        {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    /** Short error description for the dev recorder: the tool's message, falling back to its type. */
+    private static String errorDescription(Throwable error)
+    {
+        var message = error.getMessage();
+        return message != null && !message.isBlank() ? message : error.getClass().getSimpleName();
+    }
+
+    private ToolCallMessage createErrorMessage(IMcpTool tool, McpToolCall call, String toolName, Throwable rawError)
+    {
+        var error = unwrapCompletion(rawError);
         var details = new ToolCallMessageDetails();
         var message = error.getMessage();
 
