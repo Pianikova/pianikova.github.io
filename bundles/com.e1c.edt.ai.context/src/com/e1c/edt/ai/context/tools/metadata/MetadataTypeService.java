@@ -105,7 +105,7 @@ final class MetadataTypeService
         }
 
         throw new ToolException("Unsupported type `" + normalized //$NON-NLS-1$
-            + "`. Supported types: String, Number, Boolean, Date, CatalogRef.X, DocumentRef.X, EnumRef.X."); //$NON-NLS-1$
+            + "`. Supported types: " + supportedTypeNames() + "."); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private static TypeItem primitive(IEObjectProvider provider, String typeName, String requestedName)
@@ -135,9 +135,29 @@ final class MetadataTypeService
         throw new ToolException("Invalid `date_fractions`. Valid values: Date, Time, DateTime."); //$NON-NLS-1$
     }
 
+    /**
+     * Reference type prefixes. The rule is uniform: {@code <Type>Ref.<Name>} designates the object
+     * {@code <Type>.<Name>}, whose reference type EDT then produces, so a new referenceable kind only
+     * needs its prefix here.
+     */
+    @SuppressWarnings("nls")
+    private static final String[] REFERENCE_PREFIXES = { "CatalogRef.", "DocumentRef.", "EnumRef.",
+        "ChartOfCharacteristicTypesRef.", "ChartOfAccountsRef.", "ChartOfCalculationTypesRef.",
+        "BusinessProcessRef.", "TaskRef.", "ExchangePlanRef." };
+
+    static String supportedTypeNames()
+    {
+        var names = new StringBuilder("String, Number, Boolean, Date"); //$NON-NLS-1$
+        for (var prefix : REFERENCE_PREFIXES)
+        {
+            names.append(", ").append(prefix).append('X'); //$NON-NLS-1$
+        }
+        return names.toString();
+    }
+
     private static String referenceDependency(String typeName)
     {
-        for (var prefix : new String[] { "CatalogRef.", "DocumentRef.", "EnumRef." }) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        for (var prefix : REFERENCE_PREFIXES)
         {
             if (typeName.regionMatches(true, 0, prefix, 0, prefix.length()) && typeName.length() > prefix.length())
             {

@@ -235,7 +235,7 @@ public final class EditMetadataMcpTool
         property(parameters, "title", "string", "Russian synonym of a new object or child.");
         property(parameters, "property_name", "string", "Scalar EDT metadata property name.");
         property(parameters, "property_value", "string", "Scalar property value encoded as a string.");
-        property(parameters, "type", "string", "String, Number, Boolean, Date, CatalogRef.X, DocumentRef.X, or EnumRef.X.");
+        property(parameters, "type", "string", "String, Number, Boolean, Date, or a reference: CatalogRef.X, DocumentRef.X, EnumRef.X, ChartOfCharacteristicTypesRef.X, ChartOfAccountsRef.X, ChartOfCalculationTypesRef.X, BusinessProcessRef.X, TaskRef.X, ExchangePlanRef.X. The referenced object must already exist.");
         property(parameters, "length", "integer", "String length or total number digits.");
         property(parameters, "precision", "integer", "Number digits after the decimal point. For Number(N.S), pass length=N and precision=S.");
         property(parameters, "date_fractions", "string", "Date, Time, or DateTime.");

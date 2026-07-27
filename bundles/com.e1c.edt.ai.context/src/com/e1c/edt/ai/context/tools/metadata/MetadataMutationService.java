@@ -670,6 +670,9 @@ final class MetadataMutationService
     {
         validateIdentifier(request.newName, "new_name"); //$NON-NLS-1$
         boolean[] changed = { false };
+        // True for a child whose body is an external resource (form, template): renaming it needs the
+        // refactoring service, not a plain setName.
+        boolean[] external = { false };
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Rename 1C metadata child") //$NON-NLS-1$
         {
             @Override
@@ -686,14 +689,90 @@ final class MetadataMutationService
                     throw new ToolException("A child with the new name already exists: " + request.newName); //$NON-NLS-1$
                 }
                 changed[0] = !request.newName.equals(child.getName());
-                if (changed[0] && !request.dryRun)
+                external[0] = child instanceof BasicForm || child instanceof Template;
+                if (changed[0] && !request.dryRun && !external[0])
                 {
                     child.setName(request.newName);
                 }
                 return null;
             }
         });
+        // A form or a template keeps its body in a folder named after the child, so renaming it in the
+        // model alone leaves the body behind and EDT then looks for a file that does not exist: the
+        // artifact silently disappears from the configuration without producing a single marker.
+        // Renaming through the EDT refactoring service is what moves the resources as well.
+        if (changed[0] && !request.dryRun && external[0])
+        {
+            renameExternalChild(project, request);
+        }
         return MetadataResponse.success(request, request.objectName + "." + request.newName, changed[0]); //$NON-NLS-1$
+    }
+
+    /**
+     * Renames a child that owns an external body (form, template) through the EDT refactoring service,
+     * then verifies the body really moved. Fails loudly rather than leaving a dangling artifact.
+     */
+    private void renameExternalChild(IProject project, MetadataRequest request)
+    {
+        var oldBody = externalBodyFolder(project, request, request.name);
+        var child = model(project).getGlobalContext().execute(new AbstractBmTask<MdObject>("Read 1C child to rename") //$NON-NLS-1$
+        {
+            @Override
+            public MdObject execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                return findNamed(childLocation(transaction, request).children, request.name);
+            }
+        });
+        if (child == null)
+        {
+            throw new ToolException("Child metadata object not found: " + childTarget(request)); //$NON-NLS-1$
+        }
+        for (var refactoring : refactoringService.createMdObjectRenameRefactoring(child, request.newName))
+        {
+            refactoring.perform();
+        }
+        refresh(project);
+        var newBody = externalBodyFolder(project, request, request.newName);
+        if (newBody == null || oldBody == null)
+        {
+            return;
+        }
+        // The refactoring moves the resources asynchronously, so poll instead of checking once: a single
+        // immediate check reported a broken artifact for a rename that had in fact completed.
+        var target = Paths.get(newBody);
+        long deadline = System.currentTimeMillis() + persistenceTimeoutMillis();
+        while (!Files.exists(target) && System.currentTimeMillis() < deadline)
+        {
+            try
+            {
+                Thread.sleep(50L);
+            }
+            catch (InterruptedException e)
+            {
+                Thread.currentThread().interrupt();
+                return;
+            }
+            refresh(project);
+        }
+        if (!Files.exists(target))
+        {
+            throw new ToolException("Renaming `" + request.name + "` to `" + request.newName //$NON-NLS-1$ //$NON-NLS-2$
+                + "` did not move its body folder, so the artifact would be broken. Remove the child and create it" //$NON-NLS-1$
+                + " again under the wanted name instead.", ToolErrorType.USER_VISIBLE); //$NON-NLS-1$
+        }
+    }
+
+    /** Absolute path of a form/template body folder for the given child name, or {@code null}. */
+    private static String externalBodyFolder(IProject project, MetadataRequest request, String childName)
+    {
+        String collection = "template".equalsIgnoreCase(request.childKind) ? "Templates" : "Forms"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        var location = project.getLocation();
+        if (location == null)
+        {
+            return null;
+        }
+        return Paths.get(location.toOSString(), metadataOwnerFolder(request.objectName), collection, childName)
+            .toString();
     }
 
     private MetadataResponse changeDocumentRegister(IProject project, MetadataRequest request, boolean add)
