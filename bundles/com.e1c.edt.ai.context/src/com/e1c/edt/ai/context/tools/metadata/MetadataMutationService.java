@@ -218,6 +218,12 @@ final class MetadataMutationService
         case "renameChild": //$NON-NLS-1$
             response = renameChild(project, request);
             break;
+        case "addObjectReference": //$NON-NLS-1$
+            response = changeObjectReference(project, request, true);
+            break;
+        case "removeObjectReference": //$NON-NLS-1$
+            response = changeObjectReference(project, request, false);
+            break;
         case "addDocumentRegister": //$NON-NLS-1$
             response = changeDocumentRegister(project, request, true);
             break;
@@ -775,6 +781,54 @@ final class MetadataMutationService
             .toString();
     }
 
+    private static boolean isSingleReference(org.eclipse.emf.ecore.EStructuralFeature feature)
+    {
+        return feature instanceof EReference && !feature.isMany() && feature.isChangeable()
+            && feature.getEType() instanceof EClass;
+    }
+
+    /**
+     * Adds or removes an object in a reference collection, for example the documents registered by a
+     * DocumentJournal. Such collections are mandatory for some object types, and no scalar operation can
+     * fill them.
+     */
+    private MetadataResponse changeObjectReference(IProject project, MetadataRequest request, boolean add)
+    {
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Change 1C reference collection") //$NON-NLS-1$
+        {
+            @Override
+            @SuppressWarnings({ "rawtypes", "unchecked" })
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var object = requireObject(transaction, request.objectName);
+                var feature = object.eClass().getEStructuralFeature(request.propertyName);
+                if (!(feature instanceof EReference) || !feature.isMany())
+                {
+                    throw new ToolException("Property `" + request.propertyName + "` of " + request.objectName //$NON-NLS-1$ //$NON-NLS-2$
+                        + " is not a reference collection." + propertySuggestion(object, request.propertyName)); //$NON-NLS-1$
+                }
+                var target = requireObject(transaction, request.relatedObjectName);
+                var list = (EList)object.eGet(feature);
+                boolean contains = list.contains(target);
+                changed[0] = add ? !contains : contains;
+                if (changed[0] && !request.dryRun)
+                {
+                    if (add)
+                    {
+                        list.add(target);
+                    }
+                    else
+                    {
+                        list.remove(target);
+                    }
+                }
+                return null;
+            }
+        });
+        return MetadataResponse.success(request, request.objectName, changed[0]);
+    }
+
     private MetadataResponse changeDocumentRegister(IProject project, MetadataRequest request, boolean add)
     {
         boolean[] changed = { false };
@@ -1235,7 +1289,7 @@ final class MetadataMutationService
                     addToFeature(configuration, descriptor.collection, object);
                     if ("CommonForm".equals(descriptor.name)) //$NON-NLS-1$
                     {
-                        attachEmptyFormBody(transaction, (BasicForm)object);
+                        attachFormBody(project, transaction, (BasicForm)object);
                     }
                 }
                 changed[0] = true;
@@ -1974,6 +2028,51 @@ final class MetadataMutationService
         }
     }
 
+    /**
+     * Attaches a body to a standalone form (a CommonForm). An empty {@link FormFactory} form leaves
+     * mandatory features unset ({@code commandInterface}, {@code commandBar}, {@code navigationPanel}),
+     * so EDT reports the new form as invalid; the generator produces a complete one. A CommonForm is at
+     * once the owner and the form, hence it is passed as both. Falls back to the bare body if generation
+     * is unavailable, which is no worse than before.
+     */
+    private void attachFormBody(IProject project, IBmTransaction transaction, BasicForm formMetadata)
+    {
+        try
+        {
+            var v8Project = v8ProjectManager.getProject(project);
+            if (v8Project != null && formMetadata instanceof MdObject)
+            {
+                var owner = (MdObject)formMetadata;
+                var scriptVariant = v8Project.getScriptVariant();
+                var version = v8Project.getVersion();
+                var languageCode = editingLanguageManager.getEditingLanguageCode(project);
+                var rootField =
+                    formFieldGenerator.getFormGeneratorFields(owner, FormType.GENERIC, scriptVariant, version);
+                Form generated = formGenerator.generateForm(owner, formMetadata, FormType.GENERIC, scriptVariant,
+                    languageCode, version, rootField, Integer.valueOf(1));
+                if (generated != null)
+                {
+                    formMetadata.setForm(generated);
+                    generated.setMdForm(formMetadata);
+                    attachFormResource(transaction, formMetadata, generated);
+                    return;
+                }
+            }
+        }
+        catch (RuntimeException | Error e)
+        {
+            // Generation unavailable for this form: fall through to the bare body below.
+        }
+        attachEmptyFormBody(transaction, formMetadata);
+    }
+
+    private void attachFormResource(IBmTransaction transaction, BasicForm formMetadata, Form form)
+    {
+        var formReference = (org.eclipse.emf.ecore.EReference)formMetadata.eClass().getEStructuralFeature("form"); //$NON-NLS-1$
+        transaction.attachTopObject((IBmObject)form, fqnGenerator.generateExternalPropertyFqn(formMetadata,
+            formReference));
+    }
+
     private void attachEmptyFormBody(IBmTransaction transaction, BasicForm formMetadata)
     {
         Form form = FormFactory.eINSTANCE.createForm();
@@ -2010,12 +2109,34 @@ final class MetadataMutationService
                 }
 
                 var feature = object.eClass().getEStructuralFeature(request.propertyName);
+                // A single-valued reference property (BusinessProcess.task, CalculationRegister
+                // .chartOfCalculationTypes, ...) is mandatory for some object types, and leaving it unset
+                // keeps the object permanently invalid. Its value is given as the target FQN.
+                if (isSingleReference(feature))
+                {
+                    var target = transaction.getTopObjectByFqn(normalizeConfigurationFqn(request.propertyValue));
+                    if (!(target instanceof MdObject))
+                    {
+                        throw new ToolException("Referenced metadata object not found: " + request.propertyValue //$NON-NLS-1$
+                            + ". Property `" + request.propertyName + "` expects the FQN of an existing object," //$NON-NLS-1$ //$NON-NLS-2$
+                            + " for example Task.MyTask."); //$NON-NLS-1$
+                    }
+                    changed[0] = object.eGet(feature) != target;
+                    if (changed[0] && !request.dryRun)
+                    {
+                        object.eSet(feature, target);
+                    }
+                    return null;
+                }
                 if (feature == null || feature.isMany() || !(feature.getEType() instanceof EDataType))
                 {
-                    throw new ToolException("Unsupported scalar property `" + request.propertyName //$NON-NLS-1$
+                    throw new ToolException("Unsupported property `" + request.propertyName //$NON-NLS-1$
                         + "` for " + request.objectName + "." //$NON-NLS-1$ //$NON-NLS-2$
-                        + propertySuggestion(object, request.propertyName) + " Valid scalar properties: " //$NON-NLS-1$
-                        + scalarPropertyNames(object) + "."); //$NON-NLS-1$
+                        + propertySuggestion(object, request.propertyName)
+                        + (feature != null && feature.isMany()
+                            ? " That property holds a collection: use addObjectReference/removeObjectReference." //$NON-NLS-1$
+                            : "") //$NON-NLS-1$
+                        + " Valid scalar properties: " + scalarPropertyNames(object) + "."); //$NON-NLS-1$ //$NON-NLS-2$
                 }
                 var value = EcoreUtil.createFromString((EDataType)feature.getEType(), request.propertyValue);
                 changed[0] = !java.util.Objects.equals(object.eGet(feature), value);

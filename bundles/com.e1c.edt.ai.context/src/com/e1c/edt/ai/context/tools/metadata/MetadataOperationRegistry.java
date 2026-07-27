@@ -39,9 +39,12 @@ public final class MetadataOperationRegistry
             set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"createObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"title\":\"Products\"}"); //$NON-NLS-1$
         add("setObjectProperty", //$NON-NLS-1$
-            "Changes one scalar property of an existing top-level object. Use object_name=Configuration to edit" //$NON-NLS-1$
+            "Changes one property of an existing top-level object. Use object_name=Configuration to edit" //$NON-NLS-1$
                 + " configuration properties such as version, compatibilityMode, scriptVariant, vendor," //$NON-NLS-1$
-                + " defaultRunMode, or namePrefix.", //$NON-NLS-1$
+                + " defaultRunMode, or namePrefix. Also sets single-valued reference properties that some object" //$NON-NLS-1$
+                + " types require: pass the target FQN as property_value, for example property_name=task with" //$NON-NLS-1$
+                + " property_value=Task.MyTask for a BusinessProcess, or chartOfCalculationTypes for a" //$NON-NLS-1$
+                + " CalculationRegister. For a collection of references use addObjectReference instead.", //$NON-NLS-1$
             set("project_name", "object_name", "property_name", "property_value"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"setObjectProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"property_name\":\"comment\",\"property_value\":\"Managed by AI\"}"); //$NON-NLS-1$
         add("renameObject", "Renames a top-level object using the EDT refactoring service.", //$NON-NLS-1$ //$NON-NLS-2$
@@ -84,6 +87,15 @@ public final class MetadataOperationRegistry
         add("renameChild", "Renames an existing child metadata element.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "child_kind", "name", "new_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
             "{\"operation\":\"renameChild\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order\",\"child_kind\":\"tabular_section\",\"name\":\"Lines\",\"new_name\":\"Goods\"}"); //$NON-NLS-1$
+        add("addObjectReference", //$NON-NLS-1$
+            "Adds an object to a reference collection of another object, for the collections some types require:" //$NON-NLS-1$
+                + " for example property_name=registeredDocuments with related_object_name=Document.MyDoc for a" //$NON-NLS-1$
+                + " DocumentJournal. property_name is the model property; related_object_name is the FQN to add.", //$NON-NLS-1$
+            set("project_name", "object_name", "property_name", "related_object_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "{\"operation\":\"addObjectReference\",\"project_name\":\"MyProject\",\"object_name\":\"DocumentJournal.Journal\",\"property_name\":\"registeredDocuments\",\"related_object_name\":\"Document.Order\"}"); //$NON-NLS-1$
+        add("removeObjectReference", "Removes an object from a reference collection of another object.", //$NON-NLS-1$ //$NON-NLS-2$
+            set("project_name", "object_name", "property_name", "related_object_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "{\"operation\":\"removeObjectReference\",\"project_name\":\"MyProject\",\"object_name\":\"DocumentJournal.Journal\",\"property_name\":\"registeredDocuments\",\"related_object_name\":\"Document.Order\"}"); //$NON-NLS-1$
         add("addDocumentRegister", "Adds an accumulation, accounting, or calculation register to a document's register records.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "related_object_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "{\"operation\":\"addDocumentRegister\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Receipt\",\"related_object_name\":\"AccumulationRegister.Stock\"}"); //$NON-NLS-1$
