@@ -45,9 +45,6 @@ final class MetadataRequest
     @SerializedName("subordinate_kind")
     String subordinateKind;
 
-    @SerializedName("module_kind")
-    String moduleKind;
-
     @SerializedName("platform_version")
     String platformVersion;
 

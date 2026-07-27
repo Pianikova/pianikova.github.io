@@ -130,17 +130,23 @@ public final class MetadataOperationRegistry
             set("project_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"removeConfiguration\",\"project_name\":\"MyConfig\"}"); //$NON-NLS-1$
         add("listModules", //$NON-NLS-1$
-            "Lists the BSL code modules an object supports, with each module_kind, its .bsl file path, and whether it exists. Use object_name=Configuration for application-level modules.", //$NON-NLS-1$
+            "Lists the BSL code modules an object supports: each module_kind, the exact .bsl file path, and whether" //$NON-NLS-1$
+                + " that file exists. This is the only module operation here, because a 1C module *is* its .bsl file:" //$NON-NLS-1$
+                + " create it with the Write tool at the reported path, change its text with Edit, remove it with" //$NON-NLS-1$
+                + " Delete. Those tools enforce the vendor-support rules for the owning object." //$NON-NLS-1$
+                + " module_kind values: object_module, manager_module, record_set_module, value_manager_module," //$NON-NLS-1$
+                + " command_module, module (CommonModule/HTTPService/WebService/IntegrationService/Bot/CommonForm)," //$NON-NLS-1$
+                + " managed_application_module, ordinary_application_module, external_connection_module," //$NON-NLS-1$
+                + " session_module. Use object_name=Configuration for application-level modules." //$NON-NLS-1$
+                + " Nothing is registered in the .mdo for a module: its kind comes from the file name, so for an" //$NON-NLS-1$
+                + " existing object writing the .bsl is all that is needed. Two cases need the owner created first:" //$NON-NLS-1$
+                + " a common module is a metadata object, so call createObject CommonModule.Name and then write its" //$NON-NLS-1$
+                + " Module.bsl (its execution context is set with setObjectProperty on properties such as server," //$NON-NLS-1$
+                + " clientManagedApplication, clientOrdinaryApplication, externalConnection, serverCall, global," //$NON-NLS-1$
+                + " privileged); a form module requires createObjectForm first. Always call listModules before" //$NON-NLS-1$
+                + " writing: it both confirms the owner exists and returns the exact path.", //$NON-NLS-1$
             set("project_name", "object_name"), set(), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"listModules\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\"}"); //$NON-NLS-1$
-        add("createModule", //$NON-NLS-1$
-            "Creates an empty BSL code module (.bsl file) for the given module_kind, then edit its text with the Edit tool. module_kind values: object_module, manager_module, record_set_module, value_manager_module, command_module, module (CommonModule/HTTPService/WebService/IntegrationService/Bot/CommonForm), managed_application_module, ordinary_application_module, external_connection_module, session_module. Use listModules to see the kinds an object supports.", //$NON-NLS-1$
-            set("project_name", "object_name", "module_kind"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            "{\"operation\":\"createModule\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"module_kind\":\"object_module\"}"); //$NON-NLS-1$
-        add("removeModule", //$NON-NLS-1$
-            "Deletes a BSL code module (.bsl file) of the given module_kind. The object's other modules are left intact.", //$NON-NLS-1$
-            set("project_name", "object_name", "module_kind"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-            "{\"operation\":\"removeModule\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"module_kind\":\"object_module\"}"); //$NON-NLS-1$
     }
 
     Collection<MetadataOperationDescriptor> all()

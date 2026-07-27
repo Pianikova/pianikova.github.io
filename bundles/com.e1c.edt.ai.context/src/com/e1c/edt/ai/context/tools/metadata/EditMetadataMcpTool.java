@@ -208,9 +208,14 @@ public final class EditMetadataMcpTool
             + " so re-check with GetMarkers. Pass verify=false to skip this check during bulk work."
             + " Successful object/form/template create and remove operations already verify physical persistence;"
             + " do not call Glob or Read to re-check their files."
-            + " For BSL code modules use listModules to discover an object's module kinds and .bsl paths,"
-            + " createModule to add an empty module, and removeModule to delete one; edit the BSL text itself"
-            + " with the Edit tool at the returned resource_path, never through this tool."
+            + " This tool never touches .bsl files. For BSL code modules call listModules to get the exact .bsl path"
+            + " of every module kind the object supports, then create that file with Write, change its text with"
+            + " Edit, and remove it with Delete: a 1C module is its .bsl file, and those tools enforce the"
+            + " vendor-support rules of the owning object. A module needs no entry in the .mdo, but its owner must"
+            + " exist first: a common module is created with createObject CommonModule.Name (its execution context"
+            + " is then set with setObjectProperty), and a form module requires createObjectForm."
+            + " A configuration or an individual object may be on vendor support; when a support rule forbids the"
+            + " change this tool refuses it, and only the user can lift that restriction, so do not retry."
             + " When creating or editing a configuration and the user did not state its parameters"
             + " (platform_version, compatibility_mode, script_variant, language, version, vendor), ask for them"
             + " with the AskUser tool before proceeding instead of guessing."
@@ -239,7 +244,6 @@ public final class EditMetadataMcpTool
         property(parameters, "related_object_name", "string", "FQN of a related object, for example AccumulationRegister.Stock.");
         property(parameters, "form_type", "string", "Generated form type. Common: OBJECT (object form), LIST (list form), FOLDER (group form), CHOICE (choice form), FOLDER_CHOICE, RECORD (record form), RECORD_SET (record set form), REPORT, CONSTANTS, GENERIC (arbitrary form). Also supported: SEARCH, REPORT_SETTINGS, REPORT_VARIANT, SAVE, LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES. Pick the type matching the owner: a catalog with groups supports FOLDER and FOLDER_CHOICE, a register supports RECORD_SET and LIST.");
         property(parameters, "template_type", "string", "Template body type. Creatable empty: SPREADSHEET_DOCUMENT (mxl layout), DATA_COMPOSITION_SCHEMA, DATA_COMPOSITION_APPEARANCE_TEMPLATE, HTML_DOCUMENT. The response reports the created body file in details.body_path; an HTML body can then be filled with the Edit tool. TEXT_DOCUMENT, BINARY_DATA, ADD_IN, ACTIVE_DOCUMENT, GRAPHICAL_SCHEMA and GEOGRAPHICAL_SCHEMA wrap external content and cannot be created empty.");
-        property(parameters, "module_kind", "string", "BSL code module kind: object_module, manager_module, record_set_module, value_manager_module, command_module, module, managed_application_module, ordinary_application_module, external_connection_module, or session_module. Use object_name=Configuration for application-level modules.");
         property(parameters, "platform_version", "string", "Runtime 1C platform version of a new configuration, for example 8.3.24.");
         property(parameters, "compatibility_mode", "string", "Configuration compatibility mode, for example 8.3.24. Defaults to platform_version.");
         property(parameters, "script_variant", "string", "Built-in language variant of a new configuration: English or Russian.");

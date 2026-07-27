@@ -154,19 +154,15 @@ final class MetadataMutationService
         }
         if (editingSupport.isReadOnly(project))
         {
-            throw new ToolException("Project is read-only according to EDT editing rules: " + project.getName()); //$NON-NLS-1$
+            // The user must switch the configuration off vendor support first: retrying cannot help.
+            throw new ToolException("Configuration is on full vendor support, so it must not be modified: " //$NON-NLS-1$
+                + project.getName() + ". Ask the user to enable editing before changing anything.", //$NON-NLS-1$
+                ToolErrorType.USER_VISIBLE);
         }
-        // Code modules are transient in the metadata model: the .bsl file on disk is the source of
-        // truth. These operations manage that file directly (never the BSL text, which is edited with
-        // the Edit tool), so they return before the object-oriented resource/artifact verification tail.
-        if ("createModule".equals(request.operation)) //$NON-NLS-1$
-        {
-            return changeModuleFile(project, request, cancellationToken, true);
-        }
-        if ("removeModule".equals(request.operation)) //$NON-NLS-1$
-        {
-            return changeModuleFile(project, request, cancellationToken, false);
-        }
+        // Per-object vendor-support rule. isReadOnly above only covers a configuration on *full*
+        // support; with "editable with preservation" the project is writable while individual adopted
+        // objects still must not change, and only this check catches that.
+        requireEditable(project, request);
 
         MetadataResponse response;
         switch (request.operation)
@@ -403,6 +399,61 @@ final class MetadataMutationService
             throw new ToolException("EDT changed BM, but the expected metadata resource was not persisted: " //$NON-NLS-1$
                 + response.resourcePath, ToolErrorType.USER_VISIBLE);
         }
+    }
+
+    /** Operations that remove metadata, and therefore need the delete permission, not the edit one. */
+    private static final java.util.Set<String> DELETING_OPERATIONS = java.util.Set.of("removeObject"); //$NON-NLS-1$
+
+    /**
+     * Refuses the operation when vendor-support rules forbid changing the target object.
+     * <p>
+     * The question is delegated to EDT ({@code IModelEditingSupport}), the same authority the editors
+     * use, so support rules are never reinterpreted here. Objects that cannot be resolved yet (a
+     * {@code createObject} target, for instance) are permitted: the configuration root is checked
+     * instead, since adding a new own object to a supported configuration is legitimate.
+     */
+    private void requireEditable(IProject project, MetadataRequest request)
+    {
+        var fqn = request.objectName;
+        boolean deleting = DELETING_OPERATIONS.contains(request.operation);
+        var target = "createObject".equals(request.operation) ? "Configuration" //$NON-NLS-1$ //$NON-NLS-2$
+            : topObjectFqn(fqn);
+        if (target == null)
+        {
+            return;
+        }
+        var verdict = model(project).getGlobalContext().execute(new AbstractBmTask<Boolean>("Check 1C support rules") //$NON-NLS-1$
+        {
+            @Override
+            public Boolean execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var object = transaction.getTopObjectByFqn(normalizeConfigurationFqn(target));
+                if (object == null)
+                {
+                    return Boolean.TRUE;
+                }
+                return Boolean.valueOf(deleting ? editingSupport.canDelete(object) : editingSupport.canEdit(object));
+            }
+        });
+        if (Boolean.FALSE.equals(verdict))
+        {
+            throw new ToolException("Object `" + target //$NON-NLS-1$
+                + "` is on vendor support and its support rule forbids " //$NON-NLS-1$
+                + (deleting ? "deletion" : "modification") //$NON-NLS-1$ //$NON-NLS-2$
+                + ". Do not retry: only the user can change the support rule in EDT.", //$NON-NLS-1$
+                ToolErrorType.USER_VISIBLE);
+        }
+    }
+
+    /** The {@code Type.Name} part of an FQN, or {@code null} when there is nothing to check. */
+    private static String topObjectFqn(String fqn)
+    {
+        if (fqn == null || fqn.isBlank())
+        {
+            return null;
+        }
+        var parts = fqn.split("\\.", -1); //$NON-NLS-1$
+        return parts.length >= 2 ? parts[0] + "." + parts[1] : fqn; //$NON-NLS-1$
     }
 
     private MetadataResponse inspectObject(IProject project, MetadataRequest request)
@@ -1320,6 +1371,13 @@ final class MetadataMutationService
         }
         var project = ResourcesPlugin.getWorkspace().getRoot().getProject(name);
         boolean existed = project.exists();
+        if (existed && editingSupport.isReadOnly(project))
+        {
+            // Reached before the shared read-only guard, so it is checked explicitly here.
+            throw new ToolException("Configuration `" + name //$NON-NLS-1$
+                + "` is on full vendor support and must not be removed. Ask the user to do it in EDT.", //$NON-NLS-1$
+                ToolErrorType.USER_VISIBLE);
+        }
         if (existed && !request.dryRun)
         {
             try
@@ -1551,22 +1609,6 @@ final class MetadataMutationService
         return result;
     }
 
-    private static String moduleFeatureName(String kind)
-    {
-        if (kind == null || kind.isBlank())
-        {
-            throw new ToolException("Parameter `module_kind` is required. Valid values: " //$NON-NLS-1$
-                + String.join(", ", MODULE_KINDS.keySet()) + "."); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-        var feature = MODULE_KINDS.get(kind.toLowerCase(Locale.ROOT));
-        if (feature == null)
-        {
-            throw new ToolException("Unsupported module_kind `" + kind + "`. Valid values: " //$NON-NLS-1$ //$NON-NLS-2$
-                + String.join(", ", MODULE_KINDS.keySet()) + "."); //$NON-NLS-1$ //$NON-NLS-2$
-        }
-        return feature;
-    }
-
     private static String moduleKindForFeature(String featureName)
     {
         for (var entry : MODULE_KINDS.entrySet())
@@ -1601,48 +1643,6 @@ final class MetadataMutationService
             }
         }
         return owner;
-    }
-
-    private static String supportedModuleKinds(EObject holder)
-    {
-        var kinds = new java.util.ArrayList<String>();
-        for (var feature : holder.eClass().getEAllStructuralFeatures())
-        {
-            if (isModuleReference(feature))
-            {
-                kinds.add(moduleKindForFeature(feature.getName()));
-            }
-        }
-        return kinds.isEmpty() ? "(none)" : String.join(", ", kinds); //$NON-NLS-1$ //$NON-NLS-2$
-    }
-
-    /**
-     * Resolves the module feature for a requested kind, or {@code null} when the object has none.
-     * <p>
-     * The generic kind {@code module} is accepted as an alias for the object's own main module: a
-     * Report or DataProcessor is routinely described as simply having "a module", but in the model
-     * that is {@code objectModule} (and {@code managerModule} for manager-only types such as Enum).
-     * Without this alias such calls fail even though the intent is unambiguous.
-     */
-    private static org.eclipse.emf.ecore.EStructuralFeature resolveModuleFeature(EObject holder, String featureName)
-    {
-        var feature = holder.eClass().getEStructuralFeature(featureName);
-        if (isModuleReference(feature))
-        {
-            return feature;
-        }
-        if ("module".equals(featureName)) //$NON-NLS-1$
-        {
-            for (var fallback : new String[] { "objectModule", "managerModule" }) //$NON-NLS-1$ //$NON-NLS-2$
-            {
-                var candidate = holder.eClass().getEStructuralFeature(fallback);
-                if (isModuleReference(candidate))
-                {
-                    return candidate;
-                }
-            }
-        }
-        return null;
     }
 
     private MetadataResponse listModules(IProject project, MetadataRequest request)
@@ -1685,130 +1685,6 @@ final class MetadataMutationService
         details.put("edit_hint", "Edit module text with the Edit tool using the module `path`."); //$NON-NLS-1$ //$NON-NLS-2$
         response.details = details;
         return response;
-    }
-
-    /** A module's file together with the feature actually used (may differ from the requested alias). */
-    private static final class ModuleTarget
-    {
-        final IFile file;
-        final String featureName;
-
-        ModuleTarget(IFile file, String featureName)
-        {
-            this.file = file;
-            this.featureName = featureName;
-        }
-    }
-
-    private ModuleTarget resolveModuleFile(IProject project, MetadataRequest request, String featureName)
-    {
-        return model(project).getGlobalContext().execute(new AbstractBmTask<ModuleTarget>("Resolve 1C module file") //$NON-NLS-1$
-        {
-            @Override
-            public ModuleTarget execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
-            {
-                var owner = requireObject(transaction, request.objectName);
-                var holder = moduleHolder(owner);
-                var feature = resolveModuleFeature(holder, featureName);
-                if (feature == null)
-                {
-                    throw new ToolException("Object `" + request.objectName + "` (" + owner.eClass().getName() //$NON-NLS-1$ //$NON-NLS-2$
-                        + ") has no `" + moduleKindForFeature(featureName) + "` module. Supported module kinds: " //$NON-NLS-1$ //$NON-NLS-2$
-                        + supportedModuleKinds(holder) + "."); //$NON-NLS-1$
-                }
-                return new ModuleTarget(fileSystemSupportProvider.getProjectFileSystemSupport(project)
-                    .getFile(holder, (EReference)feature), feature.getName());
-            }
-        });
-    }
-
-    private MetadataResponse changeModuleFile(IProject project, MetadataRequest request,
-        ICancellationToken cancellationToken, boolean create)
-    {
-        var requestedFeature = moduleFeatureName(request.moduleKind);
-        var resolved = resolveModuleFile(project, request, requestedFeature);
-        // The effective feature, which can differ when `module` was accepted as an alias.
-        var featureName = resolved.featureName;
-        var file = resolved.file;
-        boolean existed = file.exists();
-        boolean changed = create ? !existed : existed;
-        var target = request.objectName + "." + moduleKindForFeature(featureName); //$NON-NLS-1$
-        var response = MetadataResponse.success(request, target, changed);
-        var location = file.getLocation();
-        response.resourcePath = location != null ? location.toOSString() : file.getFullPath().toString();
-        response.markerPath = response.resourcePath;
-
-        if (changed && !request.dryRun)
-        {
-            try
-            {
-                if (create)
-                {
-                    createParentFolders(file.getParent());
-                    file.create(new java.io.ByteArrayInputStream(new byte[0]), true, new NullProgressMonitor());
-                }
-                else
-                {
-                    file.delete(true, new NullProgressMonitor());
-                }
-            }
-            catch (org.eclipse.core.runtime.CoreException e)
-            {
-                throw new ToolException((create ? "Failed to create module file: " //$NON-NLS-1$
-                    : "Failed to delete module file: ") + e.getMessage()); //$NON-NLS-1$
-            }
-            refresh(project);
-            checkCanceled(cancellationToken);
-            boolean validationComplete = false;
-            try
-            {
-                validationComplete = projectBuilder.build(project, cancellationToken);
-            }
-            catch (org.eclipse.core.runtime.CoreException e)
-            {
-                response.warnings.add("EDT validation failed to start: " + e.getMessage()); //$NON-NLS-1$
-            }
-            boolean nowExists = Files.exists(Paths.get(response.resourcePath));
-            if (create != nowExists)
-            {
-                throw new ToolException("EDT did not persist the expected module file state: " //$NON-NLS-1$
-                    + response.resourcePath, ToolErrorType.USER_VISIBLE);
-            }
-            // Module operations return before the shared verification tail, so run the same
-            // post-mutation marker auto-check here. It matters most for an existing module whose BSL
-            // already has errors, and after removeModule (references to the deleted module).
-            if (request.verifyEnabled())
-            {
-                collectMarkers(project, response, cancellationToken, validationComplete, persistenceTimeoutMillis());
-                if (!create)
-                {
-                    response.warnings.add("Removing a module can break calls to it from other modules." //$NON-NLS-1$
-                        + " Run a project-wide GetMarkers check (marker_type=1c) for project_name=" //$NON-NLS-1$
-                        + project.getName() + "."); //$NON-NLS-1$
-                }
-            }
-        }
-
-        var details = new LinkedHashMap<String, Object>();
-        details.put("module_kind", moduleKindForFeature(featureName)); //$NON-NLS-1$
-        details.put("relative_path", file.getProjectRelativePath().toString()); //$NON-NLS-1$
-        if (create)
-        {
-            details.put("edit_hint", //$NON-NLS-1$
-                "The module is empty. Add BSL code with the Edit tool at `resource_path`."); //$NON-NLS-1$
-        }
-        response.details = details;
-        return response;
-    }
-
-    private static void createParentFolders(org.eclipse.core.resources.IContainer container)
-        throws org.eclipse.core.runtime.CoreException
-    {
-        if (container instanceof org.eclipse.core.resources.IFolder && !container.exists())
-        {
-            createParentFolders(container.getParent());
-            ((org.eclipse.core.resources.IFolder)container).create(true, true, new NullProgressMonitor());
-        }
     }
 
     private void requireInlineObject(IProject project, String fqn)
