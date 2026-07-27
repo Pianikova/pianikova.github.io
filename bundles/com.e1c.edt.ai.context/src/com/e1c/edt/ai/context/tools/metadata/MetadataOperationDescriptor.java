@@ -25,10 +25,16 @@ final class MetadataOperationDescriptor
         this.example = example;
     }
 
+    /**
+     * Parameters accepted by every operation, in addition to its own: {@code operation} itself and
+     * {@code verify} (post-mutation marker auto-check, enabled unless explicitly disabled).
+     */
+    static final Set<String> COMMON_PARAMETERS = Set.of("operation", "verify"); //$NON-NLS-1$ //$NON-NLS-2$
+
     Set<String> allParameters()
     {
         var result = new LinkedHashSet<String>();
-        result.add("operation"); //$NON-NLS-1$
+        result.addAll(COMMON_PARAMETERS);
         result.addAll(requiredParameters);
         result.addAll(optionalParameters);
         return result;

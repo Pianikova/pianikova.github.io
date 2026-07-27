@@ -78,4 +78,17 @@ final class MetadataRequest
 
     @SerializedName("dry_run")
     boolean dryRun;
+
+    /**
+     * Post-mutation marker auto-check. Deliberately a {@link Boolean}: Gson leaves an absent field
+     * {@code null}, and {@code null} means enabled. A primitive would default to {@code false} and
+     * silently disable the check whenever the model omits the parameter.
+     */
+    @SerializedName("verify")
+    Boolean verify;
+
+    boolean verifyEnabled()
+    {
+        return verify == null || verify.booleanValue();
+    }
 }

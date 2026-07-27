@@ -22,7 +22,10 @@ public enum MarkerType
     /**
      * Problem marker type for errors and warnings
      */
-    PROBLEM(IMarker.PROBLEM, "Contains information about build issues.", "problem"), //$NON-NLS-1$ //$NON-NLS-2$
+    PROBLEM(IMarker.PROBLEM,
+        "Eclipse build problems only. Does NOT include 1C validation errors/warnings (those are type `1c`),"
+            + " so an empty result here does not mean the 1C project is clean.",
+        "problem"), //$NON-NLS-1$
 
     /**
      * Text marker type for text annotations
@@ -35,7 +38,8 @@ public enum MarkerType
     BOOKMARK(IMarker.BOOKMARK,
         "ALWAYS use it for summaries, reports.", "bookmark"), //$NON-NLS-1$ //$NON-NLS-2$
 
-    M1C("1c", "1C marker.", "1c"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+    M1C("1c", "1C validation marker (metadata and built-in language checks). This is the type to use when"
+        + " verifying that a 1C configuration has no errors.", "1c"), //$NON-NLS-1$ //$NON-NLS-2$
 
     /**
      * Custom AI-generated marker type

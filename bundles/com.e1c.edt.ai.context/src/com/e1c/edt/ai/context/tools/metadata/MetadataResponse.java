@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.e1c.edt.ai.assistent.model.MarkerInfo;
 import com.google.gson.annotations.SerializedName;
 
 final class MetadataResponse
@@ -29,6 +30,17 @@ final class MetadataResponse
     String artifactPath;
 
     Map<String, Object> details;
+
+    /** Marker counts by severity for {@link #markerPath} after the mutation (auto-check). */
+    @SerializedName("marker_count")
+    Map<String, Integer> markerCount;
+
+    /** Most important markers of {@link #markerPath} (errors first), truncated to a small page. */
+    List<MarkerInfo> markers;
+
+    /** True when markers were truncated or EDT validation did not settle, so the list may be partial. */
+    @SerializedName("markers_incomplete")
+    Boolean markersIncomplete;
 
     boolean changed;
 

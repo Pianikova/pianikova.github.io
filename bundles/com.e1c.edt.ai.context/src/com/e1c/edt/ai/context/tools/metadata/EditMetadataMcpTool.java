@@ -183,7 +183,13 @@ public final class EditMetadataMcpTool
             + " For an attribute inside a tabular section use addTabularSectionAttribute with"
             + " object_name=Type.Object.TabularSection; addObjectAttribute is only for a top-level object."
             + " Call with operation=help to list operations, then operation=help and topic=<operation>"
-            + " for its exact parameters. Pass marker_path verbatim to GetMarkers; never shorten it to a directory."
+            + " for its exact parameters."
+            + " Each mutation auto-checks itself: the response carries marker_count {errors, warnings, infos, total}"
+            + " and the most important markers of the changed resource, so a separate GetMarkers call for that file"
+            + " is unnecessary (use GetMarkers for whole-project checks, passing marker_path verbatim, never shortened"
+            + " to a directory). Never report success while marker_count.errors is above zero: fix the reported"
+            + " markers first. markers_incomplete=true means the list is truncated or validation had not settled,"
+            + " so re-check with GetMarkers. Pass verify=false to skip this check during bulk work."
             + " Successful object/form/template create and remove operations already verify physical persistence;"
             + " do not call Glob or Read to re-check their files."
             + " For BSL code modules use listModules to discover an object's module kinds and .bsl paths,"
@@ -213,7 +219,7 @@ public final class EditMetadataMcpTool
         property(parameters, "field_kind", "string", "Register field kind: dimension, resource, or attribute.");
         property(parameters, "child_kind", "string", "Child kind: object_attribute, tabular_section, tabular_section_attribute, enum_value, dimension, resource, register_attribute, form, or template.");
         property(parameters, "related_object_name", "string", "FQN of a related object, for example AccumulationRegister.Stock.");
-        property(parameters, "form_type", "string", "Generated form type: OBJECT, LIST, RECORD, REPORT, or CONSTANTS.");
+        property(parameters, "form_type", "string", "Generated form type. Common: OBJECT (object form), LIST (list form), FOLDER (group form), CHOICE (choice form), FOLDER_CHOICE, RECORD (record form), RECORD_SET (record set form), REPORT, CONSTANTS, GENERIC (arbitrary form). Also supported: SEARCH, REPORT_SETTINGS, REPORT_VARIANT, SAVE, LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES. Pick the type matching the owner: a catalog with groups supports FOLDER and FOLDER_CHOICE, a register supports RECORD_SET and LIST.");
         property(parameters, "template_type", "string", "Template body type: SPREADSHEET_DOCUMENT or DATA_COMPOSITION_SCHEMA.");
         property(parameters, "module_kind", "string", "BSL code module kind: object_module, manager_module, record_set_module, value_manager_module, command_module, module, managed_application_module, ordinary_application_module, external_connection_module, or session_module. Use object_name=Configuration for application-level modules.");
         property(parameters, "platform_version", "string", "Runtime 1C platform version of a new configuration, for example 8.3.24.");
@@ -224,6 +230,7 @@ public final class EditMetadataMcpTool
         property(parameters, "version", "string", "Configuration version string, for example 1.0.0.1.");
         property(parameters, "vendor", "string", "Configuration vendor name.");
         property(parameters, "dry_run", "boolean", "Validate and describe the mutation without applying it.");
+        property(parameters, "verify", "boolean", "Post-mutation marker auto-check. Enabled by default: the response carries marker_count and the most important markers of the changed resource. Pass false only for bulk work where you will check markers yourself afterwards.");
         parameters.required = Arrays.asList("operation");
         spec.function.parameters = parameters;
         return spec;

@@ -251,7 +251,10 @@ public class DevAutopilot
         var promptText = applyPreamble(request);
         // Multi-artifact metadata tasks (object + form/template + content) plus self-correction
         // need more than the default 10 tool rounds; default the harness to a higher cap.
-        Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(1500);
+        // Unbounded tool nesting by default (see Conversations.MAX_TOOL_ROUNDS): a turnkey build must
+        // not be cut off mid-run. A request may still pass an explicit lower cap.
+        Integer maxToolRounds =
+            request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(Integer.MAX_VALUE);
         // The dev-autopilot must run on the "custom" skill regardless of the ConversationFacade
         // default (which is "edt"). Honor an explicit per-request override (e.g. "edt" for routing
         // diagnostics); otherwise force "custom".

@@ -62,6 +62,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;
 import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
+import com.e1c.edt.ai.assistent.model.MarkerInfo;
 import com.e1c.edt.ai.IProjectBuilder;
 import com.e1c.edt.ai.ISettings;
 import com.e1c.edt.ai.ToolException;
@@ -89,14 +90,18 @@ final class MetadataMutationService
     private final IFormFieldGenerator formFieldGenerator;
     private final IEditingLanguageManager editingLanguageManager;
     private final IProjectFileSystemSupportProvider fileSystemSupportProvider;
+    private final java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders;
 
     @Inject
     MetadataMutationService(IBmModelManager modelManager, ITopObjectFqnGenerator fqnGenerator,
         IEditingSupport editingSupport, IMdRefactoringService refactoringService, MetadataTypeService typeService,
         IProjectBuilder projectBuilder, IDerivedDataManagerProvider derivedDataManagerProvider, ISettings settings,
         IV8ProjectManager v8ProjectManager, IFormGenerator formGenerator, IFormFieldGenerator formFieldGenerator,
-        IEditingLanguageManager editingLanguageManager, IProjectFileSystemSupportProvider fileSystemSupportProvider)
+        IEditingLanguageManager editingLanguageManager, IProjectFileSystemSupportProvider fileSystemSupportProvider,
+        java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders)
     {
+        Preconditions.checkNotNull(markersProviders);
+        this.markersProviders = markersProviders;
         Preconditions.checkNotNull(modelManager);
         Preconditions.checkNotNull(fqnGenerator);
         Preconditions.checkNotNull(editingSupport);
@@ -268,6 +273,18 @@ final class MetadataMutationService
             if (!validationComplete)
             {
                 response.warnings.add("EDT validation did not settle before the configured timeout; marker results may be incomplete."); //$NON-NLS-1$
+            }
+            if (request.verifyEnabled())
+            {
+                collectMarkers(project, response, cancellationToken, validationComplete, persistenceTimeoutMillis);
+                // Deletions and renames can invalidate references held by other objects and modules,
+                // which a check scoped to the changed resource cannot see.
+                if (request.operation.startsWith("remove") || request.operation.startsWith("rename")) //$NON-NLS-1$ //$NON-NLS-2$
+                {
+                    response.warnings.add("This operation can break references in other objects." //$NON-NLS-1$
+                        + " Run a project-wide GetMarkers check (marker_type=1c) for project_name=" //$NON-NLS-1$
+                        + project.getName() + "."); //$NON-NLS-1$
+                }
             }
         }
         if (!request.dryRun)
@@ -682,7 +699,7 @@ final class MetadataMutationService
         }
         catch (RuntimeException e)
         {
-            throw new ToolException("Invalid `form_type`. Valid values: OBJECT, LIST, RECORD, REPORT, CONSTANTS."); //$NON-NLS-1$
+            throw new ToolException("Invalid `form_type`. Valid values: " + formTypeNames() + "."); //$NON-NLS-1$ //$NON-NLS-2$
         }
         boolean[] changed = { false };
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Create generated 1C object form") //$NON-NLS-1$
@@ -743,22 +760,60 @@ final class MetadataMutationService
         return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
     }
 
+    /** Comma-separated list of every generated form type EDT supports. */
+    static String formTypeNames()
+    {
+        var names = new java.util.ArrayList<String>();
+        for (var value : FormType.values())
+        {
+            names.add(value.name());
+        }
+        return String.join(", ", names); //$NON-NLS-1$
+    }
+
+    /**
+     * Candidate "default form" features per form type, most specific first. A type may have no slot at
+     * all (GENERIC), and a slot may live on the configuration rather than on the owner, so candidates
+     * are only probed: the first feature that exists on this owner and is still unset gets the form.
+     */
+    private static final Map<FormType, List<String>> DEFAULT_FORM_FEATURES = createDefaultFormFeatures();
+
+    @SuppressWarnings("nls")
+    private static Map<FormType, List<String>> createDefaultFormFeatures()
+    {
+        Map<FormType, List<String>> result = new LinkedHashMap<>();
+        result.put(FormType.OBJECT, List.of("defaultObjectForm"));
+        result.put(FormType.FOLDER, List.of("defaultFolderForm"));
+        result.put(FormType.LIST, List.of("defaultListForm"));
+        result.put(FormType.CHOICE, List.of("defaultChoiceForm"));
+        result.put(FormType.FOLDER_CHOICE, List.of("defaultFolderChoiceForm"));
+        result.put(FormType.RECORD, List.of("defaultRecordForm"));
+        result.put(FormType.RECORD_SET, List.of("defaultRecordForm", "defaultListForm"));
+        result.put(FormType.CONSTANTS, List.of("defaultConstantsForm", "defaultForm"));
+        result.put(FormType.SEARCH, List.of("defaultSearchForm"));
+        result.put(FormType.REPORT, List.of("defaultForm", "defaultReportForm"));
+        result.put(FormType.REPORT_SETTINGS, List.of("defaultSettingsForm", "defaultReportSettingsForm"));
+        result.put(FormType.REPORT_VARIANT, List.of("defaultVariantForm", "defaultReportVariantForm"));
+        result.put(FormType.SAVE, List.of("defaultSaveForm"));
+        result.put(FormType.LOAD, List.of("defaultLoadForm"));
+        result.put(FormType.DYNAMIC_LIST, List.of("defaultDynamicListSettingsForm"));
+        result.put(FormType.CHANGE_HISTORY, List.of("defaultDataHistoryChangeHistoryForm"));
+        result.put(FormType.VERSION_DATA, List.of("defaultDataHistoryVersionDataForm"));
+        result.put(FormType.VERSION_DIFFERENCES, List.of("defaultDataHistoryVersionDifferencesForm"));
+        // GENERIC is an arbitrary form: it is never anybody's default.
+        return result;
+    }
+
     private static void setDefaultForm(MdObject owner, BasicForm form, FormType formType)
     {
-        String featureName;
-        switch (formType)
+        for (var featureName : DEFAULT_FORM_FEATURES.getOrDefault(formType, List.of()))
         {
-        case OBJECT: featureName = "defaultObjectForm"; break; //$NON-NLS-1$
-        case LIST: featureName = "defaultListForm"; break; //$NON-NLS-1$
-        case RECORD: featureName = "defaultRecordForm"; break; //$NON-NLS-1$
-        case REPORT: featureName = "defaultForm"; break; //$NON-NLS-1$
-        case CONSTANTS: featureName = "defaultForm"; break; //$NON-NLS-1$
-        default: return;
-        }
-        var feature = owner.eClass().getEStructuralFeature(featureName);
-        if (feature != null && owner.eGet(feature) == null)
-        {
-            owner.eSet(feature, form);
+            var feature = owner.eClass().getEStructuralFeature(featureName);
+            if (feature != null && !feature.isMany() && owner.eGet(feature) == null)
+            {
+                owner.eSet(feature, form);
+                return;
+            }
         }
     }
 
@@ -1205,6 +1260,163 @@ final class MetadataMutationService
         return location != null ? location.toOSString() : "src/Configuration/Configuration.mdo"; //$NON-NLS-1$
     }
 
+    // ===== Post-mutation marker auto-check =====
+
+    /** Markers returned inline; a small page keeps mutation responses compact. */
+    private static final int MAX_INLINE_MARKERS = 10;
+    /** Interval between marker reads while waiting for the set to stabilize. */
+    private static final long MARKER_POLL_INTERVAL_MS = 200L;
+    /** Upper bound on stabilization polls, so a churning marker set cannot stall a mutation. */
+    private static final int MAX_MARKER_POLLS = 15;
+    /** Wall-clock budget for stabilization, independent of the (much larger) persistence timeout. */
+    private static final long MARKER_STABILIZE_BUDGET_MS = 5_000L;
+
+    /**
+     * Reads the markers of the changed resource and puts them into the response.
+     * <p>
+     * EDT produces markers asynchronously (Derived Data pipeline) and flushes them in batches, so a
+     * single read can return a partial snapshot even after {@link IProjectBuilder#build} reported
+     * completion. Therefore the set is polled until two consecutive reads agree, bounded by
+     * {@link #MAX_MARKER_POLLS} and {@link #MARKER_STABILIZE_BUDGET_MS}. This does not depend on
+     * knowing internal DD segment ids, so it keeps working even if those ever change.
+     * <p>
+     * Scope is the changed resource only. Operations that can break references elsewhere (remove,
+     * rename) therefore also get an explicit hint to run a project-wide check.
+     */
+    private void collectMarkers(IProject project, MetadataResponse response, ICancellationToken cancellationToken,
+        boolean validationComplete, long timeoutMillis)
+    {
+        if (response.markerPath == null || markersProviders.isEmpty())
+        {
+            return;
+        }
+        try
+        {
+            var file = fileForPath(project, response.markerPath);
+            if (file == null || !file.exists())
+            {
+                return;
+            }
+            // Typical case: the second read equals the first, so this costs one extra read + one
+            // interval. The poll cap bounds the pathological case (markers still churning) so a long
+            // build of hundreds of mutations cannot stall on any single one.
+            long deadline = System.currentTimeMillis() + Math.min(timeoutMillis, MARKER_STABILIZE_BUDGET_MS);
+            var markers = readMarkers(project, file);
+            boolean stable = false;
+            for (int poll = 0; poll < MAX_MARKER_POLLS; poll++)
+            {
+                if (System.currentTimeMillis() >= deadline || cancellationToken.isCanceled())
+                {
+                    break;
+                }
+                Thread.sleep(MARKER_POLL_INTERVAL_MS);
+                var next = readMarkers(project, file);
+                stable = sameMarkers(markers, next);
+                markers = next;
+                if (stable)
+                {
+                    break;
+                }
+            }
+
+            var counts = new LinkedHashMap<String, Integer>();
+            int errors = 0;
+            int warnings = 0;
+            int infos = 0;
+            for (var marker : markers)
+            {
+                if (MarkerInfo.SEVERITY_ERROR.equals(marker.severity))
+                {
+                    errors++;
+                }
+                else if (MarkerInfo.SEVERITY_WARNING.equals(marker.severity))
+                {
+                    warnings++;
+                }
+                else
+                {
+                    infos++;
+                }
+            }
+            counts.put("errors", Integer.valueOf(errors)); //$NON-NLS-1$
+            counts.put("warnings", Integer.valueOf(warnings)); //$NON-NLS-1$
+            counts.put("infos", Integer.valueOf(infos)); //$NON-NLS-1$
+            counts.put("total", Integer.valueOf(markers.size())); //$NON-NLS-1$
+            response.markerCount = counts;
+            response.markers = markers.size() > MAX_INLINE_MARKERS
+                ? new java.util.ArrayList<>(markers.subList(0, MAX_INLINE_MARKERS)) : markers;
+            if (markers.size() > MAX_INLINE_MARKERS || !validationComplete || !stable)
+            {
+                response.markersIncomplete = Boolean.TRUE;
+            }
+            if (errors > 0)
+            {
+                response.warnings.add("The changed resource has " + errors //$NON-NLS-1$
+                    + " error marker(s). Fix them before reporting success."); //$NON-NLS-1$
+            }
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
+        }
+        catch (RuntimeException e)
+        {
+            // The auto-check must never fail a successful mutation; GetMarkers remains available.
+            response.warnings.add("Marker auto-check failed: " + e.getMessage()); //$NON-NLS-1$
+        }
+    }
+
+    /** Markers of one file, most important first (error > warning > info, then priority). */
+    private List<MarkerInfo> readMarkers(IProject project, IFile file)
+    {
+        var result = new java.util.ArrayList<MarkerInfo>();
+        for (var provider : markersProviders)
+        {
+            try (var stream = provider.getMarkers(project, file))
+            {
+                stream.forEach(result::add);
+            }
+        }
+        result.sort(new com.e1c.edt.ai.tools.MarkerInfoComparator());
+        return result;
+    }
+
+    private static boolean sameMarkers(List<MarkerInfo> left, List<MarkerInfo> right)
+    {
+        if (left.size() != right.size())
+        {
+            return false;
+        }
+        for (int i = 0; i < left.size(); i++)
+        {
+            var a = left.get(i);
+            var b = right.get(i);
+            if (!java.util.Objects.equals(a.severity, b.severity)
+                || !java.util.Objects.equals(a.message, b.message)
+                || !java.util.Objects.equals(a.startLine, b.startLine))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Resolves a workspace file from an absolute OS path inside the project. */
+    private static IFile fileForPath(IProject project, String absolutePath)
+    {
+        var projectLocation = project.getLocation();
+        if (projectLocation == null)
+        {
+            return null;
+        }
+        var path = new org.eclipse.core.runtime.Path(absolutePath);
+        if (!projectLocation.isPrefixOf(path))
+        {
+            return null;
+        }
+        return project.getFile(path.removeFirstSegments(projectLocation.segmentCount()).makeRelative());
+    }
+
     // ===== Code module (.bsl) operations =====
     // Modules are transient references in the metadata model; the .bsl file on disk is the source of
     // truth and its path is derived from (owner object, module reference) by EDT's file-system support.
@@ -1294,6 +1506,35 @@ final class MetadataMutationService
         return kinds.isEmpty() ? "(none)" : String.join(", ", kinds); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
+    /**
+     * Resolves the module feature for a requested kind, or {@code null} when the object has none.
+     * <p>
+     * The generic kind {@code module} is accepted as an alias for the object's own main module: a
+     * Report or DataProcessor is routinely described as simply having "a module", but in the model
+     * that is {@code objectModule} (and {@code managerModule} for manager-only types such as Enum).
+     * Without this alias such calls fail even though the intent is unambiguous.
+     */
+    private static org.eclipse.emf.ecore.EStructuralFeature resolveModuleFeature(EObject holder, String featureName)
+    {
+        var feature = holder.eClass().getEStructuralFeature(featureName);
+        if (isModuleReference(feature))
+        {
+            return feature;
+        }
+        if ("module".equals(featureName)) //$NON-NLS-1$
+        {
+            for (var fallback : new String[] { "objectModule", "managerModule" }) //$NON-NLS-1$ //$NON-NLS-2$
+            {
+                var candidate = holder.eClass().getEStructuralFeature(fallback);
+                if (isModuleReference(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+        return null;
+    }
+
     private MetadataResponse listModules(IProject project, MetadataRequest request)
     {
         var modules = model(project).getGlobalContext().execute(
@@ -1336,24 +1577,37 @@ final class MetadataMutationService
         return response;
     }
 
-    private IFile resolveModuleFile(IProject project, MetadataRequest request, String featureName)
+    /** A module's file together with the feature actually used (may differ from the requested alias). */
+    private static final class ModuleTarget
     {
-        return model(project).getGlobalContext().execute(new AbstractBmTask<IFile>("Resolve 1C module file") //$NON-NLS-1$
+        final IFile file;
+        final String featureName;
+
+        ModuleTarget(IFile file, String featureName)
+        {
+            this.file = file;
+            this.featureName = featureName;
+        }
+    }
+
+    private ModuleTarget resolveModuleFile(IProject project, MetadataRequest request, String featureName)
+    {
+        return model(project).getGlobalContext().execute(new AbstractBmTask<ModuleTarget>("Resolve 1C module file") //$NON-NLS-1$
         {
             @Override
-            public IFile execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            public ModuleTarget execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
             {
                 var owner = requireObject(transaction, request.objectName);
                 var holder = moduleHolder(owner);
-                var feature = holder.eClass().getEStructuralFeature(featureName);
-                if (!isModuleReference(feature))
+                var feature = resolveModuleFeature(holder, featureName);
+                if (feature == null)
                 {
                     throw new ToolException("Object `" + request.objectName + "` (" + owner.eClass().getName() //$NON-NLS-1$ //$NON-NLS-2$
                         + ") has no `" + moduleKindForFeature(featureName) + "` module. Supported module kinds: " //$NON-NLS-1$ //$NON-NLS-2$
                         + supportedModuleKinds(holder) + "."); //$NON-NLS-1$
                 }
-                return fileSystemSupportProvider.getProjectFileSystemSupport(project)
-                    .getFile(holder, (EReference)feature);
+                return new ModuleTarget(fileSystemSupportProvider.getProjectFileSystemSupport(project)
+                    .getFile(holder, (EReference)feature), feature.getName());
             }
         });
     }
@@ -1361,8 +1615,11 @@ final class MetadataMutationService
     private MetadataResponse changeModuleFile(IProject project, MetadataRequest request,
         ICancellationToken cancellationToken, boolean create)
     {
-        var featureName = moduleFeatureName(request.moduleKind);
-        var file = resolveModuleFile(project, request, featureName);
+        var requestedFeature = moduleFeatureName(request.moduleKind);
+        var resolved = resolveModuleFile(project, request, requestedFeature);
+        // The effective feature, which can differ when `module` was accepted as an alias.
+        var featureName = resolved.featureName;
+        var file = resolved.file;
         boolean existed = file.exists();
         boolean changed = create ? !existed : existed;
         var target = request.objectName + "." + moduleKindForFeature(featureName); //$NON-NLS-1$
@@ -1392,9 +1649,10 @@ final class MetadataMutationService
             }
             refresh(project);
             checkCanceled(cancellationToken);
+            boolean validationComplete = false;
             try
             {
-                projectBuilder.build(project, cancellationToken);
+                validationComplete = projectBuilder.build(project, cancellationToken);
             }
             catch (org.eclipse.core.runtime.CoreException e)
             {
@@ -1405,6 +1663,19 @@ final class MetadataMutationService
             {
                 throw new ToolException("EDT did not persist the expected module file state: " //$NON-NLS-1$
                     + response.resourcePath, ToolErrorType.USER_VISIBLE);
+            }
+            // Module operations return before the shared verification tail, so run the same
+            // post-mutation marker auto-check here. It matters most for an existing module whose BSL
+            // already has errors, and after removeModule (references to the deleted module).
+            if (request.verifyEnabled())
+            {
+                collectMarkers(project, response, cancellationToken, validationComplete, persistenceTimeoutMillis());
+                if (!create)
+                {
+                    response.warnings.add("Removing a module can break calls to it from other modules." //$NON-NLS-1$
+                        + " Run a project-wide GetMarkers check (marker_type=1c) for project_name=" //$NON-NLS-1$
+                        + project.getName() + "."); //$NON-NLS-1$
+                }
             }
         }
 
@@ -1645,7 +1916,9 @@ final class MetadataMutationService
                 if (feature == null || feature.isMany() || !(feature.getEType() instanceof EDataType))
                 {
                     throw new ToolException("Unsupported scalar property `" + request.propertyName //$NON-NLS-1$
-                        + "` for " + request.objectName + "."); //$NON-NLS-1$ //$NON-NLS-2$
+                        + "` for " + request.objectName + "." //$NON-NLS-1$ //$NON-NLS-2$
+                        + propertySuggestion(object, request.propertyName) + " Valid scalar properties: " //$NON-NLS-1$
+                        + scalarPropertyNames(object) + "."); //$NON-NLS-1$
                 }
                 var value = EcoreUtil.createFromString((EDataType)feature.getEType(), request.propertyValue);
                 changed[0] = !java.util.Objects.equals(object.eGet(feature), value);
@@ -1961,9 +2234,10 @@ final class MetadataMutationService
 
     static String metadataRelativePath(String target)
     {
-        if ("Configuration".equals(target)) //$NON-NLS-1$
+        if ("Configuration".equals(target) || (target != null && target.startsWith("Configuration."))) //$NON-NLS-1$ //$NON-NLS-2$
         {
-            // The configuration root object itself (addressable via inspectObject/setObjectProperty).
+            // The configuration root object itself (addressable via inspectObject/setObjectProperty),
+            // including the model's frequent "Configuration.<ProjectName>" form.
             return "src/Configuration/Configuration.mdo"; //$NON-NLS-1$
         }
         var parts = target != null ? target.split("\\.", -1) : new String[0]; //$NON-NLS-1$
@@ -2087,6 +2361,50 @@ final class MetadataMutationService
         }
     }
 
+    /** Sorted names of an object's writable scalar properties, for helpful "unsupported property" errors. */
+    private static String scalarPropertyNames(EObject object)
+    {
+        var names = scalarPropertyNameSet(object);
+        return names.isEmpty() ? "(none)" : String.join(", ", names); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    private static java.util.SortedSet<String> scalarPropertyNameSet(EObject object)
+    {
+        var names = new java.util.TreeSet<String>();
+        for (var feature : object.eClass().getEAllStructuralFeatures())
+        {
+            if (!feature.isMany() && feature.getEType() instanceof EDataType && feature.isChangeable())
+            {
+                names.add(feature.getName());
+            }
+        }
+        return names;
+    }
+
+    /**
+     * "Did you mean" prefix for an unsupported property name. Models routinely shorten real names (for
+     * example {@code client} instead of {@code clientManagedApplication}), so the closest candidates are
+     * offered before the full list to cut the retry loop.
+     */
+    private static String propertySuggestion(EObject object, String requested)
+    {
+        if (requested == null || requested.isBlank())
+        {
+            return ""; //$NON-NLS-1$
+        }
+        var needle = requested.toLowerCase(Locale.ROOT);
+        var matches = new java.util.ArrayList<String>();
+        for (var name : scalarPropertyNameSet(object))
+        {
+            var candidate = name.toLowerCase(Locale.ROOT);
+            if (candidate.startsWith(needle) || candidate.contains(needle))
+            {
+                matches.add(name);
+            }
+        }
+        return matches.isEmpty() ? "" : " Did you mean: " + String.join(", ", matches) + "?"; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
+    }
+
     private static boolean setScalarProperty(EObject object, String propertyName, String propertyValue,
         boolean dryRun)
     {
@@ -2094,7 +2412,8 @@ final class MetadataMutationService
         if (feature == null || feature.isMany() || !(feature.getEType() instanceof EDataType))
         {
             throw new ToolException("Unsupported scalar property `" + propertyName + "` for " //$NON-NLS-1$ //$NON-NLS-2$
-                + object.eClass().getName() + "."); //$NON-NLS-1$
+                + object.eClass().getName() + "." + propertySuggestion(object, propertyName) //$NON-NLS-1$
+                + " Valid scalar properties: " + scalarPropertyNames(object) + "."); //$NON-NLS-1$ //$NON-NLS-2$
         }
         var value = EcoreUtil.createFromString((EDataType)feature.getEType(), propertyValue);
         boolean changed = !java.util.Objects.equals(object.eGet(feature), value);
@@ -2253,9 +2572,24 @@ final class MetadataMutationService
 
     private static MdObject requireObject(IBmTransaction transaction, String fqn)
     {
-        var object = transaction.getTopObjectByFqn(fqn);
+        var object = transaction.getTopObjectByFqn(normalizeConfigurationFqn(fqn));
         if (!(object instanceof MdObject)) throw new ToolException("Metadata object not found: " + fqn); //$NON-NLS-1$
         return (MdObject)object;
+    }
+
+    /**
+     * The single configuration root is always addressed by the FQN {@code Configuration}, but the model
+     * often writes {@code Configuration.<ProjectName>} (e.g. for application-level modules or properties).
+     * No real top object is named {@code Configuration.*}, so normalizing it to {@code Configuration} is
+     * safe and makes those calls resolve.
+     */
+    private static String normalizeConfigurationFqn(String fqn)
+    {
+        if (fqn != null && (fqn.equals("Configuration") || fqn.startsWith("Configuration."))) //$NON-NLS-1$ //$NON-NLS-2$
+        {
+            return "Configuration"; //$NON-NLS-1$
+        }
+        return fqn;
     }
 
     private com._1c.g5.v8.bm.integration.IBmModel model(IProject project)

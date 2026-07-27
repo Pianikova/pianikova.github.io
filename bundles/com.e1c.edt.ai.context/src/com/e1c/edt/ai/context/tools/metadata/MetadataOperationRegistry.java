@@ -86,7 +86,11 @@ public final class MetadataOperationRegistry
         add("removeDocumentRegister", "Removes a register from a document's register records.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "related_object_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "{\"operation\":\"removeDocumentRegister\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Receipt\",\"related_object_name\":\"AccumulationRegister.Stock\"}"); //$NON-NLS-1$
-        add("createObjectForm", "Creates a generated object, list, record, report, or constants form with a persisted Form.form body.", //$NON-NLS-1$ //$NON-NLS-2$
+        add("createObjectForm", //$NON-NLS-1$
+            "Creates a generated form with a persisted Form.form body and makes it the owner's default form of that" //$NON-NLS-1$
+                + " kind when such a slot is free. form_type values: OBJECT, LIST, FOLDER, CHOICE, FOLDER_CHOICE," //$NON-NLS-1$
+                + " RECORD, RECORD_SET, REPORT, CONSTANTS, GENERIC, SEARCH, REPORT_SETTINGS, REPORT_VARIANT, SAVE," //$NON-NLS-1$
+                + " LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES.", //$NON-NLS-1$
             set("project_name", "object_name", "name", "form_type"), set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
             "{\"operation\":\"createObjectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\",\"form_type\":\"OBJECT\"}"); //$NON-NLS-1$
         add("removeObjectForm", "Removes an object form and its external Form.form body.", //$NON-NLS-1$ //$NON-NLS-2$

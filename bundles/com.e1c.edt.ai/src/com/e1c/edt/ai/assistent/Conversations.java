@@ -65,7 +65,13 @@ import com.google.inject.Inject;
  */
 public class Conversations implements IConversations
 {
-    private static final int MAX_TOOL_ROUNDS = 1000;
+    /**
+     * Tool-round nesting is unbounded: a turnkey task (build a whole 1C configuration with entities,
+     * forms, templates and code modules) needs an open-ended number of rounds, and truncating it
+     * mid-run leaves the project half-built. Termination comes from the model itself (no more tool
+     * calls) or from cancellation, not from a round ceiling.
+     */
+    private static final int MAX_TOOL_ROUNDS = Integer.MAX_VALUE;
 
     private final IHttpLog log;
     private final ISettings settings;

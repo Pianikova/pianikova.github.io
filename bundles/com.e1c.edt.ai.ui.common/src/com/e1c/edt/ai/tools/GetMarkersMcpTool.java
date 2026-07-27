@@ -220,6 +220,21 @@ public class GetMarkersMcpTool implements IMcpTool
             response.requiredNextStep = buildRequiredNextStep(markerTypeFilter, path, markersPage, allMarkersList.size(),
                 firstIndex, maxCount, markersComplete);
 
+            // An empty result under a type filter must never read as "the project is clean": 1C
+            // validation markers are of type `1c`, so a `problem` filter (Eclipse build issues) returns
+            // nothing even when the project has 1C errors. Report the unfiltered total in that case.
+            if (allMarkersList.isEmpty() && markerTypeFilter != null)
+            {
+                long unfiltered = countMarkers(project, file, cancellationToken);
+                if (unfiltered > 0)
+                {
+                    response.requiredNextStep = "No markers of type `" + markerTypeFilter.getDisplayName()
+                        + "`, but this scope has " + unfiltered + " marker(s) of other types (1C validation markers"
+                        + " have type `1c`). Do not report success: call GetMarkers again without `marker_type`"
+                        + " (or with marker_type=1c) and fix what it returns.";
+                }
+            }
+
             var content = json.serialize(response);
 
             // Add response markdown
@@ -237,6 +252,19 @@ public class GetMarkersMcpTool implements IMcpTool
     }
 
     @SuppressWarnings("nls")
+    /** Counts markers in the same scope without any type filter, for the false-all-clear guard. */
+    private long countMarkers(IProject project, IFile file, ICancellationToken cancellationToken)
+    {
+        long total = 0;
+        for (var markersProvider : markersProviders)
+        {
+            total += markersProvider.getMarkers(project, file)
+                .takeWhile(i -> !cancellationToken.isCanceled())
+                .count();
+        }
+        return total;
+    }
+
     private String buildRequiredNextStep(MarkerType markerTypeFilter, String path, List<MarkerInfo> returnedMarkers,
         int totalCount, int firstIndex, int maxCount, boolean markersComplete)
     {
@@ -355,6 +383,9 @@ public class GetMarkersMcpTool implements IMcpTool
         description.append("Lists markers (errors, warnings, tasks, bookmarks, etc.) for a project or file.");
         description.append("\n\nUsage:");
         description.append("\n- Use `marker_type` to filter by type.");
+        description.append("\n- To verify a 1C project has no errors, omit `marker_type` (returns every type) or pass"
+            + " `1c`. Never conclude the project is clean from `marker_type: \"problem\"`: that type covers Eclipse"
+            + " build problems only and returns 0 even when 1C validation reports errors.");
         description.append("\n- Use `path` (absolute or project-relative) to scope to a specific file.");
         description.append("\n- Use pagination parameters to page through results.");
         description.append("\n- `ai_marker` includes `AIError`, `AIWarning`, `AIInfo` marker types.");
