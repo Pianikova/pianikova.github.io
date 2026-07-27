@@ -27,7 +27,11 @@ public final class MetadataOperationRegistry
     {
         add("help", "Lists operations or returns exact help for one operation.", set(), set("topic"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "{\"operation\":\"help\",\"topic\":\"createObject\"}"); //$NON-NLS-1$
-        add("inspectObject", "Reads an object, its scalar properties, children, types, forms, templates, and register links.", //$NON-NLS-1$ //$NON-NLS-2$
+        add("inspectObject", //$NON-NLS-1$
+            "Reads an object, its scalar properties, children, types, forms, templates, and register links." //$NON-NLS-1$
+                + " Also returns vendor_support {object_belonging, configuration_on_full_support, editable," //$NON-NLS-1$
+                + " deletable}: when editable is false the object is on vendor support and must be left alone," //$NON-NLS-1$
+                + " so check it before planning changes to an unfamiliar configuration.", //$NON-NLS-1$
             set("project_name", "object_name"), set(), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"inspectObject\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order\"}"); //$NON-NLS-1$
         add("createObject", "Creates any top-level object type listed by help topic=objectTypes.", //$NON-NLS-1$ //$NON-NLS-2$

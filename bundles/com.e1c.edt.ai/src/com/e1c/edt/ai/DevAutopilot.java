@@ -46,7 +46,13 @@ public class DevAutopilot
     // forms, templates, and code modules) is never truncated mid-run. They remain finite only as a
     // runaway backstop.
     private static final long TURN_TIMEOUT_SECONDS = 3600L;
-    private static final int MAX_AUTO_CONTINUES = 100;
+    /**
+     * Auto-continue nudges a model that answered with a plan instead of acting. The cap is high so a
+     * long task is never cut short; what keeps that safe is the no-progress rule in
+     * {@link #shouldAutoContinue}, which stops as soon as a turn yields no assistant message. Without
+     * that rule a high cap spins on empty responses (observed: 100 empty rounds in ~160s).
+     */
+    private static final int MAX_AUTO_CONTINUES = 1024;
 
     /**
      * Default agent preamble prepended to the user prompt. The dev/helper conversation (skill
@@ -376,8 +382,16 @@ public class DevAutopilot
         }
         String text = result.getText() != null ? result.getText().trim().toLowerCase() : ""; //$NON-NLS-1$
         String reasoning = result.getReasoning() != null ? result.getReasoning().toLowerCase() : ""; //$NON-NLS-1$
+        // A turn that produced no assistant message at all made no progress, so the next turn would
+        // behave identically: continuing only burns rounds. Observed as 100 empty auto-continues in
+        // ~160s once the cap was raised.
+        if (result.getAssistantMessageCount() <= 0)
+        {
+            return false;
+        }
         if (text.isBlank())
         {
+            // Blank prose with an actual assistant message means the model is working through tools.
             return true;
         }
         return text.startsWith("создам") || text.startsWith("начну") //$NON-NLS-1$ //$NON-NLS-2$

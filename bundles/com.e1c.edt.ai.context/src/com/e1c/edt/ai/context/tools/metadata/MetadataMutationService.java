@@ -468,10 +468,42 @@ final class MetadataMutationService
             public Map<String, Object> execute(IBmTransaction transaction,
                 org.eclipse.core.runtime.IProgressMonitor monitor)
             {
-                return describeObject(requireObject(transaction, request.objectName));
+                var object = requireObject(transaction, request.objectName);
+                var described = describeObject(object);
+                described.put("vendor_support", describeSupport(project, object)); //$NON-NLS-1$
+                return described;
             }
         });
         return response;
+    }
+
+    /**
+     * Vendor-support state of an object, so the model learns about the restriction before attempting a
+     * change instead of from a refusal. {@code editable}/{@code deletable} are the same verdicts the
+     * mutations enforce, and {@code object_belonging} tells adopted objects from own ones.
+     */
+    private Map<String, Object> describeSupport(IProject project, MdObject object)
+    {
+        var result = new LinkedHashMap<String, Object>();
+        var feature = object.eClass().getEStructuralFeature("objectBelonging"); //$NON-NLS-1$
+        if (feature != null && !feature.isMany())
+        {
+            var value = object.eGet(feature);
+            if (value != null)
+            {
+                result.put("object_belonging", String.valueOf(value)); //$NON-NLS-1$
+            }
+        }
+        boolean projectReadOnly = editingSupport.isReadOnly(project);
+        result.put("configuration_on_full_support", Boolean.valueOf(projectReadOnly)); //$NON-NLS-1$
+        result.put("editable", Boolean.valueOf(!projectReadOnly && editingSupport.canEdit(object))); //$NON-NLS-1$
+        result.put("deletable", Boolean.valueOf(!projectReadOnly && editingSupport.canDelete(object))); //$NON-NLS-1$
+        if (Boolean.FALSE.equals(result.get("editable"))) //$NON-NLS-1$
+        {
+            result.put("note", //$NON-NLS-1$
+                "This object must not be changed; only the user can lift the vendor-support restriction."); //$NON-NLS-1$
+        }
+        return result;
     }
 
     private static Map<String, Object> describeObject(MdObject object)
