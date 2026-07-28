@@ -251,7 +251,6 @@ public class GetMarkersMcpTool implements IMcpTool
         }
     }
 
-    @SuppressWarnings("nls")
     /** Counts markers in the same scope without any type filter, for the false-all-clear guard. */
     private long countMarkers(IProject project, IFile file, ICancellationToken cancellationToken)
     {
@@ -265,6 +264,7 @@ public class GetMarkersMcpTool implements IMcpTool
         return total;
     }
 
+    @SuppressWarnings("nls")
     private String buildRequiredNextStep(MarkerType markerTypeFilter, String path, List<MarkerInfo> returnedMarkers,
         int totalCount, int firstIndex, int maxCount, boolean markersComplete)
     {
