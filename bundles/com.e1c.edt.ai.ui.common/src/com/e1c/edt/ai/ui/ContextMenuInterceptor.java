@@ -317,7 +317,10 @@ public class ContextMenuInterceptor
         text.getControl().addFocusListener(textListener);
         text.addModifyListener(textListener);
         menuItem.addDisposeListener(e -> removeTextListener(text, textListener));
-        menuItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> executeAction(text, textAction, textListener)));
+        menuItem.addSelectionListener(SelectionListener.widgetSelectedAdapter(e -> {
+            textListener.ignoreNextFocusLost();
+            executeAction(text, textAction, textListener);
+        }));
         return menuItem;
     }
 
@@ -500,6 +503,7 @@ public class ContextMenuInterceptor
         private boolean projectAvailable;
         public CancellationTokenSource cancellationTokenSource;
         public boolean isSuppresed;
+        private boolean ignoreNextFocusLost;
 
         public TextListener(IText text, MenuItem menuItem, boolean allowForEmptyText)
         {
@@ -512,12 +516,17 @@ public class ContextMenuInterceptor
         @Override
         public void focusGained(FocusEvent e)
         {
-            //
+            ignoreNextFocusLost = false;
         }
 
         @Override
         public void focusLost(FocusEvent e)
         {
+            if (ignoreNextFocusLost)
+            {
+                ignoreNextFocusLost = false;
+                return;
+            }
             cancel();
         }
 
@@ -541,6 +550,11 @@ public class ContextMenuInterceptor
         {
             projectAvailable = value;
             setIsEnabled();
+        }
+
+        private void ignoreNextFocusLost()
+        {
+            ignoreNextFocusLost = true;
         }
 
         private void cancel()

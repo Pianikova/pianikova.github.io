@@ -577,6 +577,8 @@ public class Conversations implements IConversations
                 break;
             }
 
+            logDebug.trace(TracingSources.API_CALLS, "Response stream raw", () -> line); //$NON-NLS-1$
+
             ConversationAskResponse response = parseResponseLine(line);
             if (response == null)
             {
@@ -606,7 +608,10 @@ public class Conversations implements IConversations
                         applyFinalContent(accumulator, response.content);
                     }
 
-                    result.lastResponse = accumulator.toResponse();
+                    ConversationAskResponse finalResponse = accumulator.toResponse();
+                    logDebug.trace(TracingSources.API_CALLS, "Response stream final", //$NON-NLS-1$
+                        () -> json.serialize(finalResponse));
+                    result.lastResponse = finalResponse;
                     return result;
                 }
 

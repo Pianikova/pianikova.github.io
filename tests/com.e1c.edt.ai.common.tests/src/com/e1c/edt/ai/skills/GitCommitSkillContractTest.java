@@ -31,7 +31,7 @@ public class GitCommitSkillContractTest
 
         var skill = read("SKILL.md");
 
-        assertTrue(skill.contains("allowed-tools: JGit GetProjects Read"));
+        assertTrue(skill.contains("allowed-tools: JGit Read"));
         assertTrue(skill.contains("вызывай только `JGit`"));
         assertTrue(skill.contains("\"working_directory\": \"${working_directory}\""));
         assertTrue(skill.contains("[\"diff\", \"--cached\", \"--\", <не более трёх путей>]"));

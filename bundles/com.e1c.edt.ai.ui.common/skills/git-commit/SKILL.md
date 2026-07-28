@@ -1,7 +1,7 @@
 ---
 name: git-commit
 description: Анализирует индексированные изменения через JGit и формирует commit-message. Получает diff пошагово, финальный ответ — только текст коммита.
-allowed-tools: JGit GetProjects Read
+allowed-tools: JGit Read
 ---
 
 # РОЛЬ

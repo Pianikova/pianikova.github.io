@@ -19,6 +19,7 @@ public class Json
 {
     private final Gson gson;
     private final Gson prettyGson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    private final Gson compactGson = new GsonBuilder().disableHtmlEscaping().create();
 
     @SuppressWarnings({ "unchecked", "unused", "rawtypes" })
     public Json()
@@ -78,6 +79,19 @@ public class Json
         try
         {
             return prettyGson.toJson(JsonParser.parseString(json));
+        }
+        catch (Exception error)
+        {
+            return json;
+        }
+    }
+
+    @Override
+    public String compactJson(String json)
+    {
+        try
+        {
+            return compactGson.toJson(JsonParser.parseString(json));
         }
         catch (Exception error)
         {

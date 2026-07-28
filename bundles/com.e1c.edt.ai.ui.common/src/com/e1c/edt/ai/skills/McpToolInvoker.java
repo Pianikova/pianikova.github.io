@@ -74,7 +74,7 @@ public class McpToolInvoker
 
         if (message.content != null)
         {
-            return message.content;
+            return json.compactJson(message.content);
         }
 
         throw new SkillExecutionException(SkillErrorCode.TOOL_EXECUTION_ERROR,
