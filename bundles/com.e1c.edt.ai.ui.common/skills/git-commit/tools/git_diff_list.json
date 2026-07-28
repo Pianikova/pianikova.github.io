@@ -1,5 +1,5 @@
 {
-  "name": "jgit",
+  "name": "JGit",
   "arguments": {
     "working_directory": "${working_directory}",
     "args": ["diff", "--cached", "--name-status"]

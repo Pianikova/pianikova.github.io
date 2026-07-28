@@ -6,7 +6,7 @@
       "log",
       "-n",
       "${max_commit_count}",
-      "--pretty=format:%s"
+      "--oneline"
     ]
   }
 }

@@ -51,6 +51,9 @@ import com.google.inject.Inject;
 public class StagingViewEnhancer
     implements IViewEnhancer
 {
+    private static final String COMMIT_MESSAGE_SKILL = "edt"; //$NON-NLS-1$
+    private static final int COMMIT_MESSAGE_MAX_TOOL_ROUNDS = 200;
+
     private final Optional<String> viewId = Optional.of("org.eclipse.egit.ui.StagingView"); //$NON-NLS-1$
     private final IDispatcher dispatcher;
     private final IReflection reflection;
@@ -315,7 +318,8 @@ public class StagingViewEnhancer
                     return CompletableFuture.completedFuture(null);
                 }
 
-                var request = new SendUserMessageRequest(project.get(), result.getPrompt(), null, true);
+                var request = new SendUserMessageRequest(project.get(), result.getPrompt(), null, true,
+                    COMMIT_MESSAGE_SKILL, Boolean.TRUE, Integer.valueOf(COMMIT_MESSAGE_MAX_TOOL_ROUNDS));
 
                 return conversationFacade.sendAsync(request, cancellationToken);
             }).thenAccept(resultMessage -> {
