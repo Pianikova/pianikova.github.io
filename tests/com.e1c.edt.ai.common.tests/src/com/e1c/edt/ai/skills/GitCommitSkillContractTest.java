@@ -35,6 +35,8 @@ public class GitCommitSkillContractTest
         assertTrue(skill.contains("\"working_directory\": \"${working_directory}\""));
         assertTrue(skill.contains("[\"diff\", \"--cached\", \"--\", <не более трёх путей>]"));
         assertTrue(skill.contains("Пакеты из четырёх и более файлов запрещены"));
+        assertTrue(skill.contains("отправь все function calls одновременно"));
+        assertTrue(skill.contains("Не жди результат одного пакета"));
         assertTrue(skill.contains("Не вызывай `TodoWrite`"));
         assertTrue(skill.contains("Вторая строка должна быть строго пустой"));
         assertTrue(skill.contains("Не добавляй после деталей"));
