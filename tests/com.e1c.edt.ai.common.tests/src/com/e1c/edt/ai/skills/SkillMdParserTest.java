@@ -93,6 +93,19 @@ public class SkillMdParserTest
 
     @SuppressWarnings("nls")
     @Test
+    public void shouldParseEmptyAllowedToolsArray()
+    {
+        String skillContent = "---\nname: test-skill\nallowed-tools: []\n---\nSkill body content";
+        var parser = new SkillMdParser(templateProcessor);
+
+        var allowedTools = parser.parse("test-skill", skillContent).getMetadata().getAllowedTools();
+
+        assertTrue(allowedTools.isPresent());
+        assertTrue(allowedTools.get().isEmpty());
+    }
+
+    @SuppressWarnings("nls")
+    @Test
     public void shouldParseSkillWithoutFrontmatter()
     {
         // Given

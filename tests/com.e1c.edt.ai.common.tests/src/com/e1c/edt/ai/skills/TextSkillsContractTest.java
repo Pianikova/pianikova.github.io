@@ -60,6 +60,10 @@ public class TextSkillsContractTest
 
             assertEquals(skillId, skill.getMetadata().getValues().get("name"));
             assertFalse(skill.getMetadata().getValues().get("description").isBlank());
+            assertTrue(skillId + " must explicitly disable model tools",
+                skill.getMetadata().getAllowedTools().isPresent());
+            assertTrue(skillId + " must not expose model tools",
+                skill.getMetadata().getAllowedTools().get().isEmpty());
             assertTrue(skillId + " must reference !tool('visual_context')",
                 skill.getToolIds().contains("visual_context"));
 
