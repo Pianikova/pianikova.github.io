@@ -4,6 +4,7 @@
 package com.e1c.edt.ai.skills;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -50,6 +51,44 @@ public class SkillMdParserTest
         Map<String, String> metadataMap = metadata.getValues();
         assertEquals("test-skill", metadataMap.get("name"));
         assertEquals("Test description", metadataMap.get("description"));
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldParseAllowedTools()
+    {
+        String skillContent =
+            "---\nname: test-skill\nallowed-tools: [JGit, GetProjects, Read]\n---\nSkill body content";
+        var parser = new SkillMdParser(templateProcessor);
+
+        var allowedTools = parser.parse("test-skill", skillContent).getMetadata().getAllowedTools();
+
+        assertTrue(allowedTools.isPresent());
+        assertEquals(Set.of("JGit", "GetProjects", "Read"), allowedTools.get());
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldTreatWildcardAllowedToolsAsUnrestricted()
+    {
+        String skillContent = "---\nname: test-skill\nallowed-tools: *\n---\nSkill body content";
+        var parser = new SkillMdParser(templateProcessor);
+
+        assertFalse(parser.parse("test-skill", skillContent).getMetadata().getAllowedTools().isPresent());
+    }
+
+    @SuppressWarnings("nls")
+    @Test
+    public void shouldParseQuotedCommaSeparatedAllowedTools()
+    {
+        String skillContent =
+            "---\nname: test-skill\nallowed-tools: \"JGit, Read\"\n---\nSkill body content";
+        var parser = new SkillMdParser(templateProcessor);
+
+        var allowedTools = parser.parse("test-skill", skillContent).getMetadata().getAllowedTools();
+
+        assertTrue(allowedTools.isPresent());
+        assertEquals(Set.of("JGit", "Read"), allowedTools.get());
     }
 
     @SuppressWarnings("nls")

@@ -308,7 +308,8 @@ public class BackgroundAnalysisManager
                 ConversationSession session = state.conversationSession.get();
                 boolean forceNew = session == null;
                 var newReq = new SendUserMessageRequest(request.getProject(), skillResponse.getPrompt(),
-                    session, forceNew, CONVERSATION_SKILL, Boolean.FALSE, null);
+                    session, forceNew, CONVERSATION_SKILL, Boolean.FALSE, null,
+                    skillResponse.getAllowedTools().orElse(null));
 
                 return conversationFacade.sendAsync(newReq, token).thenAccept(resultMessage -> {
                     if (token.isCanceled())

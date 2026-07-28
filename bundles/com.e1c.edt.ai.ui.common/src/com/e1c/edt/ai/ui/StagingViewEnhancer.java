@@ -319,7 +319,8 @@ public class StagingViewEnhancer
                 }
 
                 var request = new SendUserMessageRequest(project.get(), result.getPrompt(), null, true,
-                    COMMIT_MESSAGE_SKILL, Boolean.TRUE, Integer.valueOf(COMMIT_MESSAGE_MAX_TOOL_ROUNDS));
+                    COMMIT_MESSAGE_SKILL, Boolean.TRUE, Integer.valueOf(COMMIT_MESSAGE_MAX_TOOL_ROUNDS),
+                    result.getAllowedTools().orElse(null));
 
                 return conversationFacade.sendAsync(request, cancellationToken);
             }).thenAccept(resultMessage -> {

@@ -374,7 +374,8 @@ public class ContextMenuInterceptor
             var request = new SkillExecutionRequest(textAction.skillId, parameters);
             skillExecutor.executeAsync(request, cancellationTokenSource)
                 .thenCompose(result -> conversationFacade.sendAsync(
-                    new SendUserMessageRequest(project.get(), result.getPrompt(), null, true),
+                    new SendUserMessageRequest(project.get(), result.getPrompt(), null, true,
+                        null, null, null, result.getAllowedTools().orElse(null)),
                     cancellationTokenSource))
                 .thenAccept(resultMessage -> applyResult(text, textListener, cancellationTokenSource, resultMessage))
                 .exceptionally(error -> {

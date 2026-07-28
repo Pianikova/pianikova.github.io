@@ -4,7 +4,9 @@
 package com.e1c.edt.ai;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -82,7 +84,8 @@ public class ConversationFacade
         return conversationFuture.thenCompose(conversationId -> {
             var parentUuid = isNewConversation ? null : request.getConversationSession().getReplyToMessageUuid();
 
-            ConversationAskRequest askRequest = createAskRequest(request.getMessage(), parentUuid);
+            ConversationAskRequest askRequest =
+                createAskRequest(request.getMessage(), parentUuid, request.getAllowedTools().orElse(null));
             if (request.getMaxToolRounds() != null)
             {
                 askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
@@ -141,7 +144,7 @@ public class ConversationFacade
      * @param parentUuid UUID родительского сообщения (для продолжения диалога) или null
      * @return сформированный {@link ConversationAskRequest}
      */
-    private ConversationAskRequest createAskRequest(String instruction, String parentUuid)
+    private ConversationAskRequest createAskRequest(String instruction, String parentUuid, Set<String> allowedTools)
     {
         var skillContent = new JsonObject();
         skillContent.addProperty("instruction", instruction); //$NON-NLS-1$
@@ -149,7 +152,7 @@ public class ConversationFacade
 
         ConversationRequestContent requestContent = new ConversationRequestContent();
         requestContent.content = skillContent;
-        requestContent.tools = getToolsDefinitions();
+        requestContent.tools = getToolsDefinitions(allowedTools);
 
         ConversationAskRequest askRequest = new ConversationAskRequest();
         askRequest.parentUuid = parentUuid;
@@ -167,7 +170,7 @@ public class ConversationFacade
      *
      * @return список определений инструментов
      */
-    private List<ToolDefinition> getToolsDefinitions()
+    private List<ToolDefinition> getToolsDefinitions(Set<String> allowedTools)
     {
         ArrayList<ToolDefinition> toolDefinitions = new ArrayList<>();
         var functions = mcpTools.getSpecifications().join().stream().map(i -> i.function).collect(Collectors.toList());
@@ -181,6 +184,10 @@ public class ConversationFacade
             {
                 continue;
             }
+            if (allowedTools != null && !allowedTools.contains(func.name))
+            {
+                continue;
+            }
             var tool = new ToolDefinition();
             tool.name = func.name;
             tool.description = func.description;
@@ -188,6 +195,15 @@ public class ConversationFacade
                 json.deserialize(json.serialize(func.parameters), JsonElement.class).orElse(null);
 
             toolDefinitions.add(tool);
+        }
+        if (allowedTools != null)
+        {
+            var unknownTools = new LinkedHashSet<>(allowedTools);
+            toolDefinitions.stream().map(tool -> tool.name).forEach(unknownTools::remove);
+            if (!unknownTools.isEmpty())
+            {
+                throw new IllegalArgumentException("Unknown tools in allowed-tools: " + unknownTools); //$NON-NLS-1$
+            }
         }
         return toolDefinitions;
     }

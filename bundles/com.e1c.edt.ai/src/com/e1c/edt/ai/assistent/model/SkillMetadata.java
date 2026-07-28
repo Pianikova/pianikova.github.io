@@ -4,7 +4,10 @@
 package com.e1c.edt.ai.assistent.model;
 
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * @author Bogdan Sushkov
@@ -12,6 +15,8 @@ import java.util.Map;
  */
 public class SkillMetadata
 {
+    private static final String ALLOWED_TOOLS = "allowed-tools"; //$NON-NLS-1$
+
     private final Map<String, String> values;
 
     public SkillMetadata(Map<String, String> values)
@@ -27,5 +32,65 @@ public class SkillMetadata
     public Map<String, String> getValues()
     {
         return values;
+    }
+
+    /**
+     * Returns the tool allowlist declared by the Agent Skills compatible
+     * {@code allowed-tools} frontmatter field.
+     * <p>
+     * A missing field or {@code *} means that all available tools are exposed.
+     * Space-separated values are the canonical format; commas and YAML-style
+     * inline arrays are accepted for compatibility.
+     * </p>
+     *
+     * @return an empty optional when tools are unrestricted, otherwise the declared tool names
+     */
+    public Optional<Set<String>> getAllowedTools()
+    {
+        if (!values.containsKey(ALLOWED_TOOLS))
+        {
+            return Optional.empty();
+        }
+
+        var value = values.get(ALLOWED_TOOLS);
+        if (value == null)
+        {
+            return Optional.of(Collections.emptySet());
+        }
+
+        var normalized = stripQuotes(value.trim());
+        if ("*".equals(normalized)) //$NON-NLS-1$
+        {
+            return Optional.empty();
+        }
+        if (normalized.startsWith("[") && normalized.endsWith("]")) //$NON-NLS-1$ //$NON-NLS-2$
+        {
+            normalized = normalized.substring(1, normalized.length() - 1);
+        }
+
+        var tools = new LinkedHashSet<String>();
+        for (var item : normalized.split("[,\\s]+")) //$NON-NLS-1$
+        {
+            var tool = stripQuotes(item.trim());
+            if (!tool.isEmpty())
+            {
+                tools.add(tool);
+            }
+        }
+        return Optional.of(Collections.unmodifiableSet(tools));
+    }
+
+    private static String stripQuotes(String value)
+    {
+        if (value.length() >= 2)
+        {
+            char first = value.charAt(0);
+            char last = value.charAt(value.length() - 1);
+            if ((first == '"' && last == '"') || (first == '\'' && last == '\''))
+            {
+                return value.substring(1, value.length() - 1);
+            }
+        }
+        return value;
     }
 }
