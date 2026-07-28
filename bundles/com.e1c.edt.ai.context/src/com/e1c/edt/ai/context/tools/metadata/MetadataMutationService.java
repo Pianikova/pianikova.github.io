@@ -411,6 +411,11 @@ final class MetadataMutationService
         }
     }
 
+    /** Type-description settings that {@code setChildProperty} must redirect to {@code setChildType}. */
+    private static final java.util.Set<String> TYPE_DESCRIPTION_PROPERTIES =
+        java.util.Set.of("type", "length", "precision", "datefractions", "date_fractions", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+            "stringqualifiers", "numberqualifiers", "datequalifiers"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+
     /** Operations that remove metadata, and therefore need the delete permission, not the edit one. */
     private static final java.util.Set<String> DELETING_OPERATIONS = java.util.Set.of("removeObject"); //$NON-NLS-1$
 
@@ -626,6 +631,15 @@ final class MetadataMutationService
         if ("name".equalsIgnoreCase(request.propertyName)) //$NON-NLS-1$
         {
             throw new ToolException("Use `renameChild` to change a child name."); //$NON-NLS-1$
+        }
+        // Length, precision and the like live in the type description, not among the child's own
+        // properties. Without this hint the model hit "unsupported property" and reached for a direct
+        // .mdo edit instead of the operation that exists.
+        if (TYPE_DESCRIPTION_PROPERTIES.contains(request.propertyName.toLowerCase(Locale.ROOT)))
+        {
+            throw new ToolException("`" + request.propertyName //$NON-NLS-1$
+                + "` belongs to the type of a child, not to the child itself: use `setChildType` with type," //$NON-NLS-1$
+                + " length, precision or date_fractions. For example type=String and length=50."); //$NON-NLS-1$
         }
         boolean[] changed = { false };
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Set 1C metadata child property") //$NON-NLS-1$

@@ -90,7 +90,9 @@ public final class MetadataOperationRegistry
         add("addObjectReference", //$NON-NLS-1$
             "Adds an object to a reference collection of another object, for the collections some types require:" //$NON-NLS-1$
                 + " for example property_name=registeredDocuments with related_object_name=Document.MyDoc for a" //$NON-NLS-1$
-                + " DocumentJournal. property_name is the model property; related_object_name is the FQN to add.", //$NON-NLS-1$
+                + " DocumentJournal, or property_name=content on a Subsystem to put an object into that subsystem" //$NON-NLS-1$
+                + " (the collection lives on the subsystem, not on the object). property_name is the model" //$NON-NLS-1$
+                + " property; related_object_name is the FQN to add. Call inspectObject when unsure of the name.", //$NON-NLS-1$
             set("project_name", "object_name", "property_name", "related_object_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
             "{\"operation\":\"addObjectReference\",\"project_name\":\"MyProject\",\"object_name\":\"DocumentJournal.Journal\",\"property_name\":\"registeredDocuments\",\"related_object_name\":\"Document.Order\"}"); //$NON-NLS-1$
         add("removeObjectReference", "Removes an object from a reference collection of another object.", //$NON-NLS-1$ //$NON-NLS-2$

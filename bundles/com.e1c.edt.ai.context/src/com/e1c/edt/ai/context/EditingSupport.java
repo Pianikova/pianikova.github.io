@@ -50,7 +50,12 @@ public class EditingSupport
     @Override
     public boolean canEdit(IFile file)
     {
-        return !isReadOnly(file.getProject()) && getObject(file).map(obj -> canEdit(obj)).orElse(true);
+        // Metadata resources (.mdo, .form, template bodies) are off limits for text editing, exactly as
+        // for creation and deletion: they must be changed through the 1C metadata tool. Without this the
+        // ban was unenforced for edits, and a model that hit a missing operation simply hand-edited the
+        // .mdo instead, which risks malformed XML and hides the missing operation.
+        return !isReadOnly(file.getProject()) && !isRestrictedFile(file)
+            && getObject(file).map(obj -> canEdit(obj)).orElse(true);
     }
 
     @Override

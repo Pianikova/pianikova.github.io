@@ -35,4 +35,17 @@ public class EditingSupport
         return false;
     }
 
+    @Override
+    public boolean canEdit(Object object)
+    {
+        // No 1C model here, so there are no vendor-support rules to consult.
+        return true;
+    }
+
+    @Override
+    public boolean canDelete(Object object)
+    {
+        return true;
+    }
+
 }
