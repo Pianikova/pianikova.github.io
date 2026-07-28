@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -32,6 +33,13 @@ public class McpTools
     private final ILog log;
     private final ISettings settings;
     private final Map<String, IMcpTool> tools = new HashMap<>();
+
+    /**
+     * Tools executed by the gateway rather than by this client, in lower case. A call to one of these is
+     * not a failure: it is replied to with status "accepted" and the server runs it.
+     */
+    private static final java.util.Set<String> SERVER_TOOLS =
+        java.util.Set.of("todowrite", "task", "websearch", "webfetch"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
     private final List<McpToolCallSpecification> specs = new ArrayList<>();
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IJson json;
@@ -172,7 +180,12 @@ public class McpTools
             var tool = tools.get(toolName);
             if (tool == null)
             {
-                devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null, "unknown_tool"); //$NON-NLS-1$
+                // Not a client tool. Server tools are legitimate: they are forwarded to the gateway,
+                // which executes them and continues the generation, so recording them as failures made
+                // error metrics report phantom problems (13 such "errors" in one measurement session).
+                // Only a name unknown to the server as well is a real error.
+                devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null,
+                    SERVER_TOOLS.contains(toolName) ? null : "unknown_tool"); //$NON-NLS-1$
                 unknownCalls.add(call);
                 continue;
             }
@@ -191,18 +204,22 @@ public class McpTools
                             return response;
                         })
                         .exceptionally(error -> {
+                            // A failure inside the tool arrives wrapped in CompletionException, whose
+                            // message is "<cause class>: <text>". Unwrap it so the model, the log and
+                            // the recorder all see the tool's own message and its ToolErrorType.
+                            var cause = unwrapCompletion(error);
                             log.trace(TracingSources.TOOLS, "McpTools",
-                                () -> "Tool exception: " + toolName + ", error: " + error.toString());
+                                () -> "Tool exception: " + toolName + ", error: " + cause.toString());
                             devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null,
-                                error.toString());
+                                errorDescription(cause));
                             log.warning("AI Tool failed", () -> {
                                 var message = new StringBuilder();
-                                message.append(error.toString());
+                                message.append(cause.toString());
                                 message.append("\n\nCall:\n\n");
                                 message.append(json.serialize(call));
                                 return message.toString();
                             });
-                            return createErrorMessage(tool, call, toolName, error);
+                            return createErrorMessage(tool, call, toolName, cause);
                         });
                 futures.add(callFuture);
             }
@@ -210,7 +227,20 @@ public class McpTools
             {
                 log.trace(TracingSources.TOOLS, "McpTools",
                     () -> "Tool exception (sync): " + toolName + ", error: " + ex.toString());
-                var message = createErrorMessage(tool, call, toolName, ex);
+                // Record synchronous failures too. Argument validation throws here, before the tool's
+                // future is created, so without this such rejections are missing from the transcript
+                // entirely and error metrics under-report what the model actually saw.
+                var cause = unwrapCompletion(ex);
+                devRecorder.recordCall(toolName, json.serialize(call.function.arguments), null,
+                    errorDescription(cause));
+                log.warning("AI Tool failed", () -> {
+                    var message = new StringBuilder();
+                    message.append(cause.toString());
+                    message.append("\n\nCall:\n\n");
+                    message.append(json.serialize(call));
+                    return message.toString();
+                });
+                var message = createErrorMessage(tool, call, toolName, cause);
                 futures.add(CompletableFuture.completedFuture(message));
             }
         }
@@ -253,8 +283,33 @@ public class McpTools
         return futureResult;
     }
 
-    private ToolCallMessage createErrorMessage(IMcpTool tool, McpToolCall call, String toolName, Throwable error)
+    /**
+     * Unwraps the {@link CompletionException}/{@link java.util.concurrent.ExecutionException} shells
+     * added by the asynchronous plumbing, returning the exception the tool actually threw. Without this
+     * the wrapper's message ("com.e1c.edt.ai.ToolException: ...") leaks to the model and
+     * {@code instanceof ToolException} never matches, so {@link ToolErrorType} is silently ignored.
+     */
+    private static Throwable unwrapCompletion(Throwable error)
     {
+        var current = error;
+        while ((current instanceof CompletionException || current instanceof java.util.concurrent.ExecutionException)
+            && current.getCause() != null && current.getCause() != current)
+        {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    /** Short error description for the dev recorder: the tool's message, falling back to its type. */
+    private static String errorDescription(Throwable error)
+    {
+        var message = error.getMessage();
+        return message != null && !message.isBlank() ? message : error.getClass().getSimpleName();
+    }
+
+    private ToolCallMessage createErrorMessage(IMcpTool tool, McpToolCall call, String toolName, Throwable rawError)
+    {
+        var error = unwrapCompletion(rawError);
         var details = new ToolCallMessageDetails();
         var message = error.getMessage();
 

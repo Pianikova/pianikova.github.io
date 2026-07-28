@@ -9,6 +9,8 @@ import java.util.Set;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 
+import org.eclipse.emf.ecore.EObject;
+
 import com._1c.g5.v8.bm.core.IBmObject;
 import com._1c.g5.v8.dt.core.model.EditingMode;
 import com._1c.g5.v8.dt.core.model.IModelEditingSupport;
@@ -48,7 +50,12 @@ public class EditingSupport
     @Override
     public boolean canEdit(IFile file)
     {
-        return !isReadOnly(file.getProject()) && getObject(file).map(obj -> canEdit(obj)).orElse(true);
+        // Metadata resources (.mdo, .form, template bodies) are off limits for text editing, exactly as
+        // for creation and deletion: they must be changed through the 1C metadata tool. Without this the
+        // ban was unenforced for edits, and a model that hit a missing operation simply hand-edited the
+        // .mdo instead, which risks malformed XML and hides the missing operation.
+        return !isReadOnly(file.getProject()) && !isRestrictedFile(file)
+            && getObject(file).map(obj -> canEdit(obj)).orElse(true);
     }
 
     @Override
@@ -105,6 +112,44 @@ public class EditingSupport
 
         var extension = fileName.substring(lastDotIndex);
         return RESTRICTED_EXTENSIONS.contains(extension);
+    }
+
+    @Override
+    public boolean canEdit(Object object)
+    {
+        if (!(object instanceof EObject))
+        {
+            // Nothing to judge (null, or not a model object): let the caller proceed, the
+            // project-level check still applies.
+            return true;
+        }
+        try
+        {
+            return modelEditingSupport.canEdit((EObject)object, EditingMode.DIRECT);
+        }
+        catch (RuntimeException error)
+        {
+            log.logError(error);
+            return true;
+        }
+    }
+
+    @Override
+    public boolean canDelete(Object object)
+    {
+        if (!(object instanceof EObject))
+        {
+            return true;
+        }
+        try
+        {
+            return modelEditingSupport.canDelete((EObject)object, EditingMode.DIRECT);
+        }
+        catch (RuntimeException error)
+        {
+            log.logError(error);
+            return true;
+        }
     }
 
     private boolean canEdit(IBmObject obj)

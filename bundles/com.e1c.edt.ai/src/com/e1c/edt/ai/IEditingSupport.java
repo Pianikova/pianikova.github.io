@@ -22,4 +22,25 @@ public interface IEditingSupport
      * project) return {@code false}.
      */
     boolean isReadOnly(IProject project);
+
+    /**
+     * Returns {@code true} when this metadata object may be modified.
+     * <p>
+     * This is the per-object vendor-support rule, which {@link #isReadOnly(IProject)} does not cover:
+     * a configuration can be on support with editing allowed ("editable with preservation"), so the
+     * project is writable while individual adopted objects still must not change. Answers the same
+     * question the EDT editors ask, so support rules are never reimplemented here.
+     *
+     * @param object metadata object, may be {@code null}
+     * @return {@code true} when the object may be modified, also for a {@code null} or unknown object
+     */
+    boolean canEdit(Object object);
+
+    /**
+     * Returns {@code true} when this metadata object may be deleted. See {@link #canEdit(Object)}.
+     *
+     * @param object metadata object, may be {@code null}
+     * @return {@code true} when the object may be deleted, also for a {@code null} or unknown object
+     */
+    boolean canDelete(Object object);
 }

@@ -33,6 +33,15 @@ public class ProjectBuilder
      * Source: {@code com.e1c.g5.v8.dt.internal.check.derived.CheckDerivedDataContributor} (internal,
      * not API — hence duplicated here). If a future EDT renames these, the wait degrades to a fast
      * no-op (correctness falls back to the periodic committer), it does not slow down.
+     * <p>
+     * Note on detecting such drift: it cannot be done here. The declaring package is not exported
+     * (only {@code internal.check.legacy} is, via x-friends), so neither a compile-time reference nor
+     * {@code Class.forName} is reliable, and {@code IDerivedDataManager} exposes no way to enumerate
+     * registered segments ({@code isComputed} answers {@code true} for an unknown id, exactly like an
+     * already-computed one). Callers that need a guarantee must verify at the marker level instead:
+     * the metadata tool polls markers until two consecutive reads agree, which stays correct
+     * regardless of these ids. The {@code false} returned on timeout is surfaced to the model as
+     * {@code markers_incomplete}.
      */
     private static final String[] CHECK_SEGMENTS = { "CDI_CHECKS_SEGMENT", //$NON-NLS-1$
         "M_CHECKS_SEGMENT", //$NON-NLS-1$

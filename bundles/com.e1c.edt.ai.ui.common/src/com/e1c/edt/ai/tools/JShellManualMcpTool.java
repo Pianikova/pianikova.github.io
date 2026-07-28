@@ -356,6 +356,10 @@ public class JShellManualMcpTool
         var sb = new StringBuilder();
         sb.append("Provides scenario-oriented guidance for writing Java code for ").append(JShellMcpTool.TOOL_NAME)
             .append(".\n\n");
+        sb.append("This does NOT cover editing 1C metadata or configurations: all 1C-entity editing ")
+            .append("(objects, attributes, forms, templates, subordinate objects, the configuration) MUST use the ")
+            .append(McpToolConstants.EDIT_METADATA_TOOL_NAME)
+            .append(" tool. The scenarios here are general (non-1C-entity) guidance only.\n\n");
         sb.append("Use this tool to retrieve scenario-oriented markdown guidance before writing ")
             .append(JShellMcpTool.TOOL_NAME)
             .append(" code for APIs covered by the manual.\n");
@@ -369,9 +373,8 @@ public class JShellManualMcpTool
             .append("After ").append(JShellMcpTool.TOOL_NAME)
             .append(", inspect JSON field `required_next_step` when present.\n\n");
 
-        sb.append("Naming convention: scenario ids are `<verb>_<entity>`, e.g. `create_catalog`, ")
-            .append("`edit_information_register`, `delete_attribute`, `add_tabular_section`. ")
-            .append("Pass the convention-matching id directly; you can also pass free text and the tool will fuzzy-match.\n\n");
+        sb.append("Pass a scenario id from the categorized list below directly; ")
+            .append("you can also pass free text and the tool will fuzzy-match.\n\n");
 
         sb.append("Available scenarios by category:\n\n");
         sb.append(buildCategoryListing());

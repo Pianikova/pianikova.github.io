@@ -6,7 +6,8 @@ Bundle-Version: 1.0.6.qualifier
 Bundle-SymbolicName: com.e1c.edt.ai.context
 Export-Package: com.e1c.edt.ai.context,
  com.e1c.edt.ai.context.DTO,
- com.e1c.edt.ai.context.tools
+ com.e1c.edt.ai.context.tools,
+ com.e1c.edt.ai.context.tools.metadata;x-friends:="com.e1c.edt.ai.tests"
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Automatic-Module-Name: com.e1c.edt.ai.context
 Import-Package: 
@@ -45,4 +46,7 @@ Require-Bundle: org.eclipse.core.runtime,
  com._1c.g5.v8.dt.platform;bundle-version="[11.1.0,14.0.0)",
  com._1c.g5.v8.dt.platform.core;bundle-version="[8.0.200,14.0.0)",
  com._1c.g5.v8.dt.dcs.model;bundle-version="[7.0.300,14.0.0)",
- com._1c.g5.v8.dt.moxel;bundle-version="[14.1.0,20.0.0)"
+ com._1c.g5.v8.dt.moxel;bundle-version="[14.1.0,20.0.0)",
+ com._1c.g5.v8.dt.htmldocument.model;resolution:=optional,
+ com._1c.g5.v8.dt.md.refactoring;bundle-version="[1.0.0,2.0.0)",
+ com._1c.g5.v8.dt.refactoring.core;bundle-version="[4.0.0,5.0.0)"

@@ -42,8 +42,17 @@ public class DevAutopilot
     public static final String CHANNEL_DIR_PROPERTY = "ai.dev.channel.dir"; //$NON-NLS-1$
 
     private static final long POLL_INTERVAL_MS = 1000L;
-    private static final long TURN_TIMEOUT_SECONDS = 300L;
-    private static final int MAX_AUTO_CONTINUES = 5;
+    // Limits are intentionally very high so a long turnkey build (a whole configuration with entities,
+    // forms, templates, and code modules) is never truncated mid-run. They remain finite only as a
+    // runaway backstop.
+    private static final long TURN_TIMEOUT_SECONDS = 3600L;
+    /**
+     * Auto-continue nudges a model that answered with a plan instead of acting. The cap is high so a
+     * long task is never cut short; what keeps that safe is the no-progress rule in
+     * {@link #shouldAutoContinue}, which stops as soon as a turn yields no assistant message. Without
+     * that rule a high cap spins on empty responses (observed: 100 empty rounds in ~160s).
+     */
+    private static final int MAX_AUTO_CONTINUES = 1024;
 
     /**
      * Default agent preamble prepended to the user prompt. The dev/helper conversation (skill
@@ -52,7 +61,9 @@ public class DevAutopilot
      * empty string to send the bare prompt).
      */
     private static final String DEFAULT_PREAMBLE =
-        "Не отвечай одним планом и не останавливайся.\n\nЗадача: "; //$NON-NLS-1$
+        "Не отвечай одним планом и не останавливайся. Инструмента TodoWrite нет: не вызывай его. " //$NON-NLS-1$
+            + "Никогда не создавай и не исправляй метаданные прямым редактированием .mdo/.form/XML. " //$NON-NLS-1$
+            + "Используй 1C_EditMetadata; ошибочный дочерний элемент удали и создай заново его операциями.\n\nЗадача: "; //$NON-NLS-1$
 
     private final IConversationFacade conversationFacade;
     private final IDevToolCallRecorder recorder;
@@ -246,9 +257,12 @@ public class DevAutopilot
         var promptText = applyPreamble(request);
         // Multi-artifact metadata tasks (object + form/template + content) plus self-correction
         // need more than the default 10 tool rounds; default the harness to a higher cap.
-        Integer maxToolRounds = request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(200);
+        // Unbounded tool nesting by default (see Conversations.MAX_TOOL_ROUNDS): a turnkey build must
+        // not be cut off mid-run. A request may still pass an explicit lower cap.
+        Integer maxToolRounds =
+            request.maxToolRounds != null ? request.maxToolRounds : Integer.valueOf(Integer.MAX_VALUE);
         // The dev-autopilot must run on the "custom" skill regardless of the ConversationFacade
-        // default (which is "raw"). Honor an explicit per-request override (e.g. "raw" for routing
+        // default (which is "edt"). Honor an explicit per-request override (e.g. "edt" for routing
         // diagnostics); otherwise force "custom".
         String skill = request.skill != null ? request.skill : "custom"; //$NON-NLS-1$
         Boolean isChat = request.isChat != null ? request.isChat : Boolean.TRUE;
@@ -291,7 +305,7 @@ public class DevAutopilot
             response.toolCalls = recorder.endRun();
             response.toolCallCount = response.toolCalls != null ? response.toolCalls.size() : 0;
             response.stalled = response.toolCalls == null
-                || response.toolCalls.stream().noneMatch(c -> "jshell".equalsIgnoreCase(c.tool)); //$NON-NLS-1$
+                || response.toolCalls.stream().noneMatch(c -> isMutationTool(c.tool));
             captureToolFailureMetrics(response);
         }
     }
@@ -311,6 +325,11 @@ public class DevAutopilot
                 || hasNonEmptyJsonArray(c.result, "runtime_errors")) //$NON-NLS-1$
             .count();
         response.hasToolFailures = response.toolErrorCount > 0 || response.jshellErrorCount > 0;
+    }
+
+    public static boolean isMutationTool(String tool)
+    {
+        return "jshell".equalsIgnoreCase(tool) || "1c_editmetadata".equalsIgnoreCase(tool); //$NON-NLS-1$ //$NON-NLS-2$
     }
 
     private boolean hasNonEmptyJsonArray(String text, String field)
@@ -363,8 +382,16 @@ public class DevAutopilot
         }
         String text = result.getText() != null ? result.getText().trim().toLowerCase() : ""; //$NON-NLS-1$
         String reasoning = result.getReasoning() != null ? result.getReasoning().toLowerCase() : ""; //$NON-NLS-1$
+        // A turn that produced no assistant message at all made no progress, so the next turn would
+        // behave identically: continuing only burns rounds. Observed as 100 empty auto-continues in
+        // ~160s once the cap was raised.
+        if (result.getAssistantMessageCount() <= 0)
+        {
+            return false;
+        }
         if (text.isBlank())
         {
+            // Blank prose with an actual assistant message means the model is working through tools.
             return true;
         }
         return text.startsWith("создам") || text.startsWith("начну") //$NON-NLS-1$ //$NON-NLS-2$
@@ -376,8 +403,9 @@ public class DevAutopilot
     {
         return targetProjectInstruction(request)
             + "Продолжай немедленно инструментами в этой же задаче. Не отвечай планом и не пиши \"создам\". " //$NON-NLS-1$
-            + "Следующее действие должно быть tool call: JShellManual, JShellSession, JShell или GetMarkers. " //$NON-NLS-1$
-            + "Если нужные manual уже прочитаны, сразу выполняй JShell-код и затем проверяй маркеры."; //$NON-NLS-1$
+            + "Метаданные 1С (объекты, реквизиты, формы, макеты, конфигурация) создавай/меняй/удаляй ТОЛЬКО через 1C_EditMetadata; " //$NON-NLS-1$
+            + "не редактируй метаданные через JShell и не правь .mdo/.form напрямую. " //$NON-NLS-1$
+            + "Следующее действие должно быть tool call: 1C_EditMetadata или GetMarkers. Затем проверяй маркеры."; //$NON-NLS-1$
     }
 
     private void captureToolsMetrics(Response response)
@@ -536,7 +564,7 @@ public class DevAutopilot
         @SerializedName("has_tool_failures")
         public boolean hasToolFailures;
 
-        /** True when the turn ran no `jshell` (the model gathered context and stopped). */
+        /** True when the turn ran neither `jshell` nor `1c_editmetadata`. */
         @SerializedName("stalled")
         public boolean stalled;
 

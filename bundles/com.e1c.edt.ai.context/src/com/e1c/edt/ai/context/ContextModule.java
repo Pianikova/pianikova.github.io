@@ -24,6 +24,7 @@ import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
 import com._1c.g5.v8.dt.form.generator.IFormGenerator;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
+import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
 import com._1c.g5.v8.dt.platform.version.IRuntimeVersionSupport;
 import com._1c.g5.v8.dt.search.core.text.ITextSearchIndexProvider;
 import com._1c.g5.v8.dt.validation.marker.v2.IMarkerManagerV2;
@@ -43,14 +44,11 @@ import com.e1c.edt.ai.IProjectParametersProvider;
 import com.e1c.edt.ai.MarkdownUtils;
 import com.e1c.edt.ai.context.tools.FindMcpTool;
 import com.e1c.edt.ai.context.tools.GetObjectMcpTool;
+import com.e1c.edt.ai.context.tools.metadata.EditMetadataMcpTool;
 import com.e1c.edt.ai.context.tools.IMethodListProvider;
 import com.e1c.edt.ai.context.tools.MarkersProvider;
-import com.e1c.edt.ai.context.tools.MetadataBindingProvider;
-import com.e1c.edt.ai.context.tools.MetadataManualCatalog;
 import com.e1c.edt.ai.context.tools.MethodListProvider;
 import com.e1c.edt.ai.context.tools.ProjectBuilder;
-import com.e1c.edt.ai.tools.IJShellBindingProvider;
-import com.e1c.edt.ai.tools.IJShellManualProvider;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
@@ -108,16 +106,15 @@ class ContextModule
         var toolBinder = Multibinder.newSetBinder(binder(), IMcpTool.class);
         toolBinder.addBinding().to(FindMcpTool.class);
         toolBinder.addBinding().to(GetObjectMcpTool.class);
+        toolBinder.addBinding().to(EditMetadataMcpTool.class);
 
         // Markers providers
         var markersProviderBinder = Multibinder.newSetBinder(binder(), IMarkersProvider.class);
         markersProviderBinder.addBinding().to(MarkersProvider.class);
 
-        // JShell binding providers
-        var jshellBindingProviderBinder = Multibinder.newSetBinder(binder(), IJShellBindingProvider.class);
-        jshellBindingProviderBinder.addBinding().to(MetadataBindingProvider.class);
-        var jshellManualProviderBinder = Multibinder.newSetBinder(binder(), IJShellManualProvider.class);
-        jshellManualProviderBinder.addBinding().to(MetadataManualCatalog.class);
+        // 1C metadata is edited exclusively through 1C_EditMetadata. The JShell metadata binding/manual
+        // providers (mdFactory bindings, per-scenario guides) have been removed so JShell is no longer a
+        // path for editing 1C entities; JShell remains available only as a general-purpose fallback.
 
         // Services
         bind(IExternalPropertyManagerRegistry.class).toService();
@@ -138,6 +135,7 @@ class ContextModule
         bind(IFormGenerator.class).toService();
         bind(IFormFieldGenerator.class).toService();
         bind(IEditingLanguageManager.class).toService();
+        bind(IMdRefactoringService.class).toService();
         // @formatter:on
     }
 }

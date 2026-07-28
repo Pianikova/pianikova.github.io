@@ -360,16 +360,16 @@ public class JShellMcpTool
 		var description = new StringBuilder();
         description.append("Executes Java code using JShell REPL. Preserves state across executions.");
 		description.append("\n\n**IMPORTANT:**");
+        description.append("\n- Do NOT use JShell to create, modify, rename, delete, move, attach, link, or unlink 1C")
+            .append(" metadata or configurations — Catalog, Document, Enum, registers, ChartOf*, BusinessProcess,")
+            .append(" Task, ExchangePlan, CommonModule, CommonAttribute, Subsystem, DefinedType, Constant, forms,")
+            .append(" templates, subordinate objects, the configuration project and the Configuration root, etc.")
+            .append(" All 1C-entity editing MUST go through the ").append(McpToolConstants.EDIT_METADATA_TOOL_NAME)
+            .append(" tool. JShell is only a general-purpose fallback for operations that are not 1C-entity editing");
         description.append("\n- The `manual_ids` parameter is required and validated against the live scenario catalog. ")
             .append("Call ").append(JShellManualMcpTool.TOOL_NAME)
             .append(" first, read the `manual_id` from its response, and pass it back here. Calls with empty `manual_ids`")
-            .append(" or unknown ids are rejected before execution. This applies to every EDT metadata or project CRUD")
-            .append(" via ").append(TOOL_NAME)
-            .append(" — create, edit, rename, delete, move, attach, detach, link, unlink — on Catalog,")
-            .append(" Document, Enum, register, ChartOf*, BusinessProcess, Task, ExchangePlan, CommonModule,")
-            .append(" CommonAttribute, Subsystem, DefinedType, Constant, configuration project, configuration, etc.")
-            .append(" Do not improvise rename/delete from a `create_*` pattern: load `rename_object` or the matching")
-            .append(" delete-refactoring scenario first");
+            .append(" or unknown ids are rejected before execution");
         description.append("\n- Use ").append(JShellReflectionMcpTool.TOOL_NAME)
             .append(" before execution only when unsure about packages, types, enum constants, methods, fields, constructors, or signatures not already covered by an exact ")
             .append(JShellManualMcpTool.TOOL_NAME).append(" guide");

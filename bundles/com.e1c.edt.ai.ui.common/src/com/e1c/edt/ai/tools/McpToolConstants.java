@@ -9,6 +9,13 @@ package com.e1c.edt.ai.tools;
  */
 public final class McpToolConstants
 {
+    // Tool name constants
+    /**
+     * Name of the declarative 1C metadata editing tool. The single source of truth for the name,
+     * referenced by the tool itself and by other tools that must direct 1C-entity editing to it.
+     */
+    public static final String EDIT_METADATA_TOOL_NAME = "1C_EditMetadata"; //$NON-NLS-1$
+
     // File operation constants
     /** Maximum number of lines that can be read from a file */
     public static final int MAX_READ_LINES = 1000;
