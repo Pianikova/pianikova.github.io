@@ -9,6 +9,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.egit.ui.internal.dialogs.CommitMessageComponent;
 import org.eclipse.egit.ui.internal.staging.StagingView;
 import org.eclipse.jface.action.Action;
@@ -287,7 +290,7 @@ public class StagingViewEnhancer
             refreshCreateMessageEnabled.run();
         });
 
-        var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
+        var job = dispatcher.createJob(Messages.CommitMessageJobName, jobCtx -> {
             var workingDirectory = repository.getWorkTree().getAbsolutePath();
 
             final var project = projectProvider.getProject(workingDirectory);
@@ -306,7 +309,7 @@ public class StagingViewEnhancer
                        "max_commit_count", String.valueOf(5)));
             // @formatter:on
 
-            skillExecutor.executeAsync(skillRequest, cancellationToken).handle((response, exception) -> {
+            var operation = skillExecutor.executeAsync(skillRequest, cancellationToken).handle((response, exception) -> {
                 if (exception != null)
                 {
                     log.logError(exception);
@@ -337,14 +340,18 @@ public class StagingViewEnhancer
                     return;
                 }
 
+                // The answer goes into the commit message field as is, and the skill's ban on a
+                // preamble or code fence is a prompt rule, not a guarantee — enforce it here.
+                var messageText = CommitMessageSanitizer.sanitize(generatedMessage);
+
                 var commitMessage =
-                    new CommitMessage(project.get(), resultMessage.getSession().getReplyToMessageUuid(), generatedMessage);
+                    new CommitMessage(project.get(), resultMessage.getSession().getReplyToMessageUuid(), messageText);
                 dispatcher.dispatch(() -> {
                     if (cancellationToken.isCanceled())
                     {
                         return;
                     }
-                    commitMessageComponent.setCommitMessage(generatedMessage);
+                    commitMessageComponent.setCommitMessage(messageText);
                     commitMessageComponent.updateUI();
                     commitMessages.clear();
                     commitMessages.add(new CommitMessageInfo(commitMessage, cancellationToken));
@@ -353,7 +360,23 @@ public class StagingViewEnhancer
                 log.logError(error);
                 return null;
             }).whenComplete((r, t) -> finishGeneration.run());
+
+            // Hold the job open for the whole generation, otherwise the progress UI disappears at once.
+            JobFutures.await(jobCtx, operation, cancellationToken);
         }, false, cancellationToken);
+        // Generation is triggered by the user and is short — it must not queue behind long jobs.
+        job.setPriority(Job.INTERACTIVE);
+        // Cancel ends the job while the canceled request may still be unwinding, and the button is
+        // re-enabled by finishGeneration at the end of the chain — so also release it on the job
+        // itself, or a canceled generation would leave the button disabled.
+        job.addJobChangeListener(new JobChangeAdapter()
+        {
+            @Override
+            public void done(IJobChangeEvent event)
+            {
+                finishGeneration.run();
+            }
+        });
         job.schedule();
     }
 

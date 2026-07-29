@@ -19,6 +19,9 @@ public class Messages
     public static String Activation;
     public static String CodeCompletionJobName;
     public static String BackgroundJobName;
+    public static String TextActionJobName;
+    public static String CommitMessageJobName;
+    public static String BackgroundAnalysisJobName;
     public static String CodeCompletionBackgroundScanSubtaskName;
     public static String CodeCompletionBackgroundHashSubtaskName;
     public static String CodeCompletionBackgroundSyncSubtaskName;

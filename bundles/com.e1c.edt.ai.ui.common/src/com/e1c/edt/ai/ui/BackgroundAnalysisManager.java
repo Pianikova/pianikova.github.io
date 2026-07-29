@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.osgi.util.NLS;
 
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
@@ -232,7 +233,7 @@ public class BackgroundAnalysisManager
 
         var result = new CompletableFuture<Void>();
 
-        dispatcher.createJob("Background AI Code Analysis", context -> {
+        dispatcher.createJob(NLS.bind(Messages.BackgroundAnalysisJobName, request.getFile().getName()), context -> {
             var token = cancellationToken;
 
             if (token.isCanceled())
@@ -364,6 +365,9 @@ public class BackgroundAnalysisManager
                 }
                 return null;
             });
+
+            // Hold the job open until the review actually finishes, so the Progress view shows it.
+            JobFutures.await(context, result, token);
         }, false, CancellationTokens.NONE).schedule();
 
         return result;

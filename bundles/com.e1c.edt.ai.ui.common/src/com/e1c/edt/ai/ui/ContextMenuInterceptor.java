@@ -6,6 +6,8 @@ package com.e1c.edt.ai.ui;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.osgi.util.NLS;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.FocusEvent;
@@ -373,9 +375,9 @@ public class ContextMenuInterceptor
             "language", settings.getLanguage());
         // @formatter:on
 
-        var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
+        var job = dispatcher.createJob(NLS.bind(Messages.TextActionJobName, textAction.title), jobCtx -> {
             var request = new SkillExecutionRequest(textAction.skillId, parameters);
-            skillExecutor.executeAsync(request, cancellationTokenSource)
+            var operation = skillExecutor.executeAsync(request, cancellationTokenSource)
                 .thenCompose(result -> conversationFacade.sendAsync(
                     new SendUserMessageRequest(project.get(), result.getPrompt(), null, true,
                         null, null, null, result.getAllowedTools().orElse(null)),
@@ -385,7 +387,11 @@ public class ContextMenuInterceptor
                     log.logError(error);
                     return null;
                 });
+            // Hold the job open for the whole request, otherwise the progress UI disappears at once.
+            JobFutures.await(jobCtx, operation, cancellationTokenSource);
         }, false, cancellationTokenSource);
+        // A text action is triggered by the user and is short — it must not queue behind long jobs.
+        job.setPriority(Job.INTERACTIVE);
         job.schedule();
     }
 
