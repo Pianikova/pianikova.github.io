@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.jobs.IJobChangeEvent;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.core.runtime.jobs.JobChangeAdapter;
@@ -291,6 +292,10 @@ public class StagingViewEnhancer
         });
 
         var job = dispatcher.createJob(Messages.CommitMessageJobName, jobCtx -> {
+            // The bar appears only after beginTask, and UNKNOWN because the number of tool rounds is
+            // decided by the model; the reporter then keeps overwriting this task name.
+            jobCtx.Monitor.beginTask(Messages.ConversationProgressStarting, IProgressMonitor.UNKNOWN);
+            var progressReporter = new ConversationProgressReporter(jobCtx.Monitor);
             var workingDirectory = repository.getWorkTree().getAbsolutePath();
 
             final var project = projectProvider.getProject(workingDirectory);
@@ -325,7 +330,7 @@ public class StagingViewEnhancer
                     COMMIT_MESSAGE_SKILL, Boolean.TRUE, Integer.valueOf(COMMIT_MESSAGE_MAX_TOOL_ROUNDS),
                     result.getAllowedTools().orElse(null));
 
-                return conversationFacade.sendAsync(request, cancellationToken);
+                return conversationFacade.sendAsync(request, cancellationToken, progressReporter);
             }).thenAccept(resultMessage -> {
                 if (resultMessage == null || cancellationToken.isCanceled())
                     {
