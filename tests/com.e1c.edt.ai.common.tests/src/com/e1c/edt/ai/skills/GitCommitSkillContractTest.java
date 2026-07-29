@@ -45,6 +45,23 @@ public class GitCommitSkillContractTest
         assertFalse(skill.contains("```json"));
     }
 
+    /**
+     * The answer is written into the commit message field verbatim, so the skill must forbid any
+     * preamble, reasoning or code-fence wrapping around the message.
+     */
+    @Test
+    public void skillForbidsPreambleAndFencingAroundCommitMessage() throws IOException
+    {
+        assumeTrue(Files.isDirectory(SKILL_DIR));
+
+        var skill = read("SKILL.md");
+
+        assertTrue(skill.contains("Ответ обязан начинаться первым символом строки-резюме"));
+        assertTrue(skill.contains("Не оборачивай commit-message в блок кода"));
+        assertTrue(skill.contains("Проверки длины и полноты выполняй молча"));
+        assertTrue(skill.contains("Неправильный финальный ответ"));
+    }
+
     @Test
     public void predefinedGitRequestsUseSupportedJGitArguments() throws IOException
     {
