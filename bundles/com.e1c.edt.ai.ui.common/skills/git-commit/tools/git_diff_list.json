@@ -2,6 +2,6 @@
   "name": "JGit",
   "arguments": {
     "working_directory": "${working_directory}",
-    "args": ["diff", "--cached"]
+    "args": ["diff", "--cached", "--name-status"]
   }
 }

@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.osgi.util.NLS;
 
 import com.e1c.edt.ai.CancellationTokenSource;
 import com.e1c.edt.ai.CancellationTokens;
@@ -232,8 +234,12 @@ public class BackgroundAnalysisManager
 
         var result = new CompletableFuture<Void>();
 
-        dispatcher.createJob("Background AI Code Analysis", context -> {
+        dispatcher.createJob(NLS.bind(Messages.BackgroundAnalysisJobName, request.getFile().getName()), context -> {
             var token = cancellationToken;
+            // The bar appears only after beginTask, and UNKNOWN because the number of tool rounds is
+            // decided by the model; the reporter then keeps overwriting this task name.
+            context.Monitor.beginTask(Messages.ConversationProgressStarting, IProgressMonitor.UNKNOWN);
+            var progressReporter = new ConversationProgressReporter(context.Monitor);
 
             if (token.isCanceled())
             {
@@ -308,9 +314,10 @@ public class BackgroundAnalysisManager
                 ConversationSession session = state.conversationSession.get();
                 boolean forceNew = session == null;
                 var newReq = new SendUserMessageRequest(request.getProject(), skillResponse.getPrompt(),
-                    session, forceNew, CONVERSATION_SKILL, Boolean.FALSE, null);
+                    session, forceNew, CONVERSATION_SKILL, Boolean.FALSE, null,
+                    skillResponse.getAllowedTools().orElse(null));
 
-                return conversationFacade.sendAsync(newReq, token).thenAccept(resultMessage -> {
+                return conversationFacade.sendAsync(newReq, token, progressReporter).thenAccept(resultMessage -> {
                     if (token.isCanceled())
                     {
                         result.complete(null);
@@ -363,6 +370,9 @@ public class BackgroundAnalysisManager
                 }
                 return null;
             });
+
+            // Hold the job open until the review actually finishes, so the Progress view shows it.
+            JobFutures.await(context, result, token);
         }, false, CancellationTokens.NONE).schedule();
 
         return result;

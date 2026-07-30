@@ -46,7 +46,8 @@ public class SkillExecutor
         var skill = skillPackageLoader.load(request.getSkillId(), projectRoot);
 
         return renderer.renderAsync(skill, request.getParameters(), cancellationToken)
-            .thenApply(SkillExecutionResult::new);
+            .thenApply(prompt -> new SkillExecutionResult(prompt,
+                skill.getMetadata().getAllowedTools().orElse(null)));
     }
 
     private static Optional<Path> projectRootFromParameters(Map<String, String> parameters)

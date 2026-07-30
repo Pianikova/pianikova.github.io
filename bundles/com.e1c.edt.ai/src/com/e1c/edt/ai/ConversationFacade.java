@@ -4,7 +4,9 @@
 package com.e1c.edt.ai;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -44,18 +46,22 @@ public class ConversationFacade
     private final IJson json;
     private final IMcpTools mcpTools;
     private final ISettings settings;
+    private final ILog log;
 
     @Inject
-    public ConversationFacade(IConversations conversations, IJson json, IMcpTools mcpTools, ISettings settings)
+    public ConversationFacade(IConversations conversations, IJson json, IMcpTools mcpTools, ISettings settings,
+        ILog log)
     {
         Preconditions.checkNotNull(conversations);
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(mcpTools);
         Preconditions.checkNotNull(settings);
+        Preconditions.checkNotNull(log);
         this.settings = settings;
         this.conversations = conversations;
         this.json = json;
         this.mcpTools = mcpTools;
+        this.log = log;
     }
 
     /**
@@ -72,7 +78,7 @@ public class ConversationFacade
      */
     @Override
     public CompletableFuture<SendMessageResult> sendAsync(SendUserMessageRequest request,
-        ICancellationToken cancellationToken)
+        ICancellationToken cancellationToken, IConversationProgressListener progressListener)
     {
         boolean isNewConversation = request.isForceNewConversation() || request.getConversationSession() == null
             || request.getConversationSession().isNewConversation();
@@ -82,12 +88,14 @@ public class ConversationFacade
         return conversationFuture.thenCompose(conversationId -> {
             var parentUuid = isNewConversation ? null : request.getConversationSession().getReplyToMessageUuid();
 
-            ConversationAskRequest askRequest = createAskRequest(request.getMessage(), parentUuid);
+            ConversationAskRequest askRequest =
+                createAskRequest(request.getMessage(), parentUuid, request.getAllowedTools().orElse(null));
             if (request.getMaxToolRounds() != null)
             {
                 askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
             }
-            return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken);
+            return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken,
+                progressListener);
         });
     }
 
@@ -141,7 +149,7 @@ public class ConversationFacade
      * @param parentUuid UUID родительского сообщения (для продолжения диалога) или null
      * @return сформированный {@link ConversationAskRequest}
      */
-    private ConversationAskRequest createAskRequest(String instruction, String parentUuid)
+    private ConversationAskRequest createAskRequest(String instruction, String parentUuid, Set<String> allowedTools)
     {
         var skillContent = new JsonObject();
         skillContent.addProperty("instruction", instruction); //$NON-NLS-1$
@@ -149,7 +157,7 @@ public class ConversationFacade
 
         ConversationRequestContent requestContent = new ConversationRequestContent();
         requestContent.content = skillContent;
-        requestContent.tools = getToolsDefinitions();
+        requestContent.tools = getToolsDefinitions(allowedTools);
 
         ConversationAskRequest askRequest = new ConversationAskRequest();
         askRequest.parentUuid = parentUuid;
@@ -167,7 +175,7 @@ public class ConversationFacade
      *
      * @return список определений инструментов
      */
-    private List<ToolDefinition> getToolsDefinitions()
+    private List<ToolDefinition> getToolsDefinitions(Set<String> allowedTools)
     {
         ArrayList<ToolDefinition> toolDefinitions = new ArrayList<>();
         var functions = mcpTools.getSpecifications().join().stream().map(i -> i.function).collect(Collectors.toList());
@@ -181,6 +189,10 @@ public class ConversationFacade
             {
                 continue;
             }
+            if (allowedTools != null && !allowedTools.contains(func.name))
+            {
+                continue;
+            }
             var tool = new ToolDefinition();
             tool.name = func.name;
             tool.description = func.description;
@@ -189,7 +201,37 @@ public class ConversationFacade
 
             toolDefinitions.add(tool);
         }
+        if (allowedTools != null)
+        {
+            var unknownTools = new LinkedHashSet<>(allowedTools);
+            toolDefinitions.stream().map(tool -> tool.name).forEach(unknownTools::remove);
+            if (!unknownTools.isEmpty())
+            {
+                throw new IllegalArgumentException("Unknown tools in allowed-tools: " + unknownTools); //$NON-NLS-1$
+            }
+        }
         return toolDefinitions;
+    }
+
+    /**
+     * Reports progress, shielding the response stream from a misbehaving listener: a listener that
+     * throws must not abort the conversation it is only observing.
+     */
+    private void reportProgress(IConversationProgressListener progressListener, int round, int charactersReceived)
+    {
+        if (progressListener == null)
+        {
+            return;
+        }
+
+        try
+        {
+            progressListener.onProgress(round, charactersReceived);
+        }
+        catch (RuntimeException error)
+        {
+            log.logError(error);
+        }
     }
 
     /**
@@ -212,7 +254,8 @@ public class ConversationFacade
      * @return {@link CompletableFuture} с результатом, содержащим текст ответа и сессию
      */
     private CompletableFuture<SendMessageResult> collectAssistantResult(IProject project, String conversationUuid,
-        ConversationAskRequest askRequest, ICancellationToken cancellationToken)
+        ConversationAskRequest askRequest, ICancellationToken cancellationToken,
+        IConversationProgressListener progressListener)
     {
         CompletableFuture<SendMessageResult> future = new CompletableFuture<>();
 
@@ -241,6 +284,7 @@ public class ConversationFacade
                     {
                         currentAssistantUuid.set(value.uuid);
                         textByMessageUuid.computeIfAbsent(value.uuid, k -> new StringBuilder());
+                        reportProgress(progressListener, assistantMessageCount.get() + 1, 0);
                     }
 
                     // 2) дельты
@@ -249,8 +293,9 @@ public class ConversationFacade
                         String uuid = currentAssistantUuid.get();
                         if (uuid != null)
                         {
-                            textByMessageUuid.computeIfAbsent(uuid, k -> new StringBuilder())
+                            var text = textByMessageUuid.computeIfAbsent(uuid, k -> new StringBuilder())
                                 .append(value.contentDelta.content);
+                            reportProgress(progressListener, assistantMessageCount.get() + 1, text.length());
                         }
                     }
 

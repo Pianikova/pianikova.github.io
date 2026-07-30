@@ -9,6 +9,10 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.jobs.IJobChangeEvent;
+import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.core.runtime.jobs.JobChangeAdapter;
 import org.eclipse.egit.ui.internal.dialogs.CommitMessageComponent;
 import org.eclipse.egit.ui.internal.staging.StagingView;
 import org.eclipse.jface.action.Action;
@@ -51,6 +55,9 @@ import com.google.inject.Inject;
 public class StagingViewEnhancer
     implements IViewEnhancer
 {
+    private static final String COMMIT_MESSAGE_SKILL = "edt"; //$NON-NLS-1$
+    private static final int COMMIT_MESSAGE_MAX_TOOL_ROUNDS = 200;
+
     private final Optional<String> viewId = Optional.of("org.eclipse.egit.ui.StagingView"); //$NON-NLS-1$
     private final IDispatcher dispatcher;
     private final IReflection reflection;
@@ -284,7 +291,11 @@ public class StagingViewEnhancer
             refreshCreateMessageEnabled.run();
         });
 
-        var job = dispatcher.createJob(Messages.BackgroundJobName, jobCtx -> {
+        var job = dispatcher.createJob(Messages.CommitMessageJobName, jobCtx -> {
+            // The bar appears only after beginTask, and UNKNOWN because the number of tool rounds is
+            // decided by the model; the reporter then keeps overwriting this task name.
+            jobCtx.Monitor.beginTask(Messages.ConversationProgressStarting, IProgressMonitor.UNKNOWN);
+            var progressReporter = new ConversationProgressReporter(jobCtx.Monitor);
             var workingDirectory = repository.getWorkTree().getAbsolutePath();
 
             final var project = projectProvider.getProject(workingDirectory);
@@ -303,7 +314,7 @@ public class StagingViewEnhancer
                        "max_commit_count", String.valueOf(5)));
             // @formatter:on
 
-            skillExecutor.executeAsync(skillRequest, cancellationToken).handle((response, exception) -> {
+            var operation = skillExecutor.executeAsync(skillRequest, cancellationToken).handle((response, exception) -> {
                 if (exception != null)
                 {
                     log.logError(exception);
@@ -315,9 +326,11 @@ public class StagingViewEnhancer
                     return CompletableFuture.completedFuture(null);
                 }
 
-                var request = new SendUserMessageRequest(project.get(), result.getPrompt(), null, true);
+                var request = new SendUserMessageRequest(project.get(), result.getPrompt(), null, true,
+                    COMMIT_MESSAGE_SKILL, Boolean.TRUE, Integer.valueOf(COMMIT_MESSAGE_MAX_TOOL_ROUNDS),
+                    result.getAllowedTools().orElse(null));
 
-                return conversationFacade.sendAsync(request, cancellationToken);
+                return conversationFacade.sendAsync(request, cancellationToken, progressReporter);
             }).thenAccept(resultMessage -> {
                 if (resultMessage == null || cancellationToken.isCanceled())
                     {
@@ -332,14 +345,18 @@ public class StagingViewEnhancer
                     return;
                 }
 
+                // The answer goes into the commit message field as is, and the skill's ban on a
+                // preamble or code fence is a prompt rule, not a guarantee — enforce it here.
+                var messageText = CommitMessageSanitizer.sanitize(generatedMessage);
+
                 var commitMessage =
-                    new CommitMessage(project.get(), resultMessage.getSession().getReplyToMessageUuid(), generatedMessage);
+                    new CommitMessage(project.get(), resultMessage.getSession().getReplyToMessageUuid(), messageText);
                 dispatcher.dispatch(() -> {
                     if (cancellationToken.isCanceled())
                     {
                         return;
                     }
-                    commitMessageComponent.setCommitMessage(generatedMessage);
+                    commitMessageComponent.setCommitMessage(messageText);
                     commitMessageComponent.updateUI();
                     commitMessages.clear();
                     commitMessages.add(new CommitMessageInfo(commitMessage, cancellationToken));
@@ -348,7 +365,23 @@ public class StagingViewEnhancer
                 log.logError(error);
                 return null;
             }).whenComplete((r, t) -> finishGeneration.run());
+
+            // Hold the job open for the whole generation, otherwise the progress UI disappears at once.
+            JobFutures.await(jobCtx, operation, cancellationToken);
         }, false, cancellationToken);
+        // Generation is triggered by the user and is short — it must not queue behind long jobs.
+        job.setPriority(Job.INTERACTIVE);
+        // Cancel ends the job while the canceled request may still be unwinding, and the button is
+        // re-enabled by finishGeneration at the end of the chain — so also release it on the job
+        // itself, or a canceled generation would leave the button disabled.
+        job.addJobChangeListener(new JobChangeAdapter()
+        {
+            @Override
+            public void done(IJobChangeEvent event)
+            {
+                finishGeneration.run();
+            }
+        });
         job.schedule();
     }
 

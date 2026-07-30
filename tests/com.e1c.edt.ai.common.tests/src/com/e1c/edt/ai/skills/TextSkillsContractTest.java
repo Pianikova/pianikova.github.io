@@ -60,12 +60,37 @@ public class TextSkillsContractTest
 
             assertEquals(skillId, skill.getMetadata().getValues().get("name"));
             assertFalse(skill.getMetadata().getValues().get("description").isBlank());
+            assertTrue(skillId + " must explicitly disable model tools",
+                skill.getMetadata().getAllowedTools().isPresent());
+            assertTrue(skillId + " must not expose model tools",
+                skill.getMetadata().getAllowedTools().get().isEmpty());
             assertTrue(skillId + " must reference !tool('visual_context')",
                 skill.getToolIds().contains("visual_context"));
 
             var toolJson = SKILLS_DIR.resolve(skillId).resolve("tools").resolve("visual_context.json");
             assertTrue(skillId + " must ship tools/visual_context.json", Files.isRegularFile(toolJson));
             assertTrue(Files.readString(toolJson, StandardCharsets.UTF_8).contains("\"GetVisualContext\""));
+        }
+    }
+
+    /**
+     * ContextMenuInterceptor writes the answer into the focused widget verbatim (only trimmed), so
+     * every text-* skill must forbid preamble and code-fence wrapping around the value.
+     */
+    @Test
+    public void skillsForbidPreambleAndFencingAroundFieldValue() throws IOException
+    {
+        assumeTrue(Files.isDirectory(SKILLS_DIR));
+
+        for (var skillId : SKILL_IDS)
+        {
+            var skill = readSkillMd(skillId);
+
+            assertTrue(skillId + " must state that the answer goes into the field verbatim",
+                skill.contains("подставляется в поле ввода как есть, без обработки"));
+            assertTrue(skillId + " must forbid code fences", skill.contains("Не оборачивать ответ в блок кода"));
+            assertTrue(skillId + " must forbid a preamble",
+                skill.contains("Ответ должен начинаться первым символом самого текста поля"));
         }
     }
 
