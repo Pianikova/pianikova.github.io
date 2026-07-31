@@ -3,7 +3,11 @@
  */
 package com.e1c.edt.ai.context.tools.metadata;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.eclipse.core.resources.IProject;
+import org.eclipse.emf.ecore.EClass;
 
 import com._1c.g5.v8.bm.core.IBmTransaction;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
@@ -87,25 +91,65 @@ final class MetadataTypeService
             return builder.setDateQualifiers(parseDateFractions(request.dateFractions)).build();
         }
 
-        var dependencyFqn = referenceDependency(normalized);
-        if (dependencyFqn != null)
+        var produced = producedType(transaction, normalized);
+        if (produced != null)
         {
-            var dependency = transaction.getTopObjectByFqn(dependencyFqn);
-            if (!(dependency instanceof MdObject))
+            return builder.addType(produced).build();
+        }
+
+        // Any remaining name is looked up as a platform type (DynamicList, ValueTable, ValueTree,
+        // ValueList, UUID, ...). Form attributes routinely need those, and the platform type index is
+        // the authority on which names exist for this runtime version, so there is nothing to hardcode.
+        if (provider.getEObjectDescription(normalized) != null)
+        {
+            var platformType = provider.getProxy(normalized);
+            if (platformType instanceof TypeItem)
             {
-                throw new ToolException("Referenced metadata object not found: " + dependencyFqn); //$NON-NLS-1$
+                return builder.addType((TypeItem)platformType).build();
             }
-            var producedType = MdProducedTypesUtil.getProducedType((MdObject)dependency,
-                MdTypePackage.Literals.MD_REF_TYPE);
-            if (producedType == null)
-            {
-                throw new ToolException("Cannot resolve produced reference type: " + normalized); //$NON-NLS-1$
-            }
-            return builder.addType(producedType).build();
         }
 
         throw new ToolException("Unsupported type `" + normalized //$NON-NLS-1$
             + "`. Supported types: " + supportedTypeNames() + "."); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    /**
+     * Resolves a metadata-produced type such as {@code CatalogRef.X}, {@code CatalogObject.X} or
+     * {@code InformationRegisterRecordSet.X}, or {@code null} when the name is not of that shape.
+     */
+    private static TypeItem producedType(IBmTransaction transaction, String typeName)
+    {
+        int dot = typeName.indexOf('.');
+        if (dot <= 0 || dot == typeName.length() - 1)
+        {
+            return null;
+        }
+        var head = typeName.substring(0, dot);
+        var objectName = typeName.substring(dot + 1);
+        for (var suffix : PRODUCED_TYPE_SUFFIXES.entrySet())
+        {
+            var key = suffix.getKey();
+            if (head.length() <= key.length() || !head.regionMatches(true, head.length() - key.length(), key, 0,
+                key.length()))
+            {
+                continue;
+            }
+            var ownerFqn = head.substring(0, head.length() - key.length()) + "." + objectName; //$NON-NLS-1$
+            var dependency = transaction.getTopObjectByFqn(ownerFqn);
+            if (!(dependency instanceof MdObject))
+            {
+                throw new ToolException("Referenced metadata object not found: " + ownerFqn //$NON-NLS-1$
+                    + ". Type `" + typeName + "` names the type produced by that object, so the object must" //$NON-NLS-1$ //$NON-NLS-2$
+                    + " exist first."); //$NON-NLS-1$
+            }
+            var producedType = MdProducedTypesUtil.getProducedType((MdObject)dependency, suffix.getValue());
+            if (producedType == null)
+            {
+                throw new ToolException("Object " + ownerFqn + " does not produce type `" + typeName + "`."); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            }
+            return producedType;
+        }
+        return null;
     }
 
     private static TypeItem primitive(IEObjectProvider provider, String typeName, String requestedName)
@@ -136,35 +180,38 @@ final class MetadataTypeService
     }
 
     /**
-     * Reference type prefixes. The rule is uniform: {@code <Type>Ref.<Name>} designates the object
-     * {@code <Type>.<Name>}, whose reference type EDT then produces, so a new referenceable kind only
-     * needs its prefix here.
+     * Suffixes of the types a metadata object produces, longest first so that {@code RecordManager} is
+     * not mistaken for {@code Manager}. The rule is uniform: {@code <Type><Suffix>.<Name>} designates
+     * the type produced by object {@code <Type>.<Name>}, so a new object kind needs nothing here.
      */
+    private static final Map<String, EClass> PRODUCED_TYPE_SUFFIXES = createProducedTypeSuffixes();
+
     @SuppressWarnings("nls")
-    private static final String[] REFERENCE_PREFIXES = { "CatalogRef.", "DocumentRef.", "EnumRef.",
-        "ChartOfCharacteristicTypesRef.", "ChartOfAccountsRef.", "ChartOfCalculationTypesRef.",
-        "BusinessProcessRef.", "TaskRef.", "ExchangePlanRef." };
+    private static Map<String, EClass> createProducedTypeSuffixes()
+    {
+        Map<String, EClass> result = new LinkedHashMap<>();
+        result.put("RecordManager", MdTypePackage.Literals.MD_RECORD_MANAGER_TYPE);
+        result.put("RecordSet", MdTypePackage.Literals.MD_RECORD_SET_TYPE);
+        result.put("RecordKey", MdTypePackage.Literals.MD_RECORD_KEY_TYPE);
+        result.put("ValueManager", MdTypePackage.Literals.MD_VALUE_MANAGER_TYPE);
+        result.put("ValueKey", MdTypePackage.Literals.MD_VALUE_KEY_TYPE);
+        result.put("Selection", MdTypePackage.Literals.MD_SELECTION_TYPE);
+        result.put("Manager", MdTypePackage.Literals.MD_MANAGER_TYPE);
+        result.put("Object", MdTypePackage.Literals.MD_OBJECT_TYPE);
+        result.put("List", MdTypePackage.Literals.MD_LIST_TYPE);
+        result.put("Ref", MdTypePackage.Literals.MD_REF_TYPE);
+        return result;
+    }
 
     static String supportedTypeNames()
     {
         var names = new StringBuilder("String, Number, Boolean, Date"); //$NON-NLS-1$
-        for (var prefix : REFERENCE_PREFIXES)
+        for (var suffix : PRODUCED_TYPE_SUFFIXES.keySet())
         {
-            names.append(", ").append(prefix).append('X'); //$NON-NLS-1$
+            names.append(", <ObjectType>").append(suffix).append(".<Name>"); //$NON-NLS-1$ //$NON-NLS-2$
         }
+        names.append(", and any platform type name such as DynamicList, ValueTable, ValueTree, ValueList"); //$NON-NLS-1$
         return names.toString();
-    }
-
-    private static String referenceDependency(String typeName)
-    {
-        for (var prefix : REFERENCE_PREFIXES)
-        {
-            if (typeName.regionMatches(true, 0, prefix, 0, prefix.length()) && typeName.length() > prefix.length())
-            {
-                return prefix.substring(0, prefix.length() - 4) + "." + typeName.substring(prefix.length()); //$NON-NLS-1$
-            }
-        }
-        return null;
     }
 
     private static boolean equals(String left, String right)

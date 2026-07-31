@@ -22,6 +22,9 @@ import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.core.platform.management.IDtHostResourceManager;
 import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
 import com._1c.g5.v8.dt.form.generator.IFormGenerator;
+import com._1c.g5.v8.dt.form.service.item.IFormItemManagementService;
+import com._1c.g5.v8.dt.form.service.item.IFormItemMovementService;
+import com._1c.g5.v8.dt.form.service.item.IFormItemTypeManagementService;
 import com._1c.g5.v8.dt.form.service.datasourceinfo.IDataSourceInfoAssociationService;
 import com._1c.g5.v8.dt.md.IExternalPropertyManagerRegistry;
 import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
@@ -134,6 +137,11 @@ class ContextModule
         bind(IModelObjectFactory.class).toService();
         bind(IFormGenerator.class).toService();
         bind(IFormFieldGenerator.class).toService();
+        // Editing an existing form goes through these native EDT services: they keep item ids, data
+        // paths and derived field types consistent, which hand-built model edits cannot.
+        bind(IFormItemManagementService.class).toService();
+        bind(IFormItemMovementService.class).toService();
+        bind(IFormItemTypeManagementService.class).toService();
         bind(IEditingLanguageManager.class).toService();
         bind(IMdRefactoringService.class).toService();
         // @formatter:on

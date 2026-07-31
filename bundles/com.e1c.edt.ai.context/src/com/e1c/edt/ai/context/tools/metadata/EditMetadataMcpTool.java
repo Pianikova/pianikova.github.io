@@ -196,6 +196,15 @@ public final class EditMetadataMcpTool
             + " Never use file editing tools to create or repair metadata; remove and recreate a wrong child instead."
             + " Operations: " + String.join(", ", new MetadataOperationRegistry().names()) + "."
             + " createObject supports every top-level object type returned by help topic=objectTypes."
+            + " The content of an existing form is editable too: inspectForm reads its attributes,"
+            + " commands and item tree, and addFormAttribute/addFormField/addFormGroup/addFormButton/"
+            + "addFormCommand/moveFormItem/setFormItemProperty change it. Those operations take the form"
+            + " FQN in object_name (Catalog.Products.Form.ItemForm, or CommonForm.Settings)."
+            + " Never try to edit a Form.form file with Write or Edit: EDT locks it, and these operations"
+            + " are the supported way in."
+            + " A multilingual property (synonym, title, listPresentation, objectPresentation,"
+            + " explanation) is set with setObjectProperty/setChildProperty/setFormItemProperty like any"
+            + " other property; language_code picks the language and defaults to ru."
             + " For an attribute inside a tabular section use addTabularSectionAttribute with"
             + " object_name=Type.Object.TabularSection; addObjectAttribute is only for a top-level object."
             + " Call with operation=help to list operations, then operation=help and topic=<operation>"
@@ -230,9 +239,9 @@ public final class EditMetadataMcpTool
         property(parameters, "topic", "string", "Operation name for detailed help.");
         property(parameters, "project_name", "string", "Exact EDT workspace project name.");
         property(parameters, "object_name", "string", "Top-level FQN such as Catalog.Products. For a tabular-section attribute: Type.Object.Section.");
-        property(parameters, "name", "string", "Name of a child metadata element.");
+        property(parameters, "name", "string", "Identifier of the element being created or addressed: an attribute, tabular section, enum value, register field, form, template, form item, form attribute or form command. Always required by those operations, and never interchangeable with `title` — `title` is only the display text.");
         property(parameters, "new_name", "string", "New top-level object name for renameObject.");
-        property(parameters, "title", "string", "Russian synonym of a new object or child.");
+        property(parameters, "title", "string", "Display text (synonym) of a new object or child, in the language given by language_code. Never a substitute for `name`: pass both.");
         property(parameters, "property_name", "string", "Scalar EDT metadata property name.");
         property(parameters, "property_value", "string", "Scalar property value encoded as a string.");
         property(parameters, "type", "string", "String, Number, Boolean, Date, or a reference: CatalogRef.X, DocumentRef.X, EnumRef.X, ChartOfCharacteristicTypesRef.X, ChartOfAccountsRef.X, ChartOfCalculationTypesRef.X, BusinessProcessRef.X, TaskRef.X, ExchangePlanRef.X. The referenced object must already exist.");
@@ -251,6 +260,15 @@ public final class EditMetadataMcpTool
         property(parameters, "default_language_name", "string", "Name of the default language object. Optional; defaults from default_language_code (ru -> Русский, en -> English).");
         property(parameters, "version", "string", "Configuration version string, for example 1.0.0.1.");
         property(parameters, "vendor", "string", "Configuration vendor name.");
+        property(parameters, "data_path", "string", "Form data path a field binds to: a form attribute name, or a path inside it such as Объект.Наименование. inspectForm lists the valid paths.");
+        property(parameters, "parent", "string", "Name of the form group that receives a new or moved item. Omit for the form root.");
+        property(parameters, "position", "integer", "Zero-based index inside the parent container. Omit to append.");
+        property(parameters, "item_type", "string", "Concrete form field kind: InputField, CheckBoxField, LabelField, PictureField, SpreadsheetDocumentField, CalendarField, ChartField, and so on. Omit to let EDT derive it from the data path.");
+        property(parameters, "group_type", "string", "Form group kind: UsualGroup, Pages, Page, CommandBar, ButtonGroup, ColumnGroup, Popup. A Page must be added inside a Pages group.");
+        property(parameters, "command_name", "string", "Name of the existing form command a button runs.");
+        property(parameters, "handler", "string", "Name of the form-module procedure a form command calls. Defaults to the command name.");
+        property(parameters, "language_code", "string", "Language code of a multilingual property value such as synonym, title, listPresentation or objectPresentation. Defaults to ru.");
+        property(parameters, "main", "boolean", "Marks a new form attribute as the form's main attribute.");
         property(parameters, "dry_run", "boolean", "Validate and describe the mutation without applying it.");
         property(parameters, "verify", "boolean", "Post-mutation marker auto-check. Enabled by default: the response carries marker_count and the most important markers of the changed resource. Pass false only for bulk work where you will check markers yourself afterwards.");
         parameters.required = Arrays.asList("operation");
