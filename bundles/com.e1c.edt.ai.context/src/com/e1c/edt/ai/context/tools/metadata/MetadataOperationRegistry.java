@@ -36,7 +36,7 @@ public final class MetadataOperationRegistry
             "{\"operation\":\"inspectObject\",\"project_name\":\"MyProject\",\"object_name\":\"Document.Order\"}"); //$NON-NLS-1$
         add("createObject", "Creates any top-level object type listed by help topic=objectTypes.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name"), //$NON-NLS-1$ //$NON-NLS-2$
-            set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
+            set("title", "name", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             "{\"operation\":\"createObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"title\":\"Products\"}"); //$NON-NLS-1$
         add("setObjectProperty", //$NON-NLS-1$
             "Changes one property of an existing top-level object. Use object_name=Configuration to edit" //$NON-NLS-1$
@@ -52,6 +52,15 @@ public final class MetadataOperationRegistry
             set("project_name", "object_name", "property_name", "property_value"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             set("language_code", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
             "{\"operation\":\"setObjectProperty\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"property_name\":\"comment\",\"property_value\":\"Managed by AI\"}"); //$NON-NLS-1$
+        add("setScheduledJobSchedule", //$NON-NLS-1$
+            "Sets a ScheduledJob's persisted daily schedule. Use this operation instead of setObjectProperty:" //$NON-NLS-1$
+                + " schedule is a structured EDT model object, not an object reference or JSON scalar." //$NON-NLS-1$
+                + " begin_time is 24-hour HH:mm; days_repeat_period defaults to 1.", //$NON-NLS-1$
+            set("project_name", "object_name", "begin_time"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            set("days_repeat_period", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$
+            "{\"operation\":\"setScheduledJobSchedule\",\"project_name\":\"MyProject\"," //$NON-NLS-1$
+                + "\"object_name\":\"ScheduledJob.DailyJob\",\"begin_time\":\"07:00\"," //$NON-NLS-1$
+                + "\"days_repeat_period\":1}"); //$NON-NLS-1$
         add("renameObject", "Renames a top-level object using the EDT refactoring service.", //$NON-NLS-1$ //$NON-NLS-2$
             set("project_name", "object_name", "new_name"), set("dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
             "{\"operation\":\"renameObject\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.OldName\",\"new_name\":\"NewName\"}"); //$NON-NLS-1$
@@ -116,7 +125,9 @@ public final class MetadataOperationRegistry
             "Creates a generated form with a persisted Form.form body and makes it the owner's default form of that" //$NON-NLS-1$
                 + " kind when such a slot is free. form_type values: OBJECT, LIST, FOLDER, CHOICE, FOLDER_CHOICE," //$NON-NLS-1$
                 + " RECORD, RECORD_SET, REPORT, CONSTANTS, GENERIC, SEARCH, REPORT_SETTINGS, REPORT_VARIANT, SAVE," //$NON-NLS-1$
-                + " LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES.", //$NON-NLS-1$
+                + " LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES. Use GENERIC for a new" //$NON-NLS-1$
+                + " empty DataProcessor form (or any form you will assemble with addFormAttribute/addFormField/" //$NON-NLS-1$
+                + " addFormGroup/addFormCommand/addFormButton); GENERIC does not invoke EDT's layout generator.", //$NON-NLS-1$
             set("project_name", "object_name", "name", "form_type"), set("title", "dry_run"), //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$ //$NON-NLS-6$
             "{\"operation\":\"createObjectForm\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products\",\"name\":\"ItemForm\",\"form_type\":\"OBJECT\"}"); //$NON-NLS-1$
         add("removeObjectForm", "Removes an object form and its external Form.form body.", //$NON-NLS-1$ //$NON-NLS-2$
@@ -311,6 +322,10 @@ public final class MetadataOperationRegistry
                 errors.add("Unknown parameter `" + parameter + "` for operation `" + operation //$NON-NLS-1$ //$NON-NLS-2$
                     + "`. Valid parameters: " + String.join(", ", valid) + "."); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
             }
+        }
+        if (!errors.isEmpty())
+        {
+            errors.add("Correct example for operation `" + operation + "`: " + descriptor.example); //$NON-NLS-1$ //$NON-NLS-2$
         }
         return errors;
     }

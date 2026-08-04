@@ -95,12 +95,13 @@ public final class EditMetadataMcpTool
             throw new ToolException("Cannot parse arguments as JSON object.", e, ToolErrorType.RETRYABLE); //$NON-NLS-1$
         }
 
+        normalizeCommonModelArguments(arguments);
         var validationErrors = registry.validate(arguments);
         if (!validationErrors.isEmpty())
         {
             throw new ToolException(String.join("\n", validationErrors)); //$NON-NLS-1$
         }
-        var request = json.deserialize(call.function.arguments, MetadataRequest.class)
+        var request = json.deserialize(arguments.toString(), MetadataRequest.class)
             .orElseThrow(() -> new ToolException("Cannot deserialize metadata operation arguments.")); //$NON-NLS-1$
 
         // Run on a single-threaded FIFO executor, never the common pool. The model routinely emits a
@@ -114,6 +115,94 @@ public final class EditMetadataMcpTool
             details.responseMarkdown = "1C metadata operation completed"; //$NON-NLS-1$
             return messageFactory.createMessage(this, call, json.serialize(result), details);
         }, SEQUENTIAL_EXECUTOR);
+    }
+
+    public static void normalizeCommonModelArguments(JsonObject arguments)
+    {
+        var operationElement = arguments.get("operation"); //$NON-NLS-1$
+        var operation = operationElement != null && operationElement.isJsonPrimitive()
+            ? operationElement.getAsString() : ""; //$NON-NLS-1$
+        var objectNameElement = arguments.get("object_name"); //$NON-NLS-1$
+        if ("help".equals(operation)) //$NON-NLS-1$
+        {
+            for (var parameter : new ArrayList<>(arguments.keySet()))
+            {
+                if (!"operation".equals(parameter) && !"topic".equals(parameter) && !"verify".equals(parameter)) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+                {
+                    arguments.remove(parameter);
+                }
+            }
+        }
+        if ("inspectObject".equals(operation) && objectNameElement != null && objectNameElement.isJsonPrimitive() //$NON-NLS-1$
+            && objectNameElement.getAsString().contains(".Form.")) //$NON-NLS-1$
+        {
+            arguments.addProperty("operation", "inspectForm"); //$NON-NLS-1$ //$NON-NLS-2$
+            operation = "inspectForm"; //$NON-NLS-1$
+        }
+        else if ("inspectForm".equals(operation) && objectNameElement != null //$NON-NLS-1$
+            && objectNameElement.isJsonPrimitive() && !objectNameElement.getAsString().contains(".Form.")) //$NON-NLS-1$
+        {
+            arguments.addProperty("operation", "inspectObject"); //$NON-NLS-1$ //$NON-NLS-2$
+            operation = "inspectObject"; //$NON-NLS-1$
+        }
+        if ("setObjectProperty".equals(operation)) //$NON-NLS-1$
+        {
+            arguments.remove("name"); //$NON-NLS-1$
+            arguments.remove("title"); //$NON-NLS-1$
+            var propertyName = arguments.get("property_name"); //$NON-NLS-1$
+            if (propertyName != null && propertyName.isJsonPrimitive())
+            {
+                var value = propertyName.getAsString();
+                if (!value.isEmpty() && Character.isUpperCase(value.charAt(0)))
+                {
+                    arguments.addProperty("property_name", Character.toLowerCase(value.charAt(0)) //$NON-NLS-1$
+                        + value.substring(1));
+                }
+            }
+        }
+        if ("createObject".equals(operation)) //$NON-NLS-1$
+        {
+            arguments.remove("language_code"); //$NON-NLS-1$
+        }
+        if ("setChildProperty".equals(operation) && arguments.has("property_name") //$NON-NLS-1$ //$NON-NLS-2$
+            && "type".equals(arguments.get("property_name").getAsString()) && arguments.has("type")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            arguments.addProperty("operation", "setChildType"); //$NON-NLS-1$ //$NON-NLS-2$
+            arguments.remove("property_name"); //$NON-NLS-1$
+            arguments.remove("property_value"); //$NON-NLS-1$
+            arguments.remove("title"); //$NON-NLS-1$
+        }
+        if ("addFormCommand".equals(operation)) //$NON-NLS-1$
+        {
+            if (!arguments.has("name") && arguments.has("command_name")) //$NON-NLS-1$ //$NON-NLS-2$
+            {
+                arguments.add("name", arguments.remove("command_name")); //$NON-NLS-1$ //$NON-NLS-2$
+            }
+            arguments.remove("form_type"); //$NON-NLS-1$
+        }
+        if ("addFormButton".equals(operation) && !arguments.has("name") && arguments.has("command_name")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            arguments.add("name", arguments.get("command_name")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("removeFormAttribute".equals(operation) && !arguments.has("name") //$NON-NLS-1$ //$NON-NLS-2$
+            && arguments.has("property_name")) //$NON-NLS-1$
+        {
+            arguments.add("name", arguments.remove("property_name")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("addFormField".equals(operation) && !arguments.has("data_path") && arguments.has("dataPath")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            arguments.add("data_path", arguments.remove("dataPath")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
+        if ("addFormField".equals(operation) && !arguments.has("name") && arguments.has("data_path")) //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        {
+            var dataPath = arguments.get("data_path").getAsString(); //$NON-NLS-1$
+            var separator = dataPath.lastIndexOf('.');
+            var inferredName = separator >= 0 ? dataPath.substring(separator + 1) : dataPath;
+            if (!inferredName.isBlank())
+            {
+                arguments.addProperty("name", inferredName); //$NON-NLS-1$
+            }
+        }
     }
 
     /**
@@ -253,6 +342,8 @@ public final class EditMetadataMcpTool
         property(parameters, "related_object_name", "string", "FQN of a related object, for example AccumulationRegister.Stock.");
         property(parameters, "form_type", "string", "Generated form type. Common: OBJECT (object form), LIST (list form), FOLDER (group form), CHOICE (choice form), FOLDER_CHOICE, RECORD (record form), RECORD_SET (record set form), REPORT, CONSTANTS, GENERIC (arbitrary form). Also supported: SEARCH, REPORT_SETTINGS, REPORT_VARIANT, SAVE, LOAD, DYNAMIC_LIST, CHANGE_HISTORY, VERSION_DATA, VERSION_DIFFERENCES. Pick the type matching the owner: a catalog with groups supports FOLDER and FOLDER_CHOICE, a register supports RECORD_SET and LIST.");
         property(parameters, "template_type", "string", "Template body type. Creatable empty: SPREADSHEET_DOCUMENT (mxl layout), DATA_COMPOSITION_SCHEMA, DATA_COMPOSITION_APPEARANCE_TEMPLATE, HTML_DOCUMENT. The response reports the created body file in details.body_path; an HTML body can then be filled with the Edit tool. TEXT_DOCUMENT, BINARY_DATA, ADD_IN, ACTIVE_DOCUMENT, GRAPHICAL_SCHEMA and GEOGRAPHICAL_SCHEMA wrap external content and cannot be created empty.");
+        property(parameters, "begin_time", "string", "Daily scheduled-job start time in 24-hour HH:mm format, for example 07:00.");
+        property(parameters, "days_repeat_period", "integer", "Number of days between scheduled-job runs; defaults to 1.");
         property(parameters, "platform_version", "string", "Runtime 1C platform version of a new configuration, for example 8.3.24.");
         property(parameters, "compatibility_mode", "string", "Configuration compatibility mode, for example 8.3.24. Defaults to platform_version.");
         property(parameters, "script_variant", "string", "Built-in language variant of a new configuration: English or Russian.");

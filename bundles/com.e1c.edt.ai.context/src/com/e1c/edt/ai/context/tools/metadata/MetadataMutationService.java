@@ -5,6 +5,8 @@ package com.e1c.edt.ai.context.tools.metadata;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -57,8 +59,10 @@ import com._1c.g5.v8.dt.metadata.mdclass.MdClassFactory;
 import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
 import com._1c.g5.v8.dt.metadata.mdclass.MdClassPackage;
 import com._1c.g5.v8.dt.metadata.mdclass.Report;
+import com._1c.g5.v8.dt.metadata.mdclass.ScheduledJob;
 import com._1c.g5.v8.dt.metadata.mdclass.Template;
 import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;
+import com._1c.g5.v8.dt.schedule.model.ScheduleFactory;
 import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 import com.e1c.edt.ai.ICancellationToken;
 import com.e1c.edt.ai.IEditingSupport;
@@ -191,6 +195,9 @@ final class MetadataMutationService
             break;
         case "setObjectProperty": //$NON-NLS-1$
             response = setObjectProperty(project, request);
+            break;
+        case "setScheduledJobSchedule": //$NON-NLS-1$
+            response = setScheduledJobSchedule(project, request);
             break;
         case "renameObject": //$NON-NLS-1$
             response = renameObject(project, request);
@@ -1063,28 +1070,40 @@ final class MetadataMutationService
                     return null;
                 }
                 forms.add(formMetadata);
-                var v8Project = v8ProjectManager.getProject(project);
-                if (v8Project == null)
-                {
-                    throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
-                }
-                var scriptVariant = v8Project.getScriptVariant();
-                var version = v8Project.getVersion();
-                var languageCode = editingLanguageManager.getEditingLanguageCode(project);
-                var rootField = generatorFields(owner, formType, scriptVariant, version);
                 Form form;
-                try
+                if (formType == FormType.GENERIC)
                 {
-                    form = formGenerator.generateForm(owner, formMetadata, formType, scriptVariant,
-                        languageCode, version, rootField, Integer.valueOf(1));
+                    // A generic form intentionally has no generated layout: callers build its attributes,
+                    // commands, and items through the declarative form operations. Creating its body directly
+                    // also keeps this operation compatible with EDT installations whose IFormGenerator service
+                    // has a different binary signature than the version used to compile this bundle.
+                    form = FormFactory.eINSTANCE.createForm();
                 }
-                catch (RuntimeException e)
+                else
                 {
-                    throw new ToolException("EDT could not generate a " + formType.name() + " form for " //$NON-NLS-1$ //$NON-NLS-2$
-                        + request.objectName + ": " + rootCause(e) //$NON-NLS-1$
-                        + ". Check that form_type matches the owner (a report and a data processor take" //$NON-NLS-1$
-                        + " REPORT or GENERIC, a register takes RECORD_SET or LIST), and that the owner's" //$NON-NLS-1$
-                        + " attributes are valid.", e, ToolErrorType.USER_VISIBLE); //$NON-NLS-1$
+                    var v8Project = v8ProjectManager.getProject(project);
+                    if (v8Project == null)
+                    {
+                        throw new ToolException("V8 project is not available: " + project.getName()); //$NON-NLS-1$
+                    }
+                    var scriptVariant = v8Project.getScriptVariant();
+                    var version = v8Project.getVersion();
+                    var languageCode = editingLanguageManager.getEditingLanguageCode(project);
+                    var rootField = generatorFields(owner, formType, scriptVariant, version);
+                    try
+                    {
+                        form = formGenerator.generateForm(owner, formMetadata, formType, scriptVariant,
+                            languageCode, version, rootField, Integer.valueOf(1));
+                    }
+                    catch (RuntimeException | LinkageError e)
+                    {
+                        throw new ToolException("EDT could not generate a " + formType.name() + " form for " //$NON-NLS-1$ //$NON-NLS-2$
+                            + request.objectName + ": " + rootCause(e) //$NON-NLS-1$
+                            + ". Check that form_type matches the owner (a report and a data processor take" //$NON-NLS-1$
+                            + " REPORT or GENERIC, a register takes RECORD_SET or LIST), and that the owner's" //$NON-NLS-1$
+                            + " attributes are valid. For an empty form that will be assembled with addForm*" //$NON-NLS-1$
+                            + " operations, use form_type GENERIC.", e, ToolErrorType.USER_VISIBLE); //$NON-NLS-1$
+                    }
                 }
                 if (form == null)
                 {
@@ -2381,6 +2400,71 @@ final class MetadataMutationService
             }
         });
         var response = MetadataResponse.success(request, request.objectName, changed[0]);
+        response.details = details;
+        return response;
+    }
+
+    private MetadataResponse setScheduledJobSchedule(IProject project, MetadataRequest request)
+    {
+        final LocalTime beginTime;
+        try
+        {
+            beginTime = LocalTime.parse(request.beginTime);
+        }
+        catch (RuntimeException e)
+        {
+            throw new ToolException("Invalid `begin_time` `" + request.beginTime //$NON-NLS-1$
+                + "`. Use 24-hour HH:mm, for example 07:00."); //$NON-NLS-1$
+        }
+        int days = request.daysRepeatPeriod == null ? 1 : request.daysRepeatPeriod.intValue();
+        if (days < 1)
+        {
+            throw new ToolException("`days_repeat_period` must be at least 1."); //$NON-NLS-1$
+        }
+        boolean[] changed = { false };
+        model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Set scheduled-job schedule") //$NON-NLS-1$
+        {
+            @Override
+            public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
+            {
+                var object = requireObject(transaction, request.objectName);
+                if (!(object instanceof ScheduledJob))
+                {
+                    throw new ToolException("setScheduledJobSchedule requires object_name=ScheduledJob.Name."); //$NON-NLS-1$
+                }
+                var job = (ScheduledJob)object;
+                var current = job.getSchedule();
+                var time = java.util.Date.from(beginTime.atDate(java.time.LocalDate.of(1970, 1, 1))
+                    .toInstant(ZoneOffset.UTC));
+                if (current != null && current.getDaysRepeatPeriod() == days
+                    && time.equals(current.getBeginTime()))
+                {
+                    return null;
+                }
+                changed[0] = true;
+                if (request.dryRun)
+                {
+                    return null;
+                }
+                if (current instanceof IBmObject && ((IBmObject)current).bmIsTop()
+                    && ((IBmObject)current).bmGetNamespace() != null)
+                {
+                    transaction.detachTopObject((IBmObject)current);
+                }
+                var schedule = ScheduleFactory.eINSTANCE.createSchedule();
+                schedule.setBeginTime(time);
+                schedule.setDaysRepeatPeriod(days);
+                job.setSchedule(schedule);
+                var scheduleReference = (EReference)job.eClass().getEStructuralFeature("schedule"); //$NON-NLS-1$
+                var scheduleFqn = fqnGenerator.generateExternalPropertyFqn(job, scheduleReference);
+                transaction.attachTopObject((IBmObject)schedule, scheduleFqn);
+                return null;
+            }
+        });
+        var response = MetadataResponse.success(request, request.objectName, changed[0]);
+        var details = new LinkedHashMap<String, Object>();
+        details.put("begin_time", request.beginTime); //$NON-NLS-1$
+        details.put("days_repeat_period", Integer.valueOf(days)); //$NON-NLS-1$
         response.details = details;
         return response;
     }

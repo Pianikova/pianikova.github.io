@@ -73,6 +73,14 @@ final class MetadataRequest
     @SerializedName("template_type")
     String templateType;
 
+    /** Daily scheduled-job start time in 24-hour HH:mm format. */
+    @SerializedName("begin_time")
+    String beginTime;
+
+    /** Number of days between scheduled-job runs. */
+    @SerializedName("days_repeat_period")
+    Integer daysRepeatPeriod;
+
     /** Form data path of a field, for example {@code Объект.Наименование}. */
     @SerializedName("data_path")
     String dataPath;
