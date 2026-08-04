@@ -250,6 +250,25 @@ public final class MetadataOperationRegistry
         add("removeFormCommand", "Removes a form command and every button bound to it.",
             union(form, set("name")), set("dry_run"),
             "{\"operation\":\"removeFormCommand\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"ЗаполнитьПоУмолчанию\"}");
+        add("addFormEventHandler",
+            "Attaches an event handler (обработчик события) to the form itself, or to one of its fields or"
+                + " tables when `name` is given. `event` is the event name in English or Russian, for example"
+                + " OnChange/ПриИзменении, OnCreateAtServer/ПриСозданииНаСервере,"
+                + " OnActivateRow/ПриАктивизацииСтроки. Groups, buttons, form attributes and tabular-section"
+                + " columns have no events of their own; call inspectForm first to see what a field or table"
+                + " already has wired. A wrong `event` is rejected with the exact list this element supports."
+                + " `handler` defaults to <name><event in Russian> for an item, or the event name itself for"
+                + " the form. The response reports the module file in details.handler_module_path and the"
+                + " required directive in details.side: write the procedure there with Write/Edit. Until then"
+                + " the form keeps an error marker about the missing handler.",
+            union(form, set("event")), set("name", "handler", "dry_run"),
+            "{\"operation\":\"addFormEventHandler\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Наименование\",\"event\":\"OnChange\"}");
+        add("removeFormEventHandler",
+            "Removes an event handler from the form itself, or from one of its fields or tables when `name`"
+                + " is given. The handler procedure itself is left in the module; remove it separately with"
+                + " Delete/Edit if it is now unused.",
+            union(form, set("event")), set("name", "dry_run"),
+            "{\"operation\":\"removeFormEventHandler\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Наименование\",\"event\":\"OnChange\"}");
         add("removeFormItem", "Removes a field, group, button or table from a form, with its children.",
             union(form, set("name")), set("dry_run"),
             "{\"operation\":\"removeFormItem\",\"project_name\":\"MyProject\",\"object_name\":\"Catalog.Products.Form.ItemForm\",\"name\":\"Комментарий\"}");

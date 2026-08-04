@@ -1033,6 +1033,7 @@ final class MetadataMutationService
             && ("Report".equals(ownerType) || "ExternalReport".equals(ownerType)) //$NON-NLS-1$ //$NON-NLS-2$
                 ? FormType.REPORT : requestedType;
         boolean[] changed = { false };
+        var warnings = new java.util.ArrayList<String>();
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Create generated 1C object form") //$NON-NLS-1$
         {
             @Override
@@ -1078,6 +1079,17 @@ final class MetadataMutationService
                     // also keeps this operation compatible with EDT installations whose IFormGenerator service
                     // has a different binary signature than the version used to compile this bundle.
                     form = FormFactory.eINSTANCE.createForm();
+                    // Unlike OBJECT/RECORD/RECORD_SET, GENERIC skips EDT's generator entirely, so there is no
+                    // main "Объект"-style attribute yet. addFormField then fails on Объект.<Name> with a raw
+                    // EDT NullPointerException until that attribute is added by hand; said here up front, it
+                    // is cheaper than discovering it after a failed addFormField.
+                    warnings.add("This GENERIC form starts completely empty: it has no main object attribute" //$NON-NLS-1$
+                        + " the way OBJECT/RECORD/RECORD_SET forms do. To bind fields to the owner's own" //$NON-NLS-1$
+                        + " attributes (for example Объект.Комментарий), first add that attribute yourself, for" //$NON-NLS-1$
+                        + " example addFormAttribute name=Объект type=" + ownerType + "Object." + owner.getName() //$NON-NLS-1$ //$NON-NLS-2$
+                        + " main=true (use the produced type this owner actually has — inspectObject or help" //$NON-NLS-1$
+                        + " topic=objectTypes shows it — for example RecordSet instead of Object for a" //$NON-NLS-1$
+                        + " register)."); //$NON-NLS-1$
                 }
                 else
                 {
@@ -1120,7 +1132,9 @@ final class MetadataMutationService
                 return null;
             }
         });
-        return MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+        var response = MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
+        response.warnings.addAll(warnings);
+        return response;
     }
 
     /**

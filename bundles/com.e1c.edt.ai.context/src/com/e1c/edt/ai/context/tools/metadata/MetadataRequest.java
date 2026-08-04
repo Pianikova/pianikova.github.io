@@ -106,6 +106,9 @@ final class MetadataRequest
     /** Name of the form-module procedure a form command calls. */
     String handler;
 
+    /** Event name (English or Russian) for addFormEventHandler/removeFormEventHandler. */
+    String event;
+
     /** Language code of a multilingual property value; defaults to {@code ru}. */
     @SerializedName("language_code")
     String languageCode;

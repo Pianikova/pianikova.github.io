@@ -172,6 +172,33 @@ public final class EditMetadataMcpTool
             arguments.remove("property_value"); //$NON-NLS-1$
             arguments.remove("title"); //$NON-NLS-1$
         }
+        if ("setFormItemProperty".equals(operation) && arguments.has("property_name") //$NON-NLS-1$ //$NON-NLS-2$
+            && "handlers".equalsIgnoreCase(arguments.get("property_name").getAsString()) //$NON-NLS-1$ //$NON-NLS-2$
+            && arguments.has("property_value")) //$NON-NLS-1$
+        {
+            // A form field/table/form's event handlers are a collection (Event -> handler name), not a
+            // scalar; the model routinely still tries to write it as one via setFormItemProperty. Redirect
+            // to the dedicated operation instead of surfacing a dead-end "not a scalar" error, accepting
+            // both `"OnChange"` and `"OnChange:MyHandler"` as the property_value shape.
+            var value = arguments.get("property_value").getAsString(); //$NON-NLS-1$
+            var separator = value.indexOf(':');
+            var eventName = (separator >= 0 ? value.substring(0, separator) : value).trim();
+            var handlerName = separator >= 0 ? value.substring(separator + 1).trim() : null;
+            arguments.addProperty("operation", "addFormEventHandler"); //$NON-NLS-1$ //$NON-NLS-2$
+            arguments.remove("property_name"); //$NON-NLS-1$
+            arguments.remove("property_value"); //$NON-NLS-1$
+            arguments.addProperty("event", eventName); //$NON-NLS-1$
+            if (handlerName != null && !handlerName.isBlank())
+            {
+                arguments.addProperty("handler", handlerName); //$NON-NLS-1$
+            }
+            operation = "addFormEventHandler"; //$NON-NLS-1$
+        }
+        if (("addFormEventHandler".equals(operation) || "removeFormEventHandler".equals(operation)) //$NON-NLS-1$ //$NON-NLS-2$
+            && !arguments.has("event") && arguments.has("event_name")) //$NON-NLS-1$ //$NON-NLS-2$
+        {
+            arguments.add("event", arguments.remove("event_name")); //$NON-NLS-1$ //$NON-NLS-2$
+        }
         if ("addFormCommand".equals(operation)) //$NON-NLS-1$
         {
             if (!arguments.has("name") && arguments.has("command_name")) //$NON-NLS-1$ //$NON-NLS-2$
@@ -287,8 +314,11 @@ public final class EditMetadataMcpTool
             + " createObject supports every top-level object type returned by help topic=objectTypes."
             + " The content of an existing form is editable too: inspectForm reads its attributes,"
             + " commands and item tree, and addFormAttribute/addFormField/addFormGroup/addFormButton/"
-            + "addFormCommand/moveFormItem/setFormItemProperty change it. Those operations take the form"
-            + " FQN in object_name (Catalog.Products.Form.ItemForm, or CommonForm.Settings)."
+            + "addFormCommand/addFormEventHandler/moveFormItem/setFormItemProperty change it. Those"
+            + " operations take the form FQN in object_name (Catalog.Products.Form.ItemForm, or"
+            + " CommonForm.Settings). addFormEventHandler wires an event (OnChange, OnCreateAtServer, ...)"
+            + " on the form itself or on one of its fields/tables to a module procedure; a form command"
+            + " (addFormCommand) is for a button/menu action instead, not a field event."
             + " Never try to edit a Form.form file with Write or Edit: EDT locks it, and these operations"
             + " are the supported way in."
             + " A multilingual property (synonym, title, listPresentation, objectPresentation,"
@@ -357,7 +387,8 @@ public final class EditMetadataMcpTool
         property(parameters, "item_type", "string", "Concrete form field kind: InputField, CheckBoxField, LabelField, PictureField, SpreadsheetDocumentField, CalendarField, ChartField, and so on. Omit to let EDT derive it from the data path.");
         property(parameters, "group_type", "string", "Form group kind: UsualGroup, Pages, Page, CommandBar, ButtonGroup, ColumnGroup, Popup. A Page must be added inside a Pages group.");
         property(parameters, "command_name", "string", "Name of the existing form command a button runs.");
-        property(parameters, "handler", "string", "Name of the form-module procedure a form command calls. Defaults to the command name.");
+        property(parameters, "handler", "string", "Name of the form-module procedure a form command or event handler calls. Defaults to the command name for addFormCommand, or to <name><event in Russian> for addFormEventHandler.");
+        property(parameters, "event", "string", "Event name (English or Russian) for addFormEventHandler/removeFormEventHandler, for example OnChange or ПриИзменении. inspectForm lists the handlers already wired; a wrong value is rejected with the exact list this form/field/table supports.");
         property(parameters, "language_code", "string", "Language code of a multilingual property value such as synonym, title, listPresentation or objectPresentation. Defaults to ru.");
         property(parameters, "main", "boolean", "Marks a new form attribute as the form's main attribute.");
         property(parameters, "dry_run", "boolean", "Validate and describe the mutation without applying it.");

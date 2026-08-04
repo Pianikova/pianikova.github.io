@@ -21,6 +21,8 @@ import com._1c.g5.v8.dt.core.platform.IBmModelManager;
 import com._1c.g5.v8.dt.core.platform.IV8ProjectManager;
 import com._1c.g5.v8.dt.form.model.AbstractDataPath;
 import com._1c.g5.v8.dt.form.model.Button;
+import com._1c.g5.v8.dt.form.model.EventHandler;
+import com._1c.g5.v8.dt.form.model.EventHandlerContainer;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormAttribute;
 import com._1c.g5.v8.dt.form.model.FormCommand;
@@ -30,19 +32,23 @@ import com._1c.g5.v8.dt.form.model.FormGroup;
 import com._1c.g5.v8.dt.form.model.FormItem;
 import com._1c.g5.v8.dt.form.model.FormItemContainer;
 import com._1c.g5.v8.dt.form.model.FormParameter;
+import com._1c.g5.v8.dt.form.model.FormVisualEntity;
 import com._1c.g5.v8.dt.form.model.ManagedFormFieldType;
 import com._1c.g5.v8.dt.form.model.ManagedFormGroupType;
 import com._1c.g5.v8.dt.form.model.Table;
 import com._1c.g5.v8.dt.form.model.Titled;
 import com._1c.g5.v8.dt.form.service.FormIdentifierService;
+import com._1c.g5.v8.dt.form.service.FormItemInformationService;
 import com._1c.g5.v8.dt.form.service.item.FormNewItemDescriptor;
 import com._1c.g5.v8.dt.form.service.item.IFormItemManagementService;
 import com._1c.g5.v8.dt.form.service.item.IFormItemMovementService;
 import com._1c.g5.v8.dt.form.service.item.IFormItemTypeManagementService;
 import com._1c.g5.v8.dt.mcore.Command;
+import com._1c.g5.v8.dt.mcore.Event;
 import com._1c.g5.v8.dt.mcore.NamedElement;
 import com._1c.g5.v8.dt.mcore.TypeDescription;
 import com._1c.g5.v8.dt.mcore.TypeItem;
+import com._1c.g5.v8.dt.mcore.util.Environments;
 import com._1c.g5.v8.dt.metadata.mdclass.BasicForm;
 import com._1c.g5.v8.dt.metadata.mdclass.MdClassFactory;
 import com._1c.g5.v8.dt.metadata.mdclass.MdObject;
@@ -69,12 +75,13 @@ final class FormMutationService
     private final IFormItemManagementService itemManagementService;
     private final IFormItemMovementService itemMovementService;
     private final IFormItemTypeManagementService itemTypeManagementService;
+    private final FormItemInformationService itemInformationService;
 
     @Inject
     FormMutationService(IBmModelManager modelManager, ITopObjectFqnGenerator fqnGenerator,
         IV8ProjectManager v8ProjectManager, MetadataTypeService typeService,
         IFormItemManagementService itemManagementService, IFormItemMovementService itemMovementService,
-        IFormItemTypeManagementService itemTypeManagementService)
+        IFormItemTypeManagementService itemTypeManagementService, FormItemInformationService itemInformationService)
     {
         Preconditions.checkNotNull(modelManager);
         Preconditions.checkNotNull(fqnGenerator);
@@ -83,6 +90,7 @@ final class FormMutationService
         Preconditions.checkNotNull(itemManagementService);
         Preconditions.checkNotNull(itemMovementService);
         Preconditions.checkNotNull(itemTypeManagementService);
+        Preconditions.checkNotNull(itemInformationService);
         this.modelManager = modelManager;
         this.fqnGenerator = fqnGenerator;
         this.v8ProjectManager = v8ProjectManager;
@@ -90,12 +98,14 @@ final class FormMutationService
         this.itemManagementService = itemManagementService;
         this.itemMovementService = itemMovementService;
         this.itemTypeManagementService = itemTypeManagementService;
+        this.itemInformationService = itemInformationService;
     }
 
     /** Operations this service handles; {@code object_name} is always a form FQN. */
     static final java.util.Set<String> OPERATIONS = java.util.Set.of("inspectForm", "addFormAttribute", //$NON-NLS-1$ //$NON-NLS-2$
         "removeFormAttribute", "addFormField", "addFormGroup", "addFormButton", "addFormCommand", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
-        "removeFormCommand", "removeFormItem", "moveFormItem", "setFormItemProperty", "setFormProperty"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+        "removeFormCommand", "addFormEventHandler", "removeFormEventHandler", "removeFormItem", "moveFormItem", //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$ //$NON-NLS-5$
+        "setFormItemProperty", "setFormProperty"); //$NON-NLS-1$ //$NON-NLS-2$
 
     MetadataResponse execute(IProject project, MetadataRequest request)
     {
@@ -117,6 +127,10 @@ final class FormMutationService
             return addFormCommand(project, request);
         case "removeFormCommand": //$NON-NLS-1$
             return removeFormCommand(project, request);
+        case "addFormEventHandler": //$NON-NLS-1$
+            return addFormEventHandler(project, request);
+        case "removeFormEventHandler": //$NON-NLS-1$
+            return removeFormEventHandler(project, request);
         case "removeFormItem": //$NON-NLS-1$
             return removeFormItem(project, request);
         case "moveFormItem": //$NON-NLS-1$
@@ -169,6 +183,16 @@ final class FormMutationService
             }
             result.put("commands", commands); //$NON-NLS-1$
 
+            var formHandlers = new ArrayList<Object>();
+            for (var handler : form.getHandlers())
+            {
+                var item = new LinkedHashMap<String, Object>();
+                item.put("event", eventLabel(handler.getEvent())); //$NON-NLS-1$
+                item.put("handler", handler.getName()); //$NON-NLS-1$
+                formHandlers.add(item);
+            }
+            result.put("handlers", formHandlers); //$NON-NLS-1$
+
             var parameters = new ArrayList<Object>();
             for (FormParameter parameter : form.getParameters())
             {
@@ -219,6 +243,21 @@ final class FormMutationService
             if (item instanceof Titled)
             {
                 described.put("title", localized(((Titled)item).getTitle())); //$NON-NLS-1$
+            }
+            if (item instanceof EventHandlerContainer)
+            {
+                var handlers = new ArrayList<Object>();
+                for (var handler : ((EventHandlerContainer)item).getHandlers())
+                {
+                    var h = new LinkedHashMap<String, Object>();
+                    h.put("event", eventLabel(handler.getEvent())); //$NON-NLS-1$
+                    h.put("handler", handler.getName()); //$NON-NLS-1$
+                    handlers.add(h);
+                }
+                if (!handlers.isEmpty())
+                {
+                    described.put("handlers", handlers); //$NON-NLS-1$
+                }
             }
             if (item instanceof FormItemContainer)
             {
@@ -536,6 +575,178 @@ final class FormMutationService
         var response = MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
         response.warnings.addAll(warnings);
         return response;
+    }
+
+    // ----------------------------------------------------------- event handlers
+
+    private MetadataResponse addFormEventHandler(IProject project, MetadataRequest request)
+    {
+        if (request.event == null || request.event.isBlank())
+        {
+            throw new ToolException("Parameter `event` is required, for example OnChange or ПриИзменении."); //$NON-NLS-1$
+        }
+        boolean[] changed = { false };
+        var details = new LinkedHashMap<String, Object>();
+        var warnings = new ArrayList<String>();
+        var modulePath = MetadataMutationService.formModulePath(project, request.objectName);
+        write(project, request, "Add 1C form event handler", (transaction, form) -> { //$NON-NLS-1$
+            var target = eventTarget(form, request.name);
+            var event = findEvent(target, request.event);
+            var existing = existingHandler(target, event);
+            if (existing != null)
+            {
+                throw new ToolException("Event `" + eventLabel(event) + "` on " //$NON-NLS-1$ //$NON-NLS-2$
+                    + (request.name == null ? "the form" : request.name) + " already has handler `" //$NON-NLS-1$ //$NON-NLS-2$
+                    + existing.getName() + "`. Call removeFormEventHandler first to replace it."); //$NON-NLS-1$
+            }
+            var handlerName = request.handler != null && !request.handler.isBlank() ? request.handler
+                : defaultHandlerName(request.name, event);
+            validateIdentifier(handlerName, "handler"); //$NON-NLS-1$
+            changed[0] = true;
+            details.put("event", eventLabel(event)); //$NON-NLS-1$
+            details.put("handler", handlerName); //$NON-NLS-1$
+            details.put("handler_module_path", modulePath); //$NON-NLS-1$
+            details.put("side", directiveHint(event)); //$NON-NLS-1$
+            // A 1C event handler must have its procedure, so until the BSL exists the form carries an error
+            // marker; said only in details it gets skipped, so it goes into a warning as well.
+            warnings.add("The event handler is not complete until its handler exists: write the procedure `" //$NON-NLS-1$
+                + handlerName + "` into " + modulePath + " with the Write or Edit tool, marked " //$NON-NLS-1$ //$NON-NLS-2$
+                + directiveHint(event) + ", with the parameters this event requires (EDT content assist on the" //$NON-NLS-1$
+                + " procedure header lists them). Until then the form has an error marker about the missing" //$NON-NLS-1$
+                + " handler."); //$NON-NLS-1$
+            if (request.dryRun)
+            {
+                return null;
+            }
+            var handler = FormFactory.eINSTANCE.createEventHandler();
+            handler.setEvent(event);
+            handler.setName(handlerName);
+            target.getHandlers().add(handler);
+            return null;
+        });
+        var response = MetadataResponse.success(request,
+            request.objectName + (request.name == null || request.name.isBlank() ? "" : "." + request.name), //$NON-NLS-1$ //$NON-NLS-2$
+            changed[0]);
+        response.details = details;
+        response.warnings.addAll(warnings);
+        return response;
+    }
+
+    private MetadataResponse removeFormEventHandler(IProject project, MetadataRequest request)
+    {
+        if (request.event == null || request.event.isBlank())
+        {
+            throw new ToolException("Parameter `event` is required, for example OnChange or ПриИзменении."); //$NON-NLS-1$
+        }
+        boolean[] changed = { false };
+        write(project, request, "Remove 1C form event handler", (transaction, form) -> { //$NON-NLS-1$
+            var target = eventTarget(form, request.name);
+            var event = findEvent(target, request.event);
+            var existing = existingHandler(target, event);
+            if (existing == null)
+            {
+                throw new ToolException("Event `" + eventLabel(event) + "` on " //$NON-NLS-1$ //$NON-NLS-2$
+                    + (request.name == null ? "the form" : request.name) + " has no handler."); //$NON-NLS-1$
+            }
+            changed[0] = true;
+            if (!request.dryRun)
+            {
+                EcoreUtil.delete(existing, true);
+            }
+            return null;
+        });
+        return MetadataResponse.success(request,
+            request.objectName + (request.name == null || request.name.isBlank() ? "" : "." + request.name), //$NON-NLS-1$ //$NON-NLS-2$
+            changed[0]);
+    }
+
+    /** Resolves what {@code name} (or the form itself, when absent) addresses for an event operation. */
+    private static EventHandlerContainer eventTarget(Form form, String name)
+    {
+        if (name == null || name.isBlank())
+        {
+            return form;
+        }
+        var item = findItem(form, name);
+        if (item instanceof EventHandlerContainer)
+        {
+            return (EventHandlerContainer)item;
+        }
+        if (item != null)
+        {
+            throw new ToolException("Form item `" + name + "` is a " + item.eClass().getName() //$NON-NLS-1$ //$NON-NLS-2$
+                + " and has no events of its own. Only fields and tables do; omit `name` to attach the" //$NON-NLS-1$
+                + " handler to the form itself."); //$NON-NLS-1$
+        }
+        if (findAttribute(form, name) != null)
+        {
+            throw new ToolException("Form attribute `" + name + "` has no events of its own." //$NON-NLS-1$ //$NON-NLS-2$
+                + " Only the form itself, its fields and its tables do."); //$NON-NLS-1$
+        }
+        throw new ToolException("Form item not found: " + name //$NON-NLS-1$
+            + ". Call inspectForm to list the item tree, or omit `name` to target the form itself."); //$NON-NLS-1$
+    }
+
+    private Event findEvent(EventHandlerContainer target, String requested)
+    {
+        var allowed = itemInformationService.getAllowedEvents((FormVisualEntity)target);
+        var normalized = requested.trim();
+        for (var event : allowed)
+        {
+            if (normalized.equalsIgnoreCase(event.getName()) || normalized.equalsIgnoreCase(event.getNameRu()))
+            {
+                return event;
+            }
+        }
+        var names = new ArrayList<String>();
+        for (var event : allowed)
+        {
+            names.add(eventLabel(event));
+        }
+        java.util.Collections.sort(names);
+        throw new ToolException("Unknown event `" + requested + "`. Valid events: " //$NON-NLS-1$ //$NON-NLS-2$
+            + (names.isEmpty() ? "none" : String.join(", ", names)) + "."); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+    }
+
+    private static EventHandler existingHandler(EventHandlerContainer target, Event event)
+    {
+        for (var handler : target.getHandlers())
+        {
+            if (handler.getEvent() == event)
+            {
+                return handler;
+            }
+        }
+        return null;
+    }
+
+    private static String defaultHandlerName(String itemName, Event event)
+    {
+        var suffix = event.getNameRu() != null && !event.getNameRu().isBlank() ? event.getNameRu() : event.getName();
+        return itemName == null || itemName.isBlank() ? suffix : itemName + suffix;
+    }
+
+    private static String eventLabel(Event event)
+    {
+        return event.getNameRu() != null && !event.getNameRu().isBlank()
+            ? event.getName() + " (" + event.getNameRu() + ")" : event.getName(); //$NON-NLS-1$ //$NON-NLS-2$
+    }
+
+    /** Which BSL directive the handler procedure needs, derived from the event's runtime environments. */
+    private static String directiveHint(Event event)
+    {
+        var environments = event.environments();
+        boolean server = environments.containsAny(Environments.ALL_SERVERS);
+        boolean client = environments.containsAny(Environments.ALL_CLIENTS);
+        if (server && !client)
+        {
+            return "&AtServer (&НаСервере)"; //$NON-NLS-1$
+        }
+        if (client && !server)
+        {
+            return "&AtClient (&НаКлиенте)"; //$NON-NLS-1$
+        }
+        return "&AtClient (&НаКлиенте) or &AtServer (&НаСервере), matching where this event runs"; //$NON-NLS-1$
     }
 
     // ------------------------------------------------------------- properties
