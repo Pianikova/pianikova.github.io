@@ -56,8 +56,6 @@ public class Messages
     public static String GlobDepth;
     public static String GlobFilesFound;
     public static String GlobDirectoriesFound;
-    public static String ListTitleTemplate;
-    public static String ListTemplate;
     public static String GitCommitsTitleTemplate;
     public static String GitCommitsFoundTemplate;
     public static String CommitsList;
