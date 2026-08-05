@@ -114,6 +114,12 @@ public class GlobMcpTool
         // Increase depth for patterns with ** to support deeper searches
         var depth = (pattern.contains("**") && userDepth < 10) ? 10 : userDepth;
 
+        var ignorePatterns = new HashSet<>(ListMcpTool.IGNORE_PATTERNS);
+        if (request.ignore != null && !request.ignore.isEmpty())
+        {
+            ignorePatterns.addAll(request.ignore);
+        }
+
 		if (call.callKind == ToolCallKind.RENDER)
 		{
             var patternDisplay = request.pattern != null ? markdownUtils.escapeForMarkdown(request.pattern)
@@ -142,12 +148,12 @@ public class GlobMcpTool
 		{
                 var relevantPaths = new HashSet<String>();
                 ITreeBuilder treeBuilder = treeBuilderProvider.get();
-                scanDirectory(baseDir.toPath(), baseDir.toPath(), pattern, depth, 0, result, relevantPaths, cancellationToken, LIMIT);
+                scanDirectory(baseDir.toPath(), baseDir.toPath(), pattern, ignorePatterns, depth, 0, result, relevantPaths, cancellationToken, LIMIT);
                 if (!relevantPaths.isEmpty())
                 {
                     relevantPaths.add(baseDir.getAbsolutePath());
                 }
-		scanDirectoryForTree(baseDir.toPath(), baseDir.toPath(), pattern, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
+		scanDirectoryForTree(baseDir.toPath(), baseDir.toPath(), pattern, ignorePatterns, depth, 0, result, relevantPaths, treeBuilder, cancellationToken);
 		result.tree = treeBuilder.build();
 
                 result.items.sort((a, b) -> Long.compare(b.modified, a.modified));
@@ -171,8 +177,9 @@ public class GlobMcpTool
 	}
 
     @SuppressWarnings("nls")
-    private void scanDirectory(Path baseDir, Path dir, String pattern, int maxDepth, int currentDepth, Result result,
-        Set<String> relevantPaths, ICancellationToken cancellationToken, int limit) throws IOException
+    private void scanDirectory(Path baseDir, Path dir, String pattern, Set<String> ignorePatterns, int maxDepth,
+        int currentDepth, Result result, Set<String> relevantPaths, ICancellationToken cancellationToken, int limit)
+        throws IOException
 	{
         if (cancellationToken.isCanceled() || currentDepth > maxDepth || result.items.size() >= limit)
 		{
@@ -189,6 +196,11 @@ public class GlobMcpTool
 
 				try
 				{
+					if (shouldIgnore(dir.relativize(path).toString(), ignorePatterns))
+					{
+						return;
+					}
+
 					var attrs = Files.readAttributes(path, BasicFileAttributes.class);
 					var relativePath = baseDir.relativize(path).toString();
 					// Normalize path separators to forward slashes for pattern matching
@@ -208,8 +220,8 @@ public class GlobMcpTool
                             relevantPaths.add(path.toAbsolutePath().toString());
                         }
                         var beforeCount = relevantPaths.size();
-                        scanDirectory(baseDir, path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
-                            cancellationToken, limit);
+                        scanDirectory(baseDir, path, pattern, ignorePatterns, maxDepth, currentDepth + 1, result,
+                            relevantPaths, cancellationToken, limit);
                         var afterCount = relevantPaths.size();
 
                         if (afterCount > beforeCount)
@@ -247,8 +259,9 @@ public class GlobMcpTool
 	}
 
     @SuppressWarnings("nls")
-    private void scanDirectoryForTree(Path baseDir, Path dir, String pattern, int maxDepth, int currentDepth, Result result,
-        Set<String> relevantPaths, ITreeBuilder treeBuilder, ICancellationToken cancellationToken) throws IOException
+    private void scanDirectoryForTree(Path baseDir, Path dir, String pattern, Set<String> ignorePatterns,
+        int maxDepth, int currentDepth, Result result, Set<String> relevantPaths, ITreeBuilder treeBuilder,
+        ICancellationToken cancellationToken) throws IOException
 	{
 		if (cancellationToken.isCanceled() || currentDepth > maxDepth)
 		{
@@ -265,6 +278,11 @@ public class GlobMcpTool
 
 				try
 				{
+					if (shouldIgnore(dir.relativize(path).toString(), ignorePatterns))
+					{
+						return;
+					}
+
 					var relativePath = baseDir.relativize(path).toString();
 					// Normalize path separators to forward slashes for tree display
 					var normalizedPath = relativePath.replace("\\", "/");
@@ -276,8 +294,8 @@ public class GlobMcpTool
                         if (isRelevant)
                         {
                             treeBuilder.addDirectory(normalizedPath, currentDepth);
-                            scanDirectoryForTree(baseDir, path, pattern, maxDepth, currentDepth + 1, result, relevantPaths,
-                                treeBuilder, cancellationToken);
+                            scanDirectoryForTree(baseDir, path, pattern, ignorePatterns, maxDepth, currentDepth + 1,
+                                result, relevantPaths, treeBuilder, cancellationToken);
                             treeBuilder.endDirectory();
                         }
 				}
@@ -296,6 +314,25 @@ public class GlobMcpTool
 			});
 		}
 }
+
+    @SuppressWarnings("nls")
+    private static boolean shouldIgnore(String relativePath, Set<String> ignorePatterns)
+    {
+        for (String pattern : ignorePatterns)
+        {
+            var patternTrimmed = pattern.replace("/", "");
+            if (relativePath.equals(patternTrimmed) || relativePath.startsWith(patternTrimmed + "/"))
+            {
+                return true;
+            }
+            var patternNormalized = pattern.replace("\\", "/");
+            if (relativePath.equals(patternNormalized) || relativePath.startsWith(patternNormalized + "/"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
 @SuppressWarnings("nls")
 	private static McpToolCallSpecification createSpecification()
@@ -321,6 +358,7 @@ public class GlobMcpTool
         description.append("\n    - \"**/*.java\" - .java files in any subdirectory");
         description.append("\n    - \"**/test_*.py\" - test_*.py files in any subdirectory");
         description.append("\n- Wildcards: \"*\" (any characters), \"?\" (single character), \"**\" (any number of directory segments, including zero).");
+        description.append("\n- Automatically ignores common build/cache directories: node_modules, .git, bin, obj etc. Optionally add more via `ignore`.");
 		description.append("\n- Returns matching file and directory paths sorted by modification time.");
 		description.append("\n- Use this tool when you need to explore directory structure or list files.");
 		description.append("\n- Depth parameter controls how deep to traverse subdirectories (0 = only root, 1 = root + one level, etc.).");
@@ -347,6 +385,12 @@ public class GlobMcpTool
             "The maximum depth of subdirectories to search. A value of 0 means only the root directory, 1 includes one level of subdirectories, etc. Defaults to 3 if not specified.";
 		properties.put("depth", depthProp);
 
+		var ignoreProp = new McpToolCallProperty();
+		ignoreProp.type = "array";
+		ignoreProp.description =
+			"List of glob patterns to ignore (e.g., [\"*.tmp\", \"temp/\"]). Default patterns (node_modules, .git, etc.) are always included.";
+		properties.put("ignore", ignoreProp);
+
 		parameters.properties = properties;
 		parameters.required = Arrays.asList("path");
 		spec.function.parameters = parameters;
@@ -364,6 +408,9 @@ public class GlobMcpTool
 
 		@SerializedName("depth")
 		public Integer depth;
+
+		@SerializedName("ignore")
+		public List<String> ignore;
 	}
 
 	private static class ItemInfo
