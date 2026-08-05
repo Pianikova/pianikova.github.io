@@ -3,6 +3,8 @@
  */
 package com.e1c.edt.ai;
 
+import java.util.List;
+
 /**
  * Receives liveness updates while a conversation is being answered.
  * <p>
@@ -27,4 +29,28 @@ public interface IConversationProgressListener
      * reasoning excluded
      */
     void onProgress(int round, int charactersReceived);
+
+    /**
+     * Reports that a batch of tool calls for the current round is about to run.
+     * <p>
+     * Called once per round, right before the batch is dispatched, with every tool name requested in
+     * that round (a round can request several tools in parallel). Default no-op so existing listeners
+     * that only care about {@link #onProgress} keep compiling.
+     *
+     * @param toolNames names of the tools about to run, never {@code null}, never empty
+     */
+    default void onToolCallStart(List<String> toolNames)
+    {
+    }
+
+    /**
+     * Reports that the batch of tool calls reported by the matching {@link #onToolCallStart} has
+     * finished, successfully or not — this is a liveness signal, not a result.
+     *
+     * @param toolNames same names passed to the matching {@link #onToolCallStart}, never {@code null},
+     * never empty
+     */
+    default void onToolCallEnd(List<String> toolNames)
+    {
+    }
 }

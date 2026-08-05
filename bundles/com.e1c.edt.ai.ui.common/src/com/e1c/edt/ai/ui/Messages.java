@@ -24,6 +24,7 @@ public class Messages
     public static String BackgroundAnalysisJobName;
     public static String ConversationProgressTaskName;
     public static String ConversationProgressStarting;
+    public static String ConversationProgressToolCall;
     public static String CodeCompletionBackgroundScanSubtaskName;
     public static String CodeCompletionBackgroundHashSubtaskName;
     public static String CodeCompletionBackgroundSyncSubtaskName;

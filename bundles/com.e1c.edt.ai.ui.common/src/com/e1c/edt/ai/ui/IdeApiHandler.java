@@ -9,12 +9,15 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.text.TextSelection;
+import org.eclipse.osgi.util.NLS;
 
 import com.e1c.edt.ai.CancellationTokens;
 import com.e1c.edt.ai.IEditRollback;
@@ -147,16 +150,23 @@ public class IdeApiHandler
                 call.callKind = ToolCallKind.CALL;
             }
 
-            mcpTools.callTools(calls, CancellationTokens.NONE).whenComplete((result, error) -> {
-                if (error != null)
-                {
-                    log.logError(error);
-                    return;
-                }
+            var toolNames = calls.stream().map(call -> call.function.name).collect(Collectors.joining(", ")); //$NON-NLS-1$
+            jobCtx.Monitor.beginTask(Messages.ConversationProgressStarting, IProgressMonitor.UNKNOWN);
+            jobCtx.Monitor.setTaskName(NLS.bind(Messages.ConversationProgressToolCall, toolNames));
 
+            // Block here (safe: this runs on the job's own worker thread, not the UI thread) so the
+            // job's visible lifetime in the Progress View actually spans the tool call instead of
+            // completing the instant the async call is dispatched.
+            try
+            {
+                var result = mcpTools.callTools(calls, CancellationTokens.NONE).get();
                 var chat = chatProvider.get();
                 chat.addToolsResult(chatId, messageId, result);
-            });
+            }
+            catch (InterruptedException | ExecutionException error)
+            {
+                log.logError(error);
+            }
         }, true, CancellationTokens.NONE);
         job.setPriority(Job.INTERACTIVE);
         job.schedule();

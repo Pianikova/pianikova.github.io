@@ -89,7 +89,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, conversationId, request,
-            token);
+            token, null);
 
         // Then
         assertTrue(source != null);
@@ -118,7 +118,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, conversationId, request,
-            tokenSource);
+            tokenSource, null);
         source.subscribe(observer);
 
         // Cancel immediately
@@ -156,7 +156,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, conversationId, request,
-            token);
+            token, null);
         source.subscribe(observer);
 
         // Then - should handle error gracefully
@@ -206,7 +206,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, "conv-123", request,
-            token);
+            token, null);
         source.subscribe(observer);
 
         // Then - should complete without error
@@ -233,7 +233,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, conversationId, request,
-            token);
+            token, null);
         source.subscribe(observer);
 
         // Then - should handle CompletionException from session service as error
@@ -273,7 +273,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, conversationId, request,
-            token);
+            token, null);
         source.subscribe(observer);
 
         // Then - should propagate error
@@ -302,7 +302,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, conversationId, request,
-            token);
+            token, null);
         source.subscribe(observer);
 
         // Then - should handle null session ID gracefully
@@ -329,7 +329,7 @@ public class ConversationsTest
 
         // When
         IObservable<ConversationAskResponse> source = conversations.createAskSource(projectId, conversationId, request,
-            token);
+            token, null);
 
         // Then
         assertTrue(source != null);

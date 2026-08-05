@@ -399,7 +399,7 @@ public class ConversationFacade
         ConcurrentHashMap<String, StringBuilder> textByMessageUuid = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, StringBuilder> reasoningByMessageUuid = new ConcurrentHashMap<>();
 
-        conversations.createAskSource(project, conversationUuid, askRequest, cancellationToken)
+        conversations.createAskSource(project, conversationUuid, askRequest, cancellationToken, progressListener)
             .subscribe(new IObserver<ConversationAskResponse>()
             {
                 @Override

@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.e1c.edt.ai.ICancellationToken;
+import com.e1c.edt.ai.IConversationProgressListener;
 import com.e1c.edt.ai.IObservable;
 import com.e1c.edt.ai.assistent.model.ConversationAskRequest;
 import com.e1c.edt.ai.assistent.model.ConversationAskResponse;
@@ -21,5 +22,6 @@ public interface IConversations
         ICancellationToken cancellationToken);
 
     IObservable<ConversationAskResponse> createAskSource(IProject project, String conversationId,
-        ConversationAskRequest request, ICancellationToken cancellationToken);
+        ConversationAskRequest request, ICancellationToken cancellationToken,
+        IConversationProgressListener progressListener);
 }
