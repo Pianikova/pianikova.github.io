@@ -2,6 +2,8 @@
 name: text-suggest
 description: Предлагает вариант текста для поля, находящегося в фокусе, на основе окружающего визуального контекста.
 allowed-tools: []
+completion-marker: "#END#"
+reject-tool-like-json: true
 ---
 
 # Предложение текста для поля

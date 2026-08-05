@@ -380,7 +380,8 @@ public class ContextMenuInterceptor
             var operation = skillExecutor.executeAsync(request, cancellationTokenSource)
                 .thenCompose(result -> conversationFacade.sendAsync(
                     new SendUserMessageRequest(project.get(), result.getPrompt(), null, true,
-                        null, null, null, result.getAllowedTools().orElse(null)),
+                        null, null, null, result.getAllowedTools().orElse(null),
+                        result.getCompletionPolicy().orElse(null)),
                     cancellationTokenSource))
                 .thenAccept(resultMessage -> applyResult(text, textListener, cancellationTokenSource, resultMessage))
                 .exceptionally(error -> {

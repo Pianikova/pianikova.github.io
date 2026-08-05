@@ -22,6 +22,7 @@ import com.e1c.edt.ai.assistent.model.ConversationAskResponse;
 import com.e1c.edt.ai.assistent.model.ConversationRequest;
 import com.e1c.edt.ai.assistent.model.ConversationRequestContent;
 import org.eclipse.core.resources.IProject;
+import com.e1c.edt.ai.assistent.model.SkillCompletionPolicy;
 import com.e1c.edt.ai.assistent.model.ToolDefinition;
 import com.google.common.base.Preconditions;
 import com.google.gson.JsonArray;
@@ -42,6 +43,8 @@ import com.google.inject.Inject;
 public class ConversationFacade
     implements IConversationFacade
 {
+    private static final int MAX_SKILL_COMPLETION_CONTINUES = 3;
+
     private final IConversations conversations;
     private final IJson json;
     private final IMcpTools mcpTools;
@@ -88,15 +91,107 @@ public class ConversationFacade
         return conversationFuture.thenCompose(conversationId -> {
             var parentUuid = isNewConversation ? null : request.getConversationSession().getReplyToMessageUuid();
 
+            var instruction = withCompletionProtocol(request.getMessage(),
+                request.getCompletionPolicy().orElse(null));
             ConversationAskRequest askRequest =
-                createAskRequest(request.getMessage(), parentUuid, request.getAllowedTools().orElse(null));
+                createAskRequest(instruction, parentUuid, request.getAllowedTools().orElse(null));
             if (request.getMaxToolRounds() != null)
             {
                 askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
             }
             return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken,
-                progressListener);
+                progressListener).thenCompose(result -> enforceCompletionPolicy(request, conversationId, result,
+                    cancellationToken, progressListener, 0, result.getAssistantMessageCount()));
         });
+    }
+
+    static String withCompletionProtocol(String prompt, SkillCompletionPolicy policy)
+    {
+        if (policy == null)
+        {
+            return prompt;
+        }
+        return prompt + "\n\n## Служебный протокол завершения\n\n" //$NON-NLS-1$
+            + "Только когда задача полностью завершена, добавь отдельной последней строкой `" //$NON-NLS-1$
+            + policy.getMarker() + "`. Не добавляй этот маркер к промежуточному ответу или вместо " //$NON-NLS-1$
+            + "настоящего вызова инструмента."; //$NON-NLS-1$
+    }
+
+    private CompletableFuture<SendMessageResult> enforceCompletionPolicy(SendUserMessageRequest request,
+        String conversationId, SendMessageResult result, ICancellationToken cancellationToken,
+        IConversationProgressListener progressListener, int continuation, int assistantMessageCount)
+    {
+        var policy = request.getCompletionPolicy().orElse(null);
+        if (policy == null || result == null)
+        {
+            return CompletableFuture.completedFuture(result);
+        }
+
+        var finalText = stripCompletionMarker(result.getText(), policy.getMarker());
+        var markerPresent = finalText != null;
+        var candidate = markerPresent ? finalText : result.getText();
+        var invalidJson = policy.isRejectToolLikeJson() && isJsonObject(candidate);
+        if (markerPresent && !invalidJson)
+        {
+            return CompletableFuture.completedFuture(new SendMessageResult(candidate, result.getSession(),
+                result.getReasoning(), assistantMessageCount));
+        }
+
+        if (continuation >= MAX_SKILL_COMPLETION_CONTINUES || result.getSession() == null
+            || result.getSession().getReplyToMessageUuid() == null)
+        {
+            return failedFuture(new IllegalStateException(
+                "Skill did not produce a valid final answer after completion retries")); //$NON-NLS-1$
+        }
+
+        var reason = invalidJson
+            ? "Предыдущий ответ является JSON-текстом, похожим на параметры инструмента, и не является допустимым финальным ответом. " //$NON-NLS-1$
+            : "Предыдущий ответ не содержит обязательный маркер завершения. "; //$NON-NLS-1$
+        var instruction = reason
+            + "Продолжи выполнение исходной задачи в этой же беседе. Если нужны данные, сделай настоящий function call доступного инструмента, не печатай его параметры текстом. " //$NON-NLS-1$
+            + "Только после полного завершения задачи добавь отдельной последней строкой `" //$NON-NLS-1$
+            + policy.getMarker() + "`."; //$NON-NLS-1$
+
+        var askRequest = createAskRequest(instruction, result.getSession().getReplyToMessageUuid(),
+            request.getAllowedTools().orElse(null));
+        if (request.getMaxToolRounds() != null)
+        {
+            askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
+        }
+        return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken,
+            progressListener).thenCompose(next -> enforceCompletionPolicy(request, conversationId, next,
+                cancellationToken, progressListener, continuation + 1,
+                assistantMessageCount + next.getAssistantMessageCount()));
+    }
+
+    private boolean isJsonObject(String text)
+    {
+        if (text == null || text.isBlank())
+        {
+            return false;
+        }
+        return json.deserialize(text.trim(), JsonElement.class).map(JsonElement::isJsonObject).orElse(false);
+    }
+
+    /**
+     * Removes a marker only when it occupies the final non-blank line.
+     *
+     * @return text without the marker, or {@code null} when the marker is absent
+     */
+    static String stripCompletionMarker(String text, String marker)
+    {
+        if (text == null)
+        {
+            return null;
+        }
+        var normalized = text.replace("\r\n", "\n").replace('\r', '\n').stripTrailing(); //$NON-NLS-1$ //$NON-NLS-2$
+        var markerStart = normalized.length() - marker.length();
+        if (markerStart < 0 || !normalized.regionMatches(markerStart, marker, 0, marker.length())
+            || markerStart > 0 && normalized.charAt(markerStart - 1) != '\n')
+        {
+            return null;
+        }
+        return normalized.substring(0, markerStart).stripTrailing();
     }
 
     /**

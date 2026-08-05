@@ -40,5 +40,8 @@ public class BackgroundCodeAnalysisSkillContractTest
         assertTrue(skill.getMetadata().getAllowedTools().isPresent());
         assertEquals(Set.of("LocalHistory", "LocalChanges", "Read", "SetMarkers"),
             skill.getMetadata().getAllowedTools().get());
+        assertTrue(skill.getMetadata().getCompletionPolicy().isPresent());
+        assertEquals("#END#", skill.getMetadata().getCompletionPolicy().get().getMarker());
+        assertTrue(skill.getMetadata().getCompletionPolicy().get().isRejectToolLikeJson());
     }
 }

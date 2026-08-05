@@ -93,6 +93,21 @@ public class SkillMdParserTest
 
     @SuppressWarnings("nls")
     @Test
+    public void shouldParseCompletionPolicy()
+    {
+        String skillContent = "---\nname: test-skill\ncompletion-marker: \"#END#\"\n"
+            + "reject-tool-like-json: true\n---\nSkill body content";
+        var parser = new SkillMdParser(templateProcessor);
+
+        var policy = parser.parse("test-skill", skillContent).getMetadata().getCompletionPolicy();
+
+        assertTrue(policy.isPresent());
+        assertEquals("#END#", policy.get().getMarker());
+        assertTrue(policy.get().isRejectToolLikeJson());
+    }
+
+    @SuppressWarnings("nls")
+    @Test
     public void shouldParseEmptyAllowedToolsArray()
     {
         String skillContent = "---\nname: test-skill\nallowed-tools: []\n---\nSkill body content";

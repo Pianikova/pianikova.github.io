@@ -16,6 +16,8 @@ import java.util.Set;
 public class SkillMetadata
 {
     private static final String ALLOWED_TOOLS = "allowed-tools"; //$NON-NLS-1$
+    private static final String COMPLETION_MARKER = "completion-marker"; //$NON-NLS-1$
+    private static final String REJECT_TOOL_LIKE_JSON = "reject-tool-like-json"; //$NON-NLS-1$
 
     private final Map<String, String> values;
 
@@ -78,6 +80,24 @@ public class SkillMetadata
             }
         }
         return Optional.of(Collections.unmodifiableSet(tools));
+    }
+
+    /**
+     * Returns the optional final-answer protocol declared by the skill.
+     *
+     * @return completion policy, or empty when the skill uses the ordinary stop response
+     */
+    public Optional<SkillCompletionPolicy> getCompletionPolicy()
+    {
+        var rawMarker = values.get(COMPLETION_MARKER);
+        if (rawMarker == null || rawMarker.isBlank())
+        {
+            return Optional.empty();
+        }
+        var marker = stripQuotes(rawMarker.trim());
+        var rejectToolLikeJson = Boolean.parseBoolean(stripQuotes(
+            values.getOrDefault(REJECT_TOOL_LIKE_JSON, Boolean.FALSE.toString()).trim()));
+        return Optional.of(new SkillCompletionPolicy(marker, rejectToolLikeJson));
     }
 
     private static String stripQuotes(String value)

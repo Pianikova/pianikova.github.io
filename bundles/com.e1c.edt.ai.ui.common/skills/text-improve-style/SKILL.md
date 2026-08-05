@@ -2,6 +2,8 @@
 name: text-improve-style
 description: Улучшает стиль текста поля, находящегося в фокусе, сохраняя смысл.
 allowed-tools: []
+completion-marker: "#END#"
+reject-tool-like-json: true
 ---
 
 # Улучшение стиля текста поля

@@ -32,12 +32,16 @@ public class GitCommitSkillContractTest
         var skill = read("SKILL.md");
 
         assertTrue(skill.contains("allowed-tools: JGit Read"));
+        assertTrue(skill.contains("completion-marker: \"#END#\""));
+        assertTrue(skill.contains("reject-tool-like-json: true"));
         assertTrue(skill.contains("вызывай только `JGit`"));
         assertTrue(skill.contains("\"working_directory\": \"${working_directory}\""));
         assertTrue(skill.contains("[\"diff\", \"--cached\", \"--\", <не более трёх путей>]"));
         assertTrue(skill.contains("Пакеты из четырёх и более файлов запрещены"));
-        assertTrue(skill.contains("отправь все function calls одновременно"));
-        assertTrue(skill.contains("Не жди результат одного пакета"));
+        assertTrue(skill.contains("вызывай их строго по одному"));
+        assertTrue(skill.contains("дождись результата и только затем вызывай `JGit`"));
+        assertTrue(skill.contains("Не отправляй несколько function calls в одном ответе"));
+        assertTrue(skill.contains("ровно один настоящий function call"));
         assertTrue(skill.contains("Не вызывай `TodoWrite`"));
         assertTrue(skill.contains("Вторая строка должна быть строго пустой"));
         assertTrue(skill.contains("Не добавляй после деталей"));

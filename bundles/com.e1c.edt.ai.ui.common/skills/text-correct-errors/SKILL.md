@@ -2,6 +2,8 @@
 name: text-correct-errors
 description: Исправляет орфографические, грамматические, пунктуационные и смысловые ошибки в тексте поля, находящегося в фокусе.
 allowed-tools: []
+completion-marker: "#END#"
+reject-tool-like-json: true
 ---
 
 # Исправление ошибок в тексте поля
