@@ -44,6 +44,7 @@ public class Messages
     public static String SearchQuery;
     public static String FileNamePatterns;
     public static String AllFiles;
+    public static String OutsideProject;
     public static String ProjectName;
     public static String MaxCommits;
     public static String CurrentProject;

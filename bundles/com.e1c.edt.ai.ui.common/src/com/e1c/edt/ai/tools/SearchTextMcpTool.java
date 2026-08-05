@@ -2,16 +2,28 @@
 * Copyright (C) 2025, 1C
 */
 package com.e1c.edt.ai.tools;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.core.resources.IResource;
+import org.eclipse.jface.text.IRegion;
 import org.eclipse.text.quicksearch.internal.core.LineItem;
 import org.eclipse.text.quicksearch.internal.core.QuickTextQuery;
 import org.eclipse.text.quicksearch.internal.core.QuickTextSearchRequestor;
@@ -25,9 +37,11 @@ import com.e1c.edt.ai.IJson;
 import com.e1c.edt.ai.IMarkdownUtils;
 import com.e1c.edt.ai.IMcpTool;
 import com.e1c.edt.ai.IMcpToolsCallMessageFactory;
+import com.e1c.edt.ai.IProjectTools;
 import com.e1c.edt.ai.TextColor;
 import com.e1c.edt.ai.ToolCallMessage;
 import com.e1c.edt.ai.ToolCallMessageDetails;
+import com.e1c.edt.ai.ToolErrorType;
 import com.e1c.edt.ai.ToolException;
 import com.e1c.edt.ai.assistent.model.McpToolCall;
 import com.e1c.edt.ai.assistent.model.McpToolCallFunction;
@@ -35,6 +49,7 @@ import com.e1c.edt.ai.assistent.model.McpToolCallParameters;
 import com.e1c.edt.ai.assistent.model.McpToolCallProperty;
 import com.e1c.edt.ai.assistent.model.McpToolCallSpecification;
 import com.e1c.edt.ai.assistent.model.ToolCallKind;
+import com.e1c.edt.ai.ui.IFileSystem;
 import com.google.common.base.Preconditions;
 import com.google.gson.annotations.SerializedName;
 import com.google.inject.Inject;
@@ -78,16 +93,26 @@ public class SearchTextMcpTool
     private final McpToolCallSpecification spec;
     private final IMcpToolsCallMessageFactory messageFactory;
     private final IMarkdownUtils markdownUtils;
+    private final IProjectTools projectTools;
+    private final IFileSystem fileSystem;
+    private final IPatternMatcher patternMatcher;
 
     @Inject
-    public SearchTextMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils)
+    public SearchTextMcpTool(IJson json, IMcpToolsCallMessageFactory messageFactory, IMarkdownUtils markdownUtils,
+        IProjectTools projectTools, IFileSystem fileSystem, IPatternMatcher patternMatcher)
     {
         Preconditions.checkNotNull(json);
         Preconditions.checkNotNull(messageFactory);
         Preconditions.checkNotNull(markdownUtils);
+        Preconditions.checkNotNull(projectTools);
+        Preconditions.checkNotNull(fileSystem);
+        Preconditions.checkNotNull(patternMatcher);
         this.json = json;
         this.messageFactory = messageFactory;
         this.markdownUtils = markdownUtils;
+        this.projectTools = projectTools;
+        this.fileSystem = fileSystem;
+        this.patternMatcher = patternMatcher;
         spec = createSpecification();
     }
 
@@ -120,6 +145,7 @@ public class SearchTextMcpTool
 
         var searchQuery = request.searchQuery;
         var filePathPatterns = request.filePathPatterns;
+        var path = request.path;
         int firstIndex = request.firstIndex != null ? Math.max(0, request.firstIndex) : 0;
         int maxCount = request.maxCount != null && request.maxCount > 0 ? request.maxCount : DEFAULT_MAX_ELEMENTS;
 
@@ -146,9 +172,22 @@ public class SearchTextMcpTool
                 throw new ToolException("Operation was cancelled before execution.");
             }
 
+            final int maxTotalElements = Math.min(firstIndex + maxCount, MAX_RESULTS);
+
+            if (path != null && !path.isBlank())
+            {
+                var determinedProject = projectTools.determineProjectName(path);
+                if (determinedProject == null || determinedProject.isBlank())
+                {
+                    var allElements =
+                        searchFileSystem(path, searchQuery, filePathPatterns, maxTotalElements, cancellationToken);
+                    return buildResponse(call, details, searchQuery, filePathPatterns, allElements, firstIndex,
+                        maxCount);
+                }
+            }
+
             final List<Element> allElements = new ArrayList<>();
             final ReadWriteLock lock = new ReentrantReadWriteLock();
-            final int maxTotalElements = Math.min(firstIndex + maxCount, MAX_RESULTS);
             var query = new QuickTextQuery(searchQuery, false);
 
             var searcher = new QuickTextSearcher(query,
@@ -282,111 +321,225 @@ public class SearchTextMcpTool
                 throw new ToolException("Search was cancelled");
             }
 
-            // Check pagination limit
-            if (firstIndex >= MAX_RESULTS)
-            {
-                throw new ToolException("Parameter 'first_index' cannot be greater than or equal to " + MAX_RESULTS
-                    + ". Maximum pagination depth is " + MAX_RESULTS + " results.");
-            }
-
-            // Apply pagination: get sublist based on firstIndex and maxCount
-            List<Element> elements;
-            int totalResults;
+            List<Element> allElementsSnapshot;
             lock.readLock().lock();
             try
             {
-                if (firstIndex >= allElements.size())
-                {
-                    elements = new ArrayList<>();
-                }
-                else
-                {
-                    int endIndex = Math.min(firstIndex + maxCount, allElements.size());
-                    elements = new ArrayList<>(allElements.subList(firstIndex, endIndex));
-                }
-                totalResults = allElements.size();
+                allElementsSnapshot = new ArrayList<>(allElements);
             }
             finally
             {
                 lock.readLock().unlock();
             }
 
-            // Create SearchTextResponse with paginated results and total count
-            SearchTextResponse response = new SearchTextResponse();
-            response.results = elements;
-            response.totalResults = totalResults;
+            return buildResponse(call, details, searchQuery, filePathPatterns, allElementsSnapshot, firstIndex,
+                maxCount);
+        });
+    }
 
-            var content = json.serialize(response);
+    @SuppressWarnings("nls")
+    private ToolCallMessage buildResponse(McpToolCall call, ToolCallMessageDetails details, String searchQuery,
+        List<String> filePathPatterns, List<Element> allElements, int firstIndex, int maxCount)
+    {
+        // Check pagination limit
+        if (firstIndex >= MAX_RESULTS)
+        {
+            throw new ToolException("Parameter 'first_index' cannot be greater than or equal to " + MAX_RESULTS
+                + ". Maximum pagination depth is " + MAX_RESULTS + " results.");
+        }
 
-            var responseMarkdown = new StringBuilder();
-            String resultCountText;
-            if (response.totalResults > maxCount || firstIndex > 0)
+        // Apply pagination: get sublist based on firstIndex and maxCount
+        List<Element> elements;
+        if (firstIndex >= allElements.size())
+        {
+            elements = new ArrayList<>();
+        }
+        else
+        {
+            int endIndex = Math.min(firstIndex + maxCount, allElements.size());
+            elements = new ArrayList<>(allElements.subList(firstIndex, endIndex));
+        }
+        int totalResults = allElements.size();
+
+        // Create SearchTextResponse with paginated results and total count
+        SearchTextResponse response = new SearchTextResponse();
+        response.results = elements;
+        response.totalResults = totalResults;
+
+        var content = json.serialize(response);
+
+        var responseMarkdown = new StringBuilder();
+        String resultCountText;
+        if (response.totalResults > maxCount || firstIndex > 0)
+        {
+            resultCountText = response.totalResults + "/" + elements.size();
+        }
+        else
+        {
+            resultCountText = String.valueOf(elements.size());
+        }
+
+        responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
+            markdownUtils.createStyledText(resultCountText, TextColor.GREEN, FontWeight.BOLD, false)))
+            .append("\n\n")
+            .append(Messages.SearchQuery)
+            .append(": `")
+            .append(searchQuery)
+            .append("`");
+
+        if (filePathPatterns != null && !filePathPatterns.isEmpty())
+        {
+            responseMarkdown.append("\n\n")
+                .append(Messages.FileNamePatterns)
+                .append(": ")
+                .append(formatFilePathPatterns(filePathPatterns));
+        }
+
+        if (!elements.isEmpty())
+        {
+            responseMarkdown.append("\n\n**")
+                .append(Messages.SearchResults)
+                .append("**\n\n");
+
+            var projectGroups = new HashMap<String, List<Element>>();
+            for (var element : elements)
             {
-                resultCountText = response.totalResults + "/" + elements.size();
+                projectGroups.computeIfAbsent(element.projectName, k -> new ArrayList<>()).add(element);
+            }
+
+            for (var entry : projectGroups.entrySet())
+            {
+                var projectName = entry.getKey();
+                var projectElements = entry.getValue();
+
+                responseMarkdown.append("**").append(markdownUtils.escapeForMarkdown(projectName)).append("**");
+                responseMarkdown.append(" (")
+                    .append(projectElements.size())
+                    .append(" ")
+                    .append(Messages.Matches)
+                    .append(")\n\n");
+
+                for (var element : projectElements)
+                {
+                    String formattedPath = markdownUtils.formatFilePath(element.path, element.lineNumber, 0);
+
+                    responseMarkdown.append("- **").append(formattedPath).append("**");
+                    responseMarkdown.append(" - ").append(Messages.Line).append(" ").append(element.lineNumber);
+                    responseMarkdown.append("\n");
+                }
+
+                responseMarkdown.append("\n");
+            }
+        }
+
+        details.responseMarkdown = responseMarkdown.toString();
+        details.hideAfter = elements.size() == 0;
+
+        return messageFactory.createMessage(this, call, content, details);
+    }
+
+    @SuppressWarnings("nls")
+    private List<Element> searchFileSystem(String path, String searchQuery, List<String> filePathPatterns,
+        int maxTotalElements, ICancellationToken cancellationToken)
+    {
+        var baseFile = new File(path);
+        if (!baseFile.exists())
+        {
+            throw new ToolException("The path \"" + path + "\" does not exist.");
+        }
+
+        var query = new QuickTextQuery(searchQuery, false);
+        var allElements = new ArrayList<Element>();
+
+        try
+        {
+            if (baseFile.isDirectory())
+            {
+                var basePath = baseFile.toPath();
+                try (Stream<Path> stream = Files.walk(basePath))
+                {
+                    var files = stream.filter(Files::isRegularFile)
+                        .sorted(Comparator.comparing(Path::toString))
+                        .collect(Collectors.toList());
+                    for (var file : files)
+                    {
+                        if (cancellationToken.isCanceled() || allElements.size() >= maxTotalElements)
+                        {
+                            break;
+                        }
+
+                        var relativePath = basePath.relativize(file).toString().replace("\\", "/");
+                        if (filePathPatterns != null && !filePathPatterns.isEmpty()
+                            && filePathPatterns.stream().noneMatch(pattern -> patternMatcher.matches(relativePath, pattern)))
+                        {
+                            continue;
+                        }
+
+                        searchInFile(file.toFile(), query, allElements, maxTotalElements, cancellationToken);
+                    }
+                }
             }
             else
             {
-                resultCountText = String.valueOf(elements.size());
+                searchInFile(baseFile, query, allElements, maxTotalElements, cancellationToken);
             }
+        }
+        catch (IOException e)
+        {
+            throw new ToolException("Search failed", e, ToolErrorType.RETRYABLE);
+        }
 
-            responseMarkdown.append(MessageFormat.format(Messages.FindTemplate,
-                markdownUtils.createStyledText(resultCountText, TextColor.GREEN, FontWeight.BOLD, false)))
-                .append("\n\n")
-                .append(Messages.SearchQuery)
-                .append(": `")
-                .append(searchQuery)
-                .append("`");
+        return allElements;
+    }
 
-            if (filePathPatterns != null && !filePathPatterns.isEmpty())
+    private void searchInFile(File file, QuickTextQuery query, List<Element> allElements, int maxTotalElements,
+        ICancellationToken cancellationToken)
+    {
+        if (cancellationToken.isCanceled() || allElements.size() >= maxTotalElements)
+        {
+            return;
+        }
+
+        try (var fileInputStream = new FileInputStream(file);
+            var inputStreamReader = new InputStreamReader(fileInputStream, StandardCharsets.UTF_8);
+            var reader = new BufferedReader(inputStreamReader))
+        {
+            var lineNumber = 0;
+            for (var line : fileSystem.getLines(reader))
             {
-                responseMarkdown.append("\n\n")
-                    .append(Messages.FileNamePatterns)
-                    .append(": ")
-                    .append(formatFilePathPatterns(filePathPatterns));
-            }
-
-            if (!elements.isEmpty())
-            {
-                responseMarkdown.append("\n\n**")
-                    .append(Messages.SearchResults)
-                    .append("**\n\n");
-
-                var projectGroups = new HashMap<String, List<Element>>();
-                for (var element : elements)
+                lineNumber++;
+                if (cancellationToken.isCanceled() || allElements.size() >= maxTotalElements)
                 {
-                    projectGroups.computeIfAbsent(element.projectName, k -> new ArrayList<>()).add(element);
+                    break;
                 }
 
-                for (var entry : projectGroups.entrySet())
+                if (!query.matchItem(line))
                 {
-                    var projectName = entry.getKey();
-                    var projectElements = entry.getValue();
-
-                    responseMarkdown.append("**").append(markdownUtils.escapeForMarkdown(projectName)).append("**");
-                    responseMarkdown.append(" (")
-                        .append(projectElements.size())
-                        .append(" ")
-                        .append(Messages.Matches)
-                        .append(")\n\n");
-
-                    for (var element : projectElements)
-                    {
-                        String formattedPath = markdownUtils.formatFilePath(element.path, element.lineNumber, 0);
-
-                        responseMarkdown.append("- **").append(formattedPath).append("**");
-                        responseMarkdown.append(" - ").append(Messages.Line).append(" ").append(element.lineNumber);
-                        responseMarkdown.append("\n");
-                    }
-
-                    responseMarkdown.append("\n");
+                    continue;
                 }
+
+                var element = new Element();
+                element.projectName = Messages.OutsideProject;
+                element.path = file.getAbsolutePath();
+                element.lineNumber = lineNumber;
+                element.lineContent = line;
+
+                IRegion range = query.findFirst(line);
+                if (range != null)
+                {
+                    element.offset = range.getOffset();
+                    element.length = range.getLength();
+                    element.lineOffset = range.getOffset();
+                    element.lineLength = range.getLength();
+                }
+
+                allElements.add(element);
             }
-
-            details.responseMarkdown = responseMarkdown.toString();
-            details.hideAfter = elements.size() == 0;
-
-            return messageFactory.createMessage(this, call, content, details);
-        });
+        }
+        catch (IOException e)
+        {
+            // Skip files that cannot be read (binary content, permission issues, etc.).
+        }
     }
 
     private Element createElement(LineItem match)
@@ -429,7 +582,8 @@ public class SearchTextMcpTool
         description.append("\n- Provide a search pattern in `search_query`.");
         description.append("\n- Optionally use `file_path_patterns` to filter by file types (e.g., [\"*.bsl\", \"*.mdo\"] or directory patterns like \"src/**/*.bsl\").");
         description.append("\n- Use `first_index` and `max_count` for pagination. Response includes `total_results` for all matches.");
-        description.append("\n- Searches all projects by default.");
+        description.append("\n- Searches all open projects by default.");
+        description.append("\n- Optionally set `path` to an absolute directory or file path. If the path belongs to an open project, project-wide search is used as usual. If the path is outside any open project, the file system is searched directly (useful for files/folders not part of the IDE workspace).");
         description.append("\n\nRelated tools:");
         description.append("\n- Open/edit results: `").append(ReadMcpTool.TOOL_NAME).append("`, `").append(EditMcpTool.TOOL_NAME).append("`.");
         description.append("\n\nExample:");
@@ -451,6 +605,11 @@ public class SearchTextMcpTool
         filePathPatternsProp.type = "array";
         filePathPatternsProp.description = "File path patterns (e.g., [\"*.bsl\", \"*.mdo\", \"src/**/*.bsl\"]). If not specified, searches all files.";
         properties.put("file_path_patterns", filePathPatternsProp);
+
+        var pathProp = new McpToolCallProperty();
+        pathProp.type = "string";
+        pathProp.description = "Absolute directory or file path to search. If omitted, searches all open projects. If the path is outside any open project, searches the file system directly.";
+        properties.put("path", pathProp);
 
         var firstIndexProp = new McpToolCallProperty();
         firstIndexProp.type = "integer";
@@ -476,6 +635,9 @@ public class SearchTextMcpTool
 
         @SerializedName("file_path_patterns")
         public List<String> filePathPatterns;
+
+        @SerializedName("path")
+        public String path;
 
         @SerializedName("first_index")
         public Integer firstIndex = 0;
