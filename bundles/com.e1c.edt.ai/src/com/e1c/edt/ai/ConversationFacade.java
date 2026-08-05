@@ -106,7 +106,7 @@ public class ConversationFacade
         });
     }
 
-    static String withCompletionProtocol(String prompt, SkillCompletionPolicy policy)
+    public static String withCompletionProtocol(String prompt, SkillCompletionPolicy policy)
     {
         if (policy == null)
         {
@@ -214,7 +214,7 @@ public class ConversationFacade
      *
      * @return text without the marker, or {@code null} when the marker is absent
      */
-    static String stripCompletionMarker(String text, String marker)
+    public static String stripCompletionMarker(String text, String marker)
     {
         if (text == null)
         {

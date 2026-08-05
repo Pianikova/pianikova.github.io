@@ -511,7 +511,7 @@ final class FormMutationService
             // an error marker. Said only in details it gets skipped, and the model reports success on a
             // broken form; as a warning it lands where the model already looks.
             warnings.add("The form command is not complete until its handler exists: write the procedure `" //$NON-NLS-1$
-                + handlerName + "(Команда)` (Russian script variant) or `" + handlerName //$NON-NLS-1$ //$NON-NLS-2$
+                + handlerName + "(Команда)` (Russian script variant) or `" + handlerName //$NON-NLS-1$
                 + "(Command)` into " + modulePath + " with the Write or Edit tool, marked &НаКлиенте/&AtClient." //$NON-NLS-1$ //$NON-NLS-2$
                 + " Until then the form has an error marker about the missing handler."); //$NON-NLS-1$
             if (request.dryRun)
@@ -646,7 +646,7 @@ final class FormMutationService
             if (existing == null)
             {
                 throw new ToolException("Event `" + eventLabel(event) + "` on " //$NON-NLS-1$ //$NON-NLS-2$
-                    + (request.name == null ? "the form" : request.name) + " has no handler."); //$NON-NLS-1$
+                    + (request.name == null ? "the form" : request.name) + " has no handler."); //$NON-NLS-1$ //$NON-NLS-2$
             }
             changed[0] = true;
             if (!request.dryRun)

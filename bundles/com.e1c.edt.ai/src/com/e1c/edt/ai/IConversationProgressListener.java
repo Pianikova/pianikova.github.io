@@ -41,6 +41,7 @@ public interface IConversationProgressListener
      */
     default void onToolCallStart(List<String> toolNames)
     {
+        // No-op by default: subclasses that only care about {@link #onProgress} do not have to implement this.
     }
 
     /**
@@ -52,5 +53,6 @@ public interface IConversationProgressListener
      */
     default void onToolCallEnd(List<String> toolNames)
     {
+        // No-op by default: subclasses that only care about {@link #onProgress} do not have to implement this.
     }
 }

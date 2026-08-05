@@ -336,7 +336,6 @@ public class SearchTextMcpTool
         });
     }
 
-    @SuppressWarnings("nls")
     private ToolCallMessage buildResponse(McpToolCall call, ToolCallMessageDetails details, String searchQuery,
         List<String> filePathPatterns, List<Element> allElements, int firstIndex, int maxCount)
     {
@@ -452,7 +451,6 @@ public class SearchTextMcpTool
         };
     }
 
-    @SuppressWarnings("nls")
     private List<Element> searchFileSystem(String path, String searchQuery, List<String> filePathPatterns,
         int maxTotalElements, ICancellationToken cancellationToken)
     {

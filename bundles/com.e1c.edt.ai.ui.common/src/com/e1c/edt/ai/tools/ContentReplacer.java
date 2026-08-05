@@ -309,7 +309,7 @@ public class ContentReplacer implements IContentReplacer
         StringBuilder hint = new StringBuilder();
         for (int i = from; i <= to; i++)
         {
-            hint.append(i + 1).append(": ").append(lines[i]);
+            hint.append(i + 1).append(": ").append(lines[i]); //$NON-NLS-1$
             if (i < to)
             {
                 hint.append('\n');

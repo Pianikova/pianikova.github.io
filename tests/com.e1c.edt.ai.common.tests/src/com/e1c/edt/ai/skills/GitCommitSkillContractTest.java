@@ -39,10 +39,9 @@ public class GitCommitSkillContractTest
         assertTrue(skill.contains("\"working_directory\": \"${working_directory}\""));
         assertTrue(skill.contains("[\"diff\", \"--cached\", \"--\", <не более трёх путей>]"));
         assertTrue(skill.contains("Пакеты из четырёх и более файлов запрещены"));
-        assertTrue(skill.contains("вызывай их строго по одному"));
-        assertTrue(skill.contains("дождись результата и только затем вызывай `JGit`"));
-        assertTrue(skill.contains("Не отправляй несколько function calls в одном ответе"));
-        assertTrue(skill.contains("ровно один настоящий function call"));
+        assertTrue(skill.contains("Параллельные вызовы"));
+        assertTrue(skill.contains("отправь все function calls одновременно в одном ответе"));
+        assertTrue(skill.contains("Не жди результат одного пакета перед вызовом следующего"));
         assertTrue(skill.contains("Не вызывай `TodoWrite`"));
         assertTrue(skill.contains("Вторая строка должна быть строго пустой"));
         assertTrue(skill.contains("Не добавляй после деталей"));
