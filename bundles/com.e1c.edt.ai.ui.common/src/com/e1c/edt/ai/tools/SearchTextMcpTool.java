@@ -28,7 +28,7 @@ import org.eclipse.text.quicksearch.internal.core.LineItem;
 import org.eclipse.text.quicksearch.internal.core.QuickTextQuery;
 import org.eclipse.text.quicksearch.internal.core.QuickTextSearchRequestor;
 import org.eclipse.text.quicksearch.internal.core.QuickTextSearcher;
-import org.eclipse.text.quicksearch.internal.core.pathmatch.ResourceMatchers;
+import org.eclipse.text.quicksearch.internal.core.pathmatch.ResourceMatcher;
 import org.eclipse.text.quicksearch.internal.core.priority.PriorityFunction;
 
 import com.e1c.edt.ai.FontWeight;
@@ -66,8 +66,8 @@ public class SearchTextMcpTool
     // @formatter:off
     private static String QuestionExample =
         "{\n"
-        + "  \"search_query\": \"Test.*Service\",\n"
-        + "  \"file_path_patterns\": [\"src/**/*.bsl\", \"*.mdo\", \"config/Configuration.xml\"],\n"
+        + "  \"search_query\": \"Test*Service\",\n"
+        + "  \"file_path_patterns\": [\"src/**/*.bsl\", \"*.mdo\", \"**/config/Configuration.xml\"],\n"
         + "  \"first_index\": 0,\n"
         + "  \"max_count\": 64\n"
         + "}";
@@ -296,8 +296,7 @@ public class SearchTextMcpTool
 
             if (filePathPatterns != null && !filePathPatterns.isEmpty())
             {
-                String patterns = String.join(",", filePathPatterns);
-                searcher.setPathMatcher(ResourceMatchers.commaSeparatedPaths(patterns));
+                searcher.setPathMatcher(createResourceMatcher(filePathPatterns));
             }
 
             try
@@ -436,6 +435,21 @@ public class SearchTextMcpTool
         details.hideAfter = elements.size() == 0;
 
         return messageFactory.createMessage(this, call, content, details);
+    }
+
+    private ResourceMatcher createResourceMatcher(List<String> filePathPatterns)
+    {
+        return resource -> {
+            var resourcePath = resource.getFullPath().toString();
+            for (var pattern : filePathPatterns)
+            {
+                if (patternMatcher.matches(resourcePath, pattern))
+                {
+                    return true;
+                }
+            }
+            return false;
+        };
     }
 
     @SuppressWarnings("nls")
@@ -580,7 +594,7 @@ public class SearchTextMcpTool
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
         description.append("\n- Provide a search pattern in `search_query`.");
-        description.append("\n- Optionally use `file_path_patterns` to filter by file types (e.g., [\"*.bsl\", \"*.mdo\"] or directory patterns like \"src/**/*.bsl\").");
+        description.append("\n- Optionally use `file_path_patterns` to filter by file types (e.g., [\"*.bsl\", \"*.mdo\"] or directory patterns like \"src/**/*.bsl\"). Same glob syntax as `" + GlobMcpTool.TOOL_NAME + "`: a pattern without \"/\" matches the name at any depth; a pattern with \"/\" is anchored to the root and needs \"**\" to span multiple directories (e.g. \"config/Configuration.xml\" only matches at the root, use \"**/config/Configuration.xml\" to match at any depth).");
         description.append("\n- Use `first_index` and `max_count` for pagination. Response includes `total_results` for all matches.");
         description.append("\n- Searches all open projects by default.");
         description.append("\n- Optionally set `path` to an absolute directory or file path. If the path belongs to an open project, project-wide search is used as usual. If the path is outside any open project, the file system is searched directly (useful for files/folders not part of the IDE workspace).");
@@ -603,7 +617,7 @@ public class SearchTextMcpTool
 
         var filePathPatternsProp = new McpToolCallProperty();
         filePathPatternsProp.type = "array";
-        filePathPatternsProp.description = "File path patterns (e.g., [\"*.bsl\", \"*.mdo\", \"src/**/*.bsl\"]). If not specified, searches all files.";
+        filePathPatternsProp.description = "File path patterns (e.g., [\"*.bsl\", \"*.mdo\", \"src/**/*.bsl\"]). A pattern without \"/\" matches at any depth; a pattern with \"/\" is anchored to the root unless it contains \"**\". If not specified, searches all files.";
         properties.put("file_path_patterns", filePathPatternsProp);
 
         var pathProp = new McpToolCallProperty();
