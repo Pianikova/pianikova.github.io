@@ -344,7 +344,7 @@ public class ListMcpTool
 		description.append("\n- Lists all files and directories in a tree format.");
 		description.append("\n- Automatically ignores common build/cache directories: node_modules, .git, dist, build, etc.");
 		description.append("\n- Optionally specify custom ignore patterns.");
-		description.append("\n- Limited to " + LIMIT + " files for performance.");
+		description.append("\n- Limited to " + LIMIT + " files for performance. If the response has \"truncated\": true, more than " + LIMIT + " items were found; use `" + GlobMcpTool.TOOL_NAME + "` or `" + SearchTextMcpTool.TOOL_NAME + "` with a pattern/mask or pagination instead of retrying `" + TOOL_NAME + "`.");
 		description.append("\n- Use this tool to explore directory structure quickly.");
 		description.append("\n\nExample:");
 		description.append("\n  Q: "); description.append(QuestionExample);

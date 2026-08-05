@@ -411,7 +411,7 @@ public class GetMarkersMcpTool implements IMcpTool
         }
         description.append("\n- ai_marker includes AI marker types: AIError, AIWarning, AIInfo.");
 
-        description.append("\n\nResponse: JSON with `markers` (each marker: id, absolute_path, relative_path, start_line, message, type, severity (error/warning/info), priority (high/normal/low), location, marker_highlighted_text, source_id), `total_markers`, `markers_incomplete`, and `required_next_step`. When results are truncated the response shows the total and a pagination hint.");
+        description.append("\n\nResponse: JSON with `markers` (each marker: path (absolute), start_line, message, type, severity (error/warning/info), priority (high/normal/low), done (bookmarks/tasks), location, marker_highlighted_text, source_id, details (extra structured data, type-dependent, may be absent)), `total_markers`, `markers_incomplete`, and `required_next_step`. When results are truncated the response shows the total and a pagination hint.");
 
         spec.function.description = description.toString();
 
@@ -452,7 +452,7 @@ public class GetMarkersMcpTool implements IMcpTool
 
         var pathProp = new McpToolCallProperty();
         pathProp.type = "string";
-        pathProp.description = "Optional project-relative path to file";
+        pathProp.description = "Optional absolute or project-relative path to file";
         properties.put("path", pathProp);
 
         parameters.properties = properties;

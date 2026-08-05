@@ -593,8 +593,8 @@ public class SearchTextMcpTool
         description.append("Searches for text in files using the quick search API.");
         description.append("\n\nUsage:");
         description.append("\n- Arguments must be a single JSON object.");
-        description.append("\n- Provide a search pattern in `search_query`.");
-        description.append("\n- Optionally use `file_path_patterns` to filter by file types (e.g., [\"*.bsl\", \"*.mdo\"] or directory patterns like \"src/**/*.bsl\"). Same glob syntax as `" + GlobMcpTool.TOOL_NAME + "`: a pattern without \"/\" matches the name at any depth; a pattern with \"/\" is anchored to the root and needs \"**\" to span multiple directories (e.g. \"config/Configuration.xml\" only matches at the root, use \"**/config/Configuration.xml\" to match at any depth).");
+        description.append("\n- Provide a search pattern in `search_query`. Wildcards only (\"*\", \"?\"); regular expressions are not supported (e.g. \".*\" is matched literally, not as \"any characters\"). Matching is case-sensitive, including Cyrillic (\"НДС\" does not match \"ндс\").");
+        description.append("\n- Optionally use `file_path_patterns` to filter by file types (e.g., [\"*.bsl\", \"*.mdo\"] or directory patterns like \"src/**/*.bsl\"). Same glob syntax as `" + GlobMcpTool.TOOL_NAME + "`: a pattern without \"/\" matches the name at any depth; a pattern with \"/\" is anchored to the root and needs \"**\" to span multiple directories (e.g. \"config/Configuration.xml\" only matches at the root, use \"**/config/Configuration.xml\" to match at any depth). Common 1C filters: [\"**/CommonModules/**/*.bsl\"], [\"**/Documents/**/*.bsl\"], [\"**/AccumulationRegisters/**/*.bsl\"], or by extension: [\"*.bsl\"], [\"*.mdo\"], [\"*.form\"].");
         description.append("\n- Use `first_index` and `max_count` for pagination. Response includes `total_results` for all matches.");
         description.append("\n- Searches all open projects by default.");
         description.append("\n- Optionally set `path` to an absolute directory or file path. If the path belongs to an open project, project-wide search is used as usual. If the path is outside any open project, the file system is searched directly (useful for files/folders not part of the IDE workspace).");
@@ -612,7 +612,7 @@ public class SearchTextMcpTool
 
         var searchQueryProp = new McpToolCallProperty();
         searchQueryProp.type = "string";
-        searchQueryProp.description = "Text pattern to search for. Supports wildcard patterns (*, ?).";
+        searchQueryProp.description = "Text pattern to search for. Supports wildcard patterns (*, ?) only, not regular expressions. Matching is case-sensitive.";
         properties.put("search_query", searchQueryProp);
 
         var filePathPatternsProp = new McpToolCallProperty();
