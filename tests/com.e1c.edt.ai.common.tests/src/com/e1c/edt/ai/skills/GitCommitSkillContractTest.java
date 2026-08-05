@@ -31,7 +31,8 @@ public class GitCommitSkillContractTest
 
         var skill = read("SKILL.md");
 
-        assertTrue(skill.contains("allowed-tools: JGit Read"));
+        assertTrue(skill.contains("allowed-tools: JGit"));
+        assertFalse(skill.contains("allowed-tools: JGit Read"));
         assertTrue(skill.contains("completion-marker: \"#END#\""));
         assertTrue(skill.contains("reject-tool-like-json: true"));
         assertTrue(skill.contains("вызывай только `JGit`"));

@@ -44,6 +44,7 @@ public class ConversationFacade
     implements IConversationFacade
 {
     private static final int MAX_SKILL_COMPLETION_CONTINUES = 3;
+    private static final int MAX_SKILL_COMPLETION_RESTARTS = 1;
 
     private final IConversations conversations;
     private final IJson json;
@@ -101,7 +102,7 @@ public class ConversationFacade
             }
             return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken,
                 progressListener).thenCompose(result -> enforceCompletionPolicy(request, conversationId, result,
-                    cancellationToken, progressListener, 0, result.getAssistantMessageCount()));
+                    cancellationToken, progressListener, 0, 0, result.getAssistantMessageCount()));
         });
     }
 
@@ -119,7 +120,8 @@ public class ConversationFacade
 
     private CompletableFuture<SendMessageResult> enforceCompletionPolicy(SendUserMessageRequest request,
         String conversationId, SendMessageResult result, ICancellationToken cancellationToken,
-        IConversationProgressListener progressListener, int continuation, int assistantMessageCount)
+        IConversationProgressListener progressListener, int continuation, int restart,
+        int assistantMessageCount)
     {
         var policy = request.getCompletionPolicy().orElse(null);
         if (policy == null || result == null)
@@ -137,15 +139,30 @@ public class ConversationFacade
                 result.getReasoning(), assistantMessageCount));
         }
 
-        if (continuation >= MAX_SKILL_COMPLETION_CONTINUES || result.getSession() == null
-            || result.getSession().getReplyToMessageUuid() == null)
+        if (continuation >= MAX_SKILL_COMPLETION_CONTINUES)
+        {
+            if (restart < MAX_SKILL_COMPLETION_RESTARTS)
+            {
+                return restartCompletionConversation(request, cancellationToken, progressListener, restart + 1,
+                    assistantMessageCount);
+            }
+            return failedFuture(new IllegalStateException(
+                "Skill did not produce a valid final answer after completion retries and restart")); //$NON-NLS-1$
+        }
+        if (result.getSession() == null || result.getSession().getReplyToMessageUuid() == null)
         {
             return failedFuture(new IllegalStateException(
-                "Skill did not produce a valid final answer after completion retries")); //$NON-NLS-1$
+                "Skill completion response has no conversation session")); //$NON-NLS-1$
         }
 
+        var allowedTools = request.getAllowedTools().orElse(null);
+        var exactToolHint = invalidJson && allowedTools != null && allowedTools.size() == 1
+            ? " Вызови единственный доступный инструмент `" + allowedTools.iterator().next() //$NON-NLS-1$
+                + "` через настоящий function call с уже указанными параметрами. Не повторяй JSON текстом." //$NON-NLS-1$
+            : ""; //$NON-NLS-1$
         var reason = invalidJson
-            ? "Предыдущий ответ является JSON-текстом, похожим на параметры инструмента, и не является допустимым финальным ответом. " //$NON-NLS-1$
+            ? "Предыдущий ответ является JSON-текстом, похожим на параметры инструмента, и не является допустимым финальным ответом." //$NON-NLS-1$
+                + exactToolHint + " " //$NON-NLS-1$
             : "Предыдущий ответ не содержит обязательный маркер завершения. "; //$NON-NLS-1$
         var instruction = reason
             + "Продолжи выполнение исходной задачи в этой же беседе. Если нужны данные, сделай настоящий function call доступного инструмента, не печатай его параметры текстом. " //$NON-NLS-1$
@@ -160,8 +177,27 @@ public class ConversationFacade
         }
         return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken,
             progressListener).thenCompose(next -> enforceCompletionPolicy(request, conversationId, next,
-                cancellationToken, progressListener, continuation + 1,
+                cancellationToken, progressListener, continuation + 1, restart,
                 assistantMessageCount + next.getAssistantMessageCount()));
+    }
+
+    private CompletableFuture<SendMessageResult> restartCompletionConversation(SendUserMessageRequest request,
+        ICancellationToken cancellationToken, IConversationProgressListener progressListener, int restart,
+        int assistantMessageCount)
+    {
+        return createConversationAsync(request, cancellationToken).thenCompose(conversationId -> {
+            var instruction = withCompletionProtocol(request.getMessage(),
+                request.getCompletionPolicy().orElse(null));
+            var askRequest = createAskRequest(instruction, null, request.getAllowedTools().orElse(null));
+            if (request.getMaxToolRounds() != null)
+            {
+                askRequest.maxToolRounds = request.getMaxToolRounds().intValue();
+            }
+            return collectAssistantResult(request.getProject(), conversationId, askRequest, cancellationToken,
+                progressListener).thenCompose(result -> enforceCompletionPolicy(request, conversationId, result,
+                    cancellationToken, progressListener, 0, restart,
+                    assistantMessageCount + result.getAssistantMessageCount()));
+        });
     }
 
     private boolean isJsonObject(String text)
