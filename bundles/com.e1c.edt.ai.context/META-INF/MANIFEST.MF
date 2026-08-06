@@ -50,4 +50,5 @@ Require-Bundle: org.eclipse.core.runtime,
  com._1c.g5.v8.dt.moxel;bundle-version="[14.1.0,20.0.0)",
  com._1c.g5.v8.dt.htmldocument.model;resolution:=optional,
  com._1c.g5.v8.dt.md.refactoring;bundle-version="[1.0.0,2.0.0)",
- com._1c.g5.v8.dt.refactoring.core;bundle-version="[4.0.0,5.0.0)"
+ com._1c.g5.v8.dt.refactoring.core;bundle-version="[4.0.0,5.0.0)",
+ com._1c.g5.v8.dt.cmi;bundle-version="[7.0.0,100.0.0)"

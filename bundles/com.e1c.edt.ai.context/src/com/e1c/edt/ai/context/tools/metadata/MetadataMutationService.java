@@ -43,6 +43,9 @@ import com._1c.g5.v8.dt.form.generator.IFormFieldGenerator;
 import com._1c.g5.v8.dt.form.generator.IFormGenerator;
 import com._1c.g5.v8.dt.form.model.Form;
 import com._1c.g5.v8.dt.form.model.FormFactory;
+import com._1c.g5.v8.dt.mcore.McoreFactory;
+import com._1c.g5.v8.dt.mcore.TypeDescription;
+import com._1c.g5.v8.dt.mcore.util.McoreUtil;
 import com._1c.g5.v8.dt.md.model.IMdObjectInitializer;
 import com._1c.g5.v8.dt.md.refactoring.core.IMdRefactoringService;
 import com._1c.g5.v8.dt.metadata.mdclass.AccountingRegister;
@@ -62,6 +65,7 @@ import com._1c.g5.v8.dt.metadata.mdclass.Report;
 import com._1c.g5.v8.dt.metadata.mdclass.ScheduledJob;
 import com._1c.g5.v8.dt.metadata.mdclass.Template;
 import com._1c.g5.v8.dt.metadata.mdclass.TemplateType;
+import com._1c.g5.v8.dt.platform.IEObjectTypeNames;
 import com._1c.g5.v8.dt.schedule.model.ScheduleFactory;
 import com._1c.g5.v8.dt.moxel.sheet.SheetFactory;
 import com.e1c.edt.ai.ICancellationToken;
@@ -96,6 +100,7 @@ final class MetadataMutationService
     private final IProjectFileSystemSupportProvider fileSystemSupportProvider;
     private final FormMutationService formService;
     private final java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders;
+    private final FormLoadValidator loadValidator;
 
     @Inject
     MetadataMutationService(IBmModelManager modelManager, ITopObjectFqnGenerator fqnGenerator,
@@ -103,7 +108,8 @@ final class MetadataMutationService
         IProjectBuilder projectBuilder, IDerivedDataManagerProvider derivedDataManagerProvider, ISettings settings,
         IV8ProjectManager v8ProjectManager, IFormGenerator formGenerator, IFormFieldGenerator formFieldGenerator,
         IEditingLanguageManager editingLanguageManager, IProjectFileSystemSupportProvider fileSystemSupportProvider,
-        FormMutationService formService, java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders)
+        FormMutationService formService, java.util.Set<com.e1c.edt.ai.IMarkersProvider> markersProviders,
+        FormLoadValidator loadValidator)
     {
         Preconditions.checkNotNull(formService);
         this.formService = formService;
@@ -122,6 +128,7 @@ final class MetadataMutationService
         Preconditions.checkNotNull(formFieldGenerator);
         Preconditions.checkNotNull(editingLanguageManager);
         Preconditions.checkNotNull(fileSystemSupportProvider);
+        Preconditions.checkNotNull(loadValidator);
         this.modelManager = modelManager;
         this.fqnGenerator = fqnGenerator;
         this.editingSupport = editingSupport;
@@ -135,6 +142,7 @@ final class MetadataMutationService
         this.formFieldGenerator = formFieldGenerator;
         this.editingLanguageManager = editingLanguageManager;
         this.fileSystemSupportProvider = fileSystemSupportProvider;
+        this.loadValidator = loadValidator;
     }
 
     synchronized MetadataResponse execute(MetadataRequest request, ICancellationToken cancellationToken)
@@ -774,11 +782,50 @@ final class MetadataMutationService
                 if (changed[0] && !request.dryRun)
                 {
                     ((BasicFeature)child).setType(newType);
+                    resetTypeDependentValues(child, newType);
+                    MetadataStructuralValidator.requireSound(child);
                 }
                 return null;
             }
         });
         return MetadataResponse.success(request, childTarget(request), changed[0]);
+    }
+
+    /**
+     * Resets fill/min/max value after a type change, mirroring EDT's own {@code ChangeTypeDescriptionTask}
+     * (the mechanism its Properties-view type editor uses). Left alone, a stale value set for the
+     * field's previous type — for example the empty {@code StringValue} every register-field initializer
+     * seeds a brand new dimension/resource with, before this tool overwrites the type to a reference —
+     * crashes the Properties view with a {@code ClassCastException} the first time a human opens it:
+     * {@code MdPropertyPaletteComponent} expects a value class matching the type it is about to render,
+     * and 1C's own marker checker does not validate that correspondence, so the mutation itself reports
+     * zero markers. {@code fillValue} is always reset; {@code minValue}/{@code maxValue} only when the
+     * new type is not Number, matching the official task exactly.
+     */
+    private static void resetTypeDependentValues(EObject object, TypeDescription newType)
+    {
+        setFeatureValueIfPresent(object, "fillValue", McoreFactory.eINSTANCE.createUndefinedValue()); //$NON-NLS-1$
+        if (!hasNumberType(newType))
+        {
+            setFeatureValueIfPresent(object, "maxValue", McoreFactory.eINSTANCE.createUndefinedValue()); //$NON-NLS-1$
+            setFeatureValueIfPresent(object, "minValue", McoreFactory.eINSTANCE.createUndefinedValue()); //$NON-NLS-1$
+        }
+    }
+
+    private static void setFeatureValueIfPresent(EObject object, String featureName, Object newValue)
+    {
+        var feature = object.eClass().getEStructuralFeature(featureName);
+        if (feature != null && !feature.isMany())
+        {
+            object.eSet(feature, newValue);
+        }
+    }
+
+    private static boolean hasNumberType(TypeDescription type)
+    {
+        return type != null && type.getTypes().stream()
+            .map(McoreUtil::getTypeName)
+            .anyMatch(name -> java.util.Objects.equals(name, IEObjectTypeNames.NUMBER));
     }
 
     private MetadataResponse renameChild(IProject project, MetadataRequest request)
@@ -1034,6 +1081,7 @@ final class MetadataMutationService
                 ? FormType.REPORT : requestedType;
         boolean[] changed = { false };
         var warnings = new java.util.ArrayList<String>();
+        Form[] createdForm = { null };
         model(project).getGlobalContext().execute(new AbstractBmTask<Void>("Create generated 1C object form") //$NON-NLS-1$
         {
             @Override
@@ -1079,6 +1127,10 @@ final class MetadataMutationService
                     // also keeps this operation compatible with EDT installations whose IFormGenerator service
                     // has a different binary signature than the version used to compile this bundle.
                     form = FormFactory.eINSTANCE.createForm();
+                    // Form.commandInterface is a mandatory singleton EDT's own generator always populates;
+                    // left unset here it crashes FormCommandInterfaceMapping (and any UI that loads the
+                    // form's command bar) with a raw NullPointerException the first time a human opens it.
+                    form.setCommandInterface(FormFactory.eINSTANCE.createFormCommandInterface());
                     // Unlike OBJECT/RECORD/RECORD_SET, GENERIC skips EDT's generator entirely, so there is no
                     // main "Объект"-style attribute yet. addFormField then fails on Объект.<Name> with a raw
                     // EDT NullPointerException until that attribute is added by hand; said here up front, it
@@ -1129,9 +1181,18 @@ final class MetadataMutationService
                 var formFqn = fqnGenerator.generateExternalPropertyFqn(formMetadata, formReference);
                 transaction.attachTopObject((IBmObject)form, formFqn);
                 setDefaultForm(owner, formMetadata, formType);
+                MetadataStructuralValidator.requireSound(form);
+                createdForm[0] = form;
                 return null;
             }
         });
+        // Deliberately after the transaction above has committed: see FormLoadValidator's class comment
+        // for why joining its BM-transaction-opening Job from inside a still-open write transaction risks
+        // a deadlock.
+        if (createdForm[0] != null)
+        {
+            warnings.addAll(loadValidator.findLoadErrors(createdForm[0]));
+        }
         var response = MetadataResponse.success(request, request.objectName + "." + request.name, changed[0]); //$NON-NLS-1$
         response.warnings.addAll(warnings);
         return response;
@@ -1516,6 +1577,7 @@ final class MetadataMutationService
         validateIdentifier(name, "object_name"); //$NON-NLS-1$
         var model = model(project);
         boolean[] changed = { false };
+        Form[] createdForm = { null };
         model.getGlobalContext().execute(new AbstractBmTask<Void>("Create 1C metadata object") //$NON-NLS-1$
         {
             @Override
@@ -1562,9 +1624,10 @@ final class MetadataMutationService
                     addToFeature(configuration, descriptor.collection, object);
                     if ("CommonForm".equals(descriptor.name)) //$NON-NLS-1$
                     {
-                        attachFormBody(project, transaction, (BasicForm)object);
+                        createdForm[0] = attachFormBody(project, transaction, (BasicForm)object);
                     }
                 }
+                MetadataStructuralValidator.requireSound(object);
                 changed[0] = true;
                 return null;
             }
@@ -1580,7 +1643,15 @@ final class MetadataMutationService
                 readObject(project, request.objectName);
             }
         }
-        return MetadataResponse.success(request, request.objectName, changed[0]);
+        var response = MetadataResponse.success(request, request.objectName, changed[0]);
+        // Deliberately after the transaction above has committed: see FormLoadValidator's class comment
+        // for why joining its BM-transaction-opening Job from inside a still-open write transaction risks
+        // a deadlock.
+        if (createdForm[0] != null)
+        {
+            response.warnings.addAll(loadValidator.findLoadErrors(createdForm[0]));
+        }
+        return response;
     }
 
     private static final String DEFAULT_PLATFORM_VERSION = "8.3.24"; //$NON-NLS-1$
@@ -2321,7 +2392,7 @@ final class MetadataMutationService
      * once the owner and the form, hence it is passed as both. Falls back to the bare body if generation
      * is unavailable, which is no worse than before.
      */
-    private void attachFormBody(IProject project, IBmTransaction transaction, BasicForm formMetadata)
+    private Form attachFormBody(IProject project, IBmTransaction transaction, BasicForm formMetadata)
     {
         try
         {
@@ -2341,7 +2412,8 @@ final class MetadataMutationService
                     formMetadata.setForm(generated);
                     generated.setMdForm(formMetadata);
                     attachFormResource(transaction, formMetadata, generated);
-                    return;
+                    MetadataStructuralValidator.requireSound(generated);
+                    return generated;
                 }
             }
         }
@@ -2349,7 +2421,7 @@ final class MetadataMutationService
         {
             // Generation unavailable for this form: fall through to the bare body below.
         }
-        attachEmptyFormBody(transaction, formMetadata);
+        return attachEmptyFormBody(transaction, formMetadata);
     }
 
     private void attachFormResource(IBmTransaction transaction, BasicForm formMetadata, Form form)
@@ -2359,14 +2431,18 @@ final class MetadataMutationService
             formReference));
     }
 
-    private void attachEmptyFormBody(IBmTransaction transaction, BasicForm formMetadata)
+    private Form attachEmptyFormBody(IBmTransaction transaction, BasicForm formMetadata)
     {
         Form form = FormFactory.eINSTANCE.createForm();
+        // See the matching comment in createObjectForm: commandInterface is mandatory and never implied.
+        form.setCommandInterface(FormFactory.eINSTANCE.createFormCommandInterface());
         formMetadata.setForm(form);
         form.setMdForm(formMetadata);
         var formReference = (org.eclipse.emf.ecore.EReference)formMetadata.eClass().getEStructuralFeature("form"); //$NON-NLS-1$
         var formFqn = fqnGenerator.generateExternalPropertyFqn(formMetadata, formReference);
         transaction.attachTopObject((IBmObject)form, formFqn);
+        MetadataStructuralValidator.requireSound(form);
+        return form;
     }
 
     private MetadataResponse setObjectProperty(IProject project, MetadataRequest request)
@@ -2605,12 +2681,15 @@ final class MetadataMutationService
                 }
                 if (child instanceof BasicFeature)
                 {
-                    ((BasicFeature)child).setType(typeService.create(project, transaction, request));
+                    var newType = typeService.create(project, transaction, request);
+                    ((BasicFeature)child).setType(newType);
+                    resetTypeDependentValues(child, newType);
                 }
                 changed[0] = true;
                 if (!request.dryRun)
                 {
                     list.add(child);
+                    MetadataStructuralValidator.requireSound(child);
                 }
                 return null;
             }
@@ -2743,7 +2822,8 @@ final class MetadataMutationService
         field.set(initializer, mdTypeUtil);
     }
 
-    private static java.lang.reflect.Field findField(Class<?> type, String name)
+    /** Package-visible: {@link FormLoadValidator} reuses this to reach {@code Mapping}'s private job field. */
+    static java.lang.reflect.Field findField(Class<?> type, String name)
     {
         for (var current = type; current != null; current = current.getSuperclass())
         {

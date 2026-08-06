@@ -811,7 +811,18 @@ final class FormMutationService
             @Override
             public Void execute(IBmTransaction transaction, org.eclipse.core.runtime.IProgressMonitor monitor)
             {
-                return task.run(transaction, requireForm(transaction, request.objectName));
+                var form = requireForm(transaction, request.objectName);
+                var result = task.run(transaction, form);
+                // Every form-content operation funnels through this one call: a mandatory single-valued
+                // containment (for example Form.commandInterface) left unset by a bug in this service's own
+                // construction code. Checked here, inside the still-open transaction, it rolls the mutation
+                // back instead of persisting a form that EDT's own generators never produce and whose UI
+                // never learned to tolerate.
+                if (!request.dryRun)
+                {
+                    MetadataStructuralValidator.requireSound(form);
+                }
+                return result;
             }
         });
     }
