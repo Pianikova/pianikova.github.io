@@ -1156,8 +1156,8 @@ final class MetadataMutationService
                     var rootField = generatorFields(owner, formType, scriptVariant, version);
                     try
                     {
-                        form = formGenerator.generateForm(owner, formMetadata, formType, scriptVariant,
-                            languageCode, version, rootField, Integer.valueOf(1));
+                        form = invokeGenerateForm(owner, formMetadata, formType, scriptVariant, languageCode, version,
+                            rootField);
                     }
                     catch (RuntimeException | LinkageError e)
                     {
@@ -2405,8 +2405,8 @@ final class MetadataMutationService
                 var languageCode = editingLanguageManager.getEditingLanguageCode(project);
                 var rootField =
                     formFieldGenerator.getFormGeneratorFields(owner, FormType.GENERIC, scriptVariant, version);
-                Form generated = formGenerator.generateForm(owner, formMetadata, FormType.GENERIC, scriptVariant,
-                    languageCode, version, rootField, Integer.valueOf(1));
+                Form generated = invokeGenerateForm(owner, formMetadata, FormType.GENERIC, scriptVariant,
+                    languageCode, version, rootField);
                 if (generated != null)
                 {
                     formMetadata.setForm(generated);
@@ -2791,6 +2791,94 @@ final class MetadataMutationService
         {
             return null;
         }
+    }
+
+    /**
+     * Calls {@code IFormGenerator.generateForm} without binding to one fixed compile-time overload.
+     * <p>
+     * A newer EDT platform version added a trailing {@code InterfaceCompatibilityMode} parameter to this
+     * method and dropped the 8-argument overload entirely (observed as {@code NoSuchMethodError} at
+     * runtime against a bundle compiled against an older platform version — the same class of version
+     * skew documented on {@link FormLoadValidator}). This reflects over whatever {@code generateForm}
+     * overload the runtime's actual {@code formGenerator} implementation declares, matching the leading
+     * parameters this tool always knows how to supply and defaulting any further trailing ones.
+     */
+    private Form invokeGenerateForm(MdObject owner, BasicForm formMetadata, FormType formType,
+        com._1c.g5.v8.dt.metadata.mdclass.ScriptVariant scriptVariant, String languageCode,
+        com._1c.g5.v8.dt.platform.version.Version version, com._1c.g5.v8.dt.form.generator.FormFieldInfo rootField)
+    {
+        var knownTypes = new Class<?>[] { MdObject.class, BasicForm.class, FormType.class,
+            com._1c.g5.v8.dt.metadata.mdclass.ScriptVariant.class, String.class,
+            com._1c.g5.v8.dt.platform.version.Version.class, com._1c.g5.v8.dt.form.generator.FormFieldInfo.class,
+            Integer.class };
+        var knownArgs =
+            new Object[] { owner, formMetadata, formType, scriptVariant, languageCode, version, rootField,
+                Integer.valueOf(1) };
+        for (var method : formGenerator.getClass().getMethods())
+        {
+            if (!"generateForm".equals(method.getName())) //$NON-NLS-1$
+            {
+                continue;
+            }
+            var parameterTypes = method.getParameterTypes();
+            if (parameterTypes.length < knownTypes.length || !matchesPrefix(parameterTypes, knownTypes))
+            {
+                continue;
+            }
+            var args = java.util.Arrays.copyOf(knownArgs, parameterTypes.length);
+            for (int i = knownTypes.length; i < parameterTypes.length; i++)
+            {
+                args[i] = defaultTrailingArgument(parameterTypes[i]);
+            }
+            try
+            {
+                method.setAccessible(true);
+                return (Form)method.invoke(formGenerator, args);
+            }
+            catch (ReflectiveOperationException e)
+            {
+                throw new ToolException("EDT's form generator rejected the call: " + rootCause(e), e, //$NON-NLS-1$
+                    ToolErrorType.USER_VISIBLE);
+            }
+        }
+        throw new ToolException("This EDT installation's form generator has no generateForm overload this tool" //$NON-NLS-1$
+            + " knows how to call."); //$NON-NLS-1$
+    }
+
+    private static boolean matchesPrefix(Class<?>[] parameterTypes, Class<?>[] knownTypes)
+    {
+        for (int i = 0; i < knownTypes.length; i++)
+        {
+            if (parameterTypes[i] != knownTypes[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Best-effort default for a trailing parameter a newer platform version added, that this tool has no
+     * explicit value for. An enum is assumed to be a configuration-level compatibility switch (matching
+     * {@code InterfaceCompatibilityMode}, the one observed so far): {@code TAXI} is what virtually every
+     * configuration on a currently supported platform version uses, so it is preferred by name; any other
+     * enum falls back to its first declared constant. Anything else defaults to {@code null}.
+     */
+    private static Object defaultTrailingArgument(Class<?> type)
+    {
+        if (!type.isEnum())
+        {
+            return null;
+        }
+        var constants = type.getEnumConstants();
+        for (var constant : constants)
+        {
+            if ("TAXI".equals(constant.toString())) //$NON-NLS-1$
+            {
+                return constant;
+            }
+        }
+        return constants.length > 0 ? constants[0] : null;
     }
 
     private static IMdObjectInitializer<?> newInitializer(String className) throws ReflectiveOperationException
